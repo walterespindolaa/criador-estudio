@@ -6,9 +6,10 @@ import {
   CalendarDays,
   Archive,
   Settings,
+  GraduationCap,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -21,28 +22,29 @@ import {
 } from "@/components/ui/sidebar";
 
 const navItems = [
-  { title: "Dashboard", url: "/app", icon: LayoutDashboard },
   { title: "Minhas Ideias", url: "/app/ideias", icon: Lightbulb },
   { title: "Estou Criando", url: "/app/criando", icon: Kanban },
   { title: "Meu Plano", url: "/app/plano", icon: CalendarDays },
   { title: "Biblioteca", url: "/app/biblioteca", icon: BookOpen },
   { title: "Histórico", url: "/app/historico", icon: Archive },
+  { title: "Aprender Mais", url: "/app/aprender", icon: GraduationCap },
 ];
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const location = useLocation();
+  const navigate = useNavigate();
 
   return (
     <Sidebar collapsible="icon" className="border-r-0">
       <div className="p-4 pb-2">
-        {!collapsed && (
-          <h1 className="text-xl font-display font-bold text-foreground">Criadores</h1>
-        )}
-        {collapsed && (
-          <span className="text-xl font-display font-bold text-foreground">C</span>
-        )}
+        <button onClick={() => navigate("/app")} className="text-left">
+          {!collapsed ? (
+            <h1 className="text-xl font-display font-bold text-foreground">Criadores</h1>
+          ) : (
+            <span className="text-xl font-display font-bold text-foreground">C</span>
+          )}
+        </button>
       </div>
       <SidebarContent>
         <SidebarGroup>
@@ -53,7 +55,6 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
-                      end={item.url === "/app"}
                       className="hover:bg-accent/60 rounded-xl transition-colors"
                       activeClassName="bg-primary/10 text-primary font-medium"
                     >
@@ -68,7 +69,6 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      {/* Bottom settings */}
       <div className="mt-auto p-2">
         <SidebarMenu>
           <SidebarMenuItem>
