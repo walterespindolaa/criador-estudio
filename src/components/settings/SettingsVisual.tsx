@@ -1,10 +1,37 @@
 import { useState, useEffect } from "react";
-import { Check, Lock } from "lucide-react";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useProfile } from "@/hooks/useProfile";
 import { THEME_PRESETS, ACCENT_COLORS, type ThemePreset } from "@/lib/themes";
 import { applyTheme, applyAccent } from "@/lib/applyTheme";
+
+const FONT_OPTIONS = [
+  { key: "fraunces", display: "Fraunces + DM Sans", label: "Orgânico", families: "'Fraunces', serif|'DM Sans', sans-serif" },
+  { key: "cormorant", display: "Cormorant Garamond + Plus Jakarta Sans", label: "Elegante", families: "'Cormorant Garamond', serif|'Plus Jakarta Sans', sans-serif" },
+  { key: "youngserif", display: "Young Serif + Outfit", label: "Moderno", families: "'Young Serif', serif|'Outfit', sans-serif" },
+];
+
+export function applyThemeFont(fontKey: string) {
+  const opt = FONT_OPTIONS.find(f => f.key === fontKey);
+  if (!opt) return;
+  const [display, body] = opt.families.split("|");
+  document.documentElement.style.setProperty("--font-display", display);
+  document.documentElement.style.setProperty("--font-body", body);
+  const families: Record<string, string> = {
+    fraunces: "Fraunces:opsz,wght@9..144,100..900&family=DM+Sans:wght@400;500;600;700",
+    cormorant: "Cormorant+Garamond:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700",
+    youngserif: "Young+Serif&family=Outfit:wght@400;500;600;700",
+  };
+  const id = `theme-font-${fontKey}`;
+  if (!document.getElementById(id)) {
+    const link = document.createElement("link");
+    link.id = id;
+    link.rel = "stylesheet";
+    link.href = `https://fonts.googleapis.com/css2?family=${families[fontKey]}&display=swap`;
+    document.head.appendChild(link);
+  }
+}
 import { toast } from "sonner";
 
 function ThemeCard({ preset, selected, onClick }: { preset: ThemePreset; selected: boolean; onClick: () => void }) {
