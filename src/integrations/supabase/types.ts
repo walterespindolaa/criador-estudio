@@ -490,6 +490,54 @@ export type Database = {
           },
         ]
       }
+      milestones: {
+        Row: {
+          completed: boolean | null
+          completed_at: string | null
+          created_at: string | null
+          goal_id: string
+          id: string
+          name: string
+          position: number | null
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          goal_id: string
+          id?: string
+          name: string
+          position?: number | null
+          user_id: string
+        }
+        Update: {
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          goal_id?: string
+          id?: string
+          name?: string
+          position?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milestones_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "structured_goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milestones_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       monthly_goals: {
         Row: {
           created_at: string | null
@@ -521,6 +569,109 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "monthly_goals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      monthly_reflections: {
+        Row: {
+          biz_blocked: string | null
+          biz_clarity: string | null
+          biz_procrastination: string | null
+          biz_revenue: string | null
+          biz_worked: string | null
+          content_best: string | null
+          content_connection: string | null
+          content_rhythm: string | null
+          created_at: string | null
+          focus_distractions: string | null
+          focus_execution: string | null
+          focus_lessons: string | null
+          id: string
+          month: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          biz_blocked?: string | null
+          biz_clarity?: string | null
+          biz_procrastination?: string | null
+          biz_revenue?: string | null
+          biz_worked?: string | null
+          content_best?: string | null
+          content_connection?: string | null
+          content_rhythm?: string | null
+          created_at?: string | null
+          focus_distractions?: string | null
+          focus_execution?: string | null
+          focus_lessons?: string | null
+          id?: string
+          month: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          biz_blocked?: string | null
+          biz_clarity?: string | null
+          biz_procrastination?: string | null
+          biz_revenue?: string | null
+          biz_worked?: string | null
+          content_best?: string | null
+          content_connection?: string | null
+          content_rhythm?: string | null
+          created_at?: string | null
+          focus_distractions?: string | null
+          focus_execution?: string | null
+          focus_lessons?: string | null
+          id?: string
+          month?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monthly_reflections_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      moodboard_entries: {
+        Row: {
+          answer: string | null
+          created_at: string | null
+          id: string
+          question_key: string
+          section: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          answer?: string | null
+          created_at?: string | null
+          id?: string
+          question_key: string
+          section: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          answer?: string | null
+          created_at?: string | null
+          id?: string
+          question_key?: string
+          section?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moodboard_entries_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -668,6 +819,7 @@ export type Database = {
           hook: string | null
           id: string
           idea_id: string | null
+          learnings: string | null
           notes: string | null
           pillar_id: string | null
           platform: string
@@ -695,6 +847,7 @@ export type Database = {
           hook?: string | null
           id?: string
           idea_id?: string | null
+          learnings?: string | null
           notes?: string | null
           pillar_id?: string | null
           platform: string
@@ -722,6 +875,7 @@ export type Database = {
           hook?: string | null
           id?: string
           idea_id?: string | null
+          learnings?: string | null
           notes?: string | null
           pillar_id?: string | null
           platform?: string
@@ -933,6 +1087,62 @@ export type Database = {
           title?: string
         }
         Relationships: []
+      }
+      structured_goals: {
+        Row: {
+          category: string
+          created_at: string | null
+          current_value: number | null
+          end_date: string | null
+          id: string
+          observation: string | null
+          period: string | null
+          start_date: string | null
+          status: string
+          target_value: number | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string | null
+          current_value?: number | null
+          end_date?: string | null
+          id?: string
+          observation?: string | null
+          period?: string | null
+          start_date?: string | null
+          status?: string
+          target_value?: number | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          current_value?: number | null
+          end_date?: string | null
+          id?: string
+          observation?: string | null
+          period?: string | null
+          start_date?: string | null
+          status?: string
+          target_value?: number | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "structured_goals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tasks: {
         Row: {
