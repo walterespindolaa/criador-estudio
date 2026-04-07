@@ -162,6 +162,66 @@ export type Database = {
         }
         Relationships: []
       }
+      external_media_refs: {
+        Row: {
+          created_at: string | null
+          download_url: string | null
+          external_file_id: string
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          post_id: string | null
+          provider: string
+          thumbnail_url: string | null
+          user_id: string
+          view_url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          download_url?: string | null
+          external_file_id: string
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          post_id?: string | null
+          provider?: string
+          thumbnail_url?: string | null
+          user_id: string
+          view_url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          download_url?: string | null
+          external_file_id?: string
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          post_id?: string | null
+          provider?: string
+          thumbnail_url?: string | null
+          user_id?: string
+          view_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "external_media_refs_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "external_media_refs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       files: {
         Row: {
           category: string | null
@@ -211,6 +271,44 @@ export type Database = {
             foreignKeyName: "files_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_drive_connections: {
+        Row: {
+          connected_at: string | null
+          google_account_id: string
+          google_email: string
+          google_name: string | null
+          id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          connected_at?: string | null
+          google_account_id: string
+          google_email: string
+          google_name?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          connected_at?: string | null
+          google_account_id?: string
+          google_email?: string
+          google_name?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_drive_connections_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
