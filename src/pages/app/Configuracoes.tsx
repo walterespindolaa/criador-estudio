@@ -72,6 +72,19 @@ const Configuracoes = () => {
   const [notifWeeklyGoal, setNotifWeeklyGoal] = useState(true);
   const [notifWeeklyTip, setNotifWeeklyTip] = useState(true);
 
+  // Persona state
+  const [personaName, setPersonaName] = useState("Meu público principal");
+  const [personaAge, setPersonaAge] = useState("");
+  const [personaGender, setPersonaGender] = useState("");
+  const [personaLocation, setPersonaLocation] = useState("");
+  const [personaInterests, setPersonaInterests] = useState<string[]>([]);
+  const [personaPains, setPersonaPains] = useState<string[]>([]);
+  const [personaDesires, setPersonaDesires] = useState<string[]>([]);
+  const [personaPlatforms, setPersonaPlatforms] = useState<string[]>([]);
+  const [personaNotes, setPersonaNotes] = useState("");
+  const [personaId, setPersonaId] = useState<string | null>(null);
+  const [newTag, setNewTag] = useState("");
+
   useEffect(() => {
     if (profile) {
       setName(profile.name);
