@@ -156,11 +156,9 @@ const Biblioteca = () => {
                     <CopyButton text={h.text} />
                   </div>
                   <p className="text-sm font-body text-foreground">"{h.text}"</p>
-                  <div className="flex gap-1 mt-2">
+                  <div className="flex gap-2 mt-2">
                     {h.platforms.map(p => (
-                      <span key={p} className="text-xs">
-                        {p === "instagram" ? "📸" : p === "tiktok" ? "🎵" : "🎬"}
-                      </span>
+                      <PlatformIcon key={p} platform={p as any} size="sm" />
                     ))}
                   </div>
                 </motion.div>
