@@ -182,6 +182,30 @@ const Dashboard = () => {
     }
   };
 
+  const addHabit = async () => {
+    if (!newHabitName.trim() || !user) return;
+    const { data, error } = await supabase.from("habits").insert({ user_id: user.id, name: newHabitName.trim(), position: habits.length }).select().single();
+    if (error) { toast.error("Erro ao adicionar hábito."); return; }
+    if (data) setHabits(prev => [...prev, data]);
+    setNewHabitName("");
+    toast.success("Hábito adicionado!");
+  };
+
+  const deleteHabit = async (habitId: string) => {
+    await supabase.from("habit_logs").delete().eq("habit_id", habitId);
+    await supabase.from("habits").delete().eq("id", habitId);
+    setHabits(prev => prev.filter(h => h.id !== habitId));
+    setHabitLogs(prev => prev.filter(l => l.habit_id !== habitId));
+    toast.success("Hábito removido.");
+  };
+
+  const updateHabit = async (habitId: string) => {
+    if (!editingHabitName.trim()) return;
+    await supabase.from("habits").update({ name: editingHabitName.trim() }).eq("id", habitId);
+    setHabits(prev => prev.map(h => h.id === habitId ? { ...h, name: editingHabitName.trim() } : h));
+    setEditingHabitId(null);
+    setEditingHabitName("");
+
   // Weekly stats
   const weekPublished = posts.filter(p => p.status === "publicado" && p.published_at &&
     weekDays.some(d => d.date === p.published_at?.split("T")[0]));
