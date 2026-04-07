@@ -270,9 +270,9 @@ const Dashboard = () => {
   return (
     <div className="pb-20 md:pb-0">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* LEFT COLUMN (65%) */}
-          <div className="flex-1 lg:w-[65%] space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* LEFT COLUMN (8 cols) */}
+          <div className="lg:col-span-8 space-y-6">
             {/* Greeting */}
             <div>
               <h1 className="text-3xl font-display font-bold text-foreground mb-1">
