@@ -620,56 +620,60 @@ const Dashboard = () => {
             </DCard>
 
             {/* Brand card */}
-            <DCard>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-11 h-11 rounded-full bg-muted flex items-center justify-center overflow-hidden border-2 border-border">
-                  {profile?.avatar_url ? (
-                    <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="font-display font-bold text-lg text-primary">{(profile?.name || "C")[0].toUpperCase()}</span>
-                  )}
+            <button onClick={() => navigate("/app/brandbook")} className="w-full text-left">
+              <DCard className="hover:border-primary/30 transition-all cursor-pointer">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-11 h-11 rounded-full bg-muted flex items-center justify-center overflow-hidden border-2 border-border">
+                    {profile?.avatar_url ? (
+                      <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="font-display font-bold text-lg text-primary">{(profile?.name || "C")[0].toUpperCase()}</span>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-body font-semibold text-foreground text-sm truncate">{profile?.name || "Criador"}</p>
+                    {profile?.niche && <p className="text-xs text-muted-foreground font-body truncate">{profile.niche}</p>}
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="font-body font-semibold text-foreground text-sm truncate">{profile?.name || "Criador"}</p>
-                  {profile?.niche && <p className="text-xs text-muted-foreground font-body truncate">{profile.niche}</p>}
+                {pillars.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    {pillars.map(p => (
+                      <span key={p.id} className="px-2 py-0.5 rounded-lg text-[10px] font-body font-medium text-primary-foreground" style={{ backgroundColor: p.color }}>{p.name}</span>
+                    ))}
+                  </div>
+                )}
+                <div className="space-y-1 mb-3">
+                  {profile?.instagram_handle && <div className="flex items-center gap-2 text-xs text-muted-foreground font-body"><PlatformIcon platform="instagram" size="sm" /> @{profile.instagram_handle}</div>}
+                  {profile?.tiktok_handle && <div className="flex items-center gap-2 text-xs text-muted-foreground font-body"><PlatformIcon platform="tiktok" size="sm" /> @{profile.tiktok_handle}</div>}
+                  {profile?.youtube_handle && <div className="flex items-center gap-2 text-xs text-muted-foreground font-body"><PlatformIcon platform="youtube" size="sm" /> @{profile.youtube_handle}</div>}
                 </div>
-              </div>
-              {pillars.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-3">
-                  {pillars.map(p => (
-                    <span key={p.id} className="px-2 py-0.5 rounded-lg text-[10px] font-body font-medium text-primary-foreground" style={{ backgroundColor: p.color }}>{p.name}</span>
-                  ))}
-                </div>
-              )}
-              <div className="space-y-1 mb-3">
-                {profile?.instagram_handle && <div className="flex items-center gap-2 text-xs text-muted-foreground font-body"><PlatformIcon platform="instagram" size="sm" /> @{profile.instagram_handle}</div>}
-                {profile?.tiktok_handle && <div className="flex items-center gap-2 text-xs text-muted-foreground font-body"><PlatformIcon platform="tiktok" size="sm" /> @{profile.tiktok_handle}</div>}
-                {profile?.youtube_handle && <div className="flex items-center gap-2 text-xs text-muted-foreground font-body"><PlatformIcon platform="youtube" size="sm" /> @{profile.youtube_handle}</div>}
-              </div>
-              <button onClick={() => navigate("/app/brandbook")} className="text-xs text-primary font-body font-medium hover:underline flex items-center gap-1">
-                Ver brandbook <ArrowRight className="h-3 w-3" />
-              </button>
-            </DCard>
+                <span className="text-xs text-primary font-body font-medium hover:underline flex items-center gap-1">
+                  Ver brandbook <ArrowRight className="h-3 w-3" />
+                </span>
+              </DCard>
+            </button>
 
             {/* Platform distribution */}
             {Object.keys(platformCounts).length > 0 && (
-              <DCard>
-                <p className="text-sm font-body font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-primary" /> Posts por plataforma
-                </p>
-                <div className="space-y-2">
-                  {Object.entries(platformCounts).sort((a, b) => b[1] - a[1]).map(([platform, count]) => (
-                    <div key={platform} className="flex items-center gap-2">
-                      <PlatformIcon platform={platform as any} size="sm" />
-                      <span className="text-xs font-body text-foreground flex-1 capitalize">{platform}</span>
-                      <div className="w-24 bg-muted rounded-full h-1.5">
-                        <div className="bg-primary h-1.5 rounded-full" style={{ width: `${(count / Math.max(...Object.values(platformCounts))) * 100}%` }} />
+              <button onClick={() => navigate("/app/historico")} className="w-full text-left">
+                <DCard className="hover:border-primary/30 transition-all cursor-pointer">
+                  <p className="text-sm font-body font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4 text-primary" /> Posts por plataforma
+                  </p>
+                  <div className="space-y-2">
+                    {Object.entries(platformCounts).sort((a, b) => b[1] - a[1]).map(([platform, count]) => (
+                      <div key={platform} className="flex items-center gap-2">
+                        <PlatformIcon platform={platform as any} size="sm" />
+                        <span className="text-xs font-body text-foreground flex-1 capitalize">{platform}</span>
+                        <div className="w-24 bg-muted rounded-full h-1.5">
+                          <div className="bg-primary h-1.5 rounded-full" style={{ width: `${(count / Math.max(...Object.values(platformCounts))) * 100}%` }} />
+                        </div>
+                        <span className="text-xs font-body text-muted-foreground w-6 text-right">{count}</span>
                       </div>
-                      <span className="text-xs font-body text-muted-foreground w-6 text-right">{count}</span>
-                    </div>
-                  ))}
-                </div>
-              </DCard>
+                    ))}
+                  </div>
+                </DCard>
+              </button>
             )}
 
             {/* Daily Habits Checklist */}
