@@ -97,6 +97,13 @@ interface Task {
   priority: string;
   status: string;
   due_date: string | null;
+  post_id: string | null;
+}
+
+interface PostRef {
+  id: string;
+  title: string;
+  platform: string;
 }
 
 const Dashboard = () => {
@@ -117,6 +124,7 @@ const Dashboard = () => {
   const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
   const [editingHabitName, setEditingHabitName] = useState("");
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [taskPosts, setTaskPosts] = useState<PostRef[]>([]);
 
   const weekDays = useMemo(() => getDaysOfWeek(), []);
   const today = new Date().toISOString().split("T")[0];
@@ -130,14 +138,21 @@ const Dashboard = () => {
         supabase.from("pillars").select("*").eq("user_id", user.id).order("position"),
         supabase.from("habits").select("id, name").eq("user_id", user.id).order("position"),
         supabase.from("habit_logs").select("*").eq("user_id", user.id).eq("date", today),
-        supabase.from("tasks").select("id, title, priority, status, due_date").eq("user_id", user.id),
+        supabase.from("tasks").select("id, title, priority, status, due_date, post_id").eq("user_id", user.id),
       ]);
       setIdeaCount(ideasRes.count || 0);
       setPosts(postsRes.data || []);
       setPillars(pillarsRes.data || []);
       setHabits(habitsRes.data || []);
       setHabitLogs(logsRes.data || []);
-      setTasks((tasksRes.data as any[]) || []);
+      const allTasks = (tasksRes.data as any[]) || [];
+      setTasks(allTasks);
+      // Get unique post refs for tasks with post_id
+      const postIds = [...new Set(allTasks.filter(t => t.post_id).map(t => t.post_id))];
+      if (postIds.length > 0) {
+        const { data: postRefs } = await supabase.from("posts").select("id, title, platform").in("id", postIds);
+        setTaskPosts((postRefs as any[]) || []);
+      }
     };
     fetchAll();
   }, [user]);
@@ -255,9 +270,9 @@ const Dashboard = () => {
   return (
     <div className="pb-20 md:pb-0">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* LEFT COLUMN (65%) */}
-          <div className="flex-1 lg:w-[65%] space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* LEFT COLUMN (8 cols) */}
+          <div className="lg:col-span-8 space-y-6">
             {/* Greeting */}
             <div>
               <h1 className="text-3xl font-display font-bold text-foreground mb-1">
@@ -348,48 +363,61 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Tasks for the week */}
+            {/* Mini Tasks Kanban */}
             <div className="bg-card rounded-2xl p-5 shadow-[var(--shadow-warm)] border border-border">
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-4">
                 <p className="text-sm font-body font-semibold text-foreground flex items-center gap-2">
-                  <ListChecks className="h-4 w-4" /> Para fazer esta semana
+                  <ListChecks className="h-4 w-4" /> Minhas Tarefas
                 </p>
-                <button onClick={() => navigate("/app/plano")} className="text-xs text-primary font-body font-medium hover:underline flex items-center gap-1">
-                  Ver tudo <ArrowRight className="h-3 w-3" />
+                <button onClick={() => navigate("/app/tarefas")} className="text-xs text-primary font-body font-medium hover:underline flex items-center gap-1">
+                  Ver todas <ArrowRight className="h-3 w-3" />
                 </button>
               </div>
-
-              {/* Pending habits today */}
-              {habits.filter(h => !habitLogs.find(l => l.habit_id === h.id && l.done)).map(habit => (
-                <div key={habit.id} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
-                  <Checkbox
-                    checked={false}
-                    onCheckedChange={() => toggleHabitLog(habit.id)}
-                    className="rounded"
-                  />
-                  <span className="text-sm font-body text-foreground">{habit.name}</span>
-                  <span className="text-[10px] text-muted-foreground font-body ml-auto">hábito de hoje</span>
-                </div>
-              ))}
-
-              {/* Posts in progress for this week */}
-              {posts.filter(p =>
-                ["roteiro", "gravando"].includes(p.status) &&
-                p.scheduled_date && weekDays.some(d => d.date === p.scheduled_date)
-              ).map(post => (
-                <div key={post.id} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
-                  <PlatformIcon platform={post.platform as any} size="sm" />
-                  <span className="text-sm font-body text-foreground flex-1 truncate">{post.title}</span>
-                  <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-body text-muted-foreground">
-                    {post.status}
-                  </span>
-                </div>
-              ))}
-
-              {habits.filter(h => !habitLogs.find(l => l.habit_id === h.id && l.done)).length === 0 &&
-               posts.filter(p => ["roteiro", "gravando"].includes(p.status) && p.scheduled_date && weekDays.some(d => d.date === p.scheduled_date)).length === 0 && (
-                <p className="text-sm text-muted-foreground font-body py-3 text-center">Tudo em dia! 🌿</p>
-              )}
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { key: "pendente", label: "Pendente" },
+                  { key: "em_andamento", label: "Em andamento" },
+                  { key: "concluida", label: "Concluída" },
+                ].map(col => {
+                  const colTasks = tasks.filter(t => t.status === col.key).slice(0, 3);
+                  const totalCol = tasks.filter(t => t.status === col.key).length;
+                  return (
+                    <div key={col.key}>
+                      <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-2">{col.label} ({totalCol})</p>
+                      <div className="space-y-2">
+                        {colTasks.map(t => {
+                          const isOverdue = t.due_date && t.due_date < today && t.status !== "concluida";
+                          const postRef = t.post_id ? taskPosts.find(p => p.id === t.post_id) : null;
+                          return (
+                            <div key={t.id} className="bg-background rounded-lg p-2.5 border border-border">
+                              <p className="text-xs font-body font-medium text-foreground leading-snug">{t.title}</p>
+                              <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                                <span className={`text-[10px] font-body font-semibold px-1.5 py-0.5 rounded ${
+                                  t.priority === "urgente" ? "bg-destructive/10 text-destructive" :
+                                  t.priority === "alta" ? "bg-primary/10 text-primary" :
+                                  "bg-muted text-muted-foreground"
+                                }`}>{t.priority}</span>
+                                {isOverdue && <span className="text-[10px] text-destructive font-body font-semibold">{t.due_date}</span>}
+                                {postRef && (
+                                  <span className="text-[10px] text-muted-foreground font-body flex items-center gap-0.5">
+                                    <PlatformIcon platform={postRef.platform as any} size="sm" />
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {colTasks.length === 0 && <p className="text-[10px] text-muted-foreground font-body text-center py-3">—</p>}
+                        {totalCol > 3 && (
+                          <button onClick={() => navigate("/app/tarefas")} className="text-[10px] text-primary font-body hover:underline w-full text-center">
+                            +{totalCol - 3} mais
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Quick capture */}
@@ -410,8 +438,8 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* RIGHT COLUMN (35%) */}
-          <div className="lg:w-[35%] space-y-6">
+          {/* RIGHT COLUMN (4 cols) */}
+          <div className="lg:col-span-4 space-y-6">
             {/* Brand card */}
             <div className="bg-card rounded-2xl p-5 shadow-[var(--shadow-warm)] border border-border">
               <div className="flex items-center gap-3 mb-4">
