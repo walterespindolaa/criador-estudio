@@ -127,6 +127,10 @@ export function SettingsVisual() {
       theme_mode: selectedPreset?.mode || "light",
       theme_sidebar: sidebarColor || null,
     } as any);
+    // Apply sidebar color immediately
+    if (sidebarColor) {
+      applyTheme(preset, accent);
+    }
     toast.success("Visual salvo!");
   };
 
