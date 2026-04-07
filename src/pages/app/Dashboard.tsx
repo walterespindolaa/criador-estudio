@@ -205,6 +205,7 @@ const Dashboard = () => {
     setHabits(prev => prev.map(h => h.id === habitId ? { ...h, name: editingHabitName.trim() } : h));
     setEditingHabitId(null);
     setEditingHabitName("");
+  };
 
   // Weekly stats
   const weekPublished = posts.filter(p => p.status === "publicado" && p.published_at &&
