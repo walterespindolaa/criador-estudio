@@ -115,6 +115,14 @@ const Criando = () => {
                       <motion.div key={post.id} layout draggable onDragStart={() => setDraggedPost(post.id)} onClick={() => openEdit(post)}
                         className={`bg-card rounded-xl p-4 shadow-warm border border-border cursor-grab active:cursor-grabbing hover:shadow-warm-lg transition-all ${isPublished ? "opacity-70" : ""}`}>
                         <p className="font-body font-medium text-sm text-foreground mb-2 leading-snug">{post.title}</p>
+                        {/* Content blocks progress dots */}
+                        {post.content_blocks && (
+                          <div className="flex gap-1 mb-2">
+                            {(["tema", "roteiro", "midia", "legenda"] as const).map(k => (
+                              <span key={k} className={`w-2 h-2 rounded-full ${(post.content_blocks as any)?.[k] === "feito" ? "bg-secondary" : "bg-muted-foreground/30"}`} />
+                            ))}
+                          </div>
+                        )}
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <PlatformIcon platform={post.platform as any} size="sm" />
                           <span className="text-xs bg-muted px-1.5 py-0.5 rounded font-body">{FORMAT_LABELS[post.format] || post.format}</span>

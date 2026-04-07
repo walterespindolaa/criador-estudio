@@ -13,6 +13,7 @@ import Onboarding from "./pages/Onboarding";
 import AppLayout from "./components/AppLayout";
 import Dashboard from "./pages/app/Dashboard";
 import Ideias from "./pages/app/Ideias";
+import Tarefas from "./pages/app/Tarefas";
 import Criando from "./pages/app/Criando";
 import Plano from "./pages/app/Plano";
 import Biblioteca from "./pages/app/Biblioteca";
@@ -45,6 +46,7 @@ const App = () => (
               <Route index element={<Dashboard />} />
               <Route path="ideias" element={<Ideias />} />
               <Route path="criando" element={<Criando />} />
+              <Route path="tarefas" element={<Tarefas />} />
               <Route path="plano" element={<Plano />} />
               <Route path="biblioteca" element={<Biblioteca />} />
               <Route path="arquivos" element={<Arquivos />} />
