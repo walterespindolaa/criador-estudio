@@ -19,6 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { FORMAT_LABELS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { InfoTooltip } from "@/components/shared/InfoTooltip";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, isWithinInterval, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
