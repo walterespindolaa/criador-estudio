@@ -37,7 +37,7 @@ const Configuracoes = () => {
 
   const [pillars, setPillars] = useState<Pillar[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
-  const [brandItems, setBrandItems] = useState<BrandItem[]>([]);
+  
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [niche, setNiche] = useState("");
@@ -89,25 +89,9 @@ const Configuracoes = () => {
     Promise.all([
       supabase.from("pillars").select("*").eq("user_id", user.id).order("position"),
       supabase.from("habits").select("*").eq("user_id", user.id).order("position"),
-      supabase.from("brand_items").select("*").eq("user_id", user.id).order("position"),
-      supabase.from("personas").select("*").eq("user_id", user.id).limit(1),
-    ]).then(([pillarsRes, habitsRes, brandRes, personaRes]) => {
+    ]).then(([pillarsRes, habitsRes]) => {
       setPillars(pillarsRes.data || []);
       setHabits(habitsRes.data || []);
-      setBrandItems(brandRes.data || []);
-      const p = (personaRes.data as any[])?.[0];
-      if (p) {
-        setPersonaId(p.id);
-        setPersonaName(p.name || "");
-        setPersonaAge(p.age_range || "");
-        setPersonaGender(p.gender || "");
-        setPersonaLocation(p.location || "");
-        setPersonaInterests(p.interests || []);
-        setPersonaPains(p.pain_points || []);
-        setPersonaDesires(p.desires || []);
-        setPersonaPlatforms(p.platforms || []);
-        setPersonaNotes(p.notes || "");
-      }
     });
   }, [user]);
 
@@ -153,45 +137,8 @@ const Configuracoes = () => {
 
   const deleteHabit = async (id: string) => { await supabase.from("habits").delete().eq("id", id); setHabits(prev => prev.filter(h => h.id !== id)); };
 
-  const addBrandItem = async (type: string) => {
-    if (!newItemName.trim() || !user) return;
-    await supabase.from("brand_items").insert({ user_id: user.id, type, name: newItemName.trim(), value: newItemValue || null, position: brandItems.filter(i => i.type === type).length });
-    setNewItemName(""); setNewItemValue("");
-    const { data } = await supabase.from("brand_items").select("*").eq("user_id", user.id).order("position");
-    setBrandItems(data || []);
-    toast.success("Item adicionado!");
-  };
 
-  const deleteBrandItem = async (id: string) => {
-    await supabase.from("brand_items").delete().eq("id", id);
-    setBrandItems(prev => prev.filter(i => i.id !== id));
-  };
 
-  const savePersona = async () => {
-    if (!user) return;
-    const data: any = {
-      user_id: user.id, name: personaName, age_range: personaAge || null,
-      gender: personaGender || null, location: personaLocation || null,
-      interests: personaInterests.length > 0 ? personaInterests : null,
-      pain_points: personaPains.length > 0 ? personaPains : null,
-      desires: personaDesires.length > 0 ? personaDesires : null,
-      platforms: personaPlatforms.length > 0 ? personaPlatforms : null,
-      notes: personaNotes || null,
-    };
-    if (personaId) {
-      await supabase.from("personas").update(data).eq("id", personaId);
-    } else {
-      const { data: newP } = await supabase.from("personas").insert(data).select().single();
-      if (newP) setPersonaId((newP as any).id);
-    }
-    toast.success("Persona salva!");
-  };
-
-  const addTagTo = (arr: string[], setArr: (v: string[]) => void) => {
-    if (!newTag.trim() || arr.includes(newTag.trim())) return;
-    setArr([...arr, newTag.trim()]);
-    setNewTag("");
-  };
 
   const handleChangePassword = async () => {
     if (newPassword.length < 8) { toast.error("Mínimo 8 caracteres."); return; }
