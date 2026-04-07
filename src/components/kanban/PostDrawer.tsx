@@ -366,13 +366,49 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
 
 
               <div className="space-y-2">
-                <Label className="font-body text-sm">Data agendada</Label>
-                <Input
-                  type="date"
-                  value={scheduledDate}
-                  onChange={(e) => setScheduledDate(e.target.value)}
-                  className="rounded-xl"
-                />
+                <Label className="font-body text-sm">Data e horário agendados</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    type="date"
+                    value={scheduledDate}
+                    onChange={(e) => setScheduledDate(e.target.value)}
+                    className="rounded-xl"
+                  />
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                    <Input
+                      type="time"
+                      value={scheduledTime}
+                      onChange={(e) => setScheduledTime(e.target.value)}
+                      className="rounded-xl pl-9"
+                      placeholder="HH:MM"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Google Drive media */}
+              <div className="space-y-2">
+                <Label className="font-body text-sm">Mídia do Google Drive</Label>
+                <div className="flex flex-wrap gap-3 items-start">
+                  {driveMedia.map(m => (
+                    <DriveMediaPreview
+                      key={m.id}
+                      fileName={m.file_name}
+                      fileType={m.file_type}
+                      thumbnailUrl={m.thumbnail_url}
+                      viewUrl={m.view_url}
+                      size="sm"
+                      onRemove={() => removeDriveRef(m.id)}
+                    />
+                  ))}
+                  <DrivePickerButton
+                    postId={post?.id}
+                    onPicked={() => { if (post) fetchDriveMedia(post.id); }}
+                    variant="outline"
+                    size="sm"
+                  />
+                </div>
               </div>
 
               {/* Hook */}
