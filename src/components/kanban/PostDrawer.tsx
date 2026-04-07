@@ -50,6 +50,7 @@ interface Post {
   caption: string | null;
   cta: string | null;
   scheduled_date: string | null;
+  scheduled_time: string | null;
   published_at: string | null;
   notes: string | null;
   result_views: number | null;
@@ -106,6 +107,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   const [caption, setCaption] = useState("");
   const [cta, setCta] = useState("");
   const [scheduledDate, setScheduledDate] = useState("");
+  const [scheduledTime, setScheduledTime] = useState("");
   const [notes, setNotes] = useState("");
   const [views, setViews] = useState("");
   const [saves, setSaves] = useState("");
@@ -116,6 +118,20 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   const [contentBlocks, setContentBlocks] = useState<ContentBlocks>({ tema: "pendente", roteiro: "pendente", midia: "pendente", legenda: "pendente" });
   const [previewOpen, setPreviewOpen] = useState(false);
   const { profile } = useProfile();
+
+  // Drive media refs
+  interface DriveRef { id: string; file_name: string; file_type: string | null; thumbnail_url: string | null; view_url: string | null; }
+  const [driveMedia, setDriveMedia] = useState<DriveRef[]>([]);
+
+  const fetchDriveMedia = useCallback(async (postId: string) => {
+    const { data } = await supabase.from("external_media_refs").select("id, file_name, file_type, thumbnail_url, view_url").eq("post_id", postId);
+    setDriveMedia((data as DriveRef[]) || []);
+  }, []);
+
+  const removeDriveRef = async (refId: string) => {
+    await supabase.from("external_media_refs").delete().eq("id", refId);
+    setDriveMedia(prev => prev.filter(m => m.id !== refId));
+  };
 
   useEffect(() => {
     if (post) {
