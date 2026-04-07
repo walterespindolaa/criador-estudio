@@ -15,6 +15,7 @@ interface Post {
   cta: string | null; scheduled_date: string | null; published_at: string | null;
   notes: string | null; result_views: number | null; result_saves: number | null;
   result_comments: number | null; archive_summary: string | null; user_id: string;
+  content_blocks: { tema: string; roteiro: string; midia: string; legenda: string } | null;
 }
 
 interface Pillar { id: string; name: string; color: string; }

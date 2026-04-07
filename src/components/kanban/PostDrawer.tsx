@@ -308,7 +308,31 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                 </Select>
               </div>
 
-              {/* Scheduled date */}
+              {/* Content blocks - production checklist */}
+              <div className="space-y-2">
+                <Label className="font-body text-sm flex items-center gap-2">
+                  <ClipboardList className="h-4 w-4" /> Etapas de produção
+                </Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { key: "tema" as const, label: "📋 Tema definido" },
+                    { key: "roteiro" as const, label: "✍️ Roteiro escrito" },
+                    { key: "midia" as const, label: "🎬 Mídia gravada" },
+                    { key: "legenda" as const, label: "💬 Legenda pronta" },
+                  ]).map(block => {
+                    const done = contentBlocks[block.key] === "feito";
+                    return (
+                      <button key={block.key}
+                        onClick={() => setContentBlocks(prev => ({ ...prev, [block.key]: done ? "pendente" : "feito" }))}
+                        className={`px-3 py-2 rounded-xl text-xs font-body border transition-all text-left ${done ? "bg-secondary/20 border-secondary text-secondary-foreground" : "bg-card border-border text-muted-foreground"}`}>
+                        {block.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+
               <div className="space-y-2">
                 <Label className="font-body text-sm">Data agendada</Label>
                 <Input
