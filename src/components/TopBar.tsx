@@ -8,6 +8,7 @@ const navItems = [
   { title: "Criando", url: "/app/criando" },
   { title: "Plano", url: "/app/plano" },
   { title: "Biblioteca", url: "/app/biblioteca" },
+  { title: "Arquivos", url: "/app/arquivos" },
   { title: "Histórico", url: "/app/historico" },
   { title: "Aprender", url: "/app/aprender" },
 ];
