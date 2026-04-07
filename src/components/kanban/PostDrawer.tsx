@@ -234,7 +234,8 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
         </DialogHeader>
 
         <div className="flex flex-1 overflow-hidden flex-col lg:flex-row">
-
+          {/* Left side — Post editor (60%) */}
+          <div className="flex-[3] overflow-y-auto px-6 py-4 border-r border-border">
             <div className="space-y-5">
               <div className="space-y-2">
                 <Label className="font-body text-sm">Título</Label>
