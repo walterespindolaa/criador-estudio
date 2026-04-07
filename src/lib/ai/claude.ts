@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type AIOperation = 'tag-suggestion' | 'reference-filter' | 'archive-summary';
+export type AIOperation = 'tag-suggestion' | 'reference-filter' | 'archive-summary' | 'daily-insight';
 
 interface AIRequest {
   operation: AIOperation;
@@ -39,6 +39,13 @@ export const filterReferences = async (params: { platform: string; format: strin
 export const generateArchiveSummary = async (params: { title: string; platform: string; format: string; pillar: string }) => {
   return callAIOperations({
     operation: 'archive-summary',
+    data: params
+  });
+};
+
+export const getDailyInsight = async (params: { postsThisWeek: number; weeklyGoal: number; topPillar: string; lastPublished: string }) => {
+  return callAIOperations({
+    operation: 'daily-insight',
     data: params
   });
 };

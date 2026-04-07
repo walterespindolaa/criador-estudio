@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 
 const navItems = [
   { title: "Ideias", url: "/app/ideias" },
@@ -13,7 +14,7 @@ const navItems = [
 
 export function TopBar() {
   return (
-    <header className="fixed top-0 left-0 right-0 h-14 z-50 bg-[#FAF8F4] border-b border-[rgba(28,28,26,0.08)] hidden md:block">
+    <header className="fixed top-0 left-0 right-0 h-14 z-50 bg-[hsl(var(--background))] border-b border-border hidden md:block">
       <div className="max-w-[1200px] mx-auto h-full px-6 flex items-center justify-between">
         <NavLink to="/app" className="flex items-center">
           <h1 
@@ -33,7 +34,7 @@ export function TopBar() {
                 cn(
                   "text-sm font-body font-medium transition-all relative py-1",
                   isActive 
-                    ? "text-[#C4622D] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#C4622D]" 
+                    ? "text-primary after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-primary" 
                     : "text-muted-foreground hover:text-foreground"
                 )
               }
@@ -43,9 +44,12 @@ export function TopBar() {
           ))}
         </nav>
 
-        <NavLink to="/app/configuracoes" className="p-2 hover:bg-accent/60 rounded-xl transition-colors">
-          <Settings className="h-5 w-5 text-muted-foreground hover:text-foreground" />
-        </NavLink>
+        <div className="flex items-center gap-1">
+          <NotificationsBell />
+          <NavLink to="/app/configuracoes" className="p-2 hover:bg-accent/60 rounded-xl transition-colors">
+            <Settings className="h-5 w-5 text-muted-foreground hover:text-foreground" />
+          </NavLink>
+        </div>
       </div>
     </header>
   );

@@ -1,0 +1,14 @@
+{
+  "name": "Criadores",
+  "short_name": "Criadores",
+  "description": "Seu segundo cérebro criativo",
+  "start_url": "/app",
+  "display": "standalone",
+  "background_color": "#FAF8F4",
+  "theme_color": "#C4622D",
+  "orientation": "any",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

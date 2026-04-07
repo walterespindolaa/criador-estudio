@@ -40,6 +40,12 @@ serve(async (req) => {
         maxTokens = 30
         temperature = 0.3
         break
+      case 'daily-insight':
+        systemPrompt = "Você é assistente de um creator brasileiro. Gere UMA frase de insight personalizado (máximo 25 palavras) sobre a consistência ou padrão de publicação desta pessoa. Tom encorajador e direto."
+        userPrompt = `Posts esta semana: ${data.postsThisWeek}, Meta semanal: ${data.weeklyGoal}, Pilar mais postado: ${data.topPillar}, Último post publicado: ${data.lastPublished}`
+        maxTokens = 60
+        temperature = 0.7
+        break
       default:
         throw new Error('Invalid operation')
     }
@@ -65,7 +71,6 @@ serve(async (req) => {
 
     if (operation === 'reference-filter') {
       try {
-        // Find JSON in the response if any extra text exists
         const jsonMatch = content.match(/\{.*\}/s)
         const jsonStr = jsonMatch ? jsonMatch[0] : content
         return new Response(jsonStr, {
