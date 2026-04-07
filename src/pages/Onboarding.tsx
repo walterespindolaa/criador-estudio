@@ -7,7 +7,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Instagram, Youtube, X, Plus } from "lucide-react";
+import { ArrowRight, Instagram, Youtube, X, Plus, Sparkles } from "lucide-react";
+import { PlatformIcon } from "@/components/shared/PlatformIcon";
 
 const NICHE_SUGGESTIONS = [
   "Lifestyle", "Moda", "Beleza", "Fitness", "Culinária",

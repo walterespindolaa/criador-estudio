@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Settings, Plus, Trash2, GripVertical } from "lucide-react";
+import { Settings, Plus, Trash2, GripVertical, LogOut, Sparkles } from "lucide-react";
+import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

@@ -79,9 +79,9 @@ const Historico = () => {
                 </div>
                 {(post.result_views || post.result_saves || post.result_comments) && (
                   <div className="flex gap-4 mt-3 text-sm text-muted-foreground font-body">
-                    {post.result_views && <span>👁 {post.result_views}</span>}
-                    {post.result_saves && <span>🔖 {post.result_saves}</span>}
-                    {post.result_comments && <span>💬 {post.result_comments}</span>}
+                    {post.result_views && <span className="flex items-center gap-1"><Eye className="h-3.5 w-3.5" /> {post.result_views}</span>}
+                    {post.result_saves && <span className="flex items-center gap-1"><Bookmark className="h-3.5 w-3.5" /> {post.result_saves}</span>}
+                    {post.result_comments && <span className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" /> {post.result_comments}</span>}
                   </div>
                 )}
               </motion.div>

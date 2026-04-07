@@ -244,7 +244,10 @@ const Biblioteca = () => {
                 const items = brandItems.filter(i => i.type === section.type);
                 return (
                   <div key={section.type} className="bg-card rounded-2xl p-5 shadow-warm border border-border">
-                    <h3 className="font-body font-semibold text-foreground mb-3">{section.label}</h3>
+                    <h3 className="font-body font-semibold text-foreground mb-3 flex items-center gap-2">
+                      <section.icon className="h-4 w-4 text-primary/70" />
+                      {section.label}
+                    </h3>
                     {items.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-3">
                         {items.map(item => (
