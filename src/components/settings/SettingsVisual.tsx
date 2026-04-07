@@ -5,11 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { useProfile } from "@/hooks/useProfile";
 import { THEME_PRESETS, ACCENT_COLORS, type ThemePreset } from "@/lib/themes";
 import { applyTheme, applyAccent } from "@/lib/applyTheme";
+import { applySidebarColor } from "@/lib/sidebarTheme";
+import { toast } from "sonner";
 
 const FONT_OPTIONS = [
-  { key: "fraunces", display: "Fraunces + DM Sans", label: "Orgânico", families: "'Fraunces', serif|'DM Sans', sans-serif" },
-  { key: "cormorant", display: "Cormorant Garamond + Plus Jakarta Sans", label: "Elegante", families: "'Cormorant Garamond', serif|'Plus Jakarta Sans', sans-serif" },
-  { key: "youngserif", display: "Young Serif + Outfit", label: "Moderno", families: "'Young Serif', serif|'Outfit', sans-serif" },
+  { key: "fraunces", label: "Orgânico", desc: "Fraunces + DM Sans", preview: "Elegância natural" },
+  { key: "cormorant", label: "Elegante", desc: "Cormorant + Jakarta Sans", preview: "Sofisticação clássica" },
+  { key: "youngserif", label: "Moderno", desc: "Young Serif + Outfit", preview: "Estilo contemporâneo" },
 ];
 
 export function applyThemeFont(fontKey: string) {
@@ -46,7 +48,6 @@ export function applyThemeFont(fontKey: string) {
   document.documentElement.style.setProperty("--active-font-display", opt.display);
   document.documentElement.style.setProperty("--active-font-body", opt.body);
 }
-import { toast } from "sonner";
 
 function ThemeCard({ preset, selected, onClick }: { preset: ThemePreset; selected: boolean; onClick: () => void }) {
   return (
@@ -61,7 +62,6 @@ function ThemeCard({ preset, selected, onClick }: { preset: ThemePreset; selecte
           <Check className="h-3 w-3 text-primary-foreground" />
         </div>
       )}
-      {/* Mini preview */}
       <div className="rounded-xl overflow-hidden h-20 flex" style={{ backgroundColor: preset.vars.background }}>
         <div className="w-1/4 h-full" style={{ backgroundColor: preset.vars.sidebar }} />
         <div className="flex-1 p-2 flex flex-col gap-1.5">
@@ -100,23 +100,38 @@ export function SettingsVisual() {
   const [preset, setPreset] = useState(profile?.theme_preset || "clean-warm");
   const [accent, setAccent] = useState(profile?.theme_accent || "#C4622D");
   const [sidebarColor, setSidebarColor] = useState(profile?.theme_sidebar || "");
+  const [font, setFont] = useState(profile?.theme_font || "fraunces");
 
   useEffect(() => {
     if (profile) {
       setPreset(profile.theme_preset || "clean-warm");
       setAccent(profile.theme_accent || "#C4622D");
       setSidebarColor(profile.theme_sidebar || "");
+      setFont(profile.theme_font || "fraunces");
     }
   }, [profile]);
 
   const handlePresetSelect = (id: string) => {
     setPreset(id);
     applyTheme(id, accent);
+    // Re-apply sidebar color override after theme change
+    if (sidebarColor) applySidebarColor(sidebarColor);
   };
 
   const handleAccentSelect = (hex: string) => {
     setAccent(hex);
     applyAccent(hex);
+  };
+
+  const handleSidebarSelect = (hex: string) => {
+    setSidebarColor(hex);
+    // Instant application!
+    applySidebarColor(hex || null);
+  };
+
+  const handleFontSelect = (key: string) => {
+    setFont(key);
+    applyThemeFont(key);
   };
 
   const handleSave = async () => {
@@ -126,11 +141,8 @@ export function SettingsVisual() {
       theme_accent: accent,
       theme_mode: selectedPreset?.mode || "light",
       theme_sidebar: sidebarColor || null,
+      theme_font: font,
     } as any);
-    // Apply sidebar color immediately
-    if (sidebarColor) {
-      applyTheme(preset, accent);
-    }
     toast.success("Visual salvo!");
   };
 
@@ -199,7 +211,7 @@ export function SettingsVisual() {
           {SIDEBAR_COLORS.map(c => (
             <button
               key={c.value}
-              onClick={() => setSidebarColor(c.value)}
+              onClick={() => handleSidebarSelect(c.value)}
               className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${
                 sidebarColor === c.value ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
               }`}
@@ -211,6 +223,34 @@ export function SettingsVisual() {
                 {sidebarColor === c.value && <Check className="h-3 w-3" style={{ color: c.value && parseInt(c.value.slice(1), 16) < 0x808080 ? '#fff' : '#1C1C1A' }} />}
               </span>
               <span className="text-xs font-body font-medium text-foreground">{c.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Typography */}
+      <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
+        <div>
+          <h3 className="font-display font-semibold text-foreground">Tipografia</h3>
+          <p className="text-xs text-muted-foreground font-body mt-0.5">Escolha o estilo tipográfico de todo o sistema</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {FONT_OPTIONS.map(f => (
+            <button
+              key={f.key}
+              onClick={() => handleFontSelect(f.key)}
+              className={`relative text-left rounded-2xl border-2 p-4 transition-all ${
+                font === f.key ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-primary/30"
+              }`}
+            >
+              {font === f.key && (
+                <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                  <Check className="h-3 w-3 text-primary-foreground" />
+                </div>
+              )}
+              <p className="text-sm font-semibold text-foreground">{f.label}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">{f.desc}</p>
+              <p className="text-xs text-muted-foreground/70 mt-2 italic">{f.preview}</p>
             </button>
           ))}
         </div>
