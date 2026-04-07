@@ -305,12 +305,12 @@ const Dashboard = () => {
 
   // Stats cards
   const stats = [
-    { label: "Ideias", value: ideaCount, icon: Lightbulb, color: "text-primary" },
-    { label: "Em criação", value: inCreationFiltered.length, icon: FileText, color: "text-muted-foreground" },
-    { label: "Publicados", value: publishedFiltered.length, icon: CheckCircle2, color: "text-primary" },
-    { label: "Agendados", value: scheduledFiltered.length, icon: Clock, color: "text-muted-foreground" },
-    { label: "Tarefas abertas", value: pendingTasks.length + inProgressTasks.length, icon: ListChecks, color: "text-primary" },
-    { label: "Hábitos hoje", value: `${habitsToday}/${habits.length}`, icon: Flame, color: "text-primary" },
+    { label: "Ideias", value: ideaCount, icon: Lightbulb, color: "text-primary", link: "/app/ideias" },
+    { label: "Em criação", value: inCreationFiltered.length, icon: FileText, color: "text-muted-foreground", link: "/app/criando" },
+    { label: "Publicados", value: publishedFiltered.length, icon: CheckCircle2, color: "text-primary", link: "/app/historico" },
+    { label: "Agendados", value: scheduledFiltered.length, icon: Clock, color: "text-muted-foreground", link: "/app/plano" },
+    { label: "Tarefas abertas", value: pendingTasks.length + inProgressTasks.length, icon: ListChecks, color: "text-primary", link: "/app/tarefas" },
+    { label: "Hábitos hoje", value: `${habitsToday}/${habits.length}`, icon: Flame, color: "text-primary", link: "/app/plano" },
   ];
 
   return (
@@ -395,13 +395,15 @@ const Dashboard = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.04 }}
             >
-              <DCard className="p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <stat.icon className={cn("h-4 w-4", stat.color)} />
-                  <p className="text-[10px] text-muted-foreground font-body uppercase tracking-wider">{stat.label}</p>
-                </div>
-                <p className="text-2xl font-display font-bold text-foreground">{stat.value}</p>
-              </DCard>
+              <button onClick={() => navigate(stat.link)} className="w-full text-left">
+                <DCard className="p-4 hover:border-primary/30 hover:shadow-md transition-all cursor-pointer group">
+                  <div className="flex items-center gap-2 mb-1">
+                    <stat.icon className={cn("h-4 w-4", stat.color, "group-hover:text-primary transition-colors")} />
+                    <p className="text-[10px] text-muted-foreground font-body uppercase tracking-wider">{stat.label}</p>
+                  </div>
+                  <p className="text-2xl font-display font-bold text-foreground">{stat.value}</p>
+                </DCard>
+              </button>
             </motion.div>
           ))}
         </div>
@@ -411,18 +413,29 @@ const Dashboard = () => {
           {/* LEFT COLUMN (8 cols) */}
           <div className="lg:col-span-8 space-y-5">
 
-            {/* Weekly progress */}
+            {/* Quick capture — HIGH PRIORITY */}
             <DCard>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-body font-semibold text-foreground">
-                  {goalMet ? "Meta batida! 🎉" : "Progresso semanal"}
-                </p>
-                <span className="text-xs text-muted-foreground font-body">{weekPublished.length}/{weekGoal} — {Math.round(weekProgress)}%</span>
-              </div>
-              <div className="w-full bg-muted rounded-full h-2.5">
-                <div className={cn("h-2.5 rounded-full transition-all duration-500", goalMet ? "bg-secondary" : "bg-primary")} style={{ width: `${weekProgress}%` }} />
+              <p className="text-sm font-body font-medium text-foreground mb-3">💡 Captura rápida de ideia</p>
+              <div className="flex gap-2">
+                <Input placeholder="Capturar ideia rápida..." value={quickIdea} onChange={(e) => setQuickIdea(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleQuickCapture()} className="rounded-xl" />
+                <Button variant="default" onClick={handleQuickCapture} disabled={!quickIdea.trim()}><Plus className="h-4 w-4" /></Button>
               </div>
             </DCard>
+
+            {/* Weekly progress */}
+            <button onClick={() => navigate("/app/plano")} className="w-full text-left">
+              <DCard className="hover:border-primary/30 transition-all cursor-pointer">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-body font-semibold text-foreground">
+                    {goalMet ? "Meta batida! 🎉" : "Progresso semanal"}
+                  </p>
+                  <span className="text-xs text-muted-foreground font-body">{weekPublished.length}/{weekGoal} — {Math.round(weekProgress)}%</span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2.5">
+                  <div className={cn("h-2.5 rounded-full transition-all duration-500", goalMet ? "bg-secondary" : "bg-primary")} style={{ width: `${weekProgress}%` }} />
+                </div>
+              </DCard>
+            </button>
 
             {/* Alerts row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -446,57 +459,61 @@ const Dashboard = () => {
 
               {/* Today's tasks */}
               {todayTasks.length > 0 && (
-                <DCard>
-                  <p className="text-sm font-body font-semibold text-foreground flex items-center gap-2 mb-2">
-                    <ListChecks className="h-4 w-4 text-primary" /> Para hoje ({todayTasks.length})
-                  </p>
-                  {todayTasks.slice(0, 4).map(t => (
-                    <div key={t.id} className="flex items-center gap-2 py-1.5 border-b border-border last:border-0">
-                      <span className="text-sm font-body text-foreground truncate flex-1">{t.title}</span>
-                      <span className={cn("text-[10px] font-body font-semibold px-1.5 py-0.5 rounded",
-                        t.priority === "urgente" ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"
-                      )}>{t.priority}</span>
-                    </div>
-                  ))}
-                </DCard>
+                <button onClick={() => navigate("/app/tarefas")} className="w-full text-left">
+                  <DCard className="hover:border-primary/30 transition-all cursor-pointer">
+                    <p className="text-sm font-body font-semibold text-foreground flex items-center gap-2 mb-2">
+                      <ListChecks className="h-4 w-4 text-primary" /> Para hoje ({todayTasks.length})
+                    </p>
+                    {todayTasks.slice(0, 4).map(t => (
+                      <div key={t.id} className="flex items-center gap-2 py-1.5 border-b border-border last:border-0">
+                        <span className="text-sm font-body text-foreground truncate flex-1">{t.title}</span>
+                        <span className={cn("text-[10px] font-body font-semibold px-1.5 py-0.5 rounded",
+                          t.priority === "urgente" ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"
+                        )}>{t.priority}</span>
+                      </div>
+                    ))}
+                  </DCard>
+                </button>
               )}
             </div>
 
             {/* Pipeline de status */}
-            <DCard>
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-body font-semibold text-foreground flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-primary" /> Pipeline de conteúdo
-                </p>
-                <span className="text-[10px] text-muted-foreground font-body">{filteredPosts.length} posts no período</span>
-              </div>
-              <div className="flex gap-1 h-8 rounded-xl overflow-hidden bg-muted">
-                {statusPipeline.filter(s => s.count > 0).map(s => (
-                  <div
-                    key={s.key}
-                    className={cn(
-                      "h-full flex items-center justify-center text-[10px] font-body font-semibold transition-all",
-                      s.key === "publicado" ? "bg-secondary text-secondary-foreground" : "bg-primary/20 text-primary"
-                    )}
-                    style={{ width: `${Math.max(12, (s.count / Math.max(filteredPosts.length, 1)) * 100)}%` }}
-                    title={`${s.label}: ${s.count}`}
-                  >
-                    {s.count > 0 && <span>{s.count}</span>}
-                  </div>
-                ))}
-                {filteredPosts.length === 0 && (
-                  <div className="w-full flex items-center justify-center text-[10px] text-muted-foreground font-body">Sem posts no período</div>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {statusPipeline.filter(s => s.count > 0).map(s => (
-                  <span key={s.key} className="text-[10px] text-muted-foreground font-body flex items-center gap-1">
-                    <span className={cn("w-2 h-2 rounded-full", s.key === "publicado" ? "bg-secondary" : "bg-primary/40")} />
-                    {s.label} ({s.count})
-                  </span>
-                ))}
-              </div>
-            </DCard>
+            <button onClick={() => navigate("/app/criando")} className="w-full text-left">
+              <DCard className="hover:border-primary/30 transition-all cursor-pointer">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-body font-semibold text-foreground flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4 text-primary" /> Pipeline de conteúdo
+                  </p>
+                  <span className="text-[10px] text-muted-foreground font-body">{filteredPosts.length} posts no período</span>
+                </div>
+                <div className="flex gap-1 h-8 rounded-xl overflow-hidden bg-muted">
+                  {statusPipeline.filter(s => s.count > 0).map(s => (
+                    <div
+                      key={s.key}
+                      className={cn(
+                        "h-full flex items-center justify-center text-[10px] font-body font-semibold transition-all",
+                        s.key === "publicado" ? "bg-secondary text-secondary-foreground" : "bg-primary/20 text-primary"
+                      )}
+                      style={{ width: `${Math.max(12, (s.count / Math.max(filteredPosts.length, 1)) * 100)}%` }}
+                      title={`${s.label}: ${s.count}`}
+                    >
+                      {s.count > 0 && <span>{s.count}</span>}
+                    </div>
+                  ))}
+                  {filteredPosts.length === 0 && (
+                    <div className="w-full flex items-center justify-center text-[10px] text-muted-foreground font-body">Sem posts no período</div>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {statusPipeline.filter(s => s.count > 0).map(s => (
+                    <span key={s.key} className="text-[10px] text-muted-foreground font-body flex items-center gap-1">
+                      <span className={cn("w-2 h-2 rounded-full", s.key === "publicado" ? "bg-secondary" : "bg-primary/40")} />
+                      {s.label} ({s.count})
+                    </span>
+                  ))}
+                </div>
+              </DCard>
+            </button>
 
             {/* Mini week calendar */}
             <DCard>
@@ -506,14 +523,14 @@ const Dashboard = () => {
                   Ver plano <ArrowRight className="h-3 w-3" />
                 </button>
               </div>
-              <div className="grid grid-cols-7 gap-2">
+              <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
                 {weekDays.map(day => {
                   const dayP = posts.filter(p => p.scheduled_date === day.date);
                   return (
                     <button
                       key={day.date}
                       onClick={() => { setSelectedDay(day.date); setDayDrawerOpen(true); }}
-                      className={cn("flex flex-col items-center p-2 rounded-xl transition-colors",
+                      className={cn("flex flex-col items-center p-1.5 sm:p-2 rounded-xl transition-colors min-w-0",
                         day.isToday ? "border-2 border-primary bg-primary/5" : "border border-border hover:bg-accent"
                       )}
                     >
@@ -538,7 +555,7 @@ const Dashboard = () => {
                   Ver todas <ArrowRight className="h-3 w-3" />
                 </button>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
                   { key: "pendente", label: "Pendente", items: pendingTasks },
                   { key: "em_andamento", label: "Em andamento", items: inProgressTasks },
@@ -551,7 +568,7 @@ const Dashboard = () => {
                         const isOverdue = t.due_date && t.due_date < today && t.status !== "concluida";
                         const postRef = t.post_id ? taskPosts.find(p => p.id === t.post_id) : null;
                         return (
-                          <div key={t.id} className="bg-background rounded-lg p-2.5 border border-border">
+                          <button key={t.id} onClick={() => navigate("/app/tarefas")} className="w-full text-left bg-background rounded-lg p-2.5 border border-border hover:border-primary/30 transition-all cursor-pointer">
                             <p className="text-xs font-body font-medium text-foreground leading-snug">{t.title}</p>
                             <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                               <span className={cn("text-[10px] font-body font-semibold px-1.5 py-0.5 rounded",
@@ -562,7 +579,7 @@ const Dashboard = () => {
                               {isOverdue && <span className="text-[10px] text-destructive font-body font-semibold">{t.due_date}</span>}
                               {postRef && <PlatformIcon platform={postRef.platform as any} size="sm" />}
                             </div>
-                          </div>
+                          </button>
                         );
                       })}
                       {col.items.length === 0 && <p className="text-[10px] text-muted-foreground font-body text-center py-3">—</p>}
@@ -574,15 +591,6 @@ const Dashboard = () => {
                     </div>
                   </div>
                 ))}
-              </div>
-            </DCard>
-
-            {/* Quick capture */}
-            <DCard>
-              <p className="text-sm font-body font-medium text-foreground mb-3">💡 Captura rápida de ideia</p>
-              <div className="flex gap-2">
-                <Input placeholder="Capturar ideia rápida..." value={quickIdea} onChange={(e) => setQuickIdea(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleQuickCapture()} className="rounded-xl" />
-                <Button variant="default" onClick={handleQuickCapture} disabled={!quickIdea.trim()}><Plus className="h-4 w-4" /></Button>
               </div>
             </DCard>
           </div>
@@ -612,56 +620,60 @@ const Dashboard = () => {
             </DCard>
 
             {/* Brand card */}
-            <DCard>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-11 h-11 rounded-full bg-muted flex items-center justify-center overflow-hidden border-2 border-border">
-                  {profile?.avatar_url ? (
-                    <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="font-display font-bold text-lg text-primary">{(profile?.name || "C")[0].toUpperCase()}</span>
-                  )}
+            <button onClick={() => navigate("/app/brandbook")} className="w-full text-left">
+              <DCard className="hover:border-primary/30 transition-all cursor-pointer">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-11 h-11 rounded-full bg-muted flex items-center justify-center overflow-hidden border-2 border-border">
+                    {profile?.avatar_url ? (
+                      <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="font-display font-bold text-lg text-primary">{(profile?.name || "C")[0].toUpperCase()}</span>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-body font-semibold text-foreground text-sm truncate">{profile?.name || "Criador"}</p>
+                    {profile?.niche && <p className="text-xs text-muted-foreground font-body truncate">{profile.niche}</p>}
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="font-body font-semibold text-foreground text-sm truncate">{profile?.name || "Criador"}</p>
-                  {profile?.niche && <p className="text-xs text-muted-foreground font-body truncate">{profile.niche}</p>}
+                {pillars.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    {pillars.map(p => (
+                      <span key={p.id} className="px-2 py-0.5 rounded-lg text-[10px] font-body font-medium text-primary-foreground" style={{ backgroundColor: p.color }}>{p.name}</span>
+                    ))}
+                  </div>
+                )}
+                <div className="space-y-1 mb-3">
+                  {profile?.instagram_handle && <div className="flex items-center gap-2 text-xs text-muted-foreground font-body"><PlatformIcon platform="instagram" size="sm" /> @{profile.instagram_handle}</div>}
+                  {profile?.tiktok_handle && <div className="flex items-center gap-2 text-xs text-muted-foreground font-body"><PlatformIcon platform="tiktok" size="sm" /> @{profile.tiktok_handle}</div>}
+                  {profile?.youtube_handle && <div className="flex items-center gap-2 text-xs text-muted-foreground font-body"><PlatformIcon platform="youtube" size="sm" /> @{profile.youtube_handle}</div>}
                 </div>
-              </div>
-              {pillars.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-3">
-                  {pillars.map(p => (
-                    <span key={p.id} className="px-2 py-0.5 rounded-lg text-[10px] font-body font-medium text-primary-foreground" style={{ backgroundColor: p.color }}>{p.name}</span>
-                  ))}
-                </div>
-              )}
-              <div className="space-y-1 mb-3">
-                {profile?.instagram_handle && <div className="flex items-center gap-2 text-xs text-muted-foreground font-body"><PlatformIcon platform="instagram" size="sm" /> @{profile.instagram_handle}</div>}
-                {profile?.tiktok_handle && <div className="flex items-center gap-2 text-xs text-muted-foreground font-body"><PlatformIcon platform="tiktok" size="sm" /> @{profile.tiktok_handle}</div>}
-                {profile?.youtube_handle && <div className="flex items-center gap-2 text-xs text-muted-foreground font-body"><PlatformIcon platform="youtube" size="sm" /> @{profile.youtube_handle}</div>}
-              </div>
-              <button onClick={() => navigate("/app/brandbook")} className="text-xs text-primary font-body font-medium hover:underline flex items-center gap-1">
-                Ver brandbook <ArrowRight className="h-3 w-3" />
-              </button>
-            </DCard>
+                <span className="text-xs text-primary font-body font-medium hover:underline flex items-center gap-1">
+                  Ver brandbook <ArrowRight className="h-3 w-3" />
+                </span>
+              </DCard>
+            </button>
 
             {/* Platform distribution */}
             {Object.keys(platformCounts).length > 0 && (
-              <DCard>
-                <p className="text-sm font-body font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-primary" /> Posts por plataforma
-                </p>
-                <div className="space-y-2">
-                  {Object.entries(platformCounts).sort((a, b) => b[1] - a[1]).map(([platform, count]) => (
-                    <div key={platform} className="flex items-center gap-2">
-                      <PlatformIcon platform={platform as any} size="sm" />
-                      <span className="text-xs font-body text-foreground flex-1 capitalize">{platform}</span>
-                      <div className="w-24 bg-muted rounded-full h-1.5">
-                        <div className="bg-primary h-1.5 rounded-full" style={{ width: `${(count / Math.max(...Object.values(platformCounts))) * 100}%` }} />
+              <button onClick={() => navigate("/app/historico")} className="w-full text-left">
+                <DCard className="hover:border-primary/30 transition-all cursor-pointer">
+                  <p className="text-sm font-body font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4 text-primary" /> Posts por plataforma
+                  </p>
+                  <div className="space-y-2">
+                    {Object.entries(platformCounts).sort((a, b) => b[1] - a[1]).map(([platform, count]) => (
+                      <div key={platform} className="flex items-center gap-2">
+                        <PlatformIcon platform={platform as any} size="sm" />
+                        <span className="text-xs font-body text-foreground flex-1 capitalize">{platform}</span>
+                        <div className="w-24 bg-muted rounded-full h-1.5">
+                          <div className="bg-primary h-1.5 rounded-full" style={{ width: `${(count / Math.max(...Object.values(platformCounts))) * 100}%` }} />
+                        </div>
+                        <span className="text-xs font-body text-muted-foreground w-6 text-right">{count}</span>
                       </div>
-                      <span className="text-xs font-body text-muted-foreground w-6 text-right">{count}</span>
-                    </div>
-                  ))}
-                </div>
-              </DCard>
+                    ))}
+                  </div>
+                </DCard>
+              </button>
             )}
 
             {/* Daily Habits Checklist */}
