@@ -641,6 +641,44 @@ export type Database = {
           },
         ]
       }
+      moodboard_entries: {
+        Row: {
+          answer: string | null
+          created_at: string | null
+          id: string
+          question_key: string
+          section: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          answer?: string | null
+          created_at?: string | null
+          id?: string
+          question_key: string
+          section: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          answer?: string | null
+          created_at?: string | null
+          id?: string
+          question_key?: string
+          section?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moodboard_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string | null
