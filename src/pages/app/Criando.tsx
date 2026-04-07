@@ -18,6 +18,8 @@ interface Post {
   content_blocks: { tema: string; roteiro: string; midia: string; legenda: string } | null;
 }
 
+interface TaskCount { post_id: string; count: number; done: number; }
+
 interface Pillar { id: string; name: string; color: string; }
 
 const COLUMNS = [
@@ -33,6 +35,7 @@ const Criando = () => {
   const { user } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [pillars, setPillars] = useState<Pillar[]>([]);
+  const [taskCounts, setTaskCounts] = useState<TaskCount[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [draggedPost, setDraggedPost] = useState<string | null>(null);
@@ -40,12 +43,23 @@ const Criando = () => {
 
   const fetchData = async () => {
     if (!user) return;
-    const [postsRes, pillarsRes] = await Promise.all([
+    const [postsRes, pillarsRes, tasksRes] = await Promise.all([
       supabase.from("posts").select("*").eq("user_id", user.id).order("created_at"),
       supabase.from("pillars").select("*").eq("user_id", user.id).order("position"),
+      supabase.from("tasks").select("id, post_id, status").eq("user_id", user.id).not("post_id", "is", null),
     ]);
     setPosts((postsRes.data as any[]) || []);
     setPillars(pillarsRes.data || []);
+    // Aggregate task counts per post
+    const tasksData = (tasksRes.data as any[]) || [];
+    const counts: Record<string, { count: number; done: number }> = {};
+    tasksData.forEach((t: any) => {
+      if (!t.post_id) return;
+      if (!counts[t.post_id]) counts[t.post_id] = { count: 0, done: 0 };
+      counts[t.post_id].count++;
+      if (t.status === "concluida") counts[t.post_id].done++;
+    });
+    setTaskCounts(Object.entries(counts).map(([post_id, v]) => ({ post_id, ...v })));
   };
 
   useEffect(() => { fetchData(); }, [user]);
@@ -111,6 +125,9 @@ const Criando = () => {
                 <div className={`space-y-3 min-h-[200px] rounded-xl transition-all ${isDragOver ? "ring-2 ring-primary bg-primary/5" : ""}`}>
                   {colPosts.map(post => {
                     const pillar = getPillar(post.pillar_id);
+                    const tc = taskCounts.find(t => t.post_id === post.id);
+                    const allDone = tc && tc.count > 0 && tc.done === tc.count;
+                    const pendingTasks = tc ? tc.count - tc.done : 0;
                     return (
                       <motion.div key={post.id} layout draggable onDragStart={() => setDraggedPost(post.id)} onClick={() => openEdit(post)}
                         className={`bg-card rounded-xl p-4 shadow-warm border border-border cursor-grab active:cursor-grabbing hover:shadow-warm-lg transition-all ${isPublished ? "opacity-70" : ""}`}>
@@ -130,6 +147,11 @@ const Criando = () => {
                           {isPublished && <span className="px-1.5 py-0.5 rounded text-xs font-body bg-secondary text-secondary-foreground">Publicado</span>}
                         </div>
                         {post.scheduled_date && <p className="text-xs text-muted-foreground font-body mt-2 flex items-center gap-1"><Calendar className="h-3 w-3" /> {post.scheduled_date}</p>}
+                        {tc && tc.count > 0 && (
+                          <span className={`inline-flex items-center gap-1 mt-1.5 text-[10px] font-body font-semibold px-1.5 py-0.5 rounded ${allDone ? "bg-secondary/20 text-secondary" : "bg-muted text-muted-foreground"}`}>
+                            {allDone ? "✓" : `${pendingTasks} tarefa${pendingTasks !== 1 ? "s" : ""}`}
+                          </span>
+                        )}
                         <div className="mt-2 md:hidden" onClick={(e) => e.stopPropagation()}>
                           <Select value={post.status} onValueChange={(val) => handleMovePost(post.id, val)}>
                             <SelectTrigger className="h-7 text-xs rounded-lg"><span className="flex items-center gap-1"><ChevronRight className="h-3 w-3" /> Mover</span></SelectTrigger>
