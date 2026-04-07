@@ -401,7 +401,7 @@ const Dashboard = () => {
                     <stat.icon className={cn("h-4 w-4", stat.color, "group-hover:text-primary transition-colors")} />
                     <p className="text-[10px] text-muted-foreground font-body uppercase tracking-wider">{stat.label}</p>
                   </div>
-                  <p className="text-2xl font-display font-bold text-foreground">{stat.value}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-foreground tabular-nums tracking-tight">{stat.value}</p>
                 </DCard>
               </button>
             </motion.div>

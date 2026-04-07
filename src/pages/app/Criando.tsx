@@ -244,13 +244,13 @@ const Criando = () => {
         </div>
 
         {/* Kanban */}
-        <div className="flex gap-4 overflow-x-auto pb-4">
+        <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-mandatory scrollbar-none">
           {COLUMNS.map(col => {
             const colPosts = filteredPosts.filter(p => p.status === col.key);
             const isPublished = col.key === "publicado";
             const isDragOver = dragOverCol === col.key;
             return (
-              <div key={col.key} className={`min-w-[200px] flex-1 ${isPublished ? "border-l-2 border-dashed border-border pl-4" : ""}`}
+              <div key={col.key} className={`min-w-[280px] sm:min-w-[200px] flex-shrink-0 sm:flex-1 snap-start ${isPublished ? "border-l-2 border-dashed border-border pl-4" : ""}`}
                 onDragOver={(e) => { e.preventDefault(); setDragOverCol(col.key); }} onDragLeave={() => setDragOverCol(null)} onDrop={() => handleDrop(col.key)}>
                 <div className={`${col.bg} rounded-xl px-3 py-2 mb-3 flex items-center justify-between`}>
                   <div className="flex items-center gap-1.5">
@@ -268,7 +268,7 @@ const Criando = () => {
                     return (
                       <motion.div key={post.id} layout draggable onDragStart={() => setDraggedPost(post.id)} onClick={() => openEdit(post)}
                         className={`bg-card rounded-xl p-4 shadow-warm border border-border cursor-grab active:cursor-grabbing hover:shadow-warm-lg transition-all ${isPublished ? "opacity-70" : ""}`}>
-                        <p className="font-body font-medium text-sm text-foreground mb-2 leading-snug">{post.title}</p>
+                        <p className="font-body font-medium text-sm text-foreground mb-2 leading-snug line-clamp-2">{post.title}</p>
                         {post.content_blocks && (
                           <div className="flex gap-1 mb-2">
                             {(["tema", "roteiro", "midia", "legenda"] as const).map(k => (
