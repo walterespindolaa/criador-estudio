@@ -80,16 +80,32 @@ function ThemeCard({ preset, selected, onClick }: { preset: ThemePreset; selecte
   );
 }
 
+const SIDEBAR_COLORS = [
+  { label: "Padrão (tema)", value: "" },
+  { label: "Bege Quente", value: "#F2EDE6" },
+  { label: "Branco", value: "#FAFAFA" },
+  { label: "Cinza Suave", value: "#E8E8E8" },
+  { label: "Carvão", value: "#1E1A17" },
+  { label: "Marinho", value: "#161D2E" },
+  { label: "Terracota", value: "#E5CDB8" },
+  { label: "Lavanda", value: "#DDD5F0" },
+  { label: "Sálvia", value: "#D5E5D5" },
+  { label: "Rosé", value: "#F0DDD4" },
+  { label: "Oliva", value: "#CED8BC" },
+];
+
 export function SettingsVisual() {
   const { profile, updateProfile } = useProfile();
 
   const [preset, setPreset] = useState(profile?.theme_preset || "clean-warm");
   const [accent, setAccent] = useState(profile?.theme_accent || "#C4622D");
+  const [sidebarColor, setSidebarColor] = useState(profile?.theme_sidebar || "");
 
   useEffect(() => {
     if (profile) {
       setPreset(profile.theme_preset || "clean-warm");
       setAccent(profile.theme_accent || "#C4622D");
+      setSidebarColor(profile.theme_sidebar || "");
     }
   }, [profile]);
 
@@ -109,6 +125,7 @@ export function SettingsVisual() {
       theme_preset: preset,
       theme_accent: accent,
       theme_mode: selectedPreset?.mode || "light",
+      theme_sidebar: sidebarColor || null,
     } as any);
     toast.success("Visual salvo!");
   };
@@ -168,12 +185,39 @@ export function SettingsVisual() {
         </div>
       </div>
 
+      {/* Sidebar color */}
+      <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
+        <div>
+          <h3 className="font-display font-semibold text-foreground">Cor da Sidebar</h3>
+          <p className="text-xs text-muted-foreground font-body mt-0.5">Personalize a cor de fundo da barra lateral</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {SIDEBAR_COLORS.map(c => (
+            <button
+              key={c.value}
+              onClick={() => setSidebarColor(c.value)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${
+                sidebarColor === c.value ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
+              }`}
+            >
+              <span
+                className="w-5 h-5 rounded-full flex items-center justify-center border border-border"
+                style={{ backgroundColor: c.value || (selectedPreset?.vars.sidebar || '#F2EDE6') }}
+              >
+                {sidebarColor === c.value && <Check className="h-3 w-3" style={{ color: c.value && parseInt(c.value.slice(1), 16) < 0x808080 ? '#fff' : '#1C1C1A' }} />}
+              </span>
+              <span className="text-xs font-body font-medium text-foreground">{c.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Live preview */}
       <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-3">
         <h3 className="font-display font-semibold text-foreground">Preview ao vivo</h3>
         {selectedPreset && (
           <div className="rounded-xl overflow-hidden border border-border h-40 flex" style={{ backgroundColor: selectedPreset.vars.background }}>
-            <div className="w-1/5 h-full flex flex-col gap-2 p-3" style={{ backgroundColor: selectedPreset.vars.sidebar }}>
+            <div className="w-1/5 h-full flex flex-col gap-2 p-3" style={{ backgroundColor: sidebarColor || selectedPreset.vars.sidebar }}>
               <div className="h-2 w-full rounded-full" style={{ backgroundColor: accent, opacity: 0.8 }} />
               <div className="h-2 w-3/4 rounded-full" style={{ backgroundColor: selectedPreset.vars.muted }} />
               <div className="h-2 w-3/4 rounded-full" style={{ backgroundColor: selectedPreset.vars.muted }} />
