@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Plus, Trash2, LogOut, Camera, Lock, AlertTriangle, GripVertical, Sparkles, Bell, Shield, CreditCard, Paintbrush, Languages, MessageSquareText, MessageSquare, Ban, Moon, Sun, Monitor, Users, HardDrive, ExternalLink, Unplug, Palette, User, LayoutGrid, Plug } from "lucide-react";
+import { Plus, Trash2, LogOut, Camera, Lock, AlertTriangle, GripVertical, Sparkles, Bell, Shield, CreditCard, Paintbrush, Moon, Sun, Monitor, HardDrive, ExternalLink, Unplug, User, LayoutGrid, Plug, BookMarked } from "lucide-react";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useTheme } from "@/contexts/ThemeContext";
-import { PlatformIcon as PlatformIconComp } from "@/components/shared/PlatformIcon";
+
 import { useGoogleDriveConnection } from "@/hooks/useGoogleDriveConnection";
 import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 import { SettingsVisual } from "@/components/settings/SettingsVisual";
@@ -28,14 +28,6 @@ const PILLAR_COLORS = ["#C4622D", "#5C7A6B", "#8B6F4E", "#A4785C", "#6B8E7B", "#
 const NICHE_OPTIONS = ["Lifestyle", "Moda", "Beleza", "Fitness", "Culinária", "Educação", "Negócios", "Entretenimento", "Saúde", "Tecnologia"];
 const HABIT_SUGGESTIONS = ["Filmei hoje?", "Postei?", "Respondi comentários?", "Estudei algo?", "Planejei amanhã?"];
 
-const BRAND_SECTIONS = [
-  { type: "cor", label: "Cores da marca", icon: Paintbrush, placeholder: "Ex: #C4622D" },
-  { type: "fonte", label: "Fontes", icon: Languages, placeholder: "Ex: Playfair Display" },
-  { type: "tom", label: "Tom de voz", icon: MessageSquareText, placeholder: "Ex: Acolhedor e direto" },
-  { type: "expressao", label: "Expressões que uso", icon: MessageSquare, placeholder: "Ex: Bora!" },
-  { type: "evitar", label: "Palavras que evito", icon: Ban, placeholder: "Ex: Não use gírias" },
-];
-
 const Configuracoes = () => {
   const { user, signOut } = useAuth();
   const { profile, updateProfile } = useProfile();
@@ -45,7 +37,7 @@ const Configuracoes = () => {
 
   const [pillars, setPillars] = useState<Pillar[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
-  const [brandItems, setBrandItems] = useState<BrandItem[]>([]);
+  
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [niche, setNiche] = useState("");
@@ -58,9 +50,6 @@ const Configuracoes = () => {
   const [newPillarName, setNewPillarName] = useState("");
   const [newPillarColor, setNewPillarColor] = useState(PILLAR_COLORS[0]);
   const [newHabitName, setNewHabitName] = useState("");
-  const [newItemName, setNewItemName] = useState("");
-  const [newItemValue, setNewItemValue] = useState("");
-  const [activeSection, setActiveSection] = useState("");
 
   // Dialogs
   const [passwordOpen, setPasswordOpen] = useState(false);
@@ -75,18 +64,6 @@ const Configuracoes = () => {
   const [notifWeeklyGoal, setNotifWeeklyGoal] = useState(true);
   const [notifWeeklyTip, setNotifWeeklyTip] = useState(true);
 
-  // Persona state
-  const [personaName, setPersonaName] = useState("Meu público principal");
-  const [personaAge, setPersonaAge] = useState("");
-  const [personaGender, setPersonaGender] = useState("");
-  const [personaLocation, setPersonaLocation] = useState("");
-  const [personaInterests, setPersonaInterests] = useState<string[]>([]);
-  const [personaPains, setPersonaPains] = useState<string[]>([]);
-  const [personaDesires, setPersonaDesires] = useState<string[]>([]);
-  const [personaPlatforms, setPersonaPlatforms] = useState<string[]>([]);
-  const [personaNotes, setPersonaNotes] = useState("");
-  const [personaId, setPersonaId] = useState<string | null>(null);
-  const [newTag, setNewTag] = useState("");
 
   // Google Drive
   const { connection: driveConnection, loading: driveLoading, connect: driveConnect, disconnect: driveDisconnect } = useGoogleDriveConnection();
@@ -112,25 +89,9 @@ const Configuracoes = () => {
     Promise.all([
       supabase.from("pillars").select("*").eq("user_id", user.id).order("position"),
       supabase.from("habits").select("*").eq("user_id", user.id).order("position"),
-      supabase.from("brand_items").select("*").eq("user_id", user.id).order("position"),
-      supabase.from("personas").select("*").eq("user_id", user.id).limit(1),
-    ]).then(([pillarsRes, habitsRes, brandRes, personaRes]) => {
+    ]).then(([pillarsRes, habitsRes]) => {
       setPillars(pillarsRes.data || []);
       setHabits(habitsRes.data || []);
-      setBrandItems(brandRes.data || []);
-      const p = (personaRes.data as any[])?.[0];
-      if (p) {
-        setPersonaId(p.id);
-        setPersonaName(p.name || "");
-        setPersonaAge(p.age_range || "");
-        setPersonaGender(p.gender || "");
-        setPersonaLocation(p.location || "");
-        setPersonaInterests(p.interests || []);
-        setPersonaPains(p.pain_points || []);
-        setPersonaDesires(p.desires || []);
-        setPersonaPlatforms(p.platforms || []);
-        setPersonaNotes(p.notes || "");
-      }
     });
   }, [user]);
 
@@ -176,45 +137,8 @@ const Configuracoes = () => {
 
   const deleteHabit = async (id: string) => { await supabase.from("habits").delete().eq("id", id); setHabits(prev => prev.filter(h => h.id !== id)); };
 
-  const addBrandItem = async (type: string) => {
-    if (!newItemName.trim() || !user) return;
-    await supabase.from("brand_items").insert({ user_id: user.id, type, name: newItemName.trim(), value: newItemValue || null, position: brandItems.filter(i => i.type === type).length });
-    setNewItemName(""); setNewItemValue("");
-    const { data } = await supabase.from("brand_items").select("*").eq("user_id", user.id).order("position");
-    setBrandItems(data || []);
-    toast.success("Item adicionado!");
-  };
 
-  const deleteBrandItem = async (id: string) => {
-    await supabase.from("brand_items").delete().eq("id", id);
-    setBrandItems(prev => prev.filter(i => i.id !== id));
-  };
 
-  const savePersona = async () => {
-    if (!user) return;
-    const data: any = {
-      user_id: user.id, name: personaName, age_range: personaAge || null,
-      gender: personaGender || null, location: personaLocation || null,
-      interests: personaInterests.length > 0 ? personaInterests : null,
-      pain_points: personaPains.length > 0 ? personaPains : null,
-      desires: personaDesires.length > 0 ? personaDesires : null,
-      platforms: personaPlatforms.length > 0 ? personaPlatforms : null,
-      notes: personaNotes || null,
-    };
-    if (personaId) {
-      await supabase.from("personas").update(data).eq("id", personaId);
-    } else {
-      const { data: newP } = await supabase.from("personas").insert(data).select().single();
-      if (newP) setPersonaId((newP as any).id);
-    }
-    toast.success("Persona salva!");
-  };
-
-  const addTagTo = (arr: string[], setArr: (v: string[]) => void) => {
-    if (!newTag.trim() || arr.includes(newTag.trim())) return;
-    setArr([...arr, newTag.trim()]);
-    setNewTag("");
-  };
 
   const handleChangePassword = async () => {
     if (newPassword.length < 8) { toast.error("Mínimo 8 caracteres."); return; }
@@ -285,7 +209,7 @@ const Configuracoes = () => {
           <div className="overflow-x-auto mb-6">
             <TabsList className="inline-flex h-auto bg-card border border-border rounded-2xl p-1.5 gap-1 min-w-max">
               <TabsTrigger value="perfil" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><User className="h-3.5 w-3.5" /> Perfil</TabsTrigger>
-              <TabsTrigger value="marca" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Palette className="h-3.5 w-3.5" /> Minha Marca</TabsTrigger>
+              
               <TabsTrigger value="pilares" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><LayoutGrid className="h-3.5 w-3.5" /> Pilares & Hábitos</TabsTrigger>
               <TabsTrigger value="visual" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Paintbrush className="h-3.5 w-3.5" /> Visual</TabsTrigger>
               <TabsTrigger value="notificacoes" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Bell className="h-3.5 w-3.5" /> Notificações</TabsTrigger>
@@ -346,110 +270,8 @@ const Configuracoes = () => {
             </div>
           </TabsContent>
 
-          {/* MINHA MARCA */}
-          <TabsContent value="marca">
-            <div className="space-y-6">
-              {BRAND_SECTIONS.map(section => {
-                const items = brandItems.filter(i => i.type === section.type);
-                return (
-                  <div key={section.type} className="bg-card rounded-2xl p-5 shadow-[var(--shadow-warm)] border border-border">
-                    <h3 className="font-body font-semibold text-foreground mb-3 flex items-center gap-2">
-                      <section.icon className="h-4 w-4 text-primary/70" />
-                      {section.label}
-                    </h3>
-                    {items.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {items.map(item => (
-                          <div key={item.id} className="inline-flex items-center gap-2 px-3 py-1.5 bg-background rounded-xl border border-border">
-                            {section.type === "cor" && item.value && <div className="w-4 h-4 rounded-full" style={{ backgroundColor: item.value }} />}
-                            <span className="text-sm font-body text-foreground">{item.name}</span>
-                            {item.value && section.type !== "cor" && <span className="text-xs text-muted-foreground font-body">({item.value})</span>}
-                            <button onClick={() => deleteBrandItem(item.id)} className="hover:text-destructive"><Trash2 className="h-3 w-3" /></button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {activeSection === section.type ? (
-                      <div className="flex gap-2">
-                        <Input placeholder="Nome" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} className="rounded-xl text-sm" />
-                        <Input placeholder={section.placeholder} value={newItemValue} onChange={(e) => setNewItemValue(e.target.value)} className="rounded-xl text-sm" />
-                        <Button size="sm" onClick={() => addBrandItem(section.type)} disabled={!newItemName.trim()}><Plus className="h-4 w-4" /></Button>
-                      </div>
-                    ) : (
-                      <button onClick={() => { setActiveSection(section.type); setNewItemName(""); setNewItemValue(""); }} className="text-sm text-primary font-body font-medium hover:underline">+ Adicionar</button>
-                    )}
-                  </div>
-                );
-              })}
-
-              {/* Persona section */}
-              <div className="bg-card rounded-2xl p-5 shadow-[var(--shadow-warm)] border border-border space-y-4">
-                <h3 className="font-body font-semibold text-foreground flex items-center gap-2">
-                  <Users className="h-4 w-4 text-primary/70" /> Meu Público (Persona)
-                </h3>
-                <div className="space-y-2">
-                  <Label className="font-body text-sm">Nome da persona</Label>
-                  <Input placeholder="Ex: Maria, 28 anos" value={personaName} onChange={e => setPersonaName(e.target.value)} className="rounded-xl" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="font-body text-sm">Faixa etária</Label>
-                  <div className="flex gap-2 flex-wrap">
-                    {["18-24", "25-34", "35-44", "45+"].map(a => (
-                      <button key={a} onClick={() => setPersonaAge(personaAge === a ? "" : a)} className={`px-3 py-1.5 rounded-xl text-sm font-body border transition-colors ${personaAge === a ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border"}`}>{a}</button>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="font-body text-sm">Gênero</Label>
-                  <div className="flex gap-2 flex-wrap">
-                    {["Mulheres", "Homens", "Todos"].map(g => (
-                      <button key={g} onClick={() => setPersonaGender(personaGender === g ? "" : g)} className={`px-3 py-1.5 rounded-xl text-sm font-body border transition-colors ${personaGender === g ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border"}`}>{g}</button>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="font-body text-sm">Localização</Label>
-                  <Input placeholder="Ex: Brasil, São Paulo" value={personaLocation} onChange={e => setPersonaLocation(e.target.value)} className="rounded-xl" />
-                </div>
-                {([
-                  { label: "Interesses", arr: personaInterests, setArr: setPersonaInterests },
-                  { label: "Dores principais", arr: personaPains, setArr: setPersonaPains },
-                  { label: "Desejos", arr: personaDesires, setArr: setPersonaDesires },
-                ] as const).map(section => (
-                  <div key={section.label} className="space-y-2">
-                    <Label className="font-body text-sm">{section.label}</Label>
-                    <div className="flex flex-wrap gap-1.5 mb-2">
-                      {section.arr.map((tag, i) => (
-                        <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted rounded-lg text-xs font-body">
-                          {tag}
-                          <button onClick={() => section.setArr(section.arr.filter((_, j) => j !== i))} className="hover:text-destructive">×</button>
-                        </span>
-                      ))}
-                    </div>
-                    <div className="flex gap-2">
-                      <Input placeholder={`Adicionar ${section.label.toLowerCase()}...`} value={newTag} onChange={e => setNewTag(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { addTagTo(section.arr, section.setArr); } }} className="rounded-xl text-sm" />
-                      <Button variant="outline" size="sm" onClick={() => addTagTo(section.arr, section.setArr)}><Plus className="h-4 w-4" /></Button>
-                    </div>
-                  </div>
-                ))}
-                <div className="space-y-2">
-                  <Label className="font-body text-sm">Plataformas que usa</Label>
-                  <div className="flex gap-2">
-                    {(["instagram", "tiktok", "youtube"] as const).map(p => (
-                      <button key={p} onClick={() => setPersonaPlatforms(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p])} className={`px-3 py-2 rounded-xl border transition-colors ${personaPlatforms.includes(p) ? "bg-primary/10 border-primary" : "bg-background border-border"}`}>
-                        <PlatformIconComp platform={p} size="sm" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="font-body text-sm">Notas</Label>
-                  <Textarea placeholder="Observações sobre seu público..." value={personaNotes} onChange={e => setPersonaNotes(e.target.value)} className="rounded-xl min-h-[60px]" />
-                </div>
-                <Button variant="hero" onClick={savePersona}>Salvar persona</Button>
-              </div>
-            </div>
-          </TabsContent>
+          {/* MINHA MARCA — moved to Brandbook */}
+          {/* Link to Brandbook */}
 
           {/* VISUAL */}
           <TabsContent value="visual">

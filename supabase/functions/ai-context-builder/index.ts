@@ -64,17 +64,19 @@ serve(async (req) => {
     // Fetch user context
     let userContext = ''
     if (userId) {
-      const [profileRes, pillarsRes, brandRes, personaRes] = await Promise.all([
+      const [profileRes, pillarsRes, brandRes, personaRes, moodboardRes] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', userId).single(),
         supabase.from('pillars').select('*').eq('user_id', userId).order('position'),
         supabase.from('brand_items').select('*').eq('user_id', userId).order('position'),
         supabase.from('personas').select('*').eq('user_id', userId).limit(1),
+        supabase.from('moodboard_entries').select('section, question_key, answer').eq('user_id', userId),
       ])
 
       const profile = profileRes.data
       const pillars = pillarsRes.data || []
       const brandItems = brandRes.data || []
       const persona = personaRes.data?.[0]
+      const moodboardEntries = moodboardRes.data || []
 
       if (profile) {
         const nicho = profile.niche || 'creator de conteúdo'
@@ -109,6 +111,9 @@ ${persona.age_range ? `- Faixa etária: ${persona.age_range}` : ''}
 ${dores ? `- Principais dores: ${dores}` : ''}
 ${interesses ? `- Interesses: ${interesses}` : ''}` : ''}
 
+BRANDBOOK (respostas do criador):
+${moodboardEntries.length > 0 ? moodboardEntries.filter((e: any) => e.answer && e.answer.trim()).map((e: any) => `- [${e.section}/${e.question_key}]: ${e.answer}`).join('\n') : '(não preenchido)'}
+
 PRESETS POR NICHO:
 ${getNichePresets(nicho)}
 
@@ -117,6 +122,7 @@ REGRAS DE COMPORTAMENTO:
 - Use o nome ${profile.name} quando for pessoal ou encorajador
 - Adapte sugestões ao nicho e ao tom de voz definido
 - Considere o público-alvo em todas as sugestões
+- Use o contexto do Brandbook para personalizar ao máximo
 - Nunca escreva o conteúdo pela pessoa — sugira, direcione, inspire
 - Seja encorajador mas direto
 `
