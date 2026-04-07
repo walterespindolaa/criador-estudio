@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, MessageSquareText, FileCode2, Palette, Plus, Trash2, Upload } from "lucide-react";
+import { Sparkles, MessageSquareText, FileCode2, Palette, Plus, Trash2, Upload, Paintbrush, Languages, MessageSquare, Ban } from "lucide-react";
+import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

@@ -150,9 +150,9 @@ const Configuracoes = () => {
               <Label className="font-body text-sm">Plataformas</Label>
               <div className="flex gap-3">
                 {[
-                  { id: "instagram", label: "📸 Instagram" },
-                  { id: "tiktok", label: "🎵 TikTok" },
-                  { id: "youtube", label: "🎬 YouTube" },
+                  { id: "instagram", label: "Instagram" },
+                  { id: "tiktok", label: "TikTok" },
+                  { id: "youtube", label: "YouTube" },
                 ].map(p => (
                   <button
                     key={p.id}

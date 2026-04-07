@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Archive, ExternalLink } from "lucide-react";
+import { Archive, ExternalLink, Eye, Bookmark, MessageSquare } from "lucide-react";
+import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
