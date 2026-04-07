@@ -395,71 +395,12 @@ const Plano = () => {
 
           {/* TAB: Metas */}
           <TabsContent value="metas">
-            <div className="max-w-2xl space-y-6">
-              <div className="bg-card rounded-2xl p-6 shadow-warm border border-border">
-                <h3 className="font-display font-semibold text-foreground mb-4">
-                  O que quero alcançar este mês
-                </h3>
-                {goals.map((goal, i) => (
-                  <div key={i} className="flex items-center gap-3 mb-3">
-                    <Checkbox className="rounded" />
-                    <span className="font-body text-sm text-foreground flex-1">{goal}</span>
-                    <button onClick={() => removeGoal(i)} className="p-1 hover:bg-destructive/10 rounded">
-                      <Trash2 className="h-3 w-3 text-destructive" />
-                    </button>
-                  </div>
-                ))}
-                {goals.length < 5 && (
-                  <div className="flex gap-2 mt-3">
-                    <Input
-                      placeholder="Nova meta..."
-                      value={newGoal}
-                      onChange={(e) => setNewGoal(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && addGoal()}
-                      className="rounded-xl text-sm"
-                    />
-                    <Button variant="outline" size="sm" onClick={addGoal}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-                <Button variant="default" className="w-full mt-4" onClick={saveMonthlyGoals}>
-                  Salvar metas
-                </Button>
-              </div>
+            {user && <StructuredGoals userId={user.id} />}
+          </TabsContent>
 
-              {/* Annual overview */}
-              <div className="bg-card rounded-2xl p-6 shadow-warm border border-border">
-                <h3 className="font-display font-semibold text-foreground mb-4">Visão anual</h3>
-                <div className="grid grid-cols-12 gap-2 items-end h-32">
-                  {Array.from({ length: 12 }, (_, i) => {
-                    const month = new Date(now.getFullYear(), i, 1);
-                    const monthPosts = posts.filter(p => {
-                      if (!p.scheduled_date) return false;
-                      const d = new Date(p.scheduled_date);
-                      return d.getMonth() === i && d.getFullYear() === now.getFullYear();
-                    });
-                    const count = monthPosts.length;
-                    const maxHeight = 100;
-                    const height = count > 0 ? Math.max(8, (count / Math.max(1, ...Array.from({ length: 12 }, (_, j) => 
-                      posts.filter(p => p.scheduled_date && new Date(p.scheduled_date).getMonth() === j).length
-                    ))) * maxHeight) : 4;
-                    
-                    return (
-                      <div key={i} className="flex flex-col items-center">
-                        <div
-                          className={`w-full rounded-t-lg ${i === now.getMonth() ? "bg-primary" : "bg-muted"}`}
-                          style={{ height: `${height}px` }}
-                        />
-                        <span className="text-xs font-body text-muted-foreground mt-1">
-                          {month.toLocaleDateString("pt-BR", { month: "short" }).slice(0, 3)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
+          {/* TAB: Reflexão */}
+          <TabsContent value="reflexao">
+            {user && <MonthlyReflection userId={user.id} />}
           </TabsContent>
         </Tabs>
       </motion.div>
