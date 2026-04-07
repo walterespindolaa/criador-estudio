@@ -19,6 +19,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useGoogleDriveConnection } from "@/hooks/useGoogleDriveConnection";
 import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 import { SettingsVisual } from "@/components/settings/SettingsVisual";
+import { InfoTooltip } from "@/components/shared/InfoTooltip";
 
 interface Pillar { id: string; name: string; color: string; }
 interface Habit { id: string; name: string; position: number; }
@@ -237,7 +238,7 @@ const Configuracoes = () => {
                 <div className="space-y-2"><Label className="font-body text-sm">Bio <span className="text-muted-foreground">({bio.length}/160)</span></Label><Textarea value={bio} onChange={(e) => e.target.value.length <= 160 && setBio(e.target.value)} placeholder="Conte um pouco sobre você..." className="rounded-xl min-h-[60px]" /></div>
                 <div className="space-y-2"><Label className="font-body text-sm">Nicho</Label><div className="flex flex-wrap gap-2">{NICHE_OPTIONS.map(n => (<button key={n} onClick={() => setNiche(n)} className={`px-3 py-1.5 rounded-xl text-sm font-body border transition-colors ${niche === n ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border"}`}>{n}</button>))}</div></div>
                 <div className="space-y-2"><Label className="font-body text-sm">Plataformas</Label><div className="flex gap-3">{(["instagram", "tiktok", "youtube"] as const).map(p => (<button key={p} onClick={() => togglePlatform(p)} className={`px-4 py-2 rounded-xl border text-sm font-body transition-colors flex items-center gap-2 ${platforms.includes(p) ? "bg-primary/10 border-primary" : "bg-background border-border"}`}><PlatformIcon platform={p} size="sm" />{p === "instagram" ? "Instagram" : p === "tiktok" ? "TikTok" : "YouTube"}</button>))}</div></div>
-                <div className="space-y-2"><Label className="font-body text-sm">Meta semanal: {weeklyGoal} posts</Label><input type="range" min={1} max={7} value={weeklyGoal} onChange={(e) => setWeeklyGoal(parseInt(e.target.value))} className="w-full accent-[hsl(var(--primary))]" /></div>
+                <div className="space-y-2"><Label className="font-body text-sm">Meta semanal: {weeklyGoal} posts <InfoTooltip text="Quantos posts você quer publicar por semana. Aparece no Dashboard como barra de progresso." /></Label><input type="range" min={1} max={7} value={weeklyGoal} onChange={(e) => setWeeklyGoal(parseInt(e.target.value))} className="w-full accent-[hsl(var(--primary))]" /></div>
                 <div className="space-y-3"><Label className="font-body text-sm">Handles</Label>
                   <div className="flex items-center gap-2"><PlatformIcon platform="instagram" size="sm" /><Input placeholder="@seuinstagram" value={igHandle} onChange={(e) => setIgHandle(e.target.value)} className="rounded-xl" /></div>
                   <div className="flex items-center gap-2"><PlatformIcon platform="tiktok" size="sm" /><Input placeholder="@seutiktok" value={ttHandle} onChange={(e) => setTtHandle(e.target.value)} className="rounded-xl" /></div>
@@ -253,7 +254,7 @@ const Configuracoes = () => {
             <div className="space-y-6">
               {/* Pillars */}
               <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
-                <h3 className="font-display font-semibold text-foreground">Pilares de Conteúdo</h3>
+                <h3 className="font-display font-semibold text-foreground">Pilares de Conteúdo <InfoTooltip text="Pilares são os grandes temas do seu conteúdo (ex: Rotina, Viagens). Use até 5 para acompanhar o equilíbrio." /></h3>
                 <p className="text-xs text-muted-foreground font-body">Máximo 5 pilares</p>
                 {pillars.map(p => (<div key={p.id} className="flex items-center gap-3"><div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: p.color }} /><span className="font-body text-sm text-foreground flex-1">{p.name}</span><button onClick={() => deletePillar(p.id)} className="p-1 hover:bg-destructive/10 rounded"><Trash2 className="h-3.5 w-3.5 text-destructive" /></button></div>))}
                 {pillars.length < 5 && (<div className="space-y-2"><div className="flex gap-2"><Input placeholder="Novo pilar..." value={newPillarName} onChange={(e) => setNewPillarName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addPillar()} className="rounded-xl text-sm" /><Button variant="outline" size="sm" onClick={addPillar}><Plus className="h-4 w-4" /></Button></div><div className="flex gap-2">{PILLAR_COLORS.map(c => (<button key={c} onClick={() => setNewPillarColor(c)} className={`w-6 h-6 rounded-full transition-all ${newPillarColor === c ? "ring-2 ring-offset-2 ring-primary" : ""}`} style={{ backgroundColor: c }} />))}</div></div>)}
@@ -261,7 +262,7 @@ const Configuracoes = () => {
 
               {/* Habits */}
               <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
-                <h3 className="font-display font-semibold text-foreground">Meus Hábitos</h3>
+                <h3 className="font-display font-semibold text-foreground">Meus Hábitos <InfoTooltip text="Hábitos diários de criação que você quer monitorar. Aparecem no Dashboard para check diário." /></h3>
                 {habits.map(h => (<div key={h.id} className="flex items-center gap-3"><GripVertical className="h-4 w-4 text-muted-foreground/40 flex-shrink-0" /><span className="font-body text-sm text-foreground flex-1">{h.name}</span><button onClick={() => deleteHabit(h.id)} className="p-1 hover:bg-destructive/10 rounded"><Trash2 className="h-3.5 w-3.5 text-destructive" /></button></div>))}
                 <div className="flex gap-2"><Input placeholder="Novo hábito..." value={newHabitName} onChange={(e) => setNewHabitName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addHabit()} className="rounded-xl text-sm" /><Button variant="outline" size="sm" onClick={() => addHabit()}><Plus className="h-4 w-4" /></Button></div>
                 <div className="flex flex-wrap gap-2">{HABIT_SUGGESTIONS.filter(s => !habits.find(h => h.name === s)).map(s => (<button key={s} onClick={() => addHabit(s)} className="px-3 py-1 rounded-xl text-xs font-body bg-muted border border-border hover:bg-accent transition-colors">+ {s}</button>))}</div>

@@ -7,12 +7,10 @@ export function PWAInstallBanner() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    // Don't show in standalone mode or if dismissed
     const isStandalone = window.matchMedia("(display-mode: standalone)").matches;
     const dismissed = localStorage.getItem("pwa-install-dismissed");
     if (isStandalone || dismissed) return;
 
-    // Don't show in iframes (Lovable preview)
     try {
       if (window.self !== window.top) return;
     } catch { return; }
@@ -43,17 +41,25 @@ export function PWAInstallBanner() {
   if (!show) return null;
 
   return (
-    <div className="bg-primary/5 border-b border-primary/10 px-4 py-2 flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <Download className="h-4 w-4 text-primary" />
-        <span className="text-sm font-body text-foreground">Instale o Criadores no seu celular</span>
-      </div>
-      <div className="flex items-center gap-2">
-        <Button variant="default" size="sm" className="h-7 text-xs" onClick={handleInstall}>
+    <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[60] md:bottom-6">
+      <div className="flex items-center gap-3 bg-foreground text-background rounded-2xl px-4 py-3 shadow-xl border border-foreground/10">
+        <Download className="h-4 w-4 shrink-0" />
+        <span className="text-sm font-body font-medium whitespace-nowrap">
+          Instalar app
+        </span>
+        <Button
+          variant="secondary"
+          size="sm"
+          className="h-7 text-xs bg-background text-foreground hover:bg-background/90 rounded-xl shrink-0"
+          onClick={handleInstall}
+        >
           Instalar
         </Button>
-        <button onClick={handleDismiss} className="p-1 hover:bg-accent rounded">
-          <X className="h-3.5 w-3.5 text-muted-foreground" />
+        <button
+          onClick={handleDismiss}
+          className="p-0.5 hover:opacity-70 transition-opacity rounded shrink-0"
+        >
+          <X className="h-3.5 w-3.5" />
         </button>
       </div>
     </div>
