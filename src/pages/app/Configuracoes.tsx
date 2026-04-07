@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Plus, Trash2, LogOut, Camera, Lock, AlertTriangle, GripVertical, Sparkles, Bell, Shield, CreditCard, Paintbrush, Languages, MessageSquareText, MessageSquare, Ban, Moon, Sun, Monitor, Users, HardDrive, ExternalLink, Unplug, Palette } from "lucide-react";
+import { Plus, Trash2, LogOut, Camera, Lock, AlertTriangle, GripVertical, Sparkles, Bell, Shield, CreditCard, Paintbrush, Languages, MessageSquareText, MessageSquare, Ban, Moon, Sun, Monitor, Users, HardDrive, ExternalLink, Unplug, Palette, User, LayoutGrid, Plug } from "lucide-react";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -276,22 +276,27 @@ const Configuracoes = () => {
   };
 
   return (
-    <div className="max-w-2xl pb-20 md:pb-0">
+    <div className="pb-20 md:pb-0">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <h1 className="text-3xl font-display font-bold text-foreground mb-2">Configurações</h1>
         <p className="text-muted-foreground font-body mb-6">Gerencie sua conta e preferências.</p>
 
-        <Tabs defaultValue="perfil">
-          <TabsList className="bg-card border border-border rounded-xl mb-6 flex-wrap h-auto gap-1 p-1">
-            <TabsTrigger value="perfil" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Perfil</TabsTrigger>
-            <TabsTrigger value="marca" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Minha Marca</TabsTrigger>
-            <TabsTrigger value="pilares" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Pilares & Hábitos</TabsTrigger>
-            <TabsTrigger value="visual" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary"><Palette className="h-3 w-3 mr-1" />Visual</TabsTrigger>
-            <TabsTrigger value="notificacoes" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Notificações</TabsTrigger>
-            <TabsTrigger value="seguranca" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Segurança</TabsTrigger>
-            <TabsTrigger value="integracoes" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Integrações</TabsTrigger>
-            <TabsTrigger value="assinatura" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Assinatura</TabsTrigger>
-          </TabsList>
+        <Tabs defaultValue="perfil" orientation="vertical">
+          <div className="flex flex-col md:flex-row gap-6">
+            {/* Tabs list - vertical on desktop, horizontal scroll on mobile */}
+            <TabsList className="bg-card border border-border rounded-2xl p-2 flex md:flex-col md:w-52 md:shrink-0 md:h-auto md:items-stretch overflow-x-auto md:overflow-x-visible gap-1">
+              <TabsTrigger value="perfil" className="rounded-xl font-body text-xs justify-start gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><User className="h-4 w-4 shrink-0" /> Perfil</TabsTrigger>
+              <TabsTrigger value="marca" className="rounded-xl font-body text-xs justify-start gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Palette className="h-4 w-4 shrink-0" /> Minha Marca</TabsTrigger>
+              <TabsTrigger value="pilares" className="rounded-xl font-body text-xs justify-start gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><LayoutGrid className="h-4 w-4 shrink-0" /> Pilares & Hábitos</TabsTrigger>
+              <TabsTrigger value="visual" className="rounded-xl font-body text-xs justify-start gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Paintbrush className="h-4 w-4 shrink-0" /> Visual</TabsTrigger>
+              <TabsTrigger value="notificacoes" className="rounded-xl font-body text-xs justify-start gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Bell className="h-4 w-4 shrink-0" /> Notificações</TabsTrigger>
+              <TabsTrigger value="seguranca" className="rounded-xl font-body text-xs justify-start gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Shield className="h-4 w-4 shrink-0" /> Segurança</TabsTrigger>
+              <TabsTrigger value="integracoes" className="rounded-xl font-body text-xs justify-start gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Plug className="h-4 w-4 shrink-0" /> Integrações</TabsTrigger>
+              <TabsTrigger value="assinatura" className="rounded-xl font-body text-xs justify-start gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><CreditCard className="h-4 w-4 shrink-0" /> Assinatura</TabsTrigger>
+            </TabsList>
+
+            {/* Content area */}
+            <div className="flex-1 min-w-0 max-w-2xl">
 
           {/* PERFIL — only profile info, no pillars/habits */}
           <TabsContent value="perfil">
@@ -615,6 +620,8 @@ const Configuracoes = () => {
               )}
             </div>
           </TabsContent>
+            </div>
+          </div>
         </Tabs>
       </motion.div>
 

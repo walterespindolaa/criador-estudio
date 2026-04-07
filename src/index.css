@@ -100,10 +100,22 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-body);
+    font-family: var(--active-font-body, var(--font-body));
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-display);
+    font-family: var(--active-font-display, var(--font-display));
   }
+}
+
+/* Dynamic font overrides via CSS custom properties */
+.font-display,
+[class*="font-display"] {
+  font-family: var(--active-font-display, var(--font-display)) !important;
+}
+
+.font-body,
+.font-sans,
+[class*="font-body"] {
+  font-family: var(--active-font-body, var(--font-body)) !important;
 }
