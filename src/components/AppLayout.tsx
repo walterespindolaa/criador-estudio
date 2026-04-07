@@ -1,6 +1,8 @@
 import { Outlet, NavLink } from "react-router-dom";
 import { TopBar } from "@/components/TopBar";
 import { BottomBar } from "@/components/BottomBar";
+import { PWAInstallBanner } from "@/components/shared/PWAInstallBanner";
+import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { Settings } from "lucide-react";
 
 const AppLayout = () => {
