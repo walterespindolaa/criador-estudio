@@ -1,8 +1,10 @@
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { FolderOpen, Upload, Search, Trash2, FileText, Image, File, Plus, X, Tag } from "lucide-react";
+import { FolderOpen, Upload, Search, Trash2, FileText, File, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -20,6 +22,8 @@ interface FileItem {
 }
 
 const CATEGORIES = ["geral", "referência", "marca", "inspiração", "roteiro"];
+const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
+const MAX_TOTAL_SIZE = 20 * 1024 * 1024; // 20MB
 
 const Arquivos = () => {
   const { user } = useAuth();
@@ -30,6 +34,14 @@ const Arquivos = () => {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
+  // Category dialog
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingCategory, setPendingCategory] = useState("geral");
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+
+  const totalBytes = files.reduce((acc, f) => acc + (f.size_bytes || 0), 0);
+  const isStorageFull = totalBytes >= MAX_TOTAL_SIZE;
+
   const fetchFiles = async () => {
     if (!user) return;
     const { data } = await supabase.from("files").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
@@ -38,7 +50,21 @@ const Arquivos = () => {
 
   useEffect(() => { fetchFiles(); }, [user]);
 
-  const uploadFile = async (file: File) => {
+  const handleFileSelect = (file: File) => {
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error("Arquivo muito grande. Limite: 1MB por arquivo.");
+      return;
+    }
+    if (totalBytes + file.size > MAX_TOTAL_SIZE) {
+      toast.error("Limite de armazenamento atingido (20MB).");
+      return;
+    }
+    setPendingFile(file);
+    setPendingCategory("geral");
+    setCategoryDialogOpen(true);
+  };
+
+  const uploadFile = async (file: File, category: string) => {
     if (!user) return;
     setUploading(true);
     const ext = file.name.split(".").pop();
@@ -52,7 +78,7 @@ const Arquivos = () => {
       storage_path: path,
       file_type: file.type,
       size_bytes: file.size,
-      category: "geral",
+      category,
     } as any);
     toast.success("Arquivo enviado!");
     setUploading(false);
@@ -61,14 +87,15 @@ const Arquivos = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) uploadFile(file);
+    if (file) handleFileSelect(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
     const file = e.dataTransfer.files[0];
-    if (file) uploadFile(file);
+    if (file) handleFileSelect(file);
   };
 
   const deleteFile = async (f: FileItem) => {
@@ -106,9 +133,14 @@ const Arquivos = () => {
             <h1 className="text-3xl font-display font-bold text-foreground">Arquivos</h1>
             <p className="text-muted-foreground font-body mt-1">Seus arquivos e referências visuais.</p>
           </div>
-          <Button variant="hero" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-            <Upload className="h-4 w-4 mr-1" /> {uploading ? "Enviando..." : "Upload"}
-          </Button>
+          <div className="flex items-center gap-3">
+            <p className="text-xs text-muted-foreground font-body">
+              {(totalBytes / (1024 * 1024)).toFixed(1)}MB / 20MB usados
+            </p>
+            <Button variant="hero" onClick={() => fileInputRef.current?.click()} disabled={uploading || isStorageFull}>
+              <Upload className="h-4 w-4 mr-1" /> {uploading ? "Enviando..." : isStorageFull ? "Limite atingido" : "Upload"}
+            </Button>
+          </div>
           <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileChange} />
         </div>
 
@@ -121,6 +153,7 @@ const Arquivos = () => {
         >
           <Upload className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
           <p className="text-sm text-muted-foreground font-body">Arraste arquivos aqui ou clique em Upload</p>
+          <p className="text-xs text-muted-foreground font-body mt-1">Máximo 1MB por arquivo</p>
         </div>
 
         {/* Filters */}
@@ -178,6 +211,36 @@ const Arquivos = () => {
           </div>
         )}
       </motion.div>
+
+      {/* Category Dialog */}
+      <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display">Categorizar arquivo</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm font-body text-muted-foreground truncate">{pendingFile?.name}</p>
+            <div className="space-y-2">
+              <Label className="font-body text-sm">Categoria</Label>
+              <div className="flex flex-wrap gap-2">
+                {CATEGORIES.map(cat => (
+                  <button key={cat} onClick={() => setPendingCategory(cat)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-body border capitalize transition-colors ${
+                      pendingCategory === cat ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"
+                    }`}>{cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <Button variant="hero" className="w-full" onClick={() => {
+              setCategoryDialogOpen(false);
+              if (pendingFile) uploadFile(pendingFile, pendingCategory);
+            }}>
+              Enviar arquivo
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

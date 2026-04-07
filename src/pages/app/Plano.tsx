@@ -154,7 +154,7 @@ const Plano = () => {
   const [milestones, setMilestones] = useState<MilestoneItem[]>([]);
   const [reflection, setReflection] = useState<MonthlyReflection | null>(null);
   const [showNewGoal, setShowNewGoal] = useState(false);
-  const [newGoalForm, setNewGoalForm] = useState({ title: "", category: "geral", target_value: "", observation: "" });
+  const [newGoalForm, setNewGoalForm] = useState({ title: "", category: "geral", target_value: "", observation: "", due_date: "" });
   const [newMilestoneName, setNewMilestoneName] = useState("");
   const [expandedGoal, setExpandedGoal] = useState<string | null>(null);
 
@@ -247,8 +247,9 @@ const Plano = () => {
       category: newGoalForm.category,
       target_value: newGoalForm.target_value ? parseFloat(newGoalForm.target_value) : 0,
       observation: newGoalForm.observation || null,
+      end_date: newGoalForm.due_date || null,
     });
-    setNewGoalForm({ title: "", category: "geral", target_value: "", observation: "" });
+    setNewGoalForm({ title: "", category: "geral", target_value: "", observation: "", due_date: "" });
     setShowNewGoal(false);
     fetchData();
     toast.success("Meta criada!");
