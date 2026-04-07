@@ -19,8 +19,6 @@ import { PlatformIcon as PlatformIconComp } from "@/components/shared/PlatformIc
 import { useGoogleDriveConnection } from "@/hooks/useGoogleDriveConnection";
 import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 import { SettingsVisual } from "@/components/settings/SettingsVisual";
-import { useGoogleDriveConnection } from "@/hooks/useGoogleDriveConnection";
-import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 
 interface Pillar { id: string; name: string; color: string; }
 interface Habit { id: string; name: string; position: number; }
