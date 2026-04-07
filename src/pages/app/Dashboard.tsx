@@ -284,6 +284,39 @@ const Dashboard = () => {
               </div>
             </div>
 
+            {/* Overdue tasks alert */}
+            {tasks.filter(t => t.due_date && t.due_date < today && t.status !== "concluida").length > 0 && (
+              <div className="bg-red-50 rounded-2xl p-5 border border-red-200">
+                <p className="text-sm font-body font-semibold text-red-700 flex items-center gap-2 mb-2">
+                  <AlertTriangle className="h-4 w-4" /> ⚠️ Tarefas atrasadas
+                </p>
+                {tasks.filter(t => t.due_date && t.due_date < today && t.status !== "concluida").map(t => (
+                  <div key={t.id} className="flex items-center gap-2 py-1">
+                    <span className="text-sm font-body text-red-600">{t.title}</span>
+                    <span className="text-[10px] text-red-400 font-body ml-auto">{t.due_date}</span>
+                  </div>
+                ))}
+                <button onClick={() => navigate("/app/tarefas")} className="text-xs text-red-600 font-body font-medium hover:underline flex items-center gap-1 mt-2">
+                  Ver tarefas <ArrowRight className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+
+            {/* Today's tasks */}
+            {tasks.filter(t => t.due_date === today && t.status !== "concluida").length > 0 && (
+              <div className="bg-card rounded-2xl p-5 shadow-[var(--shadow-warm)] border border-border">
+                <p className="text-sm font-body font-semibold text-foreground flex items-center gap-2 mb-2">
+                  <ListChecks className="h-4 w-4 text-primary" /> Para hoje
+                </p>
+                {tasks.filter(t => t.due_date === today && t.status !== "concluida").map(t => (
+                  <div key={t.id} className="flex items-center gap-2 py-1.5 border-b border-border last:border-0">
+                    <span className="text-sm font-body text-foreground">{t.title}</span>
+                    <span className={`text-[10px] font-body font-semibold px-1.5 py-0.5 rounded ${t.priority === "urgente" ? "bg-red-100 text-red-700" : "bg-muted text-muted-foreground"}`}>{t.priority}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Mini week calendar */}
             <div className="bg-card rounded-2xl p-5 shadow-[var(--shadow-warm)] border border-border">
               <p className="text-sm font-body font-semibold text-foreground mb-3">Esta semana</p>
