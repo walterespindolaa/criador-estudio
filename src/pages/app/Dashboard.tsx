@@ -97,6 +97,13 @@ interface Task {
   priority: string;
   status: string;
   due_date: string | null;
+  post_id: string | null;
+}
+
+interface PostRef {
+  id: string;
+  title: string;
+  platform: string;
 }
 
 const Dashboard = () => {
@@ -117,6 +124,7 @@ const Dashboard = () => {
   const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
   const [editingHabitName, setEditingHabitName] = useState("");
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [taskPosts, setTaskPosts] = useState<PostRef[]>([]);
 
   const weekDays = useMemo(() => getDaysOfWeek(), []);
   const today = new Date().toISOString().split("T")[0];
@@ -130,14 +138,21 @@ const Dashboard = () => {
         supabase.from("pillars").select("*").eq("user_id", user.id).order("position"),
         supabase.from("habits").select("id, name").eq("user_id", user.id).order("position"),
         supabase.from("habit_logs").select("*").eq("user_id", user.id).eq("date", today),
-        supabase.from("tasks").select("id, title, priority, status, due_date").eq("user_id", user.id),
+        supabase.from("tasks").select("id, title, priority, status, due_date, post_id").eq("user_id", user.id),
       ]);
       setIdeaCount(ideasRes.count || 0);
       setPosts(postsRes.data || []);
       setPillars(pillarsRes.data || []);
       setHabits(habitsRes.data || []);
       setHabitLogs(logsRes.data || []);
-      setTasks((tasksRes.data as any[]) || []);
+      const allTasks = (tasksRes.data as any[]) || [];
+      setTasks(allTasks);
+      // Get unique post refs for tasks with post_id
+      const postIds = [...new Set(allTasks.filter(t => t.post_id).map(t => t.post_id))];
+      if (postIds.length > 0) {
+        const { data: postRefs } = await supabase.from("posts").select("id, title, platform").in("id", postIds);
+        setTaskPosts((postRefs as any[]) || []);
+      }
     };
     fetchAll();
   }, [user]);

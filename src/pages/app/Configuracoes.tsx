@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Plus, Trash2, LogOut, Camera, Lock, AlertTriangle, GripVertical, Sparkles, Bell, Shield, CreditCard, Paintbrush, Languages, MessageSquareText, MessageSquare, Ban, Moon, Sun, Monitor, Users } from "lucide-react";
+import { Plus, Trash2, LogOut, Camera, Lock, AlertTriangle, GripVertical, Sparkles, Bell, Shield, CreditCard, Paintbrush, Languages, MessageSquareText, MessageSquare, Ban, Moon, Sun, Monitor, Users, HardDrive, ExternalLink, Unplug } from "lucide-react";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,8 @@ import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useTheme } from "@/contexts/ThemeContext";
 import { PlatformIcon as PlatformIconComp } from "@/components/shared/PlatformIcon";
+import { useGoogleDriveConnection } from "@/hooks/useGoogleDriveConnection";
+import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 
 interface Pillar { id: string; name: string; color: string; }
 interface Habit { id: string; name: string; position: number; }
@@ -84,6 +86,11 @@ const Configuracoes = () => {
   const [personaNotes, setPersonaNotes] = useState("");
   const [personaId, setPersonaId] = useState<string | null>(null);
   const [newTag, setNewTag] = useState("");
+
+  // Google Drive
+  const { connection: driveConnection, loading: driveLoading, connect: driveConnect, disconnect: driveDisconnect } = useGoogleDriveConnection();
+  const { pickAndSave } = useGoogleDrive();
+  const [connectingDrive, setConnectingDrive] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -226,6 +233,47 @@ const Configuracoes = () => {
     toast.success("Conta desconectada. Entre em contato para exclusão completa.");
   };
 
+  const handleDriveConnect = async () => {
+    setConnectingDrive(true);
+    try {
+      // Load Google scripts and get token
+      const loadScripts = (): Promise<void> => {
+        return new Promise((resolve) => {
+          if (window.google?.accounts) { resolve(); return; }
+          const s = document.createElement("script");
+          s.src = "https://accounts.google.com/gsi/client";
+          s.onload = () => resolve();
+          document.body.appendChild(s);
+        });
+      };
+      await loadScripts();
+      const { data: config } = await supabase.functions.invoke("get-google-config");
+      if (!config?.client_id) { toast.error("GOOGLE_CLIENT_ID não configurado."); return; }
+
+      const token: string = await new Promise((resolve, reject) => {
+        const client = (window as any).google.accounts.oauth2.initTokenClient({
+          client_id: config.client_id,
+          scope: "https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile",
+          callback: (resp: any) => { if (resp.error) reject(resp.error); else resolve(resp.access_token); },
+        });
+        client.requestAccessToken({ prompt: "consent" });
+      });
+
+      await driveConnect(token);
+      toast.success("Google Drive conectado!");
+    } catch (err) {
+      toast.error("Erro ao conectar Google Drive.");
+      console.error(err);
+    } finally {
+      setConnectingDrive(false);
+    }
+  };
+
+  const handleDriveDisconnect = async () => {
+    await driveDisconnect();
+    toast.success("Google Drive desconectado.");
+  };
+
   return (
     <div className="max-w-2xl pb-20 md:pb-0">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
@@ -236,12 +284,14 @@ const Configuracoes = () => {
           <TabsList className="bg-card border border-border rounded-xl mb-6 flex-wrap h-auto gap-1 p-1">
             <TabsTrigger value="perfil" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Perfil</TabsTrigger>
             <TabsTrigger value="marca" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Minha Marca</TabsTrigger>
+            <TabsTrigger value="pilares" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Pilares & Hábitos</TabsTrigger>
             <TabsTrigger value="notificacoes" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Notificações</TabsTrigger>
             <TabsTrigger value="seguranca" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Segurança</TabsTrigger>
+            <TabsTrigger value="integracoes" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Integrações</TabsTrigger>
             <TabsTrigger value="assinatura" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Assinatura</TabsTrigger>
           </TabsList>
 
-          {/* PERFIL */}
+          {/* PERFIL — only profile info, no pillars/habits */}
           <TabsContent value="perfil">
             <div className="space-y-6">
               <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-5">
@@ -266,7 +316,12 @@ const Configuracoes = () => {
                 </div>
                 <Button onClick={saveProfile} variant="hero">Salvar perfil</Button>
               </div>
+            </div>
+          </TabsContent>
 
+          {/* PILARES & HÁBITOS — separate tab */}
+          <TabsContent value="pilares">
+            <div className="space-y-6">
               {/* Pillars */}
               <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
                 <h3 className="font-display font-semibold text-foreground">Pilares de Conteúdo</h3>
@@ -350,7 +405,6 @@ const Configuracoes = () => {
                   <Label className="font-body text-sm">Localização</Label>
                   <Input placeholder="Ex: Brasil, São Paulo" value={personaLocation} onChange={e => setPersonaLocation(e.target.value)} className="rounded-xl" />
                 </div>
-                {/* Tag sections */}
                 {([
                   { label: "Interesses", arr: personaInterests, setArr: setPersonaInterests },
                   { label: "Dores principais", arr: personaPains, setArr: setPersonaPains },
@@ -446,6 +500,74 @@ const Configuracoes = () => {
                 <div className="flex flex-wrap gap-3">
                   <Button variant="outline" onClick={() => setLogoutOpen(true)}><LogOut className="h-4 w-4 mr-2" /> Sair</Button>
                   <Button variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => setDeleteOpen(true)}><AlertTriangle className="h-4 w-4 mr-2" /> Excluir conta</Button>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* INTEGRAÇÕES */}
+          <TabsContent value="integracoes">
+            <div className="space-y-6">
+              {/* Google Drive */}
+              <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <HardDrive className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-display font-semibold text-foreground">Google Drive</h3>
+                    <p className="text-xs text-muted-foreground font-body">Vincule arquivos do Drive aos seus posts</p>
+                  </div>
+                  {driveConnection && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-body font-semibold bg-secondary/20 text-secondary">Conectado</span>
+                  )}
+                </div>
+
+                {driveLoading ? (
+                  <p className="text-sm text-muted-foreground font-body">Carregando...</p>
+                ) : driveConnection ? (
+                  <div className="space-y-3">
+                    <div className="bg-muted/50 rounded-xl p-3 border border-border">
+                      <p className="text-sm font-body text-foreground">{driveConnection.google_name || driveConnection.google_email}</p>
+                      <p className="text-xs text-muted-foreground font-body">{driveConnection.google_email}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={handleDriveConnect}>Trocar conta</Button>
+                      <Button variant="ghost" size="sm" onClick={handleDriveDisconnect} className="text-destructive hover:text-destructive">
+                        <Unplug className="h-4 w-4 mr-1" /> Desconectar
+                      </Button>
+                      <a href="https://drive.google.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-sm font-body border border-border hover:bg-accent transition-colors ml-auto">
+                        Abrir Drive <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <Button variant="hero" onClick={handleDriveConnect} disabled={connectingDrive}>
+                    <HardDrive className="h-4 w-4 mr-1" /> {connectingDrive ? "Conectando..." : "Conectar Google Drive"}
+                  </Button>
+                )}
+              </div>
+
+              {/* Coming soon */}
+              <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border">
+                <h3 className="font-display font-semibold text-foreground mb-3">Mais integrações em breve</h3>
+                <div className="space-y-3">
+                  {[
+                    { name: "Instagram API", desc: "Publique direto pelo Criadores" },
+                    { name: "TikTok", desc: "Agendamento nativo" },
+                    { name: "YouTube", desc: "Upload de thumbnails" },
+                  ].map(i => (
+                    <div key={i.name} className="flex items-center gap-3 opacity-50">
+                      <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
+                        <Sparkles className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-body font-medium text-foreground">{i.name}</p>
+                        <p className="text-xs text-muted-foreground font-body">{i.desc}</p>
+                      </div>
+                      <span className="ml-auto text-[10px] font-body bg-muted px-2 py-0.5 rounded-full text-muted-foreground">Em breve</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
