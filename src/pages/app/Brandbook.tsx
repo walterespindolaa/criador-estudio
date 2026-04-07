@@ -86,6 +86,31 @@ Inclua:
 RESPOSTAS DO CRIADOR:
 `,
   },
+  "persona-brand": {
+    title: "Persona — Perguntas Guiadas",
+    questions: [
+      { key: "quem-e", label: "Quem é a pessoa que te segue?", placeholder: "Ex: Mulher, 25-35 anos, mora em cidade grande, trabalha com CLT mas sonha em empreender." },
+      { key: "dores", label: "Quais são as dores dela?", placeholder: "Ex: Sente que não tem estilo próprio, gasta mal com roupas, não se sente bonita no dia a dia." },
+      { key: "desejos", label: "O que ela deseja conquistar?", placeholder: "Ex: Se sentir confiante, montar looks sem esforço, ser elogiada pelo estilo." },
+      { key: "crencas", label: "Quais crenças ela carrega?", placeholder: "Ex: 'Moda é pra quem tem dinheiro', 'Eu não tenho corpo pra isso', 'Estilo é dom'." },
+      { key: "comportamento", label: "Como ela se comporta online?", placeholder: "Ex: Salva muito conteúdo, comenta pouco, assiste stories até o final, compra por impulso." },
+    ],
+    chatPrompt: `Você é especialista em marketing de conteúdo e criação de personas. Com base nas respostas abaixo, crie uma persona completa e detalhada.
+
+Inclua:
+1. Nome fictício e mini bio
+2. Demografia (idade, localização, profissão)
+3. Dores principais (com exemplos reais)
+4. Desejos profundos
+5. Crenças limitantes
+6. Comportamento digital
+7. Gatilhos de compra
+8. Tipo de conteúdo que mais engaja essa persona
+9. Linguagem que conecta com ela
+
+RESPOSTAS DO CRIADOR:
+`,
+  },
   "tom-de-voz": {
     title: "Tom de Voz",
     questions: [
