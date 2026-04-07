@@ -33,9 +33,12 @@ const AppLayout = () => {
 
         {/* Main content */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Desktop top bar (minimal — just trigger + breadcrumb area) */}
-          <header className="h-12 hidden md:flex items-center px-4 border-b border-border bg-background sticky top-0 z-40">
+          {/* Desktop top bar */}
+          <header className="h-12 hidden md:flex items-center justify-between px-4 border-b border-border bg-background sticky top-0 z-40">
             <SidebarTrigger className="mr-3" />
+            <div className="flex items-center gap-1">
+              <NotificationsBell />
+            </div>
           </header>
 
           {/* Mobile Header */}
