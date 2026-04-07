@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { getDailyInsight } from "@/lib/ai/claude";
 import { useNavigate } from "react-router-dom";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FORMAT_LABELS } from "@/lib/constants";
 
 const HOOKS_VIRAL = [
@@ -613,32 +613,53 @@ const Dashboard = () => {
         </div>
       </motion.div>
 
-      {/* Day drawer */}
-      <Sheet open={dayDrawerOpen} onOpenChange={setDayDrawerOpen}>
-        <SheetContent className="bg-background">
-          <SheetHeader>
-            <SheetTitle className="font-display">
+      {/* Day posts dialog */}
+      <Dialog open={dayDrawerOpen} onOpenChange={setDayDrawerOpen}>
+        <DialogContent className="sm:max-w-md bg-background rounded-2xl p-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-2">
+            <DialogTitle className="font-display text-lg">
               {selectedDay && new Date(selectedDay + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
-            </SheetTitle>
-          </SheetHeader>
-          <div className="mt-4 space-y-3">
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground font-body">
+              {dayPosts.length} {dayPosts.length === 1 ? "post agendado" : "posts agendados"}
+            </p>
+          </DialogHeader>
+          <div className="px-6 pb-6 space-y-2 max-h-[60vh] overflow-y-auto">
             {dayPosts.length === 0 ? (
-              <p className="text-sm text-muted-foreground font-body text-center py-8">Nenhum post agendado.</p>
+              <div className="text-center py-10">
+                <Calendar className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground font-body">Nenhum post agendado para este dia.</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 rounded-xl text-xs"
+                  onClick={() => { setDayDrawerOpen(false); navigate("/app/criando"); }}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Criar post
+                </Button>
+              </div>
             ) : (
               dayPosts.map(post => (
-                <div key={post.id} className="bg-card rounded-xl p-4 border border-border">
-                  <p className="font-body font-medium text-sm text-foreground mb-2">{post.title}</p>
+                <button
+                  key={post.id}
+                  onClick={() => { setDayDrawerOpen(false); navigate("/app/criando"); }}
+                  className="w-full text-left bg-card hover:bg-accent/50 rounded-xl p-4 border border-border transition-colors group cursor-pointer"
+                >
+                  <p className="font-body font-medium text-sm text-foreground mb-2 group-hover:text-primary transition-colors">{post.title}</p>
                   <div className="flex items-center gap-2">
                     <PlatformIcon platform={post.platform as any} size="sm" />
                     <span className="text-xs bg-muted px-1.5 py-0.5 rounded font-body">{FORMAT_LABELS[post.format] || post.format}</span>
-                    <span className="text-xs text-muted-foreground font-body ml-auto">{post.status}</span>
+                    <span className={`text-xs font-body ml-auto px-1.5 py-0.5 rounded ${
+                      post.status === "publicado" ? "bg-secondary/10 text-secondary" : "bg-muted text-muted-foreground"
+                    }`}>{post.status}</span>
+                    <ArrowRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                   </div>
-                </div>
+                </button>
               ))
             )}
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
