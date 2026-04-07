@@ -19,11 +19,11 @@ interface BrandItem {
 }
 
 const BRAND_SECTIONS = [
-  { type: "cor", label: "🎨 Cores da marca", placeholder: "Ex: #C4622D" },
-  { type: "fonte", label: "✏️ Fontes", placeholder: "Ex: Playfair Display" },
-  { type: "tom", label: "🗣️ Tom de voz", placeholder: "Ex: Acolhedor e direto" },
-  { type: "expressao", label: "💬 Expressões que uso", placeholder: "Ex: Bora!" },
-  { type: "evitar", label: "🚫 Palavras que evito", placeholder: "Ex: Não use gírias" },
+  { type: "cor", label: "Cores da marca", icon: Paintbrush, placeholder: "Ex: #C4622D" },
+  { type: "fonte", label: "Fontes", icon: Languages, placeholder: "Ex: Playfair Display" },
+  { type: "tom", label: "Tom de voz", icon: MessageSquareText, placeholder: "Ex: Acolhedor e direto" },
+  { type: "expressao", label: "Expressões que uso", icon: MessageSquare, placeholder: "Ex: Bora!" },
+  { type: "evitar", label: "Palavras que evito", icon: Ban, placeholder: "Ex: Não use gírias" },
 ];
 
 const HOOK_CATEGORIES = ["curiosidade", "identificação", "contraste", "dor", "promessa", "polêmica"];
