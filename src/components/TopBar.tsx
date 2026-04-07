@@ -44,7 +44,7 @@ function NavGroup({ items }: { items: { title: string; url: string }[] }) {
 }
 
 function Divider() {
-  return <div className="w-px h-4 bg-border/60 mx-1.5 shrink-0" />;
+  return <span className="text-muted-foreground/40 text-xs select-none mx-2">|</span>;
 }
 
 export function TopBar() {
