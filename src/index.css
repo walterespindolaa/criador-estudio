@@ -48,8 +48,8 @@
     --shadow-warm: 0 2px 12px rgba(28, 28, 26, 0.06);
     --shadow-warm-lg: 0 8px 30px rgba(28, 28, 26, 0.08);
 
-    --font-display: 'Playfair Display', Georgia, serif;
-    --font-body: 'DM Sans', system-ui, sans-serif;
+    --font-display: 'Fraunces', serif;
+    --font-body: 'DM Sans', sans-serif;
   }
 
   * {
