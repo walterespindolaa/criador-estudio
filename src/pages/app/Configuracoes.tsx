@@ -1,0 +1,32 @@
+import { motion } from "framer-motion";
+import { Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+const Configuracoes = () => {
+  return (
+    <div className="max-w-2xl">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        <h1 className="text-3xl font-display font-bold text-foreground mb-2">Configurações</h1>
+        <p className="text-muted-foreground font-body mb-8">
+          Gerencie sua conta e preferências.
+        </p>
+
+        <div className="bg-card rounded-2xl p-8 shadow-warm border border-border space-y-6">
+          <div>
+            <h3 className="font-display font-semibold text-foreground mb-1">Conta</h3>
+            <p className="text-sm text-muted-foreground font-body">Gerencie seus dados e assinatura.</p>
+          </div>
+          <div className="border-t border-border pt-6">
+            <Button variant="outline" className="font-body">Sair da conta</Button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+export default Configuracoes;
