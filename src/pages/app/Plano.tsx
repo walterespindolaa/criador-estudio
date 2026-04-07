@@ -20,6 +20,7 @@ import {
 import { FORMAT_LABELS, STATUS_OPTIONS } from "@/lib/constants";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { PostDrawer } from "@/components/kanban/PostDrawer";
+import { InfoTooltip } from "@/components/shared/InfoTooltip";
 
 // ─── Types ───────────────────────────────────────────────
 interface Post {
@@ -506,7 +507,7 @@ const Plano = () => {
               {/* Habits */}
               <Card className="border-border">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-body font-semibold text-foreground">Hábitos diários</CardTitle>
+                  <CardTitle className="text-sm font-body font-semibold text-foreground">Hábitos diários <InfoTooltip text="Acompanhamento semanal dos seus hábitos de criação. Marque os dias que cumpriu cada hábito." /></CardTitle>
                 </CardHeader>
                 <CardContent>
                   {habits.length === 0 ? (
@@ -713,7 +714,7 @@ const Plano = () => {
               {/* Header + Add button */}
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-display font-semibold text-foreground">Minhas Metas</h2>
+                  <h2 className="text-lg font-display font-semibold text-foreground">Minhas Metas <InfoTooltip text="Metas mensais ou de projeto. Adicione marcos para dividir em etapas menores." /></h2>
                   <p className="text-xs text-muted-foreground font-body">Defina objetivos claros e acompanhe seu progresso.</p>
                 </div>
                 <Button onClick={() => setShowNewGoal(true)} className="gap-1.5">
