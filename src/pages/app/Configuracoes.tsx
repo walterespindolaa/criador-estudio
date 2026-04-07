@@ -105,10 +105,24 @@ const Configuracoes = () => {
       supabase.from("pillars").select("*").eq("user_id", user.id).order("position"),
       supabase.from("habits").select("*").eq("user_id", user.id).order("position"),
       supabase.from("brand_items").select("*").eq("user_id", user.id).order("position"),
-    ]).then(([pillarsRes, habitsRes, brandRes]) => {
+      supabase.from("personas").select("*").eq("user_id", user.id).limit(1),
+    ]).then(([pillarsRes, habitsRes, brandRes, personaRes]) => {
       setPillars(pillarsRes.data || []);
       setHabits(habitsRes.data || []);
       setBrandItems(brandRes.data || []);
+      const p = (personaRes.data as any[])?.[0];
+      if (p) {
+        setPersonaId(p.id);
+        setPersonaName(p.name || "");
+        setPersonaAge(p.age_range || "");
+        setPersonaGender(p.gender || "");
+        setPersonaLocation(p.location || "");
+        setPersonaInterests(p.interests || []);
+        setPersonaPains(p.pain_points || []);
+        setPersonaDesires(p.desires || []);
+        setPersonaPlatforms(p.platforms || []);
+        setPersonaNotes(p.notes || "");
+      }
     });
   }, [user]);
 
