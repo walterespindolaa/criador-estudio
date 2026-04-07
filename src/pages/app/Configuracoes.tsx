@@ -447,6 +447,11 @@ const Configuracoes = () => {
             </div>
           </TabsContent>
 
+          {/* VISUAL */}
+          <TabsContent value="visual">
+            <SettingsVisual />
+          </TabsContent>
+
           {/* NOTIFICAÇÕES */}
           <TabsContent value="notificacoes">
             <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-5">
