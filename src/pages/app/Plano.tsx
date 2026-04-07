@@ -10,9 +10,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, CalendarDays, Target, BarChart3, Check, Calendar } from "lucide-react";
+import { Plus, Trash2, CalendarDays, Target, BarChart3, Check, Calendar, BookOpen } from "lucide-react";
 import { FORMAT_LABELS } from "@/lib/constants";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
+import { StructuredGoals } from "@/components/plano/StructuredGoals";
+import { MonthlyReflection } from "@/components/plano/MonthlyReflection";
 
 interface Post {
   id: string;
