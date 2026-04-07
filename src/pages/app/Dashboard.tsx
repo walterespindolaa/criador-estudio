@@ -44,7 +44,7 @@ const Dashboard = () => {
     if (error) {
       toast.error("Erro ao salvar ideia.");
     } else {
-      toast.success("Ideia capturada! 💡");
+      toast.success("Ideia capturada!");
       setQuickIdea("");
       setIdeaCount(prev => prev + 1);
     }
