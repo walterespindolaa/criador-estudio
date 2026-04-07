@@ -17,7 +17,7 @@ const navItems = [
 export function TopBar() {
   return (
     <header className="fixed top-0 left-0 right-0 h-14 z-50 bg-[hsl(var(--background))] border-b border-border hidden md:block">
-      <div className="max-w-[1200px] mx-auto h-full px-6 flex items-center justify-between">
+      <div className="max-w-screen-2xl mx-auto h-full px-8 flex items-center justify-between">
         <NavLink to="/app" className="flex items-center">
           <h1 
             className="text-xl font-display font-semibold text-foreground tracking-tight"
