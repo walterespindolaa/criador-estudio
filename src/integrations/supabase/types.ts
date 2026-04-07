@@ -162,6 +162,60 @@ export type Database = {
         }
         Relationships: []
       }
+      files: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          file_type: string | null
+          id: string
+          name: string
+          post_id: string | null
+          size_bytes: number | null
+          storage_path: string
+          tags: string[] | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          file_type?: string | null
+          id?: string
+          name: string
+          post_id?: string | null
+          size_bytes?: number | null
+          storage_path: string
+          tags?: string[] | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          file_type?: string | null
+          id?: string
+          name?: string
+          post_id?: string | null
+          size_bytes?: number | null
+          storage_path?: string
+          tags?: string[] | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "files_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "files_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       habit_logs: {
         Row: {
           date: string
