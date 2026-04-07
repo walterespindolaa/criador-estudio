@@ -17,7 +17,7 @@ interface Post {
   archive_summary: string | null;
 }
 
-const PLATFORM_ICONS: Record<string, string> = { instagram: "📸", tiktok: "🎵", youtube: "🎬" };
+
 
 const Historico = () => {
   const { user } = useAuth();
