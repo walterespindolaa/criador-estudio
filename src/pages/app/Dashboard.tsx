@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Lightbulb, FileText, CheckCircle2, TrendingUp, Plus, Sparkles, ArrowRight, Copy, Check, Calendar, ListChecks, Pencil, Trash2, X } from "lucide-react";
+import { Lightbulb, FileText, CheckCircle2, TrendingUp, Plus, Sparkles, ArrowRight, Copy, Check, Calendar, ListChecks, Pencil, Trash2, X, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -91,6 +91,14 @@ interface Habit {
   name: string;
 }
 
+interface Task {
+  id: string;
+  title: string;
+  priority: string;
+  status: string;
+  due_date: string | null;
+}
+
 const Dashboard = () => {
   const { user } = useAuth();
   const { profile } = useProfile();
@@ -108,6 +116,7 @@ const Dashboard = () => {
   const [newHabitName, setNewHabitName] = useState("");
   const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
   const [editingHabitName, setEditingHabitName] = useState("");
+  const [tasks, setTasks] = useState<Task[]>([]);
 
   const weekDays = useMemo(() => getDaysOfWeek(), []);
   const today = new Date().toISOString().split("T")[0];
@@ -115,18 +124,20 @@ const Dashboard = () => {
   useEffect(() => {
     if (!user) return;
     const fetchAll = async () => {
-      const [ideasRes, postsRes, pillarsRes, habitsRes, logsRes] = await Promise.all([
+      const [ideasRes, postsRes, pillarsRes, habitsRes, logsRes, tasksRes] = await Promise.all([
         supabase.from("ideas").select("*", { count: "exact", head: true }).eq("user_id", user.id),
         supabase.from("posts").select("id, title, platform, format, status, scheduled_date, published_at").eq("user_id", user.id),
         supabase.from("pillars").select("*").eq("user_id", user.id).order("position"),
         supabase.from("habits").select("id, name").eq("user_id", user.id).order("position"),
         supabase.from("habit_logs").select("*").eq("user_id", user.id).eq("date", today),
+        supabase.from("tasks").select("id, title, priority, status, due_date").eq("user_id", user.id),
       ]);
       setIdeaCount(ideasRes.count || 0);
       setPosts(postsRes.data || []);
       setPillars(pillarsRes.data || []);
       setHabits(habitsRes.data || []);
       setHabitLogs(logsRes.data || []);
+      setTasks((tasksRes.data as any[]) || []);
     };
     fetchAll();
   }, [user]);
