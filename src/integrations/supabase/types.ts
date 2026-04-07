@@ -541,6 +541,7 @@ export type Database = {
       monthly_goals: {
         Row: {
           created_at: string | null
+          due_date: string | null
           focus: string | null
           goals: string[] | null
           id: string
@@ -550,6 +551,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          due_date?: string | null
           focus?: string | null
           goals?: string[] | null
           id?: string
@@ -559,6 +561,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          due_date?: string | null
           focus?: string | null
           goals?: string[] | null
           id?: string
@@ -1267,6 +1270,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "user_hooks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_library_usage: {
+        Row: {
+          id: string
+          is_user_item: boolean | null
+          item_id: string
+          item_type: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          is_user_item?: boolean | null
+          item_id: string
+          item_type: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          is_user_item?: boolean | null
+          item_id?: string
+          item_type?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_library_usage_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
