@@ -1,0 +1,52 @@
+import { NavLink } from "react-router-dom";
+import { Settings } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const navItems = [
+  { title: "Ideias", url: "/app/ideias" },
+  { title: "Criando", url: "/app/criando" },
+  { title: "Plano", url: "/app/plano" },
+  { title: "Biblioteca", url: "/app/biblioteca" },
+  { title: "Histórico", url: "/app/historico" },
+  { title: "Aprender", url: "/app/aprender" },
+];
+
+export function TopBar() {
+  return (
+    <header className="fixed top-0 left-0 right-0 h-14 z-50 bg-[#FAF8F4] border-b border-[rgba(28,28,26,0.08)] hidden md:block">
+      <div className="max-w-[1200px] mx-auto h-full px-6 flex items-center justify-between">
+        <NavLink to="/app" className="flex items-center">
+          <h1 
+            className="text-xl font-display font-semibold text-foreground tracking-tight"
+            style={{ fontVariationSettings: "'opsz' 9" }}
+          >
+            Criadores
+          </h1>
+        </NavLink>
+
+        <nav className="flex items-center gap-8">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.url}
+              to={item.url}
+              className={({ isActive }) =>
+                cn(
+                  "text-sm font-body font-medium transition-all relative py-1",
+                  isActive 
+                    ? "text-[#C4622D] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#C4622D]" 
+                    : "text-muted-foreground hover:text-foreground"
+                )
+              }
+            >
+              {item.title}
+            </NavLink>
+          ))}
+        </nav>
+
+        <NavLink to="/app/configuracoes" className="p-2 hover:bg-accent/60 rounded-xl transition-colors">
+          <Settings className="h-5 w-5 text-muted-foreground hover:text-foreground" />
+        </NavLink>
+      </div>
+    </header>
+  );
+}
