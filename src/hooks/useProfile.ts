@@ -10,6 +10,14 @@ export interface Profile {
   weekly_goal: number | null;
   plan: string | null;
   onboarding_completed: boolean | null;
+  avatar_url: string | null;
+  bio: string | null;
+  instagram_handle: string | null;
+  tiktok_handle: string | null;
+  youtube_handle: string | null;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  subscription_status: string | null;
 }
 
 export function useProfile() {
@@ -24,7 +32,7 @@ export function useProfile() {
       .select("*")
       .eq("id", user.id)
       .single();
-    setProfile(data);
+    setProfile(data as any);
     setLoading(false);
   };
 
@@ -36,7 +44,7 @@ export function useProfile() {
     if (!user) return;
     const { error } = await supabase
       .from("profiles")
-      .update(updates)
+      .update(updates as any)
       .eq("id", user.id);
     if (!error) {
       setProfile(prev => prev ? { ...prev, ...updates } : null);
