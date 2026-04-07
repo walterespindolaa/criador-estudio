@@ -230,7 +230,7 @@ const Biblioteca = () => {
                     )}
                   </p>
                   {p.tip && (
-                    <p className="text-xs text-muted-foreground font-body">💡 {p.tip}</p>
+                    <p className="text-xs text-muted-foreground font-body flex items-center gap-1"><Sparkles className="h-3 w-3" /> {p.tip}</p>
                   )}
                 </motion.div>
               ))}
