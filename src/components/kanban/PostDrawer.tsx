@@ -225,16 +225,15 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
 
   return (
     <>
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="bg-background overflow-y-auto w-full sm:max-w-4xl p-0" side="right">
-        <div className="flex flex-col lg:flex-row h-full">
-          {/* Left side - Post editor (60%) */}
-          <div className="flex-1 lg:w-[60%] p-6 overflow-y-auto border-r border-border">
-            <SheetHeader className="mb-6">
-              <SheetTitle className="font-display text-xl">
-                {isNew ? "Novo Post" : "Editar Post"}
-              </SheetTitle>
-            </SheetHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-5xl w-[95vw] h-[90vh] p-0 overflow-hidden flex flex-col bg-background rounded-2xl">
+        <DialogHeader className="px-6 pt-5 pb-0 shrink-0">
+          <DialogTitle className="font-display text-lg">
+            {isNew ? "Novo Post" : "Editar Post"}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="flex flex-1 overflow-hidden flex-col lg:flex-row">
 
             <div className="space-y-5">
               <div className="space-y-2">
