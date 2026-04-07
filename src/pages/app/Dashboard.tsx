@@ -305,12 +305,12 @@ const Dashboard = () => {
 
   // Stats cards
   const stats = [
-    { label: "Ideias", value: ideaCount, icon: Lightbulb, color: "text-primary" },
-    { label: "Em criação", value: inCreationFiltered.length, icon: FileText, color: "text-muted-foreground" },
-    { label: "Publicados", value: publishedFiltered.length, icon: CheckCircle2, color: "text-primary" },
-    { label: "Agendados", value: scheduledFiltered.length, icon: Clock, color: "text-muted-foreground" },
-    { label: "Tarefas abertas", value: pendingTasks.length + inProgressTasks.length, icon: ListChecks, color: "text-primary" },
-    { label: "Hábitos hoje", value: `${habitsToday}/${habits.length}`, icon: Flame, color: "text-primary" },
+    { label: "Ideias", value: ideaCount, icon: Lightbulb, color: "text-primary", link: "/app/ideias" },
+    { label: "Em criação", value: inCreationFiltered.length, icon: FileText, color: "text-muted-foreground", link: "/app/criando" },
+    { label: "Publicados", value: publishedFiltered.length, icon: CheckCircle2, color: "text-primary", link: "/app/historico" },
+    { label: "Agendados", value: scheduledFiltered.length, icon: Clock, color: "text-muted-foreground", link: "/app/plano" },
+    { label: "Tarefas abertas", value: pendingTasks.length + inProgressTasks.length, icon: ListChecks, color: "text-primary", link: "/app/tarefas" },
+    { label: "Hábitos hoje", value: `${habitsToday}/${habits.length}`, icon: Flame, color: "text-primary", link: "/app/plano" },
   ];
 
   return (

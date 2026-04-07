@@ -104,27 +104,27 @@ export function AppSidebar() {
       style={sidebarStyle}
     >
       {/* Profile header */}
-      <div className="px-4 pt-5 pb-3 flex flex-col items-center gap-2">
-        <button onClick={() => navigate("/app")} className="flex flex-col items-center gap-2">
+      <div className={cn("flex flex-col items-center", collapsed ? "px-2 pt-4 pb-2" : "px-4 pt-6 pb-4")}>
+        <button onClick={() => navigate("/app")} className="flex flex-col items-center gap-3 w-full">
           {!collapsed ? (
             <>
-              <Avatar className="h-14 w-14 ring-2 ring-sidebar-primary/20">
+              <Avatar className="h-20 w-20 ring-2 ring-sidebar-primary/20 shadow-md">
                 {profile?.avatar_url ? (
                   <AvatarImage src={profile.avatar_url} alt={profile?.name || "Avatar"} />
                 ) : null}
-                <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground text-lg font-display font-bold">
+                <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground text-2xl font-display font-bold">
                   {initials}
                 </AvatarFallback>
               </Avatar>
               <div className="text-center">
-                <p className="text-sm font-display font-semibold text-sidebar-foreground leading-tight truncate max-w-[140px]">
+                <p className="text-base font-display font-bold text-sidebar-foreground leading-tight truncate max-w-[160px]">
                   {profile?.name || "Usuário"}
                 </p>
-                <p className="text-[10px] font-body text-sidebar-foreground/50 mt-0.5">CreatorsFlow</p>
+                <p className="text-[11px] font-body text-sidebar-foreground/50 mt-1">CreatorsFlow</p>
               </div>
             </>
           ) : (
-            <Avatar className="h-8 w-8">
+            <Avatar className="h-9 w-9">
               {profile?.avatar_url ? (
                 <AvatarImage src={profile.avatar_url} alt={profile?.name || "Avatar"} />
               ) : null}
@@ -135,6 +135,7 @@ export function AppSidebar() {
           )}
         </button>
       </div>
+      {!collapsed && <div className="mx-4 mb-2 border-b border-sidebar-border" />}
 
       <SidebarContent className="px-2">
         {groups.map((group) => (
