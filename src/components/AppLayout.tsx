@@ -8,6 +8,9 @@ import { Settings } from "lucide-react";
 const AppLayout = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      {/* PWA Install Banner */}
+      <PWAInstallBanner />
+
       {/* Desktop TopBar */}
       <TopBar />
 
