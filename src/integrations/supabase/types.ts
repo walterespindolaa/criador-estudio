@@ -781,6 +781,7 @@ export type Database = {
           hook: string | null
           id: string
           idea_id: string | null
+          learnings: string | null
           notes: string | null
           pillar_id: string | null
           platform: string
@@ -808,6 +809,7 @@ export type Database = {
           hook?: string | null
           id?: string
           idea_id?: string | null
+          learnings?: string | null
           notes?: string | null
           pillar_id?: string | null
           platform: string
@@ -835,6 +837,7 @@ export type Database = {
           hook?: string | null
           id?: string
           idea_id?: string | null
+          learnings?: string | null
           notes?: string | null
           pillar_id?: string | null
           platform?: string
