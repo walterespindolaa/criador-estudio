@@ -11,6 +11,7 @@ import {
   ListTodo,
   BookMarked,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
