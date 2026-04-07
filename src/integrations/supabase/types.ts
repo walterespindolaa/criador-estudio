@@ -471,6 +471,59 @@ export type Database = {
           },
         ]
       }
+      personas: {
+        Row: {
+          age_range: string | null
+          created_at: string | null
+          desires: string[] | null
+          gender: string | null
+          id: string
+          interests: string[] | null
+          location: string | null
+          name: string
+          notes: string | null
+          pain_points: string[] | null
+          platforms: string[] | null
+          user_id: string
+        }
+        Insert: {
+          age_range?: string | null
+          created_at?: string | null
+          desires?: string[] | null
+          gender?: string | null
+          id?: string
+          interests?: string[] | null
+          location?: string | null
+          name?: string
+          notes?: string | null
+          pain_points?: string[] | null
+          platforms?: string[] | null
+          user_id: string
+        }
+        Update: {
+          age_range?: string | null
+          created_at?: string | null
+          desires?: string[] | null
+          gender?: string | null
+          id?: string
+          interests?: string[] | null
+          location?: string | null
+          name?: string
+          notes?: string | null
+          pain_points?: string[] | null
+          platforms?: string[] | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personas_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pillars: {
         Row: {
           color: string
