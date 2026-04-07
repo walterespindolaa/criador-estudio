@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_log: {
+        Row: {
+          action: string
+          created_at: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_items: {
         Row: {
           created_at: string | null
@@ -373,12 +411,15 @@ export type Database = {
           format: string
           hook: string | null
           id: string
+          idea_id: string | null
           notes: string | null
           pillar_id: string | null
           platform: string
           published_at: string | null
           result_comments: number | null
+          result_reach: number | null
           result_saves: number | null
+          result_shares: number | null
           result_views: number | null
           scheduled_date: string | null
           script: string | null
@@ -395,12 +436,15 @@ export type Database = {
           format: string
           hook?: string | null
           id?: string
+          idea_id?: string | null
           notes?: string | null
           pillar_id?: string | null
           platform: string
           published_at?: string | null
           result_comments?: number | null
+          result_reach?: number | null
           result_saves?: number | null
+          result_shares?: number | null
           result_views?: number | null
           scheduled_date?: string | null
           script?: string | null
@@ -417,12 +461,15 @@ export type Database = {
           format?: string
           hook?: string | null
           id?: string
+          idea_id?: string | null
           notes?: string | null
           pillar_id?: string | null
           platform?: string
           published_at?: string | null
           result_comments?: number | null
+          result_reach?: number | null
           result_saves?: number | null
+          result_shares?: number | null
           result_views?: number | null
           scheduled_date?: string | null
           script?: string | null
@@ -432,6 +479,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "posts_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "ideas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "posts_pillar_id_fkey"
             columns: ["pillar_id"]
@@ -450,37 +504,61 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
+          bio: string | null
           created_at: string | null
           id: string
+          instagram_handle: string | null
           name: string
           niche: string | null
           onboarding_completed: boolean | null
           plan: string | null
           platforms: string[] | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_status: string | null
+          tiktok_handle: string | null
           updated_at: string | null
           weekly_goal: number | null
+          youtube_handle: string | null
         }
         Insert: {
+          avatar_url?: string | null
+          bio?: string | null
           created_at?: string | null
           id: string
+          instagram_handle?: string | null
           name: string
           niche?: string | null
           onboarding_completed?: boolean | null
           plan?: string | null
           platforms?: string[] | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
+          tiktok_handle?: string | null
           updated_at?: string | null
           weekly_goal?: number | null
+          youtube_handle?: string | null
         }
         Update: {
+          avatar_url?: string | null
+          bio?: string | null
           created_at?: string | null
           id?: string
+          instagram_handle?: string | null
           name?: string
           niche?: string | null
           onboarding_completed?: boolean | null
           plan?: string | null
           platforms?: string[] | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
+          tiktok_handle?: string | null
           updated_at?: string | null
           weekly_goal?: number | null
+          youtube_handle?: string | null
         }
         Relationships: []
       }
