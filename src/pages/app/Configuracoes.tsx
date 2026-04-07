@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Plus, Trash2, LogOut, Camera, Lock, AlertTriangle, GripVertical, Sparkles, Bell, Shield, CreditCard, Paintbrush, Languages, MessageSquareText, MessageSquare, Ban, Moon, Sun, Monitor, Users, HardDrive, ExternalLink, Unplug } from "lucide-react";
+import { Plus, Trash2, LogOut, Camera, Lock, AlertTriangle, GripVertical, Sparkles, Bell, Shield, CreditCard, Paintbrush, Languages, MessageSquareText, MessageSquare, Ban, Moon, Sun, Monitor, Users, HardDrive, ExternalLink, Unplug, Palette } from "lucide-react";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,9 @@ import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useTheme } from "@/contexts/ThemeContext";
 import { PlatformIcon as PlatformIconComp } from "@/components/shared/PlatformIcon";
+import { useGoogleDriveConnection } from "@/hooks/useGoogleDriveConnection";
+import { useGoogleDrive } from "@/hooks/useGoogleDrive";
+import { SettingsVisual } from "@/components/settings/SettingsVisual";
 import { useGoogleDriveConnection } from "@/hooks/useGoogleDriveConnection";
 import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 

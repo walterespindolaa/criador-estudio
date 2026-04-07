@@ -91,7 +91,6 @@ const Biblioteca = () => {
 
   const saveItem = async () => {
     if (!user) return;
-    const table = sheetType === "hook" ? "user_hooks" : sheetType === "format" ? "user_formats" : "user_prompts";
     
     if (sheetType === "hook") {
       if (!formData.hook_text?.trim() || !formData.category) { toast.error("Preencha os campos."); return; }
