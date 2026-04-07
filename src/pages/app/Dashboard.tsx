@@ -438,8 +438,8 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* RIGHT COLUMN (35%) */}
-          <div className="lg:w-[35%] space-y-6">
+          {/* RIGHT COLUMN (4 cols) */}
+          <div className="lg:col-span-4 space-y-6">
             {/* Brand card */}
             <div className="bg-card rounded-2xl p-5 shadow-[var(--shadow-warm)] border border-border">
               <div className="flex items-center gap-3 mb-4">
