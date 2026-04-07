@@ -182,7 +182,33 @@ const Configuracoes = () => {
     setBrandItems(prev => prev.filter(i => i.id !== id));
   };
 
-  const handleChangePassword = async () => {
+  const savePersona = async () => {
+    if (!user) return;
+    const data: any = {
+      user_id: user.id, name: personaName, age_range: personaAge || null,
+      gender: personaGender || null, location: personaLocation || null,
+      interests: personaInterests.length > 0 ? personaInterests : null,
+      pain_points: personaPains.length > 0 ? personaPains : null,
+      desires: personaDesires.length > 0 ? personaDesires : null,
+      platforms: personaPlatforms.length > 0 ? personaPlatforms : null,
+      notes: personaNotes || null,
+    };
+    if (personaId) {
+      await supabase.from("personas").update(data).eq("id", personaId);
+    } else {
+      const { data: newP } = await supabase.from("personas").insert(data).select().single();
+      if (newP) setPersonaId((newP as any).id);
+    }
+    toast.success("Persona salva!");
+  };
+
+  const addTagTo = (arr: string[], setArr: (v: string[]) => void) => {
+    if (!newTag.trim() || arr.includes(newTag.trim())) return;
+    setArr([...arr, newTag.trim()]);
+    setNewTag("");
+  };
+
+
     if (newPassword.length < 8) { toast.error("Mínimo 8 caracteres."); return; }
     if (!/[A-Z]/.test(newPassword)) { toast.error("Inclua pelo menos uma maiúscula."); return; }
     if (!/[0-9]/.test(newPassword)) { toast.error("Inclua pelo menos um número."); return; }
