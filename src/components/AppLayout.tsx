@@ -1,11 +1,21 @@
+import { useEffect } from "react";
 import { Outlet, NavLink } from "react-router-dom";
 import { TopBar } from "@/components/TopBar";
 import { BottomBar } from "@/components/BottomBar";
 import { PWAInstallBanner } from "@/components/shared/PWAInstallBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { Settings } from "lucide-react";
+import { useProfile } from "@/hooks/useProfile";
+import { applyThemeColor, applyThemeFont } from "@/components/settings/SettingsVisual";
 
 const AppLayout = () => {
+  const { profile } = useProfile();
+
+  useEffect(() => {
+    if (profile?.theme_color) applyThemeColor(profile.theme_color);
+    if (profile?.theme_font) applyThemeFont(profile.theme_font);
+  }, [profile]);
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* PWA Install Banner */}
