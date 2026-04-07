@@ -9,7 +9,7 @@ import { applySidebarColor } from "@/lib/sidebarTheme";
 import { toast } from "sonner";
 
 const FONT_OPTIONS = [
-  { key: "fraunces", label: "Orgânico", desc: "Fraunces + DM Sans", preview: "Elegância natural" },
+  { key: "fraunces", label: "Orgânico", desc: "Fraunces + Inter", preview: "Elegância natural" },
   { key: "cormorant", label: "Elegante", desc: "Cormorant + Jakarta Sans", preview: "Sofisticação clássica" },
   { key: "youngserif", label: "Moderno", desc: "Young Serif + Outfit", preview: "Estilo contemporâneo" },
 ];
@@ -18,8 +18,8 @@ export function applyThemeFont(fontKey: string) {
   const fonts: Record<string, { display: string; body: string; googleUrl: string }> = {
     fraunces: {
       display: "'Fraunces', serif",
-      body: "'DM Sans', sans-serif",
-      googleUrl: "https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900&family=DM+Sans:wght@400;500;700&display=swap",
+      body: "'Inter', sans-serif",
+      googleUrl: "https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900&family=Inter:wght@400;500;600;700&display=swap",
     },
     cormorant: {
       display: "'Cormorant Garamond', serif",

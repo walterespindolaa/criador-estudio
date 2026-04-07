@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, MessageSquareText, FileCode2, Zap, Plus, Pencil, Trash2, Star, StarOff } from "lucide-react";
+import { Sparkles, MessageSquareText, FileCode2, Zap, Plus, Pencil, Trash2, Star, StarOff, CheckCircle2 } from "lucide-react";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CopyButton } from "@/components/shared/CopyButton";
@@ -20,6 +20,7 @@ interface Prompt { id: string; title: string; category: string; prompt_text: str
 interface UserHook { id: string; hook_text: string; category: string; platforms: string[] | null; is_favorite: boolean; }
 interface UserFormat { id: string; name: string; platform: string; structure: string; tips: string | null; }
 interface UserPrompt { id: string; title: string; category: string; prompt_text: string; tip: string | null; is_favorite: boolean; }
+interface UsageRecord { item_id: string; used_at: string; }
 
 const HOOK_CATEGORIES = ["curiosidade", "identificação", "contraste", "dor", "promessa", "polêmica", "storytelling", "problema", "revelação", "desafio", "como fazer", "motivação", "autoridade", "resultado", "ação"];
 
@@ -31,6 +32,7 @@ const Biblioteca = () => {
   const [userHooks, setUserHooks] = useState<UserHook[]>([]);
   const [userFormats, setUserFormats] = useState<UserFormat[]>([]);
   const [userPrompts, setUserPrompts] = useState<UserPrompt[]>([]);
+  const [usageMap, setUsageMap] = useState<Record<string, UsageRecord>>({});
   
   // Filters
   const [hookFilter, setHookFilter] = useState<string | null>(null);
@@ -59,15 +61,46 @@ const Biblioteca = () => {
       supabase.from("user_hooks").select("*").eq("user_id", user.id).order("created_at"),
       supabase.from("user_formats").select("*").eq("user_id", user.id).order("created_at"),
       supabase.from("user_prompts").select("*").eq("user_id", user.id).order("created_at"),
-    ]).then(([hooksRes, formatsRes, promptsRes, uHooksRes, uFormatsRes, uPromptsRes]) => {
+      supabase.from("user_library_usage" as any).select("*").eq("user_id", user.id),
+    ]).then(([hooksRes, formatsRes, promptsRes, uHooksRes, uFormatsRes, uPromptsRes, usageRes]) => {
       setHooks(hooksRes.data || []);
       setFormats(formatsRes.data || []);
       setPrompts(promptsRes.data || []);
       setUserHooks((uHooksRes.data as any[]) || []);
       setUserFormats((uFormatsRes.data as any[]) || []);
       setUserPrompts((uPromptsRes.data as any[]) || []);
+      const map: Record<string, UsageRecord> = {};
+      ((usageRes.data as any[]) || []).forEach((u: any) => { map[u.item_id] = { item_id: u.item_id, used_at: u.used_at }; });
+      setUsageMap(map);
     });
   }, [user]);
+
+  const toggleUsage = async (itemType: string, itemId: string) => {
+    if (!user) return;
+    if (usageMap[itemId]) {
+      await supabase.from("user_library_usage" as any).delete().eq("user_id", user.id).eq("item_id", itemId);
+      setUsageMap(prev => { const next = { ...prev }; delete next[itemId]; return next; });
+    } else {
+      const { data } = await supabase.from("user_library_usage" as any).insert({ user_id: user.id, item_type: itemType, item_id: itemId } as any).select().single();
+      if (data) setUsageMap(prev => ({ ...prev, [itemId]: { item_id: itemId, used_at: (data as any).used_at } }));
+    }
+  };
+
+  const UsageButton = ({ itemType, itemId }: { itemType: string; itemId: string }) => {
+    const usage = usageMap[itemId];
+    return (
+      <button
+        onClick={(e) => { e.stopPropagation(); toggleUsage(itemType, itemId); }}
+        className={`flex items-center gap-1 text-[10px] font-body transition-colors ${
+          usage ? "text-secondary" : "text-muted-foreground hover:text-foreground"
+        }`}
+        title={usage ? `Usado em ${new Date(usage.used_at).toLocaleDateString("pt-BR")}` : "Marcar como usado"}
+      >
+        <CheckCircle2 className={`h-3.5 w-3.5 ${usage ? "fill-secondary text-secondary" : ""}`} />
+        {usage ? new Date(usage.used_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : "Usado"}
+      </button>
+    );
+  };
 
   const viralCategories = ["curiosidade", "problema", "revelação", "desafio", "como fazer", "storytelling", "motivação", "autoridade", "resultado", "ação"];
   const classicCategories = ["curiosidade", "identificação", "contraste", "dor", "promessa", "polêmica"];
@@ -198,7 +231,10 @@ const Biblioteca = () => {
                       <CopyButton text={h.hook_text} />
                     </div>
                     <p className="text-sm font-body text-foreground">"{h.hook_text}"</p>
-                    {h.platforms && <div className="flex gap-2 mt-2">{h.platforms.map(p => <PlatformIcon key={p} platform={p as any} size="sm" />)}</div>}
+                    <div className="flex items-center justify-between mt-2">
+                      {h.platforms && <div className="flex gap-2">{h.platforms.map(p => <PlatformIcon key={p} platform={p as any} size="sm" />)}</div>}
+                      <UsageButton itemType="hook" itemId={h.id} />
+                    </div>
                   </motion.div>
                 ))
                 : sortByFavorite(userHooks.filter(h => classicCategories.includes(h.category)).filter(h => !hookFilter || h.category === hookFilter)).map((h, i) => (
@@ -213,6 +249,9 @@ const Biblioteca = () => {
                       </div>
                     </div>
                     <p className="text-sm font-body text-foreground">"{h.hook_text}"</p>
+                    <div className="flex justify-end mt-2">
+                      <UsageButton itemType="hook" itemId={h.id} />
+                    </div>
                   </motion.div>
                 ))
               }
@@ -246,7 +285,10 @@ const Biblioteca = () => {
                       <span className="px-2 py-0.5 rounded-lg text-[10px] font-body bg-muted text-muted-foreground">{f.format_type}</span>
                     </div>
                     <div className="bg-muted/50 rounded-lg p-3 mb-2"><p className="text-sm font-body text-foreground font-mono">{f.structure}</p></div>
-                    {f.tips && <p className="text-xs text-muted-foreground font-body flex items-center gap-1"><Sparkles className="h-3 w-3 text-primary" /> {f.tips}</p>}
+                    <div className="flex items-center justify-between">
+                      {f.tips && <p className="text-xs text-muted-foreground font-body flex items-center gap-1"><Sparkles className="h-3 w-3 text-primary" /> {f.tips}</p>}
+                      <UsageButton itemType="format" itemId={f.id} />
+                    </div>
                   </motion.div>
                 ))
                 : userFormats.filter(f => !formatFilter || f.platform === formatFilter).map((f, i) => (
@@ -262,7 +304,10 @@ const Biblioteca = () => {
                       </div>
                     </div>
                     <div className="bg-muted/50 rounded-lg p-3 mb-2"><p className="text-sm font-body text-foreground font-mono">{f.structure}</p></div>
-                    {f.tips && <p className="text-xs text-muted-foreground font-body flex items-center gap-1"><Sparkles className="h-3 w-3 text-primary" /> {f.tips}</p>}
+                    <div className="flex items-center justify-between">
+                      {f.tips && <p className="text-xs text-muted-foreground font-body flex items-center gap-1"><Sparkles className="h-3 w-3 text-primary" /> {f.tips}</p>}
+                      <UsageButton itemType="format" itemId={f.id} />
+                    </div>
                   </motion.div>
                 ))
               }
@@ -308,7 +353,10 @@ const Biblioteca = () => {
                         part.startsWith("[") ? <span key={j} className="text-primary font-medium">{part}</span> : <span key={j}>{part}</span>
                       )}
                     </p>
-                    {p.tip && <p className="text-xs text-muted-foreground font-body flex items-center gap-1"><Sparkles className="h-3 w-3" /> {p.tip}</p>}
+                    <div className="flex items-center justify-between">
+                      {p.tip && <p className="text-xs text-muted-foreground font-body flex items-center gap-1"><Sparkles className="h-3 w-3" /> {p.tip}</p>}
+                      <UsageButton itemType="prompt" itemId={p.id} />
+                    </div>
                   </motion.div>
                 ))
                 : sortByFavorite(promptFilter ? userPrompts.filter(p => p.category === promptFilter) : userPrompts).map((p, i) => (
@@ -326,7 +374,10 @@ const Biblioteca = () => {
                       </div>
                     </div>
                     <p className="text-sm text-foreground font-body leading-relaxed mb-2">{p.prompt_text}</p>
-                    {p.tip && <p className="text-xs text-muted-foreground font-body flex items-center gap-1"><Sparkles className="h-3 w-3" /> {p.tip}</p>}
+                    <div className="flex items-center justify-between">
+                      {p.tip && <p className="text-xs text-muted-foreground font-body flex items-center gap-1"><Sparkles className="h-3 w-3" /> {p.tip}</p>}
+                      <UsageButton itemType="prompt" itemId={p.id} />
+                    </div>
                   </motion.div>
                 ))
               }
@@ -356,6 +407,9 @@ const Biblioteca = () => {
                       <CopyButton text={h.hook_text} />
                     </div>
                     <p className="text-sm font-body text-foreground">"{h.hook_text}"</p>
+                    <div className="flex justify-end mt-2">
+                      <UsageButton itemType="hook" itemId={h.id} />
+                    </div>
                   </motion.div>
                 ))
                 : sortByFavorite(filteredUserViral).map((h, i) => (
@@ -370,6 +424,9 @@ const Biblioteca = () => {
                       </div>
                     </div>
                     <p className="text-sm font-body text-foreground">"{h.hook_text}"</p>
+                    <div className="flex justify-end mt-2">
+                      <UsageButton itemType="hook" itemId={h.id} />
+                    </div>
                   </motion.div>
                 ))
               }
