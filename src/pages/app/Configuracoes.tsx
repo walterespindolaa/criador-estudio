@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Plus, Trash2, LogOut, Camera, Lock, AlertTriangle, GripVertical, Sparkles, Bell, Shield, CreditCard, Paintbrush, Languages, MessageSquareText, MessageSquare, Ban } from "lucide-react";
+import { Plus, Trash2, LogOut, Camera, Lock, AlertTriangle, GripVertical, Sparkles, Bell, Shield, CreditCard, Paintbrush, Languages, MessageSquareText, MessageSquare, Ban, Moon, Sun, Monitor, Users } from "lucide-react";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useTheme } from "@/contexts/ThemeContext";
+import { PlatformIcon as PlatformIconComp } from "@/components/shared/PlatformIcon";
 
 interface Pillar { id: string; name: string; color: string; }
 interface Habit { id: string; name: string; position: number; }
