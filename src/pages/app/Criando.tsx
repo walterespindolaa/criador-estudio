@@ -44,7 +44,7 @@ const Criando = () => {
       supabase.from("posts").select("*").eq("user_id", user.id).order("created_at"),
       supabase.from("pillars").select("*").eq("user_id", user.id).order("position"),
     ]);
-    setPosts(postsRes.data || []);
+    setPosts((postsRes.data as any[]) || []);
     setPillars(pillarsRes.data || []);
   };
 
