@@ -10,8 +10,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, CalendarDays, Target, BarChart3, Check } from "lucide-react";
-import { PLATFORM_ICONS, FORMAT_LABELS } from "@/lib/constants";
+import { Plus, Trash2, CalendarDays, Target, BarChart3, Check, Calendar } from "lucide-react";
+import { FORMAT_LABELS } from "@/lib/constants";
+import { PlatformIcon } from "@/components/shared/PlatformIcon";
 
 interface Post {
   id: string;
@@ -247,7 +248,7 @@ const Plano = () => {
                     {dayPosts.map(post => (
                       <div key={post.id} className="bg-background rounded-lg p-2 mb-1 border border-border">
                         <p className="text-xs font-body font-medium text-foreground truncate">{post.title}</p>
-                        <span className="text-xs">{PLATFORM_ICONS[post.platform]}</span>
+                        <PlatformIcon platform={post.platform as any} size="sm" />
                       </div>
                     ))}
                   </div>

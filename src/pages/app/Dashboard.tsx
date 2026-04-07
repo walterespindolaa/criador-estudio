@@ -44,7 +44,7 @@ const Dashboard = () => {
     if (error) {
       toast.error("Erro ao salvar ideia.");
     } else {
-      toast.success("Ideia capturada! 💡");
+      toast.success("Ideia capturada!");
       setQuickIdea("");
       setIdeaCount(prev => prev + 1);
     }
@@ -112,7 +112,7 @@ const Dashboard = () => {
         {/* Empty state */}
         {ideaCount === 0 && postCounts.published === 0 && (
           <div className="bg-card rounded-2xl p-12 shadow-warm border border-border text-center">
-            <p className="text-lg font-display font-semibold text-foreground mb-2">Seu estúdio está pronto! 🎨</p>
+            <p className="text-lg font-display font-semibold text-foreground mb-2">Seu estúdio está pronto!</p>
             <p className="text-muted-foreground font-body max-w-md mx-auto">
               Comece capturando sua primeira ideia acima. Pode ser uma frase, um tema, um insight — tudo vale.
             </p>

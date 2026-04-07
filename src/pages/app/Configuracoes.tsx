@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Settings, Plus, Trash2, GripVertical } from "lucide-react";
+import { Settings, Plus, Trash2, GripVertical, LogOut, Sparkles } from "lucide-react";
+import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -150,17 +151,18 @@ const Configuracoes = () => {
               <Label className="font-body text-sm">Plataformas</Label>
               <div className="flex gap-3">
                 {[
-                  { id: "instagram", label: "📸 Instagram" },
-                  { id: "tiktok", label: "🎵 TikTok" },
-                  { id: "youtube", label: "🎬 YouTube" },
+                  { id: "instagram", label: "Instagram" },
+                  { id: "tiktok", label: "TikTok" },
+                  { id: "youtube", label: "YouTube" },
                 ].map(p => (
                   <button
                     key={p.id}
                     onClick={() => togglePlatform(p.id)}
-                    className={`px-4 py-2 rounded-xl border text-sm font-body transition-colors ${
+                    className={`px-4 py-2 rounded-xl border text-sm font-body transition-colors flex items-center gap-2 ${
                       platforms.includes(p.id) ? "bg-primary/10 border-primary" : "bg-background border-border"
                     }`}
                   >
+                    <PlatformIcon platform={p.id as any} size="sm" />
                     {p.label}
                   </button>
                 ))}

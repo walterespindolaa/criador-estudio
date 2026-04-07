@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Plus } from "lucide-react";
+import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { PostDrawer } from "@/components/kanban/PostDrawer";
-import { PLATFORM_ICONS, FORMAT_LABELS } from "@/lib/constants";
+import { FORMAT_LABELS } from "@/lib/constants";
+import { PlatformIcon } from "@/components/shared/PlatformIcon";
 
 interface Post {
   id: string;
@@ -24,6 +25,7 @@ interface Post {
   result_views: number | null;
   result_saves: number | null;
   result_comments: number | null;
+  archive_summary: string | null;
   user_id: string;
 }
 
@@ -34,12 +36,12 @@ interface Pillar {
 }
 
 const COLUMNS = [
-  { key: "ideia", label: "💡 Ideia", bg: "bg-muted" },
-  { key: "roteiro", label: "✍️ Roteiro", bg: "bg-primary/5" },
-  { key: "gravando", label: "🎬 Gravando", bg: "bg-secondary/10" },
-  { key: "editando", label: "✂️ Editando", bg: "bg-accent" },
-  { key: "agendado", label: "📅 Agendado", bg: "bg-primary/10" },
-  { key: "publicado", label: "✅ Publicado", bg: "bg-secondary/20" },
+  { key: "ideia", label: "Ideia", icon: LayoutDashboard, bg: "bg-muted" },
+  { key: "roteiro", label: "Roteiro", icon: PenLine, bg: "bg-primary/5" },
+  { key: "gravando", label: "Gravando", icon: Video, bg: "bg-secondary/10" },
+  { key: "editando", label: "Editando", icon: Scissors, bg: "bg-accent" },
+  { key: "agendado", label: "Agendado", icon: Calendar, bg: "bg-primary/10" },
+  { key: "publicado", label: "Publicado", icon: CheckCircle2, bg: "bg-secondary/20" },
 ];
 
 const Criando = () => {
@@ -114,7 +116,10 @@ const Criando = () => {
                 onDrop={() => handleDrop(col.key)}
               >
                 <div className={`${col.bg} rounded-xl px-3 py-2 mb-3 flex items-center justify-between`}>
-                  <h3 className="font-body font-semibold text-xs text-foreground">{col.label}</h3>
+                  <div className="flex items-center gap-1.5">
+                    <col.icon className="h-3.5 w-3.5 text-foreground/70" />
+                    <h3 className="font-body font-semibold text-xs text-foreground">{col.label}</h3>
+                  </div>
                   <span className="text-xs text-muted-foreground font-body">{colPosts.length}</span>
                 </div>
                 <div className="space-y-3 min-h-[200px]">
@@ -131,7 +136,7 @@ const Criando = () => {
                       >
                         <p className="font-body font-medium text-sm text-foreground mb-2 leading-snug">{post.title}</p>
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-xs">{PLATFORM_ICONS[post.platform]}</span>
+                          <PlatformIcon platform={post.platform as any} size="sm" />
                           <span className="text-xs bg-muted px-1.5 py-0.5 rounded font-body">{FORMAT_LABELS[post.format]}</span>
                           {pillar && (
                             <span
@@ -143,7 +148,9 @@ const Criando = () => {
                           )}
                         </div>
                         {post.scheduled_date && (
-                          <p className="text-xs text-muted-foreground font-body mt-2">📅 {post.scheduled_date}</p>
+                          <p className="text-xs text-muted-foreground font-body mt-2 flex items-center gap-1">
+                            <Calendar className="h-3 w-3" /> {post.scheduled_date}
+                          </p>
                         )}
                       </motion.div>
                     );

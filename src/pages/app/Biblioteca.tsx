@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, MessageSquareText, FileCode2, Palette, Plus, Trash2, Upload } from "lucide-react";
+import { Sparkles, MessageSquareText, FileCode2, Palette, Plus, Trash2, Upload, Paintbrush, Languages, MessageSquare, Ban } from "lucide-react";
+import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,11 +19,11 @@ interface BrandItem {
 }
 
 const BRAND_SECTIONS = [
-  { type: "cor", label: "🎨 Cores da marca", placeholder: "Ex: #C4622D" },
-  { type: "fonte", label: "✏️ Fontes", placeholder: "Ex: Playfair Display" },
-  { type: "tom", label: "🗣️ Tom de voz", placeholder: "Ex: Acolhedor e direto" },
-  { type: "expressao", label: "💬 Expressões que uso", placeholder: "Ex: Bora!" },
-  { type: "evitar", label: "🚫 Palavras que evito", placeholder: "Ex: Não use gírias" },
+  { type: "cor", label: "Cores da marca", icon: Paintbrush, placeholder: "Ex: #C4622D" },
+  { type: "fonte", label: "Fontes", icon: Languages, placeholder: "Ex: Playfair Display" },
+  { type: "tom", label: "Tom de voz", icon: MessageSquareText, placeholder: "Ex: Acolhedor e direto" },
+  { type: "expressao", label: "Expressões que uso", icon: MessageSquare, placeholder: "Ex: Bora!" },
+  { type: "evitar", label: "Palavras que evito", icon: Ban, placeholder: "Ex: Não use gírias" },
 ];
 
 const HOOK_CATEGORIES = ["curiosidade", "identificação", "contraste", "dor", "promessa", "polêmica"];
@@ -155,11 +156,9 @@ const Biblioteca = () => {
                     <CopyButton text={h.text} />
                   </div>
                   <p className="text-sm font-body text-foreground">"{h.text}"</p>
-                  <div className="flex gap-1 mt-2">
+                  <div className="flex gap-2 mt-2">
                     {h.platforms.map(p => (
-                      <span key={p} className="text-xs">
-                        {p === "instagram" ? "📸" : p === "tiktok" ? "🎵" : "🎬"}
-                      </span>
+                      <PlatformIcon key={p} platform={p as any} size="sm" />
                     ))}
                   </div>
                 </motion.div>
@@ -231,7 +230,7 @@ const Biblioteca = () => {
                     )}
                   </p>
                   {p.tip && (
-                    <p className="text-xs text-muted-foreground font-body">💡 {p.tip}</p>
+                    <p className="text-xs text-muted-foreground font-body flex items-center gap-1"><Sparkles className="h-3 w-3" /> {p.tip}</p>
                   )}
                 </motion.div>
               ))}
@@ -245,7 +244,10 @@ const Biblioteca = () => {
                 const items = brandItems.filter(i => i.type === section.type);
                 return (
                   <div key={section.type} className="bg-card rounded-2xl p-5 shadow-warm border border-border">
-                    <h3 className="font-body font-semibold text-foreground mb-3">{section.label}</h3>
+                    <h3 className="font-body font-semibold text-foreground mb-3 flex items-center gap-2">
+                      <section.icon className="h-4 w-4 text-primary/70" />
+                      {section.label}
+                    </h3>
                     {items.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-3">
                         {items.map(item => (

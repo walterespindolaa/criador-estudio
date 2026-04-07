@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Archive, ExternalLink } from "lucide-react";
+import { Archive, ExternalLink, Eye, Bookmark, MessageSquare } from "lucide-react";
+import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -16,7 +17,7 @@ interface Post {
   archive_summary: string | null;
 }
 
-const PLATFORM_ICONS: Record<string, string> = { instagram: "📸", tiktok: "🎵", youtube: "🎬" };
+
 
 const Historico = () => {
   const { user } = useAuth();
@@ -64,17 +65,23 @@ const Historico = () => {
                 <div className="flex items-start justify-between">
                   <div>
                     <h3 className="font-body font-semibold text-foreground">{post.title}</h3>
-                    <p className="text-sm text-muted-foreground font-body mt-1">
-                      {PLATFORM_ICONS[post.platform]} {post.format} •{" "}
-                      {post.published_at ? new Date(post.published_at).toLocaleDateString("pt-BR") : "—"}
-                    </p>
+                    {post.archive_summary && (
+                      <p className="text-xs text-primary font-body mt-0.5 italic">"{post.archive_summary}"</p>
+                    )}
+                    <div className="flex items-center gap-2 mt-2">
+                      <PlatformIcon platform={post.platform as any} size="sm" />
+                      <p className="text-sm text-muted-foreground font-body">
+                        {post.format} •{" "}
+                        {post.published_at ? new Date(post.published_at).toLocaleDateString("pt-BR") : "—"}
+                      </p>
+                    </div>
                   </div>
                 </div>
                 {(post.result_views || post.result_saves || post.result_comments) && (
                   <div className="flex gap-4 mt-3 text-sm text-muted-foreground font-body">
-                    {post.result_views && <span>👁 {post.result_views}</span>}
-                    {post.result_saves && <span>🔖 {post.result_saves}</span>}
-                    {post.result_comments && <span>💬 {post.result_comments}</span>}
+                    {post.result_views && <span className="flex items-center gap-1"><Eye className="h-3.5 w-3.5" /> {post.result_views}</span>}
+                    {post.result_saves && <span className="flex items-center gap-1"><Bookmark className="h-3.5 w-3.5" /> {post.result_saves}</span>}
+                    {post.result_comments && <span className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" /> {post.result_comments}</span>}
                   </div>
                 )}
               </motion.div>

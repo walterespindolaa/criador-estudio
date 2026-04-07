@@ -7,7 +7,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Instagram, Youtube, X, Plus } from "lucide-react";
+import { ArrowRight, Instagram, Youtube, X, Plus, Sparkles } from "lucide-react";
+import { PlatformIcon } from "@/components/shared/PlatformIcon";
 
 const NICHE_SUGGESTIONS = [
   "Lifestyle", "Moda", "Beleza", "Fitness", "Culinária",
@@ -216,7 +217,7 @@ const Onboarding = () => {
                           : "bg-card border-border hover:bg-accent"
                       }`}
                     >
-                      <p.icon className="h-6 w-6" />
+                      <PlatformIcon platform={p.id as any} size="md" />
                       <span className="text-sm font-body font-medium">{p.label}</span>
                     </button>
                   ))}
