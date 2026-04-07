@@ -95,33 +95,33 @@ const Biblioteca = () => {
     
     if (sheetType === "hook") {
       if (!formData.hook_text?.trim() || !formData.category) { toast.error("Preencha os campos."); return; }
-      const payload = { user_id: user.id, hook_text: formData.hook_text, category: formData.category, platforms: formData.platforms || null };
+      const payload = { user_id: user.id, hook_text: formData.hook_text as string, category: formData.category as string, platforms: formData.platforms || null };
       if (editingId) {
-        await supabase.from(table).update(payload).eq("id", editingId);
+        await supabase.from("user_hooks").update(payload).eq("id", editingId);
       } else {
-        await supabase.from(table).insert(payload);
+        await supabase.from("user_hooks").insert(payload);
       }
-      const { data } = await supabase.from(table).select("*").eq("user_id", user.id).order("created_at");
+      const { data } = await supabase.from("user_hooks").select("*").eq("user_id", user.id).order("created_at");
       setUserHooks((data as any[]) || []);
     } else if (sheetType === "format") {
       if (!formData.name?.trim() || !formData.platform || !formData.structure?.trim()) { toast.error("Preencha os campos."); return; }
-      const payload = { user_id: user.id, name: formData.name, platform: formData.platform, structure: formData.structure, tips: formData.tips || null };
+      const payload = { user_id: user.id, name: formData.name as string, platform: formData.platform as string, structure: formData.structure as string, tips: (formData.tips as string) || null };
       if (editingId) {
-        await supabase.from(table).update(payload).eq("id", editingId);
+        await supabase.from("user_formats").update(payload).eq("id", editingId);
       } else {
-        await supabase.from(table).insert(payload);
+        await supabase.from("user_formats").insert(payload);
       }
-      const { data } = await supabase.from(table).select("*").eq("user_id", user.id).order("created_at");
+      const { data } = await supabase.from("user_formats").select("*").eq("user_id", user.id).order("created_at");
       setUserFormats((data as any[]) || []);
     } else {
       if (!formData.title?.trim() || !formData.prompt_text?.trim() || !formData.category) { toast.error("Preencha os campos."); return; }
-      const payload = { user_id: user.id, title: formData.title, category: formData.category, prompt_text: formData.prompt_text, tip: formData.tip || null };
+      const payload = { user_id: user.id, title: formData.title as string, category: formData.category as string, prompt_text: formData.prompt_text as string, tip: (formData.tip as string) || null };
       if (editingId) {
-        await supabase.from(table).update(payload).eq("id", editingId);
+        await supabase.from("user_prompts").update(payload).eq("id", editingId);
       } else {
-        await supabase.from(table).insert(payload);
+        await supabase.from("user_prompts").insert(payload);
       }
-      const { data } = await supabase.from(table).select("*").eq("user_id", user.id).order("created_at");
+      const { data } = await supabase.from("user_prompts").select("*").eq("user_id", user.id).order("created_at");
       setUserPrompts((data as any[]) || []);
     }
     toast.success(editingId ? "Atualizado!" : "Adicionado!");

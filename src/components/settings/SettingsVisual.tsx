@@ -84,8 +84,8 @@ export function SettingsVisual() {
 
   useEffect(() => {
     if (profile) {
-      setColor((profile as any).theme_color || "#C4622D");
-      setFont((profile as any).theme_font || "fraunces");
+      setColor(profile.theme_color || "#C4622D");
+      setFont(profile.theme_font || "fraunces");
     }
   }, [profile]);
 
