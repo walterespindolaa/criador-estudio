@@ -209,6 +209,9 @@ const Plano = () => {
             <TabsTrigger value="metas" className="rounded-lg font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               <Target className="h-4 w-4 mr-1" /> Metas
             </TabsTrigger>
+            <TabsTrigger value="reflexao" className="rounded-lg font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              <BookOpen className="h-4 w-4 mr-1" /> Reflexão
+            </TabsTrigger>
           </TabsList>
 
           {/* TAB: Semana */}
