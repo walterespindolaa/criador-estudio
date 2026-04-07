@@ -320,6 +320,74 @@ const Configuracoes = () => {
                   </div>
                 );
               })}
+
+              {/* Persona section */}
+              <div className="bg-card rounded-2xl p-5 shadow-[var(--shadow-warm)] border border-border space-y-4">
+                <h3 className="font-body font-semibold text-foreground flex items-center gap-2">
+                  <Users className="h-4 w-4 text-primary/70" /> Meu Público (Persona)
+                </h3>
+                <div className="space-y-2">
+                  <Label className="font-body text-sm">Nome da persona</Label>
+                  <Input placeholder="Ex: Maria, 28 anos" value={personaName} onChange={e => setPersonaName(e.target.value)} className="rounded-xl" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="font-body text-sm">Faixa etária</Label>
+                  <div className="flex gap-2 flex-wrap">
+                    {["18-24", "25-34", "35-44", "45+"].map(a => (
+                      <button key={a} onClick={() => setPersonaAge(personaAge === a ? "" : a)} className={`px-3 py-1.5 rounded-xl text-sm font-body border transition-colors ${personaAge === a ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border"}`}>{a}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="font-body text-sm">Gênero</Label>
+                  <div className="flex gap-2 flex-wrap">
+                    {["Mulheres", "Homens", "Todos"].map(g => (
+                      <button key={g} onClick={() => setPersonaGender(personaGender === g ? "" : g)} className={`px-3 py-1.5 rounded-xl text-sm font-body border transition-colors ${personaGender === g ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border"}`}>{g}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="font-body text-sm">Localização</Label>
+                  <Input placeholder="Ex: Brasil, São Paulo" value={personaLocation} onChange={e => setPersonaLocation(e.target.value)} className="rounded-xl" />
+                </div>
+                {/* Tag sections */}
+                {([
+                  { label: "Interesses", arr: personaInterests, setArr: setPersonaInterests },
+                  { label: "Dores principais", arr: personaPains, setArr: setPersonaPains },
+                  { label: "Desejos", arr: personaDesires, setArr: setPersonaDesires },
+                ] as const).map(section => (
+                  <div key={section.label} className="space-y-2">
+                    <Label className="font-body text-sm">{section.label}</Label>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {section.arr.map((tag, i) => (
+                        <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted rounded-lg text-xs font-body">
+                          {tag}
+                          <button onClick={() => section.setArr(section.arr.filter((_, j) => j !== i))} className="hover:text-destructive">×</button>
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input placeholder={`Adicionar ${section.label.toLowerCase()}...`} value={newTag} onChange={e => setNewTag(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { addTagTo(section.arr, section.setArr); } }} className="rounded-xl text-sm" />
+                      <Button variant="outline" size="sm" onClick={() => addTagTo(section.arr, section.setArr)}><Plus className="h-4 w-4" /></Button>
+                    </div>
+                  </div>
+                ))}
+                <div className="space-y-2">
+                  <Label className="font-body text-sm">Plataformas que usa</Label>
+                  <div className="flex gap-2">
+                    {(["instagram", "tiktok", "youtube"] as const).map(p => (
+                      <button key={p} onClick={() => setPersonaPlatforms(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p])} className={`px-3 py-2 rounded-xl border transition-colors ${personaPlatforms.includes(p) ? "bg-primary/10 border-primary" : "bg-background border-border"}`}>
+                        <PlatformIconComp platform={p} size="sm" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="font-body text-sm">Notas</Label>
+                  <Textarea placeholder="Observações sobre seu público..." value={personaNotes} onChange={e => setPersonaNotes(e.target.value)} className="rounded-xl min-h-[60px]" />
+                </div>
+                <Button variant="hero" onClick={savePersona}>Salvar persona</Button>
+              </div>
             </div>
           </TabsContent>
 
