@@ -21,7 +21,7 @@ import Arquivos from "./pages/app/Arquivos";
 import Historico from "./pages/app/Historico";
 import Configuracoes from "./pages/app/Configuracoes";
 import Aprender from "./pages/app/Aprender";
-import Moodboard from "./pages/app/Moodboard";
+import Brandbook from "./pages/app/Brandbook";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -53,8 +53,8 @@ const App = () => (
               <Route path="arquivos" element={<Arquivos />} />
               <Route path="historico" element={<Historico />} />
               <Route path="aprender" element={<Aprender />} />
+              <Route path="brandbook" element={<Brandbook />} />
               <Route path="configuracoes" element={<Configuracoes />} />
-              <Route path="moodboard" element={<Moodboard />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

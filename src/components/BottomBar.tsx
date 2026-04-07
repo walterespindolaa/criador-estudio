@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { Lightbulb, Kanban, CalendarDays, BookOpen, MoreHorizontal, Archive, GraduationCap, FolderOpen, ListTodo, X, Heart } from "lucide-react";
+import { Lightbulb, Kanban, CalendarDays, BookOpen, MoreHorizontal, Archive, GraduationCap, FolderOpen, ListTodo, X, BookMarked } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const primaryItems = [
@@ -11,9 +11,9 @@ const primaryItems = [
 ];
 
 const moreItems = [
+  { title: "Brandbook", url: "/app/brandbook", icon: BookMarked },
   { title: "Tarefas", url: "/app/tarefas", icon: ListTodo },
   { title: "Arquivos", url: "/app/arquivos", icon: FolderOpen },
-  { title: "Moodboard", url: "/app/moodboard", icon: Heart },
   { title: "Histórico", url: "/app/historico", icon: Archive },
   { title: "Aprender", url: "/app/aprender", icon: GraduationCap },
 ];

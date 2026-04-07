@@ -12,8 +12,8 @@ const groupProducao = [
 
 const groupInsights = [
   { title: "Biblioteca", url: "/app/biblioteca" },
+  { title: "Brandbook", url: "/app/brandbook" },
   { title: "Arquivos", url: "/app/arquivos" },
-  { title: "Moodboard", url: "/app/moodboard" },
 ];
 
 const groupHistorico = [
