@@ -755,6 +755,7 @@ const Plano = () => {
                         <Input type="date" value={newGoalForm.due_date}
                           onChange={e => setNewGoalForm(f => ({ ...f, due_date: e.target.value }))} className="rounded-xl text-sm" />
                       </div>
+                    </div>
                     <div className="flex gap-2 justify-end">
                       <Button variant="ghost" size="sm" onClick={() => setShowNewGoal(false)}>Cancelar</Button>
                       <Button size="sm" onClick={createGoal} disabled={!newGoalForm.title.trim()}>Criar meta</Button>
