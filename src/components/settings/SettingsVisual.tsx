@@ -13,24 +13,38 @@ const FONT_OPTIONS = [
 ];
 
 export function applyThemeFont(fontKey: string) {
-  const opt = FONT_OPTIONS.find(f => f.key === fontKey);
-  if (!opt) return;
-  const [display, body] = opt.families.split("|");
-  document.documentElement.style.setProperty("--font-display", display);
-  document.documentElement.style.setProperty("--font-body", body);
-  const families: Record<string, string> = {
-    fraunces: "Fraunces:opsz,wght@9..144,100..900&family=DM+Sans:wght@400;500;600;700",
-    cormorant: "Cormorant+Garamond:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700",
-    youngserif: "Young+Serif&family=Outfit:wght@400;500;600;700",
+  const fonts: Record<string, { display: string; body: string; googleUrl: string }> = {
+    fraunces: {
+      display: "'Fraunces', serif",
+      body: "'DM Sans', sans-serif",
+      googleUrl: "https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900&family=DM+Sans:wght@400;500;700&display=swap",
+    },
+    cormorant: {
+      display: "'Cormorant Garamond', serif",
+      body: "'Plus Jakarta Sans', sans-serif",
+      googleUrl: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;700&display=swap",
+    },
+    youngserif: {
+      display: "'Young Serif', serif",
+      body: "'Outfit', sans-serif",
+      googleUrl: "https://fonts.googleapis.com/css2?family=Young+Serif&family=Outfit:wght@400;500;700&display=swap",
+    },
   };
+
+  const opt = fonts[fontKey];
+  if (!opt) return;
+
   const id = `theme-font-${fontKey}`;
   if (!document.getElementById(id)) {
     const link = document.createElement("link");
     link.id = id;
     link.rel = "stylesheet";
-    link.href = `https://fonts.googleapis.com/css2?family=${families[fontKey]}&display=swap`;
+    link.href = opt.googleUrl;
     document.head.appendChild(link);
   }
+
+  document.documentElement.style.setProperty("--active-font-display", opt.display);
+  document.documentElement.style.setProperty("--active-font-body", opt.body);
 }
 import { toast } from "sonner";
 

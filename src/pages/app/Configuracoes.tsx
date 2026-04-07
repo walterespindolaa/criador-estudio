@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Plus, Trash2, LogOut, Camera, Lock, AlertTriangle, GripVertical, Sparkles, Bell, Shield, CreditCard, Paintbrush, Languages, MessageSquareText, MessageSquare, Ban, Moon, Sun, Monitor, Users, HardDrive, ExternalLink, Unplug, Palette } from "lucide-react";
+import { Plus, Trash2, LogOut, Camera, Lock, AlertTriangle, GripVertical, Sparkles, Bell, Shield, CreditCard, Paintbrush, Languages, MessageSquareText, MessageSquare, Ban, Moon, Sun, Monitor, Users, HardDrive, ExternalLink, Unplug, Palette, User, LayoutGrid, Plug } from "lucide-react";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
