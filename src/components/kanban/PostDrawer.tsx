@@ -223,6 +223,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   };
 
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="bg-background overflow-y-auto w-full sm:max-w-4xl p-0" side="right">
         <div className="flex flex-col lg:flex-row h-full">
