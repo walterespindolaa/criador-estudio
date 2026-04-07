@@ -1,11 +1,16 @@
 import { Outlet, NavLink } from "react-router-dom";
 import { TopBar } from "@/components/TopBar";
 import { BottomBar } from "@/components/BottomBar";
+import { PWAInstallBanner } from "@/components/shared/PWAInstallBanner";
+import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { Settings } from "lucide-react";
 
 const AppLayout = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      {/* PWA Install Banner */}
+      <PWAInstallBanner />
+
       {/* Desktop TopBar */}
       <TopBar />
 
@@ -19,9 +24,12 @@ const AppLayout = () => {
             Criadores
           </h1>
         </NavLink>
-        <NavLink to="/app/configuracoes" className="p-2 hover:bg-accent/60 rounded-xl transition-colors">
-          <Settings className="h-5 w-5 text-muted-foreground hover:text-foreground" />
-        </NavLink>
+        <div className="flex items-center gap-1">
+          <NotificationsBell />
+          <NavLink to="/app/configuracoes" className="p-2 hover:bg-accent/60 rounded-xl transition-colors">
+            <Settings className="h-5 w-5 text-muted-foreground hover:text-foreground" />
+          </NavLink>
+        </div>
       </header>
 
       {/* Content Area */}
