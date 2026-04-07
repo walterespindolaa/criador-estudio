@@ -1,12 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CopyButton } from "@/components/shared/CopyButton";
-import { Sparkles, MessageSquareText, FileCode2, Anchor, PenLine, MessageSquare, Megaphone, ClipboardList, BarChart3, Eye, Bookmark, Target, Smartphone } from "lucide-react";
+import { Sparkles, MessageSquareText, FileCode2, Anchor, PenLine, MessageSquare, Megaphone, ClipboardList, BarChart3, Eye, Bookmark, Target, Clock } from "lucide-react";
 import { PostTasks } from "./PostTasks";
+import { DrivePickerButton } from "@/components/drive/DrivePickerButton";
+import { DriveMediaPreview } from "@/components/drive/DriveMediaPreview";
 import {
   Select,
   SelectContent,
@@ -48,6 +50,7 @@ interface Post {
   caption: string | null;
   cta: string | null;
   scheduled_date: string | null;
+  scheduled_time: string | null;
   published_at: string | null;
   notes: string | null;
   result_views: number | null;
@@ -104,6 +107,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   const [caption, setCaption] = useState("");
   const [cta, setCta] = useState("");
   const [scheduledDate, setScheduledDate] = useState("");
+  const [scheduledTime, setScheduledTime] = useState("");
   const [notes, setNotes] = useState("");
   const [views, setViews] = useState("");
   const [saves, setSaves] = useState("");
@@ -114,6 +118,20 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   const [contentBlocks, setContentBlocks] = useState<ContentBlocks>({ tema: "pendente", roteiro: "pendente", midia: "pendente", legenda: "pendente" });
   const [previewOpen, setPreviewOpen] = useState(false);
   const { profile } = useProfile();
+
+  // Drive media refs
+  interface DriveRef { id: string; file_name: string; file_type: string | null; thumbnail_url: string | null; view_url: string | null; }
+  const [driveMedia, setDriveMedia] = useState<DriveRef[]>([]);
+
+  const fetchDriveMedia = useCallback(async (postId: string) => {
+    const { data } = await supabase.from("external_media_refs").select("id, file_name, file_type, thumbnail_url, view_url").eq("post_id", postId);
+    setDriveMedia((data as DriveRef[]) || []);
+  }, []);
+
+  const removeDriveRef = async (refId: string) => {
+    await supabase.from("external_media_refs").delete().eq("id", refId);
+    setDriveMedia(prev => prev.filter(m => m.id !== refId));
+  };
 
   useEffect(() => {
     if (post) {
@@ -127,7 +145,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       setCaption(post.caption || "");
       setCta(post.cta || "");
       setScheduledDate(post.scheduled_date || "");
-      setNotes(post.notes || "");
+      setScheduledTime((post as any).scheduled_time || "");
       setViews(post.result_views?.toString() || "");
       setSaves(post.result_saves?.toString() || "");
       setComments(post.result_comments?.toString() || "");
@@ -136,11 +154,13 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
     } else {
       setTitle(""); setPlatform("instagram"); setFormat("reels");
       setPillarId(""); setStatus("ideia"); setHook(""); setScript("");
-      setCaption(""); setCta(""); setScheduledDate(""); setNotes("");
+      setCaption(""); setCta(""); setScheduledDate(""); setScheduledTime(""); setNotes("");
       setViews(""); setSaves(""); setComments(""); setShowResults(false);
       setContentBlocks({ tema: "pendente", roteiro: "pendente", midia: "pendente", legenda: "pendente" });
+      setDriveMedia([]);
     }
-  }, [post, open]);
+    if (post) fetchDriveMedia(post.id);
+  }, [post, open, fetchDriveMedia]);
 
   const handleAiReferences = async () => {
     if (aiHookCategories.length > 0 || isAiLoading) return;
@@ -172,6 +192,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       caption: caption || null,
       cta: cta || null,
       scheduled_date: scheduledDate || null,
+      scheduled_time: scheduledTime || null,
       notes: notes || null,
       result_views: views ? parseInt(views) : null,
       result_saves: saves ? parseInt(saves) : null,
@@ -345,13 +366,49 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
 
 
               <div className="space-y-2">
-                <Label className="font-body text-sm">Data agendada</Label>
-                <Input
-                  type="date"
-                  value={scheduledDate}
-                  onChange={(e) => setScheduledDate(e.target.value)}
-                  className="rounded-xl"
-                />
+                <Label className="font-body text-sm">Data e horário agendados</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    type="date"
+                    value={scheduledDate}
+                    onChange={(e) => setScheduledDate(e.target.value)}
+                    className="rounded-xl"
+                  />
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                    <Input
+                      type="time"
+                      value={scheduledTime}
+                      onChange={(e) => setScheduledTime(e.target.value)}
+                      className="rounded-xl pl-9"
+                      placeholder="HH:MM"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Google Drive media */}
+              <div className="space-y-2">
+                <Label className="font-body text-sm">Mídia do Google Drive</Label>
+                <div className="flex flex-wrap gap-3 items-start">
+                  {driveMedia.map(m => (
+                    <DriveMediaPreview
+                      key={m.id}
+                      fileName={m.file_name}
+                      fileType={m.file_type}
+                      thumbnailUrl={m.thumbnail_url}
+                      viewUrl={m.view_url}
+                      size="sm"
+                      onRemove={() => removeDriveRef(m.id)}
+                    />
+                  ))}
+                  <DrivePickerButton
+                    postId={post?.id}
+                    onPicked={() => { if (post) fetchDriveMedia(post.id); }}
+                    variant="outline"
+                    size="sm"
+                  />
+                </div>
               </div>
 
               {/* Hook */}

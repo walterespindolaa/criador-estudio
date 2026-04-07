@@ -1,0 +1,1 @@
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS scheduled_time TEXT DEFAULT NULL;

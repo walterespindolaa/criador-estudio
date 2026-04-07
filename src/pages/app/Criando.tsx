@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 interface Post {
   id: string; title: string; platform: string; format: string; pillar_id: string | null;
   status: string; hook: string | null; script: string | null; caption: string | null;
-  cta: string | null; scheduled_date: string | null; published_at: string | null;
+  cta: string | null; scheduled_date: string | null; scheduled_time: string | null; published_at: string | null;
   notes: string | null; result_views: number | null; result_saves: number | null;
   result_comments: number | null; archive_summary: string | null; user_id: string;
   content_blocks: { tema: string; roteiro: string; midia: string; legenda: string } | null;
@@ -146,7 +146,7 @@ const Criando = () => {
                           {pillar && <span className="px-1.5 py-0.5 rounded text-xs font-body text-primary-foreground" style={{ backgroundColor: pillar.color }}>{pillar.name}</span>}
                           {isPublished && <span className="px-1.5 py-0.5 rounded text-xs font-body bg-secondary text-secondary-foreground">Publicado</span>}
                         </div>
-                        {post.scheduled_date && <p className="text-xs text-muted-foreground font-body mt-2 flex items-center gap-1"><Calendar className="h-3 w-3" /> {post.scheduled_date}</p>}
+                        {post.scheduled_date && <p className="text-xs text-muted-foreground font-body mt-2 flex items-center gap-1"><Calendar className="h-3 w-3" /> {post.scheduled_date}{post.scheduled_time ? ` às ${post.scheduled_time}` : ""}</p>}
                         {tc && tc.count > 0 && (
                           <span className={`inline-flex items-center gap-1 mt-1.5 text-[10px] font-body font-semibold px-1.5 py-0.5 rounded ${allDone ? "bg-secondary/20 text-secondary" : "bg-muted text-muted-foreground"}`}>
                             {allDone ? "✓" : `${pendingTasks} tarefa${pendingTasks !== 1 ? "s" : ""}`}
