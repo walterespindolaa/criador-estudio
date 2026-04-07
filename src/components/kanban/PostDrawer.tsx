@@ -471,7 +471,6 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                 </div>
               )}
 
-              </div>
             </div>
           </div>
 
