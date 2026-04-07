@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CopyButton } from "@/components/shared/CopyButton";
-import { Sparkles, MessageSquareText, FileCode2 } from "lucide-react";
+import { Sparkles, MessageSquareText, FileCode2, Anchor, PenLine, MessageSquare, Megaphone, ClipboardList, BarChart3, Eye, Bookmark, Target } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -22,7 +22,9 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { fireConfetti } from "@/lib/confetti";
-import { PLATFORM_ICONS, FORMAT_LABELS, PLATFORMS, FORMATS, STATUS_OPTIONS } from "@/lib/constants";
+import { FORMAT_LABELS, PLATFORMS, FORMATS, STATUS_OPTIONS } from "@/lib/constants";
+import { PlatformIcon } from "@/components/shared/PlatformIcon";
+import { filterReferences, generateArchiveSummary } from "@/lib/ai/claude";
 
 interface Post {
   id: string;
@@ -41,6 +43,7 @@ interface Post {
   result_views: number | null;
   result_saves: number | null;
   result_comments: number | null;
+  archive_summary: string | null;
   user_id: string;
 }
 
@@ -95,6 +98,8 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   const [saves, setSaves] = useState("");
   const [comments, setComments] = useState("");
   const [showResults, setShowResults] = useState(false);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiHookCategories, setAiHookCategories] = useState<string[]>([]);
 
   useEffect(() => {
     if (post) {
@@ -121,9 +126,25 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
     }
   }, [post, open]);
 
+  const handleAiReferences = async () => {
+    if (aiHookCategories.length > 0 || isAiLoading) return;
+    setIsAiLoading(true);
+    try {
+      const pillar = pillars.find(p => p.id === pillarId)?.name || "";
+      const result = await filterReferences({ platform, format, pillar, title });
+      if (result && result.hook_categories) {
+        setAiHookCategories(result.hook_categories);
+      }
+    } catch (e) {
+      console.error("AI References failed", e);
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!title.trim()) return;
-    const wasPublished = post?.status !== "publicado" && status === "publicado";
+    const wasPublished = status === "publicado" && post?.status !== "publicado";
     const data: any = {
       title: title.trim(),
       platform,
@@ -144,6 +165,15 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
 
     if (wasPublished) {
       data.published_at = new Date().toISOString();
+      try {
+        const pillar = pillars.find(p => p.id === pillarId)?.name || "";
+        const summary = await generateArchiveSummary({ title, platform, format, pillar });
+        if (summary) {
+          data.archive_summary = summary;
+        }
+      } catch (e) {
+        console.error("AI Summary failed", e);
+      }
     }
 
     let error;
@@ -160,11 +190,10 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
 
     if (wasPublished) {
       fireConfetti();
-      toast.success("Conteúdo publicado! 🎉🎊");
+      toast.success("Conteúdo publicado!");
       setShowResults(true);
-      // Don't close - let user enter results
     } else {
-      toast.success(post ? "Post atualizado!" : "Post criado! 🎬");
+      toast.success(post ? "Post atualizado!" : "Post criado!");
       onOpenChange(false);
     }
     onSaved();
@@ -204,10 +233,20 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                 <div className="space-y-2">
                   <Label className="font-body text-sm">Plataforma</Label>
                   <Select value={platform} onValueChange={setPlatform}>
-                    <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <PlatformIcon platform={platform as any} size="sm" />
+                        <SelectValue />
+                      </div>
+                    </SelectTrigger>
                     <SelectContent>
                       {PLATFORMS.map(p => (
-                        <SelectItem key={p} value={p}>{PLATFORM_ICONS[p]} {p}</SelectItem>
+                        <SelectItem key={p} value={p}>
+                          <div className="flex items-center gap-2">
+                            <PlatformIcon platform={p as any} size="sm" />
+                            <span>{p}</span>
+                          </div>
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -270,7 +309,9 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
 
               {/* Hook */}
               <div className="space-y-2">
-                <Label className="font-body text-sm">🪝 Hook (gancho)</Label>
+                <Label className="font-body text-sm flex items-center gap-2">
+                  <Anchor className="h-4 w-4" /> Hook (gancho)
+                </Label>
                 <Textarea
                   placeholder="A primeira frase que prende a atenção..."
                   value={hook}
@@ -281,7 +322,9 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
 
               {/* Script */}
               <div className="space-y-2">
-                <Label className="font-body text-sm">📝 Roteiro</Label>
+                <Label className="font-body text-sm flex items-center gap-2">
+                  <PenLine className="h-4 w-4" /> Roteiro
+                </Label>
                 <Textarea
                   placeholder="Escreva seu roteiro aqui..."
                   value={script}
@@ -292,7 +335,9 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
 
               {/* Caption */}
               <div className="space-y-2">
-                <Label className="font-body text-sm">💬 Legenda</Label>
+                <Label className="font-body text-sm flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" /> Legenda
+                </Label>
                 <Textarea
                   placeholder="Legenda do post..."
                   value={caption}
@@ -303,7 +348,9 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
 
               {/* CTA */}
               <div className="space-y-2">
-                <Label className="font-body text-sm">📢 CTA</Label>
+                <Label className="font-body text-sm flex items-center gap-2">
+                  <Megaphone className="h-4 w-4" /> CTA
+                </Label>
                 <Input
                   placeholder="Ex: Salva esse post!"
                   value={cta}
@@ -314,7 +361,9 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
 
               {/* Notes */}
               <div className="space-y-2">
-                <Label className="font-body text-sm">📋 Notas</Label>
+                <Label className="font-body text-sm flex items-center gap-2">
+                  <ClipboardList className="h-4 w-4" /> Notas
+                </Label>
                 <Textarea
                   placeholder="Anotações extras..."
                   value={notes}
@@ -326,17 +375,19 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
               {/* Results section */}
               {showResults && (
                 <div className="bg-card rounded-2xl p-5 border border-border space-y-4">
-                  <p className="font-body font-semibold text-foreground text-sm">
-                    📊 Resultados do post
+                  <p className="font-body font-semibold text-foreground text-sm flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4" /> Resultados do post
                   </p>
                   {status === "publicado" && !post?.result_views && (
-                    <p className="text-sm text-muted-foreground font-body">
-                      Ótimo! Quer registrar o resultado? 🎯
+                    <p className="text-sm text-muted-foreground font-body flex items-center gap-2">
+                      <Target className="h-3.5 w-3.5" /> Ótimo! Quer registrar o resultado?
                     </p>
                   )}
                   <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-1">
-                      <Label className="font-body text-xs">👁 Views</Label>
+                      <Label className="font-body text-xs flex items-center gap-1">
+                        <Eye className="h-3 w-3" /> Views
+                      </Label>
                       <Input
                         type="number"
                         placeholder="0"
@@ -346,7 +397,9 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="font-body text-xs">🔖 Salvos</Label>
+                      <Label className="font-body text-xs flex items-center gap-1">
+                        <Bookmark className="h-3 w-3" /> Salvos
+                      </Label>
                       <Input
                         type="number"
                         placeholder="0"
@@ -356,7 +409,9 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="font-body text-xs">💬 Comentários</Label>
+                      <Label className="font-body text-xs flex items-center gap-1">
+                        <MessageSquare className="h-3 w-3" /> Comentários
+                      </Label>
                       <Input
                         type="number"
                         placeholder="0"
@@ -370,7 +425,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
               )}
 
               <Button variant="hero" className="w-full" onClick={handleSave} disabled={!title.trim()}>
-                {isNew ? "Criar post 🎬" : "Salvar alterações"}
+                {isNew ? "Criar post" : "Salvar alterações"}
               </Button>
             </div>
           </div>
@@ -378,7 +433,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
           {/* Right side - References (40%) */}
           <div className="lg:w-[40%] p-6 overflow-y-auto bg-muted/30">
             <h3 className="font-display font-semibold text-foreground mb-4">Referências</h3>
-            <Tabs defaultValue="hooks">
+            <Tabs defaultValue="hooks" onValueChange={(val) => { if (val === "hooks") handleAiReferences(); }}>
               <TabsList className="bg-card border border-border rounded-xl mb-4 w-full">
                 <TabsTrigger value="hooks" className="flex-1 rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
                   <Sparkles className="h-3 w-3 mr-1" /> Hooks
@@ -392,9 +447,29 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
               </TabsList>
 
               <TabsContent value="hooks" className="space-y-2">
+                {isAiLoading && (
+                  <div className="bg-card rounded-xl p-3 border border-border animate-pulse flex items-center justify-center">
+                    <Sparkles className="h-4 w-4 mr-2 animate-spin text-primary" />
+                    <span className="text-xs font-body text-muted-foreground">Filtrando referências...</span>
+                  </div>
+                )}
+                
+                {aiHookCategories.length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Sugestões da IA</p>
+                    <div className="flex flex-wrap gap-2">
+                      {aiHookCategories.map(cat => (
+                        <span key={cat} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/20 text-primary border border-primary/20">
+                          {cat}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {FALLBACK_HOOKS.map((h, i) => (
-                  <div key={i} className="bg-card rounded-xl p-3 border border-border">
-                    <span className="inline-block px-1.5 py-0.5 rounded text-xs font-body bg-primary/10 text-primary mb-2">
+                  <div key={i} className={`bg-card rounded-xl p-3 border transition-all ${aiHookCategories.includes(h.category) ? 'border-primary/40 shadow-sm' : 'border-border'}`}>
+                    <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-body mb-2 ${aiHookCategories.includes(h.category) ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary'}`}>
                       {h.category}
                     </span>
                     <p className="text-sm font-body text-foreground mb-2">"{h.text}"</p>
