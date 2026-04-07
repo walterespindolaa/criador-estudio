@@ -395,13 +395,15 @@ const Dashboard = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.04 }}
             >
-              <DCard className="p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <stat.icon className={cn("h-4 w-4", stat.color)} />
-                  <p className="text-[10px] text-muted-foreground font-body uppercase tracking-wider">{stat.label}</p>
-                </div>
-                <p className="text-2xl font-display font-bold text-foreground">{stat.value}</p>
-              </DCard>
+              <button onClick={() => navigate(stat.link)} className="w-full text-left">
+                <DCard className="p-4 hover:border-primary/30 hover:shadow-md transition-all cursor-pointer group">
+                  <div className="flex items-center gap-2 mb-1">
+                    <stat.icon className={cn("h-4 w-4", stat.color, "group-hover:text-primary transition-colors")} />
+                    <p className="text-[10px] text-muted-foreground font-body uppercase tracking-wider">{stat.label}</p>
+                  </div>
+                  <p className="text-2xl font-display font-bold text-foreground">{stat.value}</p>
+                </DCard>
+              </button>
             </motion.div>
           ))}
         </div>
