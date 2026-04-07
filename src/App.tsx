@@ -16,6 +16,7 @@ import Ideias from "./pages/app/Ideias";
 import Criando from "./pages/app/Criando";
 import Plano from "./pages/app/Plano";
 import Biblioteca from "./pages/app/Biblioteca";
+import Arquivos from "./pages/app/Arquivos";
 import Historico from "./pages/app/Historico";
 import Configuracoes from "./pages/app/Configuracoes";
 import Aprender from "./pages/app/Aprender";
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="criando" element={<Criando />} />
               <Route path="plano" element={<Plano />} />
               <Route path="biblioteca" element={<Biblioteca />} />
+              <Route path="arquivos" element={<Arquivos />} />
               <Route path="historico" element={<Historico />} />
               <Route path="aprender" element={<Aprender />} />
               <Route path="configuracoes" element={<Configuracoes />} />
