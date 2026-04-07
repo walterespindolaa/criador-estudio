@@ -217,7 +217,7 @@ const Onboarding = () => {
                           : "bg-card border-border hover:bg-accent"
                       }`}
                     >
-                      <p.icon className="h-6 w-6" />
+                      <PlatformIcon platform={p.id as any} size="md" />
                       <span className="text-sm font-body font-medium">{p.label}</span>
                     </button>
                   ))}
