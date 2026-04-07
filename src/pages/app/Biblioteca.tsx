@@ -4,6 +4,7 @@ import { Sparkles, MessageSquareText, FileCode2, Zap, Plus, Pencil, Trash2, Star
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CopyButton } from "@/components/shared/CopyButton";
+import { InfoTooltip } from "@/components/shared/InfoTooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -195,16 +196,16 @@ const Biblioteca = () => {
         <Tabs defaultValue="hooks">
           <TabsList className="bg-card border border-border rounded-xl mb-6 flex-wrap h-auto gap-1 p-1">
             <TabsTrigger value="hooks" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-              <Sparkles className="h-3.5 w-3.5 mr-1" /> Hooks
+              <Sparkles className="h-3.5 w-3.5 mr-1" /> Hooks <InfoTooltip text="Primeiras frases que capturam atenção. Use como ponto de partida do seu roteiro ou legenda." className="ml-1" />
             </TabsTrigger>
             <TabsTrigger value="formatos" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-              <FileCode2 className="h-3.5 w-3.5 mr-1" /> Formatos
+              <FileCode2 className="h-3.5 w-3.5 mr-1" /> Formatos <InfoTooltip text="Estruturas de conteúdo que funcionam bem em cada plataforma." className="ml-1" />
             </TabsTrigger>
             <TabsTrigger value="prompts" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-              <MessageSquareText className="h-3.5 w-3.5 mr-1" /> Prompts
+              <MessageSquareText className="h-3.5 w-3.5 mr-1" /> Prompts <InfoTooltip text="Comandos prontos para IA. Preencha os [COLCHETES] com suas informações." className="ml-1" />
             </TabsTrigger>
             <TabsTrigger value="viral" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-              <Zap className="h-3.5 w-3.5 mr-1" /> Ideias Virais
+              <Zap className="h-3.5 w-3.5 mr-1" /> Ideias Virais <InfoTooltip text="Hooks e ganchos que performam bem em múltiplas plataformas. Adapte ao seu nicho." className="ml-1" />
             </TabsTrigger>
           </TabsList>
 
