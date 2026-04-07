@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Lightbulb, Search, ArrowRight, Trash2, Edit2 } from "lucide-react";
+import { Plus, Lightbulb, Search, ArrowRight, Trash2, Edit2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,12 +8,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { PlatformIcon } from "@/components/shared/PlatformIcon";
+import { suggestTag } from "@/lib/ai/claude";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
 
 interface Idea {
@@ -31,11 +32,7 @@ interface Pillar {
   color: string;
 }
 
-const PLATFORM_ICONS: Record<string, string> = {
-  instagram: "📸",
-  tiktok: "🎵",
-  youtube: "🎬",
-};
+const PLATFORMS = ["instagram", "tiktok", "youtube"] as const;
 
 const Ideias = () => {
   const { user } = useAuth();
@@ -49,6 +46,8 @@ const Ideias = () => {
   const [formPillar, setFormPillar] = useState("");
   const [formPlatform, setFormPlatform] = useState("");
   const [formNotes, setFormNotes] = useState("");
+  const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
+  const [isSuggesting, setIsSuggesting] = useState(false);
 
   const fetchData = async () => {
     if (!user) return;
@@ -68,6 +67,7 @@ const Ideias = () => {
     setFormPillar("");
     setFormPlatform("");
     setFormNotes("");
+    setAiSuggestion(null);
     setSheetOpen(true);
   };
 
@@ -77,7 +77,26 @@ const Ideias = () => {
     setFormPillar(idea.pillar_id || "");
     setFormPlatform(idea.platform || "");
     setFormNotes(idea.notes || "");
+    setAiSuggestion(null);
     setSheetOpen(true);
+  };
+
+  const handleSuggestTag = async () => {
+    if (!formTitle.trim() || pillars.length === 0 || formPillar) return;
+    setIsSuggesting(true);
+    try {
+      const suggestedPillarName = await suggestTag(formTitle, pillars);
+      if (suggestedPillarName) {
+        const found = pillars.find(p => p.name.toLowerCase() === suggestedPillarName.toLowerCase());
+        if (found) {
+          setAiSuggestion(found.id);
+        }
+      }
+    } catch (error) {
+      console.error("AI suggestion failed", error);
+    } finally {
+      setIsSuggesting(false);
+    }
   };
 
   const handleSave = async () => {
@@ -97,7 +116,7 @@ const Ideias = () => {
     } else {
       const { error } = await supabase.from("ideas").insert(data);
       if (error) { toast.error("Erro ao salvar."); return; }
-      toast.success("Ideia capturada! 💡");
+      toast.success("Ideia capturada!");
     }
     setSheetOpen(false);
     fetchData();
@@ -117,14 +136,14 @@ const Ideias = () => {
   const getPillar = (id: string | null) => pillars.find(p => p.id === id);
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-4xl pb-20 md:pb-0">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-display font-bold text-foreground">Minhas Ideias</h1>
             <p className="text-muted-foreground font-body mt-1">Seu banco de inspirações.</p>
           </div>
-          <Button variant="hero" onClick={openNew}>
+          <Button variant="hero" onClick={openNew} className="hidden md:flex">
             <Plus className="h-4 w-4 mr-1" /> Nova Ideia
           </Button>
         </div>
@@ -171,7 +190,7 @@ const Ideias = () => {
               <Lightbulb className="h-8 w-8 text-primary" />
             </div>
             <p className="text-lg font-display font-semibold text-foreground mb-2">
-              {ideas.length === 0 ? "Sua primeira ideia está te esperando 💡" : "Nenhuma ideia encontrada"}
+              {ideas.length === 0 ? "Sua primeira ideia está te esperando" : "Nenhuma ideia encontrada"}
             </p>
             <p className="text-muted-foreground font-body max-w-sm mx-auto mb-6">
               {ideas.length === 0
@@ -221,7 +240,7 @@ const Ideias = () => {
                       </span>
                     )}
                     {idea.platform && (
-                      <span className="text-sm">{PLATFORM_ICONS[idea.platform] || idea.platform}</span>
+                      <PlatformIcon platform={idea.platform as any} size="sm" />
                     )}
                   </div>
                   <button className="mt-3 text-sm text-primary font-body font-medium flex items-center gap-1 hover:underline">
@@ -233,6 +252,16 @@ const Ideias = () => {
           </div>
         )}
       </motion.div>
+
+      {/* FAB Mobile */}
+      <Button 
+        variant="hero" 
+        size="icon" 
+        className="fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-2xl md:hidden z-40"
+        onClick={openNew}
+      >
+        <Plus className="h-6 w-6" />
+      </Button>
 
       {/* Sheet for create/edit */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
@@ -249,8 +278,23 @@ const Ideias = () => {
                 placeholder="Qual é a ideia?"
                 value={formTitle}
                 onChange={(e) => setFormTitle(e.target.value)}
+                onBlur={handleSuggestTag}
                 className="rounded-xl"
               />
+              {aiSuggestion && (
+                <div className="flex items-center gap-2 bg-primary/5 p-2 rounded-xl animate-fade-in border border-primary/10">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-xs font-body text-muted-foreground">
+                    Sugestão: <span className="font-semibold text-foreground">{getPillar(aiSuggestion)?.name}</span>
+                  </span>
+                  <button 
+                    onClick={() => { setFormPillar(aiSuggestion); setAiSuggestion(null); }}
+                    className="ml-auto text-xs font-semibold text-primary hover:underline"
+                  >
+                    Aceitar
+                  </button>
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label className="font-body">Pilar</Label>
@@ -258,7 +302,7 @@ const Ideias = () => {
                 {pillars.map(p => (
                   <button
                     key={p.id}
-                    onClick={() => setFormPillar(formPillar === p.id ? "" : p.id)}
+                    onClick={() => { setFormPillar(formPillar === p.id ? "" : p.id); setAiSuggestion(null); }}
                     className={`px-3 py-1.5 rounded-xl text-sm font-body border transition-colors ${
                       formPillar === p.id ? "text-primary-foreground border-transparent" : "bg-card border-border"
                     }`}
@@ -272,15 +316,15 @@ const Ideias = () => {
             <div className="space-y-2">
               <Label className="font-body">Plataforma</Label>
               <div className="flex gap-2">
-                {Object.entries(PLATFORM_ICONS).map(([key, icon]) => (
+                {PLATFORMS.map((platform) => (
                   <button
-                    key={key}
-                    onClick={() => setFormPlatform(formPlatform === key ? "" : key)}
-                    className={`px-4 py-2 rounded-xl border transition-colors ${
-                      formPlatform === key ? "bg-primary/10 border-primary" : "bg-card border-border"
+                    key={platform}
+                    onClick={() => setFormPlatform(formPlatform === platform ? "" : platform)}
+                    className={`px-4 py-3 rounded-xl border transition-colors ${
+                      formPlatform === platform ? "bg-primary/10 border-primary" : "bg-card border-border"
                     }`}
                   >
-                    <span className="text-lg">{icon}</span>
+                    <PlatformIcon platform={platform} size="md" />
                   </button>
                 ))}
               </div>
@@ -295,7 +339,7 @@ const Ideias = () => {
               />
             </div>
             <Button variant="hero" className="w-full" onClick={handleSave} disabled={!formTitle.trim()}>
-              {editingIdea ? "Salvar alterações" : "Capturar ideia 💡"}
+              {editingIdea ? "Salvar alterações" : "Capturar ideia"}
             </Button>
           </div>
         </SheetContent>
