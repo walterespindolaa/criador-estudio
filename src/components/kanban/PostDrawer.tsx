@@ -147,7 +147,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
     setIsAiLoading(true);
     try {
       const pillar = pillars.find(p => p.id === pillarId)?.name || "";
-      const result = await filterReferences({ platform, format, pillar, title });
+      const result = await filterReferences({ platform, format, pillar, title }, userId);
       if (result && result.hook_categories) {
         setAiHookCategories(result.hook_categories);
       }
@@ -184,7 +184,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       data.published_at = new Date().toISOString();
       try {
         const pillar = pillars.find(p => p.id === pillarId)?.name || "";
-        const summary = await generateArchiveSummary({ title, platform, format, pillar });
+        const summary = await generateArchiveSummary({ title, platform, format, pillar }, userId);
         if (summary) {
           data.archive_summary = summary;
         }
