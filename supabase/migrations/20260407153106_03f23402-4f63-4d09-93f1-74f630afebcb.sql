@@ -1,0 +1,4 @@
+ALTER TABLE public.profiles
+ADD COLUMN IF NOT EXISTS theme_preset TEXT DEFAULT 'clean-warm',
+ADD COLUMN IF NOT EXISTS theme_accent TEXT DEFAULT '#C4622D',
+ADD COLUMN IF NOT EXISTS theme_sidebar TEXT DEFAULT '#F2EDE6';
