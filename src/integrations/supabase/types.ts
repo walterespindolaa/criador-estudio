@@ -775,6 +775,9 @@ export type Database = {
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           subscription_status: string | null
+          theme_color: string | null
+          theme_font: string | null
+          theme_mode: string | null
           tiktok_handle: string | null
           updated_at: string | null
           weekly_goal: number | null
@@ -794,6 +797,9 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_status?: string | null
+          theme_color?: string | null
+          theme_font?: string | null
+          theme_mode?: string | null
           tiktok_handle?: string | null
           updated_at?: string | null
           weekly_goal?: number | null
@@ -813,6 +819,9 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_status?: string | null
+          theme_color?: string | null
+          theme_font?: string | null
+          theme_mode?: string | null
           tiktok_handle?: string | null
           updated_at?: string | null
           weekly_goal?: number | null
@@ -960,6 +969,123 @@ export type Database = {
           },
           {
             foreignKeyName: "tasks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_formats: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          platform: string
+          structure: string
+          tips: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          platform: string
+          structure: string
+          tips?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          platform?: string
+          structure?: string
+          tips?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_formats_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_hooks: {
+        Row: {
+          category: string
+          created_at: string | null
+          hook_text: string
+          id: string
+          is_favorite: boolean | null
+          platforms: string[] | null
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          hook_text: string
+          id?: string
+          is_favorite?: boolean | null
+          platforms?: string[] | null
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          hook_text?: string
+          id?: string
+          is_favorite?: boolean | null
+          platforms?: string[] | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_hooks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_prompts: {
+        Row: {
+          category: string
+          created_at: string | null
+          id: string
+          is_favorite: boolean | null
+          prompt_text: string
+          tip: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          id?: string
+          is_favorite?: boolean | null
+          prompt_text: string
+          tip?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          id?: string
+          is_favorite?: boolean | null
+          prompt_text?: string
+          tip?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_prompts_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
