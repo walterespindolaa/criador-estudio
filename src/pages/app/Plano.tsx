@@ -10,8 +10,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, CalendarDays, Target, BarChart3, Check } from "lucide-react";
-import { PLATFORM_ICONS, FORMAT_LABELS } from "@/lib/constants";
+import { Plus, Trash2, CalendarDays, Target, BarChart3, Check, Calendar } from "lucide-react";
+import { FORMAT_LABELS } from "@/lib/constants";
+import { PlatformIcon } from "@/components/shared/PlatformIcon";
 
 interface Post {
   id: string;
