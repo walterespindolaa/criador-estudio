@@ -26,6 +26,13 @@ import { FORMAT_LABELS, PLATFORMS, FORMATS, STATUS_OPTIONS } from "@/lib/constan
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { filterReferences, generateArchiveSummary } from "@/lib/ai/claude";
 
+interface ContentBlocks {
+  tema: string;
+  roteiro: string;
+  midia: string;
+  legenda: string;
+}
+
 interface Post {
   id: string;
   title: string;
@@ -44,6 +51,7 @@ interface Post {
   result_saves: number | null;
   result_comments: number | null;
   archive_summary: string | null;
+  content_blocks: ContentBlocks | null;
   user_id: string;
 }
 
@@ -100,6 +108,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   const [showResults, setShowResults] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiHookCategories, setAiHookCategories] = useState<string[]>([]);
+  const [contentBlocks, setContentBlocks] = useState<ContentBlocks>({ tema: "pendente", roteiro: "pendente", midia: "pendente", legenda: "pendente" });
 
   useEffect(() => {
     if (post) {
@@ -118,11 +127,13 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       setSaves(post.result_saves?.toString() || "");
       setComments(post.result_comments?.toString() || "");
       setShowResults(post.status === "publicado");
+      setContentBlocks((post as any).content_blocks || { tema: "pendente", roteiro: "pendente", midia: "pendente", legenda: "pendente" });
     } else {
       setTitle(""); setPlatform("instagram"); setFormat("reels");
       setPillarId(""); setStatus("ideia"); setHook(""); setScript("");
       setCaption(""); setCta(""); setScheduledDate(""); setNotes("");
       setViews(""); setSaves(""); setComments(""); setShowResults(false);
+      setContentBlocks({ tema: "pendente", roteiro: "pendente", midia: "pendente", legenda: "pendente" });
     }
   }, [post, open]);
 
@@ -160,6 +171,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       result_views: views ? parseInt(views) : null,
       result_saves: saves ? parseInt(saves) : null,
       result_comments: comments ? parseInt(comments) : null,
+      content_blocks: contentBlocks,
       user_id: userId,
     };
 
@@ -296,7 +308,31 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                 </Select>
               </div>
 
-              {/* Scheduled date */}
+              {/* Content blocks - production checklist */}
+              <div className="space-y-2">
+                <Label className="font-body text-sm flex items-center gap-2">
+                  <ClipboardList className="h-4 w-4" /> Etapas de produção
+                </Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { key: "tema" as const, label: "📋 Tema definido" },
+                    { key: "roteiro" as const, label: "✍️ Roteiro escrito" },
+                    { key: "midia" as const, label: "🎬 Mídia gravada" },
+                    { key: "legenda" as const, label: "💬 Legenda pronta" },
+                  ]).map(block => {
+                    const done = contentBlocks[block.key] === "feito";
+                    return (
+                      <button key={block.key}
+                        onClick={() => setContentBlocks(prev => ({ ...prev, [block.key]: done ? "pendente" : "feito" }))}
+                        className={`px-3 py-2 rounded-xl text-xs font-body border transition-all text-left ${done ? "bg-secondary/20 border-secondary text-secondary-foreground" : "bg-card border-border text-muted-foreground"}`}>
+                        {block.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+
               <div className="space-y-2">
                 <Label className="font-body text-sm">Data agendada</Label>
                 <Input
