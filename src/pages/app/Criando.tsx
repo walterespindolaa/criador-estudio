@@ -60,6 +60,14 @@ const COLUMNS = [
   { key: "agendado", label: "Agendado", icon: Calendar, bg: "bg-primary/10" },
   { key: "publicado", label: "Publicado", icon: CheckCircle2, bg: "bg-secondary/20" },
 ];
+const COLUMN_TOOLTIPS: Record<string, string> = {
+  ideia: "Posts que você quer criar mas ainda não começou a produzir.",
+  roteiro: "Escreva o roteiro, hook e legenda antes de gravar.",
+  gravando: "Em processo de gravação ou criação da mídia.",
+  editando: "Arquivo gravado, agora em edição ou finalização.",
+  agendado: "Pronto para publicar — com data e hora definidos.",
+  publicado: "Já publicado! Use o Histórico para acompanhar resultados.",
+};
 
 const Criando = () => {
   const { user } = useAuth();
