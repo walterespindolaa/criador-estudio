@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CopyButton } from "@/components/shared/CopyButton";
-import { Sparkles, MessageSquareText, FileCode2, Anchor, PenLine, MessageSquare, Megaphone, ClipboardList, BarChart3, Eye, Bookmark, Target } from "lucide-react";
+import { Sparkles, MessageSquareText, FileCode2, Anchor, PenLine, MessageSquare, Megaphone, ClipboardList, BarChart3, Eye, Bookmark, Target, Smartphone } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -25,6 +25,8 @@ import { fireConfetti } from "@/lib/confetti";
 import { FORMAT_LABELS, PLATFORMS, FORMATS, STATUS_OPTIONS } from "@/lib/constants";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { filterReferences, generateArchiveSummary } from "@/lib/ai/claude";
+import { PostPreviewModal } from "./PostPreviewModal";
+import { useProfile } from "@/hooks/useProfile";
 
 interface ContentBlocks {
   tema: string;
@@ -109,6 +111,8 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiHookCategories, setAiHookCategories] = useState<string[]>([]);
   const [contentBlocks, setContentBlocks] = useState<ContentBlocks>({ tema: "pendente", roteiro: "pendente", midia: "pendente", legenda: "pendente" });
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const { profile } = useProfile();
 
   useEffect(() => {
     if (post) {
@@ -219,6 +223,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   };
 
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="bg-background overflow-y-auto w-full sm:max-w-4xl p-0" side="right">
         <div className="flex flex-col lg:flex-row h-full">
@@ -460,9 +465,14 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                 </div>
               )}
 
-              <Button variant="hero" className="w-full" onClick={handleSave} disabled={!title.trim()}>
-                {isNew ? "Criar post" : "Salvar alterações"}
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setPreviewOpen(true)}>
+                  <Smartphone className="h-4 w-4 mr-1" /> Prévia
+                </Button>
+                <Button variant="hero" className="flex-1" onClick={handleSave} disabled={!title.trim()}>
+                  {isNew ? "Criar post" : "Salvar alterações"}
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -542,5 +552,18 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
         </div>
       </SheetContent>
     </Sheet>
+    <PostPreviewModal
+      open={previewOpen}
+      onOpenChange={setPreviewOpen}
+      title={title}
+      hook={hook}
+      caption={caption}
+      platform={platform}
+      format={format}
+      userName={profile?.name || "Criador"}
+      userHandle={profile?.instagram_handle || profile?.tiktok_handle || "usuario"}
+      avatarUrl={profile?.avatar_url || null}
+    />
+    </>
   );
 }
