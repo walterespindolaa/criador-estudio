@@ -1,13 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, ChevronRight } from "lucide-react";
+import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { PostDrawer } from "@/components/kanban/PostDrawer";
 import { FORMAT_LABELS, STATUS_OPTIONS } from "@/lib/constants";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, parseISO, isWithinInterval } from "date-fns";
 
 interface Post {
   id: string; title: string; platform: string; format: string; pillar_id: string | null;
@@ -15,12 +17,39 @@ interface Post {
   cta: string | null; scheduled_date: string | null; scheduled_time: string | null; published_at: string | null;
   notes: string | null; result_views: number | null; result_saves: number | null;
   result_comments: number | null; archive_summary: string | null; user_id: string;
+  created_at?: string | null;
   content_blocks: { tema: string; roteiro: string; midia: string; legenda: string } | null;
 }
 
 interface TaskCount { post_id: string; count: number; done: number; }
-
 interface Pillar { id: string; name: string; color: string; }
+
+// ─── Period filter helpers (same as Dashboard) ───
+type PeriodKey = "tudo" | "hoje" | "semana" | "quinzenal" | "mes" | "ano" | "personalizado";
+
+const PERIOD_OPTIONS: { key: PeriodKey; label: string }[] = [
+  { key: "tudo", label: "Tudo" },
+  { key: "hoje", label: "Hoje" },
+  { key: "semana", label: "Semana" },
+  { key: "quinzenal", label: "Quinzenal" },
+  { key: "mes", label: "Mês" },
+  { key: "ano", label: "Ano" },
+  { key: "personalizado", label: "Personalizado" },
+];
+
+function getDateRange(period: PeriodKey, customRange?: { from: Date; to: Date }): { start: Date; end: Date } | null {
+  const now = new Date();
+  switch (period) {
+    case "tudo": return null;
+    case "hoje": return { start: new Date(now.getFullYear(), now.getMonth(), now.getDate()), end: now };
+    case "semana": return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
+    case "quinzenal": return { start: subDays(now, 14), end: now };
+    case "mes": return { start: startOfMonth(now), end: endOfMonth(now) };
+    case "ano": return { start: startOfYear(now), end: endOfYear(now) };
+    case "personalizado": return customRange ? { start: customRange.from, end: customRange.to } : null;
+    default: return null;
+  }
+}
 
 const COLUMNS = [
   { key: "ideia", label: "Ideia", icon: LayoutDashboard, bg: "bg-muted" },
@@ -41,6 +70,37 @@ const Criando = () => {
   const [draggedPost, setDraggedPost] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
 
+  // Filters
+  const [period, setPeriod] = useState<PeriodKey>(() => {
+    return (localStorage.getItem("criando-period") as PeriodKey) || "semana";
+  });
+  const [customRange, setCustomRange] = useState<{ from: Date; to: Date } | undefined>();
+  const [filterPlatform, setFilterPlatform] = useState<string | null>(null);
+  const [filterPillar, setFilterPillar] = useState<string | null>(null);
+
+  const handlePeriodChange = (p: PeriodKey) => {
+    setPeriod(p);
+    localStorage.setItem("criando-period", p);
+  };
+
+  const dateRange = useMemo(() => getDateRange(period, customRange), [period, customRange]);
+
+  const filteredPosts = useMemo(() => {
+    return posts.filter(post => {
+      if (filterPlatform && post.platform !== filterPlatform) return false;
+      if (filterPillar && post.pillar_id !== filterPillar) return false;
+      if (dateRange) {
+        const postDate = post.scheduled_date || post.created_at?.split("T")[0];
+        if (!postDate) return period === "tudo";
+        try {
+          const d = parseISO(postDate);
+          if (!isWithinInterval(d, { start: dateRange.start, end: dateRange.end })) return false;
+        } catch { return false; }
+      }
+      return true;
+    });
+  }, [posts, filterPlatform, filterPillar, dateRange, period]);
+
   const fetchData = async () => {
     if (!user) return;
     const [postsRes, pillarsRes, tasksRes] = await Promise.all([
@@ -50,7 +110,6 @@ const Criando = () => {
     ]);
     setPosts((postsRes.data as any[]) || []);
     setPillars(pillarsRes.data || []);
-    // Aggregate task counts per post
     const tasksData = (tasksRes.data as any[]) || [];
     const counts: Record<string, { count: number; done: number }> = {};
     tasksData.forEach((t: any) => {
@@ -97,6 +156,8 @@ const Criando = () => {
 
   const getPillar = (id: string | null) => pillars.find(p => p.id === id);
 
+  const hasActiveFilters = filterPlatform || filterPillar || period !== "semana";
+
   return (
     <div>
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
@@ -107,9 +168,85 @@ const Criando = () => {
           </div>
           <Button variant="hero" onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Novo Post</Button>
         </div>
+
+        {/* Filter bar */}
+        <div className="flex items-center gap-3 mb-4 flex-wrap">
+          {/* Period */}
+          <div className="flex items-center gap-1 bg-card rounded-xl border border-border p-1">
+            {PERIOD_OPTIONS.map(opt => (
+              <button key={opt.key} onClick={() => handlePeriodChange(opt.key)}
+                className={`px-3 py-1 rounded-lg text-xs font-body transition-colors ${
+                  period === opt.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}>
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Platform */}
+          <div className="flex items-center gap-1">
+            <button onClick={() => setFilterPlatform(null)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-body border transition-colors ${!filterPlatform ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"}`}>
+              Todas
+            </button>
+            {(["instagram", "tiktok", "youtube"] as const).map(p => (
+              <button key={p} onClick={() => setFilterPlatform(filterPlatform === p ? null : p)}
+                className={`px-2 py-1.5 rounded-xl border transition-colors flex items-center gap-1 ${filterPlatform === p ? "bg-primary/10 border-primary" : "bg-card border-border"}`}>
+                <PlatformIcon platform={p} size="sm" />
+              </button>
+            ))}
+          </div>
+
+          {/* Pillar */}
+          {pillars.length > 0 && (
+            <div className="flex items-center gap-1">
+              <button onClick={() => setFilterPillar(null)}
+                className={`px-3 py-1 rounded-xl text-xs font-body border transition-colors ${!filterPillar ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"}`}>
+                Pilares
+              </button>
+              {pillars.map(p => (
+                <button key={p.id} onClick={() => setFilterPillar(filterPillar === p.id ? null : p.id)}
+                  className={`px-3 py-1 rounded-xl text-xs font-body border transition-colors ${filterPillar === p.id ? "text-primary-foreground border-transparent" : "bg-card border-border"}`}
+                  style={filterPillar === p.id ? { backgroundColor: p.color } : {}}>
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Custom date range */}
+        {period === "personalizado" && (
+          <div className="flex items-center gap-2 mb-4">
+            <Input type="date" value={customRange?.from?.toISOString().split("T")[0] || ""}
+              onChange={e => setCustomRange(prev => ({ from: new Date(e.target.value), to: prev?.to || new Date() }))}
+              className="rounded-xl text-xs h-8 w-36" />
+            <span className="text-muted-foreground text-xs">até</span>
+            <Input type="date" value={customRange?.to?.toISOString().split("T")[0] || ""}
+              onChange={e => setCustomRange(prev => ({ from: prev?.from || new Date(), to: new Date(e.target.value) }))}
+              className="rounded-xl text-xs h-8 w-36" />
+          </div>
+        )}
+
+        {/* Stats */}
+        <div className="flex items-center gap-4 mb-4 text-xs font-body text-muted-foreground">
+          <span>{filteredPosts.length} posts no período</span>
+          <span>·</span>
+          <span>{filteredPosts.filter(p => p.status === "publicado").length} publicados</span>
+          <span>·</span>
+          <span>{filteredPosts.filter(p => p.scheduled_date).length} agendados</span>
+          {hasActiveFilters && (
+            <button onClick={() => { setFilterPlatform(null); setFilterPillar(null); handlePeriodChange("semana"); }}
+              className="ml-2 text-primary hover:underline flex items-center gap-1">
+              <X className="h-3 w-3" /> Limpar filtros
+            </button>
+          )}
+        </div>
+
+        {/* Kanban */}
         <div className="flex gap-4 overflow-x-auto pb-4">
           {COLUMNS.map(col => {
-            const colPosts = posts.filter(p => p.status === col.key);
+            const colPosts = filteredPosts.filter(p => p.status === col.key);
             const isPublished = col.key === "publicado";
             const isDragOver = dragOverCol === col.key;
             return (
@@ -132,7 +269,6 @@ const Criando = () => {
                       <motion.div key={post.id} layout draggable onDragStart={() => setDraggedPost(post.id)} onClick={() => openEdit(post)}
                         className={`bg-card rounded-xl p-4 shadow-warm border border-border cursor-grab active:cursor-grabbing hover:shadow-warm-lg transition-all ${isPublished ? "opacity-70" : ""}`}>
                         <p className="font-body font-medium text-sm text-foreground mb-2 leading-snug">{post.title}</p>
-                        {/* Content blocks progress dots */}
                         {post.content_blocks && (
                           <div className="flex gap-1 mb-2">
                             {(["tema", "roteiro", "midia", "legenda"] as const).map(k => (
