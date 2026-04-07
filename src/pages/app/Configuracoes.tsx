@@ -405,6 +405,26 @@ const Configuracoes = () => {
                 <p className="text-xs text-muted-foreground font-body flex items-center gap-2"><Sparkles className="h-3.5 w-3.5 text-primary" /> Notificações push (PWA) disponíveis ao instalar o app no celular.</p>
               </div>
             </div>
+
+            {/* Theme */}
+            <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4 mt-6">
+              <h3 className="font-display font-semibold text-foreground flex items-center gap-2">
+                {theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />} Aparência
+              </h3>
+              <div className="flex gap-3">
+                {([
+                  { key: "light" as const, label: "Claro", icon: Sun },
+                  { key: "dark" as const, label: "Escuro", icon: Moon },
+                  { key: "system" as const, label: "Automático", icon: Monitor },
+                ]).map(opt => (
+                  <button key={opt.key} onClick={() => setTheme(opt.key)}
+                    className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${theme === opt.key ? "bg-primary/10 border-primary" : "bg-background border-border"}`}>
+                    <opt.icon className={`h-5 w-5 ${theme === opt.key ? "text-primary" : "text-muted-foreground"}`} />
+                    <span className="text-xs font-body font-medium">{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </TabsContent>
 
           {/* SEGURANÇA */}
