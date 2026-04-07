@@ -208,7 +208,7 @@ const Configuracoes = () => {
     setNewTag("");
   };
 
-
+  const handleChangePassword = async () => {
     if (newPassword.length < 8) { toast.error("Mínimo 8 caracteres."); return; }
     if (!/[A-Z]/.test(newPassword)) { toast.error("Inclua pelo menos uma maiúscula."); return; }
     if (!/[0-9]/.test(newPassword)) { toast.error("Inclua pelo menos um número."); return; }
