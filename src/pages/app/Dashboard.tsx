@@ -105,6 +105,9 @@ const Dashboard = () => {
   const [copiedHook, setCopiedHook] = useState(false);
   const [dayDrawerOpen, setDayDrawerOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [newHabitName, setNewHabitName] = useState("");
+  const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
+  const [editingHabitName, setEditingHabitName] = useState("");
 
   const weekDays = useMemo(() => getDaysOfWeek(), []);
   const today = new Date().toISOString().split("T")[0];
