@@ -620,6 +620,8 @@ const Configuracoes = () => {
               )}
             </div>
           </TabsContent>
+            </div>
+          </div>
         </Tabs>
       </motion.div>
 
