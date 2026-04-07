@@ -286,6 +286,7 @@ const Configuracoes = () => {
             <TabsTrigger value="perfil" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Perfil</TabsTrigger>
             <TabsTrigger value="marca" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Minha Marca</TabsTrigger>
             <TabsTrigger value="pilares" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Pilares & Hábitos</TabsTrigger>
+            <TabsTrigger value="visual" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary"><Palette className="h-3 w-3 mr-1" />Visual</TabsTrigger>
             <TabsTrigger value="notificacoes" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Notificações</TabsTrigger>
             <TabsTrigger value="seguranca" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Segurança</TabsTrigger>
             <TabsTrigger value="integracoes" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Integrações</TabsTrigger>
