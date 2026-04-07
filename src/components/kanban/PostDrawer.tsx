@@ -551,5 +551,18 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
         </div>
       </SheetContent>
     </Sheet>
+    <PostPreviewModal
+      open={previewOpen}
+      onOpenChange={setPreviewOpen}
+      title={title}
+      hook={hook}
+      caption={caption}
+      platform={platform}
+      format={format}
+      userName={profile?.name || "Criador"}
+      userHandle={profile?.instagram_handle || profile?.tiktok_handle || "usuario"}
+      avatarUrl={profile?.avatar_url || null}
+    />
+    </>
   );
 }
