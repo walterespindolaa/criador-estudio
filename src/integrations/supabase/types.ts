@@ -775,9 +775,12 @@ export type Database = {
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           subscription_status: string | null
+          theme_accent: string | null
           theme_color: string | null
           theme_font: string | null
           theme_mode: string | null
+          theme_preset: string | null
+          theme_sidebar: string | null
           tiktok_handle: string | null
           updated_at: string | null
           weekly_goal: number | null
@@ -797,9 +800,12 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_status?: string | null
+          theme_accent?: string | null
           theme_color?: string | null
           theme_font?: string | null
           theme_mode?: string | null
+          theme_preset?: string | null
+          theme_sidebar?: string | null
           tiktok_handle?: string | null
           updated_at?: string | null
           weekly_goal?: number | null
@@ -819,9 +825,12 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_status?: string | null
+          theme_accent?: string | null
           theme_color?: string | null
           theme_font?: string | null
           theme_mode?: string | null
+          theme_preset?: string | null
+          theme_sidebar?: string | null
           tiktok_handle?: string | null
           updated_at?: string | null
           weekly_goal?: number | null
