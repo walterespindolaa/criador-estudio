@@ -115,7 +115,7 @@ const Ideias = () => {
   const handleSuggestTag = async () => {
     if (!formTitle.trim() || pillars.length === 0 || formPillar) return;
     try {
-      const suggestedPillarName = await suggestTag(formTitle, pillars);
+      const suggestedPillarName = await suggestTag(formTitle, pillars, user?.id);
       if (suggestedPillarName) {
         const found = pillars.find(p => p.name.toLowerCase() === String(suggestedPillarName).toLowerCase().trim());
         if (found) setAiSuggestion(found.id);

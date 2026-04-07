@@ -3,13 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 export type AIOperation = 'tag-suggestion' | 'reference-filter' | 'archive-summary' | 'daily-insight';
 
 interface AIRequest {
+  userId?: string;
   operation: AIOperation;
   data: any;
-  userContext?: any;
 }
 
-async function callAIOperations(payload: AIRequest) {
-  const { data, error } = await supabase.functions.invoke('ai-operations', {
+async function callAIContextBuilder(payload: AIRequest) {
+  const { data, error } = await supabase.functions.invoke('ai-context-builder', {
     body: payload,
   });
 
@@ -18,33 +18,36 @@ async function callAIOperations(payload: AIRequest) {
     throw error;
   }
 
-  return data;
+  return data?.result;
 }
 
-export const suggestTag = async (ideaTitle: string, pillars: { name: string }[]) => {
-  const pillarNames = pillars.map(p => p.name);
-  return callAIOperations({
+export const suggestTag = async (ideaTitle: string, pillars: { name: string }[], userId?: string) => {
+  return callAIContextBuilder({
+    userId,
     operation: 'tag-suggestion',
-    data: { ideaTitle, pillars: pillarNames }
+    data: { ideaTitle, pillars }
   });
 };
 
-export const filterReferences = async (params: { platform: string; format: string; pillar: string; title: string }) => {
-  return callAIOperations({
+export const filterReferences = async (params: { platform: string; format: string; pillar: string; title: string }, userId?: string) => {
+  return callAIContextBuilder({
+    userId,
     operation: 'reference-filter',
     data: params
   });
 };
 
-export const generateArchiveSummary = async (params: { title: string; platform: string; format: string; pillar: string }) => {
-  return callAIOperations({
+export const generateArchiveSummary = async (params: { title: string; platform: string; format: string; pillar: string }, userId?: string) => {
+  return callAIContextBuilder({
+    userId,
     operation: 'archive-summary',
     data: params
   });
 };
 
-export const getDailyInsight = async (params: { postsThisWeek: number; weeklyGoal: number; topPillar: string; lastPublished: string }) => {
-  return callAIOperations({
+export const getDailyInsight = async (params: { postsThisWeek: number; weeklyGoal: number; topPillar: string; lastPublished: string }, userId?: string) => {
+  return callAIContextBuilder({
+    userId,
     operation: 'daily-insight',
     data: params
   });

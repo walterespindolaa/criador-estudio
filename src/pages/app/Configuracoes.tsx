@@ -281,22 +281,21 @@ const Configuracoes = () => {
         <h1 className="text-3xl font-display font-bold text-foreground mb-2">Configurações</h1>
         <p className="text-muted-foreground font-body mb-6">Gerencie sua conta e preferências.</p>
 
-        <Tabs defaultValue="perfil" orientation="vertical">
-          <div className="flex flex-col md:flex-row gap-6">
-            {/* Tabs list - vertical on desktop, horizontal scroll on mobile */}
-            <TabsList className="bg-card border border-border rounded-2xl p-2 flex md:flex-col md:w-52 md:shrink-0 md:h-auto md:items-stretch overflow-x-auto md:overflow-x-visible gap-1">
-              <TabsTrigger value="perfil" className="rounded-xl font-body text-xs justify-start gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><User className="h-4 w-4 shrink-0" /> Perfil</TabsTrigger>
-              <TabsTrigger value="marca" className="rounded-xl font-body text-xs justify-start gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Palette className="h-4 w-4 shrink-0" /> Minha Marca</TabsTrigger>
-              <TabsTrigger value="pilares" className="rounded-xl font-body text-xs justify-start gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><LayoutGrid className="h-4 w-4 shrink-0" /> Pilares & Hábitos</TabsTrigger>
-              <TabsTrigger value="visual" className="rounded-xl font-body text-xs justify-start gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Paintbrush className="h-4 w-4 shrink-0" /> Visual</TabsTrigger>
-              <TabsTrigger value="notificacoes" className="rounded-xl font-body text-xs justify-start gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Bell className="h-4 w-4 shrink-0" /> Notificações</TabsTrigger>
-              <TabsTrigger value="seguranca" className="rounded-xl font-body text-xs justify-start gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Shield className="h-4 w-4 shrink-0" /> Segurança</TabsTrigger>
-              <TabsTrigger value="integracoes" className="rounded-xl font-body text-xs justify-start gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Plug className="h-4 w-4 shrink-0" /> Integrações</TabsTrigger>
-              <TabsTrigger value="assinatura" className="rounded-xl font-body text-xs justify-start gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><CreditCard className="h-4 w-4 shrink-0" /> Assinatura</TabsTrigger>
+        <Tabs defaultValue="perfil" className="w-full">
+          <div className="overflow-x-auto mb-6">
+            <TabsList className="inline-flex h-auto bg-card border border-border rounded-2xl p-1.5 gap-1 min-w-max">
+              <TabsTrigger value="perfil" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><User className="h-3.5 w-3.5" /> Perfil</TabsTrigger>
+              <TabsTrigger value="marca" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Palette className="h-3.5 w-3.5" /> Minha Marca</TabsTrigger>
+              <TabsTrigger value="pilares" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><LayoutGrid className="h-3.5 w-3.5" /> Pilares & Hábitos</TabsTrigger>
+              <TabsTrigger value="visual" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Paintbrush className="h-3.5 w-3.5" /> Visual</TabsTrigger>
+              <TabsTrigger value="notificacoes" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Bell className="h-3.5 w-3.5" /> Notificações</TabsTrigger>
+              <TabsTrigger value="seguranca" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Shield className="h-3.5 w-3.5" /> Segurança</TabsTrigger>
+              <TabsTrigger value="integracoes" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Plug className="h-3.5 w-3.5" /> Integrações</TabsTrigger>
+              <TabsTrigger value="assinatura" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><CreditCard className="h-3.5 w-3.5" /> Assinatura</TabsTrigger>
             </TabsList>
+          </div>
 
-            {/* Content area */}
-            <div className="flex-1 min-w-0 max-w-2xl">
+            <div className="max-w-2xl">
 
           {/* PERFIL — only profile info, no pillars/habits */}
           <TabsContent value="perfil">
@@ -621,7 +620,6 @@ const Configuracoes = () => {
             </div>
           </TabsContent>
             </div>
-          </div>
         </Tabs>
       </motion.div>
 

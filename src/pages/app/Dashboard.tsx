@@ -179,7 +179,7 @@ const Dashboard = () => {
       weeklyGoal: profile?.weekly_goal || 3,
       topPillar,
       lastPublished: publishedPosts[publishedPosts.length - 1]?.published_at || "",
-    }).then(insight => {
+    }, user?.id).then(insight => {
       if (insight) {
         setAiInsight(insight);
         localStorage.setItem(cacheKey, insight);
