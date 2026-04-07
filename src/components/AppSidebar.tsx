@@ -7,6 +7,7 @@ import {
   Archive,
   Settings,
   GraduationCap,
+  FolderOpen,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
@@ -26,6 +27,7 @@ const navItems = [
   { title: "Estou Criando", url: "/app/criando", icon: Kanban },
   { title: "Meu Plano", url: "/app/plano", icon: CalendarDays },
   { title: "Biblioteca", url: "/app/biblioteca", icon: BookOpen },
+  { title: "Arquivos", url: "/app/arquivos", icon: FolderOpen },
   { title: "Histórico", url: "/app/historico", icon: Archive },
   { title: "Aprender Mais", url: "/app/aprender", icon: GraduationCap },
 ];
