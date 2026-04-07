@@ -159,7 +159,8 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       setContentBlocks({ tema: "pendente", roteiro: "pendente", midia: "pendente", legenda: "pendente" });
       setDriveMedia([]);
     }
-  }, [post, open]);
+    if (post) fetchDriveMedia(post.id);
+  }, [post, open, fetchDriveMedia]);
 
   const handleAiReferences = async () => {
     if (aiHookCategories.length > 0 || isAiLoading) return;
