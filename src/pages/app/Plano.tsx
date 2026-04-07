@@ -750,7 +750,11 @@ const Plano = () => {
                         <Input placeholder="Notas sobre a meta..." value={newGoalForm.observation}
                           onChange={e => setNewGoalForm(f => ({ ...f, observation: e.target.value }))} className="rounded-xl" />
                       </div>
-                    </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-body">Prazo (opcional)</Label>
+                        <Input type="date" value={newGoalForm.due_date}
+                          onChange={e => setNewGoalForm(f => ({ ...f, due_date: e.target.value }))} className="rounded-xl text-sm" />
+                      </div>
                     <div className="flex gap-2 justify-end">
                       <Button variant="ghost" size="sm" onClick={() => setShowNewGoal(false)}>Cancelar</Button>
                       <Button size="sm" onClick={createGoal} disabled={!newGoalForm.title.trim()}>Criar meta</Button>
@@ -801,6 +805,15 @@ const Plano = () => {
                                 {goalMilestones.length > 0 && (
                                   <span className="text-[10px] font-body text-muted-foreground flex items-center gap-0.5">
                                     <Milestone className="h-2.5 w-2.5" /> {completedMs}/{goalMilestones.length} marcos
+                                  </span>
+                                )}
+                                {goal.end_date && (
+                                  <span className={`text-[10px] font-body flex items-center gap-0.5 ${
+                                    goal.end_date < today && goal.status !== "concluida" ? "text-destructive" : "text-muted-foreground"
+                                  }`}>
+                                    <CalendarDays className="h-2.5 w-2.5" />
+                                    {new Date(goal.end_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "short" })}
+                                    {goal.end_date < today && goal.status !== "concluida" && " · Atrasada"}
                                   </span>
                                 )}
                               </div>
