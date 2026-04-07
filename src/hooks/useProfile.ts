@@ -21,6 +21,9 @@ export interface Profile {
   theme_color: string | null;
   theme_mode: string | null;
   theme_font: string | null;
+  theme_preset: string | null;
+  theme_accent: string | null;
+  theme_sidebar: string | null;
 }
 
 export function useProfile() {

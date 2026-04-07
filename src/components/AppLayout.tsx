@@ -6,13 +6,16 @@ import { PWAInstallBanner } from "@/components/shared/PWAInstallBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { Settings } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
-import { applyThemeColor, applyThemeFont } from "@/components/settings/SettingsVisual";
+import { applyTheme } from "@/lib/applyTheme";
+import { applyThemeFont } from "@/components/settings/SettingsVisual";
 
 const AppLayout = () => {
   const { profile } = useProfile();
 
   useEffect(() => {
-    if (profile?.theme_color) applyThemeColor(profile.theme_color);
+    if (profile?.theme_preset) {
+      applyTheme(profile.theme_preset, profile.theme_accent || '#C4622D');
+    }
     if (profile?.theme_font) applyThemeFont(profile.theme_font);
   }, [profile]);
 

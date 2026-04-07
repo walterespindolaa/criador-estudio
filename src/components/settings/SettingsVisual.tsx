@@ -1,189 +1,164 @@
 import { useState, useEffect } from "react";
-import { Sun, Moon, Monitor, Check } from "lucide-react";
+import { Check, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useTheme } from "@/contexts/ThemeContext";
+import { Badge } from "@/components/ui/badge";
 import { useProfile } from "@/hooks/useProfile";
+import { THEME_PRESETS, ACCENT_COLORS, type ThemePreset } from "@/lib/themes";
+import { applyTheme, applyAccent } from "@/lib/applyTheme";
 import { toast } from "sonner";
 
-const ACCENT_COLORS = [
-  { hex: "#C4622D", label: "Terracota" },
-  { hex: "#5C7A6B", label: "Sage" },
-  { hex: "#3B82F6", label: "Azul" },
-  { hex: "#EC4899", label: "Rosa" },
-  { hex: "#8B5CF6", label: "Roxo" },
-  { hex: "#F59E0B", label: "Âmbar" },
-  { hex: "#EF4444", label: "Vermelho" },
-  { hex: "#22C55E", label: "Verde" },
-];
-
-const FONT_OPTIONS = [
-  { key: "fraunces", display: "Fraunces + DM Sans", label: "Orgânico", families: "'Fraunces', serif|'DM Sans', sans-serif" },
-  { key: "cormorant", display: "Cormorant Garamond + Plus Jakarta Sans", label: "Elegante", families: "'Cormorant Garamond', serif|'Plus Jakarta Sans', sans-serif" },
-  { key: "youngserif", display: "Young Serif + Outfit", label: "Moderno", families: "'Young Serif', serif|'Outfit', sans-serif" },
-];
-
-function hexToHsl(hex: string): string {
-  const r = parseInt(hex.slice(1, 3), 16) / 255;
-  const g = parseInt(hex.slice(3, 5), 16) / 255;
-  const b = parseInt(hex.slice(5, 7), 16) / 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h = 0, s = 0;
-  const l = (max + min) / 2;
-  if (max !== min) {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    switch (max) {
-      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
-      case g: h = ((b - r) / d + 2) / 6; break;
-      case b: h = ((r - g) / d + 4) / 6; break;
-    }
-  }
-  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
-}
-
-export function applyThemeColor(hex: string) {
-  const hsl = hexToHsl(hex);
-  document.documentElement.style.setProperty("--primary", hsl);
-  document.documentElement.style.setProperty("--ring", hsl);
-  document.documentElement.style.setProperty("--sidebar-primary", hsl);
-  document.documentElement.style.setProperty("--sidebar-ring", hsl);
-}
-
-export function applyThemeFont(fontKey: string) {
-  const opt = FONT_OPTIONS.find(f => f.key === fontKey);
-  if (!opt) return;
-  const [display, body] = opt.families.split("|");
-  document.documentElement.style.setProperty("--font-display", display);
-  document.documentElement.style.setProperty("--font-body", body);
-
-  // Load Google Font dynamically
-  const families: Record<string, string> = {
-    fraunces: "Fraunces:opsz,wght@9..144,100..900&family=DM+Sans:wght@400;500;600;700",
-    cormorant: "Cormorant+Garamond:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700",
-    youngserif: "Young+Serif&family=Outfit:wght@400;500;600;700",
-  };
-  const id = `theme-font-${fontKey}`;
-  if (!document.getElementById(id)) {
-    const link = document.createElement("link");
-    link.id = id;
-    link.rel = "stylesheet";
-    link.href = `https://fonts.googleapis.com/css2?family=${families[fontKey]}&display=swap`;
-    document.head.appendChild(link);
-  }
+function ThemeCard({ preset, selected, onClick }: { preset: ThemePreset; selected: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`relative rounded-2xl border-2 p-1 transition-all text-left ${
+        selected ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-primary/30"
+      }`}
+    >
+      {selected && (
+        <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center z-10">
+          <Check className="h-3 w-3 text-primary-foreground" />
+        </div>
+      )}
+      {/* Mini preview */}
+      <div className="rounded-xl overflow-hidden h-20 flex" style={{ backgroundColor: preset.vars.background }}>
+        <div className="w-1/4 h-full" style={{ backgroundColor: preset.vars.sidebar }} />
+        <div className="flex-1 p-2 flex flex-col gap-1.5">
+          <div className="h-2.5 w-3/4 rounded-full" style={{ backgroundColor: preset.vars.muted }} />
+          <div className="flex gap-1 flex-1">
+            <div className="flex-1 rounded-lg" style={{ backgroundColor: preset.vars.card }} />
+            <div className="flex-1 rounded-lg" style={{ backgroundColor: preset.vars.card }} />
+          </div>
+        </div>
+      </div>
+      <div className="px-2 py-2">
+        <p className="text-sm font-semibold font-body text-foreground">{preset.name}</p>
+        <p className="text-xs text-muted-foreground font-body">{preset.desc}</p>
+      </div>
+    </button>
+  );
 }
 
 export function SettingsVisual() {
-  const { theme, setTheme } = useTheme();
   const { profile, updateProfile } = useProfile();
 
-  const [color, setColor] = useState(profile?.theme_color || "#C4622D");
-  const [customColor, setCustomColor] = useState("");
-  const [font, setFont] = useState(profile?.theme_font || "fraunces");
+  const [preset, setPreset] = useState(profile?.theme_preset || "clean-warm");
+  const [accent, setAccent] = useState(profile?.theme_accent || "#C4622D");
 
   useEffect(() => {
     if (profile) {
-      setColor(profile.theme_color || "#C4622D");
-      setFont(profile.theme_font || "fraunces");
+      setPreset(profile.theme_preset || "clean-warm");
+      setAccent(profile.theme_accent || "#C4622D");
     }
   }, [profile]);
 
-  const handleColorSelect = (hex: string) => {
-    setColor(hex);
-    applyThemeColor(hex);
+  const handlePresetSelect = (id: string) => {
+    setPreset(id);
+    applyTheme(id, accent);
   };
 
-  const handleFontSelect = (key: string) => {
-    setFont(key);
-    applyThemeFont(key);
+  const handleAccentSelect = (hex: string) => {
+    setAccent(hex);
+    applyAccent(hex);
   };
 
   const handleSave = async () => {
+    const selectedPreset = THEME_PRESETS.find(t => t.id === preset);
     await updateProfile({
-      theme_color: color,
-      theme_mode: theme,
-      theme_font: font,
+      theme_preset: preset,
+      theme_accent: accent,
+      theme_mode: selectedPreset?.mode || "light",
     } as any);
     toast.success("Visual salvo!");
   };
 
+  const essenciais = THEME_PRESETS.filter(t => t.group === "essenciais");
+  const premium = THEME_PRESETS.filter(t => t.group === "premium");
+  const selectedPreset = THEME_PRESETS.find(t => t.id === preset);
+
   return (
     <div className="space-y-6">
+      {/* Theme presets - Essenciais */}
+      <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
+        <div>
+          <p className="text-xs font-semibold font-body uppercase tracking-widest text-muted-foreground mb-3">Essenciais</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {essenciais.map(t => (
+              <ThemeCard key={t.id} preset={t} selected={preset === t.id} onClick={() => handlePresetSelect(t.id)} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Theme presets - Premium */}
+      <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
+        <div className="flex items-center gap-2 mb-3">
+          <p className="text-xs font-semibold font-body uppercase tracking-widest text-muted-foreground">Temas Premium</p>
+          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Novos</Badge>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {premium.map(t => (
+            <ThemeCard key={t.id} preset={t} selected={preset === t.id} onClick={() => handlePresetSelect(t.id)} />
+          ))}
+        </div>
+      </div>
+
       {/* Accent color */}
       <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
-        <h3 className="font-display font-semibold text-foreground">Cor de destaque</h3>
-        <div className="flex flex-wrap gap-3">
+        <div>
+          <h3 className="font-display font-semibold text-foreground">Cor de Destaque</h3>
+          <p className="text-xs text-muted-foreground font-body mt-0.5">Defina a cor principal de ícones, badges e elementos de ação</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
           {ACCENT_COLORS.map(c => (
             <button
-              key={c.hex}
-              onClick={() => handleColorSelect(c.hex)}
-              className={`w-10 h-10 rounded-full transition-all flex items-center justify-center ${color === c.hex ? "ring-2 ring-offset-2 ring-foreground" : "hover:scale-110"}`}
-              style={{ backgroundColor: c.hex }}
-              title={c.label}
+              key={c.key}
+              onClick={() => handleAccentSelect(c.value)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${
+                accent === c.value ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
+              }`}
             >
-              {color === c.hex && <Check className="h-4 w-4 text-white" />}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-2">
-          <Label className="font-body text-sm whitespace-nowrap">Cor personalizada:</Label>
-          <Input
-            type="color"
-            value={color}
-            onChange={(e) => handleColorSelect(e.target.value)}
-            className="w-10 h-10 p-1 rounded-xl cursor-pointer"
-          />
-          <Input
-            placeholder="#hexcode"
-            value={customColor}
-            onChange={(e) => setCustomColor(e.target.value)}
-            onBlur={() => { if (/^#[0-9a-fA-F]{6}$/.test(customColor)) handleColorSelect(customColor); }}
-            className="rounded-xl text-sm w-28"
-          />
-        </div>
-      </div>
-
-      {/* Mode */}
-      <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
-        <h3 className="font-display font-semibold text-foreground">Modo</h3>
-        <div className="flex gap-3">
-          {([
-            { key: "light" as const, label: "Claro", icon: Sun },
-            { key: "dark" as const, label: "Escuro", icon: Moon },
-            { key: "system" as const, label: "Sistema", icon: Monitor },
-          ]).map(opt => (
-            <button key={opt.key} onClick={() => setTheme(opt.key)}
-              className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${theme === opt.key ? "bg-primary/10 border-primary" : "bg-background border-border"}`}>
-              <opt.icon className={`h-5 w-5 ${theme === opt.key ? "text-primary" : "text-muted-foreground"}`} />
-              <span className="text-xs font-body font-medium">{opt.label}</span>
+              <span className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: c.value }}>
+                {accent === c.value && <Check className="h-3 w-3 text-white" />}
+              </span>
+              <span className="text-xs font-body font-medium text-foreground">{c.label}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Typography */}
-      <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
-        <h3 className="font-display font-semibold text-foreground">Tipografia</h3>
-        <div className="space-y-2">
-          {FONT_OPTIONS.map(opt => (
-            <button key={opt.key} onClick={() => handleFontSelect(opt.key)}
-              className={`w-full text-left px-4 py-3 rounded-xl border transition-colors ${font === opt.key ? "bg-primary/10 border-primary" : "bg-background border-border"}`}>
-              <p className="font-body text-sm font-medium text-foreground">{opt.label}</p>
-              <p className="text-xs text-muted-foreground font-body">{opt.display}</p>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Preview */}
+      {/* Live preview */}
       <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-3">
-        <h3 className="font-display font-semibold text-foreground">Preview</h3>
-        <div className="bg-background rounded-xl p-5 border border-border">
-          <h4 className="font-display text-lg font-bold text-foreground mb-1">Título exemplo</h4>
-          <p className="font-body text-sm text-muted-foreground mb-3">Esse é o corpo do texto com a fonte escolhida.</p>
-          <button className="px-4 py-2 rounded-xl text-sm font-body font-medium text-primary-foreground bg-primary">Botão primário</button>
-        </div>
+        <h3 className="font-display font-semibold text-foreground">Preview ao vivo</h3>
+        {selectedPreset && (
+          <div className="rounded-xl overflow-hidden border border-border h-40 flex" style={{ backgroundColor: selectedPreset.vars.background }}>
+            <div className="w-1/5 h-full flex flex-col gap-2 p-3" style={{ backgroundColor: selectedPreset.vars.sidebar }}>
+              <div className="h-2 w-full rounded-full" style={{ backgroundColor: accent, opacity: 0.8 }} />
+              <div className="h-2 w-3/4 rounded-full" style={{ backgroundColor: selectedPreset.vars.muted }} />
+              <div className="h-2 w-3/4 rounded-full" style={{ backgroundColor: selectedPreset.vars.muted }} />
+              <div className="h-2 w-3/4 rounded-full" style={{ backgroundColor: selectedPreset.vars.muted }} />
+            </div>
+            <div className="flex-1 p-4 flex flex-col gap-3">
+              <div className="h-3 w-1/3 rounded-full" style={{ backgroundColor: selectedPreset.vars.foreground, opacity: 0.7 }} />
+              <div className="flex gap-3 flex-1">
+                <div className="flex-1 rounded-xl p-3 flex flex-col gap-2" style={{ backgroundColor: selectedPreset.vars.card }}>
+                  <div className="h-2 w-2/3 rounded-full" style={{ backgroundColor: selectedPreset.vars.foreground, opacity: 0.5 }} />
+                  <div className="h-2 w-full rounded-full" style={{ backgroundColor: selectedPreset.vars.muted }} />
+                </div>
+                <div className="flex-1 rounded-xl p-3 flex flex-col gap-2" style={{ backgroundColor: selectedPreset.vars.card }}>
+                  <div className="h-2 w-2/3 rounded-full" style={{ backgroundColor: selectedPreset.vars.foreground, opacity: 0.5 }} />
+                  <div className="h-2 w-full rounded-full" style={{ backgroundColor: selectedPreset.vars.muted }} />
+                </div>
+              </div>
+              <button
+                className="self-start px-4 py-1.5 rounded-xl text-xs font-body font-medium text-white"
+                style={{ backgroundColor: accent }}
+              >
+                Botão primário
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <Button variant="hero" onClick={handleSave} className="w-full">Salvar Visual</Button>
