@@ -471,20 +471,13 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                 </div>
               )}
 
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setPreviewOpen(true)}>
-                  <Smartphone className="h-4 w-4 mr-1" /> Prévia
-                </Button>
-                <Button variant="hero" className="flex-1" onClick={handleSave} disabled={!title.trim()}>
-                  {isNew ? "Criar post" : "Salvar alterações"}
-                </Button>
               </div>
             </div>
           </div>
 
           {/* Right side - References (40%) */}
-          <div className="lg:w-[40%] p-6 overflow-y-auto bg-muted/30">
-            <h3 className="font-display font-semibold text-foreground mb-4">Referências</h3>
+          <div className="flex-[2] overflow-y-auto px-5 py-4 bg-muted/30">
+            <p className="text-sm font-body font-semibold text-foreground mb-3">Referências</p>
             <Tabs defaultValue="hooks" onValueChange={(val) => { if (val === "hooks") handleAiReferences(); }}>
               <TabsList className="bg-card border border-border rounded-xl mb-4 w-full">
                 <TabsTrigger value="hooks" className="flex-1 rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
@@ -556,8 +549,18 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
             </Tabs>
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+
+        {/* Footer with actions */}
+        <div className="px-6 py-4 border-t border-border bg-card/50 shrink-0 flex gap-3">
+          <Button variant="outline" className="flex-1" onClick={() => setPreviewOpen(true)}>
+            <Eye className="h-4 w-4 mr-1.5" /> Prévia
+          </Button>
+          <Button variant="hero" className="flex-[2]" onClick={handleSave} disabled={!title.trim()}>
+            {isNew ? "Criar post 🎬" : "Salvar alterações"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
     <PostPreviewModal
       open={previewOpen}
       onOpenChange={setPreviewOpen}
