@@ -157,10 +157,11 @@ const Configuracoes = () => {
                   <button
                     key={p.id}
                     onClick={() => togglePlatform(p.id)}
-                    className={`px-4 py-2 rounded-xl border text-sm font-body transition-colors ${
+                    className={`px-4 py-2 rounded-xl border text-sm font-body transition-colors flex items-center gap-2 ${
                       platforms.includes(p.id) ? "bg-primary/10 border-primary" : "bg-background border-border"
                     }`}
                   >
+                    <PlatformIcon platform={p.id as any} size="sm" />
                     {p.label}
                   </button>
                 ))}
