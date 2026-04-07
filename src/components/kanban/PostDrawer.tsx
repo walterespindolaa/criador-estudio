@@ -145,7 +145,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       setCaption(post.caption || "");
       setCta(post.cta || "");
       setScheduledDate(post.scheduled_date || "");
-      setNotes(post.notes || "");
+      setScheduledTime((post as any).scheduled_time || "");
       setViews(post.result_views?.toString() || "");
       setSaves(post.result_saves?.toString() || "");
       setComments(post.result_comments?.toString() || "");
@@ -154,9 +154,10 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
     } else {
       setTitle(""); setPlatform("instagram"); setFormat("reels");
       setPillarId(""); setStatus("ideia"); setHook(""); setScript("");
-      setCaption(""); setCta(""); setScheduledDate(""); setNotes("");
+      setCaption(""); setCta(""); setScheduledDate(""); setScheduledTime(""); setNotes("");
       setViews(""); setSaves(""); setComments(""); setShowResults(false);
       setContentBlocks({ tema: "pendente", roteiro: "pendente", midia: "pendente", legenda: "pendente" });
+      setDriveMedia([]);
     }
   }, [post, open]);
 
