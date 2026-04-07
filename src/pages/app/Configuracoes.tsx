@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Plus, Trash2, LogOut, Camera, Lock, AlertTriangle, GripVertical, Sparkles, Bell, Shield, CreditCard, Paintbrush, Languages, MessageSquareText, MessageSquare, Ban, Moon, Sun, Monitor, Users, HardDrive, ExternalLink, Unplug } from "lucide-react";
+import { Plus, Trash2, LogOut, Camera, Lock, AlertTriangle, GripVertical, Sparkles, Bell, Shield, CreditCard, Paintbrush, Languages, MessageSquareText, MessageSquare, Ban, Moon, Sun, Monitor, Users, HardDrive, ExternalLink, Unplug, Palette } from "lucide-react";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { PlatformIcon as PlatformIconComp } from "@/components/shared/PlatformIcon";
 import { useGoogleDriveConnection } from "@/hooks/useGoogleDriveConnection";
 import { useGoogleDrive } from "@/hooks/useGoogleDrive";
+import { SettingsVisual } from "@/components/settings/SettingsVisual";
 
 interface Pillar { id: string; name: string; color: string; }
 interface Habit { id: string; name: string; position: number; }
@@ -285,6 +286,7 @@ const Configuracoes = () => {
             <TabsTrigger value="perfil" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Perfil</TabsTrigger>
             <TabsTrigger value="marca" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Minha Marca</TabsTrigger>
             <TabsTrigger value="pilares" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Pilares & Hábitos</TabsTrigger>
+            <TabsTrigger value="visual" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary"><Palette className="h-3 w-3 mr-1" />Visual</TabsTrigger>
             <TabsTrigger value="notificacoes" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Notificações</TabsTrigger>
             <TabsTrigger value="seguranca" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Segurança</TabsTrigger>
             <TabsTrigger value="integracoes" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Integrações</TabsTrigger>
@@ -443,6 +445,11 @@ const Configuracoes = () => {
                 <Button variant="hero" onClick={savePersona}>Salvar persona</Button>
               </div>
             </div>
+          </TabsContent>
+
+          {/* VISUAL */}
+          <TabsContent value="visual">
+            <SettingsVisual />
           </TabsContent>
 
           {/* NOTIFICAÇÕES */}

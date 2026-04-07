@@ -18,6 +18,9 @@ export interface Profile {
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   subscription_status: string | null;
+  theme_color: string | null;
+  theme_mode: string | null;
+  theme_font: string | null;
 }
 
 export function useProfile() {

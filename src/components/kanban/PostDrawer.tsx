@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { Sparkles, MessageSquareText, FileCode2, Anchor, PenLine, MessageSquare, Megaphone, ClipboardList, BarChart3, Eye, Bookmark, Target, Smartphone } from "lucide-react";
+import { PostTasks } from "./PostTasks";
 import {
   Select,
   SelectContent,
@@ -336,6 +337,11 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                   })}
                 </div>
               </div>
+
+              {/* Post Tasks */}
+              {!isNew && post && (
+                <PostTasks postId={post.id} userId={userId} />
+              )}
 
 
               <div className="space-y-2">
