@@ -303,6 +303,15 @@ const Dashboard = () => {
   // Day posts for dialog
   const dayPosts = selectedDay ? posts.filter(p => p.scheduled_date === selectedDay) : [];
 
+  const STAT_TOOLTIPS: Record<string, string> = {
+    "Ideias": "Total de ideias capturadas que ainda não viraram posts.",
+    "Em criação": "Posts que estão no seu pipeline de produção (Kanban).",
+    "Publicados": "Posts publicados no período selecionado.",
+    "Agendados": "Posts com data de publicação definida mas ainda não publicados.",
+    "Tarefas abertas": "Tarefas pendentes ou em andamento no período.",
+    "Hábitos hoje": "Hábitos marcados como feitos hoje. Configure em Configurações.",
+  };
+
   // Stats cards
   const stats = [
     { label: "Ideias", value: ideaCount, icon: Lightbulb, color: "text-primary", link: "/app/ideias" },
@@ -400,6 +409,7 @@ const Dashboard = () => {
                   <div className="flex items-center gap-2 mb-1">
                     <stat.icon className={cn("h-4 w-4", stat.color, "group-hover:text-primary transition-colors")} />
                     <p className="text-[10px] text-muted-foreground font-body uppercase tracking-wider">{stat.label}</p>
+                    <InfoTooltip text={STAT_TOOLTIPS[stat.label] || ""} side="bottom" />
                   </div>
                   <p className="text-xl sm:text-2xl font-bold text-foreground tabular-nums tracking-tight">{stat.value}</p>
                 </DCard>
@@ -427,7 +437,7 @@ const Dashboard = () => {
               <DCard className="hover:border-primary/30 transition-all cursor-pointer">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm font-body font-semibold text-foreground">
-                    {goalMet ? "Meta batida! 🎉" : "Progresso semanal"}
+                    {goalMet ? "Meta batida! 🎉" : "Progresso semanal"} <InfoTooltip text="Quantos posts você publicou em relação à sua meta semanal definida em Configurações." side="right" />
                   </p>
                   <span className="text-xs text-muted-foreground font-body">{weekPublished.length}/{weekGoal} — {Math.round(weekProgress)}%</span>
                 </div>
@@ -482,7 +492,7 @@ const Dashboard = () => {
               <DCard className="hover:border-primary/30 transition-all cursor-pointer">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-sm font-body font-semibold text-foreground flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4 text-primary" /> Pipeline de conteúdo
+                    <BarChart3 className="h-4 w-4 text-primary" /> Pipeline de conteúdo <InfoTooltip text="Visualização das fases de produção dos seus posts no período filtrado." />
                   </p>
                   <span className="text-[10px] text-muted-foreground font-body">{filteredPosts.length} posts no período</span>
                 </div>
@@ -605,7 +615,7 @@ const Dashboard = () => {
                   <Sparkles className="h-4 w-4 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm font-body font-semibold text-foreground">Inspiração do dia</p>
+                  <p className="text-sm font-body font-semibold text-foreground">Inspiração do dia <InfoTooltip text="Um hook viral para te inspirar. Adapte ao seu nicho e use como ponto de partida." /></p>
                   <span className="text-[10px] font-body font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">{dailyHook.category}</span>
                 </div>
               </div>
@@ -680,7 +690,7 @@ const Dashboard = () => {
             <DCard>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm font-body font-semibold text-foreground flex items-center gap-2">
-                  <Flame className="h-4 w-4 text-primary" /> Hábitos de hoje
+                  <Flame className="h-4 w-4 text-primary" /> Hábitos de hoje <InfoTooltip text="Seus hábitos diários de criação. Marque ao longo do dia para manter consistência." />
                 </p>
                 <span className="text-xs text-muted-foreground font-body">{habitsToday}/{habits.length}</span>
               </div>
