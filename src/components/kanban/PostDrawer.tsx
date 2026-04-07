@@ -192,6 +192,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       caption: caption || null,
       cta: cta || null,
       scheduled_date: scheduledDate || null,
+      scheduled_time: scheduledTime || null,
       notes: notes || null,
       result_views: views ? parseInt(views) : null,
       result_saves: saves ? parseInt(saves) : null,
