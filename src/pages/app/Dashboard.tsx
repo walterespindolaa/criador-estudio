@@ -437,6 +437,79 @@ const Dashboard = () => {
               ))}
             </div>
 
+            {/* Daily Habits Checklist */}
+            <div className="bg-card rounded-2xl p-5 shadow-[var(--shadow-warm)] border border-border">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-body font-semibold text-foreground flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-primary" /> Hábitos de hoje
+                </p>
+                <span className="text-xs text-muted-foreground font-body">
+                  {habitLogs.filter(l => l.done).length}/{habits.length}
+                </span>
+              </div>
+
+              {habits.length === 0 && (
+                <p className="text-xs text-muted-foreground font-body mb-3">Nenhum hábito ainda. Adicione abaixo!</p>
+              )}
+
+              <div className="space-y-1.5 mb-3">
+                {habits.map(habit => {
+                  const log = habitLogs.find(l => l.habit_id === habit.id);
+                  const isDone = log?.done || false;
+                  const isEditing = editingHabitId === habit.id;
+
+                  return (
+                    <div key={habit.id} className="flex items-center gap-2 group">
+                      <Checkbox
+                        checked={isDone}
+                        onCheckedChange={() => toggleHabitLog(habit.id)}
+                        className="rounded"
+                      />
+                      {isEditing ? (
+                        <Input
+                          value={editingHabitName}
+                          onChange={e => setEditingHabitName(e.target.value)}
+                          onKeyDown={e => e.key === "Enter" && updateHabit(habit.id)}
+                          onBlur={() => updateHabit(habit.id)}
+                          className="h-7 text-sm rounded-lg flex-1"
+                          autoFocus
+                        />
+                      ) : (
+                        <span className={`text-sm font-body flex-1 ${isDone ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                          {habit.name}
+                        </span>
+                      )}
+                      <button
+                        onClick={() => { setEditingHabitId(habit.id); setEditingHabitName(habit.name); }}
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-accent rounded transition-all"
+                      >
+                        <Pencil className="h-3 w-3 text-muted-foreground" />
+                      </button>
+                      <button
+                        onClick={() => deleteHabit(habit.id)}
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 rounded transition-all"
+                      >
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Novo hábito..."
+                  value={newHabitName}
+                  onChange={e => setNewHabitName(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && addHabit()}
+                  className="h-8 text-xs rounded-xl flex-1"
+                />
+                <Button variant="ghost" size="sm" onClick={addHabit} disabled={!newHabitName.trim()} className="h-8 px-2">
+                  <Plus className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+
             {/* AI Insight */}
             {aiInsight && (
               <div className="bg-primary/5 rounded-2xl p-5 border border-primary/10">
