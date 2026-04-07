@@ -119,3 +119,25 @@
 [class*="font-body"] {
   font-family: var(--active-font-body, var(--font-body)) !important;
 }
+
+/* Tabular nums for stat/interface numbers */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Hide scrollbar but keep scroll */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Safe area for notch/home indicator */
+@supports (padding: max(0px)) {
+  .bottom-bar-safe {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+}
