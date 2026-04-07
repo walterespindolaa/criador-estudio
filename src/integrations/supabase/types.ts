@@ -291,7 +291,10 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          idea_status: string | null
           notes: string | null
+          objective: string | null
+          origin: string | null
           pillar_id: string | null
           platform: string | null
           promoted_to_post_id: string | null
@@ -301,7 +304,10 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
+          idea_status?: string | null
           notes?: string | null
+          objective?: string | null
+          origin?: string | null
           pillar_id?: string | null
           platform?: string | null
           promoted_to_post_id?: string | null
@@ -311,7 +317,10 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          idea_status?: string | null
           notes?: string | null
+          objective?: string | null
+          origin?: string | null
           pillar_id?: string | null
           platform?: string | null
           promoted_to_post_id?: string | null
@@ -501,6 +510,7 @@ export type Database = {
         Row: {
           archive_summary: string | null
           caption: string | null
+          content_blocks: Json | null
           created_at: string | null
           cta: string | null
           format: string
@@ -526,6 +536,7 @@ export type Database = {
         Insert: {
           archive_summary?: string | null
           caption?: string | null
+          content_blocks?: Json | null
           created_at?: string | null
           cta?: string | null
           format: string
@@ -551,6 +562,7 @@ export type Database = {
         Update: {
           archive_summary?: string | null
           caption?: string | null
+          content_blocks?: Json | null
           created_at?: string | null
           cta?: string | null
           format?: string
@@ -749,6 +761,60 @@ export type Database = {
           title?: string
         }
         Relationships: []
+      }
+      tasks: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          post_id: string | null
+          priority: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          post_id?: string | null
+          priority?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          post_id?: string | null
+          priority?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
