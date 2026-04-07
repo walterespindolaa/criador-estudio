@@ -678,6 +678,7 @@ export type Database = {
           result_shares: number | null
           result_views: number | null
           scheduled_date: string | null
+          scheduled_time: string | null
           script: string | null
           status: string | null
           title: string
@@ -704,6 +705,7 @@ export type Database = {
           result_shares?: number | null
           result_views?: number | null
           scheduled_date?: string | null
+          scheduled_time?: string | null
           script?: string | null
           status?: string | null
           title: string
@@ -730,6 +732,7 @@ export type Database = {
           result_shares?: number | null
           result_views?: number | null
           scheduled_date?: string | null
+          scheduled_time?: string | null
           script?: string | null
           status?: string | null
           title?: string
