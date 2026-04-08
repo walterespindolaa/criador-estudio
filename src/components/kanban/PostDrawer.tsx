@@ -121,11 +121,15 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   const { profile } = useProfile();
 
   // Drive media refs
-  interface DriveRef { id: string; file_name: string; file_type: string | null; thumbnail_url: string | null; view_url: string | null; }
+  interface DriveRef { id: string; external_file_id?: string | null; file_name: string; file_type: string | null; thumbnail_url: string | null; view_url: string | null; }
   const [driveMedia, setDriveMedia] = useState<DriveRef[]>([]);
 
+  // User personal references
+  const [userRefHooks, setUserRefHooks] = useState<any[]>([]);
+  const [userRefPrompts, setUserRefPrompts] = useState<any[]>([]);
+
   const fetchDriveMedia = useCallback(async (postId: string) => {
-    const { data } = await supabase.from("external_media_refs").select("id, file_name, file_type, thumbnail_url, view_url").eq("post_id", postId);
+    const { data } = await supabase.from("external_media_refs").select("id, external_file_id, file_name, file_type, thumbnail_url, view_url").eq("post_id", postId).order("created_at");
     setDriveMedia((data as DriveRef[]) || []);
   }, []);
 
