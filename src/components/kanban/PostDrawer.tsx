@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CopyButton } from "@/components/shared/CopyButton";
-import { Sparkles, MessageSquareText, FileCode2, Anchor, PenLine, MessageSquare, Megaphone, ClipboardList, BarChart3, Eye, Bookmark, Target, Clock, Cloud, ExternalLink, X, Trash2, HardDrive } from "lucide-react";
+import { Sparkles, MessageSquareText, FileCode2, Anchor, PenLine, MessageSquare, Megaphone, ClipboardList, BarChart3, Eye, Bookmark, Target, Clock, Cloud, ExternalLink, X, Trash2, HardDrive, Play } from "lucide-react";
 import { PostTasks } from "./PostTasks";
 import {
   Select,
@@ -169,6 +169,15 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       setContentBlocks({ tema: "pendente", roteiro: "pendente", midia: "pendente", legenda: "pendente" });
       setDriveMedia([]);
       setPendingDriveFiles([]);
+      if (userId) {
+        supabase
+          .from("external_media_refs")
+          .delete()
+          .eq("user_id", userId)
+          .is("post_id", null)
+          .lt("created_at", new Date(Date.now() - 5 * 60 * 1000).toISOString())
+          .then(() => {});
+      }
     }
     if (post) fetchDriveMedia(post.id);
   }, [post, open, fetchDriveMedia]);
@@ -502,7 +511,12 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                       return (
                         <div className="relative aspect-square rounded-xl overflow-hidden bg-muted border border-border max-h-64">
                           {isVideo ? (
-                            <video controls className="w-full h-full object-contain bg-black" src={`https://drive.google.com/uc?export=download&id=${fileId}`} />
+                            <iframe
+                              src={`https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview`}
+                              className="w-full h-full"
+                              allow="autoplay"
+                              title={primary.file_name}
+                            />
                           ) : (
                             <img
                               src={imgSrc}
@@ -531,12 +545,18 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                           const fid = m.external_file_id || m.id;
                           return (
                             <div key={m.id} className="relative w-14 h-14 rounded-lg overflow-hidden border border-border bg-muted group">
-                              <img
-                                src={`https://lh3.googleusercontent.com/d/${encodeURIComponent(fid)}=w200`}
-                                alt={m.file_name}
-                                className="w-full h-full object-cover"
-                                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                              />
+                              {m.file_type?.startsWith("video/") ? (
+                                <div className="w-full h-full flex items-center justify-center bg-black/80">
+                                  <Play className="h-4 w-4 text-white" />
+                                </div>
+                              ) : (
+                                <img
+                                  src={`https://lh3.googleusercontent.com/d/${encodeURIComponent(fid)}=w200`}
+                                  alt={m.file_name}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                                />
+                              )}
                               <button
                                 onClick={() => handleRemoveMedia(m.id)}
                                 className="absolute top-0.5 right-0.5 bg-destructive text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
