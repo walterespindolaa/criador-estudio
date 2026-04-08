@@ -12,8 +12,8 @@ import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { suggestTag } from "@/lib/ai/claude";
 import { PostDrawer } from "@/components/kanban/PostDrawer";
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
@@ -262,11 +262,11 @@ const Ideias = () => {
 
       <Button variant="hero" size="icon" className="fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-2xl md:hidden z-40" onClick={openNew}><Plus className="h-6 w-6" /></Button>
 
-      {/* Sheet de criação/edição */}
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent className="bg-background overflow-y-auto">
-          <SheetHeader><SheetTitle className="font-display">{editingIdea ? "Editar Ideia" : "Nova Ideia"}</SheetTitle></SheetHeader>
-          <div className="space-y-5 mt-6">
+      {/* Dialog de criação/edição */}
+      <Dialog open={sheetOpen} onOpenChange={setSheetOpen}>
+        <DialogContent className="bg-background max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle className="font-display">{editingIdea ? "Editar Ideia" : "Nova Ideia"}</DialogTitle></DialogHeader>
+          <div className="space-y-5 mt-2">
             <div className="space-y-2">
               <Label className="font-body">Título</Label>
               <Input placeholder="Qual é a ideia?" value={formTitle} onChange={(e) => setFormTitle(e.target.value)} onBlur={handleSuggestTag} className="rounded-xl" />
@@ -298,8 +298,6 @@ const Ideias = () => {
               <Label className="font-body">Notas</Label>
               <Textarea placeholder="Detalhes, referências, links..." value={formNotes} onChange={(e) => setFormNotes(e.target.value)} className="rounded-xl min-h-[100px]" />
             </div>
-
-            {/* Objetivo do conteúdo */}
             <div className="space-y-2">
               <Label className="font-body">Objetivo do conteúdo</Label>
               <div className="flex flex-wrap gap-2">
@@ -311,8 +309,6 @@ const Ideias = () => {
                 ))}
               </div>
             </div>
-
-            {/* Origem da ideia */}
             <div className="space-y-2">
               <Label className="font-body">Origem da ideia</Label>
               <div className="flex flex-wrap gap-2">
@@ -324,11 +320,10 @@ const Ideias = () => {
                 ))}
               </div>
             </div>
-
             <Button variant="hero" className="w-full" onClick={handleSave} disabled={!formTitle.trim()}>{editingIdea ? "Salvar alterações" : "Capturar ideia"}</Button>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
       <PostDrawer open={postDrawerOpen} onOpenChange={setPostDrawerOpen} post={promotedPost} pillars={pillars} userId={user?.id || ""} onSaved={fetchData} />
     </div>
   );

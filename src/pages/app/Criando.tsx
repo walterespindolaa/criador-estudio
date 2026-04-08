@@ -168,60 +168,62 @@ const Criando = () => {
   const hasActiveFilters = filterPlatform || filterPillar || period !== "semana";
 
   return (
-    <div>
+    <div className="pb-20 md:pb-0">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-3xl font-display font-bold text-foreground">Estou Criando</h1>
-            <p className="text-muted-foreground font-body mt-1">Seu pipeline de criação. Arraste entre colunas.</p>
+            <h1 className="text-2xl sm:text-3xl font-display font-bold text-foreground">Estou Criando</h1>
+            <p className="text-muted-foreground font-body mt-1 text-sm hidden sm:block">Seu pipeline de criação. Arraste entre colunas.</p>
           </div>
-          <Button variant="hero" onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Novo Post</Button>
+          <Button variant="hero" size="sm" onClick={openNew} className="shrink-0"><Plus className="h-4 w-4 mr-1" /> Novo Post</Button>
         </div>
 
         {/* Filter bar */}
-        <div className="flex items-center gap-3 mb-4 flex-wrap">
-          {/* Period */}
-          <div className="flex items-center gap-1 bg-card rounded-xl border border-border p-1">
-            {PERIOD_OPTIONS.map(opt => (
-              <button key={opt.key} onClick={() => handlePeriodChange(opt.key)}
-                className={`px-3 py-1 rounded-lg text-xs font-body transition-colors ${
-                  period === opt.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-                }`}>
-                {opt.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Platform */}
-          <div className="flex items-center gap-1">
-            <button onClick={() => setFilterPlatform(null)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-body border transition-colors ${!filterPlatform ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"}`}>
-              Todas
-            </button>
-            {(["instagram", "tiktok", "youtube"] as const).map(p => (
-              <button key={p} onClick={() => setFilterPlatform(filterPlatform === p ? null : p)}
-                className={`px-2 py-1.5 rounded-xl border transition-colors flex items-center gap-1 ${filterPlatform === p ? "bg-primary/10 border-primary" : "bg-card border-border"}`}>
-                <PlatformIcon platform={p} size="sm" />
-              </button>
-            ))}
-          </div>
-
-          {/* Pillar */}
-          {pillars.length > 0 && (
-            <div className="flex items-center gap-1">
-              <button onClick={() => setFilterPillar(null)}
-                className={`px-3 py-1 rounded-xl text-xs font-body border transition-colors ${!filterPillar ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"}`}>
-                Pilares
-              </button>
-              {pillars.map(p => (
-                <button key={p.id} onClick={() => setFilterPillar(filterPillar === p.id ? null : p.id)}
-                  className={`px-3 py-1 rounded-xl text-xs font-body border transition-colors ${filterPillar === p.id ? "text-primary-foreground border-transparent" : "bg-card border-border"}`}
-                  style={filterPillar === p.id ? { backgroundColor: p.color } : {}}>
-                  {p.name}
+        <div className="overflow-x-auto scrollbar-none -mx-4 px-4 mb-4">
+          <div className="flex items-center gap-3 min-w-max">
+            {/* Period */}
+            <div className="flex items-center gap-1 bg-card rounded-xl border border-border p-1">
+              {PERIOD_OPTIONS.map(opt => (
+                <button key={opt.key} onClick={() => handlePeriodChange(opt.key)}
+                  className={`px-3 py-1 rounded-lg text-xs font-body transition-colors ${
+                    period === opt.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}>
+                  {opt.label}
                 </button>
               ))}
             </div>
-          )}
+
+            {/* Platform */}
+            <div className="flex items-center gap-1">
+              <button onClick={() => setFilterPlatform(null)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-body border transition-colors ${!filterPlatform ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"}`}>
+                Todas
+              </button>
+              {(["instagram", "tiktok", "youtube"] as const).map(p => (
+                <button key={p} onClick={() => setFilterPlatform(filterPlatform === p ? null : p)}
+                  className={`px-2 py-1.5 rounded-xl border transition-colors flex items-center gap-1 ${filterPlatform === p ? "bg-primary/10 border-primary" : "bg-card border-border"}`}>
+                  <PlatformIcon platform={p} size="sm" />
+                </button>
+              ))}
+            </div>
+
+            {/* Pillar */}
+            {pillars.length > 0 && (
+              <div className="flex items-center gap-1">
+                <button onClick={() => setFilterPillar(null)}
+                  className={`px-3 py-1 rounded-xl text-xs font-body border transition-colors ${!filterPillar ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"}`}>
+                  Pilares
+                </button>
+                {pillars.map(p => (
+                  <button key={p.id} onClick={() => setFilterPillar(filterPillar === p.id ? null : p.id)}
+                    className={`px-3 py-1 rounded-xl text-xs font-body border transition-colors ${filterPillar === p.id ? "text-primary-foreground border-transparent" : "bg-card border-border"}`}
+                    style={filterPillar === p.id ? { backgroundColor: p.color } : {}}>
+                    {p.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Custom date range */}

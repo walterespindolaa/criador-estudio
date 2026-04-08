@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { FolderOpen, Upload, Search, Trash2, FileText, File, Plus, X } from "lucide-react";
+import { FolderOpen, Upload, Search, Trash2, FileText, Cloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +8,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { DrivePickerButton } from "@/components/drive/DrivePickerButton";
+import { DriveMediaPreview } from "@/components/drive/DriveMediaPreview";
 
 interface FileItem {
   id: string;
@@ -22,8 +25,8 @@ interface FileItem {
 }
 
 const CATEGORIES = ["geral", "referência", "marca", "inspiração", "roteiro"];
-const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
-const MAX_TOTAL_SIZE = 20 * 1024 * 1024; // 20MB
+const MAX_FILE_SIZE = 1 * 1024 * 1024;
+const MAX_TOTAL_SIZE = 20 * 1024 * 1024;
 
 const Arquivos = () => {
   const { user } = useAuth();
@@ -33,14 +36,27 @@ const Arquivos = () => {
   const [catFilter, setCatFilter] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
-
-  // Category dialog
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingCategory, setPendingCategory] = useState("geral");
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
 
   const totalBytes = files.reduce((acc, f) => acc + (f.size_bytes || 0), 0);
   const isStorageFull = totalBytes >= MAX_TOTAL_SIZE;
+
+  // Drive files query
+  const { data: driveFiles, refetch: refetchDrive } = useQuery({
+    queryKey: ["drive-files", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data } = await supabase
+        .from("external_media_refs")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      return (data as any[]) || [];
+    },
+    enabled: !!user,
+  });
 
   const fetchFiles = async () => {
     if (!user) return;
@@ -51,14 +67,8 @@ const Arquivos = () => {
   useEffect(() => { fetchFiles(); }, [user]);
 
   const handleFileSelect = (file: File) => {
-    if (file.size > MAX_FILE_SIZE) {
-      toast.error("Arquivo muito grande. Limite: 1MB por arquivo.");
-      return;
-    }
-    if (totalBytes + file.size > MAX_TOTAL_SIZE) {
-      toast.error("Limite de armazenamento atingido (20MB).");
-      return;
-    }
+    if (file.size > MAX_FILE_SIZE) { toast.error("Arquivo muito grande. Limite: 1MB por arquivo."); return; }
+    if (totalBytes + file.size > MAX_TOTAL_SIZE) { toast.error("Limite de armazenamento atingido (20MB)."); return; }
     setPendingFile(file);
     setPendingCategory("geral");
     setCategoryDialogOpen(true);
@@ -71,15 +81,7 @@ const Arquivos = () => {
     const path = `${user.id}/${Date.now()}.${ext}`;
     const { error: uploadError } = await supabase.storage.from("files").upload(path, file);
     if (uploadError) { toast.error("Erro no upload."); setUploading(false); return; }
-
-    await supabase.from("files").insert({
-      user_id: user.id,
-      name: file.name,
-      storage_path: path,
-      file_type: file.type,
-      size_bytes: file.size,
-      category,
-    } as any);
+    await supabase.from("files").insert({ user_id: user.id, name: file.name, storage_path: path, file_type: file.type, size_bytes: file.size, category } as any);
     toast.success("Arquivo enviado!");
     setUploading(false);
     fetchFiles();
@@ -105,6 +107,12 @@ const Arquivos = () => {
     toast.success("Arquivo removido.");
   };
 
+  const deleteDriveRef = async (id: string) => {
+    await supabase.from("external_media_refs").delete().eq("id", id);
+    refetchDrive();
+    toast.success("Referência removida.");
+  };
+
   const getPublicUrl = (path: string) => {
     const { data } = supabase.storage.from("files").getPublicUrl(path);
     return data.publicUrl;
@@ -125,20 +133,25 @@ const Arquivos = () => {
     return matchSearch && matchCat;
   });
 
+  const filteredDrive = (driveFiles || []).filter((f: any) =>
+    !search || f.file_name?.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="pb-20 md:pb-0">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-display font-bold text-foreground">Arquivos</h1>
-            <p className="text-muted-foreground font-body mt-1">Seus arquivos e referências visuais.</p>
+            <h1 className="text-2xl sm:text-3xl font-display font-bold text-foreground">Arquivos</h1>
+            <p className="text-muted-foreground font-body mt-1 text-sm">Seus arquivos e referências visuais.</p>
           </div>
-          <div className="flex items-center gap-3">
-            <p className="text-xs text-muted-foreground font-body">
-              {(totalBytes / (1024 * 1024)).toFixed(1)}MB / 20MB usados
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-muted-foreground font-body hidden sm:block">
+              {(totalBytes / (1024 * 1024)).toFixed(1)}MB / 20MB
             </p>
-            <Button variant="hero" onClick={() => fileInputRef.current?.click()} disabled={uploading || isStorageFull}>
-              <Upload className="h-4 w-4 mr-1" /> {uploading ? "Enviando..." : isStorageFull ? "Limite atingido" : "Upload"}
+            <DrivePickerButton onPicked={() => refetchDrive()} variant="outline" size="sm" />
+            <Button variant="hero" size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploading || isStorageFull}>
+              <Upload className="h-4 w-4 mr-1" /> {uploading ? "Enviando..." : "Upload"}
             </Button>
           </div>
           <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileChange} />
@@ -149,12 +162,35 @@ const Arquivos = () => {
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
-          className={`border-2 border-dashed rounded-2xl p-8 text-center mb-6 transition-colors ${dragOver ? "border-primary bg-primary/5" : "border-border"}`}
+          className={`border-2 border-dashed rounded-2xl p-6 sm:p-8 text-center mb-6 transition-colors ${dragOver ? "border-primary bg-primary/5" : "border-border"}`}
         >
           <Upload className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
           <p className="text-sm text-muted-foreground font-body">Arraste arquivos aqui ou clique em Upload</p>
           <p className="text-xs text-muted-foreground font-body mt-1">Máximo 1MB por arquivo</p>
         </div>
+
+        {/* Drive files section */}
+        {filteredDrive.length > 0 && (
+          <div className="mb-6">
+            <p className="text-sm font-body font-semibold text-foreground mb-3 flex items-center gap-2">
+              <Cloud className="h-4 w-4 text-primary" />
+              Arquivos do Google Drive
+            </p>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+              {filteredDrive.map((f: any) => (
+                <DriveMediaPreview
+                  key={f.id}
+                  fileName={f.file_name}
+                  fileType={f.file_type}
+                  thumbnailUrl={f.thumbnail_url}
+                  viewUrl={f.view_url}
+                  size="md"
+                  onRemove={() => deleteDriveRef(f.id)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Filters */}
         <div className="flex gap-3 mb-6 flex-wrap">
@@ -171,7 +207,7 @@ const Arquivos = () => {
         </div>
 
         {/* Grid */}
-        {filtered.length === 0 ? (
+        {filtered.length === 0 && filteredDrive.length === 0 ? (
           <div className="bg-card rounded-2xl p-12 shadow-[var(--shadow-warm)] border border-border text-center">
             <FolderOpen className="h-8 w-8 text-primary mx-auto mb-3" />
             <p className="text-lg font-display font-semibold text-foreground mb-2">
@@ -181,12 +217,11 @@ const Arquivos = () => {
               {files.length === 0 ? "Faça upload de imagens, PDFs e referências." : "Tente mudar os filtros."}
             </p>
           </div>
-        ) : (
+        ) : filtered.length > 0 ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {filtered.map((f, i) => (
               <motion.div key={f.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.02 }}
                 className="bg-card rounded-xl border border-border overflow-hidden group">
-                {/* Preview */}
                 <div className="aspect-square bg-muted flex items-center justify-center overflow-hidden">
                   {isImage(f.file_type) ? (
                     <img src={getPublicUrl(f.storage_path)} alt={f.name} className="w-full h-full object-cover" loading="lazy" />
@@ -209,7 +244,7 @@ const Arquivos = () => {
               </motion.div>
             ))}
           </div>
-        )}
+        ) : null}
       </motion.div>
 
       {/* Category Dialog */}

@@ -19,6 +19,19 @@ interface PickedFile {
   url: string;
 }
 
+// ─── Token persistence helpers ───
+const getStoredToken = (): string | null => {
+  const token = sessionStorage.getItem("gd_access_token");
+  const expires = sessionStorage.getItem("gd_token_expires");
+  if (token && expires && parseInt(expires) > Date.now()) return token;
+  return null;
+};
+
+const setStoredToken = (token: string, expiresInSeconds = 3600) => {
+  sessionStorage.setItem("gd_access_token", token);
+  sessionStorage.setItem("gd_token_expires", String(Date.now() + expiresInSeconds * 1000 - 60000));
+};
+
 export function useGoogleDrive() {
   const { user } = useAuth();
   const [picking, setPicking] = useState(false);
@@ -44,16 +57,26 @@ export function useGoogleDrive() {
   }, []);
 
   const getAccessToken = useCallback(async (clientId: string): Promise<string> => {
+    // Check sessionStorage first
+    const stored = getStoredToken();
+    if (stored) return stored;
+
+    const hint = localStorage.getItem("gd_hint") || undefined;
+
     return new Promise((resolve, reject) => {
       const client = window.google.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: "https://www.googleapis.com/auth/drive.readonly",
         callback: (resp: any) => {
           if (resp.error) reject(resp.error);
-          else resolve(resp.access_token);
+          else {
+            setStoredToken(resp.access_token, resp.expires_in || 3600);
+            resolve(resp.access_token);
+          }
         },
+        ...(hint ? { hint } : {}),
       });
-      client.requestAccessToken({ prompt: "consent" });
+      client.requestAccessToken({ prompt: "" });
     });
   }, []);
 
@@ -86,6 +109,14 @@ export function useGoogleDrive() {
         })
         .build();
       picker.setVisible(true);
+
+      // Force high z-index so picker appears above Radix dialogs
+      setTimeout(() => {
+        const pickerContainer = document.querySelector('.picker-dialog') as HTMLElement;
+        const pickerBg = document.querySelector('.picker-dialog-bg') as HTMLElement;
+        if (pickerContainer) pickerContainer.style.zIndex = '999999';
+        if (pickerBg) pickerBg.style.zIndex = '999998';
+      }, 100);
     });
   }, []);
 
@@ -103,7 +134,7 @@ export function useGoogleDrive() {
       view_url: f.url,
       download_url: `https://drive.google.com/uc?export=download&id=${f.id}`,
     }));
-    const { error } = await supabase.from("external_media_refs" as any).insert(rows);
+    const { error } = await supabase.from("external_media_refs").insert(rows);
     if (error) { toast.error("Erro ao salvar referências."); return; }
     toast.success(`${files.length} arquivo(s) vinculado(s)!`);
   }, [user]);
