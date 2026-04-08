@@ -89,6 +89,35 @@ export function useGoogleDrive() {
     });
   }, []);
 
+  const restoreOverlays = useCallback(() => {
+    document.querySelectorAll('[data-picker-disabled="true"]').forEach((el) => {
+      (el as HTMLElement).style.pointerEvents = '';
+      delete (el as HTMLElement).dataset.pickerDisabled;
+    });
+  }, []);
+
+  const disableOverlays = useCallback(() => {
+    // Disable pointer-events on all Radix overlays so the picker receives clicks
+    const selectors = [
+      '[data-radix-dialog-overlay]',
+      '[data-radix-alert-dialog-overlay]',
+    ];
+    document.querySelectorAll(selectors.join(',')).forEach((el) => {
+      const htmlEl = el as HTMLElement;
+      htmlEl.dataset.pickerDisabled = 'true';
+      htmlEl.style.pointerEvents = 'none';
+    });
+    // Also catch any fixed full-screen backdrop that blocks clicks
+    document.querySelectorAll('.fixed.inset-0').forEach((el) => {
+      const htmlEl = el as HTMLElement;
+      const bg = window.getComputedStyle(htmlEl).backgroundColor;
+      if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+        htmlEl.dataset.pickerDisabled = 'true';
+        htmlEl.style.pointerEvents = 'none';
+      }
+    });
+  }, []);
+
   const openPicker = useCallback(async (accessToken: string): Promise<PickedFile[]> => {
     return new Promise((resolve) => {
       const picker = new window.google.picker.PickerBuilder()
@@ -100,32 +129,36 @@ export function useGoogleDrive() {
         .enableFeature(window.google.picker.Feature.MULTISELECT_ENABLED)
         .setTitle("Selecionar do Google Drive")
         .setCallback((data: any) => {
-          if (data.action === "picked") {
-            const files: PickedFile[] = data.docs.map((doc: any) => ({
-              id: doc.id,
-              name: doc.name,
-              mimeType: doc.mimeType,
-              sizeBytes: doc.sizeBytes,
-              thumbnailUrl: `https://lh3.googleusercontent.com/d/${encodeURIComponent(doc.id)}=w400`,
-              url: doc.url,
-            }));
-            resolve(files);
-          } else if (data.action === "cancel") {
-            resolve([]);
+          if (data.action === "picked" || data.action === "cancel") {
+            restoreOverlays();
+            if (data.action === "picked") {
+              const files: PickedFile[] = data.docs.map((doc: any) => ({
+                id: doc.id,
+                name: doc.name,
+                mimeType: doc.mimeType,
+                sizeBytes: doc.sizeBytes,
+                thumbnailUrl: `https://lh3.googleusercontent.com/d/${encodeURIComponent(doc.id)}=w400`,
+                url: doc.url,
+              }));
+              resolve(files);
+            } else {
+              resolve([]);
+            }
           }
         })
         .build();
       picker.setVisible(true);
 
-      // Force high z-index so picker appears above Radix dialogs
+      // Force high z-index and disable overlays so picker receives clicks
       setTimeout(() => {
         const pickerContainer = document.querySelector('.picker-dialog') as HTMLElement;
         const pickerBg = document.querySelector('.picker-dialog-bg') as HTMLElement;
         if (pickerContainer) pickerContainer.style.zIndex = '999999';
         if (pickerBg) pickerBg.style.zIndex = '999998';
+        disableOverlays();
       }, 150);
     });
-  }, []);
+  }, [restoreOverlays, disableOverlays]);
 
   const saveExternalRefs = useCallback(async (files: PickedFile[], postId?: string) => {
     if (!user || files.length === 0) return;
@@ -156,6 +189,19 @@ export function useGoogleDrive() {
       const token = await getAccessToken(data.client_id);
       const files = await openPicker(token);
       if (files.length > 0) await saveExternalRefs(files, postId);
+      // Save hint for silent refresh on next session
+      try {
+        const storedToken = sessionStorage.getItem('gd_access_token');
+        if (storedToken) {
+          const infoRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+            headers: { Authorization: `Bearer ${storedToken}` }
+          });
+          if (infoRes.ok) {
+            const info = await infoRes.json();
+            if (info.email) localStorage.setItem('gd_hint', info.email);
+          }
+        }
+      } catch { /* ignore */ }
     } catch (err: any) {
       if (!err?.message?.includes("popup_closed")) {
         toast.error("Erro ao abrir Google Drive.");
