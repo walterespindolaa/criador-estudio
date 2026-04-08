@@ -160,17 +160,17 @@ const Historico = () => {
             </div>
             <div className="bg-card rounded-xl p-4 border border-border">
               {stats.topPlatform !== "-" && <PlatformIcon platform={stats.topPlatform as any} size="sm" />}
-              <p className="text-xl font-display font-bold text-foreground mt-1 capitalize">{stats.topPlatform}</p>
+              <p className="text-xl font-bold text-foreground mt-1 capitalize tabular-nums tracking-tight">{stats.topPlatform}</p>
               <p className="text-xs text-muted-foreground font-body">Mais ativa</p>
             </div>
             <div className="bg-card rounded-xl p-4 border border-border">
               <Calendar className="h-4 w-4 text-secondary mb-1" />
-              <p className="text-xl font-display font-bold text-foreground capitalize">{stats.topMonth}</p>
+              <p className="text-xl font-bold text-foreground capitalize tabular-nums tracking-tight">{stats.topMonth}</p>
               <p className="text-xs text-muted-foreground font-body">Mês mais produtivo</p>
             </div>
             <div className="bg-card rounded-xl p-4 border border-border">
               <BarChart3 className="h-4 w-4 text-secondary mb-1" />
-              <p className="text-xl font-display font-bold text-foreground">{stats.avgPerMonth}</p>
+              <p className="text-xl font-bold text-foreground tabular-nums tracking-tight">{stats.avgPerMonth}</p>
               <p className="text-xs text-muted-foreground font-body">Média/mês</p>
             </div>
           </div>

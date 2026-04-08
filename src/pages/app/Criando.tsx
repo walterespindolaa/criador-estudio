@@ -168,14 +168,14 @@ const Criando = () => {
   const hasActiveFilters = filterPlatform || filterPillar || period !== "semana";
 
   return (
-    <div>
+    <div className="pb-20 md:pb-0">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-3xl font-display font-bold text-foreground">Estou Criando</h1>
-            <p className="text-muted-foreground font-body mt-1">Seu pipeline de criação. Arraste entre colunas.</p>
+            <h1 className="text-2xl sm:text-3xl font-display font-bold text-foreground">Estou Criando</h1>
+            <p className="text-muted-foreground font-body mt-1 text-sm hidden sm:block">Seu pipeline de criação. Arraste entre colunas.</p>
           </div>
-          <Button variant="hero" onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Novo Post</Button>
+          <Button variant="hero" size="sm" onClick={openNew} className="shrink-0"><Plus className="h-4 w-4 mr-1" /> Novo Post</Button>
         </div>
 
         {/* Filter bar */}
