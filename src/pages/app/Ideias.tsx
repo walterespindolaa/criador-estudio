@@ -12,8 +12,8 @@ import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { suggestTag } from "@/lib/ai/claude";
 import { PostDrawer } from "@/components/kanban/PostDrawer";
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";

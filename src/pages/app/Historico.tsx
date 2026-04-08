@@ -155,7 +155,7 @@ const Historico = () => {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
             <div className="bg-card rounded-xl p-4 border border-border">
               <BarChart3 className="h-4 w-4 text-primary mb-1" />
-              <p className="text-xl font-display font-bold text-foreground">{stats.total}</p>
+              <p className="text-xl font-bold text-foreground tabular-nums tracking-tight">{stats.total}</p>
               <p className="text-xs text-muted-foreground font-body">Total publicados</p>
             </div>
             <div className="bg-card rounded-xl p-4 border border-border">
