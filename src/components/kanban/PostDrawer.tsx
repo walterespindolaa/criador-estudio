@@ -648,9 +648,21 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                     <CopyButton text={h.text} />
                   </div>
                 ))}
+                {userRefHooks.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-border">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Meus Hooks</p>
+                    {userRefHooks.map((h: any, i: number) => (
+                      <div key={`uh-${i}`} className="bg-card rounded-xl p-3 border border-border mb-2">
+                        <span className="inline-block px-1.5 py-0.5 rounded text-xs font-body bg-secondary/10 text-secondary mb-1 capitalize">
+                          {h.category}
+                        </span>
+                        <p className="text-sm font-body text-foreground">"{h.hook_text}"</p>
+                        <CopyButton text={h.hook_text} className="mt-1" />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </TabsContent>
-
-              <TabsContent value="formatos" className="space-y-2">
                 {(() => {
                   const filtered = refFormats.filter(f => f.platform === platform || f.platform === "todos" || !platform);
                   if (filtered.length === 0) return (
