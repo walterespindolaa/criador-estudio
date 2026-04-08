@@ -93,19 +93,22 @@ export function useGoogleDrive() {
   const openPicker = useCallback(async (accessToken: string): Promise<PickedFile[]> => {
     return new Promise((resolve) => {
       const neutralize = () => {
-      const allFixed = Array.from(document.querySelectorAll("*")).filter((el) => {
-        if (el.closest(".picker-dialog") || el.closest(".picker-dialog-bg")) return false;
+        const allToDisable = Array.from(document.querySelectorAll("*")).filter((el) => {
+          if (el.closest(".picker-dialog") || el.closest(".picker-dialog-bg")) return false;
+          const style = window.getComputedStyle(el as HTMLElement);
+          const position = style.position;
+          const zIndex = parseInt(style.zIndex) || 0;
+          if (style.display === "none") return false;
+          return position === "fixed"
+            || position === "sticky"
+            || (position !== "static" && zIndex >= 40);
+        });
 
-        const style = window.getComputedStyle(el as HTMLElement);
-        return (style.position === "fixed" || style.position === "sticky") && style.display !== "none";
-      });
-
-        allFixed.forEach((el) => {
+        allToDisable.forEach((el) => {
           const htmlEl = el as HTMLElement;
           htmlEl.dataset.origPe = htmlEl.style.pointerEvents || "";
           htmlEl.dataset.origZ = htmlEl.style.zIndex || "";
           htmlEl.style.pointerEvents = "none";
-          htmlEl.style.zIndex = "0";
         });
       };
 
