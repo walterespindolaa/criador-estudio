@@ -206,16 +206,17 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   const handleDrivePick = async () => {
     if (picking) return;
     if (isNew) {
-      // New post: save without post_id, then fetch orphaned refs
+      // New post: save without post_id, then fetch only newly created refs
       try {
+        const pickStartedAt = new Date().toISOString();
         await pickAndSave(undefined);
         const { data } = await supabase
           .from("external_media_refs")
           .select("id, external_file_id, file_name, file_type, thumbnail_url, view_url")
           .eq("user_id", userId)
           .is("post_id", null)
-          .order("created_at", { ascending: false })
-          .limit(10);
+          .gte("created_at", pickStartedAt)
+          .order("created_at", { ascending: false });
         if (data && data.length > 0) {
           setPendingDriveFiles(prev => {
             const existingIds = new Set(prev.map(p => p.id));
@@ -824,6 +825,12 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       userName={profile?.name || "Criador"}
       userHandle={profile?.instagram_handle || profile?.tiktok_handle || "usuario"}
       avatarUrl={profile?.avatar_url || null}
+      mediaUrl={mediaList.length > 0
+        ? `https://lh3.googleusercontent.com/d/${encodeURIComponent(
+            mediaList[0].external_file_id || mediaList[0].id
+          )}=w800`
+        : undefined
+      }
     />
     </>
   );
