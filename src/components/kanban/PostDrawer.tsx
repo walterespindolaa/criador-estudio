@@ -167,13 +167,19 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
     if (post) fetchDriveMedia(post.id);
   }, [post, open, fetchDriveMedia]);
 
-  // Fetch reference formats
+  // Fetch reference formats and user personal refs
   useEffect(() => {
     if (!open) return;
     supabase.from("reference_formats").select("*").eq("is_active", true).order("platform").then(({ data }) => {
       setRefFormats(data || []);
     });
-  }, [open]);
+    if (userId) {
+      supabase.from("user_hooks").select("*").eq("user_id", userId).order("is_favorite", { ascending: false })
+        .then(({ data }) => setUserRefHooks(data || []));
+      supabase.from("user_prompts").select("*").eq("user_id", userId).order("is_favorite", { ascending: false })
+        .then(({ data }) => setUserRefPrompts(data || []));
+    }
+  }, [open, userId]);
 
   const handleAiReferences = async () => {
     if (aiHookCategories.length > 0 || isAiLoading) return;
