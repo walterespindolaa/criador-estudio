@@ -106,7 +106,7 @@ export function useGoogleDrive() {
               name: doc.name,
               mimeType: doc.mimeType,
               sizeBytes: doc.sizeBytes,
-              thumbnailUrl: `https://drive.google.com/thumbnail?id=${doc.id}&sz=w400`,
+              thumbnailUrl: `https://lh3.googleusercontent.com/d/${encodeURIComponent(doc.id)}=w400`,
               url: doc.url,
             }));
             resolve(files);
