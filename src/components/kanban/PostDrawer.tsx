@@ -5,10 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CopyButton } from "@/components/shared/CopyButton";
-import { Sparkles, MessageSquareText, FileCode2, Anchor, PenLine, MessageSquare, Megaphone, ClipboardList, BarChart3, Eye, Bookmark, Target, Clock, Cloud, ExternalLink, X, Trash2 } from "lucide-react";
+import { Sparkles, MessageSquareText, FileCode2, Anchor, PenLine, MessageSquare, Megaphone, ClipboardList, BarChart3, Eye, Bookmark, Target, Clock, Cloud, ExternalLink, X, Trash2, HardDrive } from "lucide-react";
 import { PostTasks } from "./PostTasks";
-import { DrivePickerButton } from "@/components/drive/DrivePickerButton";
-import { DriveMediaPreview } from "@/components/drive/DriveMediaPreview";
 import {
   Select,
   SelectContent,
@@ -30,6 +28,7 @@ import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { filterReferences, generateArchiveSummary } from "@/lib/ai/claude";
 import { PostPreviewModal } from "./PostPreviewModal";
 import { useProfile } from "@/hooks/useProfile";
+import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 
 interface ContentBlocks {
   tema: string;
@@ -124,6 +123,12 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   interface DriveRef { id: string; external_file_id?: string | null; file_name: string; file_type: string | null; thumbnail_url: string | null; view_url: string | null; }
   const [driveMedia, setDriveMedia] = useState<DriveRef[]>([]);
 
+  // Pending drive files for new posts (no post_id yet)
+  const [pendingDriveFiles, setPendingDriveFiles] = useState<DriveRef[]>([]);
+
+  // Google Drive hook
+  const { pickAndSave, picking } = useGoogleDrive();
+
   // User personal references
   const [userRefHooks, setUserRefHooks] = useState<any[]>([]);
   const [userRefPrompts, setUserRefPrompts] = useState<any[]>([]);
@@ -163,6 +168,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       setViews(""); setSaves(""); setComments(""); setShowResults(false);
       setContentBlocks({ tema: "pendente", roteiro: "pendente", midia: "pendente", legenda: "pendente" });
       setDriveMedia([]);
+      setPendingDriveFiles([]);
     }
     if (post) fetchDriveMedia(post.id);
   }, [post, open, fetchDriveMedia]);
@@ -194,6 +200,36 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       console.error("AI References failed", e);
     } finally {
       setIsAiLoading(false);
+    }
+  };
+
+  const handleDrivePick = async () => {
+    if (picking) return;
+    if (isNew) {
+      // New post: save without post_id, then fetch orphaned refs
+      try {
+        await pickAndSave(undefined);
+        const { data } = await supabase
+          .from("external_media_refs")
+          .select("id, external_file_id, file_name, file_type, thumbnail_url, view_url")
+          .eq("user_id", userId)
+          .is("post_id", null)
+          .order("created_at", { ascending: false })
+          .limit(10);
+        if (data && data.length > 0) {
+          setPendingDriveFiles(prev => {
+            const existingIds = new Set(prev.map(p => p.id));
+            const newFiles = (data as DriveRef[]).filter(d => !existingIds.has(d.id));
+            return [...newFiles, ...prev];
+          });
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    } else {
+      // Existing post: normal flow
+      await pickAndSave(post?.id);
+      if (post) fetchDriveMedia(post.id);
     }
   };
 
@@ -234,15 +270,29 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
     }
 
     let error;
+    let newPostId: string | undefined;
     if (post) {
       ({ error } = await supabase.from("posts").update(data).eq("id", post.id));
+      newPostId = post.id;
     } else {
-      ({ error } = await supabase.from("posts").insert(data));
+      const result = await supabase.from("posts").insert(data).select("id").single();
+      error = result.error;
+      newPostId = result.data?.id;
     }
 
     if (error) {
       toast.error("Erro ao salvar post.");
       return;
+    }
+
+    // Link pending drive files to the newly created post
+    if (isNew && newPostId && pendingDriveFiles.length > 0) {
+      const pendingIds = pendingDriveFiles.map(f => f.id);
+      await supabase
+        .from("external_media_refs")
+        .update({ post_id: newPostId })
+        .in("id", pendingIds);
+      setPendingDriveFiles([]);
     }
 
     if (wasPublished) {
@@ -260,6 +310,28 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
     setStatus(newStatus);
     if (newStatus === "publicado") {
       setShowResults(true);
+    }
+  };
+
+  // Unified media list for rendering
+  const mediaList: DriveRef[] = isNew ? pendingDriveFiles : driveMedia;
+
+  const handleRemoveMedia = (refId: string) => {
+    if (isNew) {
+      // Delete from DB (orphaned ref) and remove from state
+      supabase.from("external_media_refs").delete().eq("id", refId);
+      setPendingDriveFiles(prev => prev.filter(f => f.id !== refId));
+    } else {
+      removeDriveRef(refId);
+    }
+  };
+
+  const handleRemoveAllMedia = () => {
+    if (isNew) {
+      pendingDriveFiles.forEach(f => supabase.from("external_media_refs").delete().eq("id", f.id));
+      setPendingDriveFiles([]);
+    } else {
+      driveMedia.forEach(m => removeDriveRef(m.id));
     }
   };
 
@@ -380,7 +452,6 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                 <PostTasks postId={post.id} userId={userId} />
               )}
 
-
               <div className="space-y-2">
                 <Label className="font-body text-sm">Data e horário agendados</Label>
                 <div className="grid grid-cols-2 gap-3">
@@ -407,40 +478,45 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="font-body text-sm">Mídia</Label>
-                  <DrivePickerButton
-                    postId={post?.id}
-                    onPicked={() => { if (post) fetchDriveMedia(post.id); }}
+                  <Button
                     variant="outline"
                     size="sm"
-                  />
+                    disabled={picking}
+                    onClick={handleDrivePick}
+                    className="rounded-xl"
+                  >
+                    <HardDrive className="h-4 w-4 mr-1" />
+                    {picking ? "Abrindo..." : "Google Drive"}
+                  </Button>
                 </div>
-                {driveMedia.length > 0 ? (
+                {mediaList.length > 0 ? (
                   <div className="space-y-3">
                     {/* Primary preview */}
                     {(() => {
-                      const primary = driveMedia[0];
+                      const primary = mediaList[0];
                       const fileId = primary.external_file_id || primary.id;
                       const isVideo = primary.file_type?.startsWith("video/");
                       const imgSrc = `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w800`;
                       const fallbackSrc = `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w400`;
                       return (
-                        <div className="relative aspect-square rounded-xl overflow-hidden bg-muted border border-border">
+                        <div className="relative aspect-square rounded-xl overflow-hidden bg-muted border border-border max-h-64">
                           {isVideo ? (
-                            <video controls className="w-full h-full object-cover" src={`https://drive.google.com/uc?export=download&id=${fileId}`} />
+                            <video controls className="w-full h-full object-contain bg-black" src={`https://drive.google.com/uc?export=download&id=${fileId}`} />
                           ) : (
                             <img
                               src={imgSrc}
                               alt={primary.file_name}
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-contain"
                               onError={(e) => { (e.target as HTMLImageElement).src = fallbackSrc; }}
                             />
                           )}
-                          <span className="absolute top-2 right-2 bg-card/90 backdrop-blur text-foreground text-[10px] font-body px-1.5 py-0.5 rounded-lg flex items-center gap-1">
-                            <Cloud className="h-3 w-3" /> Drive
-                          </span>
+                          <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/50 rounded-full px-2 py-0.5">
+                            <Cloud className="h-3 w-3 text-white" />
+                            <span className="text-[10px] text-white font-body">Drive</span>
+                          </div>
                           {primary.view_url && (
                             <a href={primary.view_url} target="_blank" rel="noopener noreferrer"
-                              className="absolute bottom-2 right-2 bg-card/90 backdrop-blur text-foreground text-[10px] font-body px-2 py-1 rounded-lg flex items-center gap-1 hover:bg-card transition-colors">
+                              className="absolute bottom-2 right-2 bg-black/50 rounded-full px-2 py-1 text-[10px] text-white font-body flex items-center gap-1 hover:bg-black/70 transition-colors">
                               <ExternalLink className="h-3 w-3" /> Abrir
                             </a>
                           )}
@@ -448,36 +524,39 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                       );
                     })()}
                     {/* Additional thumbnails */}
-                    {driveMedia.length > 1 && (
-                      <div className="flex gap-2 overflow-x-auto">
-                        {driveMedia.slice(1).map(m => {
+                    {mediaList.length > 1 && (
+                      <div className="flex gap-2 flex-wrap">
+                        {mediaList.slice(1).map(m => {
                           const fid = m.external_file_id || m.id;
                           return (
-                            <div key={m.id} className="relative group shrink-0">
+                            <div key={m.id} className="relative w-14 h-14 rounded-lg overflow-hidden border border-border bg-muted group">
                               <img
                                 src={`https://lh3.googleusercontent.com/d/${encodeURIComponent(fid)}=w200`}
                                 alt={m.file_name}
-                                className="w-16 h-16 rounded-lg object-cover border border-border"
-                                onError={(e) => { (e.target as HTMLImageElement).src = `https://drive.google.com/thumbnail?id=${encodeURIComponent(fid)}&sz=w200`; }}
+                                className="w-full h-full object-cover"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                               />
-                              <button onClick={() => removeDriveRef(m.id)}
-                                className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <X className="h-3 w-3" />
+                              <button
+                                onClick={() => handleRemoveMedia(m.id)}
+                                className="absolute top-0.5 right-0.5 bg-destructive text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X className="h-2.5 w-2.5" />
                               </button>
                             </div>
                           );
                         })}
                       </div>
                     )}
-                    <button onClick={() => { driveMedia.forEach(m => removeDriveRef(m.id)); }}
+                    <button onClick={handleRemoveAllMedia}
                       className="text-xs text-destructive font-body flex items-center gap-1 hover:underline">
                       <Trash2 className="h-3 w-3" /> Remover mídia
                     </button>
                   </div>
                 ) : (
                   <div className="border-2 border-dashed border-border rounded-xl p-6 text-center">
-                    <Cloud className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
+                    <Cloud className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
                     <p className="text-xs text-muted-foreground font-body">Nenhuma mídia vinculada</p>
+                    <p className="text-[10px] text-muted-foreground/60 font-body mt-0.5">Clique em "Google Drive" para selecionar</p>
                   </div>
                 )}
               </div>
