@@ -21,15 +21,19 @@ interface PickedFile {
 
 // ─── Token persistence helpers ───
 const getStoredToken = (): string | null => {
-  const token = sessionStorage.getItem("gd_access_token");
-  const expires = sessionStorage.getItem("gd_token_expires");
-  if (token && expires && parseInt(expires) > Date.now()) return token;
+  try {
+    const token = sessionStorage.getItem("gd_access_token");
+    const expires = sessionStorage.getItem("gd_token_expires");
+    if (token && expires && parseInt(expires) > Date.now()) return token;
+  } catch { /* ignore */ }
   return null;
 };
 
 const setStoredToken = (token: string, expiresInSeconds = 3600) => {
-  sessionStorage.setItem("gd_access_token", token);
-  sessionStorage.setItem("gd_token_expires", String(Date.now() + expiresInSeconds * 1000 - 60000));
+  try {
+    sessionStorage.setItem("gd_access_token", token);
+    sessionStorage.setItem("gd_token_expires", String(Date.now() + expiresInSeconds * 1000 - 60000));
+  } catch { /* ignore */ }
 };
 
 export function useGoogleDrive() {
@@ -39,27 +43,30 @@ export function useGoogleDrive() {
   const loadGoogleScripts = useCallback((): Promise<void> => {
     return new Promise((resolve) => {
       if (window.google?.picker && window.gapi) { resolve(); return; }
-      const loadApi = () => {
-        const s = document.createElement("script");
-        s.src = "https://apis.google.com/js/api.js";
-        s.onload = () => { window.gapi.load("picker", () => resolve()); };
-        document.body.appendChild(s);
+      const loadPicker = () => {
+        if (!window.gapi) {
+          const s = document.createElement("script");
+          s.src = "https://apis.google.com/js/api.js";
+          s.onload = () => { window.gapi.load("picker", () => resolve()); };
+          document.body.appendChild(s);
+        } else {
+          window.gapi.load("picker", () => resolve());
+        }
       };
-      if (!document.querySelector('script[src*="accounts.google.com/gsi/client"]')) {
+      if (!window.google?.accounts) {
         const s = document.createElement("script");
         s.src = "https://accounts.google.com/gsi/client";
-        s.onload = loadApi;
+        s.onload = loadPicker;
         document.body.appendChild(s);
       } else {
-        loadApi();
+        loadPicker();
       }
     });
   }, []);
 
   const getAccessToken = useCallback(async (clientId: string): Promise<string> => {
-    // Check sessionStorage first
-    const stored = getStoredToken();
-    if (stored) return stored;
+    const cached = getStoredToken();
+    if (cached) return cached;
 
     const hint = localStorage.getItem("gd_hint") || undefined;
 
@@ -68,30 +75,30 @@ export function useGoogleDrive() {
         client_id: clientId,
         scope: "https://www.googleapis.com/auth/drive.readonly",
         callback: (resp: any) => {
-          if (resp.error) reject(resp.error);
-          else {
-            setStoredToken(resp.access_token, resp.expires_in || 3600);
-            resolve(resp.access_token);
+          if (resp.error) {
+            reject(new Error(resp.error));
+            return;
           }
+          setStoredToken(resp.access_token, resp.expires_in || 3600);
+          resolve(resp.access_token);
         },
         ...(hint ? { hint } : {}),
       });
+      // prompt: "" tries silent first, only shows popup if necessary
       client.requestAccessToken({ prompt: "" });
     });
   }, []);
 
-  const openPicker = useCallback(async (accessToken: string, clientId: string): Promise<PickedFile[]> => {
+  const openPicker = useCallback(async (accessToken: string): Promise<PickedFile[]> => {
     return new Promise((resolve) => {
-      const view = new window.google.picker.DocsView()
-        .setIncludeFolders(false)
-        .setSelectFolderEnabled(false);
       const picker = new window.google.picker.PickerBuilder()
-        .addView(view)
+        .addView(new window.google.picker.DocsView().setIncludeFolders(false).setSelectFolderEnabled(false))
         .addView(new window.google.picker.DocsView(window.google.picker.ViewId.DOCS_IMAGES))
         .addView(new window.google.picker.DocsView(window.google.picker.ViewId.DOCS_VIDEOS))
         .setOAuthToken(accessToken)
         .setDeveloperKey("")
         .enableFeature(window.google.picker.Feature.MULTISELECT_ENABLED)
+        .setTitle("Selecionar do Google Drive")
         .setCallback((data: any) => {
           if (data.action === "picked") {
             const files: PickedFile[] = data.docs.map((doc: any) => ({
@@ -99,7 +106,7 @@ export function useGoogleDrive() {
               name: doc.name,
               mimeType: doc.mimeType,
               sizeBytes: doc.sizeBytes,
-              thumbnailUrl: doc.iconUrl?.replace("/16/", "/512/"),
+              thumbnailUrl: `https://drive.google.com/thumbnail?id=${doc.id}&sz=w400`,
               url: doc.url,
             }));
             resolve(files);
@@ -116,7 +123,7 @@ export function useGoogleDrive() {
         const pickerBg = document.querySelector('.picker-dialog-bg') as HTMLElement;
         if (pickerContainer) pickerContainer.style.zIndex = '999999';
         if (pickerBg) pickerBg.style.zIndex = '999998';
-      }, 100);
+      }, 150);
     });
   }, []);
 
@@ -147,10 +154,12 @@ export function useGoogleDrive() {
       const { data } = await supabase.functions.invoke("get-google-config");
       if (!data?.client_id) { toast.error("Google Drive não configurado."); return; }
       const token = await getAccessToken(data.client_id);
-      const files = await openPicker(token, data.client_id);
+      const files = await openPicker(token);
       if (files.length > 0) await saveExternalRefs(files, postId);
-    } catch (err) {
-      toast.error("Erro ao abrir Google Drive.");
+    } catch (err: any) {
+      if (!err?.message?.includes("popup_closed")) {
+        toast.error("Erro ao abrir Google Drive.");
+      }
       console.error(err);
     } finally {
       setPicking(false);

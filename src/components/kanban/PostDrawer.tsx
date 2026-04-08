@@ -115,6 +115,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   const [showResults, setShowResults] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiHookCategories, setAiHookCategories] = useState<string[]>([]);
+  const [refFormats, setRefFormats] = useState<any[]>([]);
   const [contentBlocks, setContentBlocks] = useState<ContentBlocks>({ tema: "pendente", roteiro: "pendente", midia: "pendente", legenda: "pendente" });
   const [previewOpen, setPreviewOpen] = useState(false);
   const { profile } = useProfile();
@@ -161,6 +162,14 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
     }
     if (post) fetchDriveMedia(post.id);
   }, [post, open, fetchDriveMedia]);
+
+  // Fetch reference formats
+  useEffect(() => {
+    if (!open) return;
+    supabase.from("reference_formats").select("*").eq("is_active", true).order("platform").then(({ data }) => {
+      setRefFormats(data || []);
+    });
+  }, [open]);
 
   const handleAiReferences = async () => {
     if (aiHookCategories.length > 0 || isAiLoading) return;
@@ -273,17 +282,14 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                   <Label className="font-body text-sm">Plataforma</Label>
                   <Select value={platform} onValueChange={setPlatform}>
                     <SelectTrigger className="rounded-xl">
-                      <div className="flex items-center gap-2">
-                        <PlatformIcon platform={platform as any} size="sm" />
-                        <SelectValue />
-                      </div>
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {PLATFORMS.map(p => (
                         <SelectItem key={p} value={p}>
                           <div className="flex items-center gap-2">
                             <PlatformIcon platform={p as any} size="sm" />
-                            <span>{p}</span>
+                            <span className="font-body capitalize">{p === "instagram" ? "Instagram" : p === "tiktok" ? "TikTok" : "YouTube"}</span>
                           </div>
                         </SelectItem>
                       ))}
@@ -580,11 +586,28 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
               </TabsContent>
 
               <TabsContent value="formatos" className="space-y-2">
-                <div className="bg-card rounded-xl p-4 border border-border text-center">
-                  <p className="text-sm text-muted-foreground font-body">
-                    Formatos de conteúdo em breve!
-                  </p>
-                </div>
+                {(() => {
+                  const filtered = refFormats.filter(f => f.platform === platform || f.platform === "todos" || !platform);
+                  if (filtered.length === 0) return (
+                    <div className="bg-card rounded-xl p-4 border border-border text-center">
+                      <p className="text-sm text-muted-foreground font-body">Nenhum formato cadastrado ainda.</p>
+                    </div>
+                  );
+                  return filtered.map((f: any) => (
+                    <div key={f.id} className="bg-card rounded-xl p-3 border border-border space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <PlatformIcon platform={f.platform as any} size="sm" />
+                          <span className="font-body font-medium text-sm text-foreground">{f.name}</span>
+                        </div>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-body bg-secondary/10 text-secondary">{f.format_type}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground font-body whitespace-pre-line">{f.structure}</p>
+                      {f.tips && <p className="text-xs text-muted-foreground font-body italic">💡 {f.tips}</p>}
+                      <CopyButton text={f.structure || f.name} />
+                    </div>
+                  ));
+                })()}
               </TabsContent>
 
               <TabsContent value="prompts" className="space-y-2">
