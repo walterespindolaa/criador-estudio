@@ -403,21 +403,10 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                 </div>
               </div>
 
-              {/* Google Drive media */}
+              {/* Google Drive media — visual preview */}
               <div className="space-y-2">
-                <Label className="font-body text-sm">Mídia do Google Drive</Label>
-                <div className="flex flex-wrap gap-3 items-start">
-                  {driveMedia.map(m => (
-                    <DriveMediaPreview
-                      key={m.id}
-                      fileName={m.file_name}
-                      fileType={m.file_type}
-                      thumbnailUrl={m.thumbnail_url}
-                      viewUrl={m.view_url}
-                      size="sm"
-                      onRemove={() => removeDriveRef(m.id)}
-                    />
-                  ))}
+                <div className="flex items-center justify-between">
+                  <Label className="font-body text-sm">Mídia</Label>
                   <DrivePickerButton
                     postId={post?.id}
                     onPicked={() => { if (post) fetchDriveMedia(post.id); }}
@@ -425,6 +414,72 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                     size="sm"
                   />
                 </div>
+                {driveMedia.length > 0 ? (
+                  <div className="space-y-3">
+                    {/* Primary preview */}
+                    {(() => {
+                      const primary = driveMedia[0];
+                      const fileId = primary.external_file_id || primary.id;
+                      const isVideo = primary.file_type?.startsWith("video/");
+                      const imgSrc = `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w800`;
+                      const fallbackSrc = `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w400`;
+                      return (
+                        <div className="relative aspect-square rounded-xl overflow-hidden bg-muted border border-border">
+                          {isVideo ? (
+                            <video controls className="w-full h-full object-cover" src={`https://drive.google.com/uc?export=download&id=${fileId}`} />
+                          ) : (
+                            <img
+                              src={imgSrc}
+                              alt={primary.file_name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => { (e.target as HTMLImageElement).src = fallbackSrc; }}
+                            />
+                          )}
+                          <span className="absolute top-2 right-2 bg-card/90 backdrop-blur text-foreground text-[10px] font-body px-1.5 py-0.5 rounded-lg flex items-center gap-1">
+                            <Cloud className="h-3 w-3" /> Drive
+                          </span>
+                          {primary.view_url && (
+                            <a href={primary.view_url} target="_blank" rel="noopener noreferrer"
+                              className="absolute bottom-2 right-2 bg-card/90 backdrop-blur text-foreground text-[10px] font-body px-2 py-1 rounded-lg flex items-center gap-1 hover:bg-card transition-colors">
+                              <ExternalLink className="h-3 w-3" /> Abrir
+                            </a>
+                          )}
+                        </div>
+                      );
+                    })()}
+                    {/* Additional thumbnails */}
+                    {driveMedia.length > 1 && (
+                      <div className="flex gap-2 overflow-x-auto">
+                        {driveMedia.slice(1).map(m => {
+                          const fid = m.external_file_id || m.id;
+                          return (
+                            <div key={m.id} className="relative group shrink-0">
+                              <img
+                                src={`https://lh3.googleusercontent.com/d/${encodeURIComponent(fid)}=w200`}
+                                alt={m.file_name}
+                                className="w-16 h-16 rounded-lg object-cover border border-border"
+                                onError={(e) => { (e.target as HTMLImageElement).src = `https://drive.google.com/thumbnail?id=${encodeURIComponent(fid)}&sz=w200`; }}
+                              />
+                              <button onClick={() => removeDriveRef(m.id)}
+                                className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <button onClick={() => { driveMedia.forEach(m => removeDriveRef(m.id)); }}
+                      className="text-xs text-destructive font-body flex items-center gap-1 hover:underline">
+                      <Trash2 className="h-3 w-3" /> Remover mídia
+                    </button>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-border rounded-xl p-6 text-center">
+                    <Cloud className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-xs text-muted-foreground font-body">Nenhuma mídia vinculada</p>
+                  </div>
+                )}
               </div>
 
               {/* Hook */}
