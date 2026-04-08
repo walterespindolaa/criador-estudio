@@ -663,6 +663,8 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                   </div>
                 )}
               </TabsContent>
+
+              <TabsContent value="formatos" className="space-y-2">
                 {(() => {
                   const filtered = refFormats.filter(f => f.platform === platform || f.platform === "todos" || !platform);
                   if (filtered.length === 0) return (
