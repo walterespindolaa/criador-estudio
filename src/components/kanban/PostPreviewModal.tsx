@@ -14,10 +14,11 @@ interface PostPreviewProps {
   userName: string;
   userHandle: string;
   avatarUrl: string | null;
+  mediaUrl?: string;
 }
 
 export function PostPreviewModal({
-  open, onOpenChange, title, hook, caption, platform, format, userName, userHandle, avatarUrl,
+  open, onOpenChange, title, hook, caption, platform, format, userName, userHandle, avatarUrl, mediaUrl,
 }: PostPreviewProps) {
   const initials = (userName || "C")[0].toUpperCase();
 
@@ -34,6 +35,9 @@ export function PostPreviewModal({
           {/* Instagram Preview */}
           <TabsContent value="instagram" className="mt-0">
             <div className="bg-black text-white aspect-[9/16] max-h-[480px] relative flex flex-col justify-between overflow-hidden rounded-b-lg">
+              {mediaUrl ? (
+                <img src={mediaUrl} alt="preview" className="absolute inset-0 w-full h-full object-cover" />
+              ) : null}
               <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
               <div className="relative z-10 p-4 flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center overflow-hidden border-2 border-white/40">
@@ -62,6 +66,9 @@ export function PostPreviewModal({
           {/* TikTok Preview */}
           <TabsContent value="tiktok" className="mt-0">
             <div className="bg-black text-white aspect-[9/16] max-h-[480px] relative flex flex-col justify-between overflow-hidden rounded-b-lg">
+              {mediaUrl ? (
+                <img src={mediaUrl} alt="preview" className="absolute inset-0 w-full h-full object-cover opacity-70" />
+              ) : null}
               <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/80" />
               <div className="relative z-10 p-4 pt-8">
                 <div className="flex items-center gap-2">

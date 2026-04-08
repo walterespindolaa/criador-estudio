@@ -93,12 +93,12 @@ export function useGoogleDrive() {
   const openPicker = useCallback(async (accessToken: string): Promise<PickedFile[]> => {
     return new Promise((resolve) => {
       const neutralize = () => {
-        const allFixed = Array.from(document.querySelectorAll("*")).filter((el) => {
-          if (el.closest(".picker-dialog") || el.closest(".picker-dialog-bg")) return false;
+      const allFixed = Array.from(document.querySelectorAll("*")).filter((el) => {
+        if (el.closest(".picker-dialog") || el.closest(".picker-dialog-bg")) return false;
 
-          const style = window.getComputedStyle(el as HTMLElement);
-          return style.position === "fixed" && style.display !== "none";
-        });
+        const style = window.getComputedStyle(el as HTMLElement);
+        return (style.position === "fixed" || style.position === "sticky") && style.display !== "none";
+      });
 
         allFixed.forEach((el) => {
           const htmlEl = el as HTMLElement;
