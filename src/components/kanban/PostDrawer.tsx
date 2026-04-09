@@ -117,6 +117,8 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   const [referenceLink, setReferenceLink] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
   const { profile } = useProfile();
+  const pdfRef = useRef<HTMLDivElement>(null);
+  const { exportPdf } = usePdfExport();
 
   // Drive media refs
   interface DriveRef { id: string; external_file_id?: string | null; file_name: string; file_type: string | null; thumbnail_url: string | null; view_url: string | null; }
