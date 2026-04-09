@@ -155,7 +155,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       setSaves(post.result_saves?.toString() || "");
       setComments(post.result_comments?.toString() || "");
       setShowResults(post.status === "publicado");
-      setContentBlocks((post as any).content_blocks || { tema: "pendente", roteiro: "pendente", midia: "pendente", legenda: "pendente" });
+      try { setSections(JSON.parse((post as any).sections) || Array(5).fill("")); } catch { setSections(Array(5).fill("")); }
     } else {
       setTitle(""); setPlatform("instagram"); setFormat("reels");
       setPillarId(""); setStatus("ideia"); setHook(""); setScript("");
