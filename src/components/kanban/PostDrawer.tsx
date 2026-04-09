@@ -31,12 +31,6 @@ import { PostPreviewModal } from "./PostPreviewModal";
 import { useProfile } from "@/hooks/useProfile";
 import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 
-interface ContentBlocks {
-  tema: string;
-  roteiro: string;
-  midia: string;
-  legenda: string;
-}
 
 interface Post {
   id: string;
