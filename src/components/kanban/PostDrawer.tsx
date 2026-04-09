@@ -51,7 +51,7 @@ interface Post {
   result_saves: number | null;
   result_comments: number | null;
   archive_summary: string | null;
-  content_blocks: ContentBlocks | null;
+  content_blocks: any | null;
   user_id: string;
 }
 
