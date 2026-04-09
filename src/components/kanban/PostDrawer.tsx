@@ -912,6 +912,14 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
 
         {/* Footer with actions */}
         <div className="px-6 py-4 border-t border-border bg-card/50 shrink-0 flex gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => exportPdf(pdfRef, `roteiro-${title.slice(0, 20).replace(/\s+/g, "-").toLowerCase() || "post"}`)}
+          >
+            <Download className="h-4 w-4" /> PDF
+          </Button>
           <Button variant="outline" className="flex-1" onClick={() => setPreviewOpen(true)}>
             <Eye className="h-4 w-4 mr-1.5" /> Prévia
           </Button>
@@ -940,6 +948,19 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       }
       sections={sections}
     />
+    <div style={{ position: "fixed", left: "-9999px", top: 0, zIndex: -1 }}>
+      <RoteiroPdfTemplate
+        ref={pdfRef}
+        title={title}
+        format={format}
+        hook={hook}
+        caption={caption}
+        sections={sections}
+        referenceLink={referenceLink}
+        userName={profile?.name}
+        platform={platform}
+      />
+    </div>
     </>
   );
 }
