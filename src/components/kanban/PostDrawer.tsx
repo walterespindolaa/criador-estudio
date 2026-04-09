@@ -554,7 +554,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                               placeholder="Como gravar: enquadramento, tom, ação..."
                               value={sec.captacao || ""}
                               onChange={(e) => setSections(prev => prev.map((s, j) => j === i ? { ...s, captacao: e.target.value } : s))}
-                              className="border-0 bg-transparent px-3 pt-2 pb-2 text-xs font-body text-muted-foreground resize-none focus-visible:ring-0 min-h-[36px]"
+                              className="border-0 bg-muted/40 rounded-b-xl px-3 pt-2 pb-2 text-xs font-body text-foreground placeholder:text-muted-foreground/70 resize-none focus-visible:ring-0 min-h-[36px] w-full"
                               rows={1}
                             />
 
@@ -583,7 +583,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                                       } : s));
                                     }
                                   }}
-                                  className="flex items-center gap-1.5 text-[10px] font-body text-muted-foreground/60 hover:text-primary transition-colors"
+                                  className="flex items-center gap-1.5 text-[10px] font-body text-muted-foreground hover:text-primary border border-dashed border-border/60 hover:border-primary/40 rounded-lg px-2 py-1 transition-all"
                                 >
                                   <Cloud className="h-3 w-3" />
                                   Adicionar mídia
