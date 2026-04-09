@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CopyButton } from "@/components/shared/CopyButton";
-import { Sparkles, MessageSquareText, FileCode2, Anchor, PenLine, MessageSquare, Megaphone, ClipboardList, BarChart3, Eye, Bookmark, Target, Clock, Cloud, ExternalLink, X, Trash2, HardDrive, Play, Layers, Type, Radio, MousePointerClick, Link } from "lucide-react";
+import { Sparkles, MessageSquareText, FileCode2, Anchor, PenLine, MessageSquare, Megaphone, ClipboardList, BarChart3, Eye, Bookmark, Target, Clock, Cloud, ExternalLink, X, Trash2, HardDrive, Play, Layers, Type, Radio, MousePointerClick, Link, Download } from "lucide-react";
 import { getFormatStructure } from "@/lib/format-structures";
 import { PostTasks } from "./PostTasks";
 import {
@@ -30,7 +30,8 @@ import { filterReferences, generateArchiveSummary } from "@/lib/ai/claude";
 import { PostPreviewModal } from "./PostPreviewModal";
 import { useProfile } from "@/hooks/useProfile";
 import { useGoogleDrive } from "@/hooks/useGoogleDrive";
-
+import { RoteiroPdfTemplate } from "@/components/pdf/RoteiroPdfTemplate";
+import { usePdfExport } from "@/hooks/usePdfExport";
 
 interface Post {
   id: string;
@@ -116,6 +117,8 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   const [referenceLink, setReferenceLink] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
   const { profile } = useProfile();
+  const pdfRef = useRef<HTMLDivElement>(null);
+  const { exportPdf } = usePdfExport();
 
   // Drive media refs
   interface DriveRef { id: string; external_file_id?: string | null; file_name: string; file_type: string | null; thumbnail_url: string | null; view_url: string | null; }
@@ -909,6 +912,14 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
 
         {/* Footer with actions */}
         <div className="px-6 py-4 border-t border-border bg-card/50 shrink-0 flex gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => exportPdf(pdfRef, `roteiro-${title.slice(0, 20).replace(/\s+/g, "-").toLowerCase() || "post"}`)}
+          >
+            <Download className="h-4 w-4" /> PDF
+          </Button>
           <Button variant="outline" className="flex-1" onClick={() => setPreviewOpen(true)}>
             <Eye className="h-4 w-4 mr-1.5" /> Prévia
           </Button>
@@ -937,6 +948,19 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       }
       sections={sections}
     />
+    <div style={{ position: "fixed", left: "-9999px", top: 0, zIndex: -1 }}>
+      <RoteiroPdfTemplate
+        ref={pdfRef}
+        title={title}
+        format={format}
+        hook={hook}
+        caption={caption}
+        sections={sections}
+        referenceLink={referenceLink}
+        userName={profile?.name}
+        platform={platform}
+      />
+    </div>
     </>
   );
 }
