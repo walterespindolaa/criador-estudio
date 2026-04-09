@@ -116,6 +116,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   const [sections, setSections] = useState<Section[]>(Array(5).fill(null).map(emptySection));
   const [referenceLink, setReferenceLink] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [refsOpen, setRefsOpen] = useState(false);
   const { profile } = useProfile();
   const pdfRef = useRef<HTMLDivElement>(null);
   const { exportPdf } = usePdfExport();
