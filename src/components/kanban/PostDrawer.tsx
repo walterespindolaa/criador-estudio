@@ -484,23 +484,71 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                           <PenLine className="h-4 w-4" /> {structure.sectionLabel}s
                         </Label>
                         {sections.map((sec, i) => (
-                          <div key={i} className="space-y-1">
+                          <div key={i} className="space-y-1 bg-card rounded-xl p-3 border border-border">
                             <p className="text-[10px] font-body text-muted-foreground uppercase tracking-wider">
                               {structure.sectionLabel} {String(i + 1).padStart(2, "0")}
                             </p>
                             <Textarea
                               placeholder={`Descreva a ${structure.sectionLabel?.toLowerCase()} ${i + 1}...`}
-                              value={sec}
-                              onChange={(e) => setSections(prev => prev.map((s, j) => j === i ? e.target.value : s))}
-                              className="rounded-xl min-h-[60px]"
+                              value={sec.text}
+                              onChange={(e) => setSections(prev => prev.map((s, j) => j === i ? { ...s, text: e.target.value } : s))}
+                              className="rounded-lg min-h-[56px] border-0 bg-transparent p-0 resize-none focus-visible:ring-0"
                               rows={2}
                             />
+                            <div className="flex items-center gap-2 mt-1.5">
+                              {sec.driveFileId ? (
+                                <div className="flex items-center gap-2 flex-1">
+                                  <img
+                                    src={`https://lh3.googleusercontent.com/d/${encodeURIComponent(sec.driveFileId)}=w120`}
+                                    alt={sec.driveFileName || ""}
+                                    className="w-10 h-10 rounded-lg object-cover border border-border"
+                                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                  />
+                                  <span className="text-[10px] font-body text-muted-foreground truncate flex-1">{sec.driveFileName}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setSections(prev => prev.map((s, j) => j === i ? { ...s, driveFileId: null, driveFileName: null, driveThumbnail: null } : s))}
+                                    className="text-destructive hover:text-destructive/80"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={picking}
+                                  onClick={async () => {
+                                    const before = new Date().toISOString();
+                                    await pickAndSave(undefined);
+                                    const { data } = await supabase
+                                      .from("external_media_refs")
+                                      .select("external_file_id, file_name, thumbnail_url")
+                                      .eq("user_id", userId)
+                                      .is("post_id", null)
+                                      .gte("created_at", before)
+                                      .order("created_at", { ascending: false })
+                                      .limit(1);
+                                    if (data && data[0]) {
+                                      setSections(prev => prev.map((s, j) => j === i ? {
+                                        ...s,
+                                        driveFileId: data[0].external_file_id,
+                                        driveFileName: data[0].file_name,
+                                        driveThumbnail: data[0].thumbnail_url,
+                                      } : s));
+                                    }
+                                  }}
+                                  className="text-[10px] font-body text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
+                                >
+                                  <Cloud className="h-3 w-3" /> Adicionar mídia
+                                </button>
+                              )}
+                            </div>
                           </div>
                         ))}
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            onClick={() => setSections(prev => [...prev, ""])}
+                            onClick={() => setSections(prev => [...prev, emptySection()])}
                             className="text-xs font-body text-primary hover:underline flex items-center gap-1"
                           >
                             + Adicionar {structure.sectionLabel?.toLowerCase()}
