@@ -177,6 +177,15 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
     if (post) fetchDriveMedia(post.id);
   }, [post, open, fetchDriveMedia]);
 
+  // Reset sections when format changes (only for new posts)
+  useEffect(() => {
+    if (isNew) {
+      const structure = getFormatStructure(format);
+      const count = structure.hasDynamicSections ? (structure.defaultSections || 5) : 0;
+      setSections(count > 0 ? Array(count).fill("") : []);
+    }
+  }, [format, isNew]);
+
   // Fetch reference formats and user personal refs
   useEffect(() => {
     if (!open) return;
