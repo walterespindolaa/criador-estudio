@@ -124,7 +124,6 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   const [pendingTasks, setPendingTasks] = useState<Array<{ title: string; priority: string; due_date: string | null; }>>([]);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [showTaskForm, setShowTaskForm] = useState(false);
-  const { exportPdf } = usePdfExport();
 
   // Drive media refs
   interface DriveRef { id: string; external_file_id?: string | null; file_name: string; file_type: string | null; thumbnail_url: string | null; view_url: string | null; }
