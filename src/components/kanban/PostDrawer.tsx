@@ -394,10 +394,10 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-1 overflow-hidden flex-col lg:flex-row">
-          {/* Left side — Post editor (60%) */}
-          <div className="flex-[3] overflow-y-auto px-6 py-4 border-r border-border">
-            <div className="space-y-5">
+        <div className="flex flex-1 overflow-hidden">
+          {/* LEFT: Editor (grows to fill space) */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="px-5 py-4 space-y-5">
               <div className="space-y-2">
                 <Label className="font-body text-sm">Título</Label>
                 <Input
@@ -509,53 +509,59 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                     })}
 
                     {structure.hasDynamicSections && (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         <Label className="font-body text-sm flex items-center gap-2">
                           <PenLine className="h-4 w-4" /> {structure.sectionLabel}s
                         </Label>
                         {sections.map((sec, i) => (
-                          <div key={i} className="space-y-1 bg-card rounded-xl p-3 border border-border">
-                            <p className="text-[10px] font-body text-muted-foreground uppercase tracking-wider">
-                              {structure.sectionLabel} {String(i + 1).padStart(2, "0")}
-                            </p>
-                            <Textarea
-                              placeholder={`Descreva a ${structure.sectionLabel?.toLowerCase()} ${i + 1}...`}
-                              value={sec.text}
-                              onChange={(e) => setSections(prev => prev.map((s, j) => j === i ? { ...s, text: e.target.value } : s))}
-                              className="rounded-lg min-h-[56px] border-0 bg-transparent p-0 resize-none focus-visible:ring-0"
-                              rows={2}
-                            />
-                            <p className="text-[9px] font-body uppercase tracking-widest text-muted-foreground/60 mt-1.5 mb-0.5">
-                              Como gravar
-                            </p>
-                            <Textarea
-                              placeholder="Enquadramento, tom, ação..."
-                              value={sec.captacao || ""}
-                              onChange={(e) => setSections(prev => prev.map((s, j) => j === i ? { ...s, captacao: e.target.value } : s))}
-                              className="rounded-lg min-h-[36px] border border-border bg-background text-xs text-muted-foreground px-3 py-2 resize-none focus-visible:ring-0 w-full"
-                              rows={1}
-                            />
-                            <div className="flex items-center gap-2 mt-1.5">
-                              {sec.driveFileId ? (
-                                <div className="flex items-center gap-2 flex-1">
+                          <div key={i} className="rounded-2xl border border-border/60 overflow-hidden bg-card/50 hover:border-border transition-colors">
+                            {/* Header */}
+                            <div className="flex items-center gap-2 px-3 pt-2.5 pb-1">
+                              <span className="text-[9px] font-body uppercase tracking-[0.15em] text-muted-foreground/60 font-semibold">
+                                {structure.sectionLabel} {String(i + 1).padStart(2, "0")}
+                              </span>
+                              {sec.driveFileId && (
+                                <div className="ml-auto flex items-center gap-1">
                                   <img
-                                    src={`https://lh3.googleusercontent.com/d/${encodeURIComponent(sec.driveFileId)}=w120`}
-                                    alt={sec.driveFileName || ""}
-                                    className="w-10 h-10 rounded-lg object-cover border border-border"
+                                    src={`https://lh3.googleusercontent.com/d/${encodeURIComponent(sec.driveFileId)}=w80`}
+                                    className="w-5 h-5 rounded object-cover"
                                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                                   />
-                                  <span className="text-[10px] font-body text-muted-foreground truncate flex-1">{sec.driveFileName}</span>
                                   <button
-                                    type="button"
                                     onClick={() => setSections(prev => prev.map((s, j) => j === i ? { ...s, driveFileId: null, driveFileName: null, driveThumbnail: null } : s))}
-                                    className="text-destructive hover:text-destructive/80"
+                                    className="text-muted-foreground/50 hover:text-destructive"
                                   >
                                     <X className="h-3 w-3" />
                                   </button>
                                 </div>
-                              ) : (
+                              )}
+                            </div>
+
+                            {/* Roteiro */}
+                            <Textarea
+                              placeholder={`O que acontece na ${structure.sectionLabel?.toLowerCase()} ${i + 1}...`}
+                              value={sec.text}
+                              onChange={(e) => setSections(prev => prev.map((s, j) => j === i ? { ...s, text: e.target.value } : s))}
+                              className="border-0 bg-transparent px-3 pb-1 pt-0 text-sm font-body resize-none focus-visible:ring-0 min-h-[48px]"
+                              rows={2}
+                            />
+
+                            {/* Divider */}
+                            <div className="mx-3 border-t border-dashed border-border/40" />
+
+                            {/* Captação */}
+                            <Textarea
+                              placeholder="Como gravar: enquadramento, tom, ação..."
+                              value={sec.captacao || ""}
+                              onChange={(e) => setSections(prev => prev.map((s, j) => j === i ? { ...s, captacao: e.target.value } : s))}
+                              className="border-0 bg-transparent px-3 pt-2 pb-2 text-xs font-body text-muted-foreground resize-none focus-visible:ring-0 min-h-[36px]"
+                              rows={1}
+                            />
+
+                            {/* Drive media button */}
+                            {!sec.driveFileId && (
+                              <div className="px-3 pb-2.5">
                                 <button
-                                  type="button"
                                   disabled={picking}
                                   onClick={async () => {
                                     const before = new Date().toISOString();
@@ -577,29 +583,30 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                                       } : s));
                                     }
                                   }}
-                                  className="text-[10px] font-body text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
+                                  className="flex items-center gap-1.5 text-[10px] font-body text-muted-foreground/60 hover:text-primary transition-colors"
                                 >
-                                  <Cloud className="h-3 w-3" /> Adicionar mídia
+                                  <Cloud className="h-3 w-3" />
+                                  Adicionar mídia
                                 </button>
-                              )}
-                            </div>
+                              </div>
+                            )}
                           </div>
                         ))}
-                        <div className="flex gap-2">
+
+                        {/* Add/remove buttons */}
+                        <div className="flex gap-3 pt-1">
                           <button
-                            type="button"
                             onClick={() => setSections(prev => [...prev, emptySection()])}
-                            className="text-xs font-body text-primary hover:underline flex items-center gap-1"
+                            className="text-xs font-body text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
                           >
-                            + Adicionar {structure.sectionLabel?.toLowerCase()}
+                            <Plus className="h-3 w-3" /> Adicionar {structure.sectionLabel?.toLowerCase()}
                           </button>
                           {sections.length > 1 && (
                             <button
-                              type="button"
                               onClick={() => setSections(prev => prev.slice(0, -1))}
-                              className="text-xs font-body text-destructive hover:underline flex items-center gap-1 ml-3"
+                              className="text-xs font-body text-muted-foreground/50 hover:text-destructive flex items-center gap-1 transition-colors"
                             >
-                              − Remover última
+                              <Minus className="h-3 w-3" /> Remover última
                             </button>
                           )}
                         </div>
@@ -609,7 +616,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                 );
               })()}
 
-              {/* Tarefas do post — sempre visível */}
+              {/* Tarefas do post */}
               <div className="space-y-2">
                 <Label className="font-body text-sm flex items-center justify-between">
                   <span className="flex items-center gap-2">
@@ -700,30 +707,17 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
               {/* Google Drive media — only for formats without dynamic sections */}
               {!getFormatStructure(format).hasDynamicSections && (
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="font-body text-sm">Mídia</Label>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={picking}
-                    onClick={handleDrivePick}
-                    className="rounded-xl"
-                  >
-                    <HardDrive className="h-4 w-4 mr-1" />
-                    {picking ? "Abrindo..." : "Google Drive"}
-                  </Button>
-                </div>
-                {mediaList.length > 0 ? (
-                  <div className="space-y-3">
-                    {(() => {
-                      const primary = mediaList[0];
-                      const fileId = primary.external_file_id || primary.id;
-                      const isVideo = primary.file_type?.startsWith("video/");
-                      const imgSrc = `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w800`;
-                      const fallbackSrc = `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w400`;
-                      return (
-                        <div className="relative aspect-square rounded-xl overflow-hidden bg-muted border border-border max-h-64">
-                          {isVideo ? (
+                <Label className="font-body text-sm">Mídia</Label>
+                <div className="rounded-2xl border-2 border-dashed border-border/50 overflow-hidden bg-card/30 hover:border-primary/30 transition-colors">
+                  {mediaList.length > 0 ? (
+                    <div className="relative">
+                      <div className="aspect-[4/5] relative overflow-hidden">
+                        {(() => {
+                          const primary = mediaList[0];
+                          const fileId = primary.external_file_id || primary.id;
+                          const isVideo = primary.file_type?.startsWith("video/");
+                          const imgSrc = `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w600`;
+                          return isVideo ? (
                             <iframe
                               src={`https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview`}
                               className="w-full h-full"
@@ -734,67 +728,36 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                             <img
                               src={imgSrc}
                               alt={primary.file_name}
-                              className="w-full h-full object-contain"
-                              onError={(e) => { (e.target as HTMLImageElement).src = fallbackSrc; }}
+                              className="w-full h-full object-cover"
+                              onError={(e) => { (e.target as HTMLImageElement).src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`; }}
                             />
-                          )}
-                          <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/50 rounded-full px-2 py-0.5">
-                            <Cloud className="h-3 w-3 text-white" />
-                            <span className="text-[10px] text-white font-body">Drive</span>
-                          </div>
-                          {primary.view_url && (
-                            <a href={primary.view_url} target="_blank" rel="noopener noreferrer"
-                              className="absolute bottom-2 right-2 bg-black/50 rounded-full px-2 py-1 text-[10px] text-white font-body flex items-center gap-1 hover:bg-black/70 transition-colors">
-                              <ExternalLink className="h-3 w-3" /> Abrir
-                            </a>
-                          )}
-                        </div>
-                      );
-                    })()}
-                    {mediaList.length > 1 && (
-                      <div className="flex gap-2 flex-wrap">
-                        {mediaList.slice(1).map(m => {
-                          const fid = m.external_file_id || m.id;
-                          return (
-                            <div key={m.id} className="relative w-14 h-14 rounded-lg overflow-hidden border border-border bg-muted group">
-                              {m.file_type?.startsWith("video/") ? (
-                                <div className="w-full h-full flex items-center justify-center bg-black/80">
-                                  <Play className="h-4 w-4 text-white" />
-                                </div>
-                              ) : (
-                                <img
-                                  src={`https://lh3.googleusercontent.com/d/${encodeURIComponent(fid)}=w200`}
-                                  alt={m.file_name}
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                                />
-                              )}
-                              <button
-                                onClick={() => handleRemoveMedia(m.id)}
-                                className="absolute top-0.5 right-0.5 bg-destructive text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                <X className="h-2.5 w-2.5" />
-                              </button>
-                            </div>
                           );
-                        })}
+                        })()}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                        <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
+                          <div className="flex items-center gap-1 bg-black/40 backdrop-blur rounded-full px-2 py-0.5">
+                            <Cloud className="h-2.5 w-2.5 text-white" />
+                            <span className="text-[9px] text-white font-body truncate max-w-[120px]">{mediaList[0].file_name}</span>
+                          </div>
+                          <button onClick={() => handleRemoveAllMedia()} className="bg-black/40 backdrop-blur rounded-full p-1">
+                            <X className="h-3 w-3 text-white" />
+                          </button>
+                        </div>
                       </div>
-                    )}
-                    <button onClick={handleRemoveAllMedia}
-                      className="text-xs text-destructive font-body flex items-center gap-1 hover:underline">
-                      <Trash2 className="h-3 w-3" /> Remover mídia
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleDrivePick}
+                      disabled={picking}
+                      className="w-full py-8 flex flex-col items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      <Cloud className="h-6 w-6" />
+                      <span className="text-xs font-body">{picking ? "Abrindo Drive..." : "Adicionar mídia do Google Drive"}</span>
                     </button>
-                  </div>
-                ) : (
-                  <div className="border-2 border-dashed border-border rounded-xl p-6 text-center">
-                    <Cloud className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-                    <p className="text-xs text-muted-foreground font-body">Nenhuma mídia vinculada</p>
-                    <p className="text-[10px] text-muted-foreground/60 font-body mt-0.5">Clique em "Google Drive" para selecionar</p>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
               )}
-
 
               {/* Reference link */}
               <div className="space-y-2">
@@ -838,163 +801,146 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                       <Label className="font-body text-xs flex items-center gap-1">
                         <Eye className="h-3 w-3" /> Views
                       </Label>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        value={views}
-                        onChange={(e) => setViews(e.target.value)}
-                        className="rounded-xl"
-                      />
+                      <Input type="number" placeholder="0" value={views} onChange={(e) => setViews(e.target.value)} className="rounded-xl" />
                     </div>
                     <div className="space-y-1">
                       <Label className="font-body text-xs flex items-center gap-1">
                         <Bookmark className="h-3 w-3" /> Salvos
                       </Label>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        value={saves}
-                        onChange={(e) => setSaves(e.target.value)}
-                        className="rounded-xl"
-                      />
+                      <Input type="number" placeholder="0" value={saves} onChange={(e) => setSaves(e.target.value)} className="rounded-xl" />
                     </div>
                     <div className="space-y-1">
                       <Label className="font-body text-xs flex items-center gap-1">
                         <MessageSquare className="h-3 w-3" /> Comentários
                       </Label>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        value={comments}
-                        onChange={(e) => setComments(e.target.value)}
-                        className="rounded-xl"
-                      />
+                      <Input type="number" placeholder="0" value={comments} onChange={(e) => setComments(e.target.value)} className="rounded-xl" />
                     </div>
                   </div>
                 </div>
               )}
-
             </div>
           </div>
 
-          {/* Right side - References (40%) */}
-          <div className="flex-[2] overflow-y-auto px-5 py-4 bg-muted/30">
-            <p className="text-sm font-body font-semibold text-foreground mb-3">Referências</p>
-            <Tabs defaultValue="hooks" onValueChange={(val) => { if (val === "hooks") handleAiReferences(); }}>
-              <TabsList className="bg-card border border-border rounded-xl mb-4 w-full">
-                <TabsTrigger value="hooks" className="flex-1 rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-                  <Sparkles className="h-3 w-3 mr-1" /> Hooks
-                </TabsTrigger>
-                <TabsTrigger value="formatos" className="flex-1 rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-                  <FileCode2 className="h-3 w-3 mr-1" /> Formatos
-                </TabsTrigger>
-                <TabsTrigger value="prompts" className="flex-1 rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-                  <MessageSquareText className="h-3 w-3 mr-1" /> Prompts
-                </TabsTrigger>
-              </TabsList>
+          {/* RIGHT: Collapsible references panel */}
+          <div className={`transition-all duration-300 overflow-hidden border-l border-border ${refsOpen ? "w-72" : "w-0"}`}>
+            {refsOpen && (
+              <div className="w-72 h-full overflow-y-auto px-4 py-4 bg-muted/20">
+                <p className="text-sm font-body font-semibold text-foreground mb-3">Referências</p>
+                <Tabs defaultValue="hooks" onValueChange={(val) => { if (val === "hooks") handleAiReferences(); }}>
+                  <TabsList className="bg-card border border-border rounded-xl mb-4 w-full">
+                    <TabsTrigger value="hooks" className="flex-1 rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                      <Sparkles className="h-3 w-3 mr-1" /> Hooks
+                    </TabsTrigger>
+                    <TabsTrigger value="formatos" className="flex-1 rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                      <FileCode2 className="h-3 w-3 mr-1" /> Formatos
+                    </TabsTrigger>
+                    <TabsTrigger value="prompts" className="flex-1 rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                      <MessageSquareText className="h-3 w-3 mr-1" /> Prompts
+                    </TabsTrigger>
+                  </TabsList>
 
-              <TabsContent value="hooks" className="space-y-2">
-                {isAiLoading && (
-                  <div className="bg-card rounded-xl p-3 border border-border animate-pulse flex items-center justify-center">
-                    <Sparkles className="h-4 w-4 mr-2 animate-spin text-primary" />
-                    <span className="text-xs font-body text-muted-foreground">Filtrando referências...</span>
-                  </div>
-                )}
-                
-                {aiHookCategories.length > 0 && (
-                  <div className="mb-4">
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Sugestões da IA</p>
-                    <div className="flex flex-wrap gap-2">
-                      {aiHookCategories.map(cat => (
-                        <span key={cat} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/20 text-primary border border-primary/20">
-                          {cat}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {FALLBACK_HOOKS.map((h, i) => (
-                  <div key={i} className={`bg-card rounded-xl p-3 border transition-all ${aiHookCategories.includes(h.category) ? 'border-primary/40 shadow-sm' : 'border-border'}`}>
-                    <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-body mb-2 ${aiHookCategories.includes(h.category) ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary'}`}>
-                      {h.category}
-                    </span>
-                    <p className="text-sm font-body text-foreground mb-2">"{h.text}"</p>
-                    <CopyButton text={h.text} />
-                  </div>
-                ))}
-                {userRefHooks.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-border">
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Meus Hooks</p>
-                    {userRefHooks.map((h: any, i: number) => (
-                      <div key={`uh-${i}`} className="bg-card rounded-xl p-3 border border-border mb-2">
-                        <span className="inline-block px-1.5 py-0.5 rounded text-xs font-body bg-secondary/10 text-secondary mb-1 capitalize">
+                  <TabsContent value="hooks" className="space-y-2">
+                    {isAiLoading && (
+                      <div className="bg-card rounded-xl p-3 border border-border animate-pulse flex items-center justify-center">
+                        <Sparkles className="h-4 w-4 mr-2 animate-spin text-primary" />
+                        <span className="text-xs font-body text-muted-foreground">Filtrando referências...</span>
+                      </div>
+                    )}
+                    {aiHookCategories.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Sugestões da IA</p>
+                        <div className="flex flex-wrap gap-2">
+                          {aiHookCategories.map(cat => (
+                            <span key={cat} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/20 text-primary border border-primary/20">
+                              {cat}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {FALLBACK_HOOKS.map((h, i) => (
+                      <div key={i} className={`bg-card rounded-xl p-3 border transition-all ${aiHookCategories.includes(h.category) ? 'border-primary/40 shadow-sm' : 'border-border'}`}>
+                        <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-body mb-2 ${aiHookCategories.includes(h.category) ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary'}`}>
                           {h.category}
                         </span>
-                        <p className="text-sm font-body text-foreground">"{h.hook_text}"</p>
-                        <CopyButton text={h.hook_text} className="mt-1" />
+                        <p className="text-sm font-body text-foreground mb-2">"{h.text}"</p>
+                        <CopyButton text={h.text} />
                       </div>
                     ))}
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="formatos" className="space-y-2">
-                {(() => {
-                  const filtered = refFormats.filter(f => f.platform === platform || f.platform === "todos" || !platform);
-                  if (filtered.length === 0) return (
-                    <div className="bg-card rounded-xl p-4 border border-border text-center">
-                      <p className="text-sm text-muted-foreground font-body">Nenhum formato cadastrado ainda.</p>
-                    </div>
-                  );
-                  return filtered.map((f: any) => (
-                    <div key={f.id} className="bg-card rounded-xl p-3 border border-border space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <PlatformIcon platform={f.platform as any} size="sm" />
-                          <span className="font-body font-medium text-sm text-foreground">{f.name}</span>
-                        </div>
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-body bg-secondary/10 text-secondary">{f.format_type}</span>
+                    {userRefHooks.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-border">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Meus Hooks</p>
+                        {userRefHooks.map((h: any, i: number) => (
+                          <div key={`uh-${i}`} className="bg-card rounded-xl p-3 border border-border mb-2">
+                            <span className="inline-block px-1.5 py-0.5 rounded text-xs font-body bg-secondary/10 text-secondary mb-1 capitalize">
+                              {h.category}
+                            </span>
+                            <p className="text-sm font-body text-foreground">"{h.hook_text}"</p>
+                            <CopyButton text={h.hook_text} className="mt-1" />
+                          </div>
+                        ))}
                       </div>
-                      <p className="text-xs text-muted-foreground font-body whitespace-pre-line">{f.structure}</p>
-                      {f.tips && <p className="text-xs text-muted-foreground font-body italic">💡 {f.tips}</p>}
-                      <CopyButton text={f.structure || f.name} />
-                    </div>
-                  ));
-                })()}
-              </TabsContent>
+                    )}
+                  </TabsContent>
 
-              <TabsContent value="prompts" className="space-y-2">
-                <p className="text-xs text-muted-foreground font-body mb-3">
-                  Copie, preencha os [COLCHETES] e cole no ChatGPT ou Claude
-                </p>
-                {FALLBACK_PROMPTS.map((p, i) => (
-                  <div key={i} className="bg-card rounded-xl p-3 border border-border">
-                    <span className="inline-block px-1.5 py-0.5 rounded text-xs font-body bg-secondary/10 text-secondary mb-2">
-                      {p.category}
-                    </span>
-                    <p className="font-body font-medium text-sm text-foreground mb-1">{p.title}</p>
-                    <p className="text-xs text-muted-foreground font-body mb-2">{p.text}</p>
-                    <CopyButton text={p.text} />
-                  </div>
-                ))}
-                {userRefPrompts.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-border">
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Meus Prompts</p>
-                    {userRefPrompts.map((p: any, i: number) => (
-                      <div key={i} className="bg-card rounded-xl p-3 border border-border mb-2">
-                        <span className="inline-block px-1.5 py-0.5 rounded text-xs font-body bg-secondary/10 text-secondary mb-1 capitalize">
+                  <TabsContent value="formatos" className="space-y-2">
+                    {(() => {
+                      const filtered = refFormats.filter(f => f.platform === platform || f.platform === "todos" || !platform);
+                      if (filtered.length === 0) return (
+                        <div className="bg-card rounded-xl p-4 border border-border text-center">
+                          <p className="text-sm text-muted-foreground font-body">Nenhum formato cadastrado ainda.</p>
+                        </div>
+                      );
+                      return filtered.map((f: any) => (
+                        <div key={f.id} className="bg-card rounded-xl p-3 border border-border space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <PlatformIcon platform={f.platform as any} size="sm" />
+                              <span className="font-body font-medium text-sm text-foreground">{f.name}</span>
+                            </div>
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-body bg-secondary/10 text-secondary">{f.format_type}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground font-body whitespace-pre-line">{f.structure}</p>
+                          {f.tips && <p className="text-xs text-muted-foreground font-body italic">💡 {f.tips}</p>}
+                          <CopyButton text={f.structure || f.name} />
+                        </div>
+                      ));
+                    })()}
+                  </TabsContent>
+
+                  <TabsContent value="prompts" className="space-y-2">
+                    <p className="text-xs text-muted-foreground font-body mb-3">
+                      Copie, preencha os [COLCHETES] e cole no ChatGPT ou Claude
+                    </p>
+                    {FALLBACK_PROMPTS.map((p, i) => (
+                      <div key={i} className="bg-card rounded-xl p-3 border border-border">
+                        <span className="inline-block px-1.5 py-0.5 rounded text-xs font-body bg-secondary/10 text-secondary mb-2">
                           {p.category}
                         </span>
-                        <p className="text-sm font-body font-medium text-foreground mb-1">{p.title}</p>
-                        <p className="text-xs text-muted-foreground font-body">{p.prompt_text}</p>
-                        <CopyButton text={p.prompt_text} className="mt-1" />
+                        <p className="font-body font-medium text-sm text-foreground mb-1">{p.title}</p>
+                        <p className="text-xs text-muted-foreground font-body mb-2">{p.text}</p>
+                        <CopyButton text={p.text} />
                       </div>
                     ))}
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
+                    {userRefPrompts.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-border">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Meus Prompts</p>
+                        {userRefPrompts.map((p: any, i: number) => (
+                          <div key={i} className="bg-card rounded-xl p-3 border border-border mb-2">
+                            <span className="inline-block px-1.5 py-0.5 rounded text-xs font-body bg-secondary/10 text-secondary mb-1 capitalize">
+                              {p.category}
+                            </span>
+                            <p className="text-sm font-body font-medium text-foreground mb-1">{p.title}</p>
+                            <p className="text-xs text-muted-foreground font-body">{p.prompt_text}</p>
+                            <CopyButton text={p.prompt_text} className="mt-1" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </TabsContent>
+                </Tabs>
+              </div>
+            )}
           </div>
         </div>
 
