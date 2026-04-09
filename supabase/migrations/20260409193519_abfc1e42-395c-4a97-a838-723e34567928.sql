@@ -1,0 +1,3 @@
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS ai_ideas_used_month INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS ai_ideas_reset_at DATE DEFAULT CURRENT_DATE;
