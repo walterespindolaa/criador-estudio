@@ -120,6 +120,12 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   const pdfRef = useRef<HTMLDivElement>(null);
   const { exportPdf } = usePdfExport();
 
+  // Pending tasks for new posts
+  const [pendingTasks, setPendingTasks] = useState<Array<{ title: string; priority: string; due_date: string | null; }>>([]);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const { exportPdf } = usePdfExport();
+
   // Drive media refs
   interface DriveRef { id: string; external_file_id?: string | null; file_name: string; file_type: string | null; thumbnail_url: string | null; view_url: string | null; }
   const [driveMedia, setDriveMedia] = useState<DriveRef[]>([]);
@@ -174,6 +180,9 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       setSections(Array(5).fill(null).map(emptySection));
       setDriveMedia([]);
       setPendingDriveFiles([]);
+      setPendingTasks([]);
+      setNewTaskTitle("");
+      setShowTaskForm(false);
       if (userId) {
         supabase
           .from("external_media_refs")
@@ -318,6 +327,21 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
         .update({ post_id: newPostId })
         .in("id", pendingIds);
       setPendingDriveFiles([]);
+    }
+
+    // Save pending tasks for new posts
+    if (isNew && newPostId && pendingTasks.length > 0) {
+      await supabase.from("tasks").insert(
+        pendingTasks.map(t => ({
+          user_id: userId,
+          post_id: newPostId,
+          title: t.title,
+          priority: t.priority,
+          due_date: t.due_date,
+          status: "pendente",
+        }))
+      );
+      setPendingTasks([]);
     }
 
     if (wasPublished) {
@@ -582,10 +606,71 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                 );
               })()}
 
-              {/* Post Tasks */}
-              {!isNew && post && (
-                <PostTasks postId={post.id} userId={userId} />
-              )}
+              {/* Tarefas do post — sempre visível */}
+              <div className="space-y-2">
+                <Label className="font-body text-sm flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <CheckSquare className="h-4 w-4" /> Tarefas do post
+                  </span>
+                  <button
+                    onClick={() => setShowTaskForm(v => !v)}
+                    className="text-xs font-body text-primary hover:underline flex items-center gap-1"
+                  >
+                    <Plus className="h-3 w-3" /> Adicionar
+                  </button>
+                </Label>
+
+                {showTaskForm && (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Título da tarefa..."
+                      value={newTaskTitle}
+                      onChange={(e) => setNewTaskTitle(e.target.value)}
+                      className="rounded-xl text-sm flex-1"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && newTaskTitle.trim()) {
+                          if (isNew) {
+                            setPendingTasks(prev => [...prev, { title: newTaskTitle.trim(), priority: "media", due_date: null }]);
+                          } else if (post) {
+                            supabase.from("tasks").insert({
+                              user_id: userId, post_id: post.id,
+                              title: newTaskTitle.trim(), priority: "media", status: "pendente",
+                            }).then(() => {});
+                          }
+                          setNewTaskTitle("");
+                          setShowTaskForm(false);
+                        }
+                      }}
+                      autoFocus
+                    />
+                    <button onClick={() => setShowTaskForm(false)} className="text-muted-foreground hover:text-foreground">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+
+                {isNew && pendingTasks.length > 0 && (
+                  <div className="space-y-1.5">
+                    {pendingTasks.map((t, i) => (
+                      <div key={i} className="flex items-center gap-2 bg-card rounded-lg px-3 py-2 border border-border">
+                        <div className="w-4 h-4 rounded border border-border" />
+                        <span className="text-sm font-body flex-1">{t.title}</span>
+                        <button onClick={() => setPendingTasks(prev => prev.filter((_, j) => j !== i))}>
+                          <X className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {!isNew && post && (
+                  <PostTasks postId={post.id} userId={userId} />
+                )}
+
+                {isNew && pendingTasks.length === 0 && !showTaskForm && (
+                  <p className="text-xs text-muted-foreground font-body">Nenhuma tarefa. Serão salvas ao criar o post.</p>
+                )}
+              </div>
 
               <div className="space-y-2">
                 <Label className="font-body text-sm">Data e horário agendados</Label>

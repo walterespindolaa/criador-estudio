@@ -52,7 +52,7 @@ export const RoteiroPdfTemplate = forwardRef<HTMLDivElement, RoteiroPdfProps>(
     const filledSections = sections.filter(s => s.text.trim() || s.captacao?.trim());
 
     return (
-      <div ref={ref} style={{ width: 794, background: "#fff", fontFamily: "Inter, Arial, sans-serif" }}>
+      <div ref={ref} style={{ width: 794, background: "#fff", fontFamily: "Inter, Arial, sans-serif", wordBreak: "break-word" }}>
         <div style={{ padding: "48px 56px", boxSizing: "border-box" }}>
           {/* Header */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32 }}>
@@ -85,43 +85,63 @@ export const RoteiroPdfTemplate = forwardRef<HTMLDivElement, RoteiroPdfProps>(
           {hook && (
             <div style={{ background: "#f9f9f9", borderLeft: `3px solid ${badgeColor}`, padding: "10px 14px", marginBottom: 24, borderRadius: "0 6px 6px 0" }}>
               <p style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 2, color: "#999", margin: "0 0 4px 0" }}>Hook</p>
-              <p style={{ fontSize: 13, color: "#1a1a1a", margin: 0, fontStyle: "italic" }}>"{hook}"</p>
+              <p style={{ fontSize: 13, color: "#1a1a1a", margin: 0, fontStyle: "italic", whiteSpace: "pre-wrap" }}>"{hook}"</p>
             </div>
           )}
 
-          {/* Scenes table */}
+          {/* Scenes — vertical layout per block */}
           {filledSections.length > 0 && (
-            <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 24 }}>
-              <thead>
-                <tr style={{ borderBottom: "2px solid #1a1a1a" }}>
-                  <th style={{ textAlign: "left", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", color: "#1a1a1a", padding: "0 16px 10px 0", width: "55%" }}>
-                    ROTEIRO
-                  </th>
-                  <th style={{ textAlign: "left", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", color: "#1a1a1a", padding: "0 0 10px 16px", width: "45%" }}>
-                    CAPTAÇÃO
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filledSections.map((sec, i) => (
-                  <tr key={i} style={{ borderBottom: "1px solid #eee", verticalAlign: "top" }}>
-                    <td style={{ padding: "14px 16px 14px 0", fontSize: 12, color: "#333", lineHeight: 1.6 }}>
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <p style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", color: "#1a1a1a", fontWeight: 700, margin: 0 }}>
+                  ROTEIRO
+                </p>
+                <p style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", color: "#999", margin: 0 }}>
+                  CAPTAÇÃO
+                </p>
+              </div>
+              <div style={{ borderTop: "2px solid #1a1a1a", marginBottom: 0 }} />
+
+              {filledSections.map((sec, i) => (
+                <div key={i} style={{ borderBottom: "1px solid #e5e5e5" }}>
+                  <div style={{ display: "flex", gap: 0 }}>
+                    {/* Roteiro */}
+                    <div style={{
+                      flex: "0 0 55%",
+                      padding: "14px 20px 14px 0",
+                      fontSize: 12,
+                      color: "#222",
+                      lineHeight: 1.7,
+                      wordBreak: "break-word",
+                      whiteSpace: "pre-wrap",
+                    }}>
                       {sec.text || "—"}
-                    </td>
-                    <td style={{ padding: "14px 0 14px 16px", fontSize: 12, color: "#666", lineHeight: 1.6, borderLeft: "1px solid #eee" }}>
+                    </div>
+                    {/* Vertical separator */}
+                    <div style={{ width: 1, background: "#e5e5e5", flexShrink: 0 }} />
+                    {/* Captação */}
+                    <div style={{
+                      flex: "0 0 45%",
+                      padding: "14px 0 14px 20px",
+                      fontSize: 12,
+                      color: "#666",
+                      lineHeight: 1.7,
+                      wordBreak: "break-word",
+                      whiteSpace: "pre-wrap",
+                    }}>
                       {sec.captacao || "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
 
           {/* Caption */}
           {caption && (
             <div style={{ marginBottom: 20 }}>
               <p style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 2, color: "#999", margin: "0 0 6px 0" }}>Legenda</p>
-              <p style={{ fontSize: 12, color: "#333", lineHeight: 1.6, margin: 0 }}>{caption}</p>
+              <p style={{ fontSize: 12, color: "#333", lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap" }}>{caption}</p>
             </div>
           )}
 
@@ -130,7 +150,7 @@ export const RoteiroPdfTemplate = forwardRef<HTMLDivElement, RoteiroPdfProps>(
             {referenceLink ? (
               <div>
                 <p style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: 2, color: "#bbb", margin: "0 0 2px 0" }}>Referência</p>
-                <p style={{ fontSize: 10, color: "#3B82F6", margin: 0 }}>{referenceLink}</p>
+                <p style={{ fontSize: 10, color: "#3B82F6", margin: 0, wordBreak: "break-all" }}>{referenceLink}</p>
               </div>
             ) : <div />}
             <p style={{ fontSize: 9, color: "#ccc", margin: 0 }}>CreatorsFlow · {new Date().toLocaleDateString("pt-BR")}</p>
