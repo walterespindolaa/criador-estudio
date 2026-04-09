@@ -705,6 +705,19 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
               )}
 
 
+              {/* Reference link */}
+              <div className="space-y-2">
+                <Label className="font-body text-sm flex items-center gap-2">
+                  <Link className="h-4 w-4" /> Link de referência
+                </Label>
+                <Input
+                  placeholder="Cole um link de vídeo de referência para edição..."
+                  value={referenceLink}
+                  onChange={(e) => setReferenceLink(e.target.value)}
+                  className="rounded-xl font-body text-sm"
+                />
+              </div>
+
               {/* Notes */}
               <div className="space-y-2">
                 <Label className="font-body text-sm flex items-center gap-2">
