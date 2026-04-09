@@ -235,137 +235,61 @@ export function SettingsVisual() {
 
       {/* RIGHT — Live Preview */}
       <div className="hidden lg:block sticky top-6 self-start">
-        <p className="text-xs font-body font-semibold text-muted-foreground uppercase tracking-widest mb-3">Preview ao vivo</p>
+        <h3 className="text-sm font-body font-semibold text-foreground mb-1">Preview</h3>
+        <p className="text-xs text-muted-foreground font-body mb-4">Como o app vai aparecer com as suas escolhas</p>
+
         {previewTheme && (
-          <div
-            className="rounded-2xl border border-border overflow-hidden shadow-lg"
-            style={{ backgroundColor: previewTheme.vars.background }}
-          >
-            {/* Mini app mockup */}
-            <div className="flex h-[420px]">
-              {/* Sidebar mock */}
-              <div
-                className="w-14 flex flex-col items-center gap-3 py-4 shrink-0"
-                style={{ backgroundColor: previewSidebar }}
-              >
-                <div className="w-7 h-7 rounded-lg" style={{ backgroundColor: selectedAccent, opacity: 0.9 }} />
-                <div className="w-5 h-1 rounded-full mt-2" style={{ backgroundColor: isDarkSidebar ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.15)' }} />
-                <div className="w-5 h-1 rounded-full" style={{ backgroundColor: isDarkSidebar ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }} />
-                <div className="w-5 h-1 rounded-full" style={{ backgroundColor: isDarkSidebar ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }} />
-                <div className="w-5 h-1 rounded-full" style={{ backgroundColor: isDarkSidebar ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }} />
+          <div className="rounded-2xl overflow-hidden border border-border shadow-lg" style={{ backgroundColor: previewTheme.vars.background }}>
+            <div className="flex h-64">
+              {/* Sidebar */}
+              <div className="w-14 h-full flex flex-col items-center py-4 gap-4 shrink-0" style={{ backgroundColor: previewSidebar }}>
+                <div className="w-7 h-7 rounded-full" style={{ backgroundColor: selectedAccent }} />
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="w-5 h-5 rounded-lg" style={{ backgroundColor: i === 1 ? selectedAccent : previewTheme.vars.muted, opacity: i === 1 ? 1 : 0.5 }} />
+                ))}
               </div>
-
-              {/* Main content mock */}
-              <div className="flex-1 p-4 flex flex-col gap-3 overflow-hidden">
+              {/* Main content */}
+              <div className="flex-1 p-4 flex flex-col gap-3">
                 {/* Header */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div
-                      className="h-4 w-28 rounded mb-1.5"
-                      style={{
-                        backgroundColor: previewTheme.vars.foreground,
-                        opacity: 0.85,
-                        fontFamily: previewFont?.displayFont,
-                      }}
-                    />
-                    <div className="h-2 w-20 rounded-full" style={{ backgroundColor: previewTheme.vars.muted }} />
-                  </div>
-                  <div
-                    className="px-3 py-1.5 rounded-xl text-[9px] font-semibold"
-                    style={{
-                      backgroundColor: selectedAccent,
-                      color: '#fff',
-                      fontFamily: previewFont?.bodyFont,
-                    }}
-                  >
-                    + Novo
-                  </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-32 rounded-full" style={{ backgroundColor: previewTheme.vars.foreground, opacity: 0.8 }} />
                 </div>
-
-                {/* Stats row */}
-                <div className="flex gap-2">
-                  {[1, 2, 3].map(n => (
-                    <div
-                      key={n}
-                      className="flex-1 rounded-xl p-2.5"
-                      style={{ backgroundColor: previewTheme.vars.card }}
-                    >
-                      <div className="h-1.5 w-8 rounded-full mb-1.5" style={{ backgroundColor: previewTheme.vars.muted }} />
-                      <div
-                        className="text-sm font-bold"
-                        style={{
-                          color: previewTheme.vars.foreground,
-                          fontFamily: previewFont?.bodyFont,
-                        }}
-                      >
-                        {n === 1 ? "12" : n === 2 ? "4" : "87%"}
-                      </div>
+                {/* Stats cards */}
+                <div className="grid grid-cols-3 gap-2">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="rounded-xl p-2" style={{ backgroundColor: previewTheme.vars.card }}>
+                      <div className="h-1.5 w-1/2 rounded mb-1.5" style={{ backgroundColor: previewTheme.vars.muted }} />
+                      <div className="h-4 w-1/3 rounded" style={{ backgroundColor: i === 1 ? selectedAccent : previewTheme.vars.muted, opacity: i === 1 ? 1 : 0.5 }} />
                     </div>
                   ))}
                 </div>
-
-                {/* Cards */}
-                <div className="flex-1 flex flex-col gap-2">
-                  {[1, 2, 3].map(n => (
-                    <div
-                      key={n}
-                      className="rounded-xl p-3 flex items-center gap-3"
-                      style={{ backgroundColor: previewTheme.vars.card }}
-                    >
-                      <div
-                        className="w-8 h-8 rounded-lg shrink-0"
-                        style={{ backgroundColor: n === 1 ? selectedAccent : previewTheme.vars.muted, opacity: n === 1 ? 0.2 : 1 }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div
-                          className="h-2 rounded-full mb-1.5"
-                          style={{
-                            backgroundColor: previewTheme.vars.foreground,
-                            opacity: 0.6,
-                            width: n === 1 ? '70%' : n === 2 ? '55%' : '80%',
-                          }}
-                        />
-                        <div className="h-1.5 w-1/2 rounded-full" style={{ backgroundColor: previewTheme.vars.muted }} />
-                      </div>
-                      <div
-                        className="w-2 h-2 rounded-full shrink-0"
-                        style={{ backgroundColor: n === 1 ? selectedAccent : previewTheme.vars.muted }}
-                      />
-                    </div>
-                  ))}
-                </div>
-
-                {/* Bottom bar mock */}
-                <div className="flex items-center justify-around py-1.5 rounded-xl" style={{ backgroundColor: previewTheme.vars.card }}>
-                  {[1, 2, 3, 4].map(n => (
-                    <div
-                      key={n}
-                      className="w-4 h-4 rounded"
-                      style={{ backgroundColor: n === 1 ? selectedAccent : previewTheme.vars.muted, opacity: n === 1 ? 0.8 : 0.4 }}
-                    />
-                  ))}
+                {/* Content area */}
+                <div className="flex-1 rounded-xl p-3" style={{ backgroundColor: previewTheme.vars.card }}>
+                  <div className="h-2 w-3/4 rounded mb-2" style={{ backgroundColor: previewTheme.vars.muted }} />
+                  <div className="h-2 w-1/2 rounded mb-2" style={{ backgroundColor: previewTheme.vars.muted, opacity: 0.6 }} />
+                  <div className="h-6 w-24 rounded-lg mt-3" style={{ backgroundColor: selectedAccent }} />
                 </div>
               </div>
             </div>
-
-            {/* Footer with font label */}
-            <div
-              className="px-4 py-2.5 border-t flex items-center justify-between"
-              style={{ borderColor: previewTheme.vars.border, backgroundColor: previewTheme.vars.card }}
-            >
-              <span
-                className="text-[10px] font-medium"
-                style={{ color: previewTheme.vars.foreground, opacity: 0.5, fontFamily: previewFont?.bodyFont }}
-              >
-                {previewFont?.desc}
-              </span>
-              <span
-                className="text-[10px] font-semibold"
-                style={{ color: selectedAccent }}
-              >
-                {previewTheme.name}
-              </span>
+            {/* Bottom bar */}
+            <div className="h-10 flex items-center justify-around px-4 border-t" style={{ backgroundColor: previewTheme.vars.card, borderColor: previewTheme.vars.border || "rgba(0,0,0,0.1)" }}>
+              {[1, 2, 3, 4, 5].map(i => (
+                <div key={i} className="w-5 h-5 rounded" style={{ backgroundColor: i === 1 ? selectedAccent : previewTheme.vars.muted, opacity: i === 1 ? 1 : 0.4 }} />
+              ))}
             </div>
+          </div>
+        )}
+
+        {/* Font preview */}
+        {previewTheme && (
+          <div className="mt-4 rounded-2xl border border-border p-4" style={{ backgroundColor: previewTheme.vars.card }}>
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2 font-body">Tipografia selecionada</p>
+            <p className="text-xl font-bold mb-1" style={{ fontFamily: previewFont?.displayFont, color: previewTheme.vars.foreground }}>
+              Criadores de conteúdo
+            </p>
+            <p className="text-sm" style={{ fontFamily: previewFont?.bodyFont, color: previewTheme.vars.foreground, opacity: 0.6 }}>
+              {previewFont?.desc} · {previewFont?.preview}
+            </p>
           </div>
         )}
       </div>
