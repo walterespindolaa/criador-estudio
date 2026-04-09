@@ -632,57 +632,6 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                 )}
               </div>
 
-              {/* Hook */}
-              <div className="space-y-2">
-                <Label className="font-body text-sm flex items-center gap-2">
-                  <Anchor className="h-4 w-4" /> Hook (gancho)
-                </Label>
-                <Textarea
-                  placeholder="A primeira frase que prende a atenção..."
-                  value={hook}
-                  onChange={(e) => setHook(e.target.value)}
-                  className="rounded-xl min-h-[60px]"
-                />
-              </div>
-
-              {/* Script */}
-              <div className="space-y-2">
-                <Label className="font-body text-sm flex items-center gap-2">
-                  <PenLine className="h-4 w-4" /> Roteiro
-                </Label>
-                <Textarea
-                  placeholder="Escreva seu roteiro aqui..."
-                  value={script}
-                  onChange={(e) => setScript(e.target.value)}
-                  className="rounded-xl min-h-[140px]"
-                />
-              </div>
-
-              {/* Caption */}
-              <div className="space-y-2">
-                <Label className="font-body text-sm flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4" /> Legenda
-                </Label>
-                <Textarea
-                  placeholder="Legenda do post..."
-                  value={caption}
-                  onChange={(e) => setCaption(e.target.value)}
-                  className="rounded-xl min-h-[80px]"
-                />
-              </div>
-
-              {/* CTA */}
-              <div className="space-y-2">
-                <Label className="font-body text-sm flex items-center gap-2">
-                  <Megaphone className="h-4 w-4" /> CTA
-                </Label>
-                <Input
-                  placeholder="Ex: Salva esse post!"
-                  value={cta}
-                  onChange={(e) => setCta(e.target.value)}
-                  className="rounded-xl"
-                />
-              </div>
 
               {/* Notes */}
               <div className="space-y-2">
