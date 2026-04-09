@@ -92,15 +92,20 @@ export const RoteiroPdfTemplate = forwardRef<HTMLDivElement, RoteiroPdfProps>(
           {/* Scenes — vertical layout per block */}
           {filledSections.length > 0 && (
             <div style={{ marginBottom: 24 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <p style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", color: "#1a1a1a", fontWeight: 700, margin: 0 }}>
-                  ROTEIRO
-                </p>
-                <p style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", color: "#999", margin: 0 }}>
-                  CAPTAÇÃO
-                </p>
+              <div style={{ display: "flex", marginBottom: 0 }}>
+                <div style={{ flex: "0 0 55%", paddingRight: 20 }}>
+                  <p style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", color: "#1a1a1a", fontWeight: 700, margin: 0 }}>
+                    Parte falada
+                  </p>
+                </div>
+                <div style={{ width: 1, flexShrink: 0 }} />
+                <div style={{ flex: "0 0 45%", paddingLeft: 20 }}>
+                  <p style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", color: "#999", margin: 0 }}>
+                    Captação
+                  </p>
+                </div>
               </div>
-              <div style={{ borderTop: "2px solid #1a1a1a", marginBottom: 0 }} />
+              <div style={{ borderTop: "2px solid #1a1a1a", margin: "10px 0 0 0" }} />
 
               {filledSections.map((sec, i) => (
                 <div key={i} style={{ borderBottom: "1px solid #e5e5e5" }}>
