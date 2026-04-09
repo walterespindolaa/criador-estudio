@@ -157,13 +157,16 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       setSaves(post.result_saves?.toString() || "");
       setComments(post.result_comments?.toString() || "");
       setShowResults(post.status === "publicado");
-      try { setSections(JSON.parse((post as any).sections) || Array(5).fill("")); } catch { setSections(Array(5).fill("")); }
+      try {
+        const parsed = JSON.parse((post as any).sections || "[]");
+        setSections(parsed.length > 0 ? parsed.map((s: any) => typeof s === 'string' ? { ...emptySection(), text: s } : { ...emptySection(), ...s }) : Array(5).fill(null).map(emptySection));
+      } catch { setSections(Array(5).fill(null).map(emptySection)); }
     } else {
       setTitle(""); setPlatform("instagram"); setFormat("reels");
       setPillarId(""); setStatus("ideia"); setHook(""); setScript("");
       setCaption(""); setCta(""); setScheduledDate(""); setScheduledTime(""); setNotes("");
       setViews(""); setSaves(""); setComments(""); setShowResults(false);
-      setSections(Array(5).fill(""));
+      setSections(Array(5).fill(null).map(emptySection));
       setDriveMedia([]);
       setPendingDriveFiles([]);
       if (userId) {
@@ -184,7 +187,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
     if (isNew) {
       const structure = getFormatStructure(format);
       const count = structure.hasDynamicSections ? (structure.defaultSections || 5) : 0;
-      setSections(count > 0 ? Array(count).fill("") : []);
+      setSections(count > 0 ? Array(count).fill(null).map(emptySection) : []);
     }
   }, [format, isNew]);
 
