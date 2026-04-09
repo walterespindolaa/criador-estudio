@@ -596,7 +596,8 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                 </div>
               </div>
 
-              {/* Google Drive media — visual preview */}
+              {/* Google Drive media — only for formats without dynamic sections */}
+              {!getFormatStructure(format).hasDynamicSections && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="font-body text-sm">Mídia</Label>
@@ -613,7 +614,6 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                 </div>
                 {mediaList.length > 0 ? (
                   <div className="space-y-3">
-                    {/* Primary preview */}
                     {(() => {
                       const primary = mediaList[0];
                       const fileId = primary.external_file_id || primary.id;
@@ -650,7 +650,6 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                         </div>
                       );
                     })()}
-                    {/* Additional thumbnails */}
                     {mediaList.length > 1 && (
                       <div className="flex gap-2 flex-wrap">
                         {mediaList.slice(1).map(m => {
@@ -693,6 +692,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                   </div>
                 )}
               </div>
+              )}
 
 
               {/* Notes */}
