@@ -912,6 +912,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
           )}=w800`
         : undefined
       }
+      sections={sections}
     />
     </>
   );

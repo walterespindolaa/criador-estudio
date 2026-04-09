@@ -1,8 +1,15 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
-import { Heart, MessageCircle, Send, Bookmark, Play, Music2, Share2 } from "lucide-react";
+import { Heart, MessageCircle, Send, Bookmark, Play, Music2, Share2, ChevronLeft, ChevronRight } from "lucide-react";
+
+interface SectionData {
+  text: string;
+  driveFileId?: string | null;
+  driveFileName?: string | null;
+  driveThumbnail?: string | null;
+}
 
 interface PostPreviewProps {
   open: boolean;
@@ -16,16 +23,80 @@ interface PostPreviewProps {
   userHandle: string;
   avatarUrl: string | null;
   mediaUrl?: string;
+  sections?: SectionData[];
 }
 
-export function PostPreviewModal({ open, onOpenChange, title, hook, caption, platform, format, userName, userHandle, avatarUrl, mediaUrl }: PostPreviewProps) {
+export function PostPreviewModal({ open, onOpenChange, title, hook, caption, platform, format, userName, userHandle, avatarUrl, mediaUrl, sections }: PostPreviewProps) {
   const initials = (userName || "C")[0].toUpperCase();
   const [igTab, setIgTab] = useState<"feed" | "reels">("feed");
   const [ytTab, setYtTab] = useState<"thumbnail" | "shorts">("thumbnail");
+  const [carouselIdx, setCarouselIdx] = useState(0);
+
+  useEffect(() => { setCarouselIdx(0); }, [platform, format]);
 
   const Avatar = ({ size = "sm" }: { size?: "sm" | "lg" }) => (
     <div className={`rounded-full overflow-hidden bg-primary/20 flex items-center justify-center shrink-0 ${size === "sm" ? "w-8 h-8 text-xs" : "w-10 h-10 text-sm"} font-bold text-primary`}>
       {avatarUrl ? <img src={avatarUrl} className="w-full h-full object-cover" alt={userName} /> : initials}
+    </div>
+  );
+
+  const isCarousel = format === "carrossel" && sections && sections.length > 0;
+
+  const CarouselView = () => {
+    if (!sections || sections.length === 0) return null;
+    const slides = sections.slice(0, 10);
+    const currentSlide = slides[carouselIdx] || slides[0];
+    const fileId = currentSlide?.driveFileId;
+
+    return (
+      <div className="relative w-full aspect-[4/5] bg-muted overflow-hidden">
+        {fileId ? (
+          <img
+            src={`https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w800`}
+            alt={`Lâmina ${carouselIdx + 1}`}
+            className="w-full h-full object-cover"
+            onError={(e) => { (e.target as HTMLImageElement).src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`; }}
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center p-6">
+            {currentSlide?.text ? (
+              <p className="text-sm font-semibold text-center text-foreground">{currentSlide.text}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Lâmina {carouselIdx + 1}</p>
+            )}
+          </div>
+        )}
+        <div className="absolute top-3 right-3 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full font-body">
+          {carouselIdx + 1}/{slides.length}
+        </div>
+        {carouselIdx > 0 && (
+          <button onClick={() => setCarouselIdx(i => i - 1)} className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-white/80 rounded-full flex items-center justify-center shadow-sm">
+            <ChevronLeft className="h-4 w-4 text-gray-800" />
+          </button>
+        )}
+        {carouselIdx < slides.length - 1 && (
+          <button onClick={() => setCarouselIdx(i => i + 1)} className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-white/80 rounded-full flex items-center justify-center shadow-sm">
+            <ChevronRight className="h-4 w-4 text-gray-800" />
+          </button>
+        )}
+        <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1">
+          {slides.map((_, i) => (
+            <button key={i} onClick={() => setCarouselIdx(i)} className={`w-1.5 h-1.5 rounded-full transition-colors ${i === carouselIdx ? "bg-white" : "bg-white/40"}`} />
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const SingleMedia = ({ aspect = "aspect-square" }: { aspect?: string }) => (
+    <div className={`w-full ${aspect} overflow-hidden bg-muted relative`}>
+      {mediaUrl ? (
+        <img src={mediaUrl} alt="preview" className="w-full h-full object-cover" />
+      ) : (
+        <div className="w-full h-full bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center p-4">
+          {hook && <p className="text-sm font-bold text-center text-foreground">"{hook}"</p>}
+        </div>
+      )}
     </div>
   );
 
@@ -50,7 +121,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
             <div className="flex border-b border-border bg-card/50">
               <button onClick={() => setIgTab("feed")}
                 className={`flex-1 py-2 text-xs font-body transition-colors ${igTab === "feed" ? "text-primary border-b-2 border-primary" : "text-muted-foreground"}`}>
-                Feed (1:1)
+                Feed {isCarousel ? "(4:5)" : "(1:1)"}
               </button>
               <button onClick={() => setIgTab("reels")}
                 className={`flex-1 py-2 text-xs font-body transition-colors ${igTab === "reels" ? "text-primary border-b-2 border-primary" : "text-muted-foreground"}`}>
@@ -68,15 +139,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
                   </div>
                   <button className="ml-auto text-xs font-bold text-blue-500">Seguir</button>
                 </div>
-                <div className="w-full aspect-square overflow-hidden bg-muted relative">
-                  {mediaUrl ? (
-                    <img src={mediaUrl} alt="preview" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center p-4">
-                      {hook && <p className="text-sm font-bold text-center text-foreground">"{hook}"</p>}
-                    </div>
-                  )}
-                </div>
+                {isCarousel ? <CarouselView /> : <SingleMedia />}
                 <div className="p-3">
                   <div className="flex gap-3 mb-2 text-gray-800">
                     <Heart className="h-5 w-5" />
