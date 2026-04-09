@@ -145,6 +145,12 @@ const Ideias = () => {
   const handleAiSuggest = async (targetIdea: Idea) => {
     if (!user || !targetIdea || aiLoading) return;
 
+    // If we already have suggestions for this idea, just reopen the panel
+    if (targetIdeaId === targetIdea.id && aiSuggestions.length > 0) {
+      setShowAiPanel(true);
+      return;
+    }
+
     const { data: profileData } = await supabase
       .from("profiles").select("ai_ideas_used_month, ai_ideas_reset_at").eq("id", user.id).single();
 
@@ -276,7 +282,7 @@ const Ideias = () => {
               <p className="text-sm font-body font-semibold text-foreground flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-primary" /> Variações de post
               </p>
-              <button onClick={() => { setShowAiPanel(false); setTargetIdeaId(null); }}>
+              <button onClick={() => { setShowAiPanel(false); }}>
                 <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
               </button>
             </div>
@@ -302,6 +308,8 @@ const Ideias = () => {
                       setFormTitle(s.titulo);
                       setFormPlatform(origem?.platform || "instagram");
                       setFormPillar(origem?.pillar_id || "");
+                      setFormObjective(s.objetivo || "");
+                      setEditingIdea(null);
                       setSheetOpen(true);
                       setShowAiPanel(false);
                     }}
