@@ -1,11 +1,12 @@
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CopyButton } from "@/components/shared/CopyButton";
-import { Sparkles, MessageSquareText, FileCode2, Anchor, PenLine, MessageSquare, Megaphone, ClipboardList, BarChart3, Eye, Bookmark, Target, Clock, Cloud, ExternalLink, X, Trash2, HardDrive, Play } from "lucide-react";
+import { Sparkles, MessageSquareText, FileCode2, Anchor, PenLine, MessageSquare, Megaphone, ClipboardList, BarChart3, Eye, Bookmark, Target, Clock, Cloud, ExternalLink, X, Trash2, HardDrive, Play, Layers, Type, Radio, MousePointerClick } from "lucide-react";
+import { getFormatStructure } from "@/lib/format-structures";
 import { PostTasks } from "./PostTasks";
 import {
   Select,
@@ -30,12 +31,6 @@ import { PostPreviewModal } from "./PostPreviewModal";
 import { useProfile } from "@/hooks/useProfile";
 import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 
-interface ContentBlocks {
-  tema: string;
-  roteiro: string;
-  midia: string;
-  legenda: string;
-}
 
 interface Post {
   id: string;
@@ -56,7 +51,7 @@ interface Post {
   result_saves: number | null;
   result_comments: number | null;
   archive_summary: string | null;
-  content_blocks: ContentBlocks | null;
+  content_blocks: any | null;
   user_id: string;
 }
 
@@ -115,7 +110,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiHookCategories, setAiHookCategories] = useState<string[]>([]);
   const [refFormats, setRefFormats] = useState<any[]>([]);
-  const [contentBlocks, setContentBlocks] = useState<ContentBlocks>({ tema: "pendente", roteiro: "pendente", midia: "pendente", legenda: "pendente" });
+  const [sections, setSections] = useState<string[]>(["", "", "", "", ""]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const { profile } = useProfile();
 
@@ -160,13 +155,13 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       setSaves(post.result_saves?.toString() || "");
       setComments(post.result_comments?.toString() || "");
       setShowResults(post.status === "publicado");
-      setContentBlocks((post as any).content_blocks || { tema: "pendente", roteiro: "pendente", midia: "pendente", legenda: "pendente" });
+      try { setSections(JSON.parse((post as any).sections) || Array(5).fill("")); } catch { setSections(Array(5).fill("")); }
     } else {
       setTitle(""); setPlatform("instagram"); setFormat("reels");
       setPillarId(""); setStatus("ideia"); setHook(""); setScript("");
       setCaption(""); setCta(""); setScheduledDate(""); setScheduledTime(""); setNotes("");
       setViews(""); setSaves(""); setComments(""); setShowResults(false);
-      setContentBlocks({ tema: "pendente", roteiro: "pendente", midia: "pendente", legenda: "pendente" });
+      setSections(Array(5).fill(""));
       setDriveMedia([]);
       setPendingDriveFiles([]);
       if (userId) {
@@ -181,6 +176,15 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
     }
     if (post) fetchDriveMedia(post.id);
   }, [post, open, fetchDriveMedia]);
+
+  // Reset sections when format changes (only for new posts)
+  useEffect(() => {
+    if (isNew) {
+      const structure = getFormatStructure(format);
+      const count = structure.hasDynamicSections ? (structure.defaultSections || 5) : 0;
+      setSections(count > 0 ? Array(count).fill("") : []);
+    }
+  }, [format, isNew]);
 
   // Fetch reference formats and user personal refs
   useEffect(() => {
@@ -262,7 +266,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       result_views: views ? parseInt(views) : null,
       result_saves: saves ? parseInt(saves) : null,
       result_comments: comments ? parseInt(comments) : null,
-      content_blocks: contentBlocks,
+      sections: JSON.stringify(sections),
       user_id: userId,
     };
 
@@ -433,29 +437,84 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                 </Select>
               </div>
 
-              {/* Content blocks - production checklist */}
-              <div className="space-y-2">
-                <Label className="font-body text-sm flex items-center gap-2">
-                  <ClipboardList className="h-4 w-4" /> Etapas de produção
-                </Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {([
-                    { key: "tema" as const, label: "📋 Tema definido" },
-                    { key: "roteiro" as const, label: "✍️ Roteiro escrito" },
-                    { key: "midia" as const, label: "🎬 Mídia gravada" },
-                    { key: "legenda" as const, label: "💬 Legenda pronta" },
-                  ]).map(block => {
-                    const done = contentBlocks[block.key] === "feito";
-                    return (
-                      <button key={block.key}
-                        onClick={() => setContentBlocks(prev => ({ ...prev, [block.key]: done ? "pendente" : "feito" }))}
-                        className={`px-3 py-2 rounded-xl text-xs font-body border transition-all text-left ${done ? "bg-secondary/20 border-secondary text-secondary-foreground" : "bg-card border-border text-muted-foreground"}`}>
-                        {block.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              {/* Campos adaptativos por formato */}
+              {(() => {
+                const structure = getFormatStructure(format);
+                const iconMap: Record<string, React.ElementType> = {
+                  Anchor, Layers, Type, Radio, MousePointerClick, MessageSquare, PenLine,
+                };
+
+                return (
+                  <>
+                    {structure.fields.map(field => {
+                      const IconComponent = iconMap[field.icon] || PenLine;
+                      const value = field.key === "hook" ? hook
+                        : field.key === "script" ? script
+                        : field.key === "caption" ? caption
+                        : field.key === "cta" ? cta : "";
+                      const setter = field.key === "hook" ? setHook
+                        : field.key === "script" ? setScript
+                        : field.key === "caption" ? setCaption
+                        : field.key === "cta" ? setCta : (() => {});
+
+                      return (
+                        <div key={field.key} className="space-y-2">
+                          <Label className="font-body text-sm flex items-center gap-2">
+                            <IconComponent className="h-4 w-4" /> {field.label}
+                          </Label>
+                          <Textarea
+                            placeholder={field.placeholder}
+                            value={value}
+                            onChange={(e) => setter(e.target.value)}
+                            className="rounded-xl"
+                            rows={field.rows}
+                          />
+                        </div>
+                      );
+                    })}
+
+                    {structure.hasDynamicSections && (
+                      <div className="space-y-2">
+                        <Label className="font-body text-sm flex items-center gap-2">
+                          <PenLine className="h-4 w-4" /> {structure.sectionLabel}s
+                        </Label>
+                        {sections.map((sec, i) => (
+                          <div key={i} className="space-y-1">
+                            <p className="text-[10px] font-body text-muted-foreground uppercase tracking-wider">
+                              {structure.sectionLabel} {String(i + 1).padStart(2, "0")}
+                            </p>
+                            <Textarea
+                              placeholder={`Descreva a ${structure.sectionLabel?.toLowerCase()} ${i + 1}...`}
+                              value={sec}
+                              onChange={(e) => setSections(prev => prev.map((s, j) => j === i ? e.target.value : s))}
+                              className="rounded-xl min-h-[60px]"
+                              rows={2}
+                            />
+                          </div>
+                        ))}
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSections(prev => [...prev, ""])}
+                            className="text-xs font-body text-primary hover:underline flex items-center gap-1"
+                          >
+                            + Adicionar {structure.sectionLabel?.toLowerCase()}
+                          </button>
+                          {sections.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => setSections(prev => prev.slice(0, -1))}
+                              className="text-xs font-body text-destructive hover:underline flex items-center gap-1 ml-3"
+                            >
+                              − Remover última
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
 
               {/* Post Tasks */}
               {!isNew && post && (
@@ -582,57 +641,6 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                 )}
               </div>
 
-              {/* Hook */}
-              <div className="space-y-2">
-                <Label className="font-body text-sm flex items-center gap-2">
-                  <Anchor className="h-4 w-4" /> Hook (gancho)
-                </Label>
-                <Textarea
-                  placeholder="A primeira frase que prende a atenção..."
-                  value={hook}
-                  onChange={(e) => setHook(e.target.value)}
-                  className="rounded-xl min-h-[60px]"
-                />
-              </div>
-
-              {/* Script */}
-              <div className="space-y-2">
-                <Label className="font-body text-sm flex items-center gap-2">
-                  <PenLine className="h-4 w-4" /> Roteiro
-                </Label>
-                <Textarea
-                  placeholder="Escreva seu roteiro aqui..."
-                  value={script}
-                  onChange={(e) => setScript(e.target.value)}
-                  className="rounded-xl min-h-[140px]"
-                />
-              </div>
-
-              {/* Caption */}
-              <div className="space-y-2">
-                <Label className="font-body text-sm flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4" /> Legenda
-                </Label>
-                <Textarea
-                  placeholder="Legenda do post..."
-                  value={caption}
-                  onChange={(e) => setCaption(e.target.value)}
-                  className="rounded-xl min-h-[80px]"
-                />
-              </div>
-
-              {/* CTA */}
-              <div className="space-y-2">
-                <Label className="font-body text-sm flex items-center gap-2">
-                  <Megaphone className="h-4 w-4" /> CTA
-                </Label>
-                <Input
-                  placeholder="Ex: Salva esse post!"
-                  value={cta}
-                  onChange={(e) => setCta(e.target.value)}
-                  className="rounded-xl"
-                />
-              </div>
 
               {/* Notes */}
               <div className="space-y-2">

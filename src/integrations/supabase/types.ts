@@ -835,6 +835,7 @@ export type Database = {
           scheduled_date: string | null
           scheduled_time: string | null
           script: string | null
+          sections: string | null
           status: string | null
           title: string
           updated_at: string | null
@@ -863,6 +864,7 @@ export type Database = {
           scheduled_date?: string | null
           scheduled_time?: string | null
           script?: string | null
+          sections?: string | null
           status?: string | null
           title: string
           updated_at?: string | null
@@ -891,6 +893,7 @@ export type Database = {
           scheduled_date?: string | null
           scheduled_time?: string | null
           script?: string | null
+          sections?: string | null
           status?: string | null
           title?: string
           updated_at?: string | null
