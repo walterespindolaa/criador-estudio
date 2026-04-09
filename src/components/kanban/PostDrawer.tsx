@@ -944,7 +944,6 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
           </div>
         </div>
 
-        {/* Footer with actions */}
         <div className="px-6 py-4 border-t border-border bg-card/50 shrink-0 flex gap-3">
           <Button
             variant="outline"
@@ -954,6 +953,15 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
           >
             <Download className="h-4 w-4" /> PDF
           </Button>
+          <button
+            onClick={() => setRefsOpen(v => !v)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-body transition-colors ${
+              refsOpen ? "bg-primary/10 border-primary text-primary" : "border-border text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <BookOpen className="h-4 w-4" />
+            <span className="hidden sm:inline">Refs</span>
+          </button>
           <Button variant="outline" className="flex-1" onClick={() => setPreviewOpen(true)}>
             <Eye className="h-4 w-4 mr-1.5" /> Prévia
           </Button>
