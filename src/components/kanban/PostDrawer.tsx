@@ -110,7 +110,9 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiHookCategories, setAiHookCategories] = useState<string[]>([]);
   const [refFormats, setRefFormats] = useState<any[]>([]);
-  const [sections, setSections] = useState<string[]>(["", "", "", "", ""]);
+  interface Section { text: string; driveFileId?: string | null; driveFileName?: string | null; driveThumbnail?: string | null; }
+  const emptySection = (): Section => ({ text: "", driveFileId: null, driveFileName: null, driveThumbnail: null });
+  const [sections, setSections] = useState<Section[]>(Array(5).fill(null).map(emptySection));
   const [previewOpen, setPreviewOpen] = useState(false);
   const { profile } = useProfile();
 
