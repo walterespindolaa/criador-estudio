@@ -524,11 +524,14 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                               className="rounded-lg min-h-[56px] border-0 bg-transparent p-0 resize-none focus-visible:ring-0"
                               rows={2}
                             />
+                            <p className="text-[9px] font-body uppercase tracking-widest text-muted-foreground/60 mt-1.5 mb-0.5">
+                              Como gravar
+                            </p>
                             <Textarea
-                              placeholder={`Captação: como gravar essa ${structure.sectionLabel?.toLowerCase()}? (enquadramento, tom, ação...)`}
+                              placeholder="Enquadramento, tom, ação..."
                               value={sec.captacao || ""}
                               onChange={(e) => setSections(prev => prev.map((s, j) => j === i ? { ...s, captacao: e.target.value } : s))}
-                              className="rounded-lg min-h-[40px] border-0 bg-muted/50 text-xs text-muted-foreground p-2 resize-none focus-visible:ring-0 mt-1"
+                              className="rounded-lg min-h-[36px] border border-border bg-background text-xs text-muted-foreground px-3 py-2 resize-none focus-visible:ring-0 w-full"
                               rows={1}
                             />
                             <div className="flex items-center gap-2 mt-1.5">
