@@ -156,11 +156,12 @@ REGRAS DE COMPORTAMENTO:
         maxTokens = 60
         break
       case 'idea-suggestions':
-        operationPrompt = `Com base no perfil deste creator, sugira 3 ideias de conteúdo prontas para usar.
-Para cada ideia retorne JSON com: titulo (string, max 60 chars), formato (reels|carrossel|foto|video|story), pilar_sugerido (string, deve ser um dos pilares do creator), objetivo (engajamento|autoridade|venda|relacionamento).
-Retorne APENAS um array JSON válido. Nenhum texto adicional. Exemplo: [{"titulo":"...","formato":"reels","pilar_sugerido":"...","objetivo":"engajamento"}]`
-        userPrompt = `Histórico recente: ${(data.recentPosts || []).slice(0, 5).map((p: any) => p.title).join(', ') || 'nenhum'}\nPilares: ${(data.pillars || []).join(', ')}\nFormato mais usado: ${data.topFormat || 'reels'}`
-        maxTokens = 400
+        operationPrompt = `A partir da ideia/assunto fornecido pelo creator, gere 3 variações de posts prontos para executar sobre ESSE MESMO assunto.
+Varie o formato, ângulo e objetivo mantendo o tema central.
+Para cada variação retorne JSON com: titulo (string, max 70 chars — deve ser o título do post pronto pra usar), formato (reels|carrossel|foto|video|story), angulo (string curta — ex: "tutorial passo a passo", "bastidor", "lista polêmica"), objetivo (engajamento|autoridade|venda|relacionamento).
+Retorne APENAS um array JSON válido. Nenhum texto adicional. Exemplo: [{"titulo":"...","formato":"reels","angulo":"...","objetivo":"engajamento"}]`
+        userPrompt = `Ideia/assunto: ${data.ideiaTexto || 'conteúdo geral'}\nPlataforma: ${data.platform || 'instagram'}\nPilar: ${data.pilar || 'geral'}\nObjetivo: ${data.objetivo || 'engajamento'}\nNicho do creator: ${data.niche || 'lifestyle'}`
+        maxTokens = 500
         break
       default:
         throw new Error('Invalid operation')

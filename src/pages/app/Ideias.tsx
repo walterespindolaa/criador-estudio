@@ -94,10 +94,11 @@ const Ideias = () => {
   // AI suggestions state
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<Array<{
-    titulo: string; formato: string; pilar_sugerido: string; objetivo: string;
+    titulo: string; formato: string; angulo?: string; objetivo: string;
   }>>([]);
   const [showAiPanel, setShowAiPanel] = useState(false);
   const [aiUsed, setAiUsed] = useState(0);
+  const [targetIdeaId, setTargetIdeaId] = useState<string | null>(null);
 
   const fetchData = async () => {
     if (!user) return;
@@ -141,8 +142,8 @@ const Ideias = () => {
     } catch (error) { console.error("AI suggestion failed", error); }
   };
 
-  const handleAiSuggest = async () => {
-    if (!user || aiLoading) return;
+  const handleAiSuggest = async (targetIdea: Idea) => {
+    if (!user || !targetIdea || aiLoading) return;
 
     const { data: profileData } = await supabase
       .from("profiles").select("ai_ideas_used_month, ai_ideas_reset_at").eq("id", user.id).single();
@@ -160,21 +161,23 @@ const Ideias = () => {
     }
 
     if (usedThisMonth >= AI_LIMIT) {
-      toast.error(`Limite de ${AI_LIMIT} sugestões/mês atingido. Disponível no próximo mês.`);
+      toast.error(`Limite de ${AI_LIMIT} sugestões/mês atingido.`);
       return;
     }
 
     setAiLoading(true);
+    setTargetIdeaId(targetIdea.id);
     try {
-      const recentPosts = ideas.slice(0, 5).map(i => ({ title: i.title }));
       const result = await supabase.functions.invoke("ai-context-builder", {
         body: {
           userId: user.id,
           operation: "idea-suggestions",
           data: {
-            recentPosts,
-            pillars: pillars.map(p => p.name),
-            topFormat: "reels",
+            ideiaTexto: targetIdea.title,
+            platform: targetIdea.platform || "instagram",
+            pilar: pillars.find(p => p.id === targetIdea.pillar_id)?.name || "",
+            objetivo: targetIdea.objective || "",
+            niche: "lifestyle",
           },
         },
       });
@@ -257,22 +260,11 @@ const Ideias = () => {
             <p className="text-muted-foreground font-body mt-1">Seu banco de inspirações.</p>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleAiSuggest}
-              disabled={aiLoading || aiUsed >= AI_LIMIT}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-card text-sm font-body text-muted-foreground hover:text-primary hover:border-primary transition-colors disabled:opacity-40"
-              title={`${AI_LIMIT - aiUsed} sugestões restantes este mês`}
-            >
-              {aiLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Sparkles className="h-4 w-4" />
-              )}
-              <span className="hidden sm:inline">Sugerir ideias</span>
-              <span className="text-[10px] text-muted-foreground/60 ml-0.5">
-                {AI_LIMIT - aiUsed}/{AI_LIMIT}
+            {aiUsed > 0 && (
+              <span className="text-[10px] text-muted-foreground/50 font-body">
+                {AI_LIMIT - aiUsed}/{AI_LIMIT} sugestões restantes
               </span>
-            </button>
+            )}
             <Button variant="hero" onClick={openNew} className="hidden md:flex"><Plus className="h-4 w-4 mr-1" /> Nova Ideia</Button>
           </div>
         </div>
@@ -280,29 +272,36 @@ const Ideias = () => {
         {/* AI Suggestions Panel */}
         {showAiPanel && aiSuggestions.length > 0 && (
           <div className="bg-card border border-border rounded-2xl p-4 mb-4">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-1">
               <p className="text-sm font-body font-semibold text-foreground flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" /> Sugestões da IA
+                <Sparkles className="h-4 w-4 text-primary" /> Variações de post
               </p>
-              <button onClick={() => setShowAiPanel(false)}>
+              <button onClick={() => { setShowAiPanel(false); setTargetIdeaId(null); }}>
                 <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
               </button>
             </div>
+            {targetIdeaId && (
+              <p className="text-[10px] text-muted-foreground font-body mb-3">
+                Para: <span className="font-medium">{ideas.find(i => i.id === targetIdeaId)?.title}</span>
+              </p>
+            )}
             <div className="grid gap-2 sm:grid-cols-3">
               {aiSuggestions.map((s, i) => (
                 <div key={i} className="bg-background border border-border rounded-xl p-3 hover:border-primary/50 transition-colors">
-                  <div className="flex items-center gap-1.5 mb-1.5">
+                  <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
                     <span className="text-[10px] font-body bg-primary/10 text-primary px-1.5 py-0.5 rounded capitalize">{s.formato}</span>
                     <span className="text-[10px] font-body text-muted-foreground capitalize">{s.objetivo}</span>
                   </div>
-                  <p className="text-sm font-body font-medium text-foreground mb-2 leading-snug">{s.titulo}</p>
-                  {s.pilar_sugerido && (
-                    <p className="text-[10px] font-body text-muted-foreground">📌 {s.pilar_sugerido}</p>
+                  <p className="text-sm font-body font-medium text-foreground mb-1.5 leading-snug">{s.titulo}</p>
+                  {s.angulo && (
+                    <p className="text-[10px] font-body text-muted-foreground mb-2">📐 {s.angulo}</p>
                   )}
                   <button
                     onClick={() => {
+                      const origem = ideas.find(id => id.id === targetIdeaId);
                       setFormTitle(s.titulo);
-                      setFormPlatform("instagram");
+                      setFormPlatform(origem?.platform || "instagram");
+                      setFormPillar(origem?.pillar_id || "");
                       setSheetOpen(true);
                       setShowAiPanel(false);
                     }}
@@ -388,6 +387,20 @@ const Ideias = () => {
                   ) : (
                     <p className="mt-3 text-xs text-muted-foreground font-body italic">Já virou post</p>
                   )}
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/40">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleAiSuggest(idea); }}
+                      disabled={aiLoading || aiUsed >= AI_LIMIT}
+                      className="flex items-center gap-1 text-[10px] font-body text-muted-foreground hover:text-primary transition-colors disabled:opacity-30"
+                      title={`Gerar variações de post (${AI_LIMIT - aiUsed}/${AI_LIMIT} restantes este mês)`}
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      Gerar variações
+                    </button>
+                    <span className="text-[9px] text-muted-foreground/40 font-body">
+                      {AI_LIMIT - aiUsed}/{AI_LIMIT}
+                    </span>
+                  </div>
                 </motion.div>
               );
             })}
