@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CopyButton } from "@/components/shared/CopyButton";
-import { Sparkles, MessageSquareText, FileCode2, Anchor, PenLine, MessageSquare, Megaphone, ClipboardList, BarChart3, Eye, Bookmark, Target, Clock, Cloud, ExternalLink, X, Trash2, HardDrive, Play, Layers, Type, Radio, MousePointerClick } from "lucide-react";
+import { Sparkles, MessageSquareText, FileCode2, Anchor, PenLine, MessageSquare, Megaphone, ClipboardList, BarChart3, Eye, Bookmark, Target, Clock, Cloud, ExternalLink, X, Trash2, HardDrive, Play, Layers, Type, Radio, MousePointerClick, Link } from "lucide-react";
 import { getFormatStructure } from "@/lib/format-structures";
 import { PostTasks } from "./PostTasks";
 import {
@@ -110,9 +110,10 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiHookCategories, setAiHookCategories] = useState<string[]>([]);
   const [refFormats, setRefFormats] = useState<any[]>([]);
-  interface Section { text: string; driveFileId?: string | null; driveFileName?: string | null; driveThumbnail?: string | null; }
-  const emptySection = (): Section => ({ text: "", driveFileId: null, driveFileName: null, driveThumbnail: null });
+  interface Section { text: string; captacao: string; driveFileId?: string | null; driveFileName?: string | null; driveThumbnail?: string | null; }
+  const emptySection = (): Section => ({ text: "", captacao: "", driveFileId: null, driveFileName: null, driveThumbnail: null });
   const [sections, setSections] = useState<Section[]>(Array(5).fill(null).map(emptySection));
+  const [referenceLink, setReferenceLink] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
   const { profile } = useProfile();
 
@@ -157,6 +158,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       setSaves(post.result_saves?.toString() || "");
       setComments(post.result_comments?.toString() || "");
       setShowResults(post.status === "publicado");
+      setReferenceLink((post as any).reference_link || "");
       try {
         const parsed = JSON.parse((post as any).sections || "[]");
         setSections(parsed.length > 0 ? parsed.map((s: any) => typeof s === 'string' ? { ...emptySection(), text: s } : { ...emptySection(), ...s }) : Array(5).fill(null).map(emptySection));
@@ -165,7 +167,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       setTitle(""); setPlatform("instagram"); setFormat("reels");
       setPillarId(""); setStatus("ideia"); setHook(""); setScript("");
       setCaption(""); setCta(""); setScheduledDate(""); setScheduledTime(""); setNotes("");
-      setViews(""); setSaves(""); setComments(""); setShowResults(false);
+      setViews(""); setSaves(""); setComments(""); setShowResults(false); setReferenceLink("");
       setSections(Array(5).fill(null).map(emptySection));
       setDriveMedia([]);
       setPendingDriveFiles([]);
@@ -272,6 +274,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       result_saves: saves ? parseInt(saves) : null,
       result_comments: comments ? parseInt(comments) : null,
       sections: JSON.stringify(sections),
+      reference_link: referenceLink || null,
       user_id: userId,
     };
 
@@ -495,6 +498,13 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                               className="rounded-lg min-h-[56px] border-0 bg-transparent p-0 resize-none focus-visible:ring-0"
                               rows={2}
                             />
+                            <Textarea
+                              placeholder={`Captação: como gravar essa ${structure.sectionLabel?.toLowerCase()}? (enquadramento, tom, ação...)`}
+                              value={sec.captacao || ""}
+                              onChange={(e) => setSections(prev => prev.map((s, j) => j === i ? { ...s, captacao: e.target.value } : s))}
+                              className="rounded-lg min-h-[40px] border-0 bg-muted/50 text-xs text-muted-foreground p-2 resize-none focus-visible:ring-0 mt-1"
+                              rows={1}
+                            />
                             <div className="flex items-center gap-2 mt-1.5">
                               {sec.driveFileId ? (
                                 <div className="flex items-center gap-2 flex-1">
@@ -694,6 +704,19 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
               </div>
               )}
 
+
+              {/* Reference link */}
+              <div className="space-y-2">
+                <Label className="font-body text-sm flex items-center gap-2">
+                  <Link className="h-4 w-4" /> Link de referência
+                </Label>
+                <Input
+                  placeholder="Cole um link de vídeo de referência para edição..."
+                  value={referenceLink}
+                  onChange={(e) => setReferenceLink(e.target.value)}
+                  className="rounded-xl font-body text-sm"
+                />
+              </div>
 
               {/* Notes */}
               <div className="space-y-2">

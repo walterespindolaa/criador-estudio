@@ -827,6 +827,7 @@ export type Database = {
           pillar_id: string | null
           platform: string
           published_at: string | null
+          reference_link: string | null
           result_comments: number | null
           result_reach: number | null
           result_saves: number | null
@@ -856,6 +857,7 @@ export type Database = {
           pillar_id?: string | null
           platform: string
           published_at?: string | null
+          reference_link?: string | null
           result_comments?: number | null
           result_reach?: number | null
           result_saves?: number | null
@@ -885,6 +887,7 @@ export type Database = {
           pillar_id?: string | null
           platform?: string
           published_at?: string | null
+          reference_link?: string | null
           result_comments?: number | null
           result_reach?: number | null
           result_saves?: number | null
