@@ -928,6 +928,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          ai_ideas_reset_at: string | null
+          ai_ideas_used_month: number | null
           avatar_url: string | null
           bio: string | null
           created_at: string | null
@@ -953,6 +955,8 @@ export type Database = {
           youtube_handle: string | null
         }
         Insert: {
+          ai_ideas_reset_at?: string | null
+          ai_ideas_used_month?: number | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string | null
@@ -978,6 +982,8 @@ export type Database = {
           youtube_handle?: string | null
         }
         Update: {
+          ai_ideas_reset_at?: string | null
+          ai_ideas_used_month?: number | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string | null

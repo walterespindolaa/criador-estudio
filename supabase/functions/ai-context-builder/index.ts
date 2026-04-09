@@ -155,6 +155,13 @@ REGRAS DE COMPORTAMENTO:
         userPrompt = `Posts esta semana: ${data.postsThisWeek}, Meta semanal: ${data.weeklyGoal}, Pilar mais postado: ${data.topPillar}, Último post publicado: ${data.lastPublished || 'nunca'}`
         maxTokens = 60
         break
+      case 'idea-suggestions':
+        operationPrompt = `Com base no perfil deste creator, sugira 3 ideias de conteúdo prontas para usar.
+Para cada ideia retorne JSON com: titulo (string, max 60 chars), formato (reels|carrossel|foto|video|story), pilar_sugerido (string, deve ser um dos pilares do creator), objetivo (engajamento|autoridade|venda|relacionamento).
+Retorne APENAS um array JSON válido. Nenhum texto adicional. Exemplo: [{"titulo":"...","formato":"reels","pilar_sugerido":"...","objetivo":"engajamento"}]`
+        userPrompt = `Histórico recente: ${(data.recentPosts || []).slice(0, 5).map((p: any) => p.title).join(', ') || 'nenhum'}\nPilares: ${(data.pillars || []).join(', ')}\nFormato mais usado: ${data.topFormat || 'reels'}`
+        maxTokens = 400
+        break
       default:
         throw new Error('Invalid operation')
     }

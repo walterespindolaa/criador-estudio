@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Lightbulb, Search, ArrowRight, Trash2, Edit2, Sparkles, ChevronDown } from "lucide-react";
+import { Plus, Lightbulb, Search, ArrowRight, Trash2, Edit2, Sparkles, ChevronDown, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,6 +62,8 @@ const IDEA_STATUSES = [
   { key: "arquivada", label: "Arquivada", color: "bg-gray-100 text-gray-400" },
 ];
 
+const AI_LIMIT = 10;
+
 const getStatusBadge = (status: string | null) => {
   const s = IDEA_STATUSES.find(x => x.key === status) || IDEA_STATUSES[0];
   return s;
@@ -89,14 +91,30 @@ const Ideias = () => {
   const [postDrawerOpen, setPostDrawerOpen] = useState(false);
   const [promotedPost, setPromotedPost] = useState<any>(null);
 
+  // AI suggestions state
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<Array<{
+    titulo: string; formato: string; pilar_sugerido: string; objetivo: string;
+  }>>([]);
+  const [showAiPanel, setShowAiPanel] = useState(false);
+  const [aiUsed, setAiUsed] = useState(0);
+
   const fetchData = async () => {
     if (!user) return;
-    const [ideasRes, pillarsRes] = await Promise.all([
+    const [ideasRes, pillarsRes, profileRes] = await Promise.all([
       supabase.from("ideas").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
       supabase.from("pillars").select("*").eq("user_id", user.id).order("position"),
+      supabase.from("profiles").select("ai_ideas_used_month, ai_ideas_reset_at").eq("id", user.id).single(),
     ]);
     setIdeas((ideasRes.data as any[]) || []);
     setPillars(pillarsRes.data || []);
+
+    // Calculate AI usage
+    const today = new Date().toISOString().split("T")[0];
+    const resetAt = (profileRes.data as any)?.ai_ideas_reset_at || today;
+    const resetMonth = String(resetAt).substring(0, 7);
+    const currentMonth = today.substring(0, 7);
+    setAiUsed(resetMonth === currentMonth ? ((profileRes.data as any)?.ai_ideas_used_month || 0) : 0);
   };
 
   useEffect(() => { fetchData(); }, [user]);
@@ -121,6 +139,66 @@ const Ideias = () => {
         if (found) setAiSuggestion(found.id);
       }
     } catch (error) { console.error("AI suggestion failed", error); }
+  };
+
+  const handleAiSuggest = async () => {
+    if (!user || aiLoading) return;
+
+    const { data: profileData } = await supabase
+      .from("profiles").select("ai_ideas_used_month, ai_ideas_reset_at").eq("id", user.id).single();
+
+    const today = new Date().toISOString().split("T")[0];
+    const resetAt = (profileData as any)?.ai_ideas_reset_at || today;
+    const resetMonth = String(resetAt).substring(0, 7);
+    const currentMonth = today.substring(0, 7);
+
+    let usedThisMonth = (profileData as any)?.ai_ideas_used_month || 0;
+
+    if (resetMonth !== currentMonth) {
+      usedThisMonth = 0;
+      await supabase.from("profiles").update({ ai_ideas_used_month: 0, ai_ideas_reset_at: today } as any).eq("id", user.id);
+    }
+
+    if (usedThisMonth >= AI_LIMIT) {
+      toast.error(`Limite de ${AI_LIMIT} sugestões/mês atingido. Disponível no próximo mês.`);
+      return;
+    }
+
+    setAiLoading(true);
+    try {
+      const recentPosts = ideas.slice(0, 5).map(i => ({ title: i.title }));
+      const result = await supabase.functions.invoke("ai-context-builder", {
+        body: {
+          userId: user.id,
+          operation: "idea-suggestions",
+          data: {
+            recentPosts,
+            pillars: pillars.map(p => p.name),
+            topFormat: "reels",
+          },
+        },
+      });
+
+      if (result.error) throw result.error;
+
+      const text = result.data?.result || "[]";
+      const jsonMatch = String(text).match(/\[.*\]/s);
+      const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
+      setAiSuggestions(Array.isArray(parsed) ? parsed : []);
+      setShowAiPanel(true);
+
+      const newUsed = usedThisMonth + 1;
+      await supabase.from("profiles").update({
+        ai_ideas_used_month: newUsed,
+        ai_ideas_reset_at: today,
+      } as any).eq("id", user.id);
+      setAiUsed(newUsed);
+    } catch (e) {
+      toast.error("Erro ao gerar sugestões. Tente novamente.");
+      console.error(e);
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const handleSave = async () => {
@@ -178,8 +256,65 @@ const Ideias = () => {
             <h1 className="text-3xl font-display font-bold text-foreground">Minhas Ideias</h1>
             <p className="text-muted-foreground font-body mt-1">Seu banco de inspirações.</p>
           </div>
-          <Button variant="hero" onClick={openNew} className="hidden md:flex"><Plus className="h-4 w-4 mr-1" /> Nova Ideia</Button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleAiSuggest}
+              disabled={aiLoading || aiUsed >= AI_LIMIT}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-card text-sm font-body text-muted-foreground hover:text-primary hover:border-primary transition-colors disabled:opacity-40"
+              title={`${AI_LIMIT - aiUsed} sugestões restantes este mês`}
+            >
+              {aiLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
+              <span className="hidden sm:inline">Sugerir ideias</span>
+              <span className="text-[10px] text-muted-foreground/60 ml-0.5">
+                {AI_LIMIT - aiUsed}/{AI_LIMIT}
+              </span>
+            </button>
+            <Button variant="hero" onClick={openNew} className="hidden md:flex"><Plus className="h-4 w-4 mr-1" /> Nova Ideia</Button>
+          </div>
         </div>
+
+        {/* AI Suggestions Panel */}
+        {showAiPanel && aiSuggestions.length > 0 && (
+          <div className="bg-card border border-border rounded-2xl p-4 mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-body font-semibold text-foreground flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" /> Sugestões da IA
+              </p>
+              <button onClick={() => setShowAiPanel(false)}>
+                <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+              </button>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {aiSuggestions.map((s, i) => (
+                <div key={i} className="bg-background border border-border rounded-xl p-3 hover:border-primary/50 transition-colors">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <span className="text-[10px] font-body bg-primary/10 text-primary px-1.5 py-0.5 rounded capitalize">{s.formato}</span>
+                    <span className="text-[10px] font-body text-muted-foreground capitalize">{s.objetivo}</span>
+                  </div>
+                  <p className="text-sm font-body font-medium text-foreground mb-2 leading-snug">{s.titulo}</p>
+                  {s.pilar_sugerido && (
+                    <p className="text-[10px] font-body text-muted-foreground">📌 {s.pilar_sugerido}</p>
+                  )}
+                  <button
+                    onClick={() => {
+                      setFormTitle(s.titulo);
+                      setFormPlatform("instagram");
+                      setSheetOpen(true);
+                      setShowAiPanel(false);
+                    }}
+                    className="mt-2 text-xs font-body text-primary hover:underline"
+                  >
+                    Usar essa ideia →
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Filters */}
         <div className="flex gap-3 mb-6 flex-wrap items-center">
