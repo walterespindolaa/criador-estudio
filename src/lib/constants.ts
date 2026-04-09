@@ -3,13 +3,14 @@ export const PLATFORMS = ["instagram", "tiktok", "youtube"] as const;
 export const FORMAT_LABELS: Record<string, string> = {
   reels: "Reels",
   carrossel: "Carrossel",
+  foto: "Foto",
   story: "Story",
   video: "Vídeo",
   shorts: "Shorts",
   live: "Live",
 };
 
-export const FORMATS = ["reels", "carrossel", "story", "video", "shorts", "live"] as const;
+export const FORMATS = ["reels", "carrossel", "foto", "story", "video", "shorts", "live"] as const;
 
 export const STATUS_OPTIONS = [
   { key: "ideia", label: "Ideia" },

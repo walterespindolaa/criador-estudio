@@ -34,6 +34,14 @@ export const FORMAT_STRUCTURES: Record<string, FormatStructure> = {
     sectionLabel: "Cena",
     defaultSections: 5,
   },
+  foto: {
+    fields: [
+      { key: "hook", label: "Texto da foto / chamada", placeholder: "O que vai aparecer junto com a imagem? (frase de impacto, pergunta, afirmação...)", rows: 2, icon: "Type" },
+      { key: "caption", label: "Legenda", placeholder: "Legenda completa com storytelling, hashtags e CTA...", rows: 5, icon: "MessageSquare" },
+      { key: "cta", label: "CTA", placeholder: "Ex: Salva esse post! | Comenta aqui embaixo | Link na bio", rows: 1, icon: "MousePointerClick" },
+    ],
+    hasDynamicSections: false,
+  },
   carrossel: {
     fields: [
       { key: "hook", label: "Capa (slide 1)", placeholder: "O que vai aparecer na capa para parar o scroll?", rows: 2, icon: "Layers" },
