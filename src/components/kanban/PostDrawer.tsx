@@ -110,7 +110,9 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiHookCategories, setAiHookCategories] = useState<string[]>([]);
   const [refFormats, setRefFormats] = useState<any[]>([]);
-  const [sections, setSections] = useState<string[]>(["", "", "", "", ""]);
+  interface Section { text: string; driveFileId?: string | null; driveFileName?: string | null; driveThumbnail?: string | null; }
+  const emptySection = (): Section => ({ text: "", driveFileId: null, driveFileName: null, driveThumbnail: null });
+  const [sections, setSections] = useState<Section[]>(Array(5).fill(null).map(emptySection));
   const [previewOpen, setPreviewOpen] = useState(false);
   const { profile } = useProfile();
 
@@ -155,13 +157,16 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       setSaves(post.result_saves?.toString() || "");
       setComments(post.result_comments?.toString() || "");
       setShowResults(post.status === "publicado");
-      try { setSections(JSON.parse((post as any).sections) || Array(5).fill("")); } catch { setSections(Array(5).fill("")); }
+      try {
+        const parsed = JSON.parse((post as any).sections || "[]");
+        setSections(parsed.length > 0 ? parsed.map((s: any) => typeof s === 'string' ? { ...emptySection(), text: s } : { ...emptySection(), ...s }) : Array(5).fill(null).map(emptySection));
+      } catch { setSections(Array(5).fill(null).map(emptySection)); }
     } else {
       setTitle(""); setPlatform("instagram"); setFormat("reels");
       setPillarId(""); setStatus("ideia"); setHook(""); setScript("");
       setCaption(""); setCta(""); setScheduledDate(""); setScheduledTime(""); setNotes("");
       setViews(""); setSaves(""); setComments(""); setShowResults(false);
-      setSections(Array(5).fill(""));
+      setSections(Array(5).fill(null).map(emptySection));
       setDriveMedia([]);
       setPendingDriveFiles([]);
       if (userId) {
@@ -182,7 +187,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
     if (isNew) {
       const structure = getFormatStructure(format);
       const count = structure.hasDynamicSections ? (structure.defaultSections || 5) : 0;
-      setSections(count > 0 ? Array(count).fill("") : []);
+      setSections(count > 0 ? Array(count).fill(null).map(emptySection) : []);
     }
   }, [format, isNew]);
 
@@ -479,23 +484,71 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                           <PenLine className="h-4 w-4" /> {structure.sectionLabel}s
                         </Label>
                         {sections.map((sec, i) => (
-                          <div key={i} className="space-y-1">
+                          <div key={i} className="space-y-1 bg-card rounded-xl p-3 border border-border">
                             <p className="text-[10px] font-body text-muted-foreground uppercase tracking-wider">
                               {structure.sectionLabel} {String(i + 1).padStart(2, "0")}
                             </p>
                             <Textarea
                               placeholder={`Descreva a ${structure.sectionLabel?.toLowerCase()} ${i + 1}...`}
-                              value={sec}
-                              onChange={(e) => setSections(prev => prev.map((s, j) => j === i ? e.target.value : s))}
-                              className="rounded-xl min-h-[60px]"
+                              value={sec.text}
+                              onChange={(e) => setSections(prev => prev.map((s, j) => j === i ? { ...s, text: e.target.value } : s))}
+                              className="rounded-lg min-h-[56px] border-0 bg-transparent p-0 resize-none focus-visible:ring-0"
                               rows={2}
                             />
+                            <div className="flex items-center gap-2 mt-1.5">
+                              {sec.driveFileId ? (
+                                <div className="flex items-center gap-2 flex-1">
+                                  <img
+                                    src={`https://lh3.googleusercontent.com/d/${encodeURIComponent(sec.driveFileId)}=w120`}
+                                    alt={sec.driveFileName || ""}
+                                    className="w-10 h-10 rounded-lg object-cover border border-border"
+                                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                  />
+                                  <span className="text-[10px] font-body text-muted-foreground truncate flex-1">{sec.driveFileName}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setSections(prev => prev.map((s, j) => j === i ? { ...s, driveFileId: null, driveFileName: null, driveThumbnail: null } : s))}
+                                    className="text-destructive hover:text-destructive/80"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={picking}
+                                  onClick={async () => {
+                                    const before = new Date().toISOString();
+                                    await pickAndSave(undefined);
+                                    const { data } = await supabase
+                                      .from("external_media_refs")
+                                      .select("external_file_id, file_name, thumbnail_url")
+                                      .eq("user_id", userId)
+                                      .is("post_id", null)
+                                      .gte("created_at", before)
+                                      .order("created_at", { ascending: false })
+                                      .limit(1);
+                                    if (data && data[0]) {
+                                      setSections(prev => prev.map((s, j) => j === i ? {
+                                        ...s,
+                                        driveFileId: data[0].external_file_id,
+                                        driveFileName: data[0].file_name,
+                                        driveThumbnail: data[0].thumbnail_url,
+                                      } : s));
+                                    }
+                                  }}
+                                  className="text-[10px] font-body text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
+                                >
+                                  <Cloud className="h-3 w-3" /> Adicionar mídia
+                                </button>
+                              )}
+                            </div>
                           </div>
                         ))}
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            onClick={() => setSections(prev => [...prev, ""])}
+                            onClick={() => setSections(prev => [...prev, emptySection()])}
                             className="text-xs font-body text-primary hover:underline flex items-center gap-1"
                           >
                             + Adicionar {structure.sectionLabel?.toLowerCase()}
@@ -543,7 +596,8 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                 </div>
               </div>
 
-              {/* Google Drive media — visual preview */}
+              {/* Google Drive media — only for formats without dynamic sections */}
+              {!getFormatStructure(format).hasDynamicSections && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="font-body text-sm">Mídia</Label>
@@ -560,7 +614,6 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                 </div>
                 {mediaList.length > 0 ? (
                   <div className="space-y-3">
-                    {/* Primary preview */}
                     {(() => {
                       const primary = mediaList[0];
                       const fileId = primary.external_file_id || primary.id;
@@ -597,7 +650,6 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                         </div>
                       );
                     })()}
-                    {/* Additional thumbnails */}
                     {mediaList.length > 1 && (
                       <div className="flex gap-2 flex-wrap">
                         {mediaList.slice(1).map(m => {
@@ -640,6 +692,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                   </div>
                 )}
               </div>
+              )}
 
 
               {/* Notes */}
