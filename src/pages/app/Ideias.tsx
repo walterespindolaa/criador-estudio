@@ -86,9 +86,6 @@ const Ideias = () => {
     resolver: zodResolver(ideaSchema),
   });
 
-  const formTitle = watch("title") || "";
-  const formPillar = watch("pillar_id") || "";
-
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<Array<{
     titulo: string; formato: string; angulo?: string; objetivo: string;
@@ -201,118 +198,23 @@ const Ideias = () => {
           </div>
         </div>
 
-        {/* AI Suggestions Panel */}
-        {showAiPanel && aiSuggestions.length > 0 && (
-          <div className="bg-card border border-border rounded-2xl p-4 mb-4">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-sm font-body font-semibold text-foreground flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" /> Variações de post
-              </p>
-              <button onClick={() => { setShowAiPanel(false); }}>
-                <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-              </button>
-            </div>
-            {targetIdeaId && (
-              <p className="text-[10px] text-muted-foreground font-body mb-3">
-                Para: <span className="font-medium">{ideas.find(i => i.id === targetIdeaId)?.title}</span>
-              </p>
-            )}
-            <div className="grid gap-2 sm:grid-cols-3">
-              {aiSuggestions.map((s, i) => (
-                <div key={i} className="bg-background border border-border rounded-xl p-3 hover:border-primary/50 transition-colors">
-                  <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
-                    <span className="text-[10px] font-body bg-primary/10 text-primary px-1.5 py-0.5 rounded capitalize">{s.formato}</span>
-                    <span className="text-[10px] font-body text-muted-foreground capitalize">{s.objetivo}</span>
-                  </div>
-                  <p className="text-sm font-body font-medium text-foreground mb-1.5 leading-snug">{s.titulo}</p>
-                  {s.angulo && (
-                    <p className="text-[10px] font-body text-muted-foreground mb-2">📐 {s.angulo}</p>
-                  )}
-                  <button
-                    onClick={() => {
-                      const origem = ideas.find(id => id.id === targetIdeaId);
-                      setFormTitle(s.titulo);
-                      setFormPlatform(origem?.platform || "instagram");
-                      setFormPillar(origem?.pillar_id || "");
-                      setFormObjective(s.objetivo || "");
-                      setEditingIdea(null);
-                      setSheetOpen(true);
-                      setShowAiPanel(false);
-                    }}
-                    className="mt-2 text-xs font-body text-primary hover:underline"
-                  >
-                    Usar essa ideia →
-                  </button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map(idea => (
+            <div key={idea.id} className="bg-card rounded-2xl p-5 border border-border">
+              <div className="flex justify-between items-start mb-3">
+                <h3 className="font-display font-semibold text-foreground line-clamp-2">{idea.title}</h3>
+                <div className="flex gap-1">
+                  <button onClick={() => openEdit(idea)} className="p-1 hover:bg-accent rounded"><Edit2 className="h-3.5 w-3.5" /></button>
+                  <button onClick={() => handleDelete(idea.id)} className="p-1 hover:bg-destructive/10 rounded text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Filters */}
-        <div className="flex gap-3 mb-6 flex-wrap items-center">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar ideias..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 rounded-xl" />
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            <button onClick={() => setFilterPillar(null)} className={`px-3 py-1.5 rounded-xl text-sm font-body border transition-colors ${!filterPillar ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"}`}>Todos</button>
-            {pillars.map(p => (
-              <button key={p.id} onClick={() => setFilterPillar(p.id)} className={`px-3 py-1.5 rounded-xl text-sm font-body border transition-colors ${filterPillar === p.id ? "text-primary-foreground border-transparent" : "bg-card border-border"}`} style={filterPillar === p.id ? { backgroundColor: p.color } : {}}>{p.name}</button>
-            ))}
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className={`px-3 py-1.5 rounded-xl text-sm font-body border transition-colors flex items-center gap-1 ${filterObjective ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"}`}>
-                {filterObjective ? OBJECTIVES.find(o => o.key === filterObjective)?.label : "Objetivo"} <ChevronDown className="h-3 w-3" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => setFilterObjective(null)}>Todos</DropdownMenuItem>
-              {OBJECTIVES.map(o => <DropdownMenuItem key={o.key} onClick={() => setFilterObjective(o.key)}>{o.label}</DropdownMenuItem>)}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className={`px-3 py-1.5 rounded-xl text-sm font-body border transition-colors flex items-center gap-1 ${filterStatus ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"}`}>
-                {filterStatus ? IDEA_STATUSES.find(s => s.key === filterStatus)?.label : "Status"} <ChevronDown className="h-3 w-3" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => setFilterStatus(null)}>Todos</DropdownMenuItem>
-              {IDEA_STATUSES.map(s => <DropdownMenuItem key={s.key} onClick={() => setFilterStatus(s.key)}>{s.label}</DropdownMenuItem>)}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        {filtered.length === 0 ? (
-          <div className="bg-card rounded-2xl p-12 shadow-[var(--shadow-warm)] border border-border text-center">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-5"><Lightbulb className="h-8 w-8 text-primary" /></div>
-            <p className="text-lg font-display font-semibold text-foreground mb-2">{ideas.length === 0 ? "Sua primeira ideia está te esperando" : "Nenhuma ideia encontrada"}</p>
-            <p className="text-muted-foreground font-body max-w-sm mx-auto mb-6">{ideas.length === 0 ? "Anota aquela ideia que veio no banho, no ônibus, ou no meio da madrugada." : "Tente mudar os filtros."}</p>
-            {ideas.length === 0 && <Button variant="hero" onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Anotar minha primeira ideia</Button>}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map(idea => (
-              <div key={idea.id} className="bg-card rounded-2xl p-5 border border-border">
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className="font-display font-semibold text-foreground line-clamp-2">{idea.title}</h3>
-                  <div className="flex gap-1">
-                    <button onClick={() => openEdit(idea)} className="p-1 hover:bg-accent rounded"><Edit2 className="h-3.5 w-3.5" /></button>
-                    <button onClick={() => handleDelete(idea.id)} className="p-1 hover:bg-destructive/10 rounded text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
-                  </div>
-                </div>
-                <Button variant="hero" size="sm" onClick={() => handlePromoteToPost(idea)} disabled={!!idea.promoted_to_post_id}>
-                  {idea.promoted_to_post_id ? "Já virou post" : "Criar post →"}
-                </Button>
               </div>
-            ))}
-          </div>
-        )}
+              <Button variant="hero" size="sm" onClick={() => handlePromoteToPost(idea)} disabled={!!idea.promoted_to_post_id}>
+                {idea.promoted_to_post_id ? "Já virou post" : "Criar post →"}
+              </Button>
+            </div>
+          ))}
+        </div>
       </motion.div>
-
-      <Button variant="hero" size="icon" className="fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-2xl md:hidden z-40" onClick={openNew}><Plus className="h-6 w-6" /></Button>
 
       <Dialog open={sheetOpen} onOpenChange={setSheetOpen}>
         <DialogContent className="sm:max-w-lg">
