@@ -112,7 +112,18 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
     return (
       <div className="relative w-full aspect-[4/5] overflow-hidden">
         {mediaUrl ? (
-          <img src={mediaUrl} alt="preview" className="w-full h-full object-cover" />
+          mediaType === "video" ? (
+            <video
+              src={mediaUrl}
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <img src={mediaUrl} alt="preview" className="w-full h-full object-cover" />
+          )
         ) : (
           <GradientPlaceholder>
             {hook && <p className="text-white/70 text-xs font-semibold text-center px-6 max-w-[220px]">"{hook}"</p>}
