@@ -36,6 +36,8 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
   const [ytTab, setYtTab] = useState<"thumbnail" | "shorts">("thumbnail");
   const [carouselIdx, setCarouselIdx] = useState(0);
 
+  const activeMediaUrl = mediaUrl || media || thumbnail || coverImage;
+
   useEffect(() => { if (open) setCarouselIdx(0); }, [open, format]);
 
   const AvatarCircle = ({ size = 32, border = false }: { size?: number; border?: boolean }) => (
