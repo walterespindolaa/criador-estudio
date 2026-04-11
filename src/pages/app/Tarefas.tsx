@@ -120,37 +120,34 @@ const Tarefas = () => {
   };
 
   const openNew = () => {
-    setFormTitle("");
-    setFormDesc("");
-    setFormPriority("media");
-    setFormStatus("pendente");
-    setFormDueDate(undefined);
-    setFormPostId("");
-    setSheetOpen(true);
+    setNewTask({ title: '', status: 'pendente', priority: 'media', due_date: '', post_id: null, notes: '' });
+    setIsNewTaskOpen(true);
   };
 
   const handleSave = async () => {
-    if (!formTitle.trim() || !user) {
+    if (!newTask.title.trim() || !user) {
       toast.error("O título é obrigatório");
       return;
     }
+
     const { error } = await supabase.from("tasks").insert({
       user_id: user.id,
-      title: formTitle.trim(),
-      description: formDesc || null,
-      priority: formPriority,
-      status: formStatus,
-      due_date: formDueDate ? format(formDueDate, "yyyy-MM-dd") : null,
-      post_id: formPostId || null,
+      title: newTask.title.trim(),
+      description: newTask.notes || null,
+      priority: newTask.priority,
+      status: newTask.status,
+      due_date: newTask.due_date || null,
+      post_id: newTask.post_id || null,
     } as any);
     
     if (error) {
+      console.error("Error saving task:", error);
       toast.error("Erro ao criar tarefa.");
       return;
     }
     
     toast.success("Tarefa criada!");
-    setSheetOpen(false);
+    setIsNewTaskOpen(false);
     fetchData();
   };
 
