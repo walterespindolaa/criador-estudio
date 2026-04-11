@@ -69,13 +69,15 @@ const Tarefas = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [filter, setFilter] = useState("todas");
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [formTitle, setFormTitle] = useState("");
-  const [formDesc, setFormDesc] = useState("");
-  const [formPriority, setFormPriority] = useState("media");
-  const [formStatus, setFormStatus] = useState("pendente");
-  const [formDueDate, setFormDueDate] = useState<Date | undefined>();
-  const [formPostId, setFormPostId] = useState("");
+  const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
+  const [newTask, setNewTask] = useState({
+    title: "",
+    status: "pendente",
+    priority: "media",
+    due_date: "",
+    post_id: null as string | null,
+    notes: ""
+  });
   const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
