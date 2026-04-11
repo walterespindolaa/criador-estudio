@@ -99,10 +99,10 @@ export function SettingsVisual() {
   const previewSidebar = sidebarColor || previewTheme?.vars.sidebar || "#F2EDE6";
 
   return (
-    <div className="max-w-[1100px] mx-auto w-full">
-      <div className="grid grid-cols-1 lg:grid-cols-[45%_55%] gap-12">
+    <div className="w-full max-w-[1100px] mx-auto">
+      <div className="flex flex-col lg:flex-row gap-12">
         {/* LEFT — Controls */}
-        <div className="space-y-10">
+        <div className="flex-[0_0_45%] space-y-10">
           {/* Themes */}
           <section>
             <div className="mb-4">
@@ -118,7 +118,7 @@ export function SettingsVisual() {
                   key={preset.id}
                   onClick={() => handleThemeSelect(preset.id)}
                   className={cn(
-                    "group relative rounded-2xl border-2 transition-all text-left overflow-hidden flex flex-col min-w-[110px]",
+                    "group relative rounded-2xl border-2 transition-all text-left overflow-hidden flex flex-col min-w-[120px]",
                     selectedTheme === preset.id
                       ? "border-[#1A2F21] ring-1 ring-[#1A2F21]"
                       : "border-border hover:border-[#1A2F21]/30"
@@ -263,7 +263,7 @@ export function SettingsVisual() {
         </div>
 
         {/* RIGHT — Live Preview */}
-        <div className="hidden lg:block sticky top-6 self-start">
+        <div className="hidden lg:block flex-1 sticky top-6 self-start">
           <div className="mb-6">
             <h3 className="text-xl font-body font-bold text-foreground mb-1">Preview ao vivo</h3>
             <p className="text-sm text-muted-foreground font-body">Veja como ficará o seu espaço</p>
