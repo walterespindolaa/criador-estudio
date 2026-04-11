@@ -352,7 +352,7 @@ const Configuracoes = () => {
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">G</div>
                         <div>
-                          <p className="text-sm font-body font-semibold text-foreground">{driveConnection.email || "Conectado"}</p>
+                          <p className="text-sm font-body font-semibold text-foreground">{driveConnection.google_email || "Conectado"}</p>
                           <p className="text-xs font-body text-muted-foreground">Acesso apenas leitura</p>
                         </div>
                       </div>
