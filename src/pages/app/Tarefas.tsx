@@ -13,16 +13,7 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PostPreviewModal } from "@/components/kanban/PostPreviewModal";
 import { useProfile } from "@/hooks/useProfile";
-import {
-  Sheet, SheetContent, SheetHeader, SheetTitle,
-} from "@/components/ui/sheet";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
-  Popover, PopoverContent, PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar as CalendarComp } from "@/components/ui/calendar";
+// ... keep existing code (just cleaning up imports if they are unused)
 import { cn } from "@/lib/utils";
 
 interface Task {
