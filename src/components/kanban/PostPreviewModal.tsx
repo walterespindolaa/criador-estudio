@@ -149,10 +149,10 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
         <div className="relative overflow-hidden w-full max-w-[260px]"
           style={{ aspectRatio: "9/16", borderRadius: 28, boxShadow: "0 20px 60px rgba(0,0,0,0.35)" }}>
           {/* Background media or gradient */}
-          {mediaUrl ? (
+          {activeMediaUrl ? (
             mediaType === "video" ? (
               <video
-                src={mediaUrl}
+                src={activeMediaUrl}
                 autoPlay
                 muted
                 loop
@@ -160,7 +160,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
                 className="absolute inset-0 w-full h-full object-cover"
               />
             ) : (
-              <img src={mediaUrl} alt="preview" className="absolute inset-0 w-full h-full object-cover" />
+              <img src={activeMediaUrl} alt="preview" className="absolute inset-0 w-full h-full object-cover" />
             )
           ) : (
             <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)" }} />
