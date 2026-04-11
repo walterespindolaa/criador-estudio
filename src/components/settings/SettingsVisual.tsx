@@ -6,6 +6,7 @@ import { THEME_PRESETS, ACCENT_COLORS, type ThemePreset } from "@/lib/themes";
 import { applyTheme, applyAccent } from "@/lib/applyTheme";
 import { applySidebarColor } from "@/lib/sidebarTheme";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 const FONT_OPTIONS = [
   { key: "fraunces", label: "Orgânico", desc: "Fraunces + Inter", preview: "Elegância natural", displayFont: "'Fraunces', serif", bodyFont: "'Inter', sans-serif" },
@@ -96,201 +97,296 @@ export function SettingsVisual() {
   const previewTheme = THEME_PRESETS.find(t => t.id === selectedTheme);
   const previewFont = FONT_OPTIONS.find(f => f.key === selectedFont);
   const previewSidebar = sidebarColor || previewTheme?.vars.sidebar || "#F2EDE6";
-  const isDarkSidebar = previewSidebar ? parseInt(previewSidebar.slice(1), 16) < 0x808080 : false;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
-
-      {/* LEFT — Controls */}
-      <div className="space-y-8">
-
-        {/* Themes */}
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Monitor className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-body font-semibold text-foreground">Tema</h3>
-          </div>
-          <p className="text-xs text-muted-foreground font-body mb-4">Escolha a paleta de cores do sistema</p>
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
-            {THEME_PRESETS.map(preset => (
-              <button
-                key={preset.id}
-                onClick={() => handleThemeSelect(preset.id)}
-                className={`relative rounded-2xl border-2 p-1 transition-all text-left ${
-                  selectedTheme === preset.id
-                    ? "border-primary ring-2 ring-primary/20"
-                    : "border-border hover:border-primary/30"
-                }`}
-              >
-                {selectedTheme === preset.id && (
-                  <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-primary flex items-center justify-center z-10">
-                    <Check className="h-2.5 w-2.5 text-primary-foreground" />
-                  </div>
-                )}
-                <div className="rounded-xl overflow-hidden h-14 flex" style={{ backgroundColor: preset.vars.background }}>
-                  <div className="w-1/5 h-full" style={{ backgroundColor: preset.vars.sidebar }} />
-                  <div className="flex-1 p-1.5 flex flex-col gap-1">
-                    <div className="h-1.5 w-2/3 rounded-full" style={{ backgroundColor: selectedAccent, opacity: 0.8 }} />
-                    <div className="flex gap-1 flex-1">
-                      <div className="flex-1 rounded" style={{ backgroundColor: preset.vars.card }} />
-                      <div className="flex-1 rounded" style={{ backgroundColor: preset.vars.card }} />
-                    </div>
-                  </div>
-                </div>
-                <div className="px-1 py-1">
-                  <p className="text-[10px] font-semibold font-body text-foreground truncate">{preset.name}</p>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Accent Color */}
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Palette className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-body font-semibold text-foreground">Cor de destaque</h3>
-          </div>
-          <p className="text-xs text-muted-foreground font-body mb-3">Botões, links e elementos ativos</p>
-          <div className="flex flex-wrap gap-2.5">
-            {ACCENT_COLORS.map(accent => (
-              <button
-                key={accent.key}
-                onClick={() => handleAccentSelect(accent.value)}
-                title={accent.label}
-                className={`w-9 h-9 rounded-full border-2 transition-all flex items-center justify-center ${
-                  selectedAccent === accent.value
-                    ? "border-foreground scale-110 shadow-md"
-                    : "border-transparent hover:scale-105"
-                }`}
-                style={{ backgroundColor: accent.value }}
-              >
-                {selectedAccent === accent.value && (
-                  <Check className="h-4 w-4 text-white drop-shadow" />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Sidebar Color */}
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <PanelLeft className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-body font-semibold text-foreground">Cor da sidebar</h3>
-          </div>
-          <p className="text-xs text-muted-foreground font-body mb-3">Personalize o fundo da barra lateral</p>
-          <div className="flex flex-wrap gap-2">
-            {SIDEBAR_COLORS.map(c => (
-              <button
-                key={c.value || "default"}
-                onClick={() => handleSidebarSelect(c.value)}
-                title={c.label}
-                className={`w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center ${
-                  sidebarColor === c.value
-                    ? "border-foreground scale-110 shadow-md"
-                    : "border-border hover:scale-105"
-                }`}
-                style={{ backgroundColor: c.value || (previewTheme?.vars.sidebar || '#F2EDE6') }}
-              >
-                {sidebarColor === c.value && (
-                  <Check className="h-3 w-3" style={{ color: c.value && parseInt(c.value.slice(1), 16) < 0x808080 ? '#fff' : '#1C1C1A' }} />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Typography */}
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Type className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-body font-semibold text-foreground">Tipografia</h3>
-          </div>
-          <p className="text-xs text-muted-foreground font-body mb-3">Estilo tipográfico de todo o sistema</p>
-          <div className="grid grid-cols-3 gap-2.5">
-            {FONT_OPTIONS.map(font => (
-              <button
-                key={font.key}
-                onClick={() => handleFontSelect(font.key)}
-                className={`rounded-2xl border-2 p-3 text-left transition-all ${
-                  selectedFont === font.key
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:border-primary/30"
-                }`}
-              >
-                <p className="text-base font-semibold text-foreground leading-tight" style={{ fontFamily: font.displayFont }}>
-                  {font.label}
-                </p>
-                <p className="text-[10px] text-muted-foreground mt-0.5" style={{ fontFamily: font.bodyFont }}>{font.desc}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <Button onClick={handleSave} disabled={saving} variant="hero" className="w-full">
-          {saving ? "Salvando..." : "Salvar visual"}
-        </Button>
-      </div>
-
-      {/* RIGHT — Live Preview */}
-      <div className="hidden lg:block sticky top-6 self-start">
-        <h3 className="text-sm font-body font-semibold text-foreground mb-1">Preview</h3>
-        <p className="text-xs text-muted-foreground font-body mb-4">Como o app vai aparecer com as suas escolhas</p>
-
-        {previewTheme && (
-          <div className="rounded-2xl overflow-hidden border border-border shadow-lg" style={{ backgroundColor: previewTheme.vars.background }}>
-            <div className="flex h-64">
-              {/* Sidebar */}
-              <div className="w-14 h-full flex flex-col items-center py-4 gap-4 shrink-0" style={{ backgroundColor: previewSidebar }}>
-                <div className="w-7 h-7 rounded-full" style={{ backgroundColor: selectedAccent }} />
-                {[1, 2, 3, 4].map(i => (
-                  <div key={i} className="w-5 h-5 rounded-lg" style={{ backgroundColor: i === 1 ? selectedAccent : previewTheme.vars.muted, opacity: i === 1 ? 1 : 0.5 }} />
-                ))}
+    <div className="max-w-[1100px] mx-auto w-full">
+      <div className="grid grid-cols-1 lg:grid-cols-[45%_55%] gap-12">
+        {/* LEFT — Controls */}
+        <div className="space-y-10">
+          {/* Themes */}
+          <section>
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Monitor className="h-5 w-5 text-primary" />
+                <h3 className="text-base font-body font-bold text-foreground">Tema</h3>
               </div>
-              {/* Main content */}
-              <div className="flex-1 p-4 flex flex-col gap-3">
-                {/* Header */}
-                <div className="flex items-center gap-2">
-                  <div className="h-4 w-32 rounded-full" style={{ backgroundColor: previewTheme.vars.foreground, opacity: 0.8 }} />
-                </div>
-                {/* Stats cards */}
-                <div className="grid grid-cols-3 gap-2">
-                  {[1, 2, 3].map(i => (
-                    <div key={i} className="rounded-xl p-2" style={{ backgroundColor: previewTheme.vars.card }}>
-                      <div className="h-1.5 w-1/2 rounded mb-1.5" style={{ backgroundColor: previewTheme.vars.muted }} />
-                      <div className="h-4 w-1/3 rounded" style={{ backgroundColor: i === 1 ? selectedAccent : previewTheme.vars.muted, opacity: i === 1 ? 1 : 0.5 }} />
-                    </div>
-                  ))}
-                </div>
-                {/* Content area */}
-                <div className="flex-1 rounded-xl p-3" style={{ backgroundColor: previewTheme.vars.card }}>
-                  <div className="h-2 w-3/4 rounded mb-2" style={{ backgroundColor: previewTheme.vars.muted }} />
-                  <div className="h-2 w-1/2 rounded mb-2" style={{ backgroundColor: previewTheme.vars.muted, opacity: 0.6 }} />
-                  <div className="h-6 w-24 rounded-lg mt-3" style={{ backgroundColor: selectedAccent }} />
-                </div>
-              </div>
+              <p className="text-sm text-muted-foreground font-body">Escolha a paleta de cores do sistema</p>
             </div>
-            {/* Bottom bar */}
-            <div className="h-10 flex items-center justify-around px-4 border-t" style={{ backgroundColor: previewTheme.vars.card, borderColor: previewTheme.vars.border || "rgba(0,0,0,0.1)" }}>
-              {[1, 2, 3, 4, 5].map(i => (
-                <div key={i} className="w-5 h-5 rounded" style={{ backgroundColor: i === 1 ? selectedAccent : previewTheme.vars.muted, opacity: i === 1 ? 1 : 0.4 }} />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {THEME_PRESETS.map(preset => (
+                <button
+                  key={preset.id}
+                  onClick={() => handleThemeSelect(preset.id)}
+                  className={cn(
+                    "group relative rounded-2xl border-2 transition-all text-left overflow-hidden flex flex-col min-w-[110px]",
+                    selectedTheme === preset.id
+                      ? "border-[#1A2F21] ring-1 ring-[#1A2F21]"
+                      : "border-border hover:border-[#1A2F21]/30"
+                  )}
+                >
+                  <div className="p-2.5 h-20 flex" style={{ backgroundColor: preset.vars.background }}>
+                    <div className="w-1/4 h-full rounded-sm" style={{ backgroundColor: preset.vars.sidebar }} />
+                    <div className="flex-1 pl-2 flex flex-col gap-1.5">
+                      <div className="h-2 w-full rounded-full" style={{ backgroundColor: selectedAccent, opacity: 0.8 }} />
+                      <div className="flex gap-1.5 flex-1">
+                        <div className="flex-1 rounded-sm shadow-sm" style={{ backgroundColor: preset.vars.card }} />
+                        <div className="flex-1 rounded-sm shadow-sm" style={{ backgroundColor: preset.vars.card }} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="px-3 py-2 bg-background border-t">
+                    <p className={cn(
+                      "text-xs font-semibold font-body truncate",
+                      selectedTheme === preset.id ? "text-[#1A2F21]" : "text-foreground"
+                    )}>
+                      {preset.name}
+                    </p>
+                  </div>
+                  {selectedTheme === preset.id && (
+                    <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-[#1A2F21] flex items-center justify-center z-10 shadow-sm">
+                      <Check className="h-3 w-3 text-white" />
+                    </div>
+                  )}
+                </button>
               ))}
             </div>
-          </div>
-        )}
+          </section>
 
-        {/* Font preview */}
-        {previewTheme && (
-          <div className="mt-4 rounded-2xl border border-border p-4" style={{ backgroundColor: previewTheme.vars.card }}>
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2 font-body">Tipografia selecionada</p>
-            <p className="text-xl font-bold mb-1" style={{ fontFamily: previewFont?.displayFont, color: previewTheme.vars.foreground }}>
-              Criadores de conteúdo
-            </p>
-            <p className="text-sm" style={{ fontFamily: previewFont?.bodyFont, color: previewTheme.vars.foreground, opacity: 0.6 }}>
-              {previewFont?.desc} · {previewFont?.preview}
-            </p>
+          {/* Accent Color */}
+          <section>
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Palette className="h-5 w-5 text-primary" />
+                <h3 className="text-base font-body font-bold text-foreground">Cor de destaque</h3>
+              </div>
+              <p className="text-sm text-muted-foreground font-body">Botões, links e elementos ativos</p>
+            </div>
+            <div className="flex flex-wrap gap-[10px]">
+              {ACCENT_COLORS.map(accent => (
+                <button
+                  key={accent.key}
+                  onClick={() => handleAccentSelect(accent.value)}
+                  title={accent.label}
+                  className={cn(
+                    "w-10 h-10 rounded-full border-2 transition-all flex items-center justify-center relative",
+                    selectedAccent === accent.value
+                      ? "border-[#1A2F21] scale-105 shadow-md"
+                      : "border-transparent hover:scale-105"
+                  )}
+                  style={{ backgroundColor: accent.value }}
+                >
+                  {selectedAccent === accent.value && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Check className="h-5 w-5 text-white drop-shadow-sm" />
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* Sidebar Color */}
+          <section>
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-1">
+                <PanelLeft className="h-5 w-5 text-primary" />
+                <h3 className="text-base font-body font-bold text-foreground">Cor da sidebar</h3>
+              </div>
+              <p className="text-sm text-muted-foreground font-body">Personalize o fundo da barra lateral</p>
+            </div>
+            <div className="flex flex-wrap gap-2.5">
+              {SIDEBAR_COLORS.map(c => (
+                <button
+                  key={c.value || "default"}
+                  onClick={() => handleSidebarSelect(c.value)}
+                  title={c.label}
+                  className={cn(
+                    "w-9 h-9 rounded-full border-2 transition-all flex items-center justify-center relative",
+                    sidebarColor === c.value
+                      ? "border-[#1A2F21] scale-105 shadow-md"
+                      : "border-border hover:border-[#1A2F21]/30"
+                  )}
+                  style={{ backgroundColor: c.value || (previewTheme?.vars.sidebar || '#F2EDE6') }}
+                >
+                  {sidebarColor === c.value && (
+                    <Check className="h-4 w-4" style={{ color: c.value && parseInt(c.value.slice(1), 16) < 0x808080 ? '#fff' : '#1C1C1A' }} />
+                  )}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* Typography */}
+          <section>
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Type className="h-5 w-5 text-primary" />
+                <h3 className="text-base font-body font-bold text-foreground">Tipografia</h3>
+              </div>
+              <p className="text-sm text-muted-foreground font-body">Estilo tipográfico de todo o sistema</p>
+            </div>
+            <div className="flex flex-col gap-3">
+              {FONT_OPTIONS.map(font => (
+                <button
+                  key={font.key}
+                  onClick={() => handleFontSelect(font.key)}
+                  className={cn(
+                    "w-full rounded-xl border-2 p-5 text-left transition-all relative flex flex-col gap-1",
+                    selectedFont === font.key
+                      ? "border-[#1A2F21] bg-[#1A2F21]/5"
+                      : "border-border hover:border-[#1A2F21]/30"
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="text-xl font-bold text-foreground leading-tight" style={{ fontFamily: font.displayFont }}>
+                      {font.label}
+                    </p>
+                    {selectedFont === font.key && (
+                      <div className="w-6 h-6 rounded-full bg-[#1A2F21] flex items-center justify-center">
+                        <Check className="h-3.5 w-3.5 text-white" />
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground" style={{ fontFamily: font.bodyFont }}>{font.desc}</p>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <Button 
+            onClick={handleSave} 
+            disabled={saving} 
+            className="w-full h-[52px] bg-[#1A2F21] hover:bg-[#1A2F21]/90 text-white rounded-xl font-semibold text-lg transition-all"
+          >
+            {saving ? "Salvando..." : "Salvar visual"}
+          </Button>
+        </div>
+
+        {/* RIGHT — Live Preview */}
+        <div className="hidden lg:block sticky top-6 self-start">
+          <div className="mb-6">
+            <h3 className="text-xl font-body font-bold text-foreground mb-1">Preview ao vivo</h3>
+            <p className="text-sm text-muted-foreground font-body">Veja como ficará o seu espaço</p>
           </div>
+
+          {previewTheme && (
+            <div className="flex flex-col gap-6">
+              <div className="rounded-2xl overflow-hidden border border-border shadow-2xl flex flex-col" style={{ backgroundColor: previewTheme.vars.background, height: '420px' }}>
+                <div className="flex flex-1 min-h-0">
+                  {/* Sidebar */}
+                  <div className="w-20 h-full flex flex-col items-center py-6 gap-6 shrink-0 border-r" style={{ backgroundColor: previewSidebar, borderColor: previewTheme.vars.border }}>
+                    <div className="w-10 h-10 rounded-2xl shadow-sm flex items-center justify-center" style={{ backgroundColor: selectedAccent }}>
+                      <div className="w-5 h-5 rounded-full bg-white/20" />
+                    </div>
+                    {[1, 2, 3, 4].map(i => (
+                      <div key={i} className="w-6 h-6 rounded-lg" style={{ backgroundColor: i === 1 ? selectedAccent : previewTheme.vars.muted, opacity: i === 1 ? 1 : 0.4 }} />
+                    ))}
+                  </div>
+                  {/* Main content */}
+                  <div className="flex-1 p-6 flex flex-col gap-6 overflow-hidden">
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                      <div className="h-6 w-40 rounded-full" style={{ backgroundColor: previewTheme.vars.foreground, opacity: 0.15 }} />
+                      <div className="flex gap-2">
+                        <div className="h-8 w-8 rounded-full" style={{ backgroundColor: previewTheme.vars.muted }} />
+                        <div className="h-8 w-8 rounded-full" style={{ backgroundColor: previewTheme.vars.muted }} />
+                      </div>
+                    </div>
+                    
+                    {/* Stats cards */}
+                    <div className="grid grid-cols-3 gap-4">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="rounded-2xl p-4 shadow-sm border" style={{ backgroundColor: previewTheme.vars.card, borderColor: previewTheme.vars.border }}>
+                          <div className="h-2 w-12 rounded-full mb-3" style={{ backgroundColor: previewTheme.vars.muted }} />
+                          <div className="h-5 w-8 rounded-lg" style={{ backgroundColor: i === 1 ? selectedAccent : previewTheme.vars.muted, opacity: i === 1 ? 1 : 0.4 }} />
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Content area - List of posts */}
+                    <div className="flex-1 flex flex-col gap-3 overflow-hidden">
+                      {[1, 2].map(i => (
+                        <div key={i} className="rounded-xl p-4 border" style={{ backgroundColor: previewTheme.vars.card, borderColor: previewTheme.vars.border }}>
+                          <div className="flex gap-3 items-center mb-2">
+                            <div className="h-8 w-8 rounded-full" style={{ backgroundColor: previewTheme.vars.muted }} />
+                            <div className="flex-1 flex flex-col gap-1">
+                              <div className="h-2 w-24 rounded-full" style={{ backgroundColor: previewTheme.vars.foreground, opacity: 0.2 }} />
+                              <div className="h-1.5 w-16 rounded-full" style={{ backgroundColor: previewTheme.vars.muted }} />
+                            </div>
+                          </div>
+                          <div className="h-2 w-full rounded-full" style={{ backgroundColor: previewTheme.vars.muted, opacity: 0.5 }} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                {/* Bottom bar */}
+                <div className="h-14 flex items-center justify-around px-8 border-t" style={{ backgroundColor: previewTheme.vars.card, borderColor: previewTheme.vars.border }}>
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <div key={i} className="w-6 h-6 rounded-lg" style={{ backgroundColor: i === 1 ? selectedAccent : previewTheme.vars.muted, opacity: i === 1 ? 1 : 0.4 }} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Status Pill */}
+              <div className="self-center flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/50 border border-border text-xs font-medium text-muted-foreground shadow-sm">
+                <span>Fonte: <span className="text-foreground">{previewFont?.desc}</span></span>
+                <span className="w-1 h-1 rounded-full bg-border" />
+                <span>Tema: <span className="text-foreground">{previewTheme.name}</span></span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {/* Mobile Preview (Visible only on small screens) */}
+      <div className="mt-12 lg:hidden">
+        <div className="mb-6">
+          <h3 className="text-xl font-body font-bold text-foreground mb-1">Preview ao vivo</h3>
+          <p className="text-sm text-muted-foreground font-body">Veja como ficará o seu espaço</p>
+        </div>
+        {previewTheme && (
+           <div className="flex flex-col gap-6">
+           <div className="rounded-2xl overflow-hidden border border-border shadow-2xl flex flex-col" style={{ backgroundColor: previewTheme.vars.background, height: '420px' }}>
+             <div className="flex flex-1 min-h-0">
+               <div className="w-16 h-full flex flex-col items-center py-6 gap-6 shrink-0 border-r" style={{ backgroundColor: previewSidebar, borderColor: previewTheme.vars.border }}>
+                 <div className="w-8 h-8 rounded-xl shadow-sm flex items-center justify-center" style={{ backgroundColor: selectedAccent }}>
+                   <div className="w-4 h-4 rounded-full bg-white/20" />
+                 </div>
+                 {[1, 2, 3, 4].map(i => (
+                   <div key={i} className="w-5 h-5 rounded-lg" style={{ backgroundColor: i === 1 ? selectedAccent : previewTheme.vars.muted, opacity: i === 1 ? 1 : 0.4 }} />
+                 ))}
+               </div>
+               <div className="flex-1 p-4 flex flex-col gap-4 overflow-hidden">
+                 <div className="h-4 w-32 rounded-full" style={{ backgroundColor: previewTheme.vars.foreground, opacity: 0.15 }} />
+                 <div className="grid grid-cols-3 gap-2">
+                   {[1, 2, 3].map(i => (
+                     <div key={i} className="rounded-xl p-2 shadow-sm border" style={{ backgroundColor: previewTheme.vars.card, borderColor: previewTheme.vars.border }}>
+                       <div className="h-4 w-6 rounded-lg" style={{ backgroundColor: i === 1 ? selectedAccent : previewTheme.vars.muted, opacity: i === 1 ? 1 : 0.4 }} />
+                     </div>
+                   ))}
+                 </div>
+                 <div className="flex-1 flex flex-col gap-2 overflow-hidden">
+                   {[1, 2, 3].map(i => (
+                     <div key={i} className="rounded-lg p-3 border" style={{ backgroundColor: previewTheme.vars.card, borderColor: previewTheme.vars.border }}>
+                       <div className="h-2 w-full rounded-full" style={{ backgroundColor: previewTheme.vars.muted, opacity: 0.5 }} />
+                     </div>
+                   ))}
+                 </div>
+               </div>
+             </div>
+             <div className="h-12 flex items-center justify-around px-6 border-t" style={{ backgroundColor: previewTheme.vars.card, borderColor: previewTheme.vars.border }}>
+               {[1, 2, 3, 4, 5].map(i => (
+                 <div key={i} className="w-5 h-5 rounded-lg" style={{ backgroundColor: i === 1 ? selectedAccent : previewTheme.vars.muted, opacity: i === 1 ? 1 : 0.4 }} />
+               ))}
+             </div>
+           </div>
+           <div className="self-center flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/50 border border-border text-xs font-medium text-muted-foreground shadow-sm">
+             <span>Fonte: <span className="text-foreground">{previewFont?.desc}</span></span>
+             <span className="w-1 h-1 rounded-full bg-border" />
+             <span>Tema: <span className="text-foreground">{previewTheme.name}</span></span>
+           </div>
+         </div>
         )}
       </div>
     </div>
