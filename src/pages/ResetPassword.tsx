@@ -1,4 +1,7 @@
 import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,12 +11,24 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Lock } from "lucide-react";
 
+const resetSchema = z.object({
+  password: z.string().min(8, "Mínimo 8 caracteres").max(128, "Máximo 128 caracteres"),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "As senhas não coincidem",
+  path: ["confirmPassword"],
+});
+
+type ResetFormData = z.infer<typeof resetSchema>;
+
 const ResetPassword = () => {
   const navigate = useNavigate();
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [isRecovery, setIsRecovery] = useState(false);
+
+  const { register, handleSubmit, formState: { errors } } = useForm<ResetFormData>({
+    resolver: zodResolver(resetSchema),
+  });
 
   useEffect(() => {
     const hash = window.location.hash;
@@ -27,18 +42,9 @@ const ResetPassword = () => {
     });
   }, []);
 
-  const handleReset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password.length < 6) {
-      toast.error("A senha precisa ter pelo menos 6 caracteres.");
-      return;
-    }
-    if (password !== confirmPassword) {
-      toast.error("As senhas não coincidem.");
-      return;
-    }
+  const onSubmit = async (data: ResetFormData) => {
     setLoading(true);
-    const { error } = await supabase.auth.updateUser({ password });
+    const { error } = await supabase.auth.updateUser({ password: data.password });
     setLoading(false);
     if (error) {
       toast.error(error.message || "Erro ao redefinir senha.");
@@ -73,28 +79,26 @@ const ResetPassword = () => {
         </h1>
         <h3 className="text-2xl font-display font-semibold text-foreground mb-2">Nova senha</h3>
         <p className="text-muted-foreground font-body mb-8">Escolha uma nova senha para sua conta.</p>
-        <form onSubmit={handleReset} className="space-y-5">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div className="space-y-2">
             <Label className="font-body">Nova senha</Label>
             <Input
               type="password"
-              placeholder="Mínimo 6 caracteres"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Mínimo 8 caracteres"
+              {...register("password")}
               className="rounded-xl h-12"
-              required
             />
+            {errors.password && <p className="text-xs text-destructive mt-1">{errors.password.message}</p>}
           </div>
           <div className="space-y-2">
             <Label className="font-body">Confirmar senha</Label>
             <Input
               type="password"
               placeholder="Repita a senha"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              {...register("confirmPassword")}
               className="rounded-xl h-12"
-              required
             />
+            {errors.confirmPassword && <p className="text-xs text-destructive mt-1">{errors.confirmPassword.message}</p>}
           </div>
           <Button type="submit" variant="hero" size="lg" className="w-full" disabled={loading}>
             {loading ? "Salvando..." : "Salvar nova senha"}
