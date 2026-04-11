@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,8 +10,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Instagram, Youtube, X, Plus, Sparkles } from "lucide-react";
+import { ArrowRight, Instagram, Youtube, X, Plus } from "lucide-react";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
+import { sanitizeText } from "@/lib/sanitize";
 
 const NICHE_SUGGESTIONS = [
   "Lifestyle", "Moda", "Beleza", "Fitness", "Culinária",
@@ -35,17 +39,34 @@ const PILLAR_PRESETS: Record<string, string[]> = {
   default: ["Conteúdo pessoal", "Dicas e valor", "Bastidores", "Entretenimento", "Tendências"],
 };
 
+const onboardingSchema = z.object({
+  name: z.string().min(1, "Nome é obrigatório").max(100, "Máximo 100 caracteres"),
+  niche: z.string().min(1, "Nicho é obrigatório").max(100, "Máximo 100 caracteres"),
+});
+
+type OnboardingFormData = z.infer<typeof onboardingSchema>;
+
 const Onboarding = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { updateProfile } = useProfile();
   const [step, setStep] = useState(0);
-  const [name, setName] = useState("");
-  const [niche, setNiche] = useState("");
+  
+  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<OnboardingFormData>({
+    resolver: zodResolver(onboardingSchema),
+    defaultValues: {
+      name: "",
+      niche: "",
+    }
+  });
+
   const [platforms, setPlatforms] = useState<string[]>([]);
   const [weeklyGoal, setWeeklyGoal] = useState(3);
   const [pillars, setPillars] = useState<{ name: string; color: string }[]>([]);
   const [customPillar, setCustomPillar] = useState("");
+
+  const nameValue = watch("name");
+  const nicheValue = watch("niche");
 
   const goalLabels: Record<number, string> = {
     1: "Tranquilo e consistente 🌱",
@@ -69,8 +90,9 @@ const Onboarding = () => {
   };
 
   const addCustomPillar = () => {
-    if (!customPillar.trim() || pillars.length >= 5) return;
-    setPillars(prev => [...prev, { name: customPillar.trim(), color: PILLAR_COLORS[prev.length % PILLAR_COLORS.length] }]);
+    const sanitized = sanitizeText(customPillar);
+    if (!sanitized || pillars.length >= 5) return;
+    setPillars(prev => [...prev, { name: sanitized, color: PILLAR_COLORS[prev.length % PILLAR_COLORS.length] }]);
     setCustomPillar("");
   };
 
@@ -80,9 +102,13 @@ const Onboarding = () => {
 
   const finishOnboarding = async () => {
     if (!user) return;
+    
+    const sanitizedName = sanitizeText(nameValue);
+    const sanitizedNiche = sanitizeText(nicheValue);
+
     await updateProfile({
-      name,
-      niche,
+      name: sanitizedName,
+      niche: sanitizedNiche,
       platforms,
       weekly_goal: weeklyGoal,
       onboarding_completed: true,
@@ -92,7 +118,7 @@ const Onboarding = () => {
     for (let i = 0; i < pillars.length; i++) {
       await supabase.from("pillars").insert({
         user_id: user.id,
-        name: pillars[i].name,
+        name: sanitizeText(pillars[i].name),
         color: pillars[i].color,
         position: i,
       });
@@ -101,7 +127,7 @@ const Onboarding = () => {
     navigate("/app");
   };
 
-  const presets = PILLAR_PRESETS[niche] || PILLAR_PRESETS.default;
+  const presets = PILLAR_PRESETS[nicheValue] || PILLAR_PRESETS.default;
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
@@ -147,27 +173,28 @@ const Onboarding = () => {
                 <Label className="font-body">Qual é o seu nome?</Label>
                 <Input
                   placeholder="Como quer ser chamada?"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  {...register("name")}
                   className="rounded-xl h-12"
                 />
+                {errors.name && <p className="text-xs text-destructive mt-1">{errors.name.message}</p>}
               </div>
 
               <div className="space-y-3">
                 <Label className="font-body">Qual é o seu nicho?</Label>
                 <Input
                   placeholder="Ex: Moda, Fitness, Educação..."
-                  value={niche}
-                  onChange={(e) => setNiche(e.target.value)}
+                  {...register("niche")}
                   className="rounded-xl h-12"
                 />
+                {errors.niche && <p className="text-xs text-destructive mt-1">{errors.niche.message}</p>}
                 <div className="flex flex-wrap gap-2">
                   {NICHE_SUGGESTIONS.map(n => (
                     <button
                       key={n}
-                      onClick={() => setNiche(n)}
+                      type="button"
+                      onClick={() => setValue("niche", n)}
                       className={`px-3 py-1.5 rounded-xl text-sm font-body transition-colors border ${
-                        niche === n
+                        nicheValue === n
                           ? "bg-primary text-primary-foreground border-primary"
                           : "bg-card border-border text-foreground hover:bg-accent"
                       }`}
@@ -182,7 +209,7 @@ const Onboarding = () => {
                 variant="hero"
                 size="lg"
                 className="w-full"
-                disabled={!name.trim()}
+                disabled={!nameValue.trim() || !nicheValue.trim()}
                 onClick={() => setStep(2)}
               >
                 Continuar <ArrowRight className="ml-2 h-5 w-5" />
@@ -210,6 +237,7 @@ const Onboarding = () => {
                   {PLATFORMS.map(p => (
                     <button
                       key={p.id}
+                      type="button"
                       onClick={() => togglePlatform(p.id)}
                       className={`flex flex-col items-center gap-2 p-5 rounded-2xl border transition-all ${
                         platforms.includes(p.id)
@@ -279,7 +307,7 @@ const Onboarding = () => {
                       style={{ backgroundColor: p.color }}
                     >
                       {p.name}
-                      <button onClick={() => removePillar(i)}>
+                      <button type="button" onClick={() => removePillar(i)}>
                         <X className="h-3.5 w-3.5" />
                       </button>
                     </span>
@@ -289,11 +317,12 @@ const Onboarding = () => {
 
               {/* Presets */}
               <div className="space-y-2">
-                <Label className="font-body text-sm">Sugestões para {niche || "você"}</Label>
+                <Label className="font-body text-sm">Sugestões para {nicheValue || "você"}</Label>
                 <div className="flex flex-wrap gap-2">
                   {presets.map(name => (
                     <button
                       key={name}
+                      type="button"
                       onClick={() => addPresetPillar(name)}
                       disabled={pillars.length >= 5 || !!pillars.find(p => p.name === name)}
                       className="px-3 py-1.5 rounded-xl text-sm font-body bg-card border border-border hover:bg-accent disabled:opacity-40 transition-colors"
@@ -313,7 +342,7 @@ const Onboarding = () => {
                   onKeyDown={(e) => e.key === "Enter" && addCustomPillar()}
                   className="rounded-xl h-10"
                 />
-                <Button variant="outline" size="icon" onClick={addCustomPillar} disabled={pillars.length >= 5}>
+                <Button variant="outline" size="icon" type="button" onClick={addCustomPillar} disabled={pillars.length >= 5}>
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>

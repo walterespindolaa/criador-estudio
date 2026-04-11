@@ -46,8 +46,14 @@ serve(async (req) => {
   }
 
   try {
-    const { userId, operation, data } = await req.json()
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
 
+    const token = authHeader.replace('Bearer ', '')
     const supabaseUrl = Deno.env.get("SUPABASE_URL")
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY")
@@ -60,6 +66,16 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, serviceRoleKey)
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Invalid token' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    const { operation, data } = await req.json()
+    const userId = user.id // use this, ignore userId from body
 
     // Fetch user context
     let userContext = ''
