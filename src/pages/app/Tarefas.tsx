@@ -37,6 +37,12 @@ interface Task {
 interface Post {
   id: string;
   title: string;
+  scheduled_date: string | null;
+  platform: string;
+  format: string;
+  hook: string | null;
+  caption: string | null;
+  user_id: string;
 }
 
 const PRIORITY_BADGES: Record<string, { label: string; class: string }> = {
@@ -64,8 +70,11 @@ const Tarefas = () => {
   const [formTitle, setFormTitle] = useState("");
   const [formDesc, setFormDesc] = useState("");
   const [formPriority, setFormPriority] = useState("media");
+  const [formStatus, setFormStatus] = useState("pendente");
   const [formDueDate, setFormDueDate] = useState<Date | undefined>();
   const [formPostId, setFormPostId] = useState("");
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -106,22 +115,38 @@ const Tarefas = () => {
   };
 
   const openNew = () => {
-    setFormTitle(""); setFormDesc(""); setFormPriority("media"); setFormDueDate(undefined); setFormPostId(""); setSheetOpen(true);
+    setFormTitle("");
+    setFormDesc("");
+    setFormPriority("media");
+    setFormStatus("pendente");
+    setFormDueDate(undefined);
+    setFormPostId("");
+    setSheetOpen(true);
   };
 
   const handleSave = async () => {
-    if (!formTitle.trim() || !user) return;
+    if (!formTitle.trim() || !user) {
+      toast.error("O título é obrigatório");
+      return;
+    }
     const { error } = await supabase.from("tasks").insert({
       user_id: user.id,
       title: formTitle.trim(),
       description: formDesc || null,
       priority: formPriority,
-      due_date: formDueDate ? formDueDate.toISOString().split("T")[0] : null,
+      status: formStatus,
+      due_date: formDueDate ? format(formDueDate, "yyyy-MM-dd") : null,
       post_id: formPostId || null,
     } as any);
-    if (error) { toast.error("Erro ao criar tarefa."); return; }
+    
+    if (error) {
+      toast.error("Erro ao criar tarefa.");
+      return;
+    }
+    
     toast.success("Tarefa criada!");
-    setSheetOpen(false); fetchData();
+    setSheetOpen(false);
+    fetchData();
   };
 
   const toggleComplete = async (task: Task) => {
@@ -162,13 +187,19 @@ const Tarefas = () => {
                 <span className={`text-[10px] font-body flex items-center gap-0.5 ${overdue ? "text-red-600 font-semibold" : "text-muted-foreground"}`}>
                   {overdue && <AlertTriangle className="h-3 w-3" />}
                   <Calendar className="h-3 w-3" />
-                  {task.due_date}
+                  {format(parseISO(task.due_date), "dd/MM")}
                 </span>
               )}
               {linkedPost && (
-                <span className="text-[10px] font-body text-primary flex items-center gap-0.5">
+                <button
+                  onClick={() => {
+                    setSelectedPost(linkedPost);
+                    setPreviewOpen(true);
+                  }}
+                  className="text-[10px] font-body text-primary flex items-center gap-0.5 hover:underline decoration-primary"
+                >
                   <Link2 className="h-3 w-3" /> {linkedPost.title}
-                </span>
+                </button>
               )}
             </div>
           </div>
@@ -179,7 +210,7 @@ const Tarefas = () => {
               </button>
             )}
             <button onClick={() => deleteTask(task.id)} className="p-1 hover:bg-destructive/10 rounded-lg">
-              <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
+              <Trash2 className="h-3.5 w-3.5 text-destructive" />
             </button>
           </div>
         </div>
