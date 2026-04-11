@@ -310,8 +310,19 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
             {ytTab === "thumbnail" ? (
               <div className="p-3 bg-card">
                 <div className="relative rounded-xl overflow-hidden aspect-video mb-3">
-                  {mediaUrl ? (
-                    <img src={mediaUrl} alt="thumbnail" className="w-full h-full object-cover" />
+                  {activeMediaUrl ? (
+                    mediaType === "video" ? (
+                      <video
+                        src={activeMediaUrl}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <img src={activeMediaUrl} alt="thumbnail" className="w-full h-full object-cover" />
+                    )
                   ) : (
                     <GradientPlaceholder>
                       <Play className="h-10 w-10 text-white/30" />
