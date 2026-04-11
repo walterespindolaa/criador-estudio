@@ -32,6 +32,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 import { RoteiroPdfTemplate } from "@/components/pdf/RoteiroPdfTemplate";
 import { usePdfExport } from "@/hooks/usePdfExport";
+import { sanitizeText } from "@/lib/sanitize";
 
 interface Post {
   id: string;
@@ -262,22 +263,22 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
     if (!title.trim()) return;
     const wasPublished = status === "publicado" && post?.status !== "publicado";
     const data: any = {
-      title: title.trim(),
+      title: sanitizeText(title),
       platform,
       format,
       pillar_id: pillarId || null,
       status,
-      hook: hook || null,
-      script: script || null,
-      caption: caption || null,
-      cta: cta || null,
+      hook: hook ? sanitizeText(hook) : null,
+      script: script ? sanitizeText(script) : null,
+      caption: caption ? sanitizeText(caption) : null,
+      cta: cta ? sanitizeText(cta) : null,
       scheduled_date: scheduledDate || null,
       scheduled_time: scheduledTime || null,
-      notes: notes || null,
+      notes: notes ? sanitizeText(notes) : null,
       result_views: views ? parseInt(views) : null,
       result_saves: saves ? parseInt(saves) : null,
       result_comments: comments ? parseInt(comments) : null,
-      sections: JSON.stringify(sections),
+      sections: JSON.stringify(sections.map(s => ({ ...s, text: sanitizeText(s.text), captacao: sanitizeText(s.captacao) }))),
       reference_link: referenceLink || null,
       user_id: userId,
     };
