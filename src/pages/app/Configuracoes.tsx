@@ -247,7 +247,6 @@ const Configuracoes = () => {
                 <Button onClick={saveProfile} variant="hero">Salvar perfil</Button>
               </div>
             </div>
-            </div>
           </TabsContent>
 
           {/* PILARES & HÁBITOS — separate tab */}
@@ -268,7 +267,6 @@ const Configuracoes = () => {
                 <div className="flex gap-2"><Input placeholder="Novo hábito..." value={newHabitName} onChange={(e) => setNewHabitName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addHabit()} className="rounded-xl text-sm" /><Button variant="outline" size="sm" onClick={() => addHabit()}><Plus className="h-4 w-4" /></Button></div>
                 <div className="flex flex-wrap gap-2">{HABIT_SUGGESTIONS.filter(s => !habits.find(h => h.name === s)).map(s => (<button key={s} onClick={() => addHabit(s)} className="px-3 py-1 rounded-xl text-xs font-body bg-muted border border-border hover:bg-accent transition-colors">+ {s}</button>))}</div>
               </div>
-            </div>
             </div>
           </TabsContent>
 
