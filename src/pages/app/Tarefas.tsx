@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, AlertTriangle, Calendar, CheckCircle2, Clock, Link2 } from "lucide-react";
+import { Plus, AlertTriangle, Calendar, CheckCircle2, Clock, Link2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,8 +9,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { PostPreviewModal } from "@/components/kanban/PostPreviewModal";
+import { useProfile } from "@/hooks/useProfile";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
@@ -63,6 +65,7 @@ const FILTERS = [
 
 const Tarefas = () => {
   const { user } = useAuth();
+  const { profile } = useProfile();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [filter, setFilter] = useState("todas");
@@ -82,10 +85,10 @@ const Tarefas = () => {
     if (!user) return;
     const [tasksRes, postsRes] = await Promise.all([
       supabase.from("tasks").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("posts").select("id, title").eq("user_id", user.id).order("created_at", { ascending: false }),
+      supabase.from("posts").select("id, title, scheduled_date, platform, format, hook, caption, user_id").eq("user_id", user.id).order("created_at", { ascending: false }),
     ]);
-    setTasks((tasksRes.data as any[]) || []);
-    setPosts(postsRes.data || []);
+    setTasks((tasksRes.data as Task[]) || []);
+    setPosts((postsRes.data as Post[]) || []);
   };
 
   useEffect(() => { fetchData(); }, [user]);
@@ -271,27 +274,38 @@ const Tarefas = () => {
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent className="bg-background overflow-y-auto">
           <SheetHeader><SheetTitle className="font-display">Nova Tarefa</SheetTitle></SheetHeader>
-          <div className="space-y-5 mt-6">
+          <div className="space-y-5 mt-6 pb-6">
             <div className="space-y-2">
               <Label className="font-body">Título</Label>
               <Input placeholder="O que precisa fazer?" value={formTitle} onChange={e => setFormTitle(e.target.value)} className="rounded-xl" />
             </div>
-            <div className="space-y-2">
-              <Label className="font-body">Descrição</Label>
-              <Textarea placeholder="Detalhes..." value={formDesc} onChange={e => setFormDesc(e.target.value)} className="rounded-xl min-h-[80px]" />
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="font-body">Status</Label>
+                <Select value={formStatus} onValueChange={setFormStatus}>
+                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pendente">Pendente</SelectItem>
+                    <SelectItem value="em_andamento">Em andamento</SelectItem>
+                    <SelectItem value="concluida">Concluída</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="font-body">Prioridade</Label>
+                <Select value={formPriority} onValueChange={setFormPriority}>
+                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="urgente">Urgente</SelectItem>
+                    <SelectItem value="alta">Alta</SelectItem>
+                    <SelectItem value="media">Média</SelectItem>
+                    <SelectItem value="baixa">Baixa</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label className="font-body">Prioridade</Label>
-              <Select value={formPriority} onValueChange={setFormPriority}>
-                <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="urgente">Urgente</SelectItem>
-                  <SelectItem value="alta">Alta</SelectItem>
-                  <SelectItem value="media">Média</SelectItem>
-                  <SelectItem value="baixa">Baixa</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+
             <div className="space-y-2">
               <Label className="font-body">Data de vencimento</Label>
               <Popover>
@@ -306,20 +320,51 @@ const Tarefas = () => {
                 </PopoverContent>
               </Popover>
             </div>
+
             <div className="space-y-2">
               <Label className="font-body">Vincular a post (opcional)</Label>
               <Select value={formPostId} onValueChange={setFormPostId}>
                 <SelectTrigger className="rounded-xl"><SelectValue placeholder="Nenhum" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">Nenhum</SelectItem>
-                  {posts.map(p => <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>)}
+                  {posts.map(p => (
+                    <SelectItem key={p.id} value={p.id}>
+                      <span className="flex items-center gap-2">
+                        {p.title}
+                        {p.scheduled_date && (
+                          <span className="text-[10px] text-muted-foreground">({format(parseISO(p.scheduled_date), "dd/MM")})</span>
+                        )}
+                      </span>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-            <Button variant="hero" className="w-full" onClick={handleSave} disabled={!formTitle.trim()}>Criar tarefa</Button>
+
+            <div className="space-y-2">
+              <Label className="font-body">Notas (opcional)</Label>
+              <Textarea placeholder="Detalhes..." value={formDesc} onChange={e => setFormDesc(e.target.value)} className="rounded-xl min-h-[80px]" />
+            </div>
+
+            <Button variant="hero" className="w-full mt-2" onClick={handleSave} disabled={!formTitle.trim()}>Salvar tarefa</Button>
           </div>
         </SheetContent>
       </Sheet>
+
+      {selectedPost && (
+        <PostPreviewModal
+          open={previewOpen}
+          onOpenChange={setPreviewOpen}
+          title={selectedPost.title}
+          hook={selectedPost.hook || ""}
+          caption={selectedPost.caption || ""}
+          platform={selectedPost.platform}
+          format={selectedPost.format}
+          userName={profile?.full_name || user?.email?.split("@")[0] || "Usuário"}
+          userHandle={profile?.full_name?.toLowerCase().replace(/\s/g, "") || "usuario"}
+          avatarUrl={profile?.avatar_url || null}
+        />
+      )}
     </div>
   );
 };
