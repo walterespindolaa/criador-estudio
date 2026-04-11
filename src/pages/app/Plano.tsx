@@ -402,13 +402,13 @@ const Plano = () => {
 
         <Tabs defaultValue="semana">
           <TabsList className="bg-card border border-border rounded-xl mb-6">
-            <TabsTrigger value="semana" className="rounded-lg font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+            <TabsTrigger value="semana" className="rounded-lg font-medium text-sm data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               <CalendarDays className="h-4 w-4 mr-1.5" /> Semana
             </TabsTrigger>
-            <TabsTrigger value="mes" className="rounded-lg font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+            <TabsTrigger value="mes" className="rounded-lg font-medium text-sm data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               <BarChart3 className="h-4 w-4 mr-1.5" /> Mês
             </TabsTrigger>
-            <TabsTrigger value="metas" className="rounded-lg font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+            <TabsTrigger value="metas" className="rounded-lg font-medium text-sm data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               <Target className="h-4 w-4 mr-1.5" /> Metas
             </TabsTrigger>
           </TabsList>
@@ -461,7 +461,7 @@ const Plano = () => {
                           <p className={`text-xs font-body font-semibold ${isSelected || isToday ? "text-primary" : "text-foreground"}`}>
                             {day.name}
                           </p>
-                          <p className="text-lg font-display font-bold text-foreground">{day.dayNum}</p>
+                          <p className="text-sm font-body font-normal text-foreground">{day.dayNum}</p>
                           {dayPosts.length > 0 && (
                             <div className="flex justify-center gap-0.5 mt-1">
                               {dayPosts.slice(0, 3).map(p => (
@@ -600,7 +600,7 @@ const Plano = () => {
                                 : "hover:bg-accent border border-transparent"
                             }`}
                           >
-                            <span className={`${isToday || isSelected ? "text-primary font-bold" : "text-foreground"}`}>
+                            <span className={`text-sm font-body font-normal ${isToday || isSelected ? "text-primary" : "text-foreground"}`}>
                               {new Date(date + "T12:00:00").getDate()}
                             </span>
                             {dayPosts.length > 0 && (
@@ -645,7 +645,7 @@ const Plano = () => {
                 {/* Month stats */}
                 <Card className="border-border">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-body font-semibold text-foreground">Resumo do mês</CardTitle>
+                    <CardTitle className="text-[15px] font-body font-semibold text-foreground">Resumo do mês</CardTitle>
                   </CardHeader>
                   <CardContent>
                     {(() => {
@@ -679,7 +679,7 @@ const Plano = () => {
                 {/* Reflection */}
                 <Card className="border-border">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-body font-semibold text-foreground flex items-center gap-2">
+                    <CardTitle className="text-[15px] font-body font-semibold text-foreground flex items-center gap-2">
                       <ListChecks className="h-4 w-4 text-primary" /> Reflexão mensal
                     </CardTitle>
                   </CardHeader>
