@@ -913,6 +913,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
           )}=w800`
         : undefined
       }
+      mediaType={mediaList.length > 0 ? (mediaList[0].file_type?.includes("video") ? "video" : "image") : "image"}
       sections={sections}
     />
     <div style={{ position: "fixed", left: "-9999px", top: 0, zIndex: -1 }}>
