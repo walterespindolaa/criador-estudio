@@ -43,17 +43,18 @@ const GoogleIcon = () => (
 const Login = () => {
   const navigate = useNavigate();
   const { signIn } = useAuth();
-  const { register, handleSubmit, formState: { errors }, watch } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-  });
-  const { register: registerForgot, handleSubmit: handleSubmitForgot, formState: { errors: forgotErrors } } = useForm<ForgotFormData>({
-    resolver: zodResolver(forgotSchema),
-  });
-
   const [loading, setLoading] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
+
+  const { register, handleSubmit, formState: { errors }, watch } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+  });
+
+  const { register: registerForgot, handleSubmit: handleSubmitForgot, formState: { errors: forgotErrors } } = useForm<ForgotFormData>({
+    resolver: zodResolver(forgotSchema),
+  });
 
   const emailValue = watch("email");
 
@@ -76,10 +77,9 @@ const Login = () => {
     if (error) toast.error("Erro ao conectar com Google.");
   };
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmitForgot = async (data: ForgotFormData) => {
     setForgotLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+    const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
     setForgotLoading(false);
@@ -106,7 +106,6 @@ const Login = () => {
           <h3 className="text-2xl font-display font-semibold text-foreground mb-2">Entrar</h3>
           <p className="text-muted-foreground font-body mb-8">Acesse seu estúdio criativo</p>
 
-          {/* Google OAuth */}
           <Button
             type="button"
             variant="outline"
@@ -125,23 +124,25 @@ const Login = () => {
             </div>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={handleSubmit(onSubmitLogin)} className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="email" className="font-body">E-mail</Label>
-              <Input id="email" type="email" placeholder="seu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="rounded-xl h-12" required />
+              <Input id="email" type="email" placeholder="seu@email.com" {...register("email")} className="rounded-xl h-12" />
+              {errors.email && <p className="text-xs text-destructive mt-1">{errors.email.message}</p>}
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password" className="font-body">Senha</Label>
                 <button
                   type="button"
-                  onClick={() => { setForgotOpen(true); setForgotEmail(email); setForgotSent(false); }}
+                  onClick={() => { setForgotOpen(true); setForgotSent(false); }}
                   className="text-xs text-primary font-body hover:underline"
                 >
                   Esqueci minha senha
                 </button>
               </div>
-              <Input id="password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="rounded-xl h-12" required />
+              <Input id="password" type="password" placeholder="••••••••" {...register("password")} className="rounded-xl h-12" />
+              {errors.password && <p className="text-xs text-destructive mt-1">{errors.password.message}</p>}
             </div>
             <Button type="submit" variant="hero" size="lg" className="w-full" disabled={loading}>
               {loading ? "Entrando..." : "Entrar"}
@@ -154,7 +155,6 @@ const Login = () => {
         </motion.div>
       </div>
 
-      {/* Forgot Password Dialog */}
       <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -167,15 +167,17 @@ const Login = () => {
             </DialogDescription>
           </DialogHeader>
           {!forgotSent ? (
-            <form onSubmit={handleForgotPassword} className="space-y-4">
-              <Input
-                type="email"
-                placeholder="seu@email.com"
-                value={forgotEmail}
-                onChange={(e) => setForgotEmail(e.target.value)}
-                className="rounded-xl"
-                required
-              />
+            <form onSubmit={handleSubmitForgot(onSubmitForgot)} className="space-y-4">
+              <div>
+                <Input
+                  type="email"
+                  placeholder="seu@email.com"
+                  defaultValue={emailValue}
+                  {...registerForgot("email")}
+                  className="rounded-xl"
+                />
+                {forgotErrors.email && <p className="text-xs text-destructive mt-1">{forgotErrors.email.message}</p>}
+              </div>
               <Button type="submit" variant="hero" className="w-full" disabled={forgotLoading}>
                 <Mail className="h-4 w-4 mr-2" />
                 {forgotLoading ? "Enviando..." : "Enviar link"}
