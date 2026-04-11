@@ -45,6 +45,7 @@ interface Post {
   hook: string | null;
   caption: string | null;
   user_id: string;
+  created_at?: string;
 }
 
 const PRIORITY_BADGES: Record<string, { label: string; class: string }> = {
