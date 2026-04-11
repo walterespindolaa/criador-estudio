@@ -246,7 +246,6 @@ const Configuracoes = () => {
                 </div>
                 <Button onClick={saveProfile} variant="hero">Salvar perfil</Button>
               </div>
-              </div>
             </div>
           </TabsContent>
 
@@ -268,7 +267,6 @@ const Configuracoes = () => {
                 <div className="flex gap-2"><Input placeholder="Novo hábito..." value={newHabitName} onChange={(e) => setNewHabitName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addHabit()} className="rounded-xl text-sm" /><Button variant="outline" size="sm" onClick={() => addHabit()}><Plus className="h-4 w-4" /></Button></div>
                 <div className="flex flex-wrap gap-2">{HABIT_SUGGESTIONS.filter(s => !habits.find(h => h.name === s)).map(s => (<button key={s} onClick={() => addHabit(s)} className="px-3 py-1 rounded-xl text-xs font-body bg-muted border border-border hover:bg-accent transition-colors">+ {s}</button>))}</div>
               </div>
-              </div>
             </div>
           </TabsContent>
 
@@ -282,7 +280,6 @@ const Configuracoes = () => {
 
           {/* NOTIFICAÇÕES */}
           <TabsContent value="notificacoes">
-            <div className="max-w-2xl space-y-6">
             <div className="max-w-2xl space-y-6">
               <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-5">
               <h3 className="font-display font-semibold text-foreground flex items-center gap-2"><Bell className="h-4 w-4" /> Notificações</h3>
@@ -316,8 +313,7 @@ const Configuracoes = () => {
                 ))}
               </div>
               </div>
-            </div>
-          </TabsContent>
+            </TabsContent>
 
           {/* SEGURANÇA */}
           <TabsContent value="seguranca">
@@ -339,7 +335,6 @@ const Configuracoes = () => {
                   <Button variant="outline" onClick={() => setLogoutOpen(true)}><LogOut className="h-4 w-4 mr-2" /> Sair</Button>
                   <Button variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => setDeleteOpen(true)}><AlertTriangle className="h-4 w-4 mr-2" /> Excluir conta</Button>
                 </div>
-              </div>
               </div>
             </div>
           </TabsContent>
@@ -409,7 +404,6 @@ const Configuracoes = () => {
                   ))}
                 </div>
               </div>
-              </div>
             </div>
           </TabsContent>
 
@@ -446,7 +440,6 @@ const Configuracoes = () => {
                   <Button variant="outline">Gerenciar assinatura</Button>
                 </div>
               )}
-              </div>
             </div>
           </TabsContent>
             </div>
