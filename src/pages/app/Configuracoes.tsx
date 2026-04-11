@@ -280,7 +280,8 @@ const Configuracoes = () => {
 
           {/* NOTIFICAÇÕES */}
           <TabsContent value="notificacoes">
-            <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-5">
+            <div className="max-w-2xl space-y-6">
+              <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-5">
               <h3 className="font-display font-semibold text-foreground flex items-center gap-2"><Bell className="h-4 w-4" /> Notificações</h3>
               <div className="space-y-4">
                 <div className="flex items-center justify-between"><div><p className="font-body text-sm text-foreground">Notificações no app</p><p className="text-xs text-muted-foreground font-body">Receba alertas dentro do app</p></div><Switch checked={notifApp} onCheckedChange={setNotifApp} /></div>
@@ -316,7 +317,7 @@ const Configuracoes = () => {
 
           {/* SEGURANÇA */}
           <TabsContent value="seguranca">
-            <div className="space-y-6">
+            <div className="max-w-2xl space-y-6">
               <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
                 <h3 className="font-display font-semibold text-foreground flex items-center gap-2"><Shield className="h-4 w-4" /> Segurança</h3>
                 <div className="space-y-2"><Label className="font-body text-sm">E-mail</Label><Input value={user?.email || ""} readOnly className="rounded-xl bg-muted" /></div>
@@ -340,7 +341,7 @@ const Configuracoes = () => {
 
           {/* INTEGRAÇÕES */}
           <TabsContent value="integracoes">
-            <div className="space-y-6">
+            <div className="max-w-2xl space-y-6">
               {/* Google Drive */}
               <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
                 <div className="flex items-center gap-3">
@@ -408,7 +409,7 @@ const Configuracoes = () => {
 
           {/* ASSINATURA */}
           <TabsContent value="assinatura">
-            <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
+            <div className="max-w-2xl bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
               <h3 className="font-display font-semibold text-foreground flex items-center gap-2"><CreditCard className="h-4 w-4" /> Assinatura</h3>
               <div className="flex items-center gap-2">
                 <span className={`px-3 py-1 rounded-full text-xs font-body font-semibold ${profile?.plan === "pro" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
