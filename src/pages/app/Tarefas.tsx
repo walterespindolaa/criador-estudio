@@ -199,7 +199,7 @@ const Tarefas = () => {
                     setSelectedPost(linkedPost);
                     setPreviewOpen(true);
                   }}
-                  className="text-[10px] font-body text-primary flex items-center gap-0.5 hover:underline decoration-primary"
+                  className="text-[10px] font-body text-primary flex items-center gap-0.5 hover:underline decoration-primary text-left"
                 >
                   <Link2 className="h-3 w-3" /> {linkedPost.title}
                 </button>
@@ -360,8 +360,8 @@ const Tarefas = () => {
           caption={selectedPost.caption || ""}
           platform={selectedPost.platform}
           format={selectedPost.format}
-          userName={profile?.full_name || user?.email?.split("@")[0] || "Usuário"}
-          userHandle={profile?.full_name?.toLowerCase().replace(/\s/g, "") || "usuario"}
+          userName={profile?.name || user?.email?.split("@")[0] || "Usuário"}
+          userHandle={profile?.name?.toLowerCase().replace(/\s/g, "") || "usuario"}
           avatarUrl={profile?.avatar_url || null}
         />
       )}
