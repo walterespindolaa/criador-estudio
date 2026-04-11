@@ -9,7 +9,7 @@ interface InfoTooltipProps {
 
 export function InfoTooltip({ text, side = "top", className = "" }: InfoTooltipProps) {
   return (
-    <TooltipProvider delayDuration={100} skipDelayDuration={0}>
+    <TooltipProvider delayDuration={0} skipDelayDuration={0}>
       <Tooltip>
         <TooltipTrigger asChild>
           <button
