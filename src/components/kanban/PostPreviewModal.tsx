@@ -24,6 +24,9 @@ interface PostPreviewProps {
   avatarUrl: string | null;
   mediaUrl?: string;
   mediaType?: string;
+  media?: string;
+  thumbnail?: string;
+  coverImage?: string;
   sections?: SectionData[];
 }
 
