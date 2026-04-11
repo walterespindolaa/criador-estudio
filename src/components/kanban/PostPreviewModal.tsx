@@ -144,7 +144,18 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
           style={{ aspectRatio: "9/16", borderRadius: 28, boxShadow: "0 20px 60px rgba(0,0,0,0.35)" }}>
           {/* Background media or gradient */}
           {mediaUrl ? (
-            <img src={mediaUrl} alt="preview" className="absolute inset-0 w-full h-full object-cover" />
+            mediaType === "video" ? (
+              <video
+                src={mediaUrl}
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : (
+              <img src={mediaUrl} alt="preview" className="absolute inset-0 w-full h-full object-cover" />
+            )
           ) : (
             <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)" }} />
           )}
