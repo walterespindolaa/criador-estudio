@@ -219,11 +219,11 @@ const Configuracoes = () => {
             </TabsList>
           </div>
 
-            <div className="max-w-2xl">
+            <div className="w-full">
 
           {/* PERFIL — only profile info, no pillars/habits */}
           <TabsContent value="perfil">
-            <div className="space-y-6">
+            <div className="max-w-2xl space-y-6">
               <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-5">
                 <h3 className="font-display font-semibold text-foreground">Meu Perfil</h3>
                 <div className="flex items-center gap-4">
@@ -251,7 +251,7 @@ const Configuracoes = () => {
 
           {/* PILARES & HÁBITOS — separate tab */}
           <TabsContent value="pilares">
-            <div className="space-y-6">
+            <div className="max-w-2xl space-y-6">
               {/* Pillars */}
               <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
                 <h3 className="font-display font-semibold text-foreground">Pilares de Conteúdo <InfoTooltip text="Pilares são os grandes temas do seu conteúdo (ex: Rotina, Viagens). Use até 5 para acompanhar o equilíbrio." /></h3>
