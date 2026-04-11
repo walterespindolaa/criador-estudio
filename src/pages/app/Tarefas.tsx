@@ -270,85 +270,122 @@ const Tarefas = () => {
       </motion.div>
 
       {/* New task sheet */}
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent className="bg-background overflow-y-auto">
-          <SheetHeader><SheetTitle className="font-display">Nova Tarefa</SheetTitle></SheetHeader>
-          <div className="space-y-5 mt-6 pb-6">
-            <div className="space-y-2">
-              <Label className="font-body">Título</Label>
-              <Input placeholder="O que precisa fazer?" value={formTitle} onChange={e => setFormTitle(e.target.value)} className="rounded-xl" />
+      {/* Novo Modal Inline (Correção solicitada) */}
+      {isNewTaskOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm"
+          onClick={() => setIsNewTaskOpen(false)}
+        >
+          <div 
+            className="bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200"
+            onClick={e => e.stopPropagation()}
+          >
+            <h2 className="text-xl font-display font-bold mb-4 text-foreground">Nova Tarefa</h2>
+            
+            {/* Título */}
+            <div className="mb-4">
+              <label className="block text-sm font-body font-medium mb-1.5 text-foreground">Título *</label>
+              <input
+                type="text"
+                autoFocus
+                value={newTask.title}
+                onChange={e => setNewTask({...newTask, title: e.target.value})}
+                placeholder="O que precisa ser feito?"
+                className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+              />
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="font-body">Status</Label>
-                <Select value={formStatus} onValueChange={setFormStatus}>
-                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pendente">Pendente</SelectItem>
-                    <SelectItem value="em_andamento">Em andamento</SelectItem>
-                    <SelectItem value="concluida">Concluída</SelectItem>
-                  </SelectContent>
-                </Select>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              {/* Status */}
+              <div>
+                <label className="block text-sm font-body font-medium mb-1.5 text-foreground">Status</label>
+                <select
+                  value={newTask.status}
+                  onChange={e => setNewTask({...newTask, status: e.target.value})}
+                  className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                >
+                  <option value="pendente">Pendente</option>
+                  <option value="em_andamento">Em andamento</option>
+                  <option value="concluida">Concluída</option>
+                </select>
               </div>
-              <div className="space-y-2">
-                <Label className="font-body">Prioridade</Label>
-                <Select value={formPriority} onValueChange={setFormPriority}>
-                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="urgente">Urgente</SelectItem>
-                    <SelectItem value="alta">Alta</SelectItem>
-                    <SelectItem value="media">Média</SelectItem>
-                    <SelectItem value="baixa">Baixa</SelectItem>
-                  </SelectContent>
-                </Select>
+              
+              {/* Prioridade */}
+              <div>
+                <label className="block text-sm font-body font-medium mb-1.5 text-foreground">Prioridade</label>
+                <select
+                  value={newTask.priority}
+                  onChange={e => setNewTask({...newTask, priority: e.target.value})}
+                  className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                >
+                  <option value="media">Normal</option>
+                  <option value="urgente">Urgente</option>
+                  <option value="alta">Alta</option>
+                  <option value="baixa">Baixa</option>
+                </select>
               </div>
             </div>
-
-            <div className="space-y-2">
-              <Label className="font-body">Data de vencimento</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-full justify-start text-left font-normal rounded-xl", !formDueDate && "text-muted-foreground")}>
-                    <Calendar className="mr-2 h-4 w-4" />
-                    {formDueDate ? format(formDueDate, "PPP", { locale: ptBR }) : "Selecionar data"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComp mode="single" selected={formDueDate} onSelect={setFormDueDate} initialFocus className={cn("p-3 pointer-events-auto")} />
-                </PopoverContent>
-              </Popover>
+            
+            {/* Data */}
+            <div className="mb-4">
+              <label className="block text-sm font-body font-medium mb-1.5 text-foreground">Data de vencimento</label>
+              <input
+                type="date"
+                value={newTask.due_date}
+                onChange={e => setNewTask({...newTask, due_date: e.target.value})}
+                className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+              />
             </div>
-
-            <div className="space-y-2">
-              <Label className="font-body">Vincular a post (opcional)</Label>
-              <Select value={formPostId} onValueChange={setFormPostId}>
-                <SelectTrigger className="rounded-xl"><SelectValue placeholder="Nenhum" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
-                  {posts.map(p => (
-                    <SelectItem key={p.id} value={p.id}>
-                      <span className="flex items-center gap-2">
-                        {p.title}
-                        {p.scheduled_date && (
-                          <span className="text-[10px] text-muted-foreground">({format(parseISO(p.scheduled_date), "dd/MM")})</span>
-                        )}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            
+            {/* Post associado */}
+            <div className="mb-4">
+              <label className="block text-sm font-body font-medium mb-1.5 text-foreground">Post associado (opcional)</label>
+              <select
+                value={newTask.post_id || ''}
+                onChange={e => setNewTask({...newTask, post_id: e.target.value || null})}
+                className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+              >
+                <option value="">Nenhum</option>
+                {posts?.map(post => (
+                  <option key={post.id} value={post.id}>
+                    {post.title} — {post.scheduled_date || post.created_at?.slice(0,10)}
+                  </option>
+                ))}
+              </select>
             </div>
-
-            <div className="space-y-2">
-              <Label className="font-body">Notas (opcional)</Label>
-              <Textarea placeholder="Detalhes..." value={formDesc} onChange={e => setFormDesc(e.target.value)} className="rounded-xl min-h-[80px]" />
+            
+            {/* Notas */}
+            <div className="mb-6">
+              <label className="block text-sm font-body font-medium mb-1.5 text-foreground">Notas</label>
+              <textarea
+                value={newTask.notes}
+                onChange={e => setNewTask({...newTask, notes: e.target.value})}
+                placeholder="Observações importantes..."
+                rows={3}
+                className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-primary/20 outline-none"
+              />
             </div>
-
-            <Button variant="hero" className="w-full mt-2" onClick={handleSave} disabled={!formTitle.trim()}>Salvar tarefa</Button>
+            
+            {/* Botões */}
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setIsNewTaskOpen(false)}
+                className="flex-1 border border-border hover:bg-muted rounded-xl py-2 text-sm font-medium transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl py-2 text-sm font-medium transition-colors shadow-lg"
+              >
+                Salvar tarefa
+              </button>
+            </div>
           </div>
-        </SheetContent>
-      </Sheet>
+        </div>
+      )}
 
       {selectedPost && (
         <PostPreviewModal
