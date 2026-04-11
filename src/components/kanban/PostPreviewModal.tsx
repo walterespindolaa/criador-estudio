@@ -30,7 +30,7 @@ interface PostPreviewProps {
   sections?: SectionData[];
 }
 
-export function PostPreviewModal({ open, onOpenChange, title, hook, caption, platform, format, userName, userHandle, avatarUrl, mediaUrl, mediaType, sections }: PostPreviewProps) {
+export function PostPreviewModal({ open, onOpenChange, title, hook, caption, platform, format, userName, userHandle, avatarUrl, mediaUrl, mediaType, media, thumbnail, coverImage, sections }: PostPreviewProps) {
   const initials = (userName || "C")[0].toUpperCase();
   const [igTab, setIgTab] = useState<"feed" | "reels">("feed");
   const [ytTab, setYtTab] = useState<"thumbnail" | "shorts">("thumbnail");
