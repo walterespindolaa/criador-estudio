@@ -56,6 +56,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
   const currentCarouselMedia = currentSlide?.driveFileId
     ? `https://lh3.googleusercontent.com/d/${encodeURIComponent(currentSlide.driveFileId)}=w800`
     : null;
+  const isCurrentSlideVideo = false; // We don't have this info easily for slides yet, keeping as image for now
 
   // Gradient placeholder when no media
   const GradientPlaceholder = ({ children, className = "" }: { children?: React.ReactNode; className?: string }) => (
