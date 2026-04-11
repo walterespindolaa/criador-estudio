@@ -88,7 +88,7 @@ const Tarefas = () => {
     if (!user) return;
     const [tasksRes, postsRes] = await Promise.all([
       supabase.from("tasks").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("posts").select("id, title, scheduled_date, platform, format, hook, caption, user_id").eq("user_id", user.id).order("created_at", { ascending: false }),
+      supabase.from("posts").select("id, title, scheduled_date, platform, format, hook, caption, user_id, created_at").eq("user_id", user.id).order("created_at", { ascending: false }),
     ]);
     setTasks((tasksRes.data as Task[]) || []);
     setPosts((postsRes.data as Post[]) || []);
