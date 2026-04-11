@@ -23,14 +23,20 @@ interface PostPreviewProps {
   userHandle: string;
   avatarUrl: string | null;
   mediaUrl?: string;
+  mediaType?: string;
+  media?: string;
+  thumbnail?: string;
+  coverImage?: string;
   sections?: SectionData[];
 }
 
-export function PostPreviewModal({ open, onOpenChange, title, hook, caption, platform, format, userName, userHandle, avatarUrl, mediaUrl, sections }: PostPreviewProps) {
+export function PostPreviewModal({ open, onOpenChange, title, hook, caption, platform, format, userName, userHandle, avatarUrl, mediaUrl, mediaType, media, thumbnail, coverImage, sections }: PostPreviewProps) {
   const initials = (userName || "C")[0].toUpperCase();
   const [igTab, setIgTab] = useState<"feed" | "reels">("feed");
   const [ytTab, setYtTab] = useState<"thumbnail" | "shorts">("thumbnail");
   const [carouselIdx, setCarouselIdx] = useState(0);
+
+  const activeMediaUrl = mediaUrl || media || thumbnail || coverImage;
 
   useEffect(() => { if (open) setCarouselIdx(0); }, [open, format]);
 
@@ -55,6 +61,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
   const currentCarouselMedia = currentSlide?.driveFileId
     ? `https://lh3.googleusercontent.com/d/${encodeURIComponent(currentSlide.driveFileId)}=w800`
     : null;
+  const isCurrentSlideVideo = false; // We don't have this info easily for slides yet, keeping as image for now
 
   // Gradient placeholder when no media
   const GradientPlaceholder = ({ children, className = "" }: { children?: React.ReactNode; className?: string }) => (
@@ -110,8 +117,19 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
 
     return (
       <div className="relative w-full aspect-[4/5] overflow-hidden">
-        {mediaUrl ? (
-          <img src={mediaUrl} alt="preview" className="w-full h-full object-cover" />
+        {activeMediaUrl ? (
+          mediaType === "video" ? (
+            <video
+              src={activeMediaUrl}
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <img src={activeMediaUrl} alt="preview" className="w-full h-full object-cover" />
+          )
         ) : (
           <GradientPlaceholder>
             {hook && <p className="text-white/70 text-xs font-semibold text-center px-6 max-w-[220px]">"{hook}"</p>}
@@ -131,8 +149,19 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
         <div className="relative overflow-hidden w-full max-w-[260px]"
           style={{ aspectRatio: "9/16", borderRadius: 28, boxShadow: "0 20px 60px rgba(0,0,0,0.35)" }}>
           {/* Background media or gradient */}
-          {mediaUrl ? (
-            <img src={mediaUrl} alt="preview" className="absolute inset-0 w-full h-full object-cover" />
+          {activeMediaUrl ? (
+            mediaType === "video" ? (
+              <video
+                src={activeMediaUrl}
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : (
+              <img src={activeMediaUrl} alt="preview" className="absolute inset-0 w-full h-full object-cover" />
+            )
           ) : (
             <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)" }} />
           )}
@@ -281,8 +310,19 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
             {ytTab === "thumbnail" ? (
               <div className="p-3 bg-card">
                 <div className="relative rounded-xl overflow-hidden aspect-video mb-3">
-                  {mediaUrl ? (
-                    <img src={mediaUrl} alt="thumbnail" className="w-full h-full object-cover" />
+                  {activeMediaUrl ? (
+                    mediaType === "video" ? (
+                      <video
+                        src={activeMediaUrl}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <img src={activeMediaUrl} alt="thumbnail" className="w-full h-full object-cover" />
+                    )
                   ) : (
                     <GradientPlaceholder>
                       <Play className="h-10 w-10 text-white/30" />

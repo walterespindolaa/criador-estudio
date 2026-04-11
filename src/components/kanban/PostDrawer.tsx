@@ -908,11 +908,12 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       userHandle={profile?.instagram_handle || profile?.tiktok_handle || "usuario"}
       avatarUrl={profile?.avatar_url || null}
       mediaUrl={mediaList.length > 0
-        ? `https://lh3.googleusercontent.com/d/${encodeURIComponent(
-            mediaList[0].external_file_id || mediaList[0].id
-          )}=w800`
+        ? (mediaList[0].file_type?.includes("video")
+            ? `https://drive.google.com/uc?id=${encodeURIComponent(mediaList[0].external_file_id || mediaList[0].id)}`
+            : `https://lh3.googleusercontent.com/d/${encodeURIComponent(mediaList[0].external_file_id || mediaList[0].id)}=w800`)
         : undefined
       }
+      mediaType={mediaList.length > 0 ? (mediaList[0].file_type?.includes("video") ? "video" : "image") : "image"}
       sections={sections}
     />
     <div style={{ position: "fixed", left: "-9999px", top: 0, zIndex: -1 }}>
