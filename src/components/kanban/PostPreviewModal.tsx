@@ -23,6 +23,7 @@ interface PostPreviewProps {
   userHandle: string;
   avatarUrl: string | null;
   mediaUrl?: string;
+  mediaType?: string;
   sections?: SectionData[];
 }
 
