@@ -312,8 +312,8 @@ const Configuracoes = () => {
                   </button>
                 ))}
               </div>
-            </div>
-          </TabsContent>
+              </div>
+            </TabsContent>
 
           {/* SEGURANÇA */}
           <TabsContent value="seguranca">
