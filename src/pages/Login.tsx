@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +19,18 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 
+const loginSchema = z.object({
+  email: z.string().email("Email inválido"),
+  password: z.string().min(8, "Mínimo 8 caracteres").max(128, "Máximo 128 caracteres"),
+});
+
+const forgotSchema = z.object({
+  email: z.string().email("Email inválido"),
+});
+
+type LoginFormData = z.infer<typeof loginSchema>;
+type ForgotFormData = z.infer<typeof forgotSchema>;
+
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24">
     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
@@ -28,18 +43,23 @@ const GoogleIcon = () => (
 const Login = () => {
   const navigate = useNavigate();
   const { signIn } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { register, handleSubmit, formState: { errors }, watch } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+  });
+  const { register: registerForgot, handleSubmit: handleSubmitForgot, formState: { errors: forgotErrors } } = useForm<ForgotFormData>({
+    resolver: zodResolver(forgotSchema),
+  });
+
   const [loading, setLoading] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const emailValue = watch("email");
+
+  const onSubmitLogin = async (data: LoginFormData) => {
     setLoading(true);
-    const { error } = await signIn(email, password);
+    const { error } = await signIn(data.email, data.password);
     setLoading(false);
     if (error) {
       toast.error("E-mail ou senha incorretos.");
