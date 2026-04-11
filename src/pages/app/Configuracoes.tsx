@@ -1,5 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Plus, Trash2, LogOut, Camera, Lock, AlertTriangle, GripVertical, Sparkles, Bell, Shield, CreditCard, Paintbrush, Moon, Sun, Monitor, HardDrive, ExternalLink, Unplug, User, LayoutGrid, Plug, BookMarked } from "lucide-react";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Button } from "@/components/ui/button";
@@ -20,6 +23,21 @@ import { useGoogleDriveConnection } from "@/hooks/useGoogleDriveConnection";
 import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 import { SettingsVisual } from "@/components/settings/SettingsVisual";
 import { InfoTooltip } from "@/components/shared/InfoTooltip";
+import { sanitizeText, sanitizeUrl } from "@/lib/sanitize";
+
+const profileSchema = z.object({
+  name: z.string().min(1, "Nome é obrigatório").max(100, "Máximo 100 caracteres").trim(),
+  bio: z.string().max(160, "Máximo 160 caracteres").optional(),
+  niche: z.string().min(1, "Nicho é obrigatório").max(100, "Máximo 100 caracteres").trim(),
+  weekly_goal: z.number().min(1).max(7),
+  platforms: z.array(z.string()),
+  instagram_handle: z.string().max(100).optional().or(z.literal("")),
+  tiktok_handle: z.string().max(100).optional().or(z.literal("")),
+  youtube_handle: z.string().max(100).optional().or(z.literal("")),
+  avatar_url: z.string().url().optional().or(z.literal("")),
+});
+
+type ProfileFormData = z.infer<typeof profileSchema>;
 
 interface Pillar { id: string; name: string; color: string; }
 interface Habit { id: string; name: string; position: number; }
@@ -39,15 +57,10 @@ const Configuracoes = () => {
   const [pillars, setPillars] = useState<Pillar[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
   
-  const [name, setName] = useState("");
-  const [bio, setBio] = useState("");
-  const [niche, setNiche] = useState("");
-  const [weeklyGoal, setWeeklyGoal] = useState(3);
-  const [platforms, setPlatforms] = useState<string[]>([]);
-  const [igHandle, setIgHandle] = useState("");
-  const [ttHandle, setTtHandle] = useState("");
-  const [ytHandle, setYtHandle] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const { register, handleSubmit, setValue, watch, formState: { errors }, reset } = useForm<ProfileFormData>({
+    resolver: zodResolver(profileSchema),
+  });
+
   const [newPillarName, setNewPillarName] = useState("");
   const [newPillarColor, setNewPillarColor] = useState(PILLAR_COLORS[0]);
   const [newHabitName, setNewHabitName] = useState("");
@@ -73,17 +86,19 @@ const Configuracoes = () => {
 
   useEffect(() => {
     if (profile) {
-      setName(profile.name);
-      setBio(profile.bio || "");
-      setNiche(profile.niche || "");
-      setWeeklyGoal(profile.weekly_goal || 3);
-      setPlatforms(profile.platforms || []);
-      setIgHandle(profile.instagram_handle || "");
-      setTtHandle(profile.tiktok_handle || "");
-      setYtHandle(profile.youtube_handle || "");
-      setAvatarUrl(profile.avatar_url || null);
+      reset({
+        name: profile.name,
+        bio: profile.bio || "",
+        niche: profile.niche || "",
+        weekly_goal: profile.weekly_goal || 3,
+        platforms: profile.platforms || [],
+        instagram_handle: profile.instagram_handle || "",
+        tiktok_handle: profile.tiktok_handle || "",
+        youtube_handle: profile.youtube_handle || "",
+        avatar_url: profile.avatar_url || "",
+      });
     }
-  }, [profile]);
+  }, [profile, reset]);
 
   useEffect(() => {
     if (!user) return;
@@ -96,8 +111,17 @@ const Configuracoes = () => {
     });
   }, [user]);
 
-  const saveProfile = async () => {
-    await updateProfile({ name, niche, weekly_goal: weeklyGoal, platforms, bio, instagram_handle: igHandle, tiktok_handle: ttHandle, youtube_handle: ytHandle, avatar_url: avatarUrl } as any);
+  const saveProfile = async (data: ProfileFormData) => {
+    await updateProfile({
+      ...data,
+      name: sanitizeText(data.name),
+      bio: data.bio ? sanitizeText(data.bio) : null,
+      niche: sanitizeText(data.niche),
+      instagram_handle: data.instagram_handle ? sanitizeText(data.instagram_handle) : null,
+      tiktok_handle: data.tiktok_handle ? sanitizeText(data.tiktok_handle) : null,
+      youtube_handle: data.youtube_handle ? sanitizeText(data.youtube_handle) : null,
+      avatar_url: data.avatar_url ? sanitizeUrl(data.avatar_url) : null,
+    } as any);
     toast.success("Perfil atualizado!");
   };
 
@@ -109,11 +133,14 @@ const Configuracoes = () => {
     const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
     if (error) { toast.error("Erro ao enviar imagem."); return; }
     const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
-    setAvatarUrl(urlData.publicUrl + "?t=" + Date.now());
+    setValue("avatar_url", urlData.publicUrl + "?t=" + Date.now());
     toast.success("Avatar atualizado!");
   };
 
-  const togglePlatform = (p: string) => setPlatforms(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
+  const togglePlatform = (p: string) => {
+    const current = watch("platforms");
+    setValue("platforms", current.includes(p) ? current.filter(x => x !== p) : [...current, p]);
+  };
 
   const addPillar = async () => {
     if (!newPillarName.trim() || !user || pillars.length >= 5) return;
