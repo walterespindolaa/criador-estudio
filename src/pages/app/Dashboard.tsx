@@ -203,8 +203,9 @@ const Dashboard = () => {
 
   // ─── Handlers ───
   const handleQuickCapture = async () => {
-    if (!quickIdea.trim() || !user) return;
-    const { error } = await supabase.from("ideas").insert({ user_id: user.id, title: quickIdea.trim() });
+    const sanitized = sanitizeText(quickIdea);
+    if (!sanitized || !user) return;
+    const { error } = await supabase.from("ideas").insert({ user_id: user.id, title: sanitized });
     if (error) { toast.error("Erro ao salvar ideia."); return; }
     toast.success("Ideia capturada!");
     setQuickIdea("");
@@ -224,8 +225,9 @@ const Dashboard = () => {
   };
 
   const addHabit = async () => {
-    if (!newHabitName.trim() || !user) return;
-    const { data, error } = await supabase.from("habits").insert({ user_id: user.id, name: newHabitName.trim(), position: habits.length }).select().single();
+    const sanitized = sanitizeText(newHabitName);
+    if (!sanitized || !user) return;
+    const { data, error } = await supabase.from("habits").insert({ user_id: user.id, name: sanitized, position: habits.length }).select().single();
     if (error) { toast.error("Erro ao adicionar hábito."); return; }
     if (data) setHabits(prev => [...prev, data]);
     setNewHabitName("");
@@ -241,9 +243,10 @@ const Dashboard = () => {
   };
 
   const updateHabit = async (habitId: string) => {
-    if (!editingHabitName.trim()) return;
-    await supabase.from("habits").update({ name: editingHabitName.trim() }).eq("id", habitId);
-    setHabits(prev => prev.map(h => h.id === habitId ? { ...h, name: editingHabitName.trim() } : h));
+    const sanitized = sanitizeText(editingHabitName);
+    if (!sanitized) return;
+    await supabase.from("habits").update({ name: sanitized }).eq("id", habitId);
+    setHabits(prev => prev.map(h => h.id === habitId ? { ...h, name: sanitized } : h));
     setEditingHabitId(null);
     setEditingHabitName("");
   };
