@@ -566,7 +566,7 @@ const Plano = () => {
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMonthDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}>
                           <ChevronLeft className="h-4 w-4" />
                         </Button>
-                        <CardTitle className="text-base font-display font-semibold text-foreground capitalize">
+                        <CardTitle className="text-base font-body font-semibold text-foreground capitalize">
                           {monthDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
                         </CardTitle>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMonthDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))}>
@@ -714,7 +714,7 @@ const Plano = () => {
               {/* Header + Add button */}
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-display font-semibold text-foreground">Minhas Metas <InfoTooltip text="Metas mensais ou de projeto. Adicione marcos para dividir em etapas menores." /></h2>
+                  <h2 className="text-lg font-body font-semibold text-foreground">Minhas Metas <InfoTooltip text="Metas mensais ou de projeto. Adicione marcos para dividir em etapas menores." /></h2>
                   <p className="text-xs text-muted-foreground font-body">Defina objetivos claros e acompanhe seu progresso.</p>
                 </div>
                 <Button onClick={() => setShowNewGoal(true)} className="gap-1.5">
@@ -821,7 +821,7 @@ const Plano = () => {
                               </div>
                             </div>
                             <div className="text-right flex-shrink-0 ml-3">
-                              <p className="text-lg font-display font-bold text-foreground">{progress}%</p>
+                              <p className="text-lg font-body font-bold text-foreground">{progress}%</p>
                               {target > 0 && (
                                 <p className="text-[10px] text-muted-foreground font-body">{current}/{target}</p>
                               )}
