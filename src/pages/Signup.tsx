@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,6 +10,18 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+const signupSchema = z.object({
+  name: z.string().min(1, "Nome é obrigatório").max(100, "Máximo 100 caracteres"),
+  email: z.string().email("Email inválido"),
+  password: z.string().min(8, "Mínimo 8 caracteres").max(128, "Máximo 128 caracteres"),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "As senhas não coincidem",
+  path: ["confirmPassword"],
+});
+
+type SignupFormData = z.infer<typeof signupSchema>;
 
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24">
@@ -20,24 +35,15 @@ const GoogleIcon = () => (
 const Signup = () => {
   const navigate = useNavigate();
   const { signUp } = useAuth();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password.length < 6) {
-      toast.error("A senha precisa ter pelo menos 6 caracteres.");
-      return;
-    }
-    if (password !== confirmPassword) {
-      toast.error("As senhas não coincidem.");
-      return;
-    }
+  const { register, handleSubmit, formState: { errors } } = useForm<SignupFormData>({
+    resolver: zodResolver(signupSchema),
+  });
+
+  const onSubmit = async (data: SignupFormData) => {
     setLoading(true);
-    const { error } = await signUp(email, password, name);
+    const { error } = await signUp(data.email, data.password, data.name);
     setLoading(false);
     if (error) {
       toast.error(error.message || "Erro ao criar conta.");
@@ -88,22 +94,26 @@ const Signup = () => {
             </div>
           </div>
 
-          <form onSubmit={handleSignup} className="space-y-5">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="name" className="font-body">Seu nome</Label>
-              <Input id="name" type="text" placeholder="Como quer ser chamada?" value={name} onChange={(e) => setName(e.target.value)} className="rounded-xl h-12" required />
+              <Input id="name" type="text" placeholder="Como quer ser chamada?" {...register("name")} className="rounded-xl h-12" />
+              {errors.name && <p className="text-xs text-destructive mt-1">{errors.name.message}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="email" className="font-body">E-mail</Label>
-              <Input id="email" type="email" placeholder="seu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="rounded-xl h-12" required />
+              <Input id="email" type="email" placeholder="seu@email.com" {...register("email")} className="rounded-xl h-12" />
+              {errors.email && <p className="text-xs text-destructive mt-1">{errors.email.message}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="password" className="font-body">Senha</Label>
-              <Input id="password" type="password" placeholder="Mínimo 6 caracteres" value={password} onChange={(e) => setPassword(e.target.value)} className="rounded-xl h-12" required />
+              <Input id="password" type="password" placeholder="Mínimo 8 caracteres" {...register("password")} className="rounded-xl h-12" />
+              {errors.password && <p className="text-xs text-destructive mt-1">{errors.password.message}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirmPassword" className="font-body">Confirmar senha</Label>
-              <Input id="confirmPassword" type="password" placeholder="Repita a senha" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="rounded-xl h-12" required />
+              <Input id="confirmPassword" type="password" placeholder="Repita a senha" {...register("confirmPassword")} className="rounded-xl h-12" />
+              {errors.confirmPassword && <p className="text-xs text-destructive mt-1">{errors.confirmPassword.message}</p>}
             </div>
             <Button type="submit" variant="hero" size="lg" className="w-full" disabled={loading}>
               {loading ? "Criando conta..." : "Criar minha conta"}
