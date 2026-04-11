@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { motion } from "framer-motion";
-import { Plus, AlertTriangle, Calendar, CheckCircle2, Clock, Link2, Trash2 } from "lucide-react";
+import { Plus, AlertTriangle, Calendar, CheckCircle2, Clock, Link2, Trash2, Search, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,8 +16,8 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PostPreviewModal } from "@/components/kanban/PostPreviewModal";
 import { useProfile } from "@/hooks/useProfile";
-// ... keep existing code (just cleaning up imports if they are unused)
 import { cn } from "@/lib/utils";
+import { sanitizeText } from "@/lib/sanitize";
 
 interface Task {
   id: string;
@@ -39,6 +42,17 @@ interface Post {
   created_at?: string;
 }
 
+const taskSchema = z.object({
+  title: z.string().min(1, "Título é obrigatório").max(100, "Máximo 100 caracteres").trim(),
+  priority: z.string(),
+  due_date: z.string().optional().or(z.literal("")),
+  status: z.string(),
+  notes: z.string().max(500, "Máximo 500 caracteres").optional().or(z.literal("")),
+  post_id: z.string().optional().nullable(),
+});
+
+type TaskFormData = z.infer<typeof taskSchema>;
+
 const PRIORITY_BADGES: Record<string, { label: string; class: string }> = {
   urgente: { label: "Urgente", class: "bg-red-100 text-red-700" },
   alta: { label: "Alta", class: "bg-orange-100 text-orange-700" },
@@ -62,16 +76,20 @@ const Tarefas = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [filter, setFilter] = useState("todas");
   const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
-  const [newTask, setNewTask] = useState({
-    title: "",
-    status: "pendente",
-    priority: "media",
-    due_date: "",
-    post_id: null as string | null,
-    notes: ""
-  });
   const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<TaskFormData>({
+    resolver: zodResolver(taskSchema),
+    defaultValues: {
+      title: "",
+      priority: "media",
+      due_date: "",
+      status: "pendente",
+      notes: "",
+      post_id: null,
+    }
+  });
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -112,28 +130,24 @@ const Tarefas = () => {
   };
 
   const openNew = () => {
-    setNewTask({ title: '', status: 'pendente', priority: 'media', due_date: '', post_id: null, notes: '' });
+    reset();
     setIsNewTaskOpen(true);
   };
 
-  const handleSave = async () => {
-    if (!newTask.title.trim() || !user) {
-      toast.error("O título é obrigatório");
-      return;
-    }
+  const onSubmit = async (data: TaskFormData) => {
+    if (!user) return;
 
     const { error } = await supabase.from("tasks").insert({
       user_id: user.id,
-      title: newTask.title.trim(),
-      description: newTask.notes || null,
-      priority: newTask.priority,
-      status: newTask.status,
-      due_date: newTask.due_date || null,
-      post_id: newTask.post_id || null,
+      title: sanitizeText(data.title),
+      description: data.notes ? sanitizeText(data.notes) : null,
+      priority: data.priority,
+      status: data.status,
+      due_date: data.due_date || null,
+      post_id: data.post_id || null,
     } as any);
     
     if (error) {
-      console.error("Error saving task:", error);
       toast.error("Erro ao criar tarefa.");
       return;
     }
@@ -149,252 +163,222 @@ const Tarefas = () => {
     setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
   };
 
-  const moveToInProgress = async (taskId: string) => {
-    await supabase.from("tasks").update({ status: "em_andamento" } as any).eq("id", taskId);
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: "em_andamento" } : t));
+  const deleteTask = async (id: string) => {
+    const { error } = await supabase.from("tasks").delete().eq("id", id);
+    if (!error) {
+      toast.success("Tarefa removida.");
+      setTasks(prev => prev.filter(t => t.id !== id));
+    }
   };
 
-  const deleteTask = async (taskId: string) => {
-    await supabase.from("tasks").delete().eq("id", taskId);
-    setTasks(prev => prev.filter(t => t.id !== taskId));
-    toast.success("Tarefa removida.");
+  const handlePostPreview = (postId: string) => {
+    const p = posts.find(post => post.id === postId);
+    if (p) {
+      setSelectedPost(p);
+      setPreviewOpen(true);
+    }
   };
-
-  const isOverdue = (t: Task) => t.due_date && t.due_date < today && t.status !== "concluida";
-
-  const renderTaskCard = (task: Task) => {
-    const priority = PRIORITY_BADGES[task.priority] || PRIORITY_BADGES.media;
-    const overdue = isOverdue(task);
-    const linkedPost = posts.find(p => p.id === task.post_id);
-
-    return (
-      <motion.div key={task.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-        className={`bg-card rounded-xl p-4 border transition-all group ${overdue ? "border-red-300 bg-red-50/30" : "border-border"}`}>
-        <div className="flex items-start gap-3">
-          <Checkbox checked={task.status === "concluida"} onCheckedChange={() => toggleComplete(task)} className="mt-0.5 rounded" />
-          <div className="flex-1 min-w-0">
-            <p className={`font-body font-medium text-sm leading-snug ${task.status === "concluida" ? "line-through text-muted-foreground" : "text-foreground"}`}>{task.title}</p>
-            {task.description && <p className="text-xs text-muted-foreground font-body mt-1 line-clamp-2">{task.description}</p>}
-            <div className="flex items-center gap-1.5 flex-wrap mt-2">
-              <span className={`px-2 py-0.5 rounded-lg text-[10px] font-body font-semibold ${priority.class}`}>{priority.label}</span>
-              {task.due_date && (
-                <span className={`text-[10px] font-body flex items-center gap-0.5 ${overdue ? "text-red-600 font-semibold" : "text-muted-foreground"}`}>
-                  {overdue && <AlertTriangle className="h-3 w-3" />}
-                  <Calendar className="h-3 w-3" />
-                  {format(parseISO(task.due_date), "dd/MM")}
-                </span>
-              )}
-              {linkedPost && (
-                <button
-                  onClick={() => {
-                    setSelectedPost(linkedPost);
-                    setPreviewOpen(true);
-                  }}
-                  className="text-[10px] font-body text-primary flex items-center gap-0.5 hover:underline decoration-primary text-left"
-                >
-                  <Link2 className="h-3 w-3" /> {linkedPost.title}
-                </button>
-              )}
-            </div>
-          </div>
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            {task.status === "pendente" && (
-              <button onClick={() => moveToInProgress(task.id)} className="p-1 hover:bg-accent rounded-lg" title="Em andamento">
-                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-              </button>
-            )}
-            <button onClick={() => deleteTask(task.id)} className="p-1 hover:bg-destructive/10 rounded-lg">
-              <Trash2 className="h-3.5 w-3.5 text-destructive" />
-            </button>
-          </div>
-        </div>
-      </motion.div>
-    );
-  };
-
-  const columnData = [
-    { key: "pendente", label: "Pendentes", icon: Clock, tasks: grouped.pendente },
-    { key: "em_andamento", label: "Em andamento", icon: Calendar, tasks: grouped.em_andamento },
-    { key: "concluida", label: "Concluídas", icon: CheckCircle2, tasks: grouped.concluida },
-  ];
 
   return (
-    <div className="max-w-5xl pb-20 md:pb-0">
+    <div className="pb-20 md:pb-0">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-display font-bold text-foreground">Tarefas</h1>
-            <p className="text-muted-foreground font-body mt-1">Organize sua rotina de criação.</p>
+            <h1 className="text-3xl font-display font-bold text-foreground mb-1">Central de Tarefas</h1>
+            <p className="text-muted-foreground font-body">Tudo o que você precisa executar.</p>
           </div>
-          <Button variant="hero" onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Nova Tarefa</Button>
+          <Button variant="hero" onClick={openNew}><Plus className="h-4 w-4 mr-2" /> Nova Tarefa</Button>
         </div>
 
-        {/* Filters */}
-        <div className="flex gap-2 mb-6 flex-wrap">
+        <div className="flex gap-2 mb-8 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-none">
           {FILTERS.map(f => (
-            <button key={f.key} onClick={() => setFilter(f.key)}
-              className={`px-3 py-1.5 rounded-xl text-sm font-body border transition-colors ${filter === f.key ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"}`}>
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              className={cn(
+                "px-4 py-2 rounded-xl text-sm font-body font-medium transition-all whitespace-nowrap border",
+                filter === f.key ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border hover:text-foreground"
+              )}
+            >
               {f.label}
             </button>
           ))}
         </div>
 
-        {/* 3 columns */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {columnData.map(col => (
-            <div key={col.key}>
-              <div className="flex items-center gap-2 mb-3">
-                <col.icon className="h-4 w-4 text-muted-foreground" />
-                <h3 className="font-body font-semibold text-sm text-foreground">{col.label}</h3>
-                <span className="text-xs text-muted-foreground font-body bg-muted px-1.5 py-0.5 rounded-full">{col.tasks.length}</span>
+          {(["pendente", "em_andamento", "concluida"] as const).map(status => (
+            <div key={status} className="space-y-4">
+              <div className="flex items-center justify-between px-1">
+                <h3 className="font-display font-semibold text-foreground capitalize">
+                  {status.replace("_", " ")}
+                </h3>
+                <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full font-body">
+                  {grouped[status].length}
+                </span>
               </div>
+
               <div className="space-y-3">
-                {col.tasks.map(renderTaskCard)}
-                {col.tasks.length === 0 && (
-                  <div className="border-2 border-dashed border-border rounded-xl p-6 text-center">
-                    <p className="text-xs text-muted-foreground font-body">Nenhuma tarefa</p>
-                  </div>
-                )}
+                {grouped[status].map(task => {
+                  const badge = PRIORITY_BADGES[task.priority] || PRIORITY_BADGES.media;
+                  const isOverdue = task.due_date && task.due_date < today && task.status !== "concluida";
+
+                  return (
+                    <motion.div
+                      layout
+                      key={task.id}
+                      className="bg-card rounded-2xl p-4 shadow-warm border border-border group hover:border-primary/30 transition-all"
+                    >
+                      <div className="flex items-start gap-3">
+                        <Checkbox
+                          checked={task.status === "concluida"}
+                          onCheckedChange={() => toggleComplete(task)}
+                          className="mt-1"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className={cn(
+                            "font-body font-medium text-foreground leading-tight mb-2",
+                            task.status === "concluida" && "line-through text-muted-foreground"
+                          )}>
+                            {task.title}
+                          </p>
+                          
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className={cn("text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-md", badge.class)}>
+                              {badge.label}
+                            </span>
+                            
+                            {task.due_date && (
+                              <span className={cn(
+                                "text-[10px] font-medium flex items-center gap-1",
+                                isOverdue ? "text-destructive" : "text-muted-foreground"
+                              )}>
+                                <Calendar className="h-2.5 w-2.5" />
+                                {format(parseISO(task.due_date), "dd MMM", { locale: ptBR })}
+                              </span>
+                            )}
+
+                            {task.post_id && (
+                              <button
+                                onClick={() => handlePostPreview(task.post_id!)}
+                                className="text-[10px] font-medium text-primary hover:underline flex items-center gap-1"
+                              >
+                                <Link2 className="h-2.5 w-2.5" />
+                                Ver post
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => deleteTask(task.id)}
+                          className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-destructive/10 rounded transition-all"
+                        >
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </button>
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </div>
             </div>
           ))}
         </div>
       </motion.div>
 
-      {/* New task sheet */}
-      {/* Novo Modal Inline (Correção solicitada) */}
-      {isNewTaskOpen && (
-        <div 
-          className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm"
-          onClick={() => setIsNewTaskOpen(false)}
-        >
-          <div 
-            className="bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200"
-            onClick={e => e.stopPropagation()}
-          >
-            <h2 className="text-xl font-display font-bold mb-4 text-foreground">Nova Tarefa</h2>
-            
-            {/* Título */}
-            <div className="mb-4">
-              <label className="block text-sm font-body font-medium mb-1.5 text-foreground">Título *</label>
-              <input
-                type="text"
-                autoFocus
-                value={newTask.title}
-                onChange={e => setNewTask({...newTask, title: e.target.value})}
-                placeholder="O que precisa ser feito?"
-                className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              {/* Status */}
-              <div>
-                <label className="block text-sm font-body font-medium mb-1.5 text-foreground">Status</label>
+      <Dialog open={isNewTaskOpen} onOpenChange={setIsNewTaskOpen}>
+        <DialogContent className="sm:max-w-md bg-background rounded-2xl p-0 overflow-hidden border-none shadow-2xl">
+          <div className="p-6 space-y-5">
+            <DialogHeader>
+              <DialogTitle className="font-display text-xl">Nova Tarefa</DialogTitle>
+            </DialogHeader>
+
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <div className="space-y-2">
+                <Label className="font-body text-sm">O que precisa ser feito?</Label>
+                <Input
+                  placeholder="Ex: Gravar reels de moda"
+                  {...register("title")}
+                  className="rounded-xl h-11"
+                />
+                {errors.title && <p className="text-xs text-destructive mt-1">{errors.title.message}</p>}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label className="font-body text-sm">Prioridade</Label>
+                  <select
+                    {...register("priority")}
+                    className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="baixa">Baixa</option>
+                    <option value="media">Média</option>
+                    <option value="alta">Alta</option>
+                    <option value="urgente">Urgente</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="font-body text-sm">Prazo (opcional)</Label>
+                  <Input
+                    type="date"
+                    {...register("due_date")}
+                    className="rounded-xl h-11"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="font-body text-sm">Vincular a um post (opcional)</Label>
                 <select
-                  value={newTask.status}
-                  onChange={e => setNewTask({...newTask, status: e.target.value})}
-                  className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                  onChange={(e) => setValue("post_id", e.target.value || null)}
+                  className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <option value="pendente">Pendente</option>
-                  <option value="em_andamento">Em andamento</option>
-                  <option value="concluida">Concluída</option>
+                  <option value="">Nenhum</option>
+                  {posts.map(p => (
+                    <option key={p.id} value={p.id}>{p.title}</option>
+                  ))}
                 </select>
               </div>
-              
-              {/* Prioridade */}
-              <div>
-                <label className="block text-sm font-body font-medium mb-1.5 text-foreground">Prioridade</label>
-                <select
-                  value={newTask.priority}
-                  onChange={e => setNewTask({...newTask, priority: e.target.value})}
-                  className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
-                >
-                  <option value="media">Normal</option>
-                  <option value="urgente">Urgente</option>
-                  <option value="alta">Alta</option>
-                  <option value="baixa">Baixa</option>
-                </select>
+
+              <div className="space-y-2">
+                <Label className="font-body text-sm">Notas</Label>
+                <Textarea
+                  placeholder="Detalhes da tarefa..."
+                  {...register("notes")}
+                  className="rounded-xl min-h-[80px]"
+                />
+                {errors.notes && <p className="text-xs text-destructive mt-1">{errors.notes.message}</p>}
               </div>
-            </div>
-            
-            {/* Data */}
-            <div className="mb-4">
-              <label className="block text-sm font-body font-medium mb-1.5 text-foreground">Data de vencimento</label>
-              <input
-                type="date"
-                value={newTask.due_date}
-                onChange={e => setNewTask({...newTask, due_date: e.target.value})}
-                className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
-              />
-            </div>
-            
-            {/* Post associado */}
-            <div className="mb-4">
-              <label className="block text-sm font-body font-medium mb-1.5 text-foreground">Post associado (opcional)</label>
-              <select
-                value={newTask.post_id || ''}
-                onChange={e => setNewTask({...newTask, post_id: e.target.value || null})}
-                className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
-              >
-                <option value="">Nenhum</option>
-                {posts?.map(post => (
-                  <option key={post.id} value={post.id}>
-                    {post.title} — {post.scheduled_date || post.created_at?.slice(0,10)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            {/* Notas */}
-            <div className="mb-6">
-              <label className="block text-sm font-body font-medium mb-1.5 text-foreground">Notas</label>
-              <textarea
-                value={newTask.notes}
-                onChange={e => setNewTask({...newTask, notes: e.target.value})}
-                placeholder="Observações importantes..."
-                rows={3}
-                className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-primary/20 outline-none"
-              />
-            </div>
-            
-            {/* Botões */}
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setIsNewTaskOpen(false)}
-                className="flex-1 border border-border hover:bg-muted rounded-xl py-2 text-sm font-medium transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl py-2 text-sm font-medium transition-colors shadow-lg"
-              >
-                Salvar tarefa
-              </button>
-            </div>
+
+              <div className="pt-2 flex gap-3">
+                <Button type="button" variant="outline" className="flex-1" onClick={() => setIsNewTaskOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit" variant="hero" className="flex-1">
+                  Criar Tarefa
+                </Button>
+              </div>
+            </form>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {selectedPost && (
         <PostPreviewModal
           open={previewOpen}
           onOpenChange={setPreviewOpen}
-          title={selectedPost.title}
-          hook={selectedPost.hook || ""}
-          caption={selectedPost.caption || ""}
-          platform={selectedPost.platform}
-          format={selectedPost.format}
-          userName={profile?.name || user?.email?.split("@")[0] || "Usuário"}
-          userHandle={profile?.name?.toLowerCase().replace(/\s/g, "") || "usuario"}
-          avatarUrl={profile?.avatar_url || null}
+          post={selectedPost}
+          onSaved={() => { fetchData(); }}
         />
       )}
     </div>
   );
 };
+
+const DialogHeader = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+  <div className={cn("flex flex-col space-y-1.5 text-center sm:text-left", className)}>{children}</div>
+);
+
+const DialogTitle = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+  <h2 className={cn("text-lg font-semibold leading-none tracking-tight", className)}>{children}</h2>
+);
 
 export default Tarefas;
