@@ -24,6 +24,7 @@ import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, 
 import { ptBR } from "date-fns/locale";
 import { sanitizeText } from "@/lib/sanitize";
 
+// ─── Viral hooks ───
 const HOOKS_VIRAL = [
   { text: "Você sabia que [dado surpreendente]?", category: "curiosidade" },
   { text: "O erro que quase todo mundo comete sem perceber...", category: "problema" },
@@ -114,9 +115,13 @@ interface Habit { id: string; name: string; }
 interface Task { id: string; title: string; priority: string; status: string; due_date: string | null; post_id: string | null; }
 interface PostRef { id: string; title: string; platform: string; }
 
-function DCard({ children, className }: { children: React.ReactNode; className?: string }) {
+// ─── Dashboard Card wrapper ───
+function DCard({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) {
   return (
-    <div className={cn("bg-card rounded-2xl p-5 shadow-[var(--shadow-warm)] border border-border", className)}>
+    <div 
+      onClick={onClick}
+      className={cn("bg-card rounded-2xl p-5 shadow-[var(--shadow-warm)] border border-border", className, onClick && "cursor-pointer hover:border-primary/30 transition-all")}
+    >
       {children}
     </div>
   );
@@ -321,7 +326,7 @@ const Dashboard = () => {
           <div className="lg:col-span-8 space-y-6">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               {stats.map((s, i) => (
-                <DCard key={i} className="flex flex-col justify-between hover:border-primary/30 transition-all cursor-pointer" onClick={() => navigate(s.link)}>
+                <DCard key={i} onClick={() => navigate(s.link)} className="flex flex-col justify-between">
                   <div className="flex items-center justify-between mb-3">
                     <div className={cn("p-2 rounded-xl bg-card border border-border", s.color)}>
                       <s.icon className="h-4 w-4" />

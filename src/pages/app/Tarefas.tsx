@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
-import { Plus, AlertTriangle, Calendar, CheckCircle2, Clock, Link2, Trash2, Search, X, Check } from "lucide-react";
+import { Plus, AlertTriangle, Calendar, CheckCircle2, Clock, Link2, Trash2, Search, X, Check, MoreVertical, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,7 @@ import { PostPreviewModal } from "@/components/kanban/PostPreviewModal";
 import { useProfile } from "@/hooks/useProfile";
 import { cn } from "@/lib/utils";
 import { sanitizeText } from "@/lib/sanitize";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface Task {
   id: string;
@@ -197,7 +198,7 @@ const Tarefas = () => {
               onClick={() => setFilter(f.key)}
               className={cn(
                 "px-4 py-2 rounded-xl text-sm font-body font-medium transition-all whitespace-nowrap border",
-                filter === f.key ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border hover:text-foreground"
+                filter === f.key ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground border-border hover:text-foreground"
               )}
             >
               {f.label}
@@ -365,20 +366,18 @@ const Tarefas = () => {
         <PostPreviewModal
           open={previewOpen}
           onOpenChange={setPreviewOpen}
-          post={selectedPost}
-          onSaved={() => { fetchData(); }}
+          title={selectedPost.title}
+          hook={selectedPost.hook || ""}
+          caption={selectedPost.caption || ""}
+          platform={selectedPost.platform}
+          format={selectedPost.format}
+          userName={profile?.name || "Criador"}
+          userHandle={profile?.instagram_handle || "criador"}
+          avatarUrl={profile?.avatar_url || null}
         />
       )}
     </div>
   );
 };
-
-const DialogHeader = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-  <div className={cn("flex flex-col space-y-1.5 text-center sm:text-left", className)}>{children}</div>
-);
-
-const DialogTitle = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-  <h2 className={cn("text-lg font-semibold leading-none tracking-tight", className)}>{children}</h2>
-);
 
 export default Tarefas;
