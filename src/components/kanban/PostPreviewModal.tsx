@@ -117,10 +117,10 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
 
     return (
       <div className="relative w-full aspect-[4/5] overflow-hidden">
-        {mediaUrl ? (
+        {activeMediaUrl ? (
           mediaType === "video" ? (
             <video
-              src={mediaUrl}
+              src={activeMediaUrl}
               autoPlay
               muted
               loop
@@ -128,7 +128,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
               className="w-full h-full object-cover"
             />
           ) : (
-            <img src={mediaUrl} alt="preview" className="w-full h-full object-cover" />
+            <img src={activeMediaUrl} alt="preview" className="w-full h-full object-cover" />
           )
         ) : (
           <GradientPlaceholder>
