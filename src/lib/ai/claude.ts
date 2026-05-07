@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type AIOperation = 'tag-suggestion' | 'reference-filter' | 'archive-summary' | 'daily-insight';
+export type AIOperation = 'tag-suggestion' | 'reference-filter' | 'archive-summary' | 'daily-insight' | 'idea-suggestions';
 
 interface AIRequest {
   userId?: string;
@@ -50,5 +50,22 @@ export const getDailyInsight = async (params: { postsThisWeek: number; weeklyGoa
     userId,
     operation: 'daily-insight',
     data: params
+  });
+};
+
+export const getIdeaSuggestions = async (
+  params: {
+    ideiaTexto: string;
+    platform?: string;
+    pilar?: string;
+    objetivo?: string;
+    niche?: string;
+  },
+  userId?: string
+) => {
+  return callAIContextBuilder({
+    userId,
+    operation: 'idea-suggestions',
+    data: params,
   });
 };
