@@ -172,12 +172,67 @@ REGRAS DE COMPORTAMENTO:
         maxTokens = 60
         break
       case 'idea-suggestions':
-        operationPrompt = `A partir da ideia/assunto fornecido pelo creator, gere 3 variações de posts prontos para executar sobre ESSE MESMO assunto.
-Varie o formato, ângulo e objetivo mantendo o tema central.
-Para cada variação retorne JSON com: titulo (string, max 70 chars — deve ser o título do post pronto pra usar), formato (reels|carrossel|foto|video|story), angulo (string curta — ex: "tutorial passo a passo", "bastidor", "lista polêmica"), objetivo (engajamento|autoridade|venda|relacionamento).
-Retorne APENAS um array JSON válido. Nenhum texto adicional. Exemplo: [{"titulo":"...","formato":"reels","angulo":"...","objetivo":"engajamento"}]`
-        userPrompt = `Ideia/assunto: ${data.ideiaTexto || 'conteúdo geral'}\nPlataforma: ${data.platform || 'instagram'}\nPilar: ${data.pilar || 'geral'}\nObjetivo: ${data.objetivo || 'engajamento'}\nNicho do creator: ${data.niche || 'lifestyle'}`
-        maxTokens = 500
+
+        operationPrompt = `Você é um estrategista de conteúdo especializado em criar posts virais para redes sociais brasileiras.
+
+TAREFA: A partir da ideia/assunto do creator, gere EXATAMENTE 3 posts prontos para executar. Cada post deve ser uma abordagem COMPLETAMENTE DIFERENTE do mesmo tema.
+
+REGRAS PARA TÍTULOS:
+
+- O título É o gancho do post — deve ser a primeira frase que a pessoa lê/ouve
+
+- Use padrões virais: curiosidade ("O que ninguém te conta sobre..."), contraste ("Pare de X se quiser Y"), identificação ("Se você é X, esse post é pra você"), storytelling ("Eu perdi X por não saber disso"), lista prática ("3 formas de..."), polêmica leve ("Isso vai incomodar quem...")
+
+- Linguagem de rede social: informal, direta, como se estivesse falando com um amigo
+
+- NUNCA use títulos genéricos como "Reflexão sobre X" ou "Dicas de X" — seja específico e provocativo
+
+- Máximo 70 caracteres
+
+- O título deve funcionar sozinho como hook de abertura do conteúdo
+
+REGRAS PARA ÂNGULOS:
+
+- Cada sugestão deve ter um ângulo editorial diferente: tutorial, bastidor, opinião, storytelling, lista, antes/depois, mito vs verdade, desabafo, comparação, trend adaptada
+
+- O ângulo deve ser descritivo e específico (ex: "bastidor do processo criativo", não apenas "bastidor")
+
+REGRAS PARA FORMATOS:
+
+- Varie entre os formatos disponíveis: reels, carrossel, foto, video, story
+
+- Escolha o formato que MELHOR se encaixa no ângulo (ex: tutorial = carrossel, bastidor = reels, opinião = story)
+
+- Respeite a plataforma informada
+
+REGRAS PARA OBJETIVOS:
+
+- Cada post deve ter um objetivo claro: engajamento (comentários/saves), autoridade (posicionamento como referência), venda (direcionar para produto/serviço), relacionamento (conexão emocional)
+
+- Varie os objetivos entre as 3 sugestões
+
+FORMATO DE RESPOSTA:
+
+Retorne APENAS um array JSON válido com 3 objetos. Nenhum texto antes ou depois.
+
+Cada objeto: {"titulo":"string max 70 chars","formato":"reels|carrossel|foto|video|story","angulo":"string curta e descritiva","objetivo":"engajamento|autoridade|venda|relacionamento"}
+
+EXEMPLO DE BOA RESPOSTA para a ideia "rotina matinal":
+
+[{"titulo":"Minha rotina antes de abrir o Instagram mudou tudo","formato":"reels","angulo":"bastidor com storytelling pessoal","objetivo":"relacionamento"},{"titulo":"5 coisas que faço antes das 8h que triplicaram meu engajamento","formato":"carrossel","angulo":"lista prática com resultados","objetivo":"autoridade"},{"titulo":"Sua rotina matinal está sabotando seu conteúdo. Veja porquê.","formato":"story","angulo":"opinião provocativa com dica","objetivo":"engajamento"}]`
+
+        userPrompt = `IDEIA DO CREATOR: "${data.ideiaTexto || 'conteúdo geral'}"
+
+PLATAFORMA PRINCIPAL: ${data.platform || 'instagram'}
+
+PILAR DE CONTEÚDO: ${data.pilar || 'geral'}
+
+NICHO: ${data.niche || 'lifestyle'}
+
+Gere 3 posts prontos para executar sobre essa ideia. Lembre-se: títulos devem ser ganchos virais, não títulos de blog.`
+
+        maxTokens = 600
+
         break
       default:
         throw new Error('Invalid operation')
