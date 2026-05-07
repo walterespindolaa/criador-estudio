@@ -2,7 +2,7 @@ import React from 'react';
 import { cn } from "@/lib/utils";
 
 interface PlatformIconProps {
-  platform: 'instagram' | 'tiktok' | 'youtube';
+  platform: string;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
