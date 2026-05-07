@@ -1,73 +1,69 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Plus, Trash2, Calendar } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-interface Task {
-  id: string;
-  title: string;
-  priority: string;
-  status: string;
-  due_date: string | null;
-}
+import { useTasks, type Task } from "@/hooks/useTasks";
 
 interface PostTasksProps {
   postId: string;
-  userId: string;
 }
 
-export function PostTasks({ postId, userId }: PostTasksProps) {
-  const [tasks, setTasks] = useState<Task[]>([]);
+export function PostTasks({ postId }: PostTasksProps) {
+  const { tasks, createTask, updateTaskStatus, deleteTask } = useTasks();
   const [newTitle, setNewTitle] = useState("");
   const [newPriority, setNewPriority] = useState("media");
   const [newDueDate, setNewDueDate] = useState("");
   const [showForm, setShowForm] = useState(false);
 
-  const fetchTasks = async () => {
-    const { data } = await supabase
-      .from("tasks")
-      .select("id, title, priority, status, due_date")
-      .eq("post_id", postId)
-      .eq("user_id", userId)
-      .order("created_at");
-    setTasks((data as any[]) || []);
-  };
-
-  useEffect(() => { fetchTasks(); }, [postId]);
+  const postTasks = useMemo(
+    () =>
+      tasks
+        .filter(t => t.post_id === postId)
+        .sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? "")),
+    [tasks, postId],
+  );
 
   const addTask = async () => {
     if (!newTitle.trim()) return;
-    const { error } = await supabase.from("tasks").insert({
-      user_id: userId,
-      post_id: postId,
-      title: newTitle.trim(),
-      priority: newPriority,
-      due_date: newDueDate || null,
-    });
-    if (error) { toast.error("Erro ao criar tarefa."); return; }
-    setNewTitle("");
-    setNewDueDate("");
-    setNewPriority("media");
-    setShowForm(false);
-    fetchTasks();
+    try {
+      await createTask.mutateAsync({
+        title: newTitle.trim(),
+        priority: newPriority,
+        status: "pendente",
+        due_date: newDueDate || null,
+        post_id: postId,
+        description: null,
+      });
+      setNewTitle("");
+      setNewDueDate("");
+      setNewPriority("media");
+      setShowForm(false);
+    } catch {
+      toast.error("Erro ao criar tarefa.");
+    }
   };
 
   const toggleDone = async (task: Task) => {
     const newStatus = task.status === "concluida" ? "pendente" : "concluida";
-    await supabase.from("tasks").update({ status: newStatus }).eq("id", task.id);
-    setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
+    try {
+      await updateTaskStatus.mutateAsync({ id: task.id, status: newStatus });
+    } catch {
+      toast.error("Erro ao atualizar tarefa.");
+    }
   };
 
-  const deleteTask = async (id: string) => {
-    await supabase.from("tasks").delete().eq("id", id);
-    setTasks(prev => prev.filter(t => t.id !== id));
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteTask.mutateAsync(id);
+    } catch {
+      toast.error("Erro ao remover tarefa.");
+    }
   };
 
-  const priorityBadge = (p: string) => {
+  const priorityBadge = (p: string | null) => {
     const cls = p === "urgente" ? "bg-destructive/10 text-destructive" :
       p === "alta" ? "bg-primary/10 text-primary" :
       p === "media" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" :
@@ -86,7 +82,7 @@ export function PostTasks({ postId, userId }: PostTasksProps) {
         </button>
       </div>
 
-      {tasks.map(task => (
+      {postTasks.map(task => (
         <div key={task.id} className={`flex items-center gap-2 group ${task.status === "concluida" ? "opacity-50" : ""}`}>
           <Checkbox
             checked={task.status === "concluida"}
@@ -102,13 +98,13 @@ export function PostTasks({ postId, userId }: PostTasksProps) {
               <Calendar className="h-2.5 w-2.5" /> {task.due_date}
             </span>
           )}
-          <button onClick={() => deleteTask(task.id)} className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-all">
+          <button onClick={() => handleDelete(task.id)} className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-all">
             <Trash2 className="h-3 w-3 text-destructive" />
           </button>
         </div>
       ))}
 
-      {tasks.length === 0 && !showForm && (
+      {postTasks.length === 0 && !showForm && (
         <p className="text-xs text-muted-foreground font-body">Nenhuma tarefa vinculada.</p>
       )}
 

@@ -106,7 +106,7 @@ const Onboarding = () => {
     const sanitizedName = sanitizeText(nameValue);
     const sanitizedNiche = sanitizeText(nicheValue);
 
-    await updateProfile({
+    await updateProfile.mutateAsync({
       name: sanitizedName,
       niche: sanitizedNiche,
       platforms,

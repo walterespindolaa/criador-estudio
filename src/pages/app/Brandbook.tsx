@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { BookOpen, Users, Mic, Save, Sparkles, Eye, Palette, Heart, Paintbrush, Languages, MessageSquareText, MessageSquare, Ban, Plus, Trash2, BookMarked } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,14 +10,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { InfoTooltip } from "@/components/shared/InfoTooltip";
+import { useBrandItems } from "@/hooks/useBrandItems";
+import { useMoodboard } from "@/hooks/useMoodboard";
+import { usePersonas } from "@/hooks/usePersonas";
 
-// ─── Types ───────────────────────────────────────────────
 interface EntryMap { [key: string]: string }
-interface BrandItem { id: string; type: string; name: string; value: string | null; }
 interface PersonaData {
   id: string | null;
   name: string;
@@ -149,121 +148,116 @@ const BRAND_ITEM_SECTIONS = [
   { type: "evitar", label: "Palavras que evito", icon: Ban, placeholder: "Ex: Não use gírias" },
 ];
 
-// ─── Component ───────────────────────────────────────────
 const Brandbook = () => {
-  const { user } = useAuth();
-  
-  // Guided answers (moodboard_entries)
+  const { entries: moodboardEntries, isLoading: moodboardLoading, saveAnswer } = useMoodboard();
+  const { brandItems, createBrandItem, deleteBrandItem: deleteBrandItemMutation, isLoading: brandLoading } = useBrandItems();
+  const { persona: personaRow, savePersona: savePersonaMutation, isLoading: personaLoading } = usePersonas();
+
   const [answers, setAnswers] = useState<Record<string, EntryMap>>({});
   const [saving, setSaving] = useState(false);
-  const [loaded, setLoaded] = useState(false);
 
-  // Brand items (brand_items table)
-  const [brandItems, setBrandItems] = useState<BrandItem[]>([]);
   const [newItemName, setNewItemName] = useState("");
   const [newItemValue, setNewItemValue] = useState("");
   const [activeSection, setActiveSection] = useState("");
 
-  // Persona (personas table)
   const [persona, setPersona] = useState<PersonaData>({
     id: null, name: "Meu público principal", age_range: "", gender: "",
     location: "", interests: [], pain_points: [], desires: [], platforms: [], notes: "",
   });
   const [newTag, setNewTag] = useState("");
 
-  // ─── Load data ───────────────────────────────────────
+  const allSectionKeys = useMemo(() => Object.keys(QUESTION_SECTIONS) as QuestionSectionKey[], []);
+  const loaded = !moodboardLoading && !brandLoading && !personaLoading;
+
   useEffect(() => {
-    if (!user) return;
-
-    const allSectionKeys = Object.keys(QUESTION_SECTIONS);
-
-    Promise.all([
-      supabase.from("moodboard_entries").select("section, question_key, answer").eq("user_id", user.id).in("section", allSectionKeys),
-      supabase.from("brand_items").select("*").eq("user_id", user.id).order("position"),
-      supabase.from("personas").select("*").eq("user_id", user.id).limit(1),
-    ]).then(([entriesRes, brandRes, personaRes]) => {
-      // Moodboard entries
-      const grouped: Record<string, EntryMap> = {};
-      allSectionKeys.forEach(k => { grouped[k] = {}; });
-      (entriesRes.data || []).forEach((e) => {
-        if (grouped[e.section]) grouped[e.section][e.question_key] = e.answer || "";
-      });
-      setAnswers(grouped);
-
-      // Brand items
-      setBrandItems(brandRes.data || []);
-
-      // Persona
-      const p = (personaRes.data as any[])?.[0];
-      if (p) {
-        setPersona({
-          id: p.id, name: p.name || "", age_range: p.age_range || "",
-          gender: p.gender || "", location: p.location || "",
-          interests: p.interests || [], pain_points: p.pain_points || [],
-          desires: p.desires || [], platforms: p.platforms || [], notes: p.notes || "",
-        });
-      }
-
-      setLoaded(true);
+    const grouped: Record<string, EntryMap> = {};
+    allSectionKeys.forEach(k => { grouped[k] = {}; });
+    moodboardEntries.forEach(e => {
+      if (grouped[e.section]) grouped[e.section][e.question_key] = e.answer || "";
     });
-  }, [user]);
+    setAnswers(grouped);
+  }, [moodboardEntries, allSectionKeys]);
 
-  // ─── Save guided section ────────────────────────────
+  useEffect(() => {
+    if (!personaRow) return;
+    setPersona({
+      id: personaRow.id,
+      name: personaRow.name || "",
+      age_range: personaRow.age_range || "",
+      gender: personaRow.gender || "",
+      location: personaRow.location || "",
+      interests: personaRow.interests || [],
+      pain_points: personaRow.pain_points || [],
+      desires: personaRow.desires || [],
+      platforms: personaRow.platforms || [],
+      notes: personaRow.notes || "",
+    });
+  }, [personaRow]);
+
   const saveSection = useCallback(async (section: string) => {
-    if (!user) return;
     const config = QUESTION_SECTIONS[section as QuestionSectionKey];
     if (!config) return;
     setSaving(true);
-    const entries = config.questions.map((q) => ({
-      user_id: user.id,
-      section,
-      question_key: q.key,
-      answer: answers[section]?.[q.key] || "",
-    }));
-    for (const entry of entries) {
-      await supabase.from("moodboard_entries").upsert(entry, { onConflict: "user_id,section,question_key" });
+    try {
+      for (const q of config.questions) {
+        await saveAnswer.mutateAsync({
+          section,
+          question_key: q.key,
+          answer: answers[section]?.[q.key] || "",
+        });
+      }
+      toast.success("Salvo com sucesso!");
+    } catch {
+      toast.error("Erro ao salvar.");
+    } finally {
+      setSaving(false);
     }
-    toast.success("Salvo com sucesso!");
-    setSaving(false);
-  }, [user, answers]);
+  }, [answers, saveAnswer]);
 
-  // ─── Brand items CRUD ───────────────────────────────
   const addBrandItem = async (type: string) => {
-    if (!newItemName.trim() || !user) return;
-    await supabase.from("brand_items").insert({
-      user_id: user.id, type, name: newItemName.trim(),
-      value: newItemValue || null, position: brandItems.filter(i => i.type === type).length,
-    });
-    setNewItemName(""); setNewItemValue("");
-    const { data } = await supabase.from("brand_items").select("*").eq("user_id", user.id).order("position");
-    setBrandItems(data || []);
-    toast.success("Item adicionado!");
-  };
-
-  const deleteBrandItem = async (id: string) => {
-    await supabase.from("brand_items").delete().eq("id", id);
-    setBrandItems(prev => prev.filter(i => i.id !== id));
-  };
-
-  // ─── Persona save ───────────────────────────────────
-  const savePersona = async () => {
-    if (!user) return;
-    const data: any = {
-      user_id: user.id, name: persona.name, age_range: persona.age_range || null,
-      gender: persona.gender || null, location: persona.location || null,
-      interests: persona.interests.length > 0 ? persona.interests : null,
-      pain_points: persona.pain_points.length > 0 ? persona.pain_points : null,
-      desires: persona.desires.length > 0 ? persona.desires : null,
-      platforms: persona.platforms.length > 0 ? persona.platforms : null,
-      notes: persona.notes || null,
-    };
-    if (persona.id) {
-      await supabase.from("personas").update(data).eq("id", persona.id);
-    } else {
-      const { data: newP } = await supabase.from("personas").insert(data).select().single();
-      if (newP) setPersona(prev => ({ ...prev, id: (newP as any).id }));
+    if (!newItemName.trim()) return;
+    try {
+      await createBrandItem.mutateAsync({
+        type,
+        name: newItemName.trim(),
+        value: newItemValue || null,
+        position: brandItems.filter(i => i.type === type).length,
+      });
+      setNewItemName(""); setNewItemValue("");
+      toast.success("Item adicionado!");
+    } catch {
+      toast.error("Erro ao adicionar item.");
     }
-    toast.success("Persona salva!");
+  };
+
+  const handleDeleteBrandItem = async (id: string) => {
+    try {
+      await deleteBrandItemMutation.mutateAsync(id);
+    } catch {
+      toast.error("Erro ao remover item.");
+    }
+  };
+
+  const savePersona = async () => {
+    try {
+      const saved = await savePersonaMutation.mutateAsync({
+        name: persona.name,
+        age_range: persona.age_range || null,
+        gender: persona.gender || null,
+        location: persona.location || null,
+        interests: persona.interests.length > 0 ? persona.interests : null,
+        pain_points: persona.pain_points.length > 0 ? persona.pain_points : null,
+        desires: persona.desires.length > 0 ? persona.desires : null,
+        platforms: persona.platforms.length > 0 ? persona.platforms : null,
+        notes: persona.notes || null,
+      });
+      if (saved?.id && !persona.id) {
+        setPersona(prev => ({ ...prev, id: saved.id }));
+      }
+      toast.success("Persona salva!");
+    } catch {
+      toast.error("Erro ao salvar persona.");
+    }
   };
 
   const addTagTo = (field: keyof PersonaData) => {
@@ -533,7 +527,7 @@ const Brandbook = () => {
               </div>
 
               {/* Guided questions (persona-brand from moodboard_entries) */}
-              {renderGuidedSection("persona-brand" as any, true)}
+              {renderGuidedSection("persona-brand", true)}
 
               {/* Structured persona form */}
               <Card className="border-border shadow-sm">
@@ -662,7 +656,7 @@ const Brandbook = () => {
                               {section.type === "cor" && item.value && <div className="w-4 h-4 rounded-full" style={{ backgroundColor: item.value }} />}
                               <span className="text-sm font-body text-foreground">{item.name}</span>
                               {item.value && section.type !== "cor" && <span className="text-xs text-muted-foreground font-body">({item.value})</span>}
-                              <button onClick={() => deleteBrandItem(item.id)} className="hover:text-destructive"><Trash2 className="h-3 w-3" /></button>
+                              <button onClick={() => handleDeleteBrandItem(item.id)} className="hover:text-destructive"><Trash2 className="h-3 w-3" /></button>
                             </div>
                           ))}
                         </div>

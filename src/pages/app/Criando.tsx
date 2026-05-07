@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,21 +11,10 @@ import { InfoTooltip } from "@/components/shared/InfoTooltip";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, parseISO, isWithinInterval } from "date-fns";
+import { usePosts, type Post } from "@/hooks/usePosts";
+import { usePillars } from "@/hooks/usePillars";
+import { useTasks } from "@/hooks/useTasks";
 
-interface Post {
-  id: string; title: string; platform: string; format: string; pillar_id: string | null;
-  status: string; hook: string | null; script: string | null; caption: string | null;
-  cta: string | null; scheduled_date: string | null; scheduled_time: string | null; published_at: string | null;
-  notes: string | null; result_views: number | null; result_saves: number | null;
-  result_comments: number | null; archive_summary: string | null; user_id: string;
-  created_at?: string | null;
-  content_blocks: { tema: string; roteiro: string; midia: string; legenda: string } | null;
-}
-
-interface TaskCount { post_id: string; count: number; done: number; }
-interface Pillar { id: string; name: string; color: string; }
-
-// ─── Period filter helpers (same as Dashboard) ───
 type PeriodKey = "tudo" | "hoje" | "semana" | "quinzenal" | "mes" | "ano" | "personalizado";
 
 const PERIOD_OPTIONS: { key: PeriodKey; label: string }[] = [
@@ -69,17 +58,19 @@ const COLUMN_TOOLTIPS: Record<string, string> = {
   publicado: "Já publicado! Use o Histórico para acompanhar resultados.",
 };
 
+type ContentBlocks = { tema?: string; roteiro?: string; midia?: string; legenda?: string };
+
 const Criando = () => {
   const { user } = useAuth();
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [pillars, setPillars] = useState<Pillar[]>([]);
-  const [taskCounts, setTaskCounts] = useState<TaskCount[]>([]);
+  const { posts, updatePost } = usePosts();
+  const { pillars } = usePillars();
+  const { tasks } = useTasks();
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [draggedPost, setDraggedPost] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
 
-  // Filters
   const [period, setPeriod] = useState<PeriodKey>(() => {
     return (localStorage.getItem("criando-period") as PeriodKey) || "semana";
   });
@@ -93,6 +84,18 @@ const Criando = () => {
   };
 
   const dateRange = useMemo(() => getDateRange(period, customRange), [period, customRange]);
+
+  const taskCounts = useMemo(() => {
+    const counts = new Map<string, { count: number; done: number }>();
+    tasks.forEach(t => {
+      if (!t.post_id) return;
+      const cur = counts.get(t.post_id) ?? { count: 0, done: 0 };
+      cur.count += 1;
+      if (t.status === "concluida") cur.done += 1;
+      counts.set(t.post_id, cur);
+    });
+    return counts;
+  }, [tasks]);
 
   const filteredPosts = useMemo(() => {
     return posts.filter(post => {
@@ -110,57 +113,32 @@ const Criando = () => {
     });
   }, [posts, filterPlatform, filterPillar, dateRange, period]);
 
-  const fetchData = async () => {
-    if (!user) return;
-    const [postsRes, pillarsRes, tasksRes] = await Promise.all([
-      supabase.from("posts").select("*").eq("user_id", user.id).order("created_at"),
-      supabase.from("pillars").select("*").eq("user_id", user.id).order("position"),
-      supabase.from("tasks").select("id, post_id, status").eq("user_id", user.id).not("post_id", "is", null),
-    ]);
-    setPosts((postsRes.data as any[]) || []);
-    setPillars(pillarsRes.data || []);
-    const tasksData = (tasksRes.data as any[]) || [];
-    const counts: Record<string, { count: number; done: number }> = {};
-    tasksData.forEach((t: any) => {
-      if (!t.post_id) return;
-      if (!counts[t.post_id]) counts[t.post_id] = { count: 0, done: 0 };
-      counts[t.post_id].count++;
-      if (t.status === "concluida") counts[t.post_id].done++;
-    });
-    setTaskCounts(Object.entries(counts).map(([post_id, v]) => ({ post_id, ...v })));
-  };
-
-  useEffect(() => { fetchData(); }, [user]);
-
   const openNew = () => { setSelectedPost(null); setDrawerOpen(true); };
   const openEdit = (post: Post) => { setSelectedPost(post); setDrawerOpen(true); };
 
-  const handleDrop = async (newStatus: string) => {
-    setDragOverCol(null);
-    if (!draggedPost || !user) return;
-    const updates: any = { status: newStatus };
+  const movePostStatus = async (postId: string, newStatus: string) => {
+    if (!user) return;
+    const updates: { status: string; published_at?: string } = { status: newStatus };
     if (newStatus === "publicado") {
       updates.published_at = new Date().toISOString();
       const { fireConfetti } = await import("@/lib/confetti");
       fireConfetti();
-      await supabase.from("audit_log").insert({ user_id: user.id, action: "post_published", entity_type: "post", entity_id: draggedPost });
+      await supabase.from("audit_log").insert({
+        user_id: user.id,
+        action: "post_published",
+        entity_type: "post",
+        entity_id: postId,
+      });
     }
-    await supabase.from("posts").update(updates).eq("id", draggedPost);
-    setDraggedPost(null);
-    fetchData();
+    await updatePost.mutateAsync({ id: postId, updates });
   };
 
-  const handleMovePost = async (postId: string, newStatus: string) => {
-    if (!user) return;
-    const updates: any = { status: newStatus };
-    if (newStatus === "publicado") {
-      updates.published_at = new Date().toISOString();
-      const { fireConfetti } = await import("@/lib/confetti");
-      fireConfetti();
-      await supabase.from("audit_log").insert({ user_id: user.id, action: "post_published", entity_type: "post", entity_id: postId });
-    }
-    await supabase.from("posts").update(updates).eq("id", postId);
-    fetchData();
+  const handleDrop = async (newStatus: string) => {
+    setDragOverCol(null);
+    if (!draggedPost) return;
+    const id = draggedPost;
+    setDraggedPost(null);
+    await movePostStatus(id, newStatus);
   };
 
   const getPillar = (id: string | null) => pillars.find(p => p.id === id);
@@ -178,10 +156,8 @@ const Criando = () => {
           <Button variant="hero" size="sm" onClick={openNew} className="shrink-0"><Plus className="h-4 w-4 mr-1" /> Novo Post</Button>
         </div>
 
-        {/* Filter bar */}
         <div className="overflow-x-auto scrollbar-none -mx-4 px-4 mb-4">
           <div className="flex items-center gap-3 min-w-max">
-            {/* Period */}
             <div className="flex items-center gap-1 bg-card rounded-xl border border-border p-1">
               {PERIOD_OPTIONS.map(opt => (
                 <button key={opt.key} onClick={() => handlePeriodChange(opt.key)}
@@ -193,7 +169,6 @@ const Criando = () => {
               ))}
             </div>
 
-            {/* Platform */}
             <div className="flex items-center gap-1">
               <button onClick={() => setFilterPlatform(null)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-body border transition-colors ${!filterPlatform ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"}`}>
@@ -207,7 +182,6 @@ const Criando = () => {
               ))}
             </div>
 
-            {/* Pillar */}
             {pillars.length > 0 && (
               <div className="flex items-center gap-1">
                 <button onClick={() => setFilterPillar(null)}
@@ -226,7 +200,6 @@ const Criando = () => {
           </div>
         </div>
 
-        {/* Custom date range */}
         {period === "personalizado" && (
           <div className="flex items-center gap-2 mb-4">
             <Input type="date" value={customRange?.from?.toISOString().split("T")[0] || ""}
@@ -239,7 +212,6 @@ const Criando = () => {
           </div>
         )}
 
-        {/* Stats */}
         <div className="flex items-center gap-4 mb-4 text-xs font-body text-muted-foreground">
           <span>{filteredPosts.length} posts no período</span>
           <span>·</span>
@@ -254,7 +226,6 @@ const Criando = () => {
           )}
         </div>
 
-        {/* Kanban */}
         <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-mandatory scrollbar-none">
           {COLUMNS.map(col => {
             const colPosts = filteredPosts.filter(p => p.status === col.key);
@@ -274,22 +245,23 @@ const Criando = () => {
                 <div className={`space-y-3 min-h-[200px] rounded-xl transition-all ${isDragOver ? "ring-2 ring-primary bg-primary/5" : ""}`}>
                   {colPosts.map(post => {
                     const pillar = getPillar(post.pillar_id);
-                    const tc = taskCounts.find(t => t.post_id === post.id);
+                    const tc = taskCounts.get(post.id);
                     const allDone = tc && tc.count > 0 && tc.done === tc.count;
                     const pendingTasks = tc ? tc.count - tc.done : 0;
+                    const blocks = (post.content_blocks ?? null) as ContentBlocks | null;
                     return (
                       <motion.div key={post.id} layout draggable onDragStart={() => setDraggedPost(post.id)} onClick={() => openEdit(post)}
                         className={`bg-card rounded-xl p-4 shadow-warm border border-border cursor-grab active:cursor-grabbing hover:shadow-warm-lg transition-all ${isPublished ? "opacity-70" : ""}`}>
                         <p className="font-body font-medium text-sm text-foreground mb-2 leading-snug line-clamp-2">{post.title}</p>
-                        {post.content_blocks && (
+                        {blocks && (
                           <div className="flex gap-1 mb-2">
                             {(["tema", "roteiro", "midia", "legenda"] as const).map(k => (
-                              <span key={k} className={`w-2 h-2 rounded-full ${(post.content_blocks as any)?.[k] === "feito" ? "bg-secondary" : "bg-muted-foreground/30"}`} />
+                              <span key={k} className={`w-2 h-2 rounded-full ${blocks[k] === "feito" ? "bg-secondary" : "bg-muted-foreground/30"}`} />
                             ))}
                           </div>
                         )}
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <PlatformIcon platform={post.platform as any} size="sm" />
+                          <PlatformIcon platform={post.platform} size="sm" />
                           <span className="text-xs bg-muted px-1.5 py-0.5 rounded font-body">{FORMAT_LABELS[post.format] || post.format}</span>
                           {pillar && <span className="px-1.5 py-0.5 rounded text-xs font-body text-primary-foreground" style={{ backgroundColor: pillar.color }}>{pillar.name}</span>}
                           {isPublished && <span className="px-1.5 py-0.5 rounded text-xs font-body bg-secondary text-secondary-foreground">Publicado</span>}
@@ -301,7 +273,7 @@ const Criando = () => {
                           </span>
                         )}
                         <div className="mt-2 md:hidden" onClick={(e) => e.stopPropagation()}>
-                          <Select value={post.status} onValueChange={(val) => handleMovePost(post.id, val)}>
+                          <Select value={post.status ?? "ideia"} onValueChange={(val) => movePostStatus(post.id, val)}>
                             <SelectTrigger className="h-7 text-xs rounded-lg"><span className="flex items-center gap-1"><ChevronRight className="h-3 w-3" /> Mover</span></SelectTrigger>
                             <SelectContent>{STATUS_OPTIONS.map(s => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}</SelectContent>
                           </Select>
@@ -320,7 +292,7 @@ const Criando = () => {
           })}
         </div>
       </motion.div>
-      <PostDrawer open={drawerOpen} onOpenChange={setDrawerOpen} post={selectedPost} pillars={pillars} userId={user?.id || ""} onSaved={fetchData} />
+      <PostDrawer open={drawerOpen} onOpenChange={setDrawerOpen} post={selectedPost} pillars={pillars} userId={user?.id || ""} onSaved={() => { /* invalidations */ }} />
     </div>
   );
 };

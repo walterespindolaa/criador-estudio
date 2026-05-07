@@ -1,47 +1,25 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
-import { Plus, AlertTriangle, Calendar, CheckCircle2, Clock, Link2, Trash2, Search, X, Check, MoreVertical, Pencil } from "lucide-react";
+import { Plus, Calendar, Link2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PostPreviewModal } from "@/components/kanban/PostPreviewModal";
 import { useProfile } from "@/hooks/useProfile";
+import { useTasks, type Task } from "@/hooks/useTasks";
+import { usePosts, type Post } from "@/hooks/usePosts";
 import { cn } from "@/lib/utils";
 import { sanitizeText } from "@/lib/sanitize";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-
-interface Task {
-  id: string;
-  title: string;
-  description: string | null;
-  priority: string;
-  status: string;
-  due_date: string | null;
-  post_id: string | null;
-  created_at: string;
-}
-
-interface Post {
-  id: string;
-  title: string;
-  scheduled_date: string | null;
-  platform: string;
-  format: string;
-  hook: string | null;
-  caption: string | null;
-  user_id: string;
-  created_at?: string;
-}
 
 const taskSchema = z.object({
   title: z.string().min(1, "Título é obrigatório").max(100, "Máximo 100 caracteres").trim(),
@@ -73,14 +51,14 @@ const FILTERS = [
 const Tarefas = () => {
   const { user } = useAuth();
   const { profile } = useProfile();
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [posts, setPosts] = useState<Post[]>([]);
+  const { tasks, createTask, updateTaskStatus, deleteTask } = useTasks();
+  const { posts } = usePosts();
   const [filter, setFilter] = useState("todas");
   const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
-  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<TaskFormData>({
+  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<TaskFormData>({
     resolver: zodResolver(taskSchema),
     defaultValues: {
       title: "",
@@ -93,18 +71,6 @@ const Tarefas = () => {
   });
 
   const today = new Date().toISOString().split("T")[0];
-
-  const fetchData = async () => {
-    if (!user) return;
-    const [tasksRes, postsRes] = await Promise.all([
-      supabase.from("tasks").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("posts").select("id, title, scheduled_date, platform, format, hook, caption, user_id, created_at").eq("user_id", user.id).order("created_at", { ascending: false }),
-    ]);
-    setTasks((tasksRes.data as Task[]) || []);
-    setPosts((postsRes.data as Post[]) || []);
-  };
-
-  useEffect(() => { fetchData(); }, [user]);
 
   const getWeekEnd = () => {
     const d = new Date();
@@ -137,38 +103,37 @@ const Tarefas = () => {
 
   const onSubmit = async (data: TaskFormData) => {
     if (!user) return;
-
-    const { error } = await supabase.from("tasks").insert({
-      user_id: user.id,
-      title: sanitizeText(data.title),
-      description: data.notes ? sanitizeText(data.notes) : null,
-      priority: data.priority,
-      status: data.status,
-      due_date: data.due_date || null,
-      post_id: data.post_id || null,
-    } as any);
-    
-    if (error) {
+    try {
+      await createTask.mutateAsync({
+        title: sanitizeText(data.title),
+        description: data.notes ? sanitizeText(data.notes) : null,
+        priority: data.priority,
+        status: data.status,
+        due_date: data.due_date || null,
+        post_id: data.post_id || null,
+      });
+      toast.success("Tarefa criada!");
+      setIsNewTaskOpen(false);
+    } catch {
       toast.error("Erro ao criar tarefa.");
-      return;
     }
-    
-    toast.success("Tarefa criada!");
-    setIsNewTaskOpen(false);
-    fetchData();
   };
 
   const toggleComplete = async (task: Task) => {
     const newStatus = task.status === "concluida" ? "pendente" : "concluida";
-    await supabase.from("tasks").update({ status: newStatus } as any).eq("id", task.id);
-    setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
+    try {
+      await updateTaskStatus.mutateAsync({ id: task.id, status: newStatus });
+    } catch {
+      toast.error("Erro ao atualizar tarefa.");
+    }
   };
 
-  const deleteTask = async (id: string) => {
-    const { error } = await supabase.from("tasks").delete().eq("id", id);
-    if (!error) {
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteTask.mutateAsync(id);
       toast.success("Tarefa removida.");
-      setTasks(prev => prev.filter(t => t.id !== id));
+    } catch {
+      toast.error("Erro ao remover tarefa.");
     }
   };
 
@@ -270,7 +235,7 @@ const Tarefas = () => {
                           </div>
                         </div>
                         <button
-                          onClick={() => deleteTask(task.id)}
+                          onClick={() => handleDelete(task.id)}
                           className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-destructive/10 rounded transition-all"
                         >
                           <Trash2 className="h-3.5 w-3.5 text-destructive" />

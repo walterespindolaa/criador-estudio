@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { FolderOpen, Upload, Search, Trash2, FileText, Cloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,18 +11,10 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { DrivePickerButton } from "@/components/drive/DrivePickerButton";
 import { DriveMediaPreview } from "@/components/drive/DriveMediaPreview";
+import { useFiles } from "@/hooks/useFiles";
+import type { Database } from "@/integrations/supabase/types";
 
-interface FileItem {
-  id: string;
-  name: string;
-  storage_path: string;
-  file_type: string | null;
-  size_bytes: number | null;
-  category: string | null;
-  tags: string[] | null;
-  post_id: string | null;
-  created_at: string;
-}
+type DriveRef = Database["public"]["Tables"]["external_media_refs"]["Row"];
 
 const CATEGORIES = ["geral", "referência", "marca", "inspiração", "roteiro"];
 const MAX_FILE_SIZE = 1 * 1024 * 1024;
@@ -31,10 +23,9 @@ const MAX_TOTAL_SIZE = 20 * 1024 * 1024;
 const Arquivos = () => {
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [files, setFiles] = useState<FileItem[]>([]);
+  const { files, uploadFile, deleteFile, getPublicUrl } = useFiles();
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingCategory, setPendingCategory] = useState("geral");
@@ -42,29 +33,22 @@ const Arquivos = () => {
 
   const totalBytes = files.reduce((acc, f) => acc + (f.size_bytes || 0), 0);
   const isStorageFull = totalBytes >= MAX_TOTAL_SIZE;
+  const uploading = uploadFile.isPending;
 
-  // Drive files query
-  const { data: driveFiles, refetch: refetchDrive } = useQuery({
+  const { data: driveFiles, refetch: refetchDrive } = useQuery<DriveRef[]>({
     queryKey: ["drive-files", user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("external_media_refs")
         .select("*")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
-      return (data as any[]) || [];
+      if (error) throw error;
+      return (data ?? []) as DriveRef[];
     },
     enabled: !!user,
   });
-
-  const fetchFiles = async () => {
-    if (!user) return;
-    const { data } = await supabase.from("files").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
-    setFiles((data as any[]) || []);
-  };
-
-  useEffect(() => { fetchFiles(); }, [user]);
 
   const handleFileSelect = (file: File) => {
     if (file.size > MAX_FILE_SIZE) { toast.error("Arquivo muito grande. Limite: 1MB por arquivo."); return; }
@@ -74,17 +58,13 @@ const Arquivos = () => {
     setCategoryDialogOpen(true);
   };
 
-  const uploadFile = async (file: File, category: string) => {
-    if (!user) return;
-    setUploading(true);
-    const ext = file.name.split(".").pop();
-    const path = `${user.id}/${Date.now()}.${ext}`;
-    const { error: uploadError } = await supabase.storage.from("files").upload(path, file);
-    if (uploadError) { toast.error("Erro no upload."); setUploading(false); return; }
-    await supabase.from("files").insert({ user_id: user.id, name: file.name, storage_path: path, file_type: file.type, size_bytes: file.size, category } as any);
-    toast.success("Arquivo enviado!");
-    setUploading(false);
-    fetchFiles();
+  const handleUpload = async (file: File, category: string) => {
+    try {
+      await uploadFile.mutateAsync({ file, category });
+      toast.success("Arquivo enviado!");
+    } catch {
+      toast.error("Erro no upload.");
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -100,22 +80,20 @@ const Arquivos = () => {
     if (file) handleFileSelect(file);
   };
 
-  const deleteFile = async (f: FileItem) => {
-    await supabase.storage.from("files").remove([f.storage_path]);
-    await supabase.from("files").delete().eq("id", f.id);
-    setFiles(prev => prev.filter(x => x.id !== f.id));
-    toast.success("Arquivo removido.");
+  const handleDelete = async (f: { id: string; storage_path: string }) => {
+    try {
+      await deleteFile.mutateAsync(f);
+      toast.success("Arquivo removido.");
+    } catch {
+      toast.error("Erro ao remover arquivo.");
+    }
   };
 
   const deleteDriveRef = async (id: string) => {
-    await supabase.from("external_media_refs").delete().eq("id", id);
+    const { error } = await supabase.from("external_media_refs").delete().eq("id", id);
+    if (error) { toast.error("Erro ao remover referência."); return; }
     refetchDrive();
     toast.success("Referência removida.");
-  };
-
-  const getPublicUrl = (path: string) => {
-    const { data } = supabase.storage.from("files").getPublicUrl(path);
-    return data.publicUrl;
   };
 
   const isImage = (type: string | null) => type?.startsWith("image/");
@@ -133,7 +111,7 @@ const Arquivos = () => {
     return matchSearch && matchCat;
   });
 
-  const filteredDrive = (driveFiles || []).filter((f: any) =>
+  const filteredDrive = (driveFiles ?? []).filter(f =>
     !search || f.file_name?.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -177,7 +155,7 @@ const Arquivos = () => {
               Arquivos do Google Drive
             </p>
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-              {filteredDrive.map((f: any) => (
+              {filteredDrive.map(f => (
                 <DriveMediaPreview
                   key={f.id}
                   fileName={f.file_name}
@@ -233,7 +211,7 @@ const Arquivos = () => {
                   <p className="text-xs font-body font-medium text-foreground truncate">{f.name}</p>
                   <div className="flex items-center justify-between mt-1">
                     <span className="text-[10px] text-muted-foreground font-body">{formatSize(f.size_bytes)}</span>
-                    <button onClick={() => deleteFile(f)} className="p-1 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 rounded transition-opacity">
+                    <button onClick={() => handleDelete(f)} className="p-1 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 rounded transition-opacity">
                       <Trash2 className="h-3 w-3 text-destructive" />
                     </button>
                   </div>
@@ -269,7 +247,7 @@ const Arquivos = () => {
             </div>
             <Button variant="hero" className="w-full" onClick={() => {
               setCategoryDialogOpen(false);
-              if (pendingFile) uploadFile(pendingFile, pendingCategory);
+              if (pendingFile) handleUpload(pendingFile, pendingCategory);
             }}>
               Enviar arquivo
             </Button>

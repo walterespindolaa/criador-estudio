@@ -1,45 +1,22 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
-import { Plus, Lightbulb, Search, ArrowRight, Trash2, Edit2, Sparkles, ChevronDown, Loader2, X } from "lucide-react";
+import { Plus, Trash2, Edit2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { PlatformIcon } from "@/components/shared/PlatformIcon";
-import { suggestTag } from "@/lib/ai/claude";
 import { PostDrawer } from "@/components/kanban/PostDrawer";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { sanitizeText } from "@/lib/sanitize";
-
-interface Idea {
-  id: string;
-  title: string;
-  pillar_id: string | null;
-  platform: string | null;
-  notes: string | null;
-  objective: string | null;
-  origin: string | null;
-  idea_status: string | null;
-  promoted_to_post_id: string | null;
-  created_at: string;
-}
-
-interface Pillar {
-  id: string;
-  name: string;
-  color: string;
-}
+import { useIdeas, type Idea } from "@/hooks/useIdeas";
+import { usePillars } from "@/hooks/usePillars";
+import { useProfile } from "@/hooks/useProfile";
+import type { Post } from "@/hooks/usePosts";
 
 const ideaSchema = z.object({
   title: z.string().min(1, "Título é obrigatório").max(100, "Máximo 100 caracteres").trim(),
@@ -52,68 +29,33 @@ const ideaSchema = z.object({
 
 type IdeaFormData = z.infer<typeof ideaSchema>;
 
-const OBJECTIVES = [
-  { key: "engajamento", label: "Engajamento" },
-  { key: "autoridade", label: "Autoridade" },
-  { key: "venda", label: "Venda" },
-  { key: "relacionamento", label: "Relacionamento" },
-  { key: "prova_social", label: "Prova Social" },
-  { key: "bastidor", label: "Bastidor" },
-];
-
-const IDEA_STATUSES = [
-  { key: "nova", label: "Nova", color: "bg-blue-100 text-blue-700" },
-  { key: "validada", label: "Validada", color: "bg-green-100 text-green-700" },
-  { key: "em_producao", label: "Em produção", color: "bg-yellow-100 text-yellow-700" },
-  { key: "usada", label: "Usada", color: "bg-gray-200 text-gray-600" },
-  { key: "arquivada", label: "Arquivada", color: "bg-gray-100 text-gray-400" },
-];
-
 const AI_LIMIT = 10;
 
 const Ideias = () => {
   const { user } = useAuth();
-  const [ideas, setIdeas] = useState<Idea[]>([]);
-  const [pillars, setPillars] = useState<Pillar[]>([]);
+  const { ideas, createIdea, updateIdea, deleteIdea, promoteToPost } = useIdeas();
+  const { pillars } = usePillars();
+  const { profile } = useProfile();
+
   const [search, setSearch] = useState("");
   const [filterPillar, setFilterPillar] = useState<string | null>(null);
   const [filterObjective, setFilterObjective] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingIdea, setEditingIdea] = useState<Idea | null>(null);
-  
-  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<IdeaFormData>({
+
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<IdeaFormData>({
     resolver: zodResolver(ideaSchema),
   });
 
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiSuggestions, setAiSuggestions] = useState<Array<{
-    titulo: string; formato: string; angulo?: string; objetivo: string;
-  }>>([]);
-  const [showAiPanel, setShowAiPanel] = useState(false);
-  const [aiUsed, setAiUsed] = useState(0);
-  const [targetIdeaId, setTargetIdeaId] = useState<string | null>(null);
   const [postDrawerOpen, setPostDrawerOpen] = useState(false);
-  const [promotedPost, setPromotedPost] = useState<any>(null);
+  const [promotedPost, setPromotedPost] = useState<Post | null>(null);
 
-  const fetchData = async () => {
-    if (!user) return;
-    const [ideasRes, pillarsRes, profileRes] = await Promise.all([
-      supabase.from("ideas").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("pillars").select("*").eq("user_id", user.id).order("position"),
-      supabase.from("profiles").select("ai_ideas_used_month, ai_ideas_reset_at").eq("id", user.id).single(),
-    ]);
-    setIdeas((ideasRes.data as any[]) || []);
-    setPillars(pillarsRes.data || []);
-
-    const today = new Date().toISOString().split("T")[0];
-    const resetAt = (profileRes.data as any)?.ai_ideas_reset_at || today;
-    const resetMonth = String(resetAt).substring(0, 7);
-    const currentMonth = today.substring(0, 7);
-    setAiUsed(resetMonth === currentMonth ? ((profileRes.data as any)?.ai_ideas_used_month || 0) : 0);
-  };
-
-  useEffect(() => { fetchData(); }, [user]);
+  const today = new Date().toISOString().split("T")[0];
+  const resetAt = profile?.ai_ideas_reset_at ?? today;
+  const resetMonth = String(resetAt).substring(0, 7);
+  const currentMonth = today.substring(0, 7);
+  const aiUsed = resetMonth === currentMonth ? (profile?.ai_ideas_used_month ?? 0) : 0;
 
   const openNew = () => {
     setEditingIdea(null);
@@ -136,40 +78,61 @@ const Ideias = () => {
 
   const handleSave = async (data: IdeaFormData) => {
     if (!user) return;
-    const insertData: any = {
-      ...data,
+    const payload = {
       title: sanitizeText(data.title),
+      pillar_id: data.pillar_id || null,
+      platform: data.platform || null,
       notes: data.notes ? sanitizeText(data.notes) : null,
-      user_id: user.id,
+      objective: data.objective || null,
+      origin: data.origin || null,
     };
-    if (editingIdea) {
-      const { error } = await supabase.from("ideas").update(insertData).eq("id", editingIdea.id);
-      if (error) { toast.error("Erro ao atualizar."); return; }
-      toast.success("Ideia atualizada!");
-    } else {
-      const { error } = await supabase.from("ideas").insert(insertData);
-      if (error) { toast.error("Erro ao salvar."); return; }
-      toast.success("Ideia capturada!");
+    try {
+      if (editingIdea) {
+        await updateIdea.mutateAsync({ id: editingIdea.id, updates: payload });
+        toast.success("Ideia atualizada!");
+      } else {
+        await createIdea.mutateAsync(payload);
+        toast.success("Ideia capturada!");
+      }
+      setSheetOpen(false);
+    } catch {
+      toast.error(editingIdea ? "Erro ao atualizar." : "Erro ao salvar.");
     }
-    setSheetOpen(false); fetchData();
   };
 
   const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("ideas").delete().eq("id", id);
-    if (!error) { toast.success("Ideia removida."); fetchData(); }
+    try {
+      await deleteIdea.mutateAsync(id);
+      toast.success("Ideia removida.");
+    } catch {
+      toast.error("Erro ao remover ideia.");
+    }
   };
 
   const handlePromoteToPost = async (idea: Idea) => {
     if (!user) return;
-    const { data: newPost, error } = await supabase.from("posts").insert({
-      user_id: user.id, title: idea.title, platform: idea.platform || "instagram", format: "reels",
-      pillar_id: idea.pillar_id, status: "ideia", notes: idea.notes,
-    }).select().single();
-    if (error || !newPost) { toast.error("Erro ao criar post."); return; }
-    await supabase.from("ideas").update({ promoted_to_post_id: newPost.id, idea_status: "em_producao" } as any).eq("id", idea.id);
-    await supabase.from("audit_log").insert({ user_id: user.id, action: "idea_promoted", entity_type: "idea", entity_id: idea.id, metadata: { post_id: newPost.id } });
-    toast.success("Ideia virou post! Agora é só criar. 🎬");
-    setPromotedPost(newPost); setPostDrawerOpen(true); fetchData();
+    try {
+      const newPost = await promoteToPost.mutateAsync({
+        ideaId: idea.id,
+        post: {
+          title: idea.title,
+          platform: idea.platform || "instagram",
+          format: "reels",
+          pillar_id: idea.pillar_id,
+          status: "ideia",
+          notes: idea.notes,
+        },
+      });
+      await updateIdea.mutateAsync({
+        id: idea.id,
+        updates: { idea_status: "em_producao" },
+      });
+      toast.success("Ideia virou post! Agora é só criar. 🎬");
+      setPromotedPost(newPost);
+      setPostDrawerOpen(true);
+    } catch {
+      toast.error("Erro ao criar post.");
+    }
   };
 
   const filtered = ideas.filter(idea => {
@@ -239,13 +202,13 @@ const Ideias = () => {
       </Dialog>
 
       {promotedPost && (
-        <PostDrawer 
-          open={postDrawerOpen} 
-          onOpenChange={setPostDrawerOpen} 
-          post={promotedPost} 
-          pillars={pillars} 
-          userId={user?.id || ""} 
-          onSaved={() => fetchData()} 
+        <PostDrawer
+          open={postDrawerOpen}
+          onOpenChange={setPostDrawerOpen}
+          post={promotedPost}
+          pillars={pillars}
+          userId={user?.id || ""}
+          onSaved={() => { /* React Query invalidations handle refresh */ }}
         />
       )}
     </div>

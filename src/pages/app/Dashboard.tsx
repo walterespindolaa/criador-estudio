@@ -1,30 +1,25 @@
 import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
-  Lightbulb, FileText, CheckCircle2, TrendingUp, Plus, Sparkles, ArrowRight, Copy, Check,
-  Calendar, ListChecks, Pencil, Trash2, AlertTriangle, Clock, Eye, Send, BarChart3, Flame, Filter
+  Lightbulb, FileText, CheckCircle2, Sparkles, Copy, Check,
+  ListChecks, Pencil, Trash2, Clock, Flame
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { getDailyInsight } from "@/lib/ai/claude";
 import { useNavigate } from "react-router-dom";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarPicker } from "@/components/ui/calendar";
-import { FORMAT_LABELS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { InfoTooltip } from "@/components/shared/InfoTooltip";
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, isWithinInterval, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, isWithinInterval, parseISO } from "date-fns";
 import { sanitizeText } from "@/lib/sanitize";
+import { useIdeas } from "@/hooks/useIdeas";
+import { usePosts } from "@/hooks/usePosts";
+import { useHabits } from "@/hooks/useHabits";
+import { useTasks } from "@/hooks/useTasks";
 
-// ─── Viral hooks ───
 const HOOKS_VIRAL = [
   { text: "Você sabia que [dado surpreendente]?", category: "curiosidade" },
   { text: "O erro que quase todo mundo comete sem perceber...", category: "problema" },
@@ -108,17 +103,9 @@ function isInRange(dateStr: string | null, range: { start: Date; end: Date } | n
   } catch { return false; }
 }
 
-interface Post { id: string; title: string; platform: string; format: string; status: string; scheduled_date: string | null; published_at: string | null; }
-interface Pillar { id: string; name: string; color: string; }
-interface HabitLog { id: string; habit_id: string; date: string; done: boolean; }
-interface Habit { id: string; name: string; }
-interface Task { id: string; title: string; priority: string; status: string; due_date: string | null; post_id: string | null; }
-interface PostRef { id: string; title: string; platform: string; }
-
-// ─── Dashboard Card wrapper ───
 function DCard({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) {
   return (
-    <div 
+    <div
       onClick={onClick}
       className={cn("bg-card rounded-2xl p-5 shadow-[var(--shadow-warm)] border border-border", className, onClick && "cursor-pointer hover:border-primary/30 transition-all")}
     >
@@ -132,57 +119,33 @@ const Dashboard = () => {
   const { profile } = useProfile();
   const navigate = useNavigate();
 
+  const today = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const weekDays = useMemo(() => getDaysOfWeek(), []);
+
+  const { ideas, createIdea } = useIdeas();
+  const { posts } = usePosts();
+  const {
+    habits,
+    habitLogs,
+    createHabit,
+    updateHabit: updateHabitMutation,
+    deleteHabit,
+    toggleHabitLog,
+  } = useHabits({ date: today });
+  const { tasks } = useTasks();
+
   const [period, setPeriod] = useState<PeriodKey>("semana");
   const [customRange, setCustomRange] = useState<{ from: Date; to: Date }>({ from: new Date(), to: new Date() });
-  const [customOpen, setCustomOpen] = useState(false);
+  const [, setCustomOpen] = useState(false);
 
   const dateRange = useMemo(() => getDateRange(period, customRange), [period, customRange]);
 
-  const [ideaCount, setIdeaCount] = useState(0);
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [pillars, setPillars] = useState<Pillar[]>([]);
-  const [habits, setHabits] = useState<Habit[]>([]);
-  const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]);
   const [quickIdea, setQuickIdea] = useState("");
-  const [aiInsight, setAiInsight] = useState<string | null>(null);
+  const [, setAiInsight] = useState<string | null>(null);
   const [copiedHook, setCopiedHook] = useState(false);
-  const [dayDrawerOpen, setDayDrawerOpen] = useState(false);
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [newHabitName, setNewHabitName] = useState("");
   const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
   const [editingHabitName, setEditingHabitName] = useState("");
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [taskPosts, setTaskPosts] = useState<PostRef[]>([]);
-
-  const weekDays = useMemo(() => getDaysOfWeek(), []);
-  const today = new Date().toISOString().split("T")[0];
-
-  useEffect(() => {
-    if (!user) return;
-    const fetchAll = async () => {
-      const [ideasRes, postsRes, pillarsRes, habitsRes, logsRes, tasksRes] = await Promise.all([
-        supabase.from("ideas").select("*", { count: "exact", head: true }).eq("user_id", user.id),
-        supabase.from("posts").select("id, title, platform, format, status, scheduled_date, published_at").eq("user_id", user.id),
-        supabase.from("pillars").select("*").eq("user_id", user.id).order("position"),
-        supabase.from("habits").select("id, name").eq("user_id", user.id).order("position"),
-        supabase.from("habit_logs").select("*").eq("user_id", user.id).eq("date", today),
-        supabase.from("tasks").select("id, title, priority, status, due_date, post_id").eq("user_id", user.id),
-      ]);
-      setIdeaCount(ideasRes.count || 0);
-      setPosts(postsRes.data || []);
-      setPillars(pillarsRes.data || []);
-      setHabits(habitsRes.data || []);
-      setHabitLogs(logsRes.data || []);
-      const allTasks = (tasksRes.data as any[]) || [];
-      setTasks(allTasks);
-      const postIds = [...new Set(allTasks.filter(t => t.post_id).map(t => t.post_id))];
-      if (postIds.length > 0) {
-        const { data: postRefs } = await supabase.from("posts").select("id, title, platform").in("id", postIds);
-        setTaskPosts((postRefs as any[]) || []);
-      }
-    };
-    fetchAll();
-  }, [user, today]);
 
   useEffect(() => {
     if (!user || !posts.length) return;
@@ -195,57 +158,67 @@ const Dashboard = () => {
     const pillarCounts: Record<string, number> = {};
     publishedPosts.forEach(p => { pillarCounts[p.platform] = (pillarCounts[p.platform] || 0) + 1; });
     const topPillar = Object.entries(pillarCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
-    getDailyInsight({ postsThisWeek: weekPosts.length, weeklyGoal: profile?.weekly_goal || 3, topPillar, lastPublished: publishedPosts[publishedPosts.length - 1]?.published_at || "" }, user?.id)
-      .then(insight => { if (insight) { setAiInsight(insight); localStorage.setItem(cacheKey, insight); } }).catch(() => {});
+    getDailyInsight({
+      postsThisWeek: weekPosts.length,
+      weeklyGoal: profile?.weekly_goal || 3,
+      topPillar,
+      lastPublished: publishedPosts[publishedPosts.length - 1]?.published_at || "",
+    }, user?.id)
+      .then(insight => { if (insight) { setAiInsight(insight); localStorage.setItem(cacheKey, insight); } })
+      .catch(() => { /* noop */ });
   }, [posts, user, profile, today, weekDays]);
 
   const handleQuickCapture = async () => {
     const sanitized = sanitizeText(quickIdea);
     if (!sanitized || !user) return;
-    const { error } = await supabase.from("ideas").insert({ user_id: user.id, title: sanitized });
-    if (error) { toast.error("Erro ao salvar ideia."); return; }
-    toast.success("Ideia capturada!");
-    setQuickIdea("");
-    setIdeaCount(prev => prev + 1);
+    try {
+      await createIdea.mutateAsync({ title: sanitized });
+      toast.success("Ideia capturada!");
+      setQuickIdea("");
+    } catch {
+      toast.error("Erro ao salvar ideia.");
+    }
   };
 
-  const toggleHabitLog = async (habitId: string) => {
-    if (!user) return;
-    const existing = habitLogs.find(l => l.habit_id === habitId && l.date === today);
-    if (existing) {
-      await supabase.from("habit_logs").update({ done: !existing.done }).eq("id", existing.id);
-      setHabitLogs(prev => prev.map(l => l.id === existing.id ? { ...l, done: !l.done } : l));
-    } else {
-      const { data } = await supabase.from("habit_logs").insert({ user_id: user.id, habit_id: habitId, date: today, done: true }).select().single();
-      if (data) setHabitLogs(prev => [...prev, data]);
+  const handleToggleHabit = async (habitId: string) => {
+    try {
+      await toggleHabitLog.mutateAsync({ habitId, date: today });
+    } catch {
+      toast.error("Erro ao atualizar hábito.");
     }
   };
 
   const addHabit = async () => {
     const sanitized = sanitizeText(newHabitName);
-    if (!sanitized || !user) return;
-    const { data, error } = await supabase.from("habits").insert({ user_id: user.id, name: sanitized, position: habits.length }).select().single();
-    if (error) { toast.error("Erro ao adicionar hábito."); return; }
-    if (data) setHabits(prev => [...prev, data]);
-    setNewHabitName("");
-    toast.success("Hábito adicionado!");
+    if (!sanitized) return;
+    try {
+      await createHabit.mutateAsync({ name: sanitized });
+      setNewHabitName("");
+      toast.success("Hábito adicionado!");
+    } catch {
+      toast.error("Erro ao adicionar hábito.");
+    }
   };
 
-  const deleteHabit = async (habitId: string) => {
-    await supabase.from("habit_logs").delete().eq("habit_id", habitId);
-    await supabase.from("habits").delete().eq("id", habitId);
-    setHabits(prev => prev.filter(h => h.id !== habitId));
-    setHabitLogs(prev => prev.filter(l => l.habit_id !== habitId));
-    toast.success("Hábito removido.");
+  const handleDeleteHabit = async (habitId: string) => {
+    try {
+      await deleteHabit.mutateAsync(habitId);
+      toast.success("Hábito removido.");
+    } catch {
+      toast.error("Erro ao remover hábito.");
+    }
   };
 
-  const updateHabit = async (habitId: string) => {
+  const handleUpdateHabit = async (habitId: string) => {
     const sanitized = sanitizeText(editingHabitName);
     if (!sanitized) return;
-    await supabase.from("habits").update({ name: sanitized }).eq("id", habitId);
-    setHabits(prev => prev.map(h => h.id === habitId ? { ...h, name: sanitized } : h));
-    setEditingHabitId(null);
-    setEditingHabitName("");
+    try {
+      await updateHabitMutation.mutateAsync({ id: habitId, name: sanitized });
+      setEditingHabitId(null);
+      setEditingHabitName("");
+    } catch {
+      toast.error("Erro ao atualizar hábito.");
+    }
   };
 
   const handleCopyHook = async () => {
@@ -272,7 +245,7 @@ const Dashboard = () => {
 
   const weekPublished = posts.filter(p => p.status === "publicado" && p.published_at && weekDays.some(d => d.date === p.published_at?.split("T")[0]));
   const weekGoal = profile?.weekly_goal || 3;
-  
+
   const habitsToday = habitLogs.filter(l => l.done).length;
 
   const now = new Date();
@@ -280,7 +253,7 @@ const Dashboard = () => {
   const dailyHook = HOOKS_VIRAL[dayOfYear % HOOKS_VIRAL.length];
 
   const stats = [
-    { label: "Ideias", value: ideaCount, icon: Lightbulb, color: "text-primary", link: "/app/ideias" },
+    { label: "Ideias", value: ideas.length, icon: Lightbulb, color: "text-primary", link: "/app/ideias" },
     { label: "Em criação", value: inCreationFiltered.length, icon: FileText, color: "text-muted-foreground", link: "/app/criando" },
     { label: "Publicados", value: publishedFiltered.length, icon: CheckCircle2, color: "text-primary", link: "/app/historico" },
     { label: "Agendados", value: scheduledFiltered.length, icon: Clock, color: "text-muted-foreground", link: "/app/plano" },
@@ -322,7 +295,7 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
+
           <div className="lg:col-span-8 space-y-6">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               {stats.map((s, i) => (
@@ -348,8 +321,8 @@ const Dashboard = () => {
                 <Lightbulb className="h-4 w-4 text-primary" /> Captura Rápida
               </h3>
               <div className="flex gap-2">
-                <Input 
-                  placeholder="O que você está pensando?" 
+                <Input
+                  placeholder="O que você está pensando?"
                   className="rounded-xl border-border bg-background/50 h-11"
                   value={quickIdea}
                   onChange={(e) => setQuickIdea(e.target.value)}
@@ -371,12 +344,12 @@ const Dashboard = () => {
                   return (
                     <div key={h.id} className="flex items-center justify-between group">
                       <div className="flex items-center gap-3">
-                        <Checkbox checked={done} onCheckedChange={() => toggleHabitLog(h.id)} />
+                        <Checkbox checked={done} onCheckedChange={() => handleToggleHabit(h.id)} />
                         {editingHabitId === h.id ? (
-                          <Input 
-                            value={editingHabitName} 
+                          <Input
+                            value={editingHabitName}
                             onChange={(e) => setEditingHabitName(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && updateHabit(h.id)}
+                            onKeyDown={(e) => e.key === "Enter" && handleUpdateHabit(h.id)}
                             onBlur={() => setEditingHabitId(null)}
                             className="h-8 text-sm py-0 rounded-lg"
                             autoFocus
@@ -387,14 +360,14 @@ const Dashboard = () => {
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={() => { setEditingHabitId(h.id); setEditingHabitName(h.name); }} className="p-1 hover:bg-accent rounded text-muted-foreground"><Pencil className="h-3 w-3" /></button>
-                        <button onClick={() => deleteHabit(h.id)} className="p-1 hover:bg-destructive/10 rounded text-destructive"><Trash2 className="h-3 w-3" /></button>
+                        <button onClick={() => handleDeleteHabit(h.id)} className="p-1 hover:bg-destructive/10 rounded text-destructive"><Trash2 className="h-3 w-3" /></button>
                       </div>
                     </div>
                   );
                 })}
                 <div className="pt-2">
-                  <Input 
-                    placeholder="Novo hábito..." 
+                  <Input
+                    placeholder="Novo hábito..."
                     className="h-9 text-xs rounded-xl"
                     value={newHabitName}
                     onChange={(e) => setNewHabitName(e.target.value)}

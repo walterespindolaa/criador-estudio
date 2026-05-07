@@ -83,13 +83,13 @@ export function SettingsVisual() {
   const handleSave = async () => {
     setSaving(true);
     const preset = THEME_PRESETS.find(t => t.id === selectedTheme);
-    await updateProfile({
+    await updateProfile.mutateAsync({
       theme_preset: selectedTheme,
       theme_accent: selectedAccent,
       theme_mode: preset?.mode || "light",
       theme_sidebar: sidebarColor || null,
       theme_font: selectedFont,
-    } as any);
+    });
     toast.success("Visual salvo!");
     setSaving(false);
   };

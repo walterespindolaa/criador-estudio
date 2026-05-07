@@ -1,29 +1,10 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Archive, Eye, Bookmark, MessageSquare, BarChart3, Calendar, Filter, ChevronDown, ChevronRight } from "lucide-react";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { usePosts, type Post } from "@/hooks/usePosts";
+import { usePillars } from "@/hooks/usePillars";
 import { FORMAT_LABELS } from "@/lib/constants";
-
-interface Post {
-  id: string;
-  title: string;
-  platform: string;
-  format: string;
-  pillar_id: string | null;
-  published_at: string | null;
-  result_views: number | null;
-  result_saves: number | null;
-  result_comments: number | null;
-  archive_summary: string | null;
-}
-
-interface Pillar {
-  id: string;
-  name: string;
-  color: string;
-}
 
 const PERIOD_OPTIONS = [
   { key: "month", label: "Este mês" },
@@ -33,32 +14,28 @@ const PERIOD_OPTIONS = [
 ];
 
 const Historico = () => {
-  const { user } = useAuth();
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [pillars, setPillars] = useState<Pillar[]>([]);
+  const { posts: allPosts } = usePosts();
+  const { pillars } = usePillars();
   const [filterPlatform, setFilterPlatform] = useState<string | null>(null);
   const [filterPillar, setFilterPillar] = useState<string | null>(null);
   const [filterPeriod, setFilterPeriod] = useState("all");
   const [openMonths, setOpenMonths] = useState<Set<string>>(new Set());
 
+  const posts = useMemo(
+    () =>
+      allPosts
+        .filter(p => p.status === "publicado")
+        .sort((a, b) => (b.published_at ?? "").localeCompare(a.published_at ?? "")),
+    [allPosts],
+  );
+
   useEffect(() => {
-    if (!user) return;
-    Promise.all([
-      supabase.from("posts").select("*").eq("user_id", user.id).eq("status", "publicado").order("published_at", { ascending: false }),
-      supabase.from("pillars").select("*").eq("user_id", user.id),
-    ]).then(([postsRes, pillarsRes]) => {
-      setPosts(postsRes.data || []);
-      setPillars(pillarsRes.data || []);
-      // Auto-open first month
-      if (postsRes.data?.length) {
-        const first = postsRes.data[0].published_at;
-        if (first) {
-          const key = new Date(first).toISOString().slice(0, 7);
-          setOpenMonths(new Set([key]));
-        }
-      }
-    });
-  }, [user]);
+    if (posts.length === 0) return;
+    const first = posts[0].published_at;
+    if (!first) return;
+    const key = new Date(first).toISOString().slice(0, 7);
+    setOpenMonths(prev => (prev.size === 0 ? new Set([key]) : prev));
+  }, [posts]);
 
   const filtered = useMemo(() => {
     let result = posts;

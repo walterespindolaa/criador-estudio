@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -8,10 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
-import { supabase } from "@/integrations/supabase/client";
+import { usePosts, type Post } from "@/hooks/usePosts";
+import { usePillars } from "@/hooks/usePillars";
+import { useHabits } from "@/hooks/useHabits";
+import { useGoals } from "@/hooks/useGoals";
+import { useReflections } from "@/hooks/useReflections";
 import { toast } from "sonner";
 import {
   Plus, Trash2, CalendarDays, Target, BarChart3, Check, ChevronLeft, ChevronRight,
@@ -22,68 +25,6 @@ import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { PostDrawer } from "@/components/kanban/PostDrawer";
 import { InfoTooltip } from "@/components/shared/InfoTooltip";
 
-// ─── Types ───────────────────────────────────────────────
-interface Post {
-  id: string;
-  title: string;
-  platform: string;
-  format: string;
-  pillar_id: string | null;
-  status: string;
-  scheduled_date: string | null;
-  scheduled_time: string | null;
-  hook: string | null;
-  script: string | null;
-  caption: string | null;
-  cta: string | null;
-  published_at: string | null;
-  notes: string | null;
-  result_views: number | null;
-  result_saves: number | null;
-  result_comments: number | null;
-  archive_summary: string | null;
-  content_blocks: any;
-  user_id: string;
-}
-
-interface Pillar { id: string; name: string; color: string; }
-interface Habit { id: string; name: string; position: number; }
-interface HabitLog { id: string; habit_id: string; date: string; done: boolean; }
-
-interface StructuredGoal {
-  id: string;
-  title: string;
-  category: string;
-  period: string | null;
-  current_value: number | null;
-  target_value: number | null;
-  start_date: string | null;
-  end_date: string | null;
-  status: string;
-  observation: string | null;
-}
-
-interface MilestoneItem {
-  id: string;
-  goal_id: string;
-  name: string;
-  completed: boolean;
-  completed_at: string | null;
-  position: number;
-}
-
-interface MonthlyReflection {
-  id: string;
-  month: string;
-  biz_worked: string | null;
-  biz_blocked: string | null;
-  content_best: string | null;
-  content_rhythm: string | null;
-  focus_execution: string | null;
-  focus_lessons: string | null;
-}
-
-// ─── Helpers ─────────────────────────────────────────────
 const getDaysOfWeek = (offset = 0) => {
   const today = new Date();
   const monday = new Date(today);
@@ -130,200 +71,228 @@ const STATUS_GOAL = [
   { value: "pausada", label: "Pausada" },
 ];
 
-// ─── Component ───────────────────────────────────────────
+type ReflectionFormState = {
+  biz_worked: string;
+  biz_blocked: string;
+  content_best: string;
+  content_rhythm: string;
+  focus_execution: string;
+  focus_lessons: string;
+};
+
 const Plano = () => {
   const { user } = useAuth();
   const { profile } = useProfile();
+  const { posts } = usePosts();
+  const { pillars } = usePillars();
 
-  // Shared
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [pillars, setPillars] = useState<Pillar[]>([]);
-
-  // Week
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const [habits, setHabits] = useState<Habit[]>([]);
-  const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]);
   const [newHabit, setNewHabit] = useState("");
 
-  // Month
   const [monthDate, setMonthDate] = useState(new Date());
   const [selectedMonthDay, setSelectedMonthDay] = useState<string | null>(null);
 
-  // Goals
-  const [goals, setGoals] = useState<StructuredGoal[]>([]);
-  const [milestones, setMilestones] = useState<MilestoneItem[]>([]);
-  const [reflection, setReflection] = useState<MonthlyReflection | null>(null);
   const [showNewGoal, setShowNewGoal] = useState(false);
   const [newGoalForm, setNewGoalForm] = useState({ title: "", category: "geral", target_value: "", observation: "", due_date: "" });
   const [newMilestoneName, setNewMilestoneName] = useState("");
   const [expandedGoal, setExpandedGoal] = useState<string | null>(null);
 
-  // Post drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
-  // Reflection form
-  const [reflectionForm, setReflectionForm] = useState({
+  const [reflectionForm, setReflectionForm] = useState<ReflectionFormState>({
     biz_worked: "", biz_blocked: "", content_best: "", content_rhythm: "", focus_execution: "", focus_lessons: "",
   });
 
   const today = new Date().toISOString().split("T")[0];
-  const weekDays = getDaysOfWeek(weekOffset);
-  const monthDays = getMonthDays(monthDate.getFullYear(), monthDate.getMonth());
+  const weekDays = useMemo(() => getDaysOfWeek(weekOffset), [weekOffset]);
+  const monthDays = useMemo(() => getMonthDays(monthDate.getFullYear(), monthDate.getMonth()), [monthDate]);
 
-  // ─── Fetch data ──────────────────────────────────────
-  const fetchData = useCallback(async () => {
-    if (!user) return;
-    const currentMonth = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, "0")}-01`;
+  const dateRange = useMemo(
+    () => ({ start: weekDays[0].date, end: weekDays[6].date }),
+    [weekDays],
+  );
 
-    const [postsRes, pillarsRes, habitsRes, logsRes, goalsRes, milestonesRes, reflectionRes] = await Promise.all([
-      supabase.from("posts").select("*").eq("user_id", user.id),
-      supabase.from("pillars").select("*").eq("user_id", user.id).order("position"),
-      supabase.from("habits").select("*").eq("user_id", user.id).order("position"),
-      supabase.from("habit_logs").select("*").eq("user_id", user.id).gte("date", weekDays[0].date).lte("date", weekDays[6].date),
-      supabase.from("structured_goals").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("milestones").select("*").eq("user_id", user.id).order("position"),
-      supabase.from("monthly_reflections").select("*").eq("user_id", user.id).eq("month", currentMonth).maybeSingle(),
-    ]);
+  const {
+    habits,
+    habitLogs,
+    createHabit,
+    deleteHabit: deleteHabitMutation,
+    toggleHabitLog,
+  } = useHabits({ dateRange });
 
-    setPosts((postsRes.data || []) as Post[]);
-    setPillars(pillarsRes.data || []);
-    setHabits(habitsRes.data || []);
-    setHabitLogs(logsRes.data || []);
-    setGoals((goalsRes.data || []) as StructuredGoal[]);
-    setMilestones((milestonesRes.data || []) as MilestoneItem[]);
+  const {
+    structuredGoals: goals,
+    milestones,
+    createGoal: createGoalMutation,
+    updateGoalProgress,
+    updateGoalStatus: updateGoalStatusMutation,
+    deleteGoal: deleteGoalMutation,
+    createMilestone,
+    updateMilestone,
+    deleteMilestone: deleteMilestoneMutation,
+  } = useGoals();
 
-    const ref = reflectionRes.data as MonthlyReflection | null;
-    setReflection(ref);
-    if (ref) {
+  const currentMonth = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, "0")}-01`;
+  const { reflection, saveReflection: saveReflectionMutation } = useReflections(currentMonth);
+
+  useEffect(() => {
+    if (!reflection) {
       setReflectionForm({
-        biz_worked: ref.biz_worked || "", biz_blocked: ref.biz_blocked || "",
-        content_best: ref.content_best || "", content_rhythm: ref.content_rhythm || "",
-        focus_execution: ref.focus_execution || "", focus_lessons: ref.focus_lessons || "",
+        biz_worked: "", biz_blocked: "", content_best: "", content_rhythm: "", focus_execution: "", focus_lessons: "",
       });
+      return;
     }
-  }, [user, weekDays[0]?.date, monthDate]);
+    setReflectionForm({
+      biz_worked: reflection.biz_worked || "",
+      biz_blocked: reflection.biz_blocked || "",
+      content_best: reflection.content_best || "",
+      content_rhythm: reflection.content_rhythm || "",
+      focus_execution: reflection.focus_execution || "",
+      focus_lessons: reflection.focus_lessons || "",
+    });
+  }, [reflection]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  // Initialize selected day
   useEffect(() => {
     if (!selectedDay && weekOffset === 0) setSelectedDay(today);
   }, [today, weekOffset, selectedDay]);
 
-  // ─── Habit logic ─────────────────────────────────────
-  const toggleHabitLog = async (habitId: string, date: string) => {
-    if (!user) return;
-    const existing = habitLogs.find(l => l.habit_id === habitId && l.date === date);
-    if (existing) {
-      await supabase.from("habit_logs").update({ done: !existing.done }).eq("id", existing.id);
-    } else {
-      await supabase.from("habit_logs").insert({ user_id: user.id, habit_id: habitId, date, done: true });
+  const handleToggleHabit = async (habitId: string, date: string) => {
+    try {
+      await toggleHabitLog.mutateAsync({ habitId, date });
+    } catch {
+      toast.error("Erro ao atualizar hábito.");
     }
-    fetchData();
   };
 
   const isHabitDone = (habitId: string, date: string) =>
     habitLogs.find(l => l.habit_id === habitId && l.date === date)?.done || false;
 
   const addHabit = async () => {
-    if (!newHabit.trim() || !user) return;
-    await supabase.from("habits").insert({ user_id: user.id, name: newHabit.trim(), position: habits.length });
-    setNewHabit("");
-    fetchData();
+    if (!newHabit.trim()) return;
+    try {
+      await createHabit.mutateAsync({ name: newHabit.trim() });
+      setNewHabit("");
+    } catch {
+      toast.error("Erro ao adicionar hábito.");
+    }
   };
 
-  const deleteHabit = async (id: string) => {
-    await supabase.from("habits").delete().eq("id", id);
-    fetchData();
+  const handleDeleteHabit = async (id: string) => {
+    try {
+      await deleteHabitMutation.mutateAsync(id);
+    } catch {
+      toast.error("Erro ao remover hábito.");
+    }
   };
 
-  // ─── Goals logic ─────────────────────────────────────
   const createGoal = async () => {
-    if (!newGoalForm.title.trim() || !user) return;
-    await supabase.from("structured_goals").insert({
-      user_id: user.id,
-      title: newGoalForm.title.trim(),
-      category: newGoalForm.category,
-      target_value: newGoalForm.target_value ? parseFloat(newGoalForm.target_value) : 0,
-      observation: newGoalForm.observation || null,
-      end_date: newGoalForm.due_date || null,
-    });
-    setNewGoalForm({ title: "", category: "geral", target_value: "", observation: "", due_date: "" });
-    setShowNewGoal(false);
-    fetchData();
-    toast.success("Meta criada!");
+    if (!newGoalForm.title.trim()) return;
+    try {
+      await createGoalMutation.mutateAsync({
+        title: newGoalForm.title.trim(),
+        category: newGoalForm.category,
+        target_value: newGoalForm.target_value ? parseFloat(newGoalForm.target_value) : 0,
+        observation: newGoalForm.observation || null,
+        end_date: newGoalForm.due_date || null,
+        status: "em_andamento",
+      });
+      setNewGoalForm({ title: "", category: "geral", target_value: "", observation: "", due_date: "" });
+      setShowNewGoal(false);
+      toast.success("Meta criada!");
+    } catch {
+      toast.error("Erro ao criar meta.");
+    }
   };
 
   const updateGoalValue = async (goalId: string, value: number) => {
-    await supabase.from("structured_goals").update({ current_value: value }).eq("id", goalId);
-    fetchData();
+    try {
+      await updateGoalProgress.mutateAsync({ id: goalId, current_value: value });
+    } catch {
+      toast.error("Erro ao atualizar valor.");
+    }
   };
 
   const updateGoalStatus = async (goalId: string, status: string) => {
-    await supabase.from("structured_goals").update({ status }).eq("id", goalId);
-    fetchData();
-    toast.success("Status atualizado!");
+    try {
+      await updateGoalStatusMutation.mutateAsync({ id: goalId, status });
+      toast.success("Status atualizado!");
+    } catch {
+      toast.error("Erro ao atualizar status.");
+    }
   };
 
   const deleteGoal = async (goalId: string) => {
-    await supabase.from("milestones").delete().eq("goal_id", goalId);
-    await supabase.from("structured_goals").delete().eq("id", goalId);
-    fetchData();
-    toast.success("Meta removida.");
+    try {
+      await deleteGoalMutation.mutateAsync(goalId);
+      toast.success("Meta removida.");
+    } catch {
+      toast.error("Erro ao remover meta.");
+    }
   };
 
   const addMilestone = async (goalId: string) => {
-    if (!newMilestoneName.trim() || !user) return;
+    if (!newMilestoneName.trim()) return;
     const goalMilestones = milestones.filter(m => m.goal_id === goalId);
-    await supabase.from("milestones").insert({
-      user_id: user.id,
-      goal_id: goalId,
-      name: newMilestoneName.trim(),
-      position: goalMilestones.length,
-    });
-    setNewMilestoneName("");
-    fetchData();
+    try {
+      await createMilestone.mutateAsync({
+        goal_id: goalId,
+        name: newMilestoneName.trim(),
+        position: goalMilestones.length,
+      });
+      setNewMilestoneName("");
+    } catch {
+      toast.error("Erro ao adicionar marco.");
+    }
   };
 
   const toggleMilestone = async (milestoneId: string, completed: boolean) => {
-    await supabase.from("milestones").update({
-      completed: !completed,
-      completed_at: !completed ? new Date().toISOString() : null,
-    }).eq("id", milestoneId);
-    fetchData();
+    try {
+      await updateMilestone.mutateAsync({
+        id: milestoneId,
+        updates: {
+          completed: !completed,
+          completed_at: !completed ? new Date().toISOString() : null,
+        },
+      });
+    } catch {
+      toast.error("Erro ao atualizar marco.");
+    }
   };
 
   const deleteMilestone = async (id: string) => {
-    await supabase.from("milestones").delete().eq("id", id);
-    fetchData();
-  };
-
-  // ─── Reflection ──────────────────────────────────────
-  const saveReflection = async () => {
-    if (!user) return;
-    const currentMonth = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, "0")}-01`;
-    const data = { user_id: user.id, month: currentMonth, ...reflectionForm };
-    if (reflection) {
-      await supabase.from("monthly_reflections").update(data).eq("id", reflection.id);
-    } else {
-      await supabase.from("monthly_reflections").insert(data);
+    try {
+      await deleteMilestoneMutation.mutateAsync(id);
+    } catch {
+      toast.error("Erro ao remover marco.");
     }
-    toast.success("Reflexão salva!");
-    fetchData();
   };
 
-  // ─── Post interaction ────────────────────────────────
-  const openPost = async (postId: string) => {
-    const { data } = await supabase.from("posts").select("*").eq("id", postId).single();
-    if (data) {
-      setSelectedPost(data as Post);
+  const saveReflection = async () => {
+    try {
+      await saveReflectionMutation.mutateAsync({
+        biz_worked: reflectionForm.biz_worked || null,
+        biz_blocked: reflectionForm.biz_blocked || null,
+        content_best: reflectionForm.content_best || null,
+        content_rhythm: reflectionForm.content_rhythm || null,
+        focus_execution: reflectionForm.focus_execution || null,
+        focus_lessons: reflectionForm.focus_lessons || null,
+      });
+      toast.success("Reflexão salva!");
+    } catch {
+      toast.error("Erro ao salvar reflexão.");
+    }
+  };
+
+  const openPost = (postId: string) => {
+    const post = posts.find(p => p.id === postId);
+    if (post) {
+      setSelectedPost(post);
       setDrawerOpen(true);
     }
   };
 
-  // ─── Derived data ────────────────────────────────────
   const weekPublished = posts.filter(p =>
     p.status === "publicado" && p.scheduled_date && weekDays.some(d => d.date === p.scheduled_date)
   );
@@ -343,7 +312,6 @@ const Plano = () => {
     return pillars.find(p => p.id === pillarId)?.name;
   };
 
-  // ─── Post card component ────────────────────────────
   const PostCard = ({ post }: { post: Post }) => {
     const pillarColor = getPillarColor(post.pillar_id);
     const pillarName = getPillarName(post.pillar_id);
@@ -355,7 +323,7 @@ const Plano = () => {
         className="w-full text-left bg-background rounded-xl p-3 border border-border hover:border-primary/40 hover:shadow-sm transition-all group"
       >
         <div className="flex items-start gap-2">
-          <PlatformIcon platform={post.platform as any} size="sm" />
+          <PlatformIcon platform={post.platform} size="sm" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-body font-medium text-foreground truncate group-hover:text-primary transition-colors">
               {post.title}
@@ -387,7 +355,6 @@ const Plano = () => {
     );
   };
 
-  // ─── Week label ──────────────────────────────────────
   const weekLabel = (() => {
     const start = new Date(weekDays[0].date + "T12:00:00");
     const end = new Date(weekDays[6].date + "T12:00:00");
@@ -416,7 +383,6 @@ const Plano = () => {
           {/* ═══════════ TAB: SEMANA ═══════════ */}
           <TabsContent value="semana">
             <div className="space-y-6">
-              {/* Week navigation + progress */}
               <Card className="border-border">
                 <CardContent className="pt-5 pb-4">
                   <div className="flex items-center justify-between mb-3">
@@ -440,7 +406,6 @@ const Plano = () => {
                     </div>
                   </div>
 
-                  {/* Day selector */}
                   <div className="grid grid-cols-7 gap-2">
                     {weekDays.map(day => {
                       const dayPosts = posts.filter(p => p.scheduled_date === day.date);
@@ -477,7 +442,6 @@ const Plano = () => {
                 </CardContent>
               </Card>
 
-              {/* Selected day posts */}
               {selectedDay && (
                 <Card className="border-border">
                   <CardHeader className="pb-3">
@@ -504,7 +468,6 @@ const Plano = () => {
                 </Card>
               )}
 
-              {/* Habits */}
               <Card className="border-border">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-body font-semibold text-foreground">Hábitos diários <InfoTooltip text="Acompanhamento semanal dos seus hábitos de criação. Marque os dias que cumpriu cada hábito." /></CardTitle>
@@ -523,7 +486,7 @@ const Plano = () => {
                             {weekDays.map(day => (
                               <button
                                 key={day.date}
-                                onClick={() => toggleHabitLog(habit.id, day.date)}
+                                onClick={() => handleToggleHabit(habit.id, day.date)}
                                 className={`w-7 h-7 rounded-lg text-xs font-body flex items-center justify-center transition-colors ${
                                   isHabitDone(habit.id, day.date)
                                     ? "bg-secondary text-secondary-foreground"
@@ -534,7 +497,7 @@ const Plano = () => {
                                 {isHabitDone(habit.id, day.date) ? <Check className="h-3 w-3" /> : day.name[0]}
                               </button>
                             ))}
-                            <button onClick={() => deleteHabit(habit.id)} className="p-1 ml-1 hover:bg-destructive/10 rounded">
+                            <button onClick={() => handleDeleteHabit(habit.id)} className="p-1 ml-1 hover:bg-destructive/10 rounded">
                               <Trash2 className="h-3 w-3 text-destructive" />
                             </button>
                           </div>
@@ -557,7 +520,6 @@ const Plano = () => {
           {/* ═══════════ TAB: MÊS ═══════════ */}
           <TabsContent value="mes">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Calendar */}
               <div className="lg:col-span-2">
                 <Card className="border-border">
                   <CardHeader className="pb-3">
@@ -618,9 +580,7 @@ const Plano = () => {
                 </Card>
               </div>
 
-              {/* Side panel */}
               <div className="space-y-4">
-                {/* Selected day detail */}
                 <Card className="border-border">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-body font-semibold text-foreground">
@@ -642,7 +602,6 @@ const Plano = () => {
                   </CardContent>
                 </Card>
 
-                {/* Month stats */}
                 <Card className="border-border">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-[15px] font-body font-semibold text-foreground">Resumo do mês</CardTitle>
@@ -676,7 +635,6 @@ const Plano = () => {
                   </CardContent>
                 </Card>
 
-                {/* Reflection */}
                 <Card className="border-border">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-[15px] font-body font-semibold text-foreground flex items-center gap-2">
@@ -684,16 +642,16 @@ const Plano = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {[
+                    {([
                       { key: "content_best", label: "Melhor conteúdo do mês", placeholder: "Qual post se destacou?" },
                       { key: "content_rhythm", label: "Ritmo de produção", placeholder: "Como foi sua consistência?" },
                       { key: "focus_lessons", label: "Aprendizados", placeholder: "O que aprendeu?" },
-                    ].map(field => (
+                    ] as const).map(field => (
                       <div key={field.key} className="space-y-1">
                         <Label className="text-xs font-body">{field.label}</Label>
                         <Textarea
                           placeholder={field.placeholder}
-                          value={(reflectionForm as any)[field.key]}
+                          value={reflectionForm[field.key]}
                           onChange={e => setReflectionForm(prev => ({ ...prev, [field.key]: e.target.value }))}
                           className="rounded-xl min-h-[50px] text-sm"
                         />
@@ -711,7 +669,6 @@ const Plano = () => {
           {/* ═══════════ TAB: METAS ═══════════ */}
           <TabsContent value="metas">
             <div className="max-w-3xl space-y-6">
-              {/* Header + Add button */}
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-body font-semibold text-foreground">Minhas Metas <InfoTooltip text="Metas mensais ou de projeto. Adicione marcos para dividir em etapas menores." /></h2>
@@ -722,7 +679,6 @@ const Plano = () => {
                 </Button>
               </div>
 
-              {/* New goal form */}
               {showNewGoal && (
                 <Card className="border-primary/20 bg-primary/5">
                   <CardContent className="pt-5 space-y-4">
@@ -765,7 +721,6 @@ const Plano = () => {
                 </Card>
               )}
 
-              {/* Goals list */}
               {goals.length === 0 && !showNewGoal ? (
                 <Card className="border-border">
                   <CardContent className="py-12 text-center">
@@ -787,7 +742,6 @@ const Plano = () => {
                   return (
                     <Card key={goal.id} className={`border-border transition-all ${isExpanded ? "ring-1 ring-primary/20" : ""}`}>
                       <CardContent className="pt-5">
-                        {/* Goal header */}
                         <button onClick={() => setExpandedGoal(isExpanded ? null : goal.id)} className="w-full text-left">
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex-1 min-w-0">
@@ -830,10 +784,8 @@ const Plano = () => {
                           <Progress value={progress} className="h-2" />
                         </button>
 
-                        {/* Expanded details */}
                         {isExpanded && (
                           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-4 space-y-4 border-t border-border pt-4">
-                            {/* Update value */}
                             {target > 0 && (
                               <div className="flex items-center gap-3">
                                 <Label className="text-xs font-body whitespace-nowrap">Valor atual:</Label>
@@ -847,7 +799,6 @@ const Plano = () => {
                               </div>
                             )}
 
-                            {/* Status changer */}
                             <div className="flex items-center gap-3">
                               <Label className="text-xs font-body whitespace-nowrap">Status:</Label>
                               <Select value={goal.status} onValueChange={v => updateGoalStatus(goal.id, v)}>
@@ -862,7 +813,6 @@ const Plano = () => {
                               <p className="text-xs text-muted-foreground font-body italic">📝 {goal.observation}</p>
                             )}
 
-                            {/* Milestones / Baby steps */}
                             <div className="space-y-2">
                               <p className="text-xs font-body font-semibold text-foreground flex items-center gap-1.5">
                                 <Milestone className="h-3.5 w-3.5 text-primary" /> Marcos (baby steps)
@@ -870,7 +820,7 @@ const Plano = () => {
                               {goalMilestones.map(ms => (
                                 <div key={ms.id} className="flex items-center gap-2">
                                   <button
-                                    onClick={() => toggleMilestone(ms.id, ms.completed)}
+                                    onClick={() => toggleMilestone(ms.id, !!ms.completed)}
                                     className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
                                       ms.completed ? "bg-secondary border-secondary text-secondary-foreground" : "border-border hover:border-primary"
                                     }`}
@@ -896,7 +846,6 @@ const Plano = () => {
                               </div>
                             </div>
 
-                            {/* Delete goal */}
                             <div className="pt-2 border-t border-border">
                               <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive text-xs" onClick={() => deleteGoal(goal.id)}>
                                 <Trash2 className="h-3 w-3 mr-1" /> Remover meta
@@ -910,7 +859,6 @@ const Plano = () => {
                 })
               )}
 
-              {/* Annual overview */}
               <Card className="border-border">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-body font-semibold text-foreground flex items-center gap-2">
@@ -948,14 +896,13 @@ const Plano = () => {
         </Tabs>
       </motion.div>
 
-      {/* Post Drawer */}
       <PostDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         post={selectedPost}
         pillars={pillars}
         userId={user?.id || ""}
-        onSaved={fetchData}
+        onSaved={() => { /* React Query invalidations handle refresh */ }}
       />
     </div>
   );

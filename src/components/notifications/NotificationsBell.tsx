@@ -1,21 +1,11 @@
 import { useEffect, useState } from "react";
-import { Bell, Trophy, Lightbulb, CheckCircle2, Flame, X } from "lucide-react";
+import { Bell, Trophy, Lightbulb, CheckCircle2, Flame } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { useNotifications, type Notification } from "@/hooks/useNotifications";
 import { generateNotifications } from "@/lib/notifications";
-
-interface Notification {
-  id: string;
-  type: string;
-  title: string;
-  description: string | null;
-  link: string | null;
-  read: boolean;
-  created_at: string;
-}
 
 const TYPE_ICONS: Record<string, { icon: typeof Bell; color: string }> = {
   meta_batida: { icon: Trophy, color: "text-yellow-500" },
@@ -37,40 +27,21 @@ function timeAgo(dateStr: string) {
 
 export function NotificationsBell() {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [open, setOpen] = useState(false);
-
-  const fetchNotifications = async () => {
-    if (!user) return;
-    const { data } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(30);
-    setNotifications((data as any[]) || []);
-  };
 
   useEffect(() => {
     if (!user) return;
-    generateNotifications(user.id).then(() => fetchNotifications());
+    generateNotifications(user.id);
   }, [user]);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  const markAsRead = async (id: string) => {
-    await supabase.from("notifications").update({ read: true } as any).eq("id", id);
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  const handleMarkAsRead = (id: string) => {
+    markAsRead.mutate(id);
   };
 
-  const markAllRead = async () => {
-    if (!user) return;
-    const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
-    if (unreadIds.length === 0) return;
-    for (const id of unreadIds) {
-      await supabase.from("notifications").update({ read: true } as any).eq("id", id);
-    }
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  const handleMarkAllRead = () => {
+    if (unreadCount === 0) return;
+    markAllAsRead.mutate();
   };
 
   const renderList = (items: Notification[]) => (
@@ -84,7 +55,7 @@ export function NotificationsBell() {
         return (
           <button
             key={n.id}
-            onClick={() => markAsRead(n.id)}
+            onClick={() => handleMarkAsRead(n.id)}
             className={`w-full text-left flex items-start gap-3 p-3 rounded-xl transition-colors ${
               n.read ? "opacity-60" : "bg-primary/5 hover:bg-primary/10"
             }`}
@@ -94,7 +65,9 @@ export function NotificationsBell() {
               <p className="text-sm font-body font-medium text-foreground">{n.title}</p>
               {n.description && <p className="text-xs text-muted-foreground font-body mt-0.5">{n.description}</p>}
             </div>
-            <span className="text-[10px] text-muted-foreground font-body whitespace-nowrap">{timeAgo(n.created_at)}</span>
+            <span className="text-[10px] text-muted-foreground font-body whitespace-nowrap">
+              {n.created_at ? timeAgo(n.created_at) : ""}
+            </span>
           </button>
         );
       })}
@@ -116,7 +89,7 @@ export function NotificationsBell() {
       <PopoverContent className="w-[380px] p-0" align="end">
         <div className="p-4 border-b border-border flex items-center justify-between">
           <h3 className="font-display font-semibold text-foreground text-sm">Notificações</h3>
-          <Button variant="ghost" size="sm" className="text-xs text-primary h-auto py-1" onClick={markAllRead}>
+          <Button variant="ghost" size="sm" className="text-xs text-primary h-auto py-1" onClick={handleMarkAllRead}>
             Marcar todas como lidas
           </Button>
         </div>

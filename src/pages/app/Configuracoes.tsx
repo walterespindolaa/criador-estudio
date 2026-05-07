@@ -1,32 +1,28 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Trash2, LogOut, Camera, Lock, AlertTriangle, GripVertical, Sparkles, Bell, Shield, CreditCard, Paintbrush, Moon, Sun, Monitor, HardDrive, ExternalLink, Unplug, User, LayoutGrid, Plug, BookMarked } from "lucide-react";
+import { Plus, Trash2, Camera, Lock, AlertTriangle, Shield, Paintbrush, HardDrive, ExternalLink, Unplug, User, LayoutGrid, Plug } from "lucide-react";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
+import { usePillars } from "@/hooks/usePillars";
+import { useHabits } from "@/hooks/useHabits";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { useTheme } from "@/contexts/ThemeContext";
 
 import { useGoogleDriveConnection } from "@/hooks/useGoogleDriveConnection";
-import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 import { SettingsVisual } from "@/components/settings/SettingsVisual";
 import { InfoTooltip } from "@/components/shared/InfoTooltip";
 import { sanitizeText, sanitizeUrl } from "@/lib/sanitize";
-
-interface Pillar { id: string; name: string; color: string; }
-interface Habit { id: string; name: string; position: number; }
 
 const PILLAR_COLORS = ["#C4622D", "#5C7A6B", "#8B6F4E", "#A4785C", "#6B8E7B", "#D4956A"];
 const NICHE_OPTIONS = ["Lifestyle", "Moda", "Beleza", "Fitness", "Culinária", "Educação", "Negócios", "Entretenimento", "Saúde", "Tecnologia"];
@@ -48,13 +44,11 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 const Configuracoes = () => {
   const { user, signOut } = useAuth();
   const { profile, updateProfile } = useProfile();
-  const { theme, setTheme } = useTheme();
+  const { pillars, createPillar, deletePillar: deletePillarMutation } = usePillars();
+  const { habits, createHabit, deleteHabit: deleteHabitMutation } = useHabits();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [pillars, setPillars] = useState<Pillar[]>([]);
-  const [habits, setHabits] = useState<Habit[]>([]);
-  
   const { register, handleSubmit, setValue, watch, formState: { errors }, reset } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
   });
@@ -73,7 +67,7 @@ const Configuracoes = () => {
   const [newPassword, setNewPassword] = useState("");
   const [logoutOpen, setLogoutOpen] = useState(false);
 
-  const { connection: driveConnection, loading: driveLoading, connect: driveConnect, disconnect: driveDisconnect } = useGoogleDriveConnection();
+  const { connection: driveConnection, connect: driveConnect, disconnect: driveDisconnect } = useGoogleDriveConnection();
   const [connectingDrive, setConnectingDrive] = useState(false);
 
   useEffect(() => {
@@ -92,29 +86,23 @@ const Configuracoes = () => {
     }
   }, [profile, reset]);
 
-  useEffect(() => {
-    if (!user) return;
-    Promise.all([
-      supabase.from("pillars").select("*").eq("user_id", user.id).order("position"),
-      supabase.from("habits").select("*").eq("user_id", user.id).order("position"),
-    ]).then(([pillarsRes, habitsRes]) => {
-      setPillars(pillarsRes.data || []);
-      setHabits(habitsRes.data || []);
-    });
-  }, [user]);
-
   const onSubmit = async (data: ProfileFormData) => {
-    await updateProfile({
-      ...data,
-      name: sanitizeText(data.name),
-      bio: data.bio ? sanitizeText(data.bio) : null,
-      niche: sanitizeText(data.niche),
-      instagram_handle: data.instagram_handle ? sanitizeText(data.instagram_handle) : null,
-      tiktok_handle: data.tiktok_handle ? sanitizeText(data.tiktok_handle) : null,
-      youtube_handle: data.youtube_handle ? sanitizeText(data.youtube_handle) : null,
-      avatar_url: data.avatar_url ? sanitizeUrl(data.avatar_url) : null,
-    } as any);
-    toast.success("Perfil atualizado!");
+    try {
+      await updateProfile.mutateAsync({
+        name: sanitizeText(data.name),
+        bio: data.bio ? sanitizeText(data.bio) : null,
+        niche: sanitizeText(data.niche),
+        weekly_goal: data.weekly_goal,
+        platforms: data.platforms,
+        instagram_handle: data.instagram_handle ? sanitizeText(data.instagram_handle) : null,
+        tiktok_handle: data.tiktok_handle ? sanitizeText(data.tiktok_handle) : null,
+        youtube_handle: data.youtube_handle ? sanitizeText(data.youtube_handle) : null,
+        avatar_url: data.avatar_url ? sanitizeUrl(data.avatar_url) : null,
+      });
+      toast.success("Perfil atualizado!");
+    } catch {
+      toast.error("Erro ao atualizar perfil.");
+    }
   };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -136,28 +124,44 @@ const Configuracoes = () => {
 
   const addPillar = async () => {
     const sanitized = sanitizeText(newPillarName);
-    if (!sanitized || !user || pillars.length >= 5) return;
-    await supabase.from("pillars").insert({ user_id: user.id, name: sanitized, color: newPillarColor, position: pillars.length });
-    setNewPillarName("");
-    const { data } = await supabase.from("pillars").select("*").eq("user_id", user.id).order("position");
-    setPillars(data || []);
-    toast.success("Pilar adicionado!");
+    if (!sanitized || pillars.length >= 5) return;
+    try {
+      await createPillar.mutateAsync({ name: sanitized, color: newPillarColor });
+      setNewPillarName("");
+      toast.success("Pilar adicionado!");
+    } catch {
+      toast.error("Erro ao adicionar pilar.");
+    }
   };
 
-  const deletePillar = async (id: string) => { await supabase.from("pillars").delete().eq("id", id); setPillars(prev => prev.filter(p => p.id !== id)); };
+  const handleDeletePillar = async (id: string) => {
+    try {
+      await deletePillarMutation.mutateAsync(id);
+    } catch {
+      toast.error("Erro ao remover pilar.");
+    }
+  };
 
   const addHabit = async (habitName?: string) => {
     const n = habitName || newHabitName.trim();
     const sanitized = sanitizeText(n);
-    if (!sanitized || !user) return;
-    await supabase.from("habits").insert({ user_id: user.id, name: sanitized, position: habits.length });
-    setNewHabitName("");
-    const { data } = await supabase.from("habits").select("*").eq("user_id", user.id).order("position");
-    setHabits(data || []);
-    toast.success("Hábito adicionado!");
+    if (!sanitized) return;
+    try {
+      await createHabit.mutateAsync({ name: sanitized });
+      setNewHabitName("");
+      toast.success("Hábito adicionado!");
+    } catch {
+      toast.error("Erro ao adicionar hábito.");
+    }
   };
 
-  const deleteHabit = async (id: string) => { await supabase.from("habits").delete().eq("id", id); setHabits(prev => prev.filter(h => h.id !== id)); };
+  const handleDeleteHabit = async (id: string) => {
+    try {
+      await deleteHabitMutation.mutateAsync(id);
+    } catch {
+      toast.error("Erro ao remover hábito.");
+    }
+  };
 
   const handleChangePassword = async () => {
     if (newPassword.length < 8) { toast.error("Mínimo 8 caracteres."); return; }
@@ -304,7 +308,7 @@ const Configuracoes = () => {
                     <div key={p.id} className="flex items-center gap-3">
                       <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: p.color }} />
                       <span className="font-body text-sm text-foreground flex-1">{p.name}</span>
-                      <button type="button" onClick={() => deletePillar(p.id)} className="p-1 hover:bg-destructive/10 rounded"><Trash2 className="h-3.5 w-3.5 text-destructive" /></button>
+                      <button type="button" onClick={() => handleDeletePillar(p.id)} className="p-1 hover:bg-destructive/10 rounded"><Trash2 className="h-3.5 w-3.5 text-destructive" /></button>
                     </div>
                   ))}
                   {pillars.length < 5 && (
@@ -327,7 +331,7 @@ const Configuracoes = () => {
                   {habits.map(h => (
                     <div key={h.id} className="flex items-center gap-3">
                       <span className="font-body text-sm text-foreground flex-1">{h.name}</span>
-                      <button type="button" onClick={() => deleteHabit(h.id)} className="p-1 hover:bg-destructive/10 rounded"><Trash2 className="h-3.5 w-3.5 text-destructive" /></button>
+                      <button type="button" onClick={() => handleDeleteHabit(h.id)} className="p-1 hover:bg-destructive/10 rounded"><Trash2 className="h-3.5 w-3.5 text-destructive" /></button>
                     </div>
                   ))}
                   <div className="flex gap-2">

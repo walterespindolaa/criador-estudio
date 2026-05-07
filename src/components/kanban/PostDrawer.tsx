@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,6 +30,8 @@ import { filterReferences, generateArchiveSummary } from "@/lib/ai/claude";
 import { PostPreviewModal } from "./PostPreviewModal";
 import { useProfile } from "@/hooks/useProfile";
 import { useGoogleDrive } from "@/hooks/useGoogleDrive";
+import { usePosts } from "@/hooks/usePosts";
+import { useReferenceLibrary, useUserLibrary } from "@/hooks/useLibrary";
 import { RoteiroPdfTemplate } from "@/components/pdf/RoteiroPdfTemplate";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { sanitizeText } from "@/lib/sanitize";
@@ -111,7 +113,6 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   const [showResults, setShowResults] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiHookCategories, setAiHookCategories] = useState<string[]>([]);
-  const [refFormats, setRefFormats] = useState<any[]>([]);
   interface Section { text: string; captacao: string; driveFileId?: string | null; driveFileName?: string | null; driveThumbnail?: string | null; }
   const emptySection = (): Section => ({ text: "", captacao: "", driveFileId: null, driveFileName: null, driveThumbnail: null });
   const [sections, setSections] = useState<Section[]>(Array(5).fill(null).map(emptySection));
@@ -132,9 +133,27 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   // Google Drive hook
   const { pickAndSave, picking } = useGoogleDrive();
 
-  // User personal references
-  const [userRefHooks, setUserRefHooks] = useState<any[]>([]);
-  const [userRefPrompts, setUserRefPrompts] = useState<any[]>([]);
+  // Posts mutations
+  const { createPost, updatePost } = usePosts();
+
+  // Library data
+  const { referenceFormats } = useReferenceLibrary();
+  const { userHooks, userPrompts } = useUserLibrary();
+
+  const refFormats = useMemo(
+    () => [...referenceFormats].sort((a, b) => a.platform.localeCompare(b.platform)),
+    [referenceFormats],
+  );
+
+  const userRefHooks = useMemo(
+    () => [...userHooks].sort((a, b) => (b.is_favorite ? 1 : 0) - (a.is_favorite ? 1 : 0)),
+    [userHooks],
+  );
+
+  const userRefPrompts = useMemo(
+    () => [...userPrompts].sort((a, b) => (b.is_favorite ? 1 : 0) - (a.is_favorite ? 1 : 0)),
+    [userPrompts],
+  );
 
   const fetchDriveMedia = useCallback(async (postId: string) => {
     const { data } = await supabase.from("external_media_refs").select("id, external_file_id, file_name, file_type, thumbnail_url, view_url").eq("post_id", postId).order("created_at");
@@ -197,20 +216,6 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       setSections(count > 0 ? Array(count).fill(null).map(emptySection) : []);
     }
   }, [format, isNew]);
-
-  // Fetch reference formats and user personal refs
-  useEffect(() => {
-    if (!open) return;
-    supabase.from("reference_formats").select("*").eq("is_active", true).order("platform").then(({ data }) => {
-      setRefFormats(data || []);
-    });
-    if (userId) {
-      supabase.from("user_hooks").select("*").eq("user_id", userId).order("is_favorite", { ascending: false })
-        .then(({ data }) => setUserRefHooks(data || []));
-      supabase.from("user_prompts").select("*").eq("user_id", userId).order("is_favorite", { ascending: false })
-        .then(({ data }) => setUserRefPrompts(data || []));
-    }
-  }, [open, userId]);
 
   const handleAiReferences = async () => {
     if (aiHookCategories.length > 0 || isAiLoading) return;
@@ -296,18 +301,16 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       }
     }
 
-    let error;
     let newPostId: string | undefined;
-    if (post) {
-      ({ error } = await supabase.from("posts").update(data).eq("id", post.id));
-      newPostId = post.id;
-    } else {
-      const result = await supabase.from("posts").insert(data).select("id").single();
-      error = result.error;
-      newPostId = result.data?.id;
-    }
-
-    if (error) {
+    try {
+      if (post) {
+        await updatePost.mutateAsync({ id: post.id, updates: data });
+        newPostId = post.id;
+      } else {
+        const created = await createPost.mutateAsync(data);
+        newPostId = created.id;
+      }
+    } catch {
       toast.error("Erro ao salvar post.");
       return;
     }
@@ -596,7 +599,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
 
               {/* Tarefas do post */}
               {!isNew && post ? (
-                <PostTasks postId={post.id} userId={userId} />
+                <PostTasks postId={post.id} />
               ) : (
                 <div className="space-y-1">
                   <p className="text-sm font-body font-semibold text-foreground flex items-center gap-2">
