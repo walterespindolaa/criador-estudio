@@ -273,6 +273,39 @@ Nicho: ${data.nicho || 'lifestyle'}`
         maxTokens = 400
 
         break
+      case 'suggest-hashtags':
+        operationPrompt = `Você é um especialista em hashtags para redes sociais brasileiras. Gere uma lista de hashtags relevantes para o post.
+
+REGRAS:
+
+Gere EXATAMENTE 20 hashtags
+
+Ordene por relevância: as 7 primeiras devem ser as mais relevantes e populares, as 7 seguintes de média popularidade, as 6 últimas devem ser de nicho específico (menos concorrência, mais chances de aparecer no Explore)
+
+Apenas hashtags em português do Brasil (exceto termos universais como #reels, #tiktok, etc)
+
+SEM # na frente — apenas a palavra
+
+Considere a plataforma: Instagram usa hashtags no caption ou primeiro comentário, TikTok usa hashtags curtas e trends
+
+Considere o formato: reels/video usam hashtags diferentes de foto/carrossel
+
+Misture hashtags de volume alto (500K+ posts) com médio (50K-500K) e nicho (<50K)
+
+RESPONDA APENAS com um array JSON de strings. Sem texto antes ou depois. Exemplo: ["marketingdigital","dicasdeconteudo","criadoresdeconteudo","instagrambrasil","socialmedia","reelsbrasil","dicasinstagram","empreendedorismodigital","marketingdeconteudo","produçãodeconteudo","criadorbrasileiro","vidadecriador","conteudodigital","estrategiadeconteudo","nichodigital","microinfluencer","crescimentoorganico","algoritmoinstagram","planejamentodeconteudo","criatividade"]`
+        userPrompt = `Título do post: "${data.titulo || ''}"
+
+Formato: ${data.formato || 'post'}
+
+Plataforma: ${data.plataforma || 'instagram'}
+
+Pilar de conteúdo: ${data.pilar || 'geral'}
+
+Nicho do criador: ${data.nicho || 'lifestyle'}
+
+Legenda: ${(data.legenda || '').slice(0, 200)}`
+        maxTokens = 400
+        break
       default:
         throw new Error('Invalid operation')
     }
