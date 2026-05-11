@@ -12,6 +12,7 @@ import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, parseISO, isWithinInterval } from "date-fns";
 import { usePosts, type Post } from "@/hooks/usePosts";
+import { PageSkeleton } from "@/components/shared/PageSkeleton";
 import { usePillars } from "@/hooks/usePillars";
 import { useTasks } from "@/hooks/useTasks";
 
@@ -41,6 +42,15 @@ function getDateRange(period: PeriodKey, customRange?: { from: Date; to: Date })
   }
 }
 
+const STATUS_HEX: Record<string, string> = {
+  ideia: "#4DABF7",
+  roteiro: "#FFBE0B",
+  gravando: "#FF6B6B",
+  editando: "#FF69B4",
+  agendado: "#7C5CFC",
+  publicado: "#20B2AA",
+};
+
 const COLUMNS = [
   { key: "ideia", label: "Ideia", icon: LayoutDashboard, bg: "bg-muted" },
   { key: "roteiro", label: "Roteiro", icon: PenLine, bg: "bg-primary/5" },
@@ -62,7 +72,7 @@ type ContentBlocks = { tema?: string; roteiro?: string; midia?: string; legenda?
 
 const Criando = () => {
   const { user } = useAuth();
-  const { posts, updatePost } = usePosts();
+  const { posts, updatePost, isLoading: postsLoading } = usePosts();
   const { pillars } = usePillars();
   const { tasks } = useTasks();
 
@@ -144,6 +154,14 @@ const Criando = () => {
   const getPillar = (id: string | null) => pillars.find(p => p.id === id);
 
   const hasActiveFilters = filterPlatform || filterPillar || period !== "semana";
+
+  if (postsLoading && posts.length === 0) {
+    return (
+      <div className="pb-20 md:pb-0">
+        <PageSkeleton />
+      </div>
+    );
+  }
 
   return (
     <div className="pb-20 md:pb-0">
@@ -256,7 +274,8 @@ const Criando = () => {
                     const blocks = (post.content_blocks ?? null) as ContentBlocks | null;
                     return (
                       <motion.div key={post.id} layout draggable onDragStart={() => setDraggedPost(post.id)} onClick={() => openEdit(post)}
-                        className={`bg-card rounded-xl p-4 shadow-warm border border-border cursor-grab active:cursor-grabbing hover:shadow-warm-lg transition-all ${isPublished ? "opacity-70" : ""}`}>
+                        style={{ borderLeftColor: STATUS_HEX[post.status ?? "ideia"] ?? "transparent", borderLeftWidth: 4 }}
+                        className={`bg-card rounded-xl p-4 shadow-warm-sm border border-border cursor-grab active:cursor-grabbing hover:shadow-warm-md hover:scale-[1.01] transition-all duration-200 ${isPublished ? "opacity-70" : ""}`}>
                         <p className="font-body font-medium text-sm text-foreground mb-2 leading-snug line-clamp-2">{post.title}</p>
                         {blocks && (
                           <div className="flex gap-1 mb-2">

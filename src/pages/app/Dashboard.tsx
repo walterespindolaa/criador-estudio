@@ -19,6 +19,8 @@ import { useIdeas } from "@/hooks/useIdeas";
 import { usePosts } from "@/hooks/usePosts";
 import { useHabits } from "@/hooks/useHabits";
 import { useTasks } from "@/hooks/useTasks";
+import { BestTimeToPost } from "@/components/insights/BestTimeToPost";
+import { PageSkeleton } from "@/components/shared/PageSkeleton";
 
 const HOOKS_VIRAL = [
   { text: "Você sabia que [dado surpreendente]?", category: "curiosidade" },
@@ -116,7 +118,7 @@ function DCard({ children, className, onClick }: { children: React.ReactNode; cl
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { profile } = useProfile();
+  const { profile, isLoading: profileLoading } = useProfile();
   const navigate = useNavigate();
 
   const today = useMemo(() => new Date().toISOString().split("T")[0], []);
@@ -261,6 +263,14 @@ const Dashboard = () => {
     { label: "Hábitos hoje", value: `${habitsToday}/${habits.length}`, icon: Flame, bg: "from-orange-500/15 to-red-500/5", iconBg: "bg-orange-500", iconColor: "text-white", link: "/app/plano" },
   ];
 
+  if (profileLoading) {
+    return (
+      <div className="pb-20 md:pb-0">
+        <PageSkeleton />
+      </div>
+    );
+  }
+
   return (
     <div className="pb-20 md:pb-0">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
@@ -393,6 +403,8 @@ const Dashboard = () => {
                 </div>
               </div>
             </DCard>
+
+            <BestTimeToPost posts={posts} />
 
             <DCard className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200/50 dark:from-amber-500/10 dark:to-orange-500/5 dark:border-amber-500/20">
               <h3 className="text-sm font-display font-bold text-amber-700 dark:text-amber-400 mb-2 flex items-center gap-1.5">

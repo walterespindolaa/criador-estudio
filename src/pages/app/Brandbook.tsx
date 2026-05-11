@@ -15,6 +15,7 @@ import { InfoTooltip } from "@/components/shared/InfoTooltip";
 import { useBrandItems } from "@/hooks/useBrandItems";
 import { useMoodboard } from "@/hooks/useMoodboard";
 import { usePersonas } from "@/hooks/usePersonas";
+import { cn } from "@/lib/utils";
 
 interface EntryMap { [key: string]: string }
 interface PersonaData {
@@ -154,6 +155,14 @@ const Brandbook = () => {
   const { persona: personaRow, savePersona: savePersonaMutation, isLoading: personaLoading } = usePersonas();
 
   const [answers, setAnswers] = useState<Record<string, EntryMap>>({});
+  const [activeTab, setActiveTab] = useState<string>("visao-geral");
+
+  const countSectionAnswers = useCallback((sectionKey: string) => {
+    const config = QUESTION_SECTIONS[sectionKey as QuestionSectionKey];
+    if (!config) return 0;
+    const sectionAnswers = answers[sectionKey] ?? {};
+    return config.questions.filter(q => (sectionAnswers[q.key] ?? "").trim().length > 0).length;
+  }, [answers]);
   const [saving, setSaving] = useState(false);
 
   const [newItemName, setNewItemName] = useState("");
@@ -407,7 +416,34 @@ const Brandbook = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="visao-geral">
+        {/* Brand Hub Overview */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
+          {([
+            { key: "identidade", icon: Heart, label: "Identidade", color: "from-pink-500 to-rose-500", count: countSectionAnswers("moodboard-identidade"), tab: "moodboard" },
+            { key: "visual", icon: Palette, label: "Visual", color: "from-violet-500 to-purple-500", count: countSectionAnswers("moodboard-visual") + brandItems.length, tab: "moodboard" },
+            { key: "comunicacao", icon: MessageSquare, label: "Comunicação", color: "from-blue-500 to-cyan-500", count: countSectionAnswers("linha-editorial"), tab: "linha-editorial" },
+            { key: "publico", icon: Users, label: "Público-alvo", color: "from-amber-500 to-orange-500", count: persona.name ? 1 : 0, tab: "persona" },
+            { key: "valores", icon: BookOpen, label: "Valores", color: "from-emerald-500 to-teal-500", count: countSectionAnswers("moodboard-contexto"), tab: "moodboard" },
+            { key: "tom", icon: Mic, label: "Tom de Voz", color: "from-indigo-500 to-blue-500", count: countSectionAnswers("tom-de-voz"), tab: "tom-de-voz" },
+          ] as const).map(section => (
+            <button
+              key={section.key}
+              type="button"
+              onClick={() => setActiveTab(section.tab)}
+              className="bg-card rounded-xl border border-border p-4 text-left hover:shadow-warm-md hover:scale-[1.01] transition-all duration-200 group"
+            >
+              <div className={cn("w-9 h-9 rounded-lg bg-gradient-to-br flex items-center justify-center mb-3", section.color)}>
+                <section.icon className="h-4 w-4 text-white" strokeWidth={1.75} />
+              </div>
+              <p className="text-sm font-display font-semibold text-foreground">{section.label}</p>
+              <p className="text-[11px] text-muted-foreground font-body mt-0.5">
+                {section.count > 0 ? `${section.count} ${section.count === 1 ? "item" : "itens"}` : "Configurar →"}
+              </p>
+            </button>
+          ))}
+        </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div className="overflow-x-auto mb-6">
             <TabsList className="inline-flex h-auto bg-card border border-border rounded-2xl p-1.5 gap-1 min-w-max">
               <TabsTrigger value="visao-geral" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap">

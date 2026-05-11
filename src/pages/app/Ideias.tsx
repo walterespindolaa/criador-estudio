@@ -14,6 +14,7 @@ import { PostDrawer } from "@/components/kanban/PostDrawer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { sanitizeText } from "@/lib/sanitize";
 import { useIdeas, type Idea } from "@/hooks/useIdeas";
+import { PageSkeleton } from "@/components/shared/PageSkeleton";
 import { usePillars } from "@/hooks/usePillars";
 import { useProfile } from "@/hooks/useProfile";
 import { usePosts, type Post } from "@/hooks/usePosts";
@@ -63,7 +64,7 @@ function parseSuggestions(result: unknown): AISuggestion[] {
 
 const Ideias = () => {
   const { user } = useAuth();
-  const { ideas, createIdea, updateIdea, deleteIdea, promoteToPost } = useIdeas();
+  const { ideas, createIdea, updateIdea, deleteIdea, promoteToPost, isLoading: ideasLoading } = useIdeas();
   const { pillars } = usePillars();
   const { profile } = useProfile();
   const { createPost } = usePosts();
@@ -234,6 +235,14 @@ const Ideias = () => {
     const matchStatus = !filterStatus || idea.idea_status === filterStatus;
     return matchSearch && matchPillar && matchObj && matchStatus;
   });
+
+  if (ideasLoading && ideas.length === 0) {
+    return (
+      <div className="pb-20 md:pb-0">
+        <PageSkeleton />
+      </div>
+    );
+  }
 
   return (
     <div className="pb-20 md:pb-0">
