@@ -69,3 +69,24 @@ export const getIdeaSuggestions = async (
     data: params,
   });
 };
+
+export const generateCaption = async (
+  params: {
+    titulo: string;
+    conteudo?: string;
+    roteiro?: string;
+    pilar?: string;
+    nicho?: string;
+    tom?: string;
+    tamanho?: 'curto' | 'medio' | 'longo';
+    formato?: string;
+    plataforma?: string;
+  },
+  userId?: string
+) => {
+  return callAIContextBuilder({
+    userId,
+    operation: 'generate-caption',
+    data: params,
+  });
+};
