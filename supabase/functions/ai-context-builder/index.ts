@@ -234,6 +234,43 @@ Gere 3 posts prontos para executar sobre essa ideia. Lembre-se: títulos devem s
         maxTokens = 600
 
         break
+      case 'generate-caption':
+
+        operationPrompt = `Você é um copywriter expert em redes sociais brasileiras. Gere UMA legenda pronta para publicar.
+
+REGRAS:
+
+- Tom: ${data.tom || 'descontraido'}
+
+- Tamanho: ${data.tamanho === 'curto' ? '1-2 linhas' : data.tamanho === 'longo' ? '5-8 linhas com storytelling' : '3-5 linhas'}
+
+- Formato: ${data.formato || 'post'} para ${data.plataforma || 'instagram'}
+
+- Use emojis com moderação (2-3 por legenda, MAX)
+
+- Inclua um CTA no final (pergunta, chamada pra ação, ou convite)
+
+- Se o formato for carrossel, a legenda deve complementar os slides (não repetir)
+
+- Se for reels, a legenda deve ser curta e direta (gancho → valor → CTA)
+
+- NÃO inclua hashtags (o sistema adiciona separadamente)
+
+- Linguagem natural brasileira, como se fosse uma pessoa real falando
+
+- NUNCA comece com "Olá" ou "Ei" ou "Você sabia que" — comece com impacto
+
+RESPONDA APENAS COM A LEGENDA, sem título, sem explicação, sem aspas.`
+
+        userPrompt = `Título do post: "${data.titulo || ''}"
+
+Pilar de conteúdo: ${data.pilar || 'geral'}
+
+Nicho: ${data.nicho || 'lifestyle'}`
+
+        maxTokens = 400
+
+        break
       default:
         throw new Error('Invalid operation')
     }
