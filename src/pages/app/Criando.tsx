@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, ChevronRight, X } from "lucide-react";
+import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, ChevronRight, X, Kanban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";

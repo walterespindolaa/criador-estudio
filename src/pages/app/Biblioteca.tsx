@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, MessageSquareText, FileCode2, Zap, Plus, Pencil, Trash2, Star, StarOff, CheckCircle2 } from "lucide-react";
+import { Sparkles, MessageSquareText, FileCode2, Zap, Plus, Pencil, Trash2, Star, StarOff, CheckCircle2, BookOpen } from "lucide-react";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CopyButton } from "@/components/shared/CopyButton";

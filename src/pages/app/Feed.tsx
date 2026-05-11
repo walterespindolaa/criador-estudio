@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutGrid } from "lucide-react";
+import { LayoutGrid, Grid3X3 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { usePosts, type Post } from "@/hooks/usePosts";

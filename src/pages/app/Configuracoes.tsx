@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Trash2, Camera, Lock, AlertTriangle, Shield, Paintbrush, HardDrive, ExternalLink, Unplug, User, LayoutGrid, Plug } from "lucide-react";
+import { Plus, Trash2, Camera, Lock, AlertTriangle, Shield, Paintbrush, HardDrive, ExternalLink, Unplug, User, LayoutGrid, Plug, Settings } from "lucide-react";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
