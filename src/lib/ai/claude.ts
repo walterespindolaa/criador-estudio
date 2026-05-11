@@ -90,3 +90,21 @@ export const generateCaption = async (
     data: params,
   });
 };
+
+export const suggestHashtags = async (
+  params: {
+    titulo?: string;
+    formato?: string;
+    plataforma?: string;
+    pilar?: string;
+    nicho?: string;
+    legenda?: string;
+  },
+  userId?: string
+) => {
+  return callAIContextBuilder({
+    userId,
+    operation: 'suggest-hashtags',
+    data: params,
+  });
+};
