@@ -24,6 +24,9 @@ import { FORMAT_LABELS, STATUS_OPTIONS } from "@/lib/constants";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { PostDrawer } from "@/components/kanban/PostDrawer";
 import { InfoTooltip } from "@/components/shared/InfoTooltip";
+import { CalendarWeekView } from "@/components/calendar/CalendarWeekView";
+import { CalendarMonthView } from "@/components/calendar/CalendarMonthView";
+import { cn } from "@/lib/utils";
 
 const getDaysOfWeek = (offset = 0) => {
   const today = new Date();
@@ -87,6 +90,11 @@ const Plano = () => {
   const { pillars } = usePillars();
 
   const [weekOffset, setWeekOffset] = useState(0);
+  const [calView, setCalView] = useState<"week" | "month">("week");
+  const [calMonth, setCalMonth] = useState<Date>(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [newHabit, setNewHabit] = useState("");
 
@@ -384,6 +392,9 @@ const Plano = () => {
             </TabsTrigger>
             <TabsTrigger value="metas" className="rounded-lg font-medium text-sm data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               <Target className="h-4 w-4 mr-1.5" /> Metas
+            </TabsTrigger>
+            <TabsTrigger value="calendario" className="rounded-lg font-medium text-sm data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              <CalendarDays className="h-4 w-4 mr-1.5" /> Calendário
             </TabsTrigger>
           </TabsList>
 
@@ -898,6 +909,70 @@ const Plano = () => {
                   </div>
                 </CardContent>
               </Card>
+            </div>
+          </TabsContent>
+
+          {/* ═══════════ TAB: CALENDÁRIO ═══════════ */}
+          <TabsContent value="calendario">
+            <div className="space-y-4">
+              <div className="flex items-center gap-0.5 bg-muted/50 rounded-full p-1 w-fit">
+                <button
+                  type="button"
+                  onClick={() => setCalView("week")}
+                  className={cn(
+                    "px-3 py-1.5 rounded-full text-xs font-body font-medium transition-all duration-200",
+                    calView === "week"
+                      ? "bg-card text-foreground shadow-warm-sm font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Semanal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCalView("month")}
+                  className={cn(
+                    "px-3 py-1.5 rounded-full text-xs font-body font-medium transition-all duration-200",
+                    calView === "month"
+                      ? "bg-card text-foreground shadow-warm-sm font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Mensal
+                </button>
+              </div>
+
+              {calView === "week" ? (
+                <CalendarWeekView
+                  posts={posts}
+                  pillars={pillars}
+                  weekDays={weekDays}
+                  weekOffset={weekOffset}
+                  onWeekChange={(delta) => {
+                    if (delta === 0) setWeekOffset(0);
+                    else setWeekOffset((w) => w + delta);
+                  }}
+                  onPostClick={(post) => openPost(post.id)}
+                  today={today}
+                />
+              ) : (
+                <CalendarMonthView
+                  posts={posts}
+                  pillars={pillars}
+                  currentMonth={calMonth}
+                  onMonthChange={(delta) => {
+                    if (delta === 0) {
+                      const d = new Date();
+                      setCalMonth(new Date(d.getFullYear(), d.getMonth(), 1));
+                      return;
+                    }
+                    setCalMonth((m) => new Date(m.getFullYear(), m.getMonth() + delta, 1));
+                  }}
+                  onPostClick={(post) => openPost(post.id)}
+                  onDayClick={(date) => setSelectedDay(date)}
+                  today={today}
+                />
+              )}
             </div>
           </TabsContent>
         </Tabs>

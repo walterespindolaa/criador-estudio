@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type AIOperation = 'tag-suggestion' | 'reference-filter' | 'archive-summary' | 'daily-insight' | 'idea-suggestions';
+export type AIOperation = 'tag-suggestion' | 'reference-filter' | 'archive-summary' | 'daily-insight' | 'idea-suggestions' | 'generate-caption';
 
 interface AIRequest {
   userId?: string;
@@ -8,7 +8,7 @@ interface AIRequest {
   data: any;
 }
 
-async function callAIContextBuilder(payload: AIRequest) {
+export async function callAIContextBuilder(payload: AIRequest) {
   const { data, error } = await supabase.functions.invoke('ai-context-builder', {
     body: payload,
   });
