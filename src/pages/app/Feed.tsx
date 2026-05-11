@@ -129,6 +129,7 @@ const Feed = () => {
       if (!post) return;
       setAvailablePosts((prev) => prev.filter((p) => p.id !== postId));
       setGridPosts((prev) => {
+        if (prev.some((p) => p.id === post.id)) return prev;
         const next = [...prev];
         next.splice(destination.index, 0, post);
         return next;
@@ -141,6 +142,7 @@ const Feed = () => {
       if (!post) return;
       setGridPosts((prev) => prev.filter((p) => p.id !== postId));
       setAvailablePosts((prev) => {
+        if (prev.some((p) => p.id === post.id)) return prev;
         const next = [...prev];
         next.splice(destination.index, 0, post);
         return next;
@@ -152,7 +154,10 @@ const Feed = () => {
     const post = gridPosts.find((p) => p.id === postId);
     if (!post) return;
     setGridPosts((prev) => prev.filter((p) => p.id !== postId));
-    setAvailablePosts((prev) => [post, ...prev]);
+    setAvailablePosts((prev) => {
+      if (prev.some((p) => p.id === post.id)) return prev;
+      return [post, ...prev];
+    });
   };
 
   const sidebarPanel = (
