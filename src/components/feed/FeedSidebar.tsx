@@ -4,6 +4,7 @@ import { Search, Image as ImageIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { FORMAT_LABELS } from "@/lib/constants";
+import { getStatusClasses } from "@/lib/statusColors";
 import type { Post } from "@/hooks/usePosts";
 
 export const SIDEBAR_DROPPABLE_ID = "feed-sidebar";
@@ -16,12 +17,6 @@ const FILTERS: { key: StatusFilter; label: string }[] = [
   { key: "agendado", label: "Agendado" },
   { key: "publicado", label: "Publicado" },
 ];
-
-const STATUS_STYLES: Record<string, string> = {
-  editando: "bg-accent text-foreground",
-  agendado: "bg-primary/10 text-primary",
-  publicado: "bg-secondary/20 text-secondary",
-};
 
 type Props = {
   posts: Post[];
@@ -136,8 +131,8 @@ export function FeedSidebar({
                           {post.status && (
                             <span
                               className={cn(
-                                "text-[10px] font-body px-1.5 py-0.5 rounded-md capitalize",
-                                STATUS_STYLES[post.status] ?? "bg-muted text-muted-foreground"
+                                "text-[10px] font-body px-1.5 py-0.5 rounded-md capitalize border",
+                                getStatusClasses(post.status)
                               )}
                             >
                               {post.status}

@@ -364,8 +364,15 @@ const Plano = () => {
   return (
     <div className="max-w-5xl pb-20 md:pb-0">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <h1 className="text-3xl font-display font-extrabold text-foreground mb-2">Meu Plano</h1>
-        <p className="text-muted-foreground font-body mb-6">Planeje, acompanhe e reflita sobre sua produção.</p>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center shadow-sm shrink-0">
+            <CalendarDays className="h-5 w-5 text-white" strokeWidth={1.75} />
+          </div>
+          <div>
+            <h1 className="text-3xl font-display font-extrabold text-foreground tracking-tight">Meu Plano</h1>
+            <p className="text-muted-foreground font-body mt-0.5 text-sm">Planeje, acompanhe e reflita sobre sua produção.</p>
+          </div>
+        </div>
 
         <Tabs defaultValue="semana">
           <TabsList className="bg-card border border-border rounded-xl mb-6">

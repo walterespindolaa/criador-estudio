@@ -9,9 +9,11 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const FONT_OPTIONS = [
-  { key: "fraunces", label: "Orgânico", desc: "Fraunces + Inter", preview: "Elegância natural", displayFont: "'Fraunces', serif", bodyFont: "'Inter', sans-serif" },
-  { key: "cormorant", label: "Elegante", desc: "Cormorant + Jakarta Sans", preview: "Sofisticação clássica", displayFont: "'Cormorant Garamond', serif", bodyFont: "'Plus Jakarta Sans', sans-serif" },
-  { key: "youngserif", label: "Moderno", desc: "Young Serif + Outfit", preview: "Estilo contemporâneo", displayFont: "'Young Serif', serif", bodyFont: "'Outfit', sans-serif" },
+  { key: "moderno", label: "Moderno", desc: "Plus Jakarta Sans + Nunito Sans", preview: "Limpo e contemporâneo", displayFont: "'Plus Jakarta Sans', sans-serif", bodyFont: "'Nunito Sans', sans-serif" },
+  { key: "elegante", label: "Elegante", desc: "DM Serif Display + DM Sans", preview: "Editorial sofisticado", displayFont: "'DM Serif Display', serif", bodyFont: "'DM Sans', sans-serif" },
+  { key: "criativo", label: "Criativo", desc: "Space Grotesk + Outfit", preview: "Atitude criadora", displayFont: "'Space Grotesk', sans-serif", bodyFont: "'Outfit', sans-serif" },
+  { key: "suave", label: "Suave", desc: "Quicksand + Nunito", preview: "Calmo e arredondado", displayFont: "'Quicksand', sans-serif", bodyFont: "'Nunito', sans-serif" },
+  { key: "bold", label: "Bold", desc: "Sora + Inter", preview: "Geométrico e impactante", displayFont: "'Sora', sans-serif", bodyFont: "'Inter', sans-serif" },
 ];
 
 const SIDEBAR_COLORS = [
@@ -31,12 +33,13 @@ const SIDEBAR_COLORS = [
 export function applyThemeFont(fontKey: string) {
   localStorage.setItem("theme_font", fontKey);
   const fonts: Record<string, { display: string; body: string }> = {
-    fraunces: { display: "'Fraunces', serif", body: "'Inter', sans-serif" },
-    cormorant: { display: "'Cormorant Garamond', serif", body: "'Plus Jakarta Sans', sans-serif" },
-    youngserif: { display: "'Young Serif', serif", body: "'Outfit', sans-serif" },
+    moderno: { display: "'Plus Jakarta Sans', sans-serif", body: "'Nunito Sans', sans-serif" },
+    elegante: { display: "'DM Serif Display', serif", body: "'DM Sans', sans-serif" },
+    criativo: { display: "'Space Grotesk', sans-serif", body: "'Outfit', sans-serif" },
+    suave: { display: "'Quicksand', sans-serif", body: "'Nunito', sans-serif" },
+    bold: { display: "'Sora', sans-serif", body: "'Inter', sans-serif" },
   };
-  const opt = fonts[fontKey];
-  if (!opt) return;
+  const opt = fonts[fontKey] ?? fonts.moderno;
   document.documentElement.style.setProperty("--active-font-display", opt.display);
   document.documentElement.style.setProperty("--active-font-body", opt.body);
 }
@@ -47,7 +50,7 @@ export function SettingsVisual() {
   const [selectedTheme, setSelectedTheme] = useState(profile?.theme_preset || "clean-warm");
   const [selectedAccent, setSelectedAccent] = useState(profile?.theme_accent || "#C4622D");
   const [sidebarColor, setSidebarColor] = useState(profile?.theme_sidebar || "");
-  const [selectedFont, setSelectedFont] = useState(profile?.theme_font || "fraunces");
+  const [selectedFont, setSelectedFont] = useState(profile?.theme_font || "moderno");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -55,7 +58,7 @@ export function SettingsVisual() {
       setSelectedTheme(profile.theme_preset || "clean-warm");
       setSelectedAccent(profile.theme_accent || "#C4622D");
       setSidebarColor(profile.theme_sidebar || "");
-      setSelectedFont(profile.theme_font || "fraunces");
+      setSelectedFont(profile.theme_font || "moderno");
     }
   }, [profile]);
 

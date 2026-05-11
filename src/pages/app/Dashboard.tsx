@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   Lightbulb, FileText, CheckCircle2, Sparkles, Copy, Check,
-  ListChecks, Pencil, Trash2, Clock, Flame
+  ListChecks, Pencil, Trash2, Clock, Flame, ArrowRight, TrendingUp, LayoutDashboard
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -253,12 +253,12 @@ const Dashboard = () => {
   const dailyHook = HOOKS_VIRAL[dayOfYear % HOOKS_VIRAL.length];
 
   const stats = [
-    { label: "Ideias", value: ideas.length, icon: Lightbulb, color: "text-primary", link: "/app/ideias" },
-    { label: "Em criação", value: inCreationFiltered.length, icon: FileText, color: "text-muted-foreground", link: "/app/criando" },
-    { label: "Publicados", value: publishedFiltered.length, icon: CheckCircle2, color: "text-primary", link: "/app/historico" },
-    { label: "Agendados", value: scheduledFiltered.length, icon: Clock, color: "text-muted-foreground", link: "/app/plano" },
-    { label: "Tarefas abertas", value: pendingTasks.length + inProgressTasks.length, icon: ListChecks, color: "text-primary", link: "/app/tarefas" },
-    { label: "Hábitos hoje", value: `${habitsToday}/${habits.length}`, icon: Flame, color: "text-primary", link: "/app/plano" },
+    { label: "Ideias", value: ideas.length, icon: Lightbulb, bg: "from-violet-500/15 to-purple-500/5", iconBg: "bg-violet-500", iconColor: "text-white", link: "/app/ideias" },
+    { label: "Em criação", value: inCreationFiltered.length, icon: FileText, bg: "from-blue-500/15 to-sky-500/5", iconBg: "bg-blue-500", iconColor: "text-white", link: "/app/criando" },
+    { label: "Publicados", value: publishedFiltered.length, icon: CheckCircle2, bg: "from-emerald-500/15 to-teal-500/5", iconBg: "bg-emerald-500", iconColor: "text-white", link: "/app/historico" },
+    { label: "Agendados", value: scheduledFiltered.length, icon: Clock, bg: "from-amber-500/15 to-yellow-500/5", iconBg: "bg-amber-500", iconColor: "text-white", link: "/app/plano" },
+    { label: "Tarefas abertas", value: pendingTasks.length + inProgressTasks.length, icon: ListChecks, bg: "from-pink-500/15 to-rose-500/5", iconBg: "bg-pink-500", iconColor: "text-white", link: "/app/tarefas" },
+    { label: "Hábitos hoje", value: `${habitsToday}/${habits.length}`, icon: Flame, bg: "from-orange-500/15 to-red-500/5", iconBg: "bg-orange-500", iconColor: "text-white", link: "/app/plano" },
   ];
 
   return (
@@ -266,16 +266,22 @@ const Dashboard = () => {
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
 
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-display font-extrabold text-foreground mb-0.5">
-              {getGreeting(profile?.name || "criador")}
-            </h1>
-            <p className="text-sm text-muted-foreground font-body">
-              Sua meta: {weekPublished.length}/{weekGoal} posts esta semana
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-sm shrink-0">
+              <LayoutDashboard className="h-5 w-5 text-white" strokeWidth={1.75} />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-display font-extrabold text-foreground tracking-tight mb-0.5">
+                {getGreeting(profile?.name || "criador")}
+              </h1>
+              <p className="text-sm text-muted-foreground font-body flex items-center gap-1.5">
+                <TrendingUp className="h-3.5 w-3.5 text-primary" />
+                Sua meta: <span className="font-semibold text-foreground">{weekPublished.length}/{weekGoal}</span> posts esta semana
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-1 bg-card border border-border rounded-xl p-1 flex-wrap">
+          <div className="flex items-center gap-0.5 bg-muted/50 rounded-full p-1 flex-wrap">
             {PERIOD_OPTIONS.map(opt => (
               <button
                 key={opt.key}
@@ -284,8 +290,10 @@ const Dashboard = () => {
                   if (opt.key === "personalizado") setCustomOpen(true);
                 }}
                 className={cn(
-                  "px-2.5 py-1.5 rounded-lg text-xs font-body font-medium transition-all",
-                  period === opt.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  "px-3 py-1.5 rounded-full text-xs font-body font-medium transition-all duration-200",
+                  period === opt.key
+                    ? "bg-card text-foreground shadow-warm-sm font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 {opt.label}
@@ -299,21 +307,30 @@ const Dashboard = () => {
           <div className="lg:col-span-8 space-y-6">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               {stats.map((s, i) => (
-                <DCard key={i} onClick={() => navigate(s.link)} className="flex flex-col justify-between">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className={cn("p-2 rounded-xl bg-card border border-border", s.color)}>
-                      <s.icon className="h-4 w-4" />
-                    </div>
+                <motion.button
+                  key={i}
+                  onClick={() => navigate(s.link)}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className={cn(
+                    "relative overflow-hidden bg-gradient-to-br p-5 rounded-2xl border border-border/50",
+                    "hover:shadow-warm-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-200",
+                    "text-left w-full group cursor-pointer",
+                    s.bg
+                  )}
+                >
+                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center mb-3 shadow-sm", s.iconBg)}>
+                    <s.icon className={cn("h-5 w-5", s.iconColor)} strokeWidth={1.75} />
                   </div>
-                  <div>
-                    <p className="text-2xl font-display font-bold text-foreground">{s.value}</p>
-                    <p className="text-[10px] uppercase tracking-wider font-body font-semibold text-muted-foreground">{s.label}</p>
-                  </div>
-                </DCard>
+                  <p className="text-3xl font-display font-extrabold text-foreground tracking-tight">{s.value}</p>
+                  <p className="text-[11px] uppercase tracking-wider font-body font-semibold text-muted-foreground mt-0.5">{s.label}</p>
+                  <ArrowRight className="absolute top-4 right-4 h-4 w-4 text-muted-foreground/30 group-hover:text-foreground/50 group-hover:translate-x-0.5 transition-all" />
+                </motion.button>
               ))}
             </div>
 
-            <DCard className="relative overflow-hidden group">
+            <DCard className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-transparent to-primary/10 border-primary/15 group">
               <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
                 <Sparkles className="h-24 w-24 text-primary" />
               </div>
@@ -377,14 +394,17 @@ const Dashboard = () => {
               </div>
             </DCard>
 
-            <DCard className="bg-primary/5 border-primary/20">
-              <h3 className="text-sm font-display font-bold text-primary mb-2 flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5" /> Gancho do Dia
+            <DCard className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200/50 dark:from-amber-500/10 dark:to-orange-500/5 dark:border-amber-500/20">
+              <h3 className="text-sm font-display font-bold text-amber-700 dark:text-amber-400 mb-2 flex items-center gap-1.5">
+                <div className="w-6 h-6 rounded-lg bg-amber-500 flex items-center justify-center">
+                  <Sparkles className="h-3.5 w-3.5 text-white" />
+                </div>
+                Gancho do Dia
               </h3>
               <p className="text-sm font-body text-foreground italic mb-4 leading-relaxed">
                 "{dailyHook.text}"
               </p>
-              <Button variant="outline" size="sm" onClick={handleCopyHook} className="w-full bg-background border-primary/20 hover:bg-primary/5 text-primary">
+              <Button variant="outline" size="sm" onClick={handleCopyHook} className="w-full bg-white/60 dark:bg-background/40 border-amber-300/40 hover:bg-white text-amber-700 dark:text-amber-300">
                 {copiedHook ? <><Check className="h-3.5 w-3.5 mr-2" /> Copiado</> : <><Copy className="h-3.5 w-3.5 mr-2" /> Copiar hook</>}
               </Button>
             </DCard>

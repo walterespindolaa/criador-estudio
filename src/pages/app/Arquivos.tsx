@@ -118,10 +118,15 @@ const Arquivos = () => {
   return (
     <div className="pb-20 md:pb-0">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground">Arquivos</h1>
-            <p className="text-muted-foreground font-body mt-1 text-sm">Seus arquivos e referências visuais.</p>
+        <div className="flex items-center justify-between mb-6 gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shadow-sm shrink-0">
+              <FolderOpen className="h-5 w-5 text-white" strokeWidth={1.75} />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Arquivos</h1>
+              <p className="text-muted-foreground font-body mt-0.5 text-sm">Seus arquivos e referências visuais.</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <p className="text-xs text-muted-foreground font-body hidden sm:block">

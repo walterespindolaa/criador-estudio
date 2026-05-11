@@ -90,12 +90,14 @@ export function AppSidebar() {
           collapsed ? "justify-center p-3" : "p-4"
         )}
       >
-        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden ring-2 ring-primary/10 shrink-0">
-          {profile?.avatar_url ? (
-            <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <span className="text-primary font-display font-bold text-sm">{initial}</span>
-          )}
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary via-purple-500 to-pink-500 p-[2px] overflow-hidden shrink-0">
+          <div className="w-full h-full rounded-full bg-card overflow-hidden flex items-center justify-center">
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-primary font-display font-bold text-sm">{initial}</span>
+            )}
+          </div>
         </div>
         {!collapsed && (
           <div className="flex flex-col min-w-0">
@@ -127,8 +129,8 @@ export function AppSidebar() {
                       <NavLink
                         to={item.url}
                         end={(item as { end?: boolean }).end}
-                        className="group rounded-xl px-3 py-2.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-all duration-150"
-                        activeClassName="bg-primary/10 text-primary font-semibold"
+                        className="group relative rounded-xl px-3 py-2.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-all duration-150"
+                        activeClassName="bg-primary/10 text-primary font-semibold before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-5 before:bg-primary before:rounded-r-full before:content-['']"
                       >
                         <item.icon className="h-5 w-5 flex-shrink-0" strokeWidth={1.5} />
                         {!collapsed && <span className="font-body text-sm">{item.title}</span>}
@@ -147,12 +149,16 @@ export function AppSidebar() {
           <button
             type="button"
             className={cn(
-              "w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-primary/5 hover:bg-primary/10 text-primary transition-all",
+              "w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-primary transition-all group",
+              "bg-gradient-to-r from-primary/10 via-purple-500/10 to-pink-500/10",
+              "hover:from-primary/15 hover:via-purple-500/15 hover:to-pink-500/15",
               collapsed && "justify-center px-2"
             )}
             aria-label="Cria IA"
           >
-            <Sparkles className="h-5 w-5 flex-shrink-0" strokeWidth={1.5} />
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-sm group-hover:shadow-glow transition-shadow flex-shrink-0">
+              <Sparkles className="h-3.5 w-3.5 text-white" strokeWidth={2} />
+            </div>
             {!collapsed && <span className="text-sm font-display font-semibold">Cria IA</span>}
           </button>
         </div>

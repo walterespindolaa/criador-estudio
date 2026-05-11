@@ -224,8 +224,15 @@ const Biblioteca = () => {
   return (
     <div className="max-w-4xl">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <h1 className="text-3xl font-display font-extrabold text-foreground mb-2">Biblioteca</h1>
-        <p className="text-muted-foreground font-body mb-8">Referências prontas para turbinar seu conteúdo.</p>
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center shadow-sm shrink-0">
+            <BookOpen className="h-5 w-5 text-white" strokeWidth={1.75} />
+          </div>
+          <div>
+            <h1 className="text-3xl font-display font-extrabold text-foreground tracking-tight">Biblioteca</h1>
+            <p className="text-muted-foreground font-body mt-0.5 text-sm">Referências prontas para turbinar seu conteúdo.</p>
+          </div>
+        </div>
 
         <Tabs defaultValue="hooks">
           <TabsList className="bg-card border border-border rounded-xl mb-6 flex-wrap h-auto gap-1 p-1">

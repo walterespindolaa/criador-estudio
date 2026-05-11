@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Film, Grid3X3, UserCircle } from "lucide-react";
 import type { Profile } from "@/hooks/useProfile";
 
 type Props = {
@@ -7,50 +7,60 @@ type Props = {
 };
 
 export function FeedProfileHeader({ profile, postCount }: Props) {
-  const name = profile?.name || "Seu nome";
-  const handle = profile?.instagram_handle?.replace(/^@/, "") || "";
+  const name = profile?.name || "Criador";
   const niche = profile?.niche || "";
-  const bio = profile?.bio || "Sua bio aparece aqui.";
-
-  const initials = profile?.name
-    ? profile.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
-    : "CF";
+  const bio = profile?.bio || "";
+  const initial = name.charAt(0).toUpperCase();
 
   return (
-    <div className="px-4 sm:px-6 py-5 bg-card rounded-t-2xl border border-b-0 border-border">
-      <div className="flex items-start gap-4 sm:gap-6">
-        <Avatar className="h-16 w-16 sm:h-20 sm:w-20 ring-2 ring-primary/10 shrink-0">
-          {profile?.avatar_url ? <AvatarImage src={profile.avatar_url} alt={name} /> : null}
-          <AvatarFallback className="bg-muted text-foreground text-lg font-display font-bold">
-            {initials}
-          </AvatarFallback>
-        </Avatar>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <p className="font-display font-bold text-base sm:text-lg text-foreground truncate">
-              {name}
-            </p>
-            {(handle || niche) && (
-              <p className="text-xs sm:text-sm font-body text-muted-foreground truncate">
-                {handle && `@${handle}`}
-                {handle && niche && " · "}
-                {niche}
-              </p>
+    <div className="bg-card rounded-2xl border border-border overflow-hidden mb-6">
+      <div className="p-6">
+        <div className="flex items-center gap-6">
+          <div className="w-20 h-20 rounded-full ring-[3px] ring-primary/30 ring-offset-2 ring-offset-background overflow-hidden shrink-0">
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+                <span className="text-2xl font-display font-bold text-white">{initial}</span>
+              </div>
             )}
           </div>
 
-          <p className="text-sm font-body text-foreground/80 mt-1.5 leading-snug line-clamp-3 whitespace-pre-line">
-            {bio}
-          </p>
-
-          <div className="mt-3 pt-3 border-t border-border/60">
-            <span className="text-sm font-body">
-              <span className="font-display font-bold text-foreground">{postCount}</span>{" "}
-              <span className="text-muted-foreground">{postCount === 1 ? "post" : "posts"}</span>
-            </span>
+          <div className="flex gap-8">
+            <div className="text-center">
+              <p className="text-xl font-display font-extrabold text-foreground">{postCount}</p>
+              <p className="text-xs text-muted-foreground font-body">{postCount === 1 ? "post" : "posts"}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xl font-display font-extrabold text-foreground">—</p>
+              <p className="text-xs text-muted-foreground font-body">seguidores</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xl font-display font-extrabold text-foreground">—</p>
+              <p className="text-xs text-muted-foreground font-body">seguindo</p>
+            </div>
           </div>
         </div>
+
+        <div className="mt-4">
+          <h2 className="text-sm font-display font-bold text-foreground">{name}</h2>
+          {niche && <p className="text-xs text-muted-foreground font-body mt-0.5">{niche}</p>}
+          {bio && (
+            <p className="text-sm text-foreground font-body mt-1.5 leading-relaxed whitespace-pre-line">{bio}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex border-t border-border">
+        <button type="button" className="flex-1 py-3 flex justify-center border-b-2 border-foreground" aria-label="Grid">
+          <Grid3X3 className="h-5 w-5 text-foreground" strokeWidth={1.5} />
+        </button>
+        <button type="button" className="flex-1 py-3 flex justify-center text-muted-foreground" aria-label="Reels">
+          <Film className="h-5 w-5" strokeWidth={1.5} />
+        </button>
+        <button type="button" className="flex-1 py-3 flex justify-center text-muted-foreground" aria-label="Marcações">
+          <UserCircle className="h-5 w-5" strokeWidth={1.5} />
+        </button>
       </div>
     </div>
   );

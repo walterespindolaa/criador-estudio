@@ -7,9 +7,11 @@ import "./index.css";
 const savedFont = localStorage.getItem("theme_font");
 if (savedFont) {
   const FONT_MAP: Record<string, { display: string; body: string }> = {
-    fraunces: { display: "'Fraunces', serif", body: "'Inter', sans-serif" },
-    cormorant: { display: "'Cormorant Garamond', serif", body: "'Plus Jakarta Sans', sans-serif" },
-    youngserif: { display: "'Young Serif', serif", body: "'Outfit', sans-serif" },
+    moderno: { display: "'Plus Jakarta Sans', sans-serif", body: "'Nunito Sans', sans-serif" },
+    elegante: { display: "'DM Serif Display', serif", body: "'DM Sans', sans-serif" },
+    criativo: { display: "'Space Grotesk', sans-serif", body: "'Outfit', sans-serif" },
+    suave: { display: "'Quicksand', sans-serif", body: "'Nunito', sans-serif" },
+    bold: { display: "'Sora', sans-serif", body: "'Inter', sans-serif" },
   };
   const opt = FONT_MAP[savedFont];
   if (opt) {
