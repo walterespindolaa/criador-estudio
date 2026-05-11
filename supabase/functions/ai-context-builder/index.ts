@@ -264,6 +264,8 @@ RESPONDA APENAS COM A LEGENDA, sem título, sem explicação, sem aspas.`
 
         userPrompt = `Título do post: "${data.titulo || ''}"
 
+Conteúdo/roteiro do post: ${data.conteudo || data.roteiro || 'não informado'}
+
 Pilar de conteúdo: ${data.pilar || 'geral'}
 
 Nicho: ${data.nicho || 'lifestyle'}`
