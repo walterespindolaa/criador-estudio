@@ -253,6 +253,8 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
           tamanho: aiLength,
           pilar: pillars.find(p => p.id === pillarId)?.name,
           nicho: profile?.niche,
+          conteudo: caption,
+          roteiro: sections.map(s => s.text).filter(Boolean).join(" | "),
         },
       });
       const text = typeof result === "string" ? result.replace(/```\n?|```/g, "").trim() : String(result ?? "");

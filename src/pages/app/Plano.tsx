@@ -18,15 +18,12 @@ import { useReflections } from "@/hooks/useReflections";
 import { toast } from "sonner";
 import {
   Plus, Trash2, CalendarDays, Target, BarChart3, Check, ChevronLeft, ChevronRight,
-  Clock, Flag, TrendingUp, ListChecks, Save, Eye, Milestone,
+  Flag, TrendingUp, ListChecks, Save, Milestone,
 } from "lucide-react";
-import { FORMAT_LABELS, STATUS_OPTIONS } from "@/lib/constants";
-import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { PostDrawer } from "@/components/kanban/PostDrawer";
 import { InfoTooltip } from "@/components/shared/InfoTooltip";
 import { CalendarWeekView } from "@/components/calendar/CalendarWeekView";
 import { CalendarMonthView } from "@/components/calendar/CalendarMonthView";
-import { cn } from "@/lib/utils";
 
 const getDaysOfWeek = (offset = 0) => {
   const today = new Date();
@@ -43,18 +40,6 @@ const getDaysOfWeek = (offset = 0) => {
       dayNum: d.getDate(),
       label: d.toLocaleDateString("pt-BR", { day: "numeric", month: "short" }),
     });
-  }
-  return days;
-};
-
-const getMonthDays = (year: number, month: number) => {
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-  const startPad = (firstDay.getDay() + 6) % 7;
-  const days: (string | null)[] = [];
-  for (let i = 0; i < startPad; i++) days.push(null);
-  for (let d = 1; d <= lastDay.getDate(); d++) {
-    days.push(new Date(year, month, d).toISOString().split("T")[0]);
   }
   return days;
 };
@@ -90,16 +75,9 @@ const Plano = () => {
   const { pillars } = usePillars();
 
   const [weekOffset, setWeekOffset] = useState(0);
-  const [calView, setCalView] = useState<"week" | "month">("week");
-  const [calMonth, setCalMonth] = useState<Date>(() => {
-    const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1);
-  });
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [newHabit, setNewHabit] = useState("");
 
   const [monthDate, setMonthDate] = useState(new Date());
-  const [selectedMonthDay, setSelectedMonthDay] = useState<string | null>(null);
 
   const [showNewGoal, setShowNewGoal] = useState(false);
   const [newGoalForm, setNewGoalForm] = useState({ title: "", category: "geral", target_value: "", observation: "", due_date: "" });
@@ -115,7 +93,6 @@ const Plano = () => {
 
   const today = new Date().toISOString().split("T")[0];
   const weekDays = useMemo(() => getDaysOfWeek(weekOffset), [weekOffset]);
-  const monthDays = useMemo(() => getMonthDays(monthDate.getFullYear(), monthDate.getMonth()), [monthDate]);
 
   const dateRange = useMemo(
     () => ({ start: weekDays[0].date, end: weekDays[6].date }),
@@ -161,10 +138,6 @@ const Plano = () => {
       focus_lessons: reflection.focus_lessons || "",
     });
   }, [reflection]);
-
-  useEffect(() => {
-    if (!selectedDay && weekOffset === 0) setSelectedDay(today);
-  }, [today, weekOffset, selectedDay]);
 
   const handleToggleHabit = async (habitId: string, date: string) => {
     try {
@@ -307,62 +280,6 @@ const Plano = () => {
   const weekGoal = profile?.weekly_goal || 3;
   const weekProgress = Math.min(100, Math.round((weekPublished.length / weekGoal) * 100));
 
-  const selectedDayPosts = posts.filter(p => p.scheduled_date === selectedDay);
-  const selectedMonthDayPosts = posts.filter(p => p.scheduled_date === selectedMonthDay);
-
-  const getPillarColor = (pillarId: string | null) => {
-    if (!pillarId) return undefined;
-    return pillars.find(p => p.id === pillarId)?.color;
-  };
-
-  const getPillarName = (pillarId: string | null) => {
-    if (!pillarId) return null;
-    return pillars.find(p => p.id === pillarId)?.name;
-  };
-
-  const PostCard = ({ post }: { post: Post }) => {
-    const pillarColor = getPillarColor(post.pillar_id);
-    const pillarName = getPillarName(post.pillar_id);
-    const statusLabel = STATUS_OPTIONS.find(s => s.key === post.status)?.label || post.status;
-
-    return (
-      <button
-        onClick={() => openPost(post.id)}
-        className="w-full text-left bg-background rounded-xl p-3 border border-border hover:border-primary/40 hover:shadow-sm transition-all group"
-      >
-        <div className="flex items-start gap-2">
-          <PlatformIcon platform={post.platform} size="sm" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-body font-medium text-foreground truncate group-hover:text-primary transition-colors">
-              {post.title}
-            </p>
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <span className="text-[10px] font-body px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                {FORMAT_LABELS[post.format] || post.format}
-              </span>
-              <span className={`text-[10px] font-body px-1.5 py-0.5 rounded ${
-                post.status === "publicado" ? "bg-secondary/20 text-secondary" : "bg-accent text-accent-foreground"
-              }`}>
-                {statusLabel}
-              </span>
-              {pillarName && (
-                <span className="text-[10px] font-body px-1.5 py-0.5 rounded" style={{ backgroundColor: `${pillarColor}20`, color: pillarColor }}>
-                  {pillarName}
-                </span>
-              )}
-              {post.scheduled_time && (
-                <span className="text-[10px] font-body text-muted-foreground flex items-center gap-0.5">
-                  <Clock className="h-2.5 w-2.5" /> {post.scheduled_time}
-                </span>
-              )}
-            </div>
-          </div>
-          <Eye className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-0.5" />
-        </div>
-      </button>
-    );
-  };
-
   const weekLabel = (() => {
     const start = new Date(weekDays[0].date + "T12:00:00");
     const end = new Date(weekDays[6].date + "T12:00:00");
@@ -393,9 +310,6 @@ const Plano = () => {
             <TabsTrigger value="metas" className="rounded-lg font-medium text-sm data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               <Target className="h-4 w-4 mr-1.5" /> Metas
             </TabsTrigger>
-            <TabsTrigger value="calendario" className="rounded-lg font-medium text-sm data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-              <CalendarDays className="h-4 w-4 mr-1.5" /> Calendário
-            </TabsTrigger>
           </TabsList>
 
           {/* ═══════════ TAB: SEMANA ═══════════ */}
@@ -403,17 +317,17 @@ const Plano = () => {
             <div className="space-y-6">
               <Card className="border-border">
                 <CardContent className="pt-5 pb-4">
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setWeekOffset(w => w - 1); setSelectedDay(null); }}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(w => w - 1)}>
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
                       <span className="text-sm font-body font-medium text-foreground">{weekLabel}</span>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setWeekOffset(w => w + 1); setSelectedDay(null); }}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(w => w + 1)}>
                         <ChevronRight className="h-4 w-4" />
                       </Button>
                       {weekOffset !== 0 && (
-                        <Button variant="ghost" size="sm" className="text-xs" onClick={() => { setWeekOffset(0); setSelectedDay(today); }}>
+                        <Button variant="ghost" size="sm" className="text-xs" onClick={() => setWeekOffset(0)}>
                           Hoje
                         </Button>
                       )}
@@ -423,68 +337,21 @@ const Plano = () => {
                       <Progress value={weekProgress} className="w-24 h-1.5 mt-1" />
                     </div>
                   </div>
-
-                  <div className="grid grid-cols-7 gap-2">
-                    {weekDays.map(day => {
-                      const dayPosts = posts.filter(p => p.scheduled_date === day.date);
-                      const isToday = day.date === today;
-                      const isSelected = day.date === selectedDay;
-                      return (
-                        <button
-                          key={day.date}
-                          onClick={() => setSelectedDay(day.date)}
-                          className={`rounded-xl p-3 text-center transition-all border ${
-                            isSelected
-                              ? "border-primary bg-primary/10 ring-1 ring-primary/30"
-                              : isToday
-                              ? "border-primary/40 bg-primary/5"
-                              : "border-border bg-card hover:border-primary/20"
-                          }`}
-                        >
-                          <p className={`text-xs font-body font-semibold ${isSelected || isToday ? "text-primary" : "text-foreground"}`}>
-                            {day.name}
-                          </p>
-                          <p className="text-sm font-body font-normal text-foreground">{day.dayNum}</p>
-                          {dayPosts.length > 0 && (
-                            <div className="flex justify-center gap-0.5 mt-1">
-                              {dayPosts.slice(0, 3).map(p => (
-                                <span key={p.id} className="w-1.5 h-1.5 rounded-full bg-primary" />
-                              ))}
-                              {dayPosts.length > 3 && <span className="text-[8px] text-muted-foreground">+{dayPosts.length - 3}</span>}
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
                 </CardContent>
               </Card>
 
-              {selectedDay && (
-                <Card className="border-border">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-body font-semibold text-foreground flex items-center gap-2">
-                      <CalendarDays className="h-4 w-4 text-primary" />
-                      {new Date(selectedDay + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
-                      <span className="ml-auto text-xs text-muted-foreground font-normal">
-                        {selectedDayPosts.length} {selectedDayPosts.length === 1 ? "post" : "posts"}
-                      </span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {selectedDayPosts.length === 0 ? (
-                      <div className="text-center py-8">
-                        <p className="text-sm text-muted-foreground font-body">Nenhum post agendado para este dia.</p>
-                        <p className="text-xs text-muted-foreground font-body mt-1">Crie um post em "Criando" e agende para esta data.</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {selectedDayPosts.map(post => <PostCard key={post.id} post={post} />)}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
+              <CalendarWeekView
+                posts={posts}
+                pillars={pillars}
+                weekDays={weekDays}
+                weekOffset={weekOffset}
+                onWeekChange={(delta) => {
+                  if (delta === 0) setWeekOffset(0);
+                  else setWeekOffset((w) => w + delta);
+                }}
+                onPostClick={(post) => openPost(post.id)}
+                today={today}
+              />
 
               <Card className="border-border">
                 <CardHeader className="pb-3">
@@ -537,150 +404,47 @@ const Plano = () => {
 
           {/* ═══════════ TAB: MÊS ═══════════ */}
           <TabsContent value="mes">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2">
-                <Card className="border-border">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMonthDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}>
-                          <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <CardTitle className="text-base font-body font-semibold text-foreground capitalize">
-                          {monthDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
-                        </CardTitle>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMonthDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))}>
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <Button variant="ghost" size="sm" className="text-xs" onClick={() => setMonthDate(new Date())}>Hoje</Button>
+            <div className="space-y-6">
+              <CalendarMonthView
+                posts={posts}
+                pillars={pillars}
+                currentMonth={monthDate}
+                onMonthChange={(delta) => {
+                  if (delta === 0) setMonthDate(new Date());
+                  else setMonthDate((m) => new Date(m.getFullYear(), m.getMonth() + delta, 1));
+                }}
+                onPostClick={(post) => openPost(post.id)}
+                onDayClick={() => { /* no-op: click on post opens drawer */ }}
+                today={today}
+              />
+
+              <Card className="border-border">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-[15px] font-body font-semibold text-foreground flex items-center gap-2">
+                    <ListChecks className="h-4 w-4 text-primary" /> Reflexão mensal
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {([
+                    { key: "content_best", label: "Melhor conteúdo do mês", placeholder: "Qual post se destacou?" },
+                    { key: "content_rhythm", label: "Ritmo de produção", placeholder: "Como foi sua consistência?" },
+                    { key: "focus_lessons", label: "Aprendizados", placeholder: "O que aprendeu?" },
+                  ] as const).map(field => (
+                    <div key={field.key} className="space-y-1">
+                      <Label className="text-xs font-body">{field.label}</Label>
+                      <Textarea
+                        placeholder={field.placeholder}
+                        value={reflectionForm[field.key]}
+                        onChange={e => setReflectionForm(prev => ({ ...prev, [field.key]: e.target.value }))}
+                        className="rounded-xl min-h-[50px] text-sm"
+                      />
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-7 gap-1">
-                      {["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].map(d => (
-                        <div key={d} className="text-center text-xs font-body font-medium text-muted-foreground py-1">{d}</div>
-                      ))}
-                      {monthDays.map((date, i) => {
-                        if (!date) return <div key={`empty-${i}`} />;
-                        const dayPosts = posts.filter(p => p.scheduled_date === date);
-                        const isToday = date === today;
-                        const isSelected = date === selectedMonthDay;
-                        return (
-                          <button
-                            key={date}
-                            onClick={() => setSelectedMonthDay(date === selectedMonthDay ? null : date)}
-                            className={`aspect-square rounded-lg p-1 flex flex-col items-center justify-center text-xs font-body transition-all ${
-                              isSelected
-                                ? "bg-primary/15 border-2 border-primary"
-                                : isToday
-                                ? "bg-primary/10 border border-primary/50"
-                                : dayPosts.length > 0
-                                ? "hover:bg-accent border border-transparent hover:border-primary/20"
-                                : "hover:bg-accent border border-transparent"
-                            }`}
-                          >
-                            <span className={`text-sm font-body font-normal ${isToday || isSelected ? "text-primary" : "text-foreground"}`}>
-                              {new Date(date + "T12:00:00").getDate()}
-                            </span>
-                            {dayPosts.length > 0 && (
-                              <div className="flex gap-0.5 mt-0.5">
-                                {dayPosts.slice(0, 3).map(p => (
-                                  <span key={p.id} className="w-1.5 h-1.5 rounded-full bg-primary" />
-                                ))}
-                              </div>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="space-y-4">
-                <Card className="border-border">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-body font-semibold text-foreground">
-                      {selectedMonthDay
-                        ? new Date(selectedMonthDay + "T12:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "long" })
-                        : "Selecione um dia"}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {!selectedMonthDay ? (
-                      <p className="text-xs text-muted-foreground font-body">Clique em um dia do calendário para ver os posts.</p>
-                    ) : selectedMonthDayPosts.length === 0 ? (
-                      <p className="text-xs text-muted-foreground font-body">Nenhum post neste dia.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {selectedMonthDayPosts.map(post => <PostCard key={post.id} post={post} />)}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card className="border-border">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-[15px] font-body font-semibold text-foreground">Resumo do mês</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {(() => {
-                      const monthPostsAll = posts.filter(p => {
-                        if (!p.scheduled_date) return false;
-                        const d = new Date(p.scheduled_date);
-                        return d.getMonth() === monthDate.getMonth() && d.getFullYear() === monthDate.getFullYear();
-                      });
-                      const published = monthPostsAll.filter(p => p.status === "publicado");
-                      const scheduled = monthPostsAll.filter(p => p.status !== "publicado");
-                      return (
-                        <div className="space-y-3">
-                          <div className="flex justify-between text-sm font-body">
-                            <span className="text-muted-foreground">Total</span>
-                            <span className="font-semibold text-foreground">{monthPostsAll.length}</span>
-                          </div>
-                          <div className="flex justify-between text-sm font-body">
-                            <span className="text-muted-foreground">Publicados</span>
-                            <span className="font-semibold text-secondary">{published.length}</span>
-                          </div>
-                          <div className="flex justify-between text-sm font-body">
-                            <span className="text-muted-foreground">Planejados</span>
-                            <span className="font-semibold text-foreground">{scheduled.length}</span>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </CardContent>
-                </Card>
-
-                <Card className="border-border">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-[15px] font-body font-semibold text-foreground flex items-center gap-2">
-                      <ListChecks className="h-4 w-4 text-primary" /> Reflexão mensal
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {([
-                      { key: "content_best", label: "Melhor conteúdo do mês", placeholder: "Qual post se destacou?" },
-                      { key: "content_rhythm", label: "Ritmo de produção", placeholder: "Como foi sua consistência?" },
-                      { key: "focus_lessons", label: "Aprendizados", placeholder: "O que aprendeu?" },
-                    ] as const).map(field => (
-                      <div key={field.key} className="space-y-1">
-                        <Label className="text-xs font-body">{field.label}</Label>
-                        <Textarea
-                          placeholder={field.placeholder}
-                          value={reflectionForm[field.key]}
-                          onChange={e => setReflectionForm(prev => ({ ...prev, [field.key]: e.target.value }))}
-                          className="rounded-xl min-h-[50px] text-sm"
-                        />
-                      </div>
-                    ))}
-                    <Button size="sm" onClick={saveReflection} className="w-full gap-1.5">
-                      <Save className="h-3.5 w-3.5" /> Salvar reflexão
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
+                  ))}
+                  <Button size="sm" onClick={saveReflection} className="w-full gap-1.5">
+                    <Save className="h-3.5 w-3.5" /> Salvar reflexão
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 
@@ -912,69 +676,6 @@ const Plano = () => {
             </div>
           </TabsContent>
 
-          {/* ═══════════ TAB: CALENDÁRIO ═══════════ */}
-          <TabsContent value="calendario">
-            <div className="space-y-4">
-              <div className="flex items-center gap-0.5 bg-muted/50 rounded-full p-1 w-fit">
-                <button
-                  type="button"
-                  onClick={() => setCalView("week")}
-                  className={cn(
-                    "px-3 py-1.5 rounded-full text-xs font-body font-medium transition-all duration-200",
-                    calView === "week"
-                      ? "bg-card text-foreground shadow-warm-sm font-semibold"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  Semanal
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCalView("month")}
-                  className={cn(
-                    "px-3 py-1.5 rounded-full text-xs font-body font-medium transition-all duration-200",
-                    calView === "month"
-                      ? "bg-card text-foreground shadow-warm-sm font-semibold"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  Mensal
-                </button>
-              </div>
-
-              {calView === "week" ? (
-                <CalendarWeekView
-                  posts={posts}
-                  pillars={pillars}
-                  weekDays={weekDays}
-                  weekOffset={weekOffset}
-                  onWeekChange={(delta) => {
-                    if (delta === 0) setWeekOffset(0);
-                    else setWeekOffset((w) => w + delta);
-                  }}
-                  onPostClick={(post) => openPost(post.id)}
-                  today={today}
-                />
-              ) : (
-                <CalendarMonthView
-                  posts={posts}
-                  pillars={pillars}
-                  currentMonth={calMonth}
-                  onMonthChange={(delta) => {
-                    if (delta === 0) {
-                      const d = new Date();
-                      setCalMonth(new Date(d.getFullYear(), d.getMonth(), 1));
-                      return;
-                    }
-                    setCalMonth((m) => new Date(m.getFullYear(), m.getMonth() + delta, 1));
-                  }}
-                  onPostClick={(post) => openPost(post.id)}
-                  onDayClick={(date) => setSelectedDay(date)}
-                  today={today}
-                />
-              )}
-            </div>
-          </TabsContent>
         </Tabs>
       </motion.div>
 
