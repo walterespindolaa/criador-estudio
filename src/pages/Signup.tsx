@@ -64,16 +64,16 @@ const Signup = () => {
     <div className="min-h-screen bg-background flex">
       <div className="hidden lg:flex lg:w-1/2 bg-card items-center justify-center p-12">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }} className="max-w-md">
-          <h2 className="text-4xl font-display font-bold text-foreground mb-4">Sua jornada criativa começa aqui. 🚀</h2>
+          <h2 className="text-4xl font-display font-extrabold text-foreground tracking-tight mb-4">Sua jornada criativa começa aqui. 🚀</h2>
           <p className="text-muted-foreground font-body text-lg leading-relaxed">Chega de improvisar. Organize suas ideias, crie com consistência e apareça pro mundo.</p>
         </motion.div>
       </div>
       <div className="flex-1 flex items-center justify-center p-8">
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-sm">
-          <Link to="/" className="text-2xl font-display font-bold text-foreground mb-8 block" style={{ fontVariationSettings: "'opsz' 9" }}>
+          <Link to="/" className="text-2xl font-display font-extrabold text-foreground mb-8 block">
             Criadores
           </Link>
-          <h3 className="text-2xl font-display font-semibold text-foreground mb-2">Criar conta</h3>
+          <h3 className="text-2xl font-display font-extrabold text-foreground mb-2">Criar conta</h3>
           <p className="text-muted-foreground font-body mb-8">Comece a organizar seu conteúdo hoje</p>
 
           <Button

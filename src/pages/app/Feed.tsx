@@ -172,7 +172,7 @@ const Feed = () => {
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
           <div className="flex items-center justify-between mb-4 gap-3">
             <div className="min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-display font-bold text-foreground">Meu Feed</h1>
+              <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground">Meu Feed</h1>
               <p className="text-muted-foreground font-body mt-1 text-sm hidden sm:block">
                 Organize visualmente como seu feed do Instagram vai ficar.
               </p>
@@ -196,7 +196,7 @@ const Feed = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-4 md:gap-6">
-            <aside className="hidden md:flex flex-col h-[calc(100vh-180px)] sticky top-4 bg-card rounded-2xl border border-border overflow-hidden">
+            <aside className="hidden md:flex flex-col h-[calc(100vh-180px)] sticky top-4 bg-card rounded-xl border border-border overflow-hidden">
               <div className="px-3 py-2.5 border-b border-border">
                 <p className="text-xs font-body font-semibold uppercase tracking-widest text-muted-foreground">
                   Posts disponíveis

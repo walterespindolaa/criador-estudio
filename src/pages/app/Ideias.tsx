@@ -240,7 +240,7 @@ const Ideias = () => {
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-display font-bold text-foreground">Minhas Ideias</h1>
+            <h1 className="text-3xl font-display font-extrabold text-foreground">Minhas Ideias</h1>
             <p className="text-muted-foreground font-body mt-1">Seu banco de inspirações.</p>
           </div>
           <div className="flex items-center gap-2">
@@ -258,7 +258,7 @@ const Ideias = () => {
             const isExpanded = expandedIdeaId === idea.id;
             return (
               <div key={idea.id} className="flex flex-col gap-3">
-                <div className="bg-card rounded-2xl p-5 border border-border">
+                <div className="bg-card rounded-xl p-5 border border-border">
                   <div className="flex justify-between items-start mb-3">
                     <h3 className="font-display font-semibold text-foreground line-clamp-2">{idea.title}</h3>
                     <div className="flex gap-1">

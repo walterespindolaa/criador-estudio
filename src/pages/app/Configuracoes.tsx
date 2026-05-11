@@ -216,7 +216,7 @@ const Configuracoes = () => {
   return (
     <div className="pb-20 md:pb-0">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <h1 className="text-3xl font-display font-bold text-foreground mb-2">Configurações</h1>
+        <h1 className="text-3xl font-display font-extrabold text-foreground mb-2">Configurações</h1>
         <p className="text-muted-foreground font-body mb-6">Gerencie sua conta e preferências.</p>
 
         <Tabs defaultValue="perfil" className="w-full">
@@ -233,7 +233,7 @@ const Configuracoes = () => {
           <div className="w-full">
             <TabsContent value="perfil">
               <form onSubmit={handleSubmit(onSubmit)} className="max-w-2xl space-y-6">
-                <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-5">
+                <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-5">
                   <h3 className="font-display font-semibold text-foreground">Meu Perfil</h3>
                   <div className="flex items-center gap-4">
                     <button type="button" onClick={() => fileInputRef.current?.click()} className="relative w-20 h-20 rounded-full bg-muted flex items-center justify-center overflow-hidden border-2 border-border hover:border-primary transition-colors group">
@@ -301,7 +301,7 @@ const Configuracoes = () => {
 
             <TabsContent value="pilares">
               <div className="max-w-2xl space-y-6">
-                <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
+                <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
                   <h3 className="font-display font-semibold text-foreground">Pilares de Conteúdo</h3>
                   <p className="text-xs text-muted-foreground font-body">Máximo 5 pilares</p>
                   {pillars.map(p => (
@@ -326,7 +326,7 @@ const Configuracoes = () => {
                   )}
                 </div>
 
-                <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
+                <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
                   <h3 className="font-display font-semibold text-foreground">Meus Hábitos</h3>
                   {habits.map(h => (
                     <div key={h.id} className="flex items-center gap-3">
@@ -348,7 +348,7 @@ const Configuracoes = () => {
 
             <TabsContent value="integracoes">
               <div className="max-w-2xl space-y-6">
-                <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
+                <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
                   <h3 className="font-display font-semibold text-foreground flex items-center gap-2"><HardDrive className="h-5 w-5 text-primary" /> Google Drive</h3>
                   <p className="text-sm text-muted-foreground font-body leading-relaxed">Conecte seu Google Drive para buscar imagens e vídeos diretamente para o moodboard e brandbook.</p>
                   {driveConnection ? (
@@ -374,7 +374,7 @@ const Configuracoes = () => {
 
             <TabsContent value="seguranca">
               <div className="max-w-2xl space-y-6">
-                <div className="bg-card rounded-2xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
+                <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
                   <h3 className="font-display font-semibold text-foreground">Segurança da Conta</h3>
                   <div className="space-y-4">
                     <Button variant="outline" onClick={() => setPasswordOpen(true)} className="w-full sm:w-auto"><Lock className="h-4 w-4 mr-2" /> Alterar Senha</Button>

@@ -224,7 +224,7 @@ const Biblioteca = () => {
   return (
     <div className="max-w-4xl">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <h1 className="text-3xl font-display font-bold text-foreground mb-2">Biblioteca</h1>
+        <h1 className="text-3xl font-display font-extrabold text-foreground mb-2">Biblioteca</h1>
         <p className="text-muted-foreground font-body mb-8">Referências prontas para turbinar seu conteúdo.</p>
 
         <Tabs defaultValue="hooks">
@@ -347,7 +347,7 @@ const Biblioteca = () => {
                 ))
               }
               {((formatSource === "curados" ? referenceFormats : userFormats).length === 0) && (
-                <div className="bg-card rounded-2xl p-12 shadow-[var(--shadow-warm)] border border-border text-center">
+                <div className="bg-card rounded-xl p-12 shadow-[var(--shadow-warm)] border border-border text-center">
                   <FileCode2 className="h-8 w-8 text-primary mx-auto mb-3" />
                   <p className="text-muted-foreground font-body">Nenhum formato encontrado.</p>
                 </div>

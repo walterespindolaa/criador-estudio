@@ -150,7 +150,7 @@ const Tarefas = () => {
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-display font-bold text-foreground mb-1">Central de Tarefas</h1>
+            <h1 className="text-3xl font-display font-extrabold text-foreground mb-1">Central de Tarefas</h1>
             <p className="text-muted-foreground font-body">Tudo o que você precisa executar.</p>
           </div>
           <Button variant="hero" onClick={openNew}><Plus className="h-4 w-4 mr-2" /> Nova Tarefa</Button>
@@ -192,7 +192,7 @@ const Tarefas = () => {
                     <motion.div
                       layout
                       key={task.id}
-                      className="bg-card rounded-2xl p-4 shadow-warm border border-border group hover:border-primary/30 transition-all"
+                      className="bg-card rounded-xl p-4 shadow-warm border border-border group hover:border-primary/30 transition-all"
                     >
                       <div className="flex items-start gap-3">
                         <Checkbox

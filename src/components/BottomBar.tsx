@@ -1,20 +1,24 @@
 import { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
-  Home, Lightbulb, Kanban, CalendarDays, MoreHorizontal,
-  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, ChevronUp, LogOut
+  Home, Lightbulb, Kanban, CalendarDays,
+  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, ChevronUp, LogOut, Sparkles, Grid3X3
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 
-const primaryItems = [
+const leftItems = [
   { title: "Início", url: "/app", icon: Home, exact: true },
   { title: "Ideias", url: "/app/ideias", icon: Lightbulb },
+];
+
+const rightItems = [
   { title: "Criando", url: "/app/criando", icon: Kanban },
   { title: "Plano", url: "/app/plano", icon: CalendarDays },
 ];
 
 const moreItems = [
+  { title: "Meu Feed", url: "/app/feed", icon: Grid3X3 },
   { title: "Biblioteca", url: "/app/biblioteca", icon: BookOpen },
   { title: "Tarefas", url: "/app/tarefas", icon: ListTodo },
   { title: "Brandbook", url: "/app/brandbook", icon: BookMarked },
@@ -31,6 +35,7 @@ export function BottomBar() {
   const { signOut } = useAuth();
 
   const handleSignOut = async () => {
+    setMoreOpen(false);
     await signOut();
     navigate("/");
   };
@@ -42,17 +47,37 @@ export function BottomBar() {
 
   const isMoreActive = moreItems.some(item => location.pathname.startsWith(item.url));
 
+  const renderNavItem = (item: { title: string; url: string; icon: typeof Home; exact?: boolean }) => {
+    const active = isActive(item.url, item.exact);
+    return (
+      <NavLink
+        key={item.url}
+        to={item.url}
+        className="flex flex-col items-center justify-center gap-0.5 px-1 flex-1"
+      >
+        <item.icon
+          className={cn("h-5 w-5 transition-colors", active ? "text-primary" : "text-muted-foreground")}
+          strokeWidth={1.5}
+        />
+        <span className={cn("text-[10px] font-body font-medium", active ? "text-primary" : "text-muted-foreground")}>
+          {item.title}
+        </span>
+        <span className={cn("h-1 w-1 rounded-full mt-0.5 transition-colors", active ? "bg-primary" : "bg-transparent")} />
+      </NavLink>
+    );
+  };
+
   return (
     <>
-      {/* Backdrop */}
       {moreOpen && (
         <div className="fixed inset-0 z-40 md:hidden bg-foreground/20 backdrop-blur-sm" onClick={() => setMoreOpen(false)} />
       )}
 
-      {/* More drawer */}
       {moreOpen && (
-        <div className="fixed bottom-[64px] left-0 right-0 z-50 md:hidden bg-card border-t border-border rounded-t-2xl shadow-2xl p-4 bottom-bar-safe"
-          style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+        <div
+          className="fixed bottom-[72px] left-0 right-0 z-50 md:hidden bg-card border-t border-border rounded-t-2xl shadow-warm-lg p-4 bottom-bar-safe"
+          style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+        >
           <div className="w-8 h-1 bg-border rounded-full mx-auto mb-4" />
           <div className="grid grid-cols-4 gap-3">
             {moreItems.map((item) => {
@@ -67,62 +92,62 @@ export function BottomBar() {
                     active ? "bg-primary/10 text-primary" : "bg-muted/50 text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  <item.icon className="h-5 w-5" />
+                  <item.icon className="h-5 w-5" strokeWidth={1.5} />
                   <span className="text-[10px] font-body font-medium leading-tight text-center">{item.title}</span>
                 </NavLink>
               );
             })}
           </div>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive/15 transition-colors text-sm font-body font-medium"
+          >
+            <LogOut className="h-4 w-4" strokeWidth={1.5} /> Sair
+          </button>
         </div>
       )}
 
-      {/* Bottom nav */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-background/95 backdrop-blur-md border-t border-border"
+        className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card/95 backdrop-blur-lg border-t border-border"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        <div className="flex items-center justify-around h-16 px-1">
-          {primaryItems.map((item) => {
-            const active = isActive(item.url, item.exact);
-            return (
-              <NavLink
-                key={item.url}
-                to={item.url}
-                className="flex flex-col items-center justify-center gap-1 px-1"
-              >
-                <div className={cn(
-                  "p-1.5 rounded-xl transition-colors",
-                  active ? "bg-primary/10" : ""
-                )}>
-                  <item.icon className={cn("h-5 w-5 transition-colors", active ? "text-primary" : "text-muted-foreground")} />
-                </div>
-                <span className={cn("text-[10px] font-body font-medium", active ? "text-primary" : "text-muted-foreground")}>{item.title}</span>
-              </NavLink>
-            );
-          })}
+        <div className="relative flex items-end justify-around h-[72px] px-1">
+          {leftItems.map(renderNavItem)}
+
           <button
-            onClick={() => setMoreOpen(!moreOpen)}
-            className="flex flex-col items-center justify-center gap-1 px-1"
+            type="button"
+            onClick={() => { /* hook up to Cria IA when available */ }}
+            className="flex flex-col items-center justify-center gap-0.5 px-1 flex-1"
+            aria-label="Cria IA"
           >
-            <div className={cn(
-              "p-1.5 rounded-xl transition-colors",
-              moreOpen || isMoreActive ? "bg-primary/10" : ""
-            )}>
-              <ChevronUp className={cn(
+            <span className="h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-glow -mt-4">
+              <Sparkles className="h-5 w-5" strokeWidth={1.8} />
+            </span>
+            <span className="text-[10px] font-body font-semibold text-primary">Cria</span>
+          </button>
+
+          {rightItems.map(renderNavItem)}
+
+          <button
+            type="button"
+            onClick={() => setMoreOpen(!moreOpen)}
+            className="flex flex-col items-center justify-center gap-0.5 px-1 flex-1"
+          >
+            <ChevronUp
+              className={cn(
                 "h-5 w-5 transition-all",
                 moreOpen ? "text-primary rotate-180" : isMoreActive ? "text-primary" : "text-muted-foreground"
-              )} />
-            </div>
-            <span className={cn("text-[10px] font-body font-medium", moreOpen || isMoreActive ? "text-primary" : "text-muted-foreground")}>Mais</span>
-          </button>
-          <button
-            onClick={handleSignOut}
-            className="flex flex-col items-center justify-center gap-1 px-1"
-          >
-            <div className="p-1.5 rounded-xl transition-colors">
-              <LogOut className="h-5 w-5 text-muted-foreground transition-colors" />
-            </div>
-            <span className="text-[10px] font-body font-medium text-muted-foreground">Sair</span>
+              )}
+              strokeWidth={1.5}
+            />
+            <span className={cn(
+              "text-[10px] font-body font-medium",
+              moreOpen || isMoreActive ? "text-primary" : "text-muted-foreground"
+            )}>
+              Mais
+            </span>
+            <span className={cn("h-1 w-1 rounded-full mt-0.5 transition-colors", moreOpen || isMoreActive ? "bg-primary" : "bg-transparent")} />
           </button>
         </div>
       </nav>

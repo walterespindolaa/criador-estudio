@@ -107,7 +107,7 @@ function DCard({ children, className, onClick }: { children: React.ReactNode; cl
   return (
     <div
       onClick={onClick}
-      className={cn("bg-card rounded-2xl p-5 shadow-[var(--shadow-warm)] border border-border", className, onClick && "cursor-pointer hover:border-primary/30 transition-all")}
+      className={cn("bg-card rounded-xl p-5 shadow-[var(--shadow-warm)] border border-border", className, onClick && "cursor-pointer hover:border-primary/30 transition-all")}
     >
       {children}
     </div>
@@ -267,7 +267,7 @@ const Dashboard = () => {
 
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
           <div>
-            <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-0.5">
+            <h1 className="text-2xl md:text-3xl font-display font-extrabold text-foreground mb-0.5">
               {getGreeting(profile?.name || "criador")}
             </h1>
             <p className="text-sm text-muted-foreground font-body">

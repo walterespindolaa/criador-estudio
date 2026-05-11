@@ -33,7 +33,7 @@ const Landing = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
-        <h1 className="text-2xl font-display font-bold text-foreground">Criadores</h1>
+        <h1 className="text-2xl font-display font-extrabold text-foreground">Criadores</h1>
         <div className="flex gap-3">
           <Button variant="ghost" onClick={() => navigate("/login")}>Entrar</Button>
           <Button variant="hero" onClick={() => navigate("/signup")}>Começar grátis</Button>
@@ -50,9 +50,9 @@ const Landing = () => {
           <p className="text-sm font-body font-medium text-primary tracking-wider uppercase mb-4">
             Seu segundo cérebro criativo
           </p>
-          <h2 className="text-5xl md:text-6xl font-display font-bold text-foreground leading-tight mb-6">
+          <h2 className="text-5xl md:text-6xl font-display font-extrabold text-foreground leading-tight tracking-tight mb-6">
             Crie. Organize.{" "}
-            <span className="text-primary italic">Apareça.</span>
+            <span className="text-primary">Apareça.</span>
           </h2>
           <p className="text-lg text-muted-foreground font-body max-w-2xl mx-auto mb-10 leading-relaxed">
             De ideia solta a conteúdo publicado — sem ansiedade, sem burnout.
@@ -78,12 +78,12 @@ const Landing = () => {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 + i * 0.1 }}
-              className="bg-card rounded-2xl p-8 shadow-warm border border-border"
+              className="bg-card rounded-xl p-8 shadow-warm-sm hover:shadow-warm-md transition-all duration-200 border border-border"
             >
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-5">
-                <feature.icon className="h-6 w-6 text-primary" />
+                <feature.icon className="h-6 w-6 text-primary" strokeWidth={1.75} />
               </div>
-              <h3 className="text-xl font-display font-semibold text-foreground mb-2">
+              <h3 className="text-xl font-display font-bold text-foreground mb-2">
                 {feature.title}
               </h3>
               <p className="text-muted-foreground font-body leading-relaxed">
@@ -96,8 +96,8 @@ const Landing = () => {
 
       {/* CTA */}
       <section className="max-w-3xl mx-auto px-6 pb-24 text-center">
-        <div className="bg-card rounded-2xl p-12 shadow-warm border border-border">
-          <h3 className="text-3xl font-display font-bold text-foreground mb-4">
+        <div className="bg-card rounded-2xl p-12 shadow-warm-lg border border-border">
+          <h3 className="text-3xl font-display font-extrabold text-foreground mb-4">
             Pronto pra criar com consistência?
           </h3>
           <p className="text-muted-foreground font-body mb-8">

@@ -364,7 +364,7 @@ const Plano = () => {
   return (
     <div className="max-w-5xl pb-20 md:pb-0">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <h1 className="text-3xl font-display font-bold text-foreground mb-2">Meu Plano</h1>
+        <h1 className="text-3xl font-display font-extrabold text-foreground mb-2">Meu Plano</h1>
         <p className="text-muted-foreground font-body mb-6">Planeje, acompanhe e reflita sobre sua produção.</p>
 
         <Tabs defaultValue="semana">

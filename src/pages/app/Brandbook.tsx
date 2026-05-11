@@ -386,7 +386,7 @@ const Brandbook = () => {
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <div className="flex items-start justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-display font-bold text-foreground mb-2">
+            <h1 className="text-3xl font-display font-extrabold text-foreground mb-2">
               Brandbook <InfoTooltip text="O Brandbook define a identidade da sua marca. As respostas aqui personalizam todas as sugestões da IA para o seu estilo e público." side="bottom" />
             </h1>
             <p className="text-muted-foreground font-body">

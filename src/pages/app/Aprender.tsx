@@ -9,12 +9,12 @@ const Aprender = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
-        <h1 className="text-3xl font-display font-bold text-foreground mb-2">Aprender Mais</h1>
+        <h1 className="text-3xl font-display font-extrabold text-foreground mb-2">Aprender Mais</h1>
         <p className="text-muted-foreground font-body mb-8">
           Cursos e materiais bônus para acelerar seu crescimento.
         </p>
 
-        <div className="bg-card rounded-2xl p-12 shadow-warm border border-border text-center">
+        <div className="bg-card rounded-xl p-12 shadow-warm border border-border text-center">
           <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-5">
             <GraduationCap className="h-8 w-8 text-primary" />
           </div>

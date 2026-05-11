@@ -150,7 +150,7 @@ const Criando = () => {
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-display font-bold text-foreground">Estou Criando</h1>
+            <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground">Estou Criando</h1>
             <p className="text-muted-foreground font-body mt-1 text-sm hidden sm:block">Seu pipeline de criação. Arraste entre colunas.</p>
           </div>
           <Button variant="hero" size="sm" onClick={openNew} className="shrink-0"><Plus className="h-4 w-4 mr-1" /> Novo Post</Button>

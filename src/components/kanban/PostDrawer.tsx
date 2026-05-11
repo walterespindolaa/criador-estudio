@@ -716,7 +716,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
 
               {/* Results section */}
               {showResults && (
-                <div className="bg-card rounded-2xl p-5 border border-border space-y-4">
+                <div className="bg-card rounded-xl p-5 border border-border space-y-4">
                   <p className="font-body font-semibold text-foreground text-sm flex items-center gap-2">
                     <BarChart3 className="h-4 w-4" /> Resultados do post
                   </p>

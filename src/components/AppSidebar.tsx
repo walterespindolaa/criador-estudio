@@ -12,13 +12,13 @@ import {
   BookMarked,
   LogOut,
   Grid3X3,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   Sidebar,
   SidebarContent,
@@ -79,54 +79,43 @@ export function AppSidebar() {
     navigate("/");
   };
 
-  const initials = profile?.name
-    ? profile.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
-    : "CF";
+  const initial = profile?.name?.charAt(0)?.toUpperCase() || "C";
 
   return (
-    <Sidebar
-      collapsible="icon"
-      className="border-r border-sidebar-border"
-    >
-      {/* Profile header */}
-      <div className={cn("flex flex-col items-center", collapsed ? "px-2 pt-4 pb-2" : "px-4 pt-6 pb-4")}>
-        <button onClick={() => navigate("/app")} className="flex flex-col items-center gap-3 w-full">
-          {!collapsed ? (
-            <>
-              <Avatar className="h-20 w-20 ring-2 ring-sidebar-primary/20 shadow-md">
-                {profile?.avatar_url ? (
-                  <AvatarImage src={profile.avatar_url} alt={profile?.name || "Avatar"} />
-                ) : null}
-                <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground text-2xl font-display font-bold">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="text-center">
-                <p className="text-base font-display font-bold text-sidebar-foreground leading-tight truncate max-w-[160px]">
-                  {profile?.name || "Usuário"}
-                </p>
-                <p className="text-[11px] font-body text-sidebar-foreground/50 mt-1">CreatorsFlow</p>
-              </div>
-            </>
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+      <button
+        onClick={() => navigate("/app")}
+        className={cn(
+          "flex items-center gap-3 mb-2 w-full text-left",
+          collapsed ? "justify-center p-3" : "p-4"
+        )}
+      >
+        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden ring-2 ring-primary/10 shrink-0">
+          {profile?.avatar_url ? (
+            <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
           ) : (
-            <Avatar className="h-9 w-9">
-              {profile?.avatar_url ? (
-                <AvatarImage src={profile.avatar_url} alt={profile?.name || "Avatar"} />
-              ) : null}
-              <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground text-xs font-display font-bold">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
+            <span className="text-primary font-display font-bold text-sm">{initial}</span>
           )}
-        </button>
-      </div>
-      {!collapsed && <div className="mx-4 mb-2 border-b border-sidebar-border" />}
+        </div>
+        {!collapsed && (
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-display font-semibold text-foreground truncate">
+              {profile?.name || "Criador"}
+            </span>
+            {profile?.instagram_handle && (
+              <span className="text-[11px] text-muted-foreground truncate">
+                @{profile.instagram_handle.replace(/^@/, "")}
+              </span>
+            )}
+          </div>
+        )}
+      </button>
 
       <SidebarContent className="px-2">
         {groups.map((group) => (
           <SidebarGroup key={group.label}>
             {!collapsed && (
-              <SidebarGroupLabel className="text-[10px] font-body font-semibold uppercase tracking-widest text-sidebar-foreground/50 px-3 mb-1">
+              <SidebarGroupLabel className="text-[11px] font-display font-semibold uppercase tracking-wider text-muted-foreground/60 px-3 mt-4 mb-1.5">
                 {group.label}
               </SidebarGroupLabel>
             )}
@@ -134,14 +123,14 @@ export function AppSidebar() {
               <SidebarMenu>
                 {group.items.map((item) => (
                   <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild tooltip={item.title}>
                       <NavLink
                         to={item.url}
-                        end={(item as any).end}
-                        className="hover:bg-sidebar-accent/60 rounded-xl transition-colors text-sidebar-foreground/80"
-                        activeClassName="bg-sidebar-primary/10 text-sidebar-primary font-medium"
+                        end={(item as { end?: boolean }).end}
+                        className="group rounded-xl px-3 py-2.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-all duration-150"
+                        activeClassName="bg-primary/10 text-primary font-semibold"
                       >
-                        <item.icon className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <item.icon className="h-5 w-5 flex-shrink-0" strokeWidth={1.5} />
                         {!collapsed && <span className="font-body text-sm">{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
@@ -153,22 +142,34 @@ export function AppSidebar() {
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="px-2 pb-3">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={handleSignOut}
-              tooltip="Sair"
-              className={cn(
-                "rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10",
-                collapsed && "justify-center"
-              )}
-            >
-              <LogOut className={cn("h-4 w-4 flex-shrink-0", !collapsed && "mr-2")} />
-              {!collapsed && <span className="font-body text-sm">Sair</span>}
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+      <SidebarFooter className="mt-auto">
+        <div className={cn("border-t border-border", collapsed ? "p-2" : "p-3")}>
+          <button
+            type="button"
+            className={cn(
+              "w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-primary/5 hover:bg-primary/10 text-primary transition-all",
+              collapsed && "justify-center px-2"
+            )}
+            aria-label="Cria IA"
+          >
+            <Sparkles className="h-5 w-5 flex-shrink-0" strokeWidth={1.5} />
+            {!collapsed && <span className="text-sm font-display font-semibold">Cria IA</span>}
+          </button>
+        </div>
+        <div className={cn(collapsed ? "px-2 pb-3" : "px-3 pb-3")}>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className={cn(
+              "w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all",
+              collapsed && "justify-center px-2"
+            )}
+            aria-label="Sair"
+          >
+            <LogOut className="h-4 w-4 flex-shrink-0" strokeWidth={1.5} />
+            {!collapsed && <span className="text-sm font-body">Sair</span>}
+          </button>
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

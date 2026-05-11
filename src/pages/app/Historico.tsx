@@ -114,7 +114,7 @@ const Historico = () => {
   return (
     <div className="max-w-4xl pb-20 md:pb-0">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <h1 className="text-3xl font-display font-bold text-foreground mb-2">Histórico</h1>
+        <h1 className="text-3xl font-display font-extrabold text-foreground mb-2">Histórico</h1>
         <p className="text-muted-foreground font-body mb-6">Tudo que você já publicou. Seu portfólio de consistência.</p>
 
         {/* Memory banner */}
@@ -197,7 +197,7 @@ const Historico = () => {
 
         {/* Posts grouped by month */}
         {posts.length === 0 ? (
-          <div className="bg-card rounded-2xl p-12 shadow-warm border border-border text-center">
+          <div className="bg-card rounded-xl p-12 shadow-warm border border-border text-center">
             <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-5">
               <Archive className="h-8 w-8 text-primary" />
             </div>
@@ -207,7 +207,7 @@ const Historico = () => {
             </p>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="bg-card rounded-2xl p-8 shadow-warm border border-border text-center">
+          <div className="bg-card rounded-xl p-8 shadow-warm border border-border text-center">
             <p className="text-muted-foreground font-body">Nenhum post encontrado com esses filtros.</p>
           </div>
         ) : (
@@ -218,7 +218,7 @@ const Historico = () => {
                 ? new Date(monthKey + "-15").toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
                 : "Sem data";
               return (
-                <div key={monthKey} className="bg-card rounded-2xl border border-border overflow-hidden">
+                <div key={monthKey} className="bg-card rounded-xl border border-border overflow-hidden">
                   <button
                     onClick={() => toggleMonth(monthKey)}
                     className="w-full flex items-center justify-between p-4 hover:bg-accent/30 transition-colors"

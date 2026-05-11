@@ -8,20 +8,20 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-warm rounded-xl",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-xl",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-xl",
+        default: "bg-primary text-primary-foreground rounded-full font-semibold shadow-warm-sm hover:bg-primary/90 hover:shadow-glow",
+        destructive: "bg-red-50 text-red-600 rounded-full hover:bg-red-100",
+        outline: "border border-border bg-transparent rounded-full hover:bg-accent hover:border-primary/30 hover:text-accent-foreground",
+        secondary: "bg-primary/10 text-primary rounded-full font-semibold hover:bg-primary/15",
         ghost: "hover:bg-accent hover:text-accent-foreground rounded-xl",
         link: "text-primary underline-offset-4 hover:underline",
-        hero: "bg-primary text-primary-foreground hover:bg-primary/85 shadow-warm-lg rounded-2xl font-semibold text-base",
+        hero: "bg-primary text-white rounded-full font-bold px-8 shadow-glow hover:shadow-glow-hover hover:scale-[1.02]",
       },
       size: {
-        default: "h-10 px-5 py-2",
-        sm: "h-9 px-4",
-        lg: "h-12 px-8",
+        default: "h-10 px-6 text-sm",
+        sm: "h-8 px-4 text-xs font-semibold",
+        lg: "h-12 px-8 text-base",
         xl: "h-14 px-10 text-base",
-        icon: "h-10 w-10",
+        icon: "h-10 w-10 rounded-xl",
       },
     },
     defaultVariants: {

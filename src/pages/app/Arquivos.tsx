@@ -120,7 +120,7 @@ const Arquivos = () => {
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-display font-bold text-foreground">Arquivos</h1>
+            <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground">Arquivos</h1>
             <p className="text-muted-foreground font-body mt-1 text-sm">Seus arquivos e referências visuais.</p>
           </div>
           <div className="flex items-center gap-2">
@@ -186,7 +186,7 @@ const Arquivos = () => {
 
         {/* Grid */}
         {filtered.length === 0 && filteredDrive.length === 0 ? (
-          <div className="bg-card rounded-2xl p-12 shadow-[var(--shadow-warm)] border border-border text-center">
+          <div className="bg-card rounded-xl p-12 shadow-[var(--shadow-warm)] border border-border text-center">
             <FolderOpen className="h-8 w-8 text-primary mx-auto mb-3" />
             <p className="text-lg font-display font-semibold text-foreground mb-2">
               {files.length === 0 ? "Seus arquivos aparecem aqui" : "Nenhum arquivo encontrado"}

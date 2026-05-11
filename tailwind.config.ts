@@ -14,9 +14,10 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['Fraunces', 'serif'],
-        body: ['Inter', 'sans-serif'],
-        sans: ['Inter', 'sans-serif'],
+        display: ['Plus Jakarta Sans', 'sans-serif'],
+        body: ['Nunito Sans', 'sans-serif'],
+        sans: ['Nunito Sans', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -27,6 +28,8 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          light: "#EDE8FF",
+          dark: "#5B3FD9",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -62,17 +65,33 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        coral: { DEFAULT: "#FF6B6B", light: "#FFE8E8" },
+        amber: { DEFAULT: "#FFBE0B", light: "#FFF8E0" },
+        teal: { DEFAULT: "#20B2AA", light: "#E0F7F6" },
+        rose: { DEFAULT: "#FF69B4", light: "#FFE8F3" },
+        sky: { DEFAULT: "#4DABF7", light: "#E8F4FF" },
+        "status-ideia": "#4DABF7",
+        "status-roteiro": "#FFBE0B",
+        "status-gravando": "#FF6B6B",
+        "status-editando": "#FF69B4",
+        "status-agendado": "#7C5CFC",
+        "status-publicado": "#20B2AA",
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 4px)",
-        sm: "calc(var(--radius) - 8px)",
-        xl: "calc(var(--radius) + 4px)",
-        "2xl": "calc(var(--radius) + 8px)",
+        sm: "8px",
+        md: "12px",
+        lg: "16px",
+        xl: "20px",
+        "2xl": "24px",
+        "3xl": "28px",
       },
       boxShadow: {
         warm: "var(--shadow-warm)",
-        "warm-lg": "var(--shadow-warm-lg)",
+        "warm-sm": "0 1px 2px rgba(0,0,0,0.04)",
+        "warm-md": "0 4px 12px rgba(0,0,0,0.06)",
+        "warm-lg": "0 8px 24px rgba(0,0,0,0.08)",
+        glow: "0 0 20px rgba(124,92,252,0.15)",
+        "glow-hover": "0 0 30px rgba(124,92,252,0.25)",
       },
       keyframes: {
         "accordion-down": {

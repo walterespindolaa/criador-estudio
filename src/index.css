@@ -6,50 +6,50 @@
 
 @layer base {
   :root {
-    --background: 40 33% 97%;
-    --foreground: 60 4% 11%;
+    --background: 38 30% 97%;
+    --foreground: 234 33% 14%;
 
-    --card: 33 27% 93%;
-    --card-foreground: 60 4% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 234 33% 14%;
 
-    --popover: 40 33% 97%;
-    --popover-foreground: 60 4% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 234 33% 14%;
 
-    --primary: 20 65% 47%;
-    --primary-foreground: 40 33% 97%;
+    --primary: 254 97% 67%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 150 14% 42%;
-    --secondary-foreground: 40 33% 97%;
+    --secondary: 174 70% 41%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 33 20% 90%;
-    --muted-foreground: 60 4% 40%;
+    --muted: 34 14% 94%;
+    --muted-foreground: 220 9% 46%;
 
-    --accent: 33 27% 93%;
-    --accent-foreground: 60 4% 11%;
+    --accent: 254 60% 96%;
+    --accent-foreground: 254 97% 40%;
 
     --destructive: 0 84% 60%;
-    --destructive-foreground: 40 33% 97%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 60 4% 11% / 0.08;
-    --input: 60 4% 11% / 0.12;
-    --ring: 20 65% 47%;
+    --border: 34 14% 90%;
+    --input: 34 14% 90%;
+    --ring: 254 97% 67%;
 
-    --radius: 1rem;
+    --radius: 0.75rem;
 
-    --sidebar-background: 33 27% 93%;
-    --sidebar-foreground: 60 4% 11%;
-    --sidebar-primary: 20 65% 47%;
-    --sidebar-primary-foreground: 40 33% 97%;
-    --sidebar-accent: 33 20% 90%;
-    --sidebar-accent-foreground: 60 4% 11%;
-    --sidebar-border: 60 4% 11% / 0.08;
-    --sidebar-ring: 20 65% 47%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 234 33% 14%;
+    --sidebar-primary: 254 97% 67%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 254 60% 96%;
+    --sidebar-accent-foreground: 254 97% 40%;
+    --sidebar-border: 34 14% 90%;
+    --sidebar-ring: 254 97% 67%;
 
     --shadow-warm: 0 2px 12px rgba(28, 28, 26, 0.06);
     --shadow-warm-lg: 0 8px 30px rgba(28, 28, 26, 0.08);
 
-    --font-display: 'Fraunces', serif;
-    --font-body: 'Inter', sans-serif;
+    --font-display: 'Plus Jakarta Sans', sans-serif;
+    --font-body: 'Nunito Sans', sans-serif;
   }
 
   .dark {
