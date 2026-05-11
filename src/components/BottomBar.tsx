@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const leftItems = [
   { title: "Início", url: "/app", icon: Home, exact: true },
@@ -117,7 +118,7 @@ export function BottomBar() {
 
           <button
             type="button"
-            onClick={() => { /* hook up to Cria IA when available */ }}
+            onClick={() => toast.info("Cria IA estará disponível em breve! 🚀", { description: "Seu assistente criativo pessoal." })}
             className="flex flex-col items-center justify-center gap-0.5 px-1 flex-1"
             aria-label="Cria IA"
           >

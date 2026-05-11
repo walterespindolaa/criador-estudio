@@ -50,27 +50,69 @@ const Feed = () => {
       return;
     }
 
-    const published = feedPosts.filter((p) => p.status === "publicado").sort(sortPublishedDesc);
-    const others = feedPosts.filter((p) => p.status !== "publicado");
-    setGridPosts(published);
-    setAvailablePosts(others);
+    let savedOrder: string[] = [];
+    try {
+      const raw = localStorage.getItem("feed_grid_order");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) savedOrder = parsed.filter((v): v is string => typeof v === "string");
+      }
+    } catch {
+      savedOrder = [];
+    }
+
+    const postsById = new Map(feedPosts.map((p) => [p.id, p]));
+
+    if (savedOrder.length > 0) {
+      const grid: Post[] = [];
+      const usedIds = new Set<string>();
+      for (const id of savedOrder) {
+        const post = postsById.get(id);
+        if (post && !usedIds.has(id)) {
+          grid.push(post);
+          usedIds.add(id);
+        }
+      }
+      const available = feedPosts.filter((p) => !usedIds.has(p.id));
+      setGridPosts(grid);
+      setAvailablePosts(available);
+    } else {
+      const published = feedPosts.filter((p) => p.status === "publicado").sort(sortPublishedDesc);
+      const others = feedPosts.filter((p) => p.status !== "publicado");
+      setGridPosts(published);
+      setAvailablePosts(others);
+    }
     initializedRef.current = true;
   }, [postsLoading, feedPosts]);
 
   useEffect(() => {
     if (!initializedRef.current) return;
-    const known = new Set([...gridPosts.map((p) => p.id), ...availablePosts.map((p) => p.id)]);
+    try {
+      localStorage.setItem("feed_grid_order", JSON.stringify(gridPosts.map((p) => p.id)));
+    } catch {
+      /* localStorage unavailable — ignore */
+    }
+  }, [gridPosts]);
+
+  useEffect(() => {
+    if (!initializedRef.current) return;
+    const gridIds = new Set(gridPosts.map((p) => p.id));
+    const known = new Set([...gridIds, ...availablePosts.map((p) => p.id)]);
     const incoming = feedPosts.filter((p) => !known.has(p.id));
     const stillValidIds = new Set(feedPosts.map((p) => p.id));
 
     if (incoming.length === 0) {
       const filteredGrid = gridPosts.filter((p) => stillValidIds.has(p.id));
-      const filteredAvail = availablePosts.filter((p) => stillValidIds.has(p.id));
+      const filteredAvail = availablePosts.filter((p) => stillValidIds.has(p.id) && !gridIds.has(p.id));
       if (filteredGrid.length !== gridPosts.length) setGridPosts(filteredGrid);
       if (filteredAvail.length !== availablePosts.length) setAvailablePosts(filteredAvail);
       return;
     }
-    setAvailablePosts((prev) => [...incoming, ...prev.filter((p) => stillValidIds.has(p.id))]);
+    setAvailablePosts((prev) => {
+      const merged = [...incoming, ...prev.filter((p) => stillValidIds.has(p.id) && !gridIds.has(p.id))];
+      const seen = new Set<string>();
+      return merged.filter((p) => (seen.has(p.id) ? false : (seen.add(p.id), true)));
+    });
     setGridPosts((prev) => prev.filter((p) => stillValidIds.has(p.id)));
   }, [feedPosts, gridPosts, availablePosts]);
 
