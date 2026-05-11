@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Home, Lightbulb, Kanban, CalendarDays, MoreHorizontal,
-  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, ChevronUp
+  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, ChevronUp, LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 const primaryItems = [
   { title: "Início", url: "/app", icon: Home, exact: true },
@@ -26,6 +27,13 @@ const moreItems = [
 export function BottomBar() {
   const [moreOpen, setMoreOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   const isActive = (url: string, exact?: boolean) => {
     if (exact) return location.pathname === url;
@@ -106,6 +114,15 @@ export function BottomBar() {
               )} />
             </div>
             <span className={cn("text-[10px] font-body font-medium", moreOpen || isMoreActive ? "text-primary" : "text-muted-foreground")}>Mais</span>
+          </button>
+          <button
+            onClick={handleSignOut}
+            className="flex flex-col items-center justify-center gap-1 px-1"
+          >
+            <div className="p-1.5 rounded-xl transition-colors">
+              <LogOut className="h-5 w-5 text-muted-foreground transition-colors" />
+            </div>
+            <span className="text-[10px] font-body font-medium text-muted-foreground">Sair</span>
           </button>
         </div>
       </nav>

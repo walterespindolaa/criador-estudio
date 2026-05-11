@@ -10,15 +10,19 @@ import {
   FolderOpen,
   ListTodo,
   BookMarked,
+  LogOut,
+  Grid3X3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
+import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -35,6 +39,7 @@ const groups = [
       { title: "Dashboard", url: "/app", icon: LayoutDashboard, end: true },
       { title: "Ideias", url: "/app/ideias", icon: Lightbulb },
       { title: "Criando", url: "/app/criando", icon: Kanban },
+      { title: "Meu Feed", url: "/app/feed", icon: Grid3X3 },
       { title: "Tarefas", url: "/app/tarefas", icon: ListTodo },
     ],
   },
@@ -67,6 +72,12 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const navigate = useNavigate();
   const { profile } = useProfile();
+  const { signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   const initials = profile?.name
     ? profile.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
@@ -141,6 +152,24 @@ export function AppSidebar() {
           </SidebarGroup>
         ))}
       </SidebarContent>
+
+      <SidebarFooter className="px-2 pb-3">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={handleSignOut}
+              tooltip="Sair"
+              className={cn(
+                "rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10",
+                collapsed && "justify-center"
+              )}
+            >
+              <LogOut className={cn("h-4 w-4 flex-shrink-0", !collapsed && "mr-2")} />
+              {!collapsed && <span className="font-body text-sm">Sair</span>}
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 }
