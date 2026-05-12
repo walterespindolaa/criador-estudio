@@ -3,7 +3,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AnimatePresence, motion } from "framer-motion";
-import { Plus, Trash2, Edit2, Sparkles, Loader2, Lightbulb } from "lucide-react";
+import { Plus, Trash2, Edit2, Sparkles, Loader2, Lightbulb, List, LayoutGrid } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -75,6 +76,7 @@ const Ideias = () => {
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingIdea, setEditingIdea] = useState<Idea | null>(null);
+  const [viewMode, setViewMode] = useState<"list" | "gallery">("list");
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<IdeaFormData>({
     resolver: zodResolver(ideaSchema),
@@ -263,10 +265,82 @@ const Ideias = () => {
                 {AI_LIMIT - aiUsed}/{AI_LIMIT} sugestões restantes
               </span>
             )}
+            <div className="flex items-center gap-0.5 bg-muted/50 rounded-full p-1">
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-xs font-body font-medium transition-all",
+                  viewMode === "list" ? "bg-card shadow-warm-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                )}
+                aria-pressed={viewMode === "list"}
+              >
+                <List className="h-3.5 w-3.5 mr-1 inline" /> Lista
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("gallery")}
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-xs font-body font-medium transition-all",
+                  viewMode === "gallery" ? "bg-card shadow-warm-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                )}
+                aria-pressed={viewMode === "gallery"}
+              >
+                <LayoutGrid className="h-3.5 w-3.5 mr-1 inline" /> Galeria
+              </button>
+            </div>
             <Button variant="hero" onClick={openNew} className="hidden md:flex"><Plus className="h-4 w-4 mr-1" /> Nova Ideia</Button>
           </div>
         </div>
 
+        {viewMode === "gallery" && (
+          <div className="columns-2 sm:columns-3 lg:columns-4 gap-3 [&>*]:mb-3">
+            {filtered.map((idea) => {
+              const pillar = idea.pillar_id ? pillars.find((p) => p.id === idea.pillar_id) : null;
+              return (
+                <div
+                  key={idea.id}
+                  onClick={() => openEdit(idea)}
+                  className="break-inside-avoid bg-card rounded-xl border border-border p-4 hover:shadow-warm-md hover:scale-[1.01] transition-all cursor-pointer group"
+                >
+                  {pillar && (
+                    <div
+                      className="w-full h-24 rounded-lg mb-3"
+                      style={{ backgroundColor: pillar.color }}
+                    />
+                  )}
+                  <h3 className="font-display font-semibold text-sm text-foreground line-clamp-2 mb-2">
+                    {idea.title}
+                  </h3>
+                  {idea.notes && (
+                    <p className="text-xs font-body text-muted-foreground line-clamp-3 mb-3 whitespace-pre-line">
+                      {idea.notes}
+                    </p>
+                  )}
+                  <div className="flex flex-wrap gap-1">
+                    {pillar && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-body font-medium">
+                        {pillar.name}
+                      </span>
+                    )}
+                    {idea.platform && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-body capitalize">
+                        {idea.platform}
+                      </span>
+                    )}
+                    {idea.promoted_to_post_id && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary/15 text-secondary font-body font-medium">
+                        ✓ Virou post
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {viewMode === "list" && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map(idea => {
             const isExpanded = expandedIdeaId === idea.id;
@@ -398,6 +472,7 @@ const Ideias = () => {
             );
           })}
         </div>
+        )}
       </motion.div>
 
       <Dialog open={sheetOpen} onOpenChange={setSheetOpen}>
