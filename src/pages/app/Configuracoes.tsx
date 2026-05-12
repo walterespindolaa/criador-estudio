@@ -30,7 +30,7 @@ const NICHE_OPTIONS = ["Lifestyle", "Moda", "Beleza", "Fitness", "Culinária", "
 const profileSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório").max(100, "Máximo 100 caracteres").trim(),
   bio: z.string().max(160, "Máximo 160 caracteres").optional().or(z.literal("")),
-  niche: z.string().min(1, "Nicho é obrigatório").max(100, "Máximo 100 caracteres").trim(),
+  niche: z.string().max(200, "Máximo 200 caracteres").optional().or(z.literal("")),
   weekly_goal: z.number().min(1).max(7),
   platforms: z.array(z.string()),
   instagram_handle: z.string().max(100).optional().or(z.literal("")),
@@ -54,7 +54,6 @@ const Configuracoes = () => {
   });
 
   const avatarUrl = watch("avatar_url");
-  const niche = watch("niche");
   const bio = watch("bio") || "";
   const platforms = watch("platforms") || [];
   const weeklyGoal = watch("weekly_goal");
@@ -62,6 +61,8 @@ const Configuracoes = () => {
   const [newPillarName, setNewPillarName] = useState("");
   const [newPillarColor, setNewPillarColor] = useState(PILLAR_COLORS[0]);
   const [newHabitName, setNewHabitName] = useState("");
+  const [selectedNiches, setSelectedNiches] = useState<string[]>([]);
+  const [customNiche, setCustomNiche] = useState("");
 
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -83,15 +84,40 @@ const Configuracoes = () => {
         youtube_handle: profile.youtube_handle || "",
         avatar_url: profile.avatar_url || "",
       });
+      const list = (profile.niche || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      setSelectedNiches(list);
     }
   }, [profile, reset]);
 
+  const toggleNiche = (n: string) => {
+    setSelectedNiches((prev) => {
+      const next = prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n];
+      setValue("niche", next.join(", "));
+      return next;
+    });
+  };
+
+  const addCustomNiche = () => {
+    const value = customNiche.trim();
+    if (!value || selectedNiches.includes(value)) return;
+    setSelectedNiches((prev) => {
+      const next = [...prev, value];
+      setValue("niche", next.join(", "));
+      return next;
+    });
+    setCustomNiche("");
+  };
+
   const onSubmit = async (data: ProfileFormData) => {
     try {
+      const nicheString = selectedNiches.map((n) => n.trim()).filter(Boolean).join(", ");
       await updateProfile.mutateAsync({
         name: sanitizeText(data.name),
         bio: data.bio ? sanitizeText(data.bio) : null,
-        niche: sanitizeText(data.niche),
+        niche: nicheString ? sanitizeText(nicheString) : null,
         weekly_goal: data.weekly_goal,
         platforms: data.platforms,
         instagram_handle: data.instagram_handle ? sanitizeText(data.instagram_handle) : null,
@@ -262,12 +288,64 @@ const Configuracoes = () => {
                   </div>
                   <div className="space-y-2">
                     <Label className="font-body text-sm">Nicho</Label>
+                    <p className="text-[11px] text-muted-foreground font-body">
+                      Selecione um ou mais. Adicione um nicho personalizado se preferir.
+                    </p>
                     <div className="flex flex-wrap gap-2">
-                      {NICHE_OPTIONS.map(n => (
-                        <button key={n} type="button" onClick={() => setValue("niche", n)} className={`px-3 py-1.5 rounded-xl text-sm font-body border transition-colors ${niche === n ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border"}`}>
-                          {n}
-                        </button>
-                      ))}
+                      {NICHE_OPTIONS.map((n) => {
+                        const active = selectedNiches.includes(n);
+                        return (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => toggleNiche(n)}
+                            className={`px-3 py-1.5 rounded-full text-sm font-body transition-colors ${
+                              active
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted text-foreground hover:bg-muted/80"
+                            }`}
+                          >
+                            {n}
+                          </button>
+                        );
+                      })}
+                      {selectedNiches
+                        .filter((n) => !NICHE_OPTIONS.includes(n))
+                        .map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => toggleNiche(n)}
+                            className="px-3 py-1.5 rounded-full text-sm font-body bg-primary text-primary-foreground hover:opacity-90"
+                          >
+                            {n}
+                            <span className="ml-1.5 opacity-70">×</span>
+                          </button>
+                        ))}
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <Input
+                        placeholder="Outro nicho..."
+                        value={customNiche}
+                        onChange={(e) => setCustomNiche(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addCustomNiche();
+                          }
+                        }}
+                        maxLength={40}
+                        className="rounded-xl text-sm"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={addCustomNiche}
+                        disabled={!customNiche.trim() || selectedNiches.includes(customNiche.trim())}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
                     </div>
                     {errors.niche && <p className="text-xs text-destructive mt-1">{errors.niche.message}</p>}
                   </div>
