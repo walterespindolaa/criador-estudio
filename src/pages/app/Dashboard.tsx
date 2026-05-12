@@ -20,6 +20,7 @@ import { usePosts } from "@/hooks/usePosts";
 import { useHabits } from "@/hooks/useHabits";
 import { useTasks } from "@/hooks/useTasks";
 import { BestTimeToPost } from "@/components/insights/BestTimeToPost";
+import { SmartNotificationsCard } from "@/components/notifications/SmartNotificationsCard";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
 
 const HOOKS_VIRAL = [
@@ -361,6 +362,7 @@ const Dashboard = () => {
           </div>
 
           <div className="lg:col-span-4 space-y-6">
+            <SmartNotificationsCard />
              <DCard>
               <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
                 <Flame className="h-4 w-4 text-primary" /> Hábitos de Criação
