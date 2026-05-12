@@ -1,135 +1,211 @@
 import { motion } from "framer-motion";
 import {
-  ArrowRight,
   BookMarked,
   CalendarDays,
   Check,
-  Clock,
-  FileText,
   Grid3X3,
-  Hash,
-  Heart,
   Instagram,
   Kanban,
   Lightbulb,
-  MessageSquare,
-  Shield,
+  Link2,
   Sparkles,
   User,
   Youtube,
-  Zap,
+  BarChart3,
+  X,
+  Play
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
-const features = [
+// --- Components ---
+
+const MockupVisual = () => (
+  <div className="bg-[#0f172a] rounded-[24px] p-6 shadow-2xl border border-slate-800/60 transform rotate-1 sm:rotate-2 hover:rotate-0 transition-transform duration-500 relative">
+    <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 to-transparent rounded-[24px] pointer-events-none" />
+    <div className="flex gap-2 mb-6 relative z-10">
+      <div className="w-3 h-3 rounded-full bg-red-500/80" />
+      <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
+      <div className="w-3 h-3 rounded-full bg-green-500/80" />
+    </div>
+    <div className="space-y-4 relative z-10">
+      <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700/50 flex items-center justify-between backdrop-blur-sm shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-sky-500/20 flex items-center justify-center">
+            <Lightbulb className="w-5 h-5 text-sky-400" />
+          </div>
+          <div>
+            <div className="w-32 h-3 bg-slate-700 rounded-full mb-2" />
+            <div className="w-20 h-2 bg-slate-700/50 rounded-full" />
+          </div>
+        </div>
+        <span className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-sky-500/10 text-sky-400 border border-sky-500/20">
+          Ideia
+        </span>
+      </div>
+      <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700/50 flex items-center justify-between backdrop-blur-sm shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
+            <User className="w-5 h-5 text-red-400" />
+          </div>
+          <div>
+            <div className="w-40 h-3 bg-slate-700 rounded-full mb-2" />
+            <div className="w-24 h-2 bg-slate-700/50 rounded-full" />
+          </div>
+        </div>
+        <span className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+          Gravando
+        </span>
+      </div>
+      <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700/50 flex items-center justify-between backdrop-blur-sm shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-teal-500/20 flex items-center justify-center">
+            <Check className="w-5 h-5 text-teal-400" />
+          </div>
+          <div>
+            <div className="w-36 h-3 bg-slate-700 rounded-full mb-2" />
+            <div className="w-16 h-2 bg-slate-700/50 rounded-full" />
+          </div>
+        </div>
+        <span className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-teal-500/10 text-teal-400 border border-teal-500/20">
+          Publicado
+        </span>
+      </div>
+    </div>
+  </div>
+);
+
+const featuresList = [
   {
     icon: Lightbulb,
-    emoji: "💡",
-    title: "Capture ideias",
-    description: "Anotou? Está salvo. Nunca mais perca aquela ideia no banho.",
-    gradient: "from-amber-500 to-sky-500",
+    title: "Banco de Ideias",
+    description: "Capture no celular, organize por pilar e formato. Nunca perca uma ideia no banho.",
+    gradient: "from-amber-500 to-yellow-400",
   },
   {
     icon: Kanban,
-    emoji: "📋",
-    title: "Pipeline visual",
-    description: "Kanban de criação: do rascunho ao publicado em colunas visuais.",
+    title: "Pipeline Kanban",
+    description: "Do rascunho ao publicado em colunas visuais. Veja seu conteúdo fluir.",
     gradient: "from-blue-500 to-cyan-500",
   },
   {
     icon: CalendarDays,
-    emoji: "📅",
-    title: "Calendário de conteúdo",
-    description: "Veja sua semana e mês. Arraste posts entre dias.",
+    title: "Calendário + Metas",
+    description: "Planeje semanas, defina metas mensais e acompanhe sua consistência com hábitos.",
     gradient: "from-teal-500 to-emerald-500",
   },
   {
     icon: Sparkles,
-    emoji: "✨",
-    title: "IA que entende você",
-    description: "Legendas, hashtags e sugestões personalizadas pro seu nicho.",
+    title: "Cria IA",
+    description: "IA que conhece seu nicho: gera legendas, hashtags, ideias e roteiros no seu tom.",
     gradient: "from-primary to-purple-600",
   },
   {
     icon: Grid3X3,
-    emoji: "📱",
-    title: "Preview do feed",
-    description: "Organize visualmente como seu Instagram vai ficar antes de postar.",
-    gradient: "from-purple-500 to-pink-500",
+    title: "Feed + Agendamento",
+    description: "Veja como seu grid vai ficar e agende posts direto para Instagram, TikTok e YouTube.",
+    gradient: "from-violet-500 to-purple-500",
+  },
+  {
+    icon: Link2,
+    title: "Link in Bio",
+    description: "Sua mini landing page profissional com todos os links que importam. Incluso no plano.",
+    gradient: "from-rose-500 to-pink-500",
+  },
+  {
+    icon: BarChart3,
+    title: "Relatórios e Analytics",
+    description: "Alcance, impressões e engajamento reais das suas redes. Entenda o que está funcionando.",
+    gradient: "from-orange-500 to-red-500",
   },
   {
     icon: BookMarked,
-    emoji: "🎨",
-    title: "Brandbook pessoal",
-    description: "Defina sua identidade visual, tom de voz e público-alvo.",
+    title: "Brandbook + Biblioteca",
+    description: "Defina sua identidade visual, tom de voz, hooks e prompts favoritos em um só lugar.",
     gradient: "from-amber-600 to-orange-500",
   },
 ];
 
-const steps = [
+const stepsList = [
   {
     icon: User,
-    title: "Configure seu perfil",
-    description: "Conte quem você é, seu nicho e seu público.",
+    num: "01",
+    title: "Configure seu espaço criativo",
+    description: "Defina seu nicho, plataformas e seus pilares de conteúdo.",
   },
   {
     icon: Kanban,
-    title: "Crie e organize",
-    description: "Use o kanban para tirar ideias do papel.",
+    num: "02",
+    title: "Crie com sistema",
+    description: "Use o kanban, a IA e o calendário para produzir sem travar.",
   },
   {
-    icon: CalendarDays,
-    title: "Publique com consistência",
-    description: "Calendário visual + IA para nunca mais travar.",
+    icon: BarChart3,
+    num: "03",
+    title: "Publique e analise",
+    description: "Agende direto para as redes e veja o que gerou resultado.",
   },
 ];
 
-const aiCapabilities = [
-  { icon: FileText, label: "Gera legendas", desc: "No tom da sua marca" },
-  { icon: Hash, label: "Sugere hashtags", desc: "Por relevância" },
-  { icon: Lightbulb, label: "Dá ideias", desc: "Pro seu nicho" },
-  { icon: Clock, label: "Melhor horário", desc: "Baseado nos seus dados" },
+const aiList = [
+  { emoji: "✍️", title: "Gera legendas completas", desc: "— no estilo e tom da sua marca" },
+  { emoji: "#️⃣", title: "Sugere hashtags", desc: "— por relevância e nicho" },
+  { emoji: "💡", title: "Dá ideias de conteúdo", desc: "— baseado nos seus pilares" },
+  { emoji: "📊", title: "Analisa seus resultados", desc: "— e sugere o que fazer diferente" },
 ];
 
-const testimonials = [
+const testimonialsList = [
   {
     name: "Ana Vitória",
     handle: "@anavitoria.lifestyle",
     quote: "Finalmente parei de improvisar. O CreatorsFlow virou meu cérebro fora do cérebro.",
-    initial: "A",
-    color: "from-pink-500 to-rose-500",
+    gradient: "from-pink-500 to-rose-500",
+    initial: "A"
   },
   {
     name: "Pedro Sales",
     handle: "@pedro.cria",
-    quote: "Triplicou minha consistência. Em 3 meses fiz mais conteúdo do que no ano inteiro passado.",
-    initial: "P",
-    color: "from-blue-500 to-cyan-500",
+    quote: "Triplicou minha consistência. Em 3 meses fiz mais conteúdo do que no ano inteiro anterior.",
+    gradient: "from-blue-500 to-cyan-500",
+    initial: "P"
   },
   {
     name: "Carla Mendonça",
     handle: "@carlamendonca",
-    quote: "A IA me dá ideias quando travo. É como ter uma sócia criativa 24h.",
-    initial: "C",
-    color: "from-violet-500 to-purple-500",
+    quote: "A Cria IA me dá ideias quando trava. É como ter uma sócia criativa disponível 24h.",
+    gradient: "from-violet-500 to-purple-500",
+    initial: "C"
+  }
+];
+
+const faqs = [
+  {
+    q: "Preciso saber mexer com tecnologia?",
+    a: "Não. O CreatorsFlow foi feito para criadores, não para especialistas em marketing. A interface é guiada e intuitiva do zero."
   },
+  {
+    q: "Funciona com qual plataforma?",
+    a: "Instagram, TikTok e YouTube. Você conecta suas contas e o sistema publica, coleta métricas e gera insights automaticamente."
+  },
+  {
+    q: "A IA é genérica ou personalizada?",
+    a: "Personalizada. Ela aprende seu nicho, tom de voz e pilares de conteúdo para gerar sugestões que parecem escritas por você."
+  },
+  {
+    q: "Posso cancelar quando quiser?",
+    a: "Sim. Sem fidelidade, sem multa. Se não gostar, cancela com um clique."
+  }
 ];
 
-const planFeatures = [
-  "Captura ilimitada de ideias",
-  "Kanban com colunas customizáveis",
-  "Calendário semanal + mensal",
-  "Preview de feed do Instagram",
-  "Cria IA: legendas, hashtags e ideias",
-  "Brandbook completo (persona, tom, valores)",
-  "Biblioteca de hooks e prompts",
-  "Histórico e analytics dos seus posts",
-];
-
-const Landing = () => {
+export default function Landing() {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
 
@@ -143,412 +219,459 @@ const Landing = () => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  const fadeUp = {
+    initial: { opacity: 0, y: 16 },
+    whileInView: { opacity: 1, y: 0 },
+    viewport: { once: true },
+    transition: { duration: 0.5 }
+  };
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* ─── Header ─── */}
+    <div className="min-h-screen bg-background text-foreground font-body">
+      {/* ─── 1. HEADER ─── */}
       <header
         className={cn(
-          "sticky top-0 z-50 transition-all duration-200",
-          scrolled ? "bg-background/85 backdrop-blur-md border-b border-border/60" : "bg-transparent"
+          "fixed top-0 inset-x-0 z-50 transition-all duration-300",
+          scrolled ? "bg-background/80 backdrop-blur-md border-b border-border shadow-sm" : "bg-transparent"
         )}
       >
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 max-w-6xl mx-auto">
-          <button onClick={() => scrollTo("hero")} className="text-xl font-display font-extrabold text-foreground">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2 font-display font-extrabold text-xl tracking-tight cursor-pointer" onClick={() => scrollTo("hero")}>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary via-purple-600 to-pink-500 flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
             CreatorsFlow
-          </button>
-          <nav className="hidden md:flex items-center gap-6 text-sm font-body text-muted-foreground">
-            <button onClick={() => scrollTo("features")} className="hover:text-foreground transition-colors">
-              Funcionalidades
-            </button>
-            <button onClick={() => scrollTo("pricing")} className="hover:text-foreground transition-colors">
-              Preço
-            </button>
+          </div>
+
+          <nav className="hidden md:flex items-center gap-8 font-medium text-sm text-muted-foreground">
+            <button onClick={() => scrollTo("features")} className="hover:text-foreground transition-colors">Funcionalidades</button>
+            <button onClick={() => scrollTo("how-it-works")} className="hover:text-foreground transition-colors">Como funciona</button>
+            <button onClick={() => scrollTo("pricing")} className="hover:text-foreground transition-colors">Preço</button>
           </nav>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/login")}>
+
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" className="hidden sm:flex font-semibold" onClick={() => navigate("/login")}>
               Entrar
             </Button>
-            <Button variant="hero" size="sm" onClick={() => navigate("/signup")}>
-              Começar grátis
+            <Button variant="hero" className="font-semibold shadow-md" onClick={() => navigate("/signup")}>
+              Começar grátis &rarr;
             </Button>
           </div>
         </div>
       </header>
 
-      {/* ─── Hero ─── */}
-      <section id="hero" className="relative overflow-hidden">
-        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/5 via-background to-background" />
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-16 pb-24 lg:pt-24 lg:pb-32">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-              <span className="inline-flex items-center gap-1.5 bg-primary/10 text-primary text-xs font-body font-semibold px-3 py-1 rounded-full mb-6">
-                <Sparkles className="h-3 w-3" />
-                Seu cérebro criativo potencializado por IA
-              </span>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-extrabold text-foreground leading-[1.05] tracking-tight mb-5">
-                De ideia solta a{" "}
-                <span className="bg-gradient-to-r from-primary via-purple-600 to-pink-500 bg-clip-text text-transparent">
-                  conteúdo publicado.
-                </span>
-              </h1>
-              <p className="text-base sm:text-lg text-muted-foreground font-body leading-relaxed max-w-xl mb-8">
-                Sem ansiedade. Sem burnout. Só você e seu melhor conteúdo. O sistema operacional pessoal para criadores brasileiros.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 mb-8">
-                <Button variant="hero" size="lg" onClick={() => navigate("/signup")} className="text-base">
-                  Começar grátis <ArrowRight className="ml-1 h-5 w-5" />
-                </Button>
-                <Button variant="outline" size="lg" onClick={() => scrollTo("features")} className="text-base">
-                  Ver como funciona
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs font-body text-muted-foreground">
-                <span className="inline-flex items-center gap-1.5">
-                  <Shield className="h-3.5 w-3.5 text-emerald-500" /> Seus dados protegidos
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Zap className="h-3.5 w-3.5 text-amber-500" /> Setup em 2 minutos
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Heart className="h-3.5 w-3.5 text-primary" /> Feito no Brasil
-                </span>
-              </div>
-            </motion.div>
-
-            {/* Dashboard mockup */}
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.15 }}
-              className="hidden lg:block"
-            >
-              <DashboardMockup />
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Features ─── */}
-      <section id="features" className="py-20 lg:py-28">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display font-extrabold text-foreground tracking-tight mb-4">
-              Tudo o que você precisa
-              <br />
-              num só lugar.
-            </h2>
-            <p className="text-base text-muted-foreground font-body max-w-xl mx-auto">
-              Para de pular entre Notion, planilha, agenda e bloco de notas. Construa seu fluxo num só sistema.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
-            {features.map((feature, i) => (
-              <motion.div
-                key={feature.title}
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-50px" }}
-                transition={{ duration: 0.4, delay: i * 0.06 }}
-                className="bg-card rounded-2xl p-6 shadow-warm-sm hover:shadow-warm-md hover:scale-[1.01] transition-all duration-200 border border-border"
-              >
-                <div
-                  className={cn(
-                    "w-11 h-11 rounded-xl bg-gradient-to-br flex items-center justify-center mb-4 shadow-sm",
-                    feature.gradient
-                  )}
-                >
-                  <feature.icon className="h-5 w-5 text-white" strokeWidth={1.75} />
+      <main>
+        {/* ─── 2. HERO ─── */}
+        <section id="hero" className="relative pt-32 pb-20 lg:pt-40 lg:pb-28 overflow-hidden">
+          <div className="absolute top-0 inset-x-0 h-screen bg-gradient-to-b from-primary/5 via-transparent to-transparent -z-10 pointer-events-none" />
+          
+          <div className="max-w-7xl mx-auto px-4 sm:px-6">
+            <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+              <motion.div {...fadeUp} className="text-center lg:text-left">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-6 border border-primary/20 shadow-sm">
+                  <Sparkles className="w-4 h-4" />
+                  ✦ Para criadores brasileiros
                 </div>
-                <h3 className="text-lg font-display font-bold text-foreground mb-1.5 flex items-center gap-1.5">
-                  <span aria-hidden="true">{feature.emoji}</span>
-                  {feature.title}
-                </h3>
-                <p className="text-sm text-muted-foreground font-body leading-relaxed">{feature.description}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Como funciona ─── */}
-      <section className="py-20 lg:py-24 bg-muted/30">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12">
-            <span className="text-xs font-body font-semibold uppercase tracking-wider text-primary mb-3 block">
-              Como funciona
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-display font-extrabold text-foreground tracking-tight">
-              Três passos pra sair do caos.
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-2 relative">
-            {steps.map((step, i) => (
-              <motion.div
-                key={step.title}
-                initial={{ opacity: 0, y: 12 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: i * 0.1 }}
-                className="relative bg-card rounded-2xl p-6 border border-border md:mx-2"
-              >
-                <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-display font-bold text-sm mb-4">
-                  {i + 1}
-                </div>
-                <div className="flex items-center gap-2 mb-2">
-                  <step.icon className="h-5 w-5 text-primary" strokeWidth={1.75} />
-                  <h3 className="text-base font-display font-bold text-foreground">{step.title}</h3>
-                </div>
-                <p className="text-sm text-muted-foreground font-body leading-relaxed">{step.description}</p>
-                {i < steps.length - 1 && (
-                  <ArrowRight className="hidden md:block absolute -right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground/40 z-10" />
-                )}
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Seção IA (Cria IA) ─── */}
-      <section className="py-20 lg:py-28">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-purple-600 to-pink-500 p-8 sm:p-12 lg:p-16 text-white">
-            <div className="absolute top-0 right-0 opacity-10 pointer-events-none">
-              <Sparkles className="h-64 w-64 -translate-y-16 translate-x-16" />
-            </div>
-            <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-              <div>
-                <span className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur text-xs font-body font-semibold px-3 py-1 rounded-full mb-5">
-                  <Sparkles className="h-3 w-3" />
-                  Cria IA
-                </span>
-                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display font-extrabold tracking-tight leading-tight mb-4">
-                  Sua assistente criativa.
-                  <br />
-                  Sempre disponível.
-                </h2>
-                <p className="text-base text-white/85 font-body leading-relaxed max-w-md">
-                  Treinada com o seu brandbook, persona e nicho. A Cria IA sabe quem você é e como você fala.
+                
+                <h1 className="text-5xl lg:text-6xl font-display font-extrabold tracking-tight leading-[1.1] mb-6">
+                  Do caos criativo ao <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-purple-600 to-pink-500">conteúdo publicado.</span>
+                </h1>
+                
+                <p className="text-lg lg:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+                  Um sistema operacional completo para criadores de conteúdo. Ideias, roteiros, agendamento e análise — tudo em um só lugar.
                 </p>
+
+                <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-8">
+                  <Button variant="hero" size="lg" className="w-full sm:w-auto text-base h-14 px-8" onClick={() => navigate("/signup")}>
+                    Começar grátis &rarr;
+                  </Button>
+                  <Button variant="outline" size="lg" className="w-full sm:w-auto text-base h-14 px-8" onClick={() => scrollTo("how-it-works")}>
+                    Ver como funciona
+                  </Button>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 sm:gap-6 text-sm text-muted-foreground font-medium">
+                  <div className="flex items-center gap-1.5"><Check className="w-4 h-4 text-primary" /> 14 dias grátis</div>
+                  <div className="flex items-center gap-1.5"><Check className="w-4 h-4 text-primary" /> Sem cartão</div>
+                  <div className="flex items-center gap-1.5"><Check className="w-4 h-4 text-primary" /> Cancele quando quiser</div>
+                </div>
+              </motion.div>
+
+              <motion.div 
+                initial={{ opacity: 0, y: 24, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+                className="mx-auto w-full max-w-md lg:max-w-full"
+              >
+                <MockupVisual />
+              </motion.div>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── 3. LOGOS DE PLATAFORMAS ─── */}
+        <section className="py-12 bg-muted/30 border-y border-border">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
+            <p className="text-sm font-semibold text-muted-foreground mb-6 uppercase tracking-wider">
+              Funciona com as plataformas que você já usa:
+            </p>
+            <div className="flex flex-wrap justify-center items-center gap-8 sm:gap-16 opacity-70 grayscale hover:grayscale-0 transition-all duration-500">
+              <div className="flex items-center gap-2 font-display font-bold text-xl text-foreground">
+                <Instagram className="w-7 h-7" /> Instagram
+              </div>
+              <div className="flex items-center gap-2 font-display font-bold text-xl text-foreground">
+                <Play className="w-7 h-7" /> TikTok
+              </div>
+              <div className="flex items-center gap-2 font-display font-bold text-xl text-foreground">
+                <Youtube className="w-7 h-7" /> YouTube
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── 4. FUNCIONALIDADES ─── */}
+        <section id="features" className="py-20 lg:py-28">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6">
+            <motion.div {...fadeUp} className="text-center max-w-3xl mx-auto mb-16">
+              <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight mb-4">
+                Tudo que você precisa. <span className="text-muted-foreground">Nada que você não precisa.</span>
+              </h2>
+              <p className="text-lg text-muted-foreground">
+                Cada módulo foi pensado para o criador que trabalha sozinho.
+              </p>
+            </motion.div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+              {featuresList.map((f, i) => (
+                <motion.div 
+                  key={i}
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: i * 0.05 }}
+                  className="bg-card border border-border rounded-2xl p-6 sm:p-8 shadow-warm-sm hover:shadow-warm-md hover:border-primary/20 transition-all duration-300"
+                >
+                  <div className={cn("w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center mb-6 shadow-inner", f.gradient)}>
+                    <f.icon className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-xl font-display font-bold mb-3">{f.title}</h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {f.description}
+                  </p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ─── 5. COMO FUNCIONA ─── */}
+        <section id="how-it-works" className="py-20 lg:py-28 bg-muted/30 border-y border-border">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6">
+            <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-16">
+              <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight mb-4">
+                Em 3 passos, você para de improvisar.
+              </h2>
+            </motion.div>
+
+            <div className="grid md:grid-cols-3 gap-8 relative">
+              <div className="hidden md:block absolute top-1/2 left-0 right-0 h-0.5 bg-border -translate-y-1/2 z-0" />
+              {stepsList.map((s, i) => (
+                <motion.div 
+                  key={i}
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: i * 0.1 }}
+                  className="relative z-10 bg-card border border-border rounded-2xl p-8 shadow-warm-sm flex flex-col items-center text-center"
+                >
+                  <div className="w-14 h-14 rounded-full bg-primary text-white flex items-center justify-center font-display font-bold text-xl mb-6 shadow-glow border-4 border-background">
+                    {s.num}
+                  </div>
+                  <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-4">
+                    <s.icon className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-xl font-display font-bold mb-3">{s.title}</h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {s.description}
+                  </p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ─── 6. DESTAQUE IA ─── */}
+        <section className="py-20 lg:py-28 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-purple-600/5 -z-10" />
+          <div className="max-w-7xl mx-auto px-4 sm:px-6">
+            <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+              <motion.div {...fadeUp}>
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-6">
+                  <Sparkles className="w-4 h-4" /> Inteligência Artificial
+                </div>
+                <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight mb-4">
+                  A Cria IA trabalha enquanto você cria.
+                </h2>
+                <p className="text-lg text-muted-foreground leading-relaxed mb-8">
+                  Não é um chatbot genérico. É uma IA que conhece seu nicho, seu tom e seu público.
+                </p>
+              </motion.div>
+              
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+                className="grid sm:grid-cols-2 gap-4"
+              >
+                {aiList.map((ai, i) => (
+                  <div key={i} className="bg-card border border-border rounded-2xl p-6 shadow-warm-sm">
+                    <div className="text-2xl mb-3">{ai.emoji}</div>
+                    <h4 className="font-display font-bold text-foreground mb-1">{ai.title}</h4>
+                    <p className="text-sm text-muted-foreground">{ai.desc}</p>
+                  </div>
+                ))}
+              </motion.div>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── 7. COMPARATIVO ─── */}
+        <section className="py-20 lg:py-28 bg-muted/30 border-y border-border">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6">
+            <motion.div {...fadeUp} className="text-center mb-14">
+              <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight mb-4">
+                Por que não Buffer, mLabs ou Later?
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Essas ferramentas foram feitas para agências. O CreatorsFlow foi feito para você.
+              </p>
+            </motion.div>
+            
+            <motion.div {...fadeUp} className="overflow-x-auto rounded-2xl border border-border bg-card shadow-warm-sm">
+              <table className="w-full min-w-[600px] text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-border text-sm font-display font-bold text-foreground">
+                    <th className="p-4 sm:p-6 w-2/5">Funcionalidade</th>
+                    <th className="p-4 sm:p-6 w-1/5 text-center bg-primary/10 border-x border-primary/20 text-primary">CreatorsFlow</th>
+                    <th className="p-4 sm:p-6 w-1/5 text-center text-muted-foreground">Buffer/Later</th>
+                    <th className="p-4 sm:p-6 w-1/5 text-center text-muted-foreground">mLabs</th>
+                  </tr>
+                </thead>
+                <tbody className="font-body text-sm text-foreground/90 divide-y divide-border">
+                  <tr>
+                    <td className="p-4 sm:p-6 font-medium">Banco de ideias integrado</td>
+                    <td className="p-4 sm:p-6 text-center bg-primary/5 border-x border-primary/20"><Check className="w-5 h-5 mx-auto text-primary" /></td>
+                    <td className="p-4 sm:p-6 text-center text-muted-foreground"><X className="w-5 h-5 mx-auto opacity-30" /></td>
+                    <td className="p-4 sm:p-6 text-center text-muted-foreground"><X className="w-5 h-5 mx-auto opacity-30" /></td>
+                  </tr>
+                  <tr>
+                    <td className="p-4 sm:p-6 font-medium">Roteiro e produção com IA</td>
+                    <td className="p-4 sm:p-6 text-center bg-primary/5 border-x border-primary/20"><Check className="w-5 h-5 mx-auto text-primary" /></td>
+                    <td className="p-4 sm:p-6 text-center text-muted-foreground"><X className="w-5 h-5 mx-auto opacity-30" /></td>
+                    <td className="p-4 sm:p-6 text-center text-muted-foreground"><X className="w-5 h-5 mx-auto opacity-30" /></td>
+                  </tr>
+                  <tr>
+                    <td className="p-4 sm:p-6 font-medium">Brandbook e identidade visual</td>
+                    <td className="p-4 sm:p-6 text-center bg-primary/5 border-x border-primary/20"><Check className="w-5 h-5 mx-auto text-primary" /></td>
+                    <td className="p-4 sm:p-6 text-center text-muted-foreground"><X className="w-5 h-5 mx-auto opacity-30" /></td>
+                    <td className="p-4 sm:p-6 text-center text-muted-foreground"><X className="w-5 h-5 mx-auto opacity-30" /></td>
+                  </tr>
+                  <tr>
+                    <td className="p-4 sm:p-6 font-medium">Link in Bio incluso</td>
+                    <td className="p-4 sm:p-6 text-center bg-primary/5 border-x border-primary/20"><Check className="w-5 h-5 mx-auto text-primary" /></td>
+                    <td className="p-4 sm:p-6 text-center text-muted-foreground font-medium">Pago à parte</td>
+                    <td className="p-4 sm:p-6 text-center text-muted-foreground"><X className="w-5 h-5 mx-auto opacity-30" /></td>
+                  </tr>
+                  <tr>
+                    <td className="p-4 sm:p-6 font-medium">Preço acessível para pessoa física</td>
+                    <td className="p-4 sm:p-6 text-center bg-primary/10 border-x border-b-0 border-primary/20 rounded-b-2xl"><Check className="w-5 h-5 mx-auto text-primary" /></td>
+                    <td className="p-4 sm:p-6 text-center text-muted-foreground"><X className="w-5 h-5 mx-auto opacity-30" /></td>
+                    <td className="p-4 sm:p-6 text-center text-muted-foreground font-medium">Parcial</td>
+                  </tr>
+                </tbody>
+              </table>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* ─── 8. DEPOIMENTOS ─── */}
+        <section className="py-20 lg:py-28">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6">
+            <motion.div {...fadeUp} className="text-center mb-16">
+              <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight">
+                Criadores que pararam de improvisar.
+              </h2>
+            </motion.div>
+            
+            <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
+              {testimonialsList.map((t, i) => (
+                <motion.div 
+                  key={i}
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: i * 0.1 }}
+                  className="bg-card border border-border rounded-2xl p-8 shadow-warm-sm flex flex-col h-full"
+                >
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className={cn("w-12 h-12 rounded-full flex items-center justify-center text-white font-display font-bold text-lg bg-gradient-to-br shadow-inner", t.gradient)}>
+                      {t.initial}
+                    </div>
+                    <div>
+                      <h4 className="font-display font-bold text-foreground">{t.name}</h4>
+                      <p className="text-sm text-muted-foreground">{t.handle}</p>
+                    </div>
+                  </div>
+                  <p className="text-foreground/90 italic leading-relaxed flex-1">
+                    "{t.quote}"
+                  </p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ─── 9. PREÇO ─── */}
+        <section id="pricing" className="py-20 lg:py-28 bg-muted/30 border-y border-border">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6">
+            <motion.div {...fadeUp} className="text-center mb-16">
+              <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight mb-4">
+                Um plano. Tudo incluso.
+              </h2>
+              <p className="text-lg text-muted-foreground">
+                Sem surpresa, sem plano básico que não serve.
+              </p>
+            </motion.div>
+
+            <motion.div 
+              {...fadeUp}
+              className="max-w-lg mx-auto bg-card border-2 border-primary/20 rounded-3xl p-8 sm:p-10 shadow-glow relative"
+            >
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-primary text-white px-4 py-1 rounded-full text-sm font-semibold flex items-center gap-1.5 shadow-md">
+                <Sparkles className="w-4 h-4" /> ✦ Mais popular
+              </div>
+              
+              <div className="text-center mb-8 pt-4">
+                <h3 className="text-2xl font-display font-bold mb-2">Criador Pro</h3>
+                <div className="flex items-center justify-center gap-3 mb-2">
+                  <span className="text-2xl text-muted-foreground line-through font-display font-semibold opacity-60">R$ 47</span>
+                  <span className="text-5xl font-display font-extrabold text-foreground tracking-tight">R$ 29<span className="text-xl font-body font-normal text-muted-foreground">/mês</span></span>
+                </div>
+                <p className="text-sm text-primary font-semibold">ou R$ 297/ano — 2 meses grátis</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                {aiCapabilities.map((cap, i) => (
-                  <motion.div
-                    key={cap.label}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.3, delay: i * 0.07 }}
-                    className="bg-white/10 backdrop-blur-sm border border-white/15 rounded-2xl p-4"
-                  >
-                    <cap.icon className="h-5 w-5 mb-2" strokeWidth={1.75} />
-                    <p className="text-sm font-display font-bold mb-0.5">{cap.label}</p>
-                    <p className="text-xs text-white/70 font-body">{cap.desc}</p>
-                  </motion.div>
+              <div className="space-y-4 mb-8">
+                {[
+                  "Banco de ideias ilimitado",
+                  "Pipeline kanban completo",
+                  "Calendário + metas mensais",
+                  "Acompanhamento de hábitos",
+                  "Cria IA (legendas, hashtags, ideias, roteiros)",
+                  "Agendamento Instagram, TikTok e YouTube",
+                  "Preview de feed do Instagram",
+                  "Link in Bio profissional",
+                  "Brandbook + Biblioteca pessoal",
+                  "Relatórios e analytics das redes",
+                ].map((item, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="mt-1 rounded-full bg-primary/10 p-0.5">
+                      <Check className="w-4 h-4 text-primary" />
+                    </div>
+                    <span className="text-foreground/90 font-medium">{item}</span>
+                  </div>
                 ))}
               </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      {/* ─── Depoimentos ─── */}
-      <section className="py-20 lg:py-24 bg-muted/30">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl sm:text-4xl font-display font-extrabold text-foreground tracking-tight mb-3">
-              Criadores que pararam de improvisar.
-            </h2>
-            <p className="text-xs text-muted-foreground font-body italic">Em breve: depoimentos reais de criadores beta.</p>
+              <Button variant="hero" size="xl" className="w-full text-lg h-14" onClick={() => navigate("/signup")}>
+                Começar 14 dias grátis &rarr;
+              </Button>
+              <p className="text-center text-sm text-muted-foreground mt-4 font-medium">
+                Sem cartão de crédito. Cancele quando quiser.
+              </p>
+            </motion.div>
           </div>
+        </section>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {testimonials.map((t, i) => (
-              <motion.div
-                key={t.name}
-                initial={{ opacity: 0, y: 12 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: i * 0.08 }}
-                className="bg-card rounded-2xl p-6 border border-border shadow-warm-sm"
-              >
-                <div className="flex items-center gap-3 mb-4">
-                  <div
-                    className={cn(
-                      "w-11 h-11 rounded-full bg-gradient-to-br flex items-center justify-center text-white font-display font-bold",
-                      t.color
-                    )}
-                  >
-                    {t.initial}
-                  </div>
-                  <div>
-                    <p className="text-sm font-display font-bold text-foreground">{t.name}</p>
-                    <p className="text-xs text-muted-foreground font-body">{t.handle}</p>
-                  </div>
-                </div>
-                <p className="text-sm font-body text-foreground/90 leading-relaxed italic">"{t.quote}"</p>
-              </motion.div>
-            ))}
+        {/* ─── 10. FAQ ─── */}
+        <section className="py-20 lg:py-28">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6">
+            <motion.div {...fadeUp} className="text-center mb-12">
+              <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight">
+                Perguntas frequentes
+              </h2>
+            </motion.div>
+            
+            <motion.div {...fadeUp}>
+              <Accordion type="single" collapsible className="w-full">
+                {faqs.map((faq, i) => (
+                  <AccordionItem key={i} value={`item-${i}`} className="border-border">
+                    <AccordionTrigger className="text-left font-display font-bold text-lg hover:text-primary transition-colors py-5">
+                      {faq.q}
+                    </AccordionTrigger>
+                    <AccordionContent className="font-body text-muted-foreground text-base leading-relaxed pb-5">
+                      {faq.a}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </motion.div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ─── Preço ─── */}
-      <section id="pricing" className="py-20 lg:py-28">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-10">
-            <h2 className="text-3xl sm:text-4xl font-display font-extrabold text-foreground tracking-tight mb-3">
-              Tudo o que você precisa.
-              <br />
-              Um preço simples.
-            </h2>
-            <p className="text-base text-muted-foreground font-body">Sem planos confusos. Tudo já incluído.</p>
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.4 }}
-            className="bg-card rounded-3xl p-8 sm:p-10 border border-border shadow-warm-lg"
-          >
-            <div className="text-center mb-6">
-              <span className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-700 text-xs font-body font-semibold px-3 py-1 rounded-full mb-4">
-                <Zap className="h-3 w-3" />
-                7 dias grátis · Cancele quando quiser
-              </span>
-              <div className="flex items-baseline justify-center gap-1">
-                <span className="text-5xl font-display font-extrabold text-foreground">R$ 47</span>
-                <span className="text-base text-muted-foreground font-body">/mês</span>
+        {/* ─── 11. CTA FINAL ─── */}
+        <section className="py-24 lg:py-32 relative overflow-hidden border-t border-border">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/8 to-purple-600/8 -z-10" />
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+            <motion.div {...fadeUp}>
+              <h2 className="text-4xl lg:text-5xl font-display font-extrabold tracking-tight mb-6">
+                Pronto para parar de improvisar?
+              </h2>
+              <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
+                Junte-se a criadores que produziram mais em 30 dias do que em 6 meses tentando sozinhos.
+              </p>
+              <Button variant="hero" size="xl" className="h-16 px-10 text-lg shadow-glow hover:shadow-glow-hover" onClick={() => navigate("/signup")}>
+                Criar minha conta grátis &rarr;
+              </Button>
+              <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-sm text-muted-foreground font-medium">
+                <span>14 dias grátis</span>
+                <span className="hidden sm:inline">&middot;</span>
+                <span>Sem cartão</span>
+                <span className="hidden sm:inline">&middot;</span>
+                <span>Cancele quando quiser</span>
               </div>
-              <p className="text-xs text-muted-foreground font-body mt-1">ou R$ 470/ano (2 meses grátis)</p>
+            </motion.div>
+          </div>
+        </section>
+      </main>
+
+      {/* ─── 12. FOOTER ─── */}
+      <footer className="py-12 border-t border-border bg-card">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-2 font-display font-extrabold text-lg">
+            <div className="w-6 h-6 rounded bg-gradient-to-br from-primary via-purple-600 to-pink-500 flex items-center justify-center">
+              <Sparkles className="w-3 h-3 text-white" />
             </div>
+            CreatorsFlow
+          </div>
+          
+          <div className="flex flex-wrap justify-center items-center gap-6 text-sm font-medium text-muted-foreground">
+            <a href="#" className="hover:text-primary transition-colors">Termos de Uso</a>
+            <a href="#" className="hover:text-primary transition-colors">Privacidade</a>
+            <a href="#" className="hover:text-primary transition-colors">Contato</a>
+          </div>
 
-            <ul className="space-y-3 mb-8">
-              {planFeatures.map((feat) => (
-                <li key={feat} className="flex items-start gap-2.5">
-                  <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-emerald-500/15 flex items-center justify-center">
-                    <Check className="h-3 w-3 text-emerald-600" strokeWidth={3} />
-                  </span>
-                  <span className="text-sm font-body text-foreground">{feat}</span>
-                </li>
-              ))}
-            </ul>
-
-            <Button variant="hero" size="lg" className="w-full text-base" onClick={() => navigate("/signup")}>
-              Começar agora <ArrowRight className="ml-1 h-5 w-5" />
-            </Button>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ─── CTA Final ─── */}
-      <section className="py-20 lg:py-28">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6">
-          <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-pink-500/10 rounded-3xl p-10 sm:p-16 text-center border border-primary/15">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display font-extrabold text-foreground tracking-tight mb-4">
-              Pronto pra parar de improvisar?
-            </h2>
-            <p className="text-base text-muted-foreground font-body mb-8 max-w-xl mx-auto">
-              Junte-se à comunidade de criadores brasileiros que construíram um sistema. Não um caos.
-            </p>
-            <Button variant="hero" size="lg" onClick={() => navigate("/signup")} className="text-base">
-              Criar minha conta grátis <ArrowRight className="ml-1 h-5 w-5" />
-            </Button>
+          <div className="flex items-center gap-4 text-muted-foreground">
+            <a href="#" className="hover:text-primary transition-colors"><Instagram className="w-5 h-5" /></a>
+            <a href="#" className="hover:text-primary transition-colors"><Play className="w-5 h-5" /></a>
+            <a href="#" className="hover:text-primary transition-colors"><Youtube className="w-5 h-5" /></a>
+            <a href="#" className="hover:text-primary transition-colors"><Link2 className="w-5 h-5" /></a>
           </div>
         </div>
-      </section>
-
-      {/* ─── Footer ─── */}
-      <footer className="border-t border-border py-10">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-display font-extrabold text-foreground">CreatorsFlow</span>
-              <span className="text-xs text-muted-foreground font-body">· feito com 💜 para criadores brasileiros</span>
-            </div>
-            <div className="flex items-center gap-5 text-sm font-body text-muted-foreground">
-              <a href="#" className="hover:text-foreground transition-colors">Termos</a>
-              <a href="#" className="hover:text-foreground transition-colors">Privacidade</a>
-              <a href="#" className="hover:text-foreground transition-colors">Contato</a>
-            </div>
-            <div className="flex items-center gap-3 text-muted-foreground">
-              <a href="#" aria-label="Instagram" className="hover:text-foreground transition-colors">
-                <Instagram className="h-4 w-4" />
-              </a>
-              <a href="#" aria-label="YouTube" className="hover:text-foreground transition-colors">
-                <Youtube className="h-4 w-4" />
-              </a>
-              <a href="#" aria-label="Conversa" className="hover:text-foreground transition-colors">
-                <MessageSquare className="h-4 w-4" />
-              </a>
-            </div>
-          </div>
+        <div className="mt-8 text-center text-sm text-muted-foreground">
+          © 2025 CreatorsFlow. Feito com ♥ para criadores brasileiros.
         </div>
       </footer>
     </div>
   );
-};
-
-function DashboardMockup() {
-  return (
-    <div className="relative">
-      <div className="absolute -inset-6 bg-gradient-to-br from-primary/15 via-transparent to-pink-500/15 rounded-[2.5rem] blur-2xl -z-10" />
-      <div className="bg-card rounded-3xl border border-border shadow-warm-lg p-5 space-y-4">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
-            <Sparkles className="h-4 w-4 text-white" />
-          </div>
-          <div className="flex-1">
-            <div className="h-2.5 w-32 bg-muted rounded-full" />
-            <div className="h-2 w-20 bg-muted/70 rounded-full mt-1.5" />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            { color: "from-violet-500/20 to-purple-500/5", icon: Lightbulb, count: 12 },
-            { color: "from-blue-500/20 to-sky-500/5", icon: FileText, count: 4 },
-            { color: "from-emerald-500/20 to-teal-500/5", icon: Check, count: 23 },
-          ].map((stat, i) => (
-            <div
-              key={i}
-              className={cn(
-                "rounded-2xl p-3 bg-gradient-to-br border border-border/50",
-                stat.color
-              )}
-            >
-              <div className="w-7 h-7 rounded-lg bg-foreground/85 flex items-center justify-center mb-2">
-                <stat.icon className="h-3.5 w-3.5 text-background" strokeWidth={1.75} />
-              </div>
-              <p className="text-xl font-display font-extrabold text-foreground leading-none">{stat.count}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="bg-gradient-to-br from-primary/5 to-transparent rounded-2xl border border-primary/15 p-3">
-          <div className="flex items-center gap-2 mb-2">
-            <Lightbulb className="h-3.5 w-3.5 text-primary" />
-            <div className="h-2 w-24 bg-muted rounded-full" />
-          </div>
-          <div className="h-8 bg-background rounded-xl border border-border" />
-        </div>
-
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-3 border border-amber-200/40">
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <div className="w-5 h-5 rounded bg-amber-500 flex items-center justify-center">
-              <Sparkles className="h-3 w-3 text-white" />
-            </div>
-            <div className="h-2 w-20 bg-amber-700/30 rounded-full" />
-          </div>
-          <div className="h-2 w-full bg-amber-700/15 rounded-full mb-1" />
-          <div className="h-2 w-4/5 bg-amber-700/15 rounded-full" />
-        </div>
-      </div>
-    </div>
-  );
 }
-
-export default Landing;
