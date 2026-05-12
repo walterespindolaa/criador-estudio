@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   DragDropContext,
   Droppable,
   Draggable,
+  type DraggableProvided,
   type DropResult,
 } from "@hello-pangea/dnd";
 import {
@@ -107,6 +108,11 @@ const LinkInBio = () => {
 
   const maxClicks = useMemo(
     () => sortedLinks.reduce((max, l) => Math.max(max, l.clicks ?? 0), 0),
+    [sortedLinks]
+  );
+
+  const activeLinks = useMemo(
+    () => sortedLinks.filter((l) => l.is_active),
     [sortedLinks]
   );
 
@@ -257,90 +263,20 @@ const LinkInBio = () => {
                         {...provided.droppableProps}
                         className="space-y-2"
                       >
-                        {sortedLinks.map((link, index) => {
-                          const clicks = link.clicks ?? 0;
-                          const widthPct = maxClicks > 0 ? (clicks / maxClicks) * 100 : 0;
-                          return (
-                            <Draggable key={link.id} draggableId={link.id} index={index}>
-                              {(prov, snapshot) => (
-                                <div
-                                  ref={prov.innerRef}
-                                  {...prov.draggableProps}
-                                  className={cn(
-                                    "group relative bg-background rounded-xl border border-border p-3 transition-shadow",
-                                    snapshot.isDragging && "shadow-lg ring-2 ring-primary/30"
-                                  )}
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <button
-                                      {...prov.dragHandleProps}
-                                      className="text-muted-foreground hover:text-foreground touch-none"
-                                      aria-label="Arrastar"
-                                    >
-                                      <GripVertical className="h-4 w-4" />
-                                    </button>
-                                    <Input
-                                      value={link.icon ?? ""}
-                                      onChange={(e) =>
-                                        handleUpdate(link.id, { icon: e.target.value || null })
-                                      }
-                                      placeholder="🔗"
-                                      className="h-9 w-12 text-center rounded-lg"
-                                      maxLength={4}
-                                    />
-                                    <Input
-                                      value={link.title}
-                                      onChange={(e) =>
-                                        handleUpdate(link.id, { title: e.target.value })
-                                      }
-                                      placeholder="Título"
-                                      className="h-9 rounded-lg flex-1 min-w-0 font-medium"
-                                      maxLength={80}
-                                    />
-                                    <Switch
-                                      checked={link.is_active ?? true}
-                                      onCheckedChange={(v) =>
-                                        handleUpdate(link.id, { is_active: v })
-                                      }
-                                      aria-label="Ativo"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDelete(link.id)}
-                                      className="text-muted-foreground hover:text-red-500 transition p-1.5 rounded-lg hover:bg-red-50"
-                                      aria-label="Excluir"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </button>
-                                  </div>
-                                  <div className="mt-2 flex items-center gap-2 pl-6">
-                                    <Input
-                                      value={link.url}
-                                      onChange={(e) =>
-                                        handleUpdate(link.id, { url: e.target.value })
-                                      }
-                                      placeholder="https://"
-                                      className="h-8 rounded-lg flex-1 text-xs font-mono"
-                                      maxLength={500}
-                                    />
-                                    <div className="hidden sm:flex items-center gap-1.5 min-w-[90px]">
-                                      <BarChart3 className="h-3 w-3 text-muted-foreground" />
-                                      <div className="relative flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                                        <div
-                                          className="absolute inset-y-0 left-0 bg-gradient-to-r from-pink-500 to-purple-500"
-                                          style={{ width: `${widthPct}%` }}
-                                        />
-                                      </div>
-                                      <span className="text-[10px] font-mono text-muted-foreground tabular-nums w-6 text-right">
-                                        {clicks}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                            </Draggable>
-                          );
-                        })}
+                        {sortedLinks.map((link, index) => (
+                          <Draggable key={link.id} draggableId={link.id} index={index}>
+                            {(prov, snapshot) => (
+                              <LinkCard
+                                link={link}
+                                maxClicks={maxClicks}
+                                provided={prov}
+                                isDragging={snapshot.isDragging}
+                                onUpdate={handleUpdate}
+                                onDelete={handleDelete}
+                              />
+                            )}
+                          </Draggable>
+                        ))}
                         {provided.placeholder}
                       </div>
                     )}
@@ -467,7 +403,7 @@ const LinkInBio = () => {
               </p>
               <BioPreview
                 profile={profile}
-                links={sortedLinks.filter((l) => l.is_active)}
+                links={activeLinks}
                 theme={theme}
               />
             </Card>
@@ -478,13 +414,134 @@ const LinkInBio = () => {
   );
 };
 
+type LinkCardProps = {
+  link: BioLink;
+  maxClicks: number;
+  provided: DraggableProvided;
+  isDragging: boolean;
+  onUpdate: (id: string, updates: Partial<BioLink>) => void;
+  onDelete: (id: string) => void;
+};
+
+// Local state for the text inputs so each keystroke doesn't trigger a
+// network call or a re-render of the parent (which would re-render the
+// preview). Server sync happens on blur.
+function LinkCard({
+  link,
+  maxClicks,
+  provided,
+  isDragging,
+  onUpdate,
+  onDelete,
+}: LinkCardProps) {
+  const [title, setTitle] = useState(link.title);
+  const [url, setUrl] = useState(link.url);
+  const [icon, setIcon] = useState(link.icon ?? "");
+
+  // Resync local state only when this slot becomes a different link
+  // (e.g. after reorder/delete shifts indexes). Skipping this on every
+  // link prop change avoids clobbering in-progress edits when our own
+  // mutation refetches the list.
+  useEffect(() => {
+    setTitle(link.title);
+    setUrl(link.url);
+    setIcon(link.icon ?? "");
+  }, [link.id]);
+
+  const clicks = link.clicks ?? 0;
+  const widthPct = maxClicks > 0 ? (clicks / maxClicks) * 100 : 0;
+
+  const commitTitle = () => {
+    if (title !== link.title) onUpdate(link.id, { title });
+  };
+  const commitUrl = () => {
+    if (url !== link.url) onUpdate(link.id, { url });
+  };
+  const commitIcon = () => {
+    const next = icon || null;
+    if (next !== (link.icon ?? null)) onUpdate(link.id, { icon: next });
+  };
+
+  return (
+    <div
+      ref={provided.innerRef}
+      {...provided.draggableProps}
+      className={cn(
+        "group relative bg-background rounded-xl border border-border p-3 transition-shadow",
+        isDragging && "shadow-lg ring-2 ring-primary/30"
+      )}
+    >
+      <div className="flex items-center gap-2">
+        <button
+          {...provided.dragHandleProps}
+          className="text-muted-foreground hover:text-foreground touch-none"
+          aria-label="Arrastar"
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+        <Input
+          value={icon}
+          onChange={(e) => setIcon(e.target.value)}
+          onBlur={commitIcon}
+          placeholder="🔗"
+          className="h-9 w-12 text-center rounded-lg"
+          maxLength={4}
+        />
+        <Input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onBlur={commitTitle}
+          placeholder="Título"
+          className="h-9 rounded-lg flex-1 min-w-0 font-medium"
+          maxLength={80}
+        />
+        <Switch
+          checked={link.is_active ?? true}
+          onCheckedChange={(v) => onUpdate(link.id, { is_active: v })}
+          aria-label="Ativo"
+        />
+        <button
+          type="button"
+          onClick={() => onDelete(link.id)}
+          className="text-muted-foreground hover:text-red-500 transition p-1.5 rounded-lg hover:bg-red-50"
+          aria-label="Excluir"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="mt-2 flex items-center gap-2 pl-6">
+        <Input
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          onBlur={commitUrl}
+          placeholder="https://"
+          className="h-8 rounded-lg flex-1 text-xs font-mono"
+          maxLength={500}
+        />
+        <div className="hidden sm:flex items-center gap-1.5 min-w-[90px]">
+          <BarChart3 className="h-3 w-3 text-muted-foreground" />
+          <div className="relative flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+            <div
+              className="absolute inset-y-0 left-0 bg-gradient-to-r from-pink-500 to-purple-500"
+              style={{ width: `${widthPct}%` }}
+            />
+          </div>
+          <span className="text-[10px] font-mono text-muted-foreground tabular-nums w-6 text-right">
+            {clicks}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type PreviewProps = {
   profile: ReturnType<typeof useProfile>["profile"];
   links: BioLink[];
   theme: BioTheme;
 };
 
-function BioPreview({ profile, links, theme }: PreviewProps) {
+const BioPreview = memo(function BioPreview({ profile, links, theme }: PreviewProps) {
   const showProfile = theme.useProfile && profile;
   return (
     <div className="w-[300px] mx-auto bg-white rounded-[40px] border-[8px] border-gray-800 p-2 shadow-2xl">
@@ -539,6 +596,6 @@ function BioPreview({ profile, links, theme }: PreviewProps) {
       </div>
     </div>
   );
-}
+});
 
 export default LinkInBio;
