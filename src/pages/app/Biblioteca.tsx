@@ -1,6 +1,10 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, MessageSquareText, FileCode2, Zap, Plus, Pencil, Trash2, Star, StarOff, CheckCircle2, BookOpen } from "lucide-react";
+import { Sparkles, MessageSquareText, FileCode2, Zap, Plus, Pencil, Trash2, Star, StarOff, CheckCircle2, BookOpen, LayoutTemplate, Copy } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
+import { usePosts } from "@/hooks/usePosts";
+import { POST_TEMPLATES, TEMPLATE_CATEGORIES, type PostTemplate } from "@/lib/post-templates";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CopyButton } from "@/components/shared/CopyButton";
@@ -58,6 +62,13 @@ const Biblioteca = () => {
   const [viralFilter, setViralFilter] = useState<string | null>(null);
   const [promptFilter, setPromptFilter] = useState<string | null>(null);
   const [formatFilter, setFormatFilter] = useState<string | null>(null);
+  const [templateFilter, setTemplateFilter] = useState<"all" | PostTemplate["category"]>("all");
+  const navigate = useNavigate();
+  const { createPost } = usePosts();
+  const filteredTemplates = useMemo(
+    () => (templateFilter === "all" ? POST_TEMPLATES : POST_TEMPLATES.filter((t) => t.category === templateFilter)),
+    [templateFilter]
+  );
 
   const [hookSource, setHookSource] = useState<Source>("curados");
   const [formatSource, setFormatSource] = useState<Source>("curados");
@@ -247,6 +258,9 @@ const Biblioteca = () => {
             </TabsTrigger>
             <TabsTrigger value="viral" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               <Zap className="h-3.5 w-3.5 mr-1" /> Ideias Virais <InfoTooltip text="Hooks e ganchos que performam bem em múltiplas plataformas. Adapte ao seu nicho." className="ml-1" />
+            </TabsTrigger>
+            <TabsTrigger value="templates" className="rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              <LayoutTemplate className="h-3.5 w-3.5 mr-1" /> Templates <InfoTooltip text="Modelos prontos de legenda. Copie e personalize ou crie um post direto a partir do template." className="ml-1" />
             </TabsTrigger>
           </TabsList>
 
@@ -472,6 +486,90 @@ const Biblioteca = () => {
                   </motion.div>
                 ))
               }
+            </div>
+          </TabsContent>
+
+          {/* TEMPLATES */}
+          <TabsContent value="templates">
+            <div className="flex gap-1.5 flex-wrap mb-6">
+              {TEMPLATE_CATEGORIES.map((cat) => (
+                <button
+                  key={cat.key}
+                  type="button"
+                  onClick={() => setTemplateFilter(cat.key)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-full text-xs font-body font-medium transition-all",
+                    templateFilter === cat.key
+                      ? "bg-primary/10 text-primary font-semibold"
+                      : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
+                  )}
+                >
+                  <span className="mr-1">{cat.icon}</span> {cat.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredTemplates.map((template) => (
+                <div
+                  key={template.id}
+                  className="bg-card rounded-xl border border-border p-5 hover:shadow-warm-md transition-all group flex flex-col"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-lg">{template.icon}</span>
+                    <h3 className="font-display font-semibold text-sm text-foreground">{template.title}</h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground font-body mb-3">{template.description}</p>
+
+                  <div className="bg-muted/50 rounded-lg p-3 mb-3 flex-1">
+                    <p className="text-xs font-body text-foreground/70 whitespace-pre-line line-clamp-5">
+                      {template.caption}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted font-body capitalize whitespace-nowrap">
+                      {template.format}
+                    </span>
+                    <div className="flex gap-1.5">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-8"
+                        onClick={() => {
+                          navigator.clipboard.writeText(template.caption);
+                          toast.success("Template copiado!");
+                        }}
+                      >
+                        <Copy className="h-3 w-3 mr-1" /> Copiar
+                      </Button>
+                      <Button
+                        variant="hero"
+                        size="sm"
+                        className="text-xs h-8"
+                        disabled={createPost.isPending}
+                        onClick={async () => {
+                          try {
+                            await createPost.mutateAsync({
+                              title: template.title,
+                              caption: template.caption,
+                              format: template.format,
+                              platform: "instagram",
+                              status: "ideia",
+                            });
+                            toast.success("Post criado com template!");
+                            navigate("/app/criando");
+                          } catch {
+                            toast.error("Erro ao criar post.");
+                          }
+                        }}
+                      >
+                        Usar template
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </TabsContent>
         </Tabs>
