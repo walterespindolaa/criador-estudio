@@ -208,43 +208,53 @@ Gere 3 posts. Títulos são hooks virais, não títulos de blog.`
         maxTokens = 600
         break
       case 'generate-caption':
-
+        const toneGuide: Record<string, string> = {
+          descontraido: 'Casual, como conversa entre amigos. Usa gírias leves. Frases curtas.',
+          profissional: 'Polido mas acessível. Sem gírias. Frases claras e diretas.',
+          inspirador: 'Motivacional sem ser clichê. Storytelling pessoal. Vulnerable.',
+          educativo: 'Didático, passo a passo. Usa "você" direto. Entrega valor concreto.',
+          provocativo: 'Contrarian. Desafia o senso comum. Polêmica leve que gera debate.'
+        }
+        const lengthGuide: Record<string, string> = {
+          curto: '1-2 linhas. Ideal pra reels e stories. Vai direto ao ponto.',
+          medio: '3-5 linhas. Gancho + valor + CTA. O sweet spot do Instagram.',
+          longo: '5-10 linhas. Storytelling com início-meio-fim. Pra carrossel e posts de autoridade.'
+        }
         operationPrompt = `Você é um copywriter expert em redes sociais brasileiras. Gere UMA legenda pronta para publicar.
 
+TOM: ${toneGuide[data.tom] || toneGuide.descontraido}
+TAMANHO: ${lengthGuide[data.tamanho] || lengthGuide.medio}
+
+FRAMEWORKS DE COPY A USAR:
+- PAS (Problema→Agitação→Solução): comece com uma dor, amplifique, apresente a solução
+- AIDA (Atenção→Interesse→Desejo→Ação): hook → por que importa → como ficaria → CTA
+- Before-After-Bridge: situação atual → situação desejada → como chegar lá
+
 REGRAS:
-
-- Tom: ${data.tom || 'descontraido'}
-
-- Tamanho: ${data.tamanho === 'curto' ? '1-2 linhas' : data.tamanho === 'longo' ? '5-8 linhas com storytelling' : '3-5 linhas'}
-
 - Formato: ${data.formato || 'post'} para ${data.plataforma || 'instagram'}
+- NUNCA comece com "Olá", "Ei", "Você sabia que" — comece com IMPACTO
+- Emojis: 2-3 no máximo, posicionados estrategicamente
+- CTA no final: pergunta aberta, convite à ação, ou chamada pro próximo passo
+- Se carrossel: legenda complementa os slides (não repete)
+- Se reels: curta e direta (gancho → valor → CTA)
+- Se story: ultra-curta, 1-2 linhas com CTA direto
+- SEM hashtags (sistema adiciona separadamente)
+- Linguagem natural brasileira — como pessoa real falando
+- Use line breaks pra respirar (não um bloco de texto)
 
-- Use emojis com moderação (2-3 por legenda, MAX)
+TÁTICA DE ENGAJAMENTO:
+Termine 100% das legendas com algo que provoque resposta:
+- Pergunta aberta: "E você, como faz?"
+- Debate: "Concorda ou discorda?"
+- Ação: "Salva pra quando precisar"
+- Comunidade: "Marca alguém que precisa ver isso"
 
-- Inclua um CTA no final (pergunta, chamada pra ação, ou convite)
-
-- Se o formato for carrossel, a legenda deve complementar os slides (não repetir)
-
-- Se for reels, a legenda deve ser curta e direta (gancho → valor → CTA)
-
-- NÃO inclua hashtags (o sistema adiciona separadamente)
-
-- Linguagem natural brasileira, como se fosse uma pessoa real falando
-
-- NUNCA comece com "Olá" ou "Ei" ou "Você sabia que" — comece com impacto
-
-RESPONDA APENAS COM A LEGENDA, sem título, sem explicação, sem aspas.`
-
-        userPrompt = `Título do post: "${data.titulo || ''}"
-
-Conteúdo/roteiro do post: ${data.conteudo || data.roteiro || 'não informado'}
-
-Pilar de conteúdo: ${data.pilar || 'geral'}
-
-Nicho: ${data.nicho || 'lifestyle'}`
-
-        maxTokens = 400
-
+RESPONDA APENAS COM A LEGENDA. Sem título, sem aspas, sem explicação.`
+        userPrompt = `TÍTULO DO POST: "${data.titulo || ''}"
+PILAR: ${data.pilar || 'geral'}
+NICHO: ${data.nicho || 'lifestyle'}
+CONTEÚDO/ROTEIRO: ${(data.conteudo || data.roteiro || 'não informado').slice(0, 500)}`
+        maxTokens = 500
         break
       case 'suggest-hashtags':
         operationPrompt = `Você é um especialista em hashtags para redes sociais brasileiras. Gere uma lista de hashtags relevantes para o post.
