@@ -23,6 +23,7 @@ import { useGoogleDriveConnection } from "@/hooks/useGoogleDriveConnection";
 import { SettingsVisual } from "@/components/settings/SettingsVisual";
 import { InfoTooltip } from "@/components/shared/InfoTooltip";
 import { sanitizeText, sanitizeUrl } from "@/lib/sanitize";
+import { ImageCropModal } from "@/components/shared/ImageCropModal";
 
 const PILLAR_COLORS = ["#C4622D", "#5C7A6B", "#8B6F4E", "#A4785C", "#6B8E7B", "#D4956A"];
 const NICHE_OPTIONS = ["Lifestyle", "Moda", "Beleza", "Fitness", "Culinária", "Educação", "Negócios", "Entretenimento", "Saúde", "Tecnologia"];
@@ -67,6 +68,10 @@ const Configuracoes = () => {
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [logoutOpen, setLogoutOpen] = useState(false);
+
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const { connection: driveConnection, connect: driveConnect, disconnect: driveDisconnect } = useGoogleDriveConnection();
   const [connectingDrive, setConnectingDrive] = useState(false);
@@ -131,16 +136,43 @@ const Configuracoes = () => {
     }
   };
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user) return;
-    const ext = file.name.split(".").pop();
-    const path = `${user.id}/avatar.${ext}`;
-    const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
-    if (error) { toast.error("Erro ao enviar imagem."); return; }
-    const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
-    setValue("avatar_url", urlData.publicUrl + "?t=" + Date.now());
-    toast.success("Avatar atualizado!");
+    // Reset the input so picking the same file twice re-fires onChange
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setRawImageSrc(reader.result as string);
+      setCropModalOpen(true);
+    };
+    reader.onerror = () => toast.error("Erro ao ler imagem.");
+    reader.readAsDataURL(file);
+  };
+
+  const handleAvatarCropped = async (croppedBlob: Blob) => {
+    if (!user) return;
+    try {
+      setUploadingAvatar(true);
+      const path = `${user.id}/avatar.jpg`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(path, croppedBlob, { upsert: true, contentType: "image/jpeg" });
+      if (uploadError) {
+        toast.error("Erro ao enviar imagem.");
+        return;
+      }
+      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+      const fresh = `${urlData.publicUrl}?t=${Date.now()}`;
+      setValue("avatar_url", fresh, { shouldDirty: true });
+      await updateProfile.mutateAsync({ avatar_url: fresh });
+      toast.success("Foto atualizada!");
+    } catch {
+      toast.error("Erro ao atualizar foto.");
+    } finally {
+      setUploadingAvatar(false);
+      setRawImageSrc(null);
+    }
   };
 
   const togglePlatform = (p: string) => {
@@ -273,8 +305,13 @@ const Configuracoes = () => {
                       {avatarUrl ? <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : <Camera className="h-6 w-6 text-muted-foreground group-hover:text-primary" />}
                       <div className="absolute inset-0 bg-foreground/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"><Camera className="h-5 w-5 text-primary-foreground" /></div>
                     </button>
-                    <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
-                    <div><p className="font-body text-sm font-medium text-foreground">Foto de perfil</p><p className="font-body text-xs text-muted-foreground">Clique para alterar</p></div>
+                    <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarSelect} />
+                    <div>
+                      <p className="font-body text-sm font-medium text-foreground">Foto de perfil</p>
+                      <p className="font-body text-xs text-muted-foreground">
+                        {uploadingAvatar ? "Enviando..." : "Clique para alterar"}
+                      </p>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label className="font-body text-sm">Nome</Label>
@@ -490,6 +527,15 @@ const Configuracoes = () => {
             <div className="flex gap-3 mt-4"><Button variant="outline" className="flex-1" onClick={() => setLogoutOpen(false)}>Cancelar</Button><Button variant="destructive" className="flex-1" onClick={handleSignOut}>Sair</Button></div>
           </DialogContent>
         </Dialog>
+
+        {rawImageSrc && (
+          <ImageCropModal
+            open={cropModalOpen}
+            onOpenChange={setCropModalOpen}
+            imageSrc={rawImageSrc}
+            onCropComplete={handleAvatarCropped}
+          />
+        )}
       </motion.div>
     </div>
   );

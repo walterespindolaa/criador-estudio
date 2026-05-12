@@ -23,6 +23,7 @@ import { sanitizeText } from "@/lib/sanitize";
 import { callAIContextBuilder } from "@/lib/ai/claude";
 import { PILLAR_COLORS } from "@/lib/constants";
 import { fireConfetti } from "@/lib/confetti";
+import { ImageCropModal } from "@/components/shared/ImageCropModal";
 
 const TOTAL_STEPS = 5;
 
@@ -100,13 +101,29 @@ const Onboarding = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const initial = name.trim().charAt(0).toUpperCase() || "C";
 
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
+
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    setAvatarFile(file);
     const reader = new FileReader();
-    reader.onload = (ev) => setAvatarPreview((ev.target?.result as string) ?? null);
+    reader.onload = (ev) => {
+      setRawImageSrc((ev.target?.result as string) ?? null);
+      setCropModalOpen(true);
+    };
     reader.readAsDataURL(file);
+  };
+
+  const handleAvatarCropped = (croppedBlob: Blob) => {
+    const cropped = new File([croppedBlob], "avatar.jpg", { type: "image/jpeg" });
+    setAvatarFile(cropped);
+    setAvatarPreview((prev) => {
+      if (prev && prev.startsWith("blob:")) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(croppedBlob);
+    });
+    setRawImageSrc(null);
   };
 
   const toggleNiche = (value: string) => {
@@ -674,6 +691,15 @@ const Onboarding = () => {
           </div>
         )}
       </div>
+
+      {rawImageSrc && (
+        <ImageCropModal
+          open={cropModalOpen}
+          onOpenChange={setCropModalOpen}
+          imageSrc={rawImageSrc}
+          onCropComplete={handleAvatarCropped}
+        />
+      )}
     </div>
   );
 };
