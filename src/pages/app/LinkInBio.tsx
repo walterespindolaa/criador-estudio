@@ -17,7 +17,6 @@ import {
   ExternalLink,
   BarChart3,
   Upload,
-  Image as ImageIcon,
   Type as TypeIcon,
   Instagram,
   Youtube,
@@ -799,7 +798,7 @@ function LinkCard({
           ) : link.thumbnail_url ? (
             <img src={link.thumbnail_url} alt="" className="w-full h-full object-cover" />
           ) : (
-            <ImageIcon className="h-4 w-4 text-muted-foreground" />
+            <LinkIcon className="h-4 w-4 text-muted-foreground" />
           )}
         </button>
 
