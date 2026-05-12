@@ -199,15 +199,9 @@ FORMATO JSON (APENAS o array, sem texto):
 [{"titulo":"max 70 chars","formato":"reels|carrossel|foto|video|story","angulo":"descritivo e específico","objetivo":"engajamento|autoridade|venda|relacionamento"}]
 
 EXEMPLO para "rotina matinal":
-[{"titulo":"Minha rotina antes de abrir o Instagram mudou tudo","formato":"reels","angulo":"bastidor com storytelling pessoal","objetivo":"relacionamento"},{"titulo":"5 coisas que faço antes das 8h que triplicaram meu engajamento","formato":"carrossel","angulo":"lista prática com resultados","objetivo":"autoridade"},{"titulo":"Sua rotina matinal tá sabotando seu conteúdo. Veja porquê.","formato":"story","angulo":"opinião provocativa com dica","objetivo":"engajamento"}]`
-${data.brandContext ? `\nCONTEXTO DA MARCA DO CRIADOR:\n${data.brandContext}\nUse essas informações pra personalizar o conteúdo ao estilo e tom da marca.` : ''}
-        userPrompt = `IDEIA: "${data.ideiaTexto || 'conteúdo geral'}"
-PLATAFORMA: ${data.platform || 'instagram'}
-PILAR: ${data.pilar || 'geral'}
-NICHO: ${data.niche || 'lifestyle'}
-Gere 3 posts. Títulos são hooks virais, não títulos de blog.`
-        maxTokens = 600
-        break
+[{"titulo":"Minha rotina antes de abrir o Instagram mudou tudo","formato":"reels","angulo":"bastidor com storytelling pessoal","objetivo":"relacionamento"},{"titulo":"5 coisas que faço antes das 8h que triplicaram meu engajamento","formato":"carrossel","angulo":"lista prática com resultados","objetivo":"autoridade"},{"titulo":"Sua rotina matinal tá sabotando seu conteúdo. Veja porquê.","formato":"story","angulo":"opinião provocativa com dica","objetivo":"engajamento"}]${data.brandContext ? `\nCONTEXTO DA MARCA DO CRIADOR:\n${data.brandContext}\nUse essas informações pra personalizar o conteúdo ao estilo e tom da marca.` : ''}`
+        userPrompt = `IDEIA: "${data.ideiaTexto || 'conteúdo geral'}"`
+
       case 'generate-caption':
         const toneGuide: Record<string, string> = {
           descontraido: 'Casual, como conversa entre amigos. Usa gírias leves. Frases curtas.',
