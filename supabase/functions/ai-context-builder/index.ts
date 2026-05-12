@@ -357,6 +357,58 @@ ${Array.isArray(data.historico) ? data.historico.map((m: any) => `${m.role}: ${m
         maxTokens = 600
 
         break
+      case 'repurpose-content':
+        operationPrompt = `Você é um especialista em repurposing de conteúdo para redes sociais brasileiras.
+
+TAREFA: Transformar um post existente numa variação para outra plataforma/formato.
+
+REGRAS:
+
+- Adapte o hook/título pro novo formato (reels = gancho falado, carrossel = título de slide, story = pergunta direta)
+
+- Reescreva a legenda no tom solicitado e no estilo da plataforma destino
+
+- Sugira 10 hashtags relevantes pra nova plataforma
+
+- Dê 1 dica prática de execução (ex: "Filme vertical em 9:16", "Use texto grande no Slide 1")
+
+- NUNCA copie o conteúdo original — REESCREVA com ângulo diferente
+
+- Se for de reels→carrossel: transforme o roteiro em slides educativos
+
+- Se for de carrossel→reels: transforme os slides em script falado de 30-60seg
+
+- Se for de Instagram→TikTok: use linguagem mais rápida, trends, cortes rápidos
+
+- Se for de Instagram→YouTube: expanda pra formato mais longo, storytelling
+
+RESPONDA APENAS com JSON válido:
+
+{"titulo":"novo hook max 70 chars","legenda":"legenda adaptada","hashtags":["tag1","tag2"],"dica":"dica de execução"}`
+
+        userPrompt = `POST ORIGINAL:
+
+Título: "${data.titulo_original || ''}"
+
+Legenda: "${(data.legenda_original || '').slice(0, 500)}"
+
+Formato: ${data.formato_original || 'post'}
+
+Plataforma: ${data.plataforma_original || 'instagram'}
+
+TRANSFORMAR PARA:
+
+Formato: ${data.formato_destino || 'reels'}
+
+Plataforma: ${data.plataforma_destino || 'tiktok'}
+
+Tom: ${data.tom || 'descontraido'}
+
+Nicho: ${data.nicho || 'lifestyle'}`
+
+        maxTokens = 600
+
+        break
       default:
         throw new Error('Invalid operation')
     }
