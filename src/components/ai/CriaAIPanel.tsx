@@ -61,6 +61,13 @@ const QUICK_ACTIONS: QuickAction[] = [
     build: ({ niche, weeklyGoal }) =>
       `Me ajuda a planejar minha semana de conteúdo no nicho de ${niche || "criação"} com ${weeklyGoal} posts.`,
   },
+  {
+    label: "Trends do momento",
+    emoji: "🔥",
+    classes: "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100",
+    build: ({ niche }) =>
+      `Busque as 5 trends mais virais agora no Instagram/TikTok pro nicho de ${niche || "lifestyle"} no Brasil e me dê ideias de como adaptar cada uma pro meu conteúdo.`,
+  },
 ];
 
 function uid() {
