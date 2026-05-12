@@ -2,7 +2,7 @@ import { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Home, Lightbulb, Kanban, CalendarDays,
-  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, ChevronUp, LogOut, Sparkles, Grid3X3
+  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, ChevronUp, LogOut, Sparkles, Grid3X3, Link2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,6 +24,7 @@ const moreItems = [
   { title: "Biblioteca", url: "/app/biblioteca", icon: BookOpen },
   { title: "Tarefas", url: "/app/tarefas", icon: ListTodo },
   { title: "Brandbook", url: "/app/brandbook", icon: BookMarked },
+  { title: "Link in Bio", url: "/app/linkinbio", icon: Link2 },
   { title: "Arquivos", url: "/app/arquivos", icon: FolderOpen },
   { title: "Histórico", url: "/app/historico", icon: Archive },
   { title: "Aprender", url: "/app/aprender", icon: GraduationCap },

@@ -94,6 +94,50 @@ export type Database = {
           },
         ]
       }
+      bio_links: {
+        Row: {
+          clicks: number | null
+          created_at: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          position: number | null
+          title: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          clicks?: number | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          position?: number | null
+          title: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          clicks?: number | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          position?: number | null
+          title?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bio_links_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_items: {
         Row: {
           created_at: string | null
@@ -974,6 +1018,8 @@ export type Database = {
           ai_ideas_used_month: number | null
           avatar_url: string | null
           bio: string | null
+          bio_slug: string | null
+          bio_theme: Json | null
           created_at: string | null
           id: string
           instagram_handle: string | null
@@ -1002,6 +1048,8 @@ export type Database = {
           ai_ideas_used_month?: number | null
           avatar_url?: string | null
           bio?: string | null
+          bio_slug?: string | null
+          bio_theme?: Json | null
           created_at?: string | null
           id: string
           instagram_handle?: string | null
@@ -1030,6 +1078,8 @@ export type Database = {
           ai_ideas_used_month?: number | null
           avatar_url?: string | null
           bio?: string | null
+          bio_slug?: string | null
+          bio_theme?: Json | null
           created_at?: string | null
           id?: string
           instagram_handle?: string | null
@@ -1416,6 +1466,10 @@ export type Database = {
     }
     Functions: {
       is_admin: { Args: never; Returns: boolean }
+      increment_bio_link_click: {
+        Args: { link_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

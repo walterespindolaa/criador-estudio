@@ -15,6 +15,7 @@ import {
   Sparkles,
   BarChart3,
   Shield,
+  Link2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
@@ -58,6 +59,7 @@ const groups = [
     items: [
       { title: "Biblioteca", url: "/app/biblioteca", icon: BookOpen },
       { title: "Brandbook", url: "/app/brandbook", icon: BookMarked },
+      { title: "Link in Bio", url: "/app/linkinbio", icon: Link2 },
     ],
   },
   {

@@ -29,6 +29,8 @@ const Historico = lazy(() => import("./pages/app/Historico"));
 const Configuracoes = lazy(() => import("./pages/app/Configuracoes"));
 const Aprender = lazy(() => import("./pages/app/Aprender"));
 const Brandbook = lazy(() => import("./pages/app/Brandbook"));
+const LinkInBio = lazy(() => import("./pages/app/LinkInBio"));
+const BioPage = lazy(() => import("./pages/BioPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -54,6 +56,7 @@ const App = () => (
           }>
             <Routes>
               <Route path="/" element={<Landing />} />
+              <Route path="/bio/:slug" element={<BioPage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/reset-password" element={<ResetPassword />} />
@@ -76,6 +79,7 @@ const App = () => (
                 <Route path="historico" element={<ErrorBoundary><Historico /></ErrorBoundary>} />
                 <Route path="aprender" element={<ErrorBoundary><Aprender /></ErrorBoundary>} />
                 <Route path="brandbook" element={<ErrorBoundary><Brandbook /></ErrorBoundary>} />
+                <Route path="linkinbio" element={<ErrorBoundary><LinkInBio /></ErrorBoundary>} />
                 <Route path="configuracoes" element={<ErrorBoundary><Configuracoes /></ErrorBoundary>} />
               </Route>
               <Route path="*" element={<NotFound />} />
