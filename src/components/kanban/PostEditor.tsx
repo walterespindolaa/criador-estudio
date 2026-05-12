@@ -47,6 +47,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 import { usePosts, type Post as DbPost } from "@/hooks/usePosts";
 import { useReferenceLibrary, useUserLibrary } from "@/hooks/useLibrary";
+import { useBrandContext } from "@/hooks/useBrandContext";
 import { RoteiroPdfTemplate } from "@/components/pdf/RoteiroPdfTemplate";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { sanitizeText } from "@/lib/sanitize";
@@ -183,6 +184,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
   const initialLoadCompleteRef = useRef(false);
 
   const { profile } = useProfile();
+  const { brandContext } = useBrandContext();
   const pdfRef = useRef<HTMLDivElement>(null);
   const { exportPdf } = usePdfExport();
 
@@ -453,6 +455,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
           nicho: profile?.niche,
           conteudo: caption,
           roteiro: sections.map((s) => s.text).filter(Boolean).join(" | "),
+          brandContext,
         },
       });
       const text = typeof result === "string" ? result.replace(/```\n?|```/g, "").trim() : String(result ?? "");
@@ -491,6 +494,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
           pilar: pillars.find((p) => p.id === pillarId)?.name,
           nicho: profile?.niche,
           legenda: caption,
+          brandContext,
         },
       });
       const raw = typeof result === "string" ? result.replace(/```json?\n?|\n?```/g, "").trim() : "";
@@ -531,6 +535,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
           nicho: profile?.niche,
           plataforma: platform,
           formato: format,
+          brandContext,
         },
       });
       const text =

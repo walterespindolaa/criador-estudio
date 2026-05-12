@@ -11,6 +11,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { usePosts } from "@/hooks/usePosts";
 import { useIdeas } from "@/hooks/useIdeas";
 import { useCriaAI } from "@/contexts/CriaAIContext";
+import { useBrandContext } from "@/hooks/useBrandContext";
 
 type Message = {
   id: string;
@@ -90,6 +91,7 @@ export function CriaAIPanel() {
   const { profile } = useProfile();
   const { posts } = usePosts();
   const { ideas } = useIdeas();
+  const { brandContext, hasBrandContext } = useBrandContext();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -156,6 +158,7 @@ export function CriaAIPanel() {
           historico: messages
             .slice(-6)
             .map((m) => ({ role: m.role, content: m.content })),
+          brandContext,
         },
       });
 
@@ -264,7 +267,9 @@ export function CriaAIPanel() {
                     <p className="text-xl text-muted-foreground font-medium font-display">{greeting}</p>
                     <p className="text-lg font-display font-medium text-foreground">Como posso ajudar?</p>
                     <p className="text-sm text-muted-foreground font-body">
-                      Ideias, legendas, hashtags ou análises — é só pedir!
+                      {hasBrandContext
+                        ? "Já li seu Brandbook 💜 Tudo que eu gerar vai seguir seu tom de voz e identidade."
+                        : "Preencha seu Brandbook pra eu conhecer sua marca e gerar conteúdo personalizado. Por enquanto, posso te ajudar com ideias gerais!"}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-1.5 pt-2">
