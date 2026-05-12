@@ -10,6 +10,7 @@ import {
   ClipboardList, BarChart3, Eye, Bookmark, Target, Clock, Cloud, X, Trash2,
   Layers, Type, Radio, MousePointerClick, Link as LinkIcon, Download, BookOpen,
   Loader2, Hash, Copy, Repeat2, FileText, ListChecks, Calendar, ChevronDown,
+  RefreshCw, Minus, Plus, SmilePlus, Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getFormatStructure } from "@/lib/format-structures";
@@ -162,6 +163,10 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
   const [hashSuggested, setHashSuggested] = useState<string[]>([]);
   const [hashSelected, setHashSelected] = useState<string[]>([]);
   const [hashLoading, setHashLoading] = useState(false);
+
+  // Caption refinement
+  const [refineLoading, setRefineLoading] = useState<string | null>(null);
+  const [refinedPreview, setRefinedPreview] = useState<string | null>(null);
 
   // References panel
   const [refsOpen, setRefsOpen] = useState(false);
@@ -509,6 +514,35 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
 
   const toggleHash = (tag: string) => {
     setHashSelected((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+  };
+
+  // AI: refine existing caption (rephrase / shorten / expand / tone shifts)
+  const handleRefineCaption = async (key: string, instruction: string) => {
+    if (!caption || refineLoading) return;
+    setRefineLoading(key);
+    setRefinedPreview(null);
+    try {
+      const result = await callAIContextBuilder({
+        userId,
+        operation: "refine-caption",
+        data: {
+          legenda_original: caption,
+          instrucao: instruction,
+          nicho: profile?.niche,
+          plataforma: platform,
+          formato: format,
+        },
+      });
+      const text =
+        typeof result === "string"
+          ? result.replace(/```\n?|```/g, "").replace(/^["']|["']$/g, "").trim()
+          : String(result ?? "");
+      setRefinedPreview(text);
+    } catch {
+      toast.error("Erro ao refinar legenda.");
+    } finally {
+      setRefineLoading(null);
+    }
   };
 
   const mediaList: DriveRef[] = isNew ? pendingDriveFiles : driveMedia;
@@ -956,6 +990,72 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                       {captionLen}/{captionMax}
                     </span>
                   </div>
+
+                  {caption.length > 10 && (
+                    <div className="flex flex-wrap gap-1.5 py-2 border-t border-border/50">
+                      {([
+                        { key: "rephrase", label: "Reescrever", icon: RefreshCw, instruction: "Reescreva essa legenda mantendo a mesma mensagem mas com palavras completamente diferentes." },
+                        { key: "shorten", label: "Encurtar", icon: Minus, instruction: "Encurte essa legenda pra no máximo 2 linhas mantendo a essência e o CTA." },
+                        { key: "expand", label: "Expandir", icon: Plus, instruction: "Expanda essa legenda com mais detalhes, storytelling e contexto. Mantenha o tom." },
+                        { key: "casual", label: "Mais casual", icon: SmilePlus, instruction: "Reescreva essa legenda num tom mais casual, descontraído, como conversa entre amigos. Use gírias leves." },
+                        { key: "formal", label: "Mais formal", icon: Briefcase, instruction: "Reescreva essa legenda num tom mais profissional e polido. Sem gírias, linguagem clara e direta." },
+                      ] as const).map((action) => {
+                        const isLoading = refineLoading === action.key;
+                        const Icon = action.icon;
+                        return (
+                          <button
+                            key={action.key}
+                            type="button"
+                            disabled={!!refineLoading}
+                            onClick={() => handleRefineCaption(action.key, action.instruction)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card hover:bg-accent text-xs font-body font-medium text-muted-foreground hover:text-foreground transition-all disabled:opacity-50 disabled:hover:bg-card"
+                          >
+                            {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Icon className="h-3 w-3" />}
+                            {action.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {refinedPreview && (
+                    <div className="bg-primary/5 border border-primary/15 rounded-xl p-4 space-y-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Sparkles className="h-3.5 w-3.5 text-primary" />
+                        <span className="text-xs font-display font-semibold text-primary">Sugestão da IA</span>
+                      </div>
+                      <div className="bg-destructive/5 rounded-lg p-2.5">
+                        <p className="text-xs font-body text-muted-foreground line-through whitespace-pre-line">
+                          {caption.slice(0, 200)}{caption.length > 200 ? "..." : ""}
+                        </p>
+                      </div>
+                      <div className="bg-emerald-50 dark:bg-emerald-500/10 rounded-lg p-2.5 border border-emerald-200/50">
+                        <p className="text-sm font-body text-foreground whitespace-pre-line">{refinedPreview}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="hero"
+                          size="sm"
+                          className="flex-1 text-xs"
+                          onClick={() => {
+                            setCaption(refinedPreview);
+                            setRefinedPreview(null);
+                            toast.success("Legenda atualizada!");
+                          }}
+                        >
+                          Substituir
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs"
+                          onClick={() => setRefinedPreview(null)}
+                        >
+                          Descartar
+                        </Button>
+                      </div>
+                    </div>
+                  )}
 
                   {hashSuggested.length > 0 && (
                     <div className="space-y-2">
