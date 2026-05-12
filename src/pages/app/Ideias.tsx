@@ -318,9 +318,24 @@ const Ideias = () => {
               return (
                 <div
                   key={idea.id}
-                  onClick={() => openEdit(idea)}
-                  className="break-inside-avoid bg-card rounded-xl border border-border p-4 hover:shadow-warm-md hover:scale-[1.01] transition-all cursor-pointer group"
+                  onClick={() => { if (expandedIdeaId !== idea.id) openEdit(idea); }}
+                  className="relative break-inside-avoid bg-card rounded-xl border border-border p-4 hover:shadow-warm-md hover:scale-[1.01] transition-all cursor-pointer group"
                 >
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); toggleAiPanel(idea.id); }}
+                      className={cn(
+                        "h-7 w-7 rounded-lg flex items-center justify-center transition-colors shadow-sm",
+                        expandedIdeaId === idea.id
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-card border border-border text-muted-foreground hover:text-primary hover:border-primary/50"
+                      )}
+                      aria-label="Sugestões de IA"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                   {pillar && (
                     <div
                       className="w-full h-24 rounded-lg mb-3"
@@ -352,6 +367,95 @@ const Ideias = () => {
                       </span>
                     )}
                   </div>
+
+                  {expandedIdeaId === idea.id && (
+                    <AnimatePresence initial={false}>
+                      <motion.div
+                        key={`ai-gallery-${idea.id}`}
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.25, ease: "easeOut" }}
+                        className="overflow-hidden mt-3"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="bg-primary/5 border border-primary/15 rounded-xl p-3 space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="h-3.5 w-3.5 text-primary" />
+                            <span className="text-xs font-body font-semibold text-primary">Sugestões de IA</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {PLATFORM_PRESETS.map(p => (
+                              <button
+                                key={p.value}
+                                onClick={() => setSelectedPlatform(p.value)}
+                                className={`px-2.5 py-1 rounded-lg text-[11px] font-body border transition-colors ${
+                                  selectedPlatform === p.value
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "bg-card border-border text-foreground hover:border-primary/40"
+                                }`}
+                              >
+                                {p.label}
+                              </button>
+                            ))}
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="hero"
+                            onClick={() => handleGenerateSuggestions(idea)}
+                            disabled={aiLoading}
+                            className="w-full"
+                          >
+                            {aiLoading
+                              ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Gerando...</>
+                              : <><Sparkles className="h-3.5 w-3.5 mr-1.5" /> Gerar sugestões</>}
+                          </Button>
+                          {aiLoading && (
+                            <div className="space-y-2">
+                              {[0, 1, 2].map(i => (
+                                <div key={i} className="bg-card/60 border border-border rounded-xl p-3 animate-pulse">
+                                  <div className="h-3 w-3/4 bg-muted rounded mb-2" />
+                                  <div className="flex gap-1.5">
+                                    <div className="h-3 w-12 bg-muted rounded" />
+                                    <div className="h-3 w-16 bg-muted rounded" />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {!aiLoading && aiSuggestions.length > 0 && (
+                            <div className="space-y-2">
+                              {aiSuggestions.map((s, i) => (
+                                <motion.div
+                                  key={`${idea.id}-gal-sug-${i}`}
+                                  initial={{ opacity: 0, y: 4 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ delay: i * 0.05 }}
+                                  className="bg-card border border-primary/20 rounded-xl p-3 space-y-2"
+                                >
+                                  <p className="text-sm font-body font-medium text-foreground leading-snug">{s.titulo}</p>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-body bg-primary/10 text-primary capitalize">{s.formato}</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-body bg-secondary/10 text-secondary capitalize">{s.angulo}</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-body bg-muted text-muted-foreground capitalize">{s.objetivo}</span>
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="w-full h-7 text-xs"
+                                    onClick={() => handleCreateFromSuggestion(s, idea.id)}
+                                    disabled={createPost.isPending}
+                                  >
+                                    Criar post com essa ideia
+                                  </Button>
+                                </motion.div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    </AnimatePresence>
+                  )}
                 </div>
               );
             })}

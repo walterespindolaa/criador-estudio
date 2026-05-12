@@ -31,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
+import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBioLinks, type BioLink } from "@/hooks/useBioLinks";
@@ -765,6 +766,8 @@ function LinkCard({
   const [icon, setIcon] = useState(link.icon ?? "");
   const [uploadingThumb, setUploadingThumb] = useState(false);
   const thumbInputRef = useRef<HTMLInputElement>(null);
+  const [rawThumbSrc, setRawThumbSrc] = useState<string | null>(null);
+  const [thumbCropOpen, setThumbCropOpen] = useState(false);
 
   useEffect(() => {
     setTitle(link.title);
@@ -786,24 +789,36 @@ function LinkCard({
     if (next !== (link.icon ?? null)) onUpdate(link.id, { icon: next });
   };
 
-  const handleThumbUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleThumbSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
-    if (!file || !userId) return;
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setRawThumbSrc(reader.result as string);
+      setThumbCropOpen(true);
+    };
+    reader.onerror = () => toast.error("Erro ao ler imagem.");
+    reader.readAsDataURL(file);
+  };
+
+  const handleThumbCropped = async (croppedBlob: Blob) => {
+    if (!userId) return;
     try {
       setUploadingThumb(true);
-      const ext = file.name.split(".").pop() ?? "jpg";
-      const path = `${userId}/thumb-${link.id}.${ext}`;
+      const path = `${userId}/thumb-${link.id}.jpg`;
       const { error: upErr } = await supabase.storage
         .from("bio-media")
-        .upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
+        .upload(path, croppedBlob, { upsert: true, contentType: "image/jpeg" });
       if (upErr) throw upErr;
       const { data: urlData } = supabase.storage.from("bio-media").getPublicUrl(path);
       onUpdate(link.id, { thumbnail_url: `${urlData.publicUrl}?t=${Date.now()}` });
+      toast.success("Imagem atualizada!");
     } catch {
       toast.error("Erro ao enviar imagem.");
     } finally {
       setUploadingThumb(false);
+      setRawThumbSrc(null);
     }
   };
 
@@ -855,6 +870,7 @@ function LinkCard({
   }
 
   return (
+    <>
     <div
       ref={provided.innerRef}
       {...provided.draggableProps}
@@ -877,7 +893,7 @@ function LinkCard({
           ref={thumbInputRef}
           type="file"
           accept="image/*"
-          onChange={handleThumbUpload}
+          onChange={handleThumbSelect}
           className="hidden"
         />
         <button
@@ -953,6 +969,20 @@ function LinkCard({
         </div>
       </div>
     </div>
+    {rawThumbSrc && (
+      <ImageCropModal
+        open={thumbCropOpen}
+        onOpenChange={(open) => {
+          setThumbCropOpen(open);
+          if (!open) setRawThumbSrc(null);
+        }}
+        imageSrc={rawThumbSrc}
+        onCropComplete={handleThumbCropped}
+        aspectRatio={16 / 9}
+        cropShape="rect"
+      />
+    )}
+    </>
   );
 }
 
