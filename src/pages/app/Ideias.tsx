@@ -5,6 +5,16 @@ import { z } from "zod";
 import { AnimatePresence, motion } from "framer-motion";
 import { Plus, Trash2, Edit2, Sparkles, Loader2, Lightbulb, List, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -77,6 +87,7 @@ const Ideias = () => {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingIdea, setEditingIdea] = useState<Idea | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "gallery">("list");
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<IdeaFormData>({
     resolver: zodResolver(ideaSchema),
@@ -139,12 +150,15 @@ const Ideias = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await deleteIdea.mutateAsync(id);
+      await deleteIdea.mutateAsync(deleteTarget.id);
       toast.success("Ideia removida.");
     } catch {
       toast.error("Erro ao remover ideia.");
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -345,31 +359,64 @@ const Ideias = () => {
         )}
 
         {viewMode === "list" && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="bg-card border border-border rounded-xl divide-y divide-border/30 overflow-hidden">
           {filtered.map(idea => {
             const isExpanded = expandedIdeaId === idea.id;
+            const pillar = idea.pillar_id ? pillars.find(p => p.id === idea.pillar_id) : null;
             return (
-              <div key={idea.id} className="flex flex-col gap-3">
-                <div className="bg-card rounded-xl p-5 border border-border">
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="font-display font-semibold text-foreground line-clamp-2">{idea.title}</h3>
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => toggleAiPanel(idea.id)}
-                        className={`p-1 rounded transition-colors ${
-                          isExpanded ? "bg-primary/15 text-primary" : "hover:bg-primary/10 text-primary"
-                        }`}
-                        title="Sugestões de IA"
+              <div key={idea.id}>
+                <div
+                  onClick={() => openEdit(idea)}
+                  className="flex items-center gap-3 px-3 sm:px-4 py-3 hover:bg-accent/30 cursor-pointer group transition-colors"
+                >
+                  <div className="w-5 h-5 rounded border-2 border-border shrink-0 group-hover:border-primary/50 transition-colors" />
+                  <p className="font-body text-sm text-foreground flex-1 truncate">
+                    {idea.title}
+                  </p>
+                  <div className="hidden sm:flex gap-1 shrink-0">
+                    {pillar && (
+                      <span
+                        className="text-[10px] px-2 py-0.5 rounded-full font-body whitespace-nowrap"
+                        style={{ backgroundColor: `${pillar.color}20`, color: pillar.color }}
                       >
-                        <Sparkles className="h-3.5 w-3.5" />
-                      </button>
-                      <button onClick={() => openEdit(idea)} className="p-1 hover:bg-accent rounded"><Edit2 className="h-3.5 w-3.5" /></button>
-                      <button onClick={() => handleDelete(idea.id)} className="p-1 hover:bg-destructive/10 rounded text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
-                    </div>
+                        {pillar.name}
+                      </span>
+                    )}
+                    {idea.promoted_to_post_id && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary/15 text-secondary font-body whitespace-nowrap">
+                        ✓ Post
+                      </span>
+                    )}
                   </div>
-                  <Button variant="hero" size="sm" onClick={() => handlePromoteToPost(idea)} disabled={!!idea.promoted_to_post_id}>
-                    {idea.promoted_to_post_id ? "Já virou post" : "Criar post →"}
-                  </Button>
+                  <div className="flex gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); toggleAiPanel(idea.id); }}
+                      className={cn(
+                        "h-7 w-7 rounded-md flex items-center justify-center transition-colors",
+                        isExpanded ? "bg-primary/15 text-primary" : "hover:bg-accent text-muted-foreground hover:text-primary"
+                      )}
+                      aria-label="Sugestões de IA"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); openEdit(idea); }}
+                      className="h-7 w-7 rounded-md hover:bg-accent flex items-center justify-center text-muted-foreground hover:text-foreground"
+                      aria-label="Editar"
+                    >
+                      <Edit2 className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: idea.id, title: idea.title }); }}
+                      className="h-7 w-7 rounded-md hover:bg-destructive/10 flex items-center justify-center text-destructive"
+                      aria-label="Excluir"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 <AnimatePresence initial={false}>
@@ -382,7 +429,7 @@ const Ideias = () => {
                       transition={{ duration: 0.25, ease: "easeOut" }}
                       className="overflow-hidden"
                     >
-                      <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 space-y-3">
+                      <div className="bg-primary/5 border-t border-primary/15 px-3 sm:px-4 py-4 space-y-3">
                         <div className="flex items-center gap-2">
                           <Sparkles className="h-3.5 w-3.5 text-primary" />
                           <span className="text-xs font-body font-semibold text-primary">Sugestões de IA</span>
@@ -511,6 +558,26 @@ const Ideias = () => {
           onSaved={() => { /* React Query invalidations handle refresh */ }}
         />
       )}
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display">Excluir ideia?</AlertDialogTitle>
+            <AlertDialogDescription className="font-body">
+              {deleteTarget ? `"${deleteTarget.title}" será removida permanentemente. Essa ação não pode ser desfeita.` : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-body">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-body"
+              onClick={handleConfirmDelete}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

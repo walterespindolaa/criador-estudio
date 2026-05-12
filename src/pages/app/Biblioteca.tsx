@@ -63,6 +63,7 @@ const Biblioteca = () => {
   const [promptFilter, setPromptFilter] = useState<string | null>(null);
   const [formatFilter, setFormatFilter] = useState<string | null>(null);
   const [templateFilter, setTemplateFilter] = useState<"all" | PostTemplate["category"]>("all");
+  const [expandedTemplate, setExpandedTemplate] = useState<string | null>(null);
   const navigate = useNavigate();
   const { createPost } = usePosts();
   const filteredTemplates = useMemo(
@@ -512,10 +513,13 @@ const Biblioteca = () => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredTemplates.map((template) => (
+              {filteredTemplates.map((template) => {
+                const isExpanded = expandedTemplate === template.id;
+                return (
                 <div
                   key={template.id}
-                  className="bg-card rounded-xl border border-border p-5 hover:shadow-warm-md transition-all group flex flex-col"
+                  onClick={() => setExpandedTemplate((prev) => (prev === template.id ? null : template.id))}
+                  className="bg-card rounded-xl border border-border p-5 hover:shadow-warm-md transition-all group flex flex-col cursor-pointer"
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-lg">{template.icon}</span>
@@ -524,7 +528,12 @@ const Biblioteca = () => {
                   <p className="text-xs text-muted-foreground font-body mb-3">{template.description}</p>
 
                   <div className="bg-muted/50 rounded-lg p-3 mb-3 flex-1">
-                    <p className="text-xs font-body text-foreground/70 whitespace-pre-line line-clamp-5">
+                    <p
+                      className={cn(
+                        "text-xs font-body text-foreground/70 whitespace-pre-line",
+                        !isExpanded && "line-clamp-4"
+                      )}
+                    >
                       {template.caption}
                     </p>
                   </div>
@@ -535,10 +544,11 @@ const Biblioteca = () => {
                     </span>
                     <div className="flex gap-1.5">
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         className="text-xs h-8"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           navigator.clipboard.writeText(template.caption);
                           toast.success("Template copiado!");
                         }}
@@ -550,7 +560,8 @@ const Biblioteca = () => {
                         size="sm"
                         className="text-xs h-8"
                         disabled={createPost.isPending}
-                        onClick={async () => {
+                        onClick={async (e) => {
+                          e.stopPropagation();
                           try {
                             await createPost.mutateAsync({
                               title: template.title,
@@ -571,7 +582,8 @@ const Biblioteca = () => {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </TabsContent>
         </Tabs>

@@ -20,6 +20,16 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { fireConfetti } from "@/lib/confetti";
@@ -160,6 +170,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
 
   const [previewOpen, setPreviewOpen] = useState(false);
   const [repurposeOpen, setRepurposeOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   // Auto-save indicator
   const [autoSaveStatus, setAutoSaveStatus] = useState<null | "saving" | "saved">(null);
@@ -513,14 +524,22 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
 
   const handleDelete = () => {
     if (!post) return;
-    if (!window.confirm(`Excluir "${title || post.title}"?`)) return;
+    setConfirmDeleteOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!post) return;
     deletePost.mutate(post.id, {
       onSuccess: () => {
         toast.success("Post excluído");
+        setConfirmDeleteOpen(false);
         onOpenChange(false);
         onSaved();
       },
-      onError: () => toast.error("Erro ao excluir post."),
+      onError: () => {
+        toast.error("Erro ao excluir post.");
+        setConfirmDeleteOpen(false);
+      },
     });
   };
 
@@ -1282,6 +1301,26 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
           platform={platform}
         />
       </div>
+
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display">Excluir post?</AlertDialogTitle>
+            <AlertDialogDescription className="font-body">
+              {post ? `"${title || post.title}" será removido permanentemente. Essa ação não pode ser desfeita.` : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-body">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-body"
+              onClick={handleConfirmDelete}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

@@ -1,6 +1,16 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, ChevronRight, X, Kanban } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
@@ -79,6 +89,7 @@ const Criando = () => {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
   const [draggedPost, setDraggedPost] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
 
@@ -281,12 +292,7 @@ const Criando = () => {
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (window.confirm(`Excluir "${post.title}"?`)) {
-                              deletePost.mutate(post.id, {
-                                onSuccess: () => toast.success("Post excluído"),
-                                onError: () => toast.error("Erro ao excluir post."),
-                              });
-                            }
+                            setDeleteTarget({ id: post.id, title: post.title });
                           }}
                           className="absolute top-2 right-2 h-6 w-6 rounded-full bg-destructive/80 hover:bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity z-10"
                           aria-label="Excluir post"
@@ -334,6 +340,33 @@ const Criando = () => {
         </div>
       </motion.div>
       <PostEditor open={drawerOpen} onOpenChange={setDrawerOpen} post={selectedPost} pillars={pillars} userId={user?.id || ""} onSaved={() => { /* invalidations */ }} />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display">Excluir post?</AlertDialogTitle>
+            <AlertDialogDescription className="font-body">
+              {deleteTarget ? `"${deleteTarget.title}" será removido permanentemente. Essa ação não pode ser desfeita.` : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-body">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-body"
+              onClick={() => {
+                if (!deleteTarget) return;
+                deletePost.mutate(deleteTarget.id, {
+                  onSuccess: () => toast.success("Post excluído"),
+                  onError: () => toast.error("Erro ao excluir post."),
+                });
+                setDeleteTarget(null);
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
