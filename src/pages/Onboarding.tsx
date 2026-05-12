@@ -212,15 +212,17 @@ const Onboarding = () => {
         platform: idea.platform ?? platforms[0] ?? "instagram",
       })).filter((idea) => idea.title);
 
-      await updateProfile.mutateAsync({
-        name: sanitizedName || "Criador",
-        avatar_url: avatarUrl,
-        instagram_handle: sanitizedHandle || null,
-        niche: niches[0] ?? null,
-        platforms,
+      const profileUpdates = {
+        ...(sanitizedName ? { name: sanitizedName } : {}),
+        ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
+        ...(sanitizedHandle ? { instagram_handle: sanitizedHandle } : {}),
+        ...(niches.length > 0 ? { niche: niches[0] } : {}),
+        ...(platforms.length > 0 ? { platforms } : {}),
         weekly_goal: weeklyGoal,
         onboarding_completed: true,
-      });
+      };
+
+      await updateProfile.mutateAsync(profileUpdates);
 
       for (let i = 0; i < finalPillars.length; i++) {
         await supabase.from("pillars").insert({
