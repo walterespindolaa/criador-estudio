@@ -16,6 +16,12 @@ import { useBrandItems } from "@/hooks/useBrandItems";
 import { useMoodboard } from "@/hooks/useMoodboard";
 import { usePersonas } from "@/hooks/usePersonas";
 import { cn } from "@/lib/utils";
+import { BrandHubOverview } from "@/components/brandbook/BrandHubOverview";
+import { GuidedSection } from "@/components/brandbook/GuidedSection";
+import { BrandValuesSection } from "@/components/brandbook/BrandValuesSection";
+import { PersonaStructuredForm } from "@/components/brandbook/PersonaStructuredForm";
+import { MoodboardSection } from "@/components/brandbook/MoodboardSection";
+import { EditorialSection } from "@/components/brandbook/EditorialSection";
 
 interface EntryMap { [key: string]: string }
 interface PersonaData {
@@ -324,69 +330,21 @@ const Brandbook = () => {
     );
   }
 
-  // ─── Render helpers ─────────────────────────────────
   const renderGuidedSection = (sectionKey: string, showChatPrompt = false) => {
     const config = QUESTION_SECTIONS[sectionKey as QuestionSectionKey];
     if (!config) return null;
-    const progress = getSectionProgress(sectionKey);
-
     return (
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-5">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="flex-1">
-            <h3 className="text-base font-display font-semibold text-foreground">{config.title}</h3>
-          </div>
-          <div className="text-right">
-            <span className="text-xs text-muted-foreground font-body">{progress}%</span>
-            <Progress value={progress} className="w-20 h-1.5 mt-1" />
-          </div>
-        </div>
-
-        {config.questions.map((q, i) => (
-          <motion.div key={q.key} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
-            <Card className="border-border shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-body font-semibold text-foreground">{q.label}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  value={answers[sectionKey]?.[q.key] || ""}
-                  onChange={(e) => handleChange(sectionKey, q.key, e.target.value)}
-                  placeholder={q.placeholder}
-                  className="min-h-[80px] resize-y font-body text-sm border-border rounded-xl"
-                />
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-
-        <div className="flex justify-end">
-          <Button onClick={() => saveSection(sectionKey)} disabled={saving} className="gap-2">
-            <Save className="h-4 w-4" />
-            {saving ? "Salvando..." : "Salvar"}
-          </Button>
-        </div>
-
-        {showChatPrompt && "chatPrompt" in config && (
-          <Card className="border-primary/20 bg-primary/5">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-body font-semibold text-foreground flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-                Perguntar ao Chat
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-xs text-muted-foreground font-body">
-                Copie o prompt e cole no ChatGPT ou Claude para gerar um guia completo.
-              </p>
-              <div className="bg-card rounded-xl p-4 border border-border max-h-48 overflow-y-auto">
-                <pre className="text-xs font-body text-foreground whitespace-pre-wrap">{buildPrompt(sectionKey)}</pre>
-              </div>
-              <CopyButton text={buildPrompt(sectionKey)} />
-            </CardContent>
-          </Card>
-        )}
-      </motion.div>
+      <GuidedSection
+        sectionKey={sectionKey}
+        title={config.title}
+        questions={config.questions}
+        answers={answers[sectionKey] ?? {}}
+        progress={getSectionProgress(sectionKey)}
+        saving={saving}
+        onAnswerChange={(key, value) => handleChange(sectionKey, key, value)}
+        onSave={() => saveSection(sectionKey)}
+        chatPrompt={showChatPrompt && "chatPrompt" in config ? buildPrompt(sectionKey) : null}
+      />
     );
   };
 
@@ -416,32 +374,17 @@ const Brandbook = () => {
           </div>
         </div>
 
-        {/* Brand Hub Overview */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
-          {([
-            { key: "identidade", icon: Heart, label: "Identidade", color: "from-pink-500 to-rose-500", count: countSectionAnswers("moodboard-identidade"), tab: "moodboard" },
-            { key: "visual", icon: Palette, label: "Visual", color: "from-violet-500 to-purple-500", count: countSectionAnswers("moodboard-visual") + brandItems.length, tab: "moodboard" },
-            { key: "comunicacao", icon: MessageSquare, label: "Comunicação", color: "from-blue-500 to-cyan-500", count: countSectionAnswers("linha-editorial"), tab: "linha-editorial" },
-            { key: "publico", icon: Users, label: "Público-alvo", color: "from-amber-500 to-orange-500", count: persona.name ? 1 : 0, tab: "persona" },
-            { key: "valores", icon: BookOpen, label: "Valores", color: "from-emerald-500 to-teal-500", count: countSectionAnswers("moodboard-contexto"), tab: "moodboard" },
-            { key: "tom", icon: Mic, label: "Tom de Voz", color: "from-indigo-500 to-blue-500", count: countSectionAnswers("tom-de-voz"), tab: "tom-de-voz" },
-          ] as const).map(section => (
-            <button
-              key={section.key}
-              type="button"
-              onClick={() => setActiveTab(section.tab)}
-              className="bg-card rounded-xl border border-border p-4 text-left hover:shadow-warm-md hover:scale-[1.01] transition-all duration-200 group"
-            >
-              <div className={cn("w-9 h-9 rounded-lg bg-gradient-to-br flex items-center justify-center mb-3", section.color)}>
-                <section.icon className="h-4 w-4 text-white" strokeWidth={1.75} />
-              </div>
-              <p className="text-sm font-display font-semibold text-foreground">{section.label}</p>
-              <p className="text-[11px] text-muted-foreground font-body mt-0.5">
-                {section.count > 0 ? `${section.count} ${section.count === 1 ? "item" : "itens"}` : "Configurar →"}
-              </p>
-            </button>
-          ))}
-        </div>
+        <BrandHubOverview
+          counts={{
+            identidade: countSectionAnswers("moodboard-identidade"),
+            visual: countSectionAnswers("moodboard-visual") + brandItems.length,
+            comunicacao: countSectionAnswers("linha-editorial"),
+            publico: persona.name ? 1 : 0,
+            valores: countSectionAnswers("moodboard-contexto"),
+            tom: countSectionAnswers("tom-de-voz"),
+          }}
+          onSelect={setActiveTab}
+        />
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div className="overflow-x-auto mb-6">
@@ -521,37 +464,12 @@ const Brandbook = () => {
 
           {/* ═══ MOODBOARD ═══ */}
           <TabsContent value="moodboard">
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Heart className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-display font-semibold text-foreground">Moodboard</h2>
-                  <p className="text-sm text-muted-foreground font-body">Defina a direção criativa e emocional da sua marca.</p>
-                </div>
-              </div>
-
-              {MOODBOARD_KEYS.map(key => (
-                <div key={key}>
-                  {renderGuidedSection(key)}
-                </div>
-              ))}
-            </motion.div>
+            <MoodboardSection moodboardSectionKeys={MOODBOARD_KEYS} renderGuided={renderGuidedSection} />
           </TabsContent>
 
           {/* ═══ LINHA EDITORIAL ═══ */}
           <TabsContent value="linha-editorial">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <BookOpen className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h2 className="text-lg font-display font-semibold text-foreground">Linha Editorial</h2>
-                <p className="text-sm text-muted-foreground font-body">Defina a essência do seu conteúdo.</p>
-              </div>
-            </div>
-            {renderGuidedSection("linha-editorial", true)}
+            <EditorialSection>{renderGuidedSection("linha-editorial", true)}</EditorialSection>
           </TabsContent>
 
           {/* ═══ PERSONA ═══ */}
@@ -570,85 +488,15 @@ const Brandbook = () => {
               {/* Guided questions (persona-brand from moodboard_entries) */}
               {renderGuidedSection("persona-brand", true)}
 
-              {/* Structured persona form */}
-              <Card className="border-border shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-sm font-body font-semibold text-foreground flex items-center gap-2">
-                    <Users className="h-4 w-4 text-primary/70" /> Dados estruturados da persona
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="font-body text-sm">Nome da persona</Label>
-                    <Input placeholder="Ex: Maria, 28 anos" value={persona.name} onChange={e => setPersona(prev => ({ ...prev, name: e.target.value }))} className="rounded-xl" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-body text-sm">Faixa etária</Label>
-                    <div className="flex gap-2 flex-wrap">
-                      {["18-24", "25-34", "35-44", "45+"].map(a => (
-                        <button key={a} onClick={() => setPersona(prev => ({ ...prev, age_range: prev.age_range === a ? "" : a }))}
-                          className={`px-3 py-1.5 rounded-xl text-sm font-body border transition-colors ${persona.age_range === a ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border"}`}>{a}</button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-body text-sm">Gênero</Label>
-                    <div className="flex gap-2 flex-wrap">
-                      {["Mulheres", "Homens", "Todos"].map(g => (
-                        <button key={g} onClick={() => setPersona(prev => ({ ...prev, gender: prev.gender === g ? "" : g }))}
-                          className={`px-3 py-1.5 rounded-xl text-sm font-body border transition-colors ${persona.gender === g ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border"}`}>{g}</button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-body text-sm">Localização</Label>
-                    <Input placeholder="Ex: Brasil, São Paulo" value={persona.location} onChange={e => setPersona(prev => ({ ...prev, location: e.target.value }))} className="rounded-xl" />
-                  </div>
-
-                  {([
-                    { label: "Interesses", field: "interests" as const },
-                    { label: "Dores principais", field: "pain_points" as const },
-                    { label: "Desejos", field: "desires" as const },
-                  ]).map(section => (
-                    <div key={section.field} className="space-y-2">
-                      <Label className="font-body text-sm">{section.label}</Label>
-                      <div className="flex flex-wrap gap-1.5 mb-2">
-                        {(persona[section.field] as string[]).map((tag, i) => (
-                          <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted rounded-lg text-xs font-body">
-                            {tag}
-                            <button onClick={() => removeTag(section.field, i)} className="hover:text-destructive">×</button>
-                          </span>
-                        ))}
-                      </div>
-                      <div className="flex gap-2">
-                        <Input placeholder={`Adicionar ${section.label.toLowerCase()}...`} value={newTag} onChange={e => setNewTag(e.target.value)} onKeyDown={e => { if (e.key === "Enter") addTagTo(section.field); }} className="rounded-xl text-sm" />
-                        <Button variant="outline" size="sm" onClick={() => addTagTo(section.field)}><Plus className="h-4 w-4" /></Button>
-                      </div>
-                    </div>
-                  ))}
-
-                  <div className="space-y-2">
-                    <Label className="font-body text-sm">Plataformas que usa</Label>
-                    <div className="flex gap-2">
-                      {(["instagram", "tiktok", "youtube"] as const).map(p => (
-                        <button key={p} onClick={() => setPersona(prev => ({ ...prev, platforms: prev.platforms.includes(p) ? prev.platforms.filter(x => x !== p) : [...prev.platforms, p] }))}
-                          className={`px-3 py-2 rounded-xl border transition-colors ${persona.platforms.includes(p) ? "bg-primary/10 border-primary" : "bg-background border-border"}`}>
-                          <PlatformIcon platform={p} size="sm" />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="font-body text-sm">Notas</Label>
-                    <Textarea placeholder="Observações sobre seu público..." value={persona.notes} onChange={e => setPersona(prev => ({ ...prev, notes: e.target.value }))} className="rounded-xl min-h-[60px]" />
-                  </div>
-
-                  <Button variant="hero" onClick={savePersona} className="gap-2">
-                    <Save className="h-4 w-4" /> Salvar persona
-                  </Button>
-                </CardContent>
-              </Card>
+              <PersonaStructuredForm
+                persona={persona}
+                newTag={newTag}
+                onPersonaChange={setPersona}
+                onNewTagChange={setNewTag}
+                onAddTag={addTagTo}
+                onRemoveTag={removeTag}
+                onSave={savePersona}
+              />
             </motion.div>
           </TabsContent>
 
@@ -668,54 +516,17 @@ const Brandbook = () => {
 
           {/* ═══ IDENTIDADE DA MARCA ═══ */}
           <TabsContent value="identidade">
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Palette className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-display font-semibold text-foreground">Identidade da Marca</h2>
-                  <p className="text-sm text-muted-foreground font-body">Cores, fontes, expressões e elementos visuais que compõem sua marca.</p>
-                </div>
-              </div>
-
-              {BRAND_ITEM_SECTIONS.map(section => {
-                const items = brandItems.filter(i => i.type === section.type);
-                return (
-                  <Card key={section.type} className="border-border shadow-sm">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-body font-semibold text-foreground flex items-center gap-2">
-                        <section.icon className="h-4 w-4 text-primary/70" />
-                        {section.label}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {items.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {items.map(item => (
-                            <div key={item.id} className="inline-flex items-center gap-2 px-3 py-1.5 bg-background rounded-xl border border-border">
-                              {section.type === "cor" && item.value && <div className="w-4 h-4 rounded-full" style={{ backgroundColor: item.value }} />}
-                              <span className="text-sm font-body text-foreground">{item.name}</span>
-                              {item.value && section.type !== "cor" && <span className="text-xs text-muted-foreground font-body">({item.value})</span>}
-                              <button onClick={() => handleDeleteBrandItem(item.id)} className="hover:text-destructive"><Trash2 className="h-3 w-3" /></button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {activeSection === section.type ? (
-                        <div className="flex gap-2">
-                          <Input placeholder="Nome" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} className="rounded-xl text-sm" />
-                          <Input placeholder={section.placeholder} value={newItemValue} onChange={(e) => setNewItemValue(e.target.value)} className="rounded-xl text-sm" />
-                          <Button size="sm" onClick={() => addBrandItem(section.type)} disabled={!newItemName.trim()}><Plus className="h-4 w-4" /></Button>
-                        </div>
-                      ) : (
-                        <button onClick={() => { setActiveSection(section.type); setNewItemName(""); setNewItemValue(""); }} className="text-sm text-primary font-body font-medium hover:underline">+ Adicionar</button>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </motion.div>
+            <BrandValuesSection
+              brandItems={brandItems}
+              activeSection={activeSection}
+              newItemName={newItemName}
+              newItemValue={newItemValue}
+              onActiveSectionChange={setActiveSection}
+              onNewItemNameChange={setNewItemName}
+              onNewItemValueChange={setNewItemValue}
+              onAddBrandItem={addBrandItem}
+              onDeleteBrandItem={handleDeleteBrandItem}
+            />
           </TabsContent>
         </Tabs>
       </motion.div>

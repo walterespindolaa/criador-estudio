@@ -22,8 +22,9 @@ import {
 } from "lucide-react";
 import { PostDrawer } from "@/components/kanban/PostDrawer";
 import { InfoTooltip } from "@/components/shared/InfoTooltip";
-import { CalendarWeekView } from "@/components/calendar/CalendarWeekView";
-import { CalendarMonthView } from "@/components/calendar/CalendarMonthView";
+import { WeekTab } from "@/components/plano/WeekTab";
+import { MonthTab } from "@/components/plano/MonthTab";
+import { GoalsTab } from "@/components/plano/GoalsTab";
 
 const getDaysOfWeek = (offset = 0) => {
   const today = new Date();
@@ -314,366 +315,72 @@ const Plano = () => {
 
           {/* ═══════════ TAB: SEMANA ═══════════ */}
           <TabsContent value="semana">
-            <div className="space-y-6">
-              <Card className="border-border">
-                <CardContent className="pt-5 pb-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(w => w - 1)}>
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <span className="text-sm font-body font-medium text-foreground">{weekLabel}</span>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(w => w + 1)}>
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                      {weekOffset !== 0 && (
-                        <Button variant="ghost" size="sm" className="text-xs" onClick={() => setWeekOffset(0)}>
-                          Hoje
-                        </Button>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground font-body">{weekPublished.length}/{weekGoal} posts</p>
-                      <Progress value={weekProgress} className="w-24 h-1.5 mt-1" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <CalendarWeekView
-                posts={posts}
-                pillars={pillars}
-                weekDays={weekDays}
-                weekOffset={weekOffset}
-                onWeekChange={(delta) => {
-                  if (delta === 0) setWeekOffset(0);
-                  else setWeekOffset((w) => w + delta);
-                }}
-                onPostClick={(post) => openPost(post.id)}
-                today={today}
-              />
-
-              <Card className="border-border">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-body font-semibold text-foreground">Hábitos diários <InfoTooltip text="Acompanhamento semanal dos seus hábitos de criação. Marque os dias que cumpriu cada hábito." /></CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {habits.length === 0 ? (
-                    <p className="text-sm text-muted-foreground font-body mb-3">
-                      Adicione hábitos como "Filmei hoje?", "Postei?", "Respondi comentários?"
-                    </p>
-                  ) : (
-                    <div className="space-y-2 mb-4">
-                      {habits.map(habit => (
-                        <div key={habit.id} className="flex items-center justify-between">
-                          <span className="font-body text-sm text-foreground flex-1">{habit.name}</span>
-                          <div className="flex items-center gap-1">
-                            {weekDays.map(day => (
-                              <button
-                                key={day.date}
-                                onClick={() => handleToggleHabit(habit.id, day.date)}
-                                className={`w-7 h-7 rounded-lg text-xs font-body flex items-center justify-center transition-colors ${
-                                  isHabitDone(habit.id, day.date)
-                                    ? "bg-secondary text-secondary-foreground"
-                                    : "bg-muted text-muted-foreground hover:bg-accent"
-                                }`}
-                                title={day.name}
-                              >
-                                {isHabitDone(habit.id, day.date) ? <Check className="h-3 w-3" /> : day.name[0]}
-                              </button>
-                            ))}
-                            <button onClick={() => handleDeleteHabit(habit.id)} className="p-1 ml-1 hover:bg-destructive/10 rounded">
-                              <Trash2 className="h-3 w-3 text-destructive" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <div className="flex gap-2">
-                    <Input placeholder="Novo hábito..." value={newHabit} onChange={(e) => setNewHabit(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && addHabit()} className="rounded-xl text-sm" />
-                    <Button variant="outline" size="sm" onClick={addHabit} disabled={!newHabit.trim()}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <WeekTab
+              posts={posts}
+              pillars={pillars}
+              habits={habits}
+              habitLogs={habitLogs}
+              weekDays={weekDays}
+              weekOffset={weekOffset}
+              weekLabel={weekLabel}
+              weekPublishedCount={weekPublished.length}
+              weekGoal={weekGoal}
+              weekProgress={weekProgress}
+              today={today}
+              newHabit={newHabit}
+              onNewHabitChange={setNewHabit}
+              onWeekChange={(delta) => {
+                if (delta === 0) setWeekOffset(0);
+                else setWeekOffset((w) => w + delta);
+              }}
+              onPostClick={openPost}
+              onToggleHabit={handleToggleHabit}
+              onAddHabit={addHabit}
+              onDeleteHabit={handleDeleteHabit}
+            />
           </TabsContent>
 
           {/* ═══════════ TAB: MÊS ═══════════ */}
           <TabsContent value="mes">
-            <div className="space-y-6">
-              <CalendarMonthView
-                posts={posts}
-                pillars={pillars}
-                currentMonth={monthDate}
-                onMonthChange={(delta) => {
-                  if (delta === 0) setMonthDate(new Date());
-                  else setMonthDate((m) => new Date(m.getFullYear(), m.getMonth() + delta, 1));
-                }}
-                onPostClick={(post) => openPost(post.id)}
-                onDayClick={() => { /* no-op: click on post opens drawer */ }}
-                today={today}
-              />
-
-              <Card className="border-border">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-[15px] font-body font-semibold text-foreground flex items-center gap-2">
-                    <ListChecks className="h-4 w-4 text-primary" /> Reflexão mensal
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {([
-                    { key: "content_best", label: "Melhor conteúdo do mês", placeholder: "Qual post se destacou?" },
-                    { key: "content_rhythm", label: "Ritmo de produção", placeholder: "Como foi sua consistência?" },
-                    { key: "focus_lessons", label: "Aprendizados", placeholder: "O que aprendeu?" },
-                  ] as const).map(field => (
-                    <div key={field.key} className="space-y-1">
-                      <Label className="text-xs font-body">{field.label}</Label>
-                      <Textarea
-                        placeholder={field.placeholder}
-                        value={reflectionForm[field.key]}
-                        onChange={e => setReflectionForm(prev => ({ ...prev, [field.key]: e.target.value }))}
-                        className="rounded-xl min-h-[50px] text-sm"
-                      />
-                    </div>
-                  ))}
-                  <Button size="sm" onClick={saveReflection} className="w-full gap-1.5">
-                    <Save className="h-3.5 w-3.5" /> Salvar reflexão
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
+            <MonthTab
+              posts={posts}
+              pillars={pillars}
+              currentMonth={monthDate}
+              today={today}
+              reflectionForm={reflectionForm}
+              onMonthChange={(delta) => {
+                if (delta === 0) setMonthDate(new Date());
+                else setMonthDate((m) => new Date(m.getFullYear(), m.getMonth() + delta, 1));
+              }}
+              onPostClick={openPost}
+              onReflectionChange={(key, value) => setReflectionForm(prev => ({ ...prev, [key]: value }))}
+              onSaveReflection={saveReflection}
+            />
           </TabsContent>
 
           {/* ═══════════ TAB: METAS ═══════════ */}
           <TabsContent value="metas">
-            <div className="max-w-3xl space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-body font-semibold text-foreground">Minhas Metas <InfoTooltip text="Metas mensais ou de projeto. Adicione marcos para dividir em etapas menores." /></h2>
-                  <p className="text-xs text-muted-foreground font-body">Defina objetivos claros e acompanhe seu progresso.</p>
-                </div>
-                <Button onClick={() => setShowNewGoal(true)} className="gap-1.5">
-                  <Plus className="h-4 w-4" /> Nova meta
-                </Button>
-              </div>
-
-              {showNewGoal && (
-                <Card className="border-primary/20 bg-primary/5">
-                  <CardContent className="pt-5 space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-body">Título</Label>
-                        <Input placeholder="Ex: Alcançar 10k seguidores" value={newGoalForm.title}
-                          onChange={e => setNewGoalForm(f => ({ ...f, title: e.target.value }))} className="rounded-xl" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-body">Categoria</Label>
-                        <Select value={newGoalForm.category} onValueChange={v => setNewGoalForm(f => ({ ...f, category: v }))}>
-                          <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {GOAL_CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-body">Valor objetivo</Label>
-                        <Input placeholder="Ex: 10000" type="number" value={newGoalForm.target_value}
-                          onChange={e => setNewGoalForm(f => ({ ...f, target_value: e.target.value }))} className="rounded-xl" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-body">Observação</Label>
-                        <Input placeholder="Notas sobre a meta..." value={newGoalForm.observation}
-                          onChange={e => setNewGoalForm(f => ({ ...f, observation: e.target.value }))} className="rounded-xl" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-body">Prazo (opcional)</Label>
-                        <Input type="date" value={newGoalForm.due_date}
-                          onChange={e => setNewGoalForm(f => ({ ...f, due_date: e.target.value }))} className="rounded-xl text-sm" />
-                      </div>
-                    </div>
-                    <div className="flex gap-2 justify-end">
-                      <Button variant="ghost" size="sm" onClick={() => setShowNewGoal(false)}>Cancelar</Button>
-                      <Button size="sm" onClick={createGoal} disabled={!newGoalForm.title.trim()}>Criar meta</Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {goals.length === 0 && !showNewGoal ? (
-                <Card className="border-border">
-                  <CardContent className="py-12 text-center">
-                    <Target className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground font-body">Nenhuma meta criada ainda.</p>
-                    <p className="text-xs text-muted-foreground font-body mt-1">Defina objetivos para acompanhar sua evolução.</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                goals.map(goal => {
-                  const goalMilestones = milestones.filter(m => m.goal_id === goal.id);
-                  const completedMs = goalMilestones.filter(m => m.completed).length;
-                  const target = goal.target_value || 0;
-                  const current = goal.current_value || 0;
-                  const progress = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0;
-                  const isExpanded = expandedGoal === goal.id;
-                  const categoryLabel = GOAL_CATEGORIES.find(c => c.value === goal.category)?.label || goal.category;
-
-                  return (
-                    <Card key={goal.id} className={`border-border transition-all ${isExpanded ? "ring-1 ring-primary/20" : ""}`}>
-                      <CardContent className="pt-5">
-                        <button onClick={() => setExpandedGoal(isExpanded ? null : goal.id)} className="w-full text-left">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <Flag className="h-4 w-4 text-primary" />
-                                <h3 className="text-sm font-body font-semibold text-foreground truncate">{goal.title}</h3>
-                              </div>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-[10px] font-body px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{categoryLabel}</span>
-                                <span className={`text-[10px] font-body px-1.5 py-0.5 rounded ${
-                                  goal.status === "concluida" ? "bg-secondary/20 text-secondary" :
-                                  goal.status === "pausada" ? "bg-muted text-muted-foreground" :
-                                  "bg-primary/10 text-primary"
-                                }`}>
-                                  {STATUS_GOAL.find(s => s.value === goal.status)?.label}
-                                </span>
-                                {goalMilestones.length > 0 && (
-                                  <span className="text-[10px] font-body text-muted-foreground flex items-center gap-0.5">
-                                    <Milestone className="h-2.5 w-2.5" /> {completedMs}/{goalMilestones.length} marcos
-                                  </span>
-                                )}
-                                {goal.end_date && (
-                                  <span className={`text-[10px] font-body flex items-center gap-0.5 ${
-                                    goal.end_date < today && goal.status !== "concluida" ? "text-destructive" : "text-muted-foreground"
-                                  }`}>
-                                    <CalendarDays className="h-2.5 w-2.5" />
-                                    {new Date(goal.end_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "short" })}
-                                    {goal.end_date < today && goal.status !== "concluida" && " · Atrasada"}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="text-right flex-shrink-0 ml-3">
-                              <p className="text-lg font-body font-bold text-foreground">{progress}%</p>
-                              {target > 0 && (
-                                <p className="text-[10px] text-muted-foreground font-body">{current}/{target}</p>
-                              )}
-                            </div>
-                          </div>
-                          <Progress value={progress} className="h-2" />
-                        </button>
-
-                        {isExpanded && (
-                          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-4 space-y-4 border-t border-border pt-4">
-                            {target > 0 && (
-                              <div className="flex items-center gap-3">
-                                <Label className="text-xs font-body whitespace-nowrap">Valor atual:</Label>
-                                <Input
-                                  type="number"
-                                  value={current}
-                                  onChange={e => updateGoalValue(goal.id, parseFloat(e.target.value) || 0)}
-                                  className="rounded-xl text-sm w-28"
-                                />
-                                <span className="text-xs text-muted-foreground font-body">/ {target}</span>
-                              </div>
-                            )}
-
-                            <div className="flex items-center gap-3">
-                              <Label className="text-xs font-body whitespace-nowrap">Status:</Label>
-                              <Select value={goal.status} onValueChange={v => updateGoalStatus(goal.id, v)}>
-                                <SelectTrigger className="rounded-xl text-sm w-40"><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                  {STATUS_GOAL.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            {goal.observation && (
-                              <p className="text-xs text-muted-foreground font-body italic">📝 {goal.observation}</p>
-                            )}
-
-                            <div className="space-y-2">
-                              <p className="text-xs font-body font-semibold text-foreground flex items-center gap-1.5">
-                                <Milestone className="h-3.5 w-3.5 text-primary" /> Marcos (baby steps)
-                              </p>
-                              {goalMilestones.map(ms => (
-                                <div key={ms.id} className="flex items-center gap-2">
-                                  <button
-                                    onClick={() => toggleMilestone(ms.id, !!ms.completed)}
-                                    className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
-                                      ms.completed ? "bg-secondary border-secondary text-secondary-foreground" : "border-border hover:border-primary"
-                                    }`}
-                                  >
-                                    {ms.completed && <Check className="h-3 w-3" />}
-                                  </button>
-                                  <span className={`text-sm font-body flex-1 ${ms.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                                    {ms.name}
-                                  </span>
-                                  <button onClick={() => deleteMilestone(ms.id)} className="p-0.5 hover:bg-destructive/10 rounded">
-                                    <Trash2 className="h-3 w-3 text-destructive" />
-                                  </button>
-                                </div>
-                              ))}
-                              <div className="flex gap-2">
-                                <Input placeholder="Novo marco..." value={newMilestoneName}
-                                  onChange={e => setNewMilestoneName(e.target.value)}
-                                  onKeyDown={e => e.key === "Enter" && addMilestone(goal.id)}
-                                  className="rounded-xl text-sm" />
-                                <Button variant="outline" size="sm" onClick={() => addMilestone(goal.id)} disabled={!newMilestoneName.trim()}>
-                                  <Plus className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-
-                            <div className="pt-2 border-t border-border">
-                              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive text-xs" onClick={() => deleteGoal(goal.id)}>
-                                <Trash2 className="h-3 w-3 mr-1" /> Remover meta
-                              </Button>
-                            </div>
-                          </motion.div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })
-              )}
-
-              <Card className="border-border">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-body font-semibold text-foreground flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-primary" /> Visão anual
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-12 gap-2 items-end h-28">
-                    {Array.from({ length: 12 }, (_, i) => {
-                      const now = new Date();
-                      const monthPosts = posts.filter(p => {
-                        if (!p.scheduled_date) return false;
-                        const d = new Date(p.scheduled_date);
-                        return d.getMonth() === i && d.getFullYear() === now.getFullYear();
-                      });
-                      const count = monthPosts.length;
-                      const maxCount = Math.max(1, ...Array.from({ length: 12 }, (_, j) =>
-                        posts.filter(p => p.scheduled_date && new Date(p.scheduled_date).getMonth() === j && new Date(p.scheduled_date).getFullYear() === now.getFullYear()).length
-                      ));
-                      const height = count > 0 ? Math.max(8, (count / maxCount) * 100) : 4;
-                      return (
-                        <div key={i} className="flex flex-col items-center">
-                          <div className={`w-full rounded-t-lg transition-all ${i === now.getMonth() ? "bg-primary" : "bg-muted"}`} style={{ height: `${height}px` }} />
-                          <span className="text-[10px] font-body text-muted-foreground mt-1">
-                            {new Date(now.getFullYear(), i, 1).toLocaleDateString("pt-BR", { month: "short" }).slice(0, 3)}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <GoalsTab
+              goals={goals}
+              milestones={milestones}
+              posts={posts}
+              today={today}
+              showNewGoal={showNewGoal}
+              newGoalForm={newGoalForm}
+              newMilestoneName={newMilestoneName}
+              expandedGoal={expandedGoal}
+              onShowNewGoal={setShowNewGoal}
+              onNewGoalFormChange={(patch) => setNewGoalForm(prev => ({ ...prev, ...patch }))}
+              onCreateGoal={createGoal}
+              onUpdateGoalValue={updateGoalValue}
+              onUpdateGoalStatus={updateGoalStatus}
+              onDeleteGoal={deleteGoal}
+              onToggleMilestone={toggleMilestone}
+              onAddMilestone={addMilestone}
+              onDeleteMilestone={deleteMilestone}
+              onNewMilestoneNameChange={setNewMilestoneName}
+              onExpandedGoalChange={setExpandedGoal}
+            />
           </TabsContent>
 
         </Tabs>

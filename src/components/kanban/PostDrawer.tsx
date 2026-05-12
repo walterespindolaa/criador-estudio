@@ -28,6 +28,10 @@ import { fireConfetti } from "@/lib/confetti";
 import { FORMAT_LABELS, PLATFORMS, FORMATS, STATUS_OPTIONS } from "@/lib/constants";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { filterReferences, generateArchiveSummary, callAIContextBuilder } from "@/lib/ai/claude";
+import { AIAssistantSection } from "./drawer/AIAssistantSection";
+import { HashtagsSection } from "./drawer/HashtagsSection";
+import { PostMetadataForm, PostScheduleFields } from "./drawer/PostMetadataForm";
+import { ScriptEditor, emptySection, type Section } from "./drawer/ScriptEditor";
 import { PostPreviewModal } from "./PostPreviewModal";
 import { useProfile } from "@/hooks/useProfile";
 import { useGoogleDrive } from "@/hooks/useGoogleDrive";
@@ -114,15 +118,6 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   const [showResults, setShowResults] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiHookCategories, setAiHookCategories] = useState<string[]>([]);
-  const [aiTone, setAiTone] = useState("descontraido");
-  const [aiLength, setAiLength] = useState("medio");
-  const [aiCaption, setAiCaption] = useState("");
-  const [aiCaptionLoading, setAiCaptionLoading] = useState(false);
-  const [suggestedHashtags, setSuggestedHashtags] = useState<string[]>([]);
-  const [selectedHashtags, setSelectedHashtags] = useState<string[]>([]);
-  const [hashtagsLoading, setHashtagsLoading] = useState(false);
-  interface Section { text: string; captacao: string; driveFileId?: string | null; driveFileName?: string | null; driveThumbnail?: string | null; }
-  const emptySection = (): Section => ({ text: "", captacao: "", driveFileId: null, driveFileName: null, driveThumbnail: null });
   const [sections, setSections] = useState<Section[]>(Array(5).fill(null).map(emptySection));
   const [referenceLink, setReferenceLink] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -240,88 +235,6 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
       setIsAiLoading(false);
     }
   };
-
-  const handleGenerateCaption = async () => {
-    if (!title || aiCaptionLoading) return;
-    setAiCaptionLoading(true);
-    setAiCaption("");
-    try {
-      const result = await callAIContextBuilder({
-        userId,
-        operation: "generate-caption",
-        data: {
-          titulo: title,
-          formato: format,
-          plataforma: platform,
-          tom: aiTone,
-          tamanho: aiLength,
-          pilar: pillars.find(p => p.id === pillarId)?.name,
-          nicho: profile?.niche,
-          conteudo: caption,
-          roteiro: sections.map(s => s.text).filter(Boolean).join(" | "),
-        },
-      });
-      const text = typeof result === "string" ? result.replace(/```\n?|```/g, "").trim() : String(result ?? "");
-      setAiCaption(text);
-    } catch (e) {
-      console.error("Generate caption failed", e);
-      toast.error("Erro ao gerar legenda.");
-    } finally {
-      setAiCaptionLoading(false);
-    }
-  };
-
-  const toggleHashtag = (tag: string) => {
-    setSelectedHashtags(prev =>
-      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
-    );
-  };
-
-  const handleGenerateHashtags = async () => {
-    if (!title || hashtagsLoading) return;
-    setHashtagsLoading(true);
-    setSuggestedHashtags([]);
-    setSelectedHashtags([]);
-    try {
-      const result = await callAIContextBuilder({
-        userId,
-        operation: "suggest-hashtags",
-        data: {
-          titulo: title,
-          formato: format,
-          plataforma: platform,
-          pilar: pillars.find(p => p.id === pillarId)?.name,
-          nicho: profile?.niche,
-          legenda: caption,
-        },
-      });
-      const raw = typeof result === "string" ? result.replace(/```json?\n?|\n?```/g, "").trim() : "";
-      let tags: string[] = [];
-      try {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) tags = parsed.map(String);
-      } catch {
-        tags = raw.split(/[,\n]+/).map(t => t.replace(/^#?\s*/, "").trim()).filter(Boolean);
-      }
-      const clean = tags.slice(0, 30);
-      setSuggestedHashtags(clean);
-      setSelectedHashtags(clean.slice(0, 10));
-    } catch (e) {
-      console.error("Suggest hashtags failed", e);
-      toast.error("Erro ao sugerir hashtags.");
-    } finally {
-      setHashtagsLoading(false);
-    }
-  };
-
-  const hashtagGroups = useMemo(() => {
-    const third = Math.ceil(suggestedHashtags.length / 3);
-    return {
-      high: suggestedHashtags.slice(0, third),
-      medium: suggestedHashtags.slice(third, third * 2),
-      niche: suggestedHashtags.slice(third * 2),
-    };
-  }, [suggestedHashtags]);
 
   const handleDrivePick = async () => {
     if (picking) return;
@@ -479,69 +392,21 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label className="font-body text-sm">Plataforma</Label>
-                  <Select value={platform} onValueChange={setPlatform}>
-                    <SelectTrigger className="rounded-xl">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PLATFORMS.map(p => (
-                        <SelectItem key={p} value={p}>
-                          <div className="flex items-center gap-2">
-                            <PlatformIcon platform={p as any} size="sm" />
-                            <span className="font-body capitalize">{p === "instagram" ? "Instagram" : p === "tiktok" ? "TikTok" : "YouTube"}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="font-body text-sm">Formato</Label>
-                  <Select value={format} onValueChange={setFormat}>
-                    <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {FORMATS.map(f => (
-                        <SelectItem key={f} value={f}>{FORMAT_LABELS[f]}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Pillar */}
-              <div className="space-y-2">
-                <Label className="font-body text-sm">Pilar</Label>
-                <div className="flex flex-wrap gap-2">
-                  {pillars.map(p => (
-                    <button
-                      key={p.id}
-                      onClick={() => setPillarId(pillarId === p.id ? "" : p.id)}
-                      className={`px-3 py-1.5 rounded-xl text-sm font-body border transition-colors ${
-                        pillarId === p.id ? "text-primary-foreground border-transparent" : "bg-card border-border"
-                      }`}
-                      style={pillarId === p.id ? { backgroundColor: p.color } : {}}
-                    >
-                      {p.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Status */}
-              <div className="space-y-2">
-                <Label className="font-body text-sm">Status</Label>
-                <Select value={status} onValueChange={handleStatusChange}>
-                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map(s => (
-                      <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <PostMetadataForm
+                platform={platform}
+                format={format}
+                pillarId={pillarId}
+                pillars={pillars}
+                status={status}
+                scheduledDate={scheduledDate}
+                scheduledTime={scheduledTime}
+                onPlatformChange={setPlatform}
+                onFormatChange={setFormat}
+                onPillarChange={setPillarId}
+                onStatusChange={handleStatusChange}
+                onScheduledDateChange={setScheduledDate}
+                onScheduledTimeChange={setScheduledTime}
+              />
 
               {/* Campos adaptativos por formato */}
               {(() => {
@@ -580,108 +445,32 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                     })}
 
                     {structure.hasDynamicSections && (
-                      <div className="space-y-3">
-                        <Label className="font-body text-sm flex items-center gap-2">
-                          <PenLine className="h-4 w-4" /> {structure.sectionLabel}s
-                        </Label>
-                        {sections.map((sec, i) => (
-                          <div key={i} className="rounded-2xl border border-border/60 overflow-hidden bg-card/50 hover:border-border transition-colors">
-                            {/* Header */}
-                            <div className="flex items-center gap-2 px-3 pt-2.5 pb-1">
-                              <span className="text-[9px] font-body uppercase tracking-[0.15em] text-muted-foreground/60 font-semibold">
-                                {structure.sectionLabel} {String(i + 1).padStart(2, "0")}
-                              </span>
-                              {sec.driveFileId && (
-                                <div className="ml-auto flex items-center gap-1">
-                                  <img
-                                    src={`https://lh3.googleusercontent.com/d/${encodeURIComponent(sec.driveFileId)}=w80`}
-                                    className="w-5 h-5 rounded object-cover"
-                                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                                  />
-                                  <button
-                                    onClick={() => setSections(prev => prev.map((s, j) => j === i ? { ...s, driveFileId: null, driveFileName: null, driveThumbnail: null } : s))}
-                                    className="text-muted-foreground/50 hover:text-destructive"
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Roteiro */}
-                            <Textarea
-                              placeholder={`O que acontece na ${structure.sectionLabel?.toLowerCase()} ${i + 1}...`}
-                              value={sec.text}
-                              onChange={(e) => setSections(prev => prev.map((s, j) => j === i ? { ...s, text: e.target.value } : s))}
-                              className="border-0 bg-transparent px-3 pb-1 pt-0 text-sm font-body resize-none focus-visible:ring-0 min-h-[48px]"
-                              rows={2}
-                            />
-
-                            {/* Divider */}
-                            <div className="mx-3 border-t border-dashed border-border/40" />
-
-                            {/* Captação */}
-                            <Textarea
-                              placeholder="Como gravar: enquadramento, tom, ação..."
-                              value={sec.captacao || ""}
-                              onChange={(e) => setSections(prev => prev.map((s, j) => j === i ? { ...s, captacao: e.target.value } : s))}
-                              className="border-0 bg-muted/40 rounded-b-xl px-3 pt-2 pb-2 text-xs font-body text-foreground placeholder:text-muted-foreground/70 resize-none focus-visible:ring-0 min-h-[36px] w-full"
-                              rows={1}
-                            />
-
-                            {/* Drive media button */}
-                            {!sec.driveFileId && (
-                              <div className="px-3 pb-2.5">
-                                <button
-                                  disabled={picking}
-                                  onClick={async () => {
-                                    const before = new Date().toISOString();
-                                    await pickAndSave(undefined);
-                                    const { data } = await supabase
-                                      .from("external_media_refs")
-                                      .select("external_file_id, file_name, thumbnail_url")
-                                      .eq("user_id", userId)
-                                      .is("post_id", null)
-                                      .gte("created_at", before)
-                                      .order("created_at", { ascending: false })
-                                      .limit(1);
-                                    if (data && data[0]) {
-                                      setSections(prev => prev.map((s, j) => j === i ? {
-                                        ...s,
-                                        driveFileId: data[0].external_file_id,
-                                        driveFileName: data[0].file_name,
-                                        driveThumbnail: data[0].thumbnail_url,
-                                      } : s));
-                                    }
-                                  }}
-                                  className="flex items-center gap-1.5 text-[10px] font-body text-muted-foreground hover:text-primary border border-dashed border-border/60 hover:border-primary/40 rounded-lg px-2 py-1 transition-all"
-                                >
-                                  <Cloud className="h-3 w-3" />
-                                  Adicionar mídia
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-
-                        {/* Add/remove buttons */}
-                        <div className="flex gap-3 pt-1">
-                          <button
-                            onClick={() => setSections(prev => [...prev, emptySection()])}
-                            className="text-xs font-body text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
-                          >
-                            <Plus className="h-3 w-3" /> Adicionar {structure.sectionLabel?.toLowerCase()}
-                          </button>
-                          {sections.length > 1 && (
-                            <button
-                              onClick={() => setSections(prev => prev.slice(0, -1))}
-                              className="text-xs font-body text-muted-foreground/50 hover:text-destructive flex items-center gap-1 transition-colors"
-                            >
-                              <Minus className="h-3 w-3" /> Remover última
-                            </button>
-                          )}
-                        </div>
-                      </div>
+                      <ScriptEditor
+                        sections={sections}
+                        onChange={setSections}
+                        sectionLabel={structure.sectionLabel ?? "Seção"}
+                        picking={picking}
+                        onPickDriveForSection={async (index) => {
+                          const before = new Date().toISOString();
+                          await pickAndSave(undefined);
+                          const { data } = await supabase
+                            .from("external_media_refs")
+                            .select("external_file_id, file_name, thumbnail_url")
+                            .eq("user_id", userId)
+                            .is("post_id", null)
+                            .gte("created_at", before)
+                            .order("created_at", { ascending: false })
+                            .limit(1);
+                          if (data && data[0]) {
+                            setSections(prev => prev.map((s, j) => j === index ? {
+                              ...s,
+                              driveFileId: data[0].external_file_id,
+                              driveFileName: data[0].file_name,
+                              driveThumbnail: data[0].thumbnail_url,
+                            } : s));
+                          }
+                        }}
+                      />
                     )}
                   </>
                 );
@@ -701,27 +490,12 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                 </div>
               )}
 
-              <div className="space-y-2">
-                <Label className="font-body text-sm">Data e horário agendados</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <Input
-                    type="date"
-                    value={scheduledDate}
-                    onChange={(e) => setScheduledDate(e.target.value)}
-                    className="rounded-xl"
-                  />
-                  <div className="relative">
-                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-                    <Input
-                      type="time"
-                      value={scheduledTime}
-                      onChange={(e) => setScheduledTime(e.target.value)}
-                      className="rounded-xl pl-9"
-                      placeholder="HH:MM"
-                    />
-                  </div>
-                </div>
-              </div>
+              <PostScheduleFields
+                scheduledDate={scheduledDate}
+                scheduledTime={scheduledTime}
+                onScheduledDateChange={setScheduledDate}
+                onScheduledTimeChange={setScheduledTime}
+              />
 
               {/* Google Drive media — only for formats without dynamic sections */}
               {!getFormatStructure(format).hasDynamicSections && (
@@ -804,203 +578,29 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
                 />
               </div>
 
-              {/* ── AI Content Assistant ── */}
-              <div className="border-t border-border pt-4 mt-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
-                    <Sparkles className="h-3.5 w-3.5 text-white" />
-                  </div>
-                  <span className="text-sm font-display font-semibold text-foreground">Assistente IA</span>
-                </div>
+              <AIAssistantSection
+                title={title}
+                format={format}
+                platform={platform}
+                pillarId={pillarId}
+                pillars={pillars}
+                caption={caption}
+                sectionsText={sections.map(s => s.text).filter(Boolean).join(" | ")}
+                userId={userId}
+                profile={profile}
+                onCaptionGenerated={(text) => setCaption(prev => prev ? `${prev}\n\n${text}` : text)}
+              />
 
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  <div>
-                    <Label className="text-[11px] text-muted-foreground mb-1 block">Tom</Label>
-                    <select
-                      value={aiTone}
-                      onChange={(e) => setAiTone(e.target.value)}
-                      className="w-full h-8 rounded-lg border border-border bg-background px-2 text-xs font-body"
-                    >
-                      <option value="descontraido">Descontraído</option>
-                      <option value="profissional">Profissional</option>
-                      <option value="inspirador">Inspirador</option>
-                      <option value="educativo">Educativo</option>
-                      <option value="provocativo">Provocativo</option>
-                    </select>
-                  </div>
-                  <div>
-                    <Label className="text-[11px] text-muted-foreground mb-1 block">Tamanho</Label>
-                    <select
-                      value={aiLength}
-                      onChange={(e) => setAiLength(e.target.value)}
-                      className="w-full h-8 rounded-lg border border-border bg-background px-2 text-xs font-body"
-                    >
-                      <option value="curto">Curto (1-2 linhas)</option>
-                      <option value="medio">Médio (3-5 linhas)</option>
-                      <option value="longo">Longo (storytelling)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleGenerateCaption}
-                  disabled={!title || aiCaptionLoading}
-                  className="w-full"
-                >
-                  {aiCaptionLoading ? (
-                    <>
-                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Gerando legenda...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Gerar legenda
-                    </>
-                  )}
-                </Button>
-
-                {aiCaption && (
-                  <div className="mt-3 bg-primary/5 border border-primary/15 rounded-xl p-3">
-                    <p className="text-sm font-body text-foreground whitespace-pre-line leading-relaxed">{aiCaption}</p>
-                    <div className="flex gap-2 mt-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 text-xs"
-                        onClick={() => {
-                          setCaption((prev) => (prev ? `${prev}\n\n${aiCaption}` : aiCaption));
-                          toast.success("Legenda adicionada ao post!");
-                        }}
-                      >
-                        Usar esta legenda
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-xs" onClick={handleGenerateCaption}>
-                        Gerar outra
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* ── Hashtags IA ── */}
-              <div className="border-t border-border pt-4 mt-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center">
-                      <Hash className="h-3.5 w-3.5 text-white" />
-                    </div>
-                    <span className="text-sm font-display font-semibold text-foreground">Hashtags</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleGenerateHashtags}
-                    disabled={!title || hashtagsLoading}
-                    className="text-xs"
-                  >
-                    {hashtagsLoading ? (
-                      <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Gerando...</>
-                    ) : (
-                      <><Sparkles className="h-3 w-3 mr-1" /> Sugerir hashtags</>
-                    )}
-                  </Button>
-                </div>
-
-                {suggestedHashtags.length > 0 && (
-                  <div className="space-y-2">
-                    {hashtagGroups.high.length > 0 && (
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wider font-body font-semibold text-emerald-600 mb-1">Alta relevância</p>
-                        <div className="flex flex-wrap gap-1">
-                          {hashtagGroups.high.map(tag => (
-                            <button
-                              key={tag}
-                              type="button"
-                              onClick={() => toggleHashtag(tag)}
-                              className={cn(
-                                "px-2 py-0.5 rounded-full text-[11px] font-body border transition-all",
-                                selectedHashtags.includes(tag)
-                                  ? "bg-primary/10 text-primary border-primary/30"
-                                  : "bg-card border-border text-muted-foreground hover:border-primary/20"
-                              )}
-                            >
-                              #{tag}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {hashtagGroups.medium.length > 0 && (
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wider font-body font-semibold text-amber-600 mb-1">Média relevância</p>
-                        <div className="flex flex-wrap gap-1">
-                          {hashtagGroups.medium.map(tag => (
-                            <button
-                              key={tag}
-                              type="button"
-                              onClick={() => toggleHashtag(tag)}
-                              className={cn(
-                                "px-2 py-0.5 rounded-full text-[11px] font-body border transition-all",
-                                selectedHashtags.includes(tag)
-                                  ? "bg-primary/10 text-primary border-primary/30"
-                                  : "bg-card border-border text-muted-foreground hover:border-primary/20"
-                              )}
-                            >
-                              #{tag}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {hashtagGroups.niche.length > 0 && (
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wider font-body font-semibold text-violet-600 mb-1">Nicho específico</p>
-                        <div className="flex flex-wrap gap-1">
-                          {hashtagGroups.niche.map(tag => (
-                            <button
-                              key={tag}
-                              type="button"
-                              onClick={() => toggleHashtag(tag)}
-                              className={cn(
-                                "px-2 py-0.5 rounded-full text-[11px] font-body border transition-all",
-                                selectedHashtags.includes(tag)
-                                  ? "bg-primary/10 text-primary border-primary/30"
-                                  : "bg-card border-border text-muted-foreground hover:border-primary/20"
-                              )}
-                            >
-                              #{tag}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {selectedHashtags.length > 0 && (
-                      <div className="pt-2 border-t border-border/50">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="text-[10px] text-muted-foreground font-body">{selectedHashtags.length} selecionadas</p>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-xs h-6"
-                            onClick={() => {
-                              const text = selectedHashtags.map(t => `#${t}`).join(" ");
-                              navigator.clipboard.writeText(text);
-                              toast.success("Hashtags copiadas!");
-                            }}
-                          >
-                            <Copy className="h-3 w-3 mr-1" /> Copiar
-                          </Button>
-                        </div>
-                        <p className="text-xs font-body text-primary break-all">
-                          {selectedHashtags.map(t => `#${t}`).join(" ")}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+              <HashtagsSection
+                title={title}
+                format={format}
+                platform={platform}
+                pillarId={pillarId}
+                pillars={pillars}
+                caption={caption}
+                userId={userId}
+                profile={profile}
+              />
 
               {/* Results section */}
               {showResults && (
