@@ -69,6 +69,35 @@ const DEFAULT_SETTINGS: BioSettings = {
   socialLinks: { instagram: "", tiktok: "", youtube: "", twitter: "" },
 };
 
+type BioThemePreset = {
+  key: string;
+  label: string;
+  bg: string;
+  bgGradient: string | null;
+  buttonColor: string;
+  buttonTextColor: string;
+  buttonStyle: ButtonStyle;
+};
+
+const BIO_THEMES: BioThemePreset[] = [
+  { key: "clean", label: "Clean", bg: "#ffffff", bgGradient: null, buttonColor: "#0A0D12", buttonTextColor: "#ffffff", buttonStyle: "rounded" },
+  { key: "dark", label: "Dark", bg: "#0A0D12", bgGradient: null, buttonColor: "#ffffff", buttonTextColor: "#0A0D12", buttonStyle: "rounded" },
+  { key: "sunset", label: "Sunset", bg: "#FFF5EB", bgGradient: null, buttonColor: "#FF6B35", buttonTextColor: "#ffffff", buttonStyle: "pill" },
+  { key: "ocean", label: "Ocean", bg: "#EEF4FF", bgGradient: null, buttonColor: "#3B82F6", buttonTextColor: "#ffffff", buttonStyle: "pill" },
+  { key: "forest", label: "Forest", bg: "#F0FFF4", bgGradient: null, buttonColor: "#16A34A", buttonTextColor: "#ffffff", buttonStyle: "rounded" },
+  {
+    key: "purple",
+    label: "Purple Vibes",
+    bg: "#FAF5FF",
+    bgGradient: "linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #fb923c 100%)",
+    buttonColor: "#8B5CF6",
+    buttonTextColor: "#ffffff",
+    buttonStyle: "pill",
+  },
+  { key: "neon", label: "Neon Night", bg: "#0F0F23", bgGradient: null, buttonColor: "#FACC15", buttonTextColor: "#0F0F23", buttonStyle: "square" },
+  { key: "rose", label: "Rosé", bg: "#FFF1F2", bgGradient: null, buttonColor: "#F43F5E", buttonTextColor: "#ffffff", buttonStyle: "pill" },
+];
+
 const BG_COLOR_PRESETS = [
   "#ffffff", "#0A0D12", "#1a1a2e", "#f0e6d3",
   "#d4e4bc", "#fce4ec", "#e8eaf6", "#fff3e0",
@@ -335,6 +364,20 @@ const LinkInBio = () => {
     setAppearanceDirty(true);
   };
 
+  const applyTheme = (theme: BioThemePreset) => {
+    setSettings((s) => ({
+      ...s,
+      bgType: theme.bgGradient ? "gradient" : "color",
+      bgColor: theme.bg,
+      bgGradient: theme.bgGradient ?? s.bgGradient,
+      bgImage: null,
+      buttonStyle: theme.buttonStyle,
+      buttonColor: theme.buttonColor,
+      buttonTextColor: theme.buttonTextColor,
+    }));
+    setAppearanceDirty(true);
+  };
+
   const patchSocial = (key: keyof SocialLinks, value: string) => {
     setSettings((s) => ({ ...s, socialLinks: { ...s.socialLinks, [key]: value } }));
     setAppearanceDirty(true);
@@ -443,8 +486,58 @@ const LinkInBio = () => {
             <Card className="p-4 md:p-5 rounded-2xl border-border space-y-6">
               <h2 className="font-display font-semibold text-foreground">Aparência</h2>
 
-              {/* Background */}
+              {/* Themes (presets) */}
               <div className="space-y-3">
+                <Label className="text-sm font-display font-semibold">Temas</Label>
+                <p className="text-xs text-muted-foreground -mt-1">
+                  Aplica fundo, cor e estilo dos botões de uma vez.
+                </p>
+                <div className="grid grid-cols-4 gap-2">
+                  {BIO_THEMES.map((theme) => {
+                    const previewBg = theme.bgGradient
+                      ? { backgroundImage: theme.bgGradient }
+                      : { backgroundColor: theme.bg };
+                    return (
+                      <button
+                        key={theme.key}
+                        type="button"
+                        onClick={() => applyTheme(theme)}
+                        className="group flex flex-col items-center gap-1 text-center"
+                      >
+                        <div
+                          className="w-full aspect-[3/5] rounded-lg border border-border overflow-hidden p-2 flex flex-col justify-center gap-1 transition-all group-hover:border-primary/40 group-hover:shadow-md"
+                          style={previewBg}
+                        >
+                          {[0, 1, 2].map((i) => (
+                            <div
+                              key={i}
+                              className={cn(
+                                "h-1.5 w-full",
+                                theme.buttonStyle === "pill" && "rounded-full",
+                                theme.buttonStyle === "rounded" && "rounded-md",
+                                theme.buttonStyle === "square" && "rounded-sm",
+                                theme.buttonStyle === "outline" && "rounded-md border"
+                              )}
+                              style={{
+                                backgroundColor:
+                                  theme.buttonStyle === "outline" ? "transparent" : theme.buttonColor,
+                                borderColor:
+                                  theme.buttonStyle === "outline" ? theme.buttonTextColor : undefined,
+                              }}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-[10px] font-body font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                          {theme.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Background */}
+              <div className="space-y-3 pt-4 border-t border-border">
                 <Label className="text-sm font-display font-semibold">Fundo</Label>
                 <div className="flex gap-2 flex-wrap">
                   {([
@@ -770,10 +863,10 @@ function LinkCard({
         isDragging && "shadow-lg ring-2 ring-primary/30"
       )}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-start gap-2">
         <button
           {...provided.dragHandleProps}
-          className="text-muted-foreground hover:text-foreground touch-none"
+          className="text-muted-foreground hover:text-foreground touch-none mt-2"
           aria-label="Arrastar"
         >
           <GripVertical className="h-4 w-4" />
@@ -790,68 +883,73 @@ function LinkCard({
         <button
           type="button"
           onClick={() => thumbInputRef.current?.click()}
-          className="relative w-10 h-10 rounded-lg border border-dashed border-border bg-muted/40 hover:border-primary transition-colors flex items-center justify-center overflow-hidden shrink-0"
+          className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl border border-dashed border-border bg-muted/40 hover:border-primary transition-colors flex items-center justify-center overflow-hidden shrink-0"
           aria-label="Imagem do link"
         >
           {uploadingThumb ? (
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           ) : link.thumbnail_url ? (
             <img src={link.thumbnail_url} alt="" className="w-full h-full object-cover" />
           ) : (
-            <LinkIcon className="h-4 w-4 text-muted-foreground" />
+            <LinkIcon className="h-5 w-5 text-muted-foreground" />
           )}
         </button>
 
-        <Input
-          value={icon}
-          onChange={(e) => setIcon(e.target.value)}
-          onBlur={commitIcon}
-          placeholder="🔗"
-          className="h-9 w-12 text-center rounded-lg"
-          maxLength={4}
-        />
-        <Input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onBlur={commitTitle}
-          placeholder="Título"
-          className="h-9 rounded-lg flex-1 min-w-0 font-medium"
-          maxLength={80}
-        />
-        <Switch
-          checked={link.is_active ?? true}
-          onCheckedChange={(v) => onUpdate(link.id, { is_active: v })}
-          aria-label="Ativo"
-        />
-        <button
-          type="button"
-          onClick={() => onDelete(link.id)}
-          className="text-muted-foreground hover:text-red-500 transition p-1.5 rounded-lg hover:bg-red-50"
-          aria-label="Excluir"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-      </div>
-      <div className="mt-2 flex items-center gap-2 pl-6">
-        <Input
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          onBlur={commitUrl}
-          placeholder="https://"
-          className="h-8 rounded-lg flex-1 text-xs font-mono"
-          maxLength={500}
-        />
-        <div className="hidden sm:flex items-center gap-1.5 min-w-[90px]">
-          <BarChart3 className="h-3 w-3 text-muted-foreground" />
-          <div className="relative flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-            <div
-              className="absolute inset-y-0 left-0 bg-gradient-to-r from-pink-500 to-purple-500"
-              style={{ width: `${widthPct}%` }}
+        <div className="flex-1 min-w-0 space-y-2">
+          <div className="flex items-center gap-2">
+            <Input
+              value={icon}
+              onChange={(e) => setIcon(e.target.value)}
+              onBlur={commitIcon}
+              placeholder="🔗"
+              className="h-9 w-11 text-center rounded-lg shrink-0"
+              maxLength={4}
             />
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onBlur={commitTitle}
+              placeholder="Título"
+              className="h-9 rounded-lg flex-1 min-w-0 font-medium"
+              maxLength={80}
+            />
+            <Switch
+              checked={link.is_active ?? true}
+              onCheckedChange={(v) => onUpdate(link.id, { is_active: v })}
+              aria-label="Ativo"
+            />
+            <button
+              type="button"
+              onClick={() => onDelete(link.id)}
+              className="text-muted-foreground hover:text-red-500 transition p-1.5 rounded-lg hover:bg-red-50 shrink-0"
+              aria-label="Excluir"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
           </div>
-          <span className="text-[10px] font-mono text-muted-foreground tabular-nums w-6 text-right">
-            {clicks}
-          </span>
+
+          <div className="flex items-center gap-2">
+            <Input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              onBlur={commitUrl}
+              placeholder="https://"
+              className="h-8 rounded-lg flex-1 text-xs font-mono"
+              maxLength={500}
+            />
+            <div className="hidden sm:flex items-center gap-1.5 min-w-[90px]">
+              <BarChart3 className="h-3 w-3 text-muted-foreground" />
+              <div className="relative flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-pink-500 to-purple-500"
+                  style={{ width: `${widthPct}%` }}
+                />
+              </div>
+              <span className="text-[10px] font-mono text-muted-foreground tabular-nums w-6 text-right">
+                {clicks}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -937,7 +1035,7 @@ const BioPreview = memo(function BioPreview({ profile, links, settings }: Previe
                 <div
                   key={link.id}
                   className={cn(
-                    "w-full px-4 py-3 flex items-center gap-2 font-body font-semibold text-sm shadow-sm",
+                    "w-full font-body font-semibold text-sm shadow-sm overflow-hidden",
                     radius,
                     isOutline && "border-2 bg-transparent"
                   )}
@@ -947,18 +1045,17 @@ const BioPreview = memo(function BioPreview({ profile, links, settings }: Previe
                     borderColor: isOutline ? settings.buttonTextColor : undefined,
                   }}
                 >
-                  {link.thumbnail_url ? (
-                    <img
-                      src={link.thumbnail_url}
-                      alt=""
-                      className="w-8 h-8 rounded-md object-cover shrink-0"
-                    />
-                  ) : link.icon ? (
-                    <span className="text-base">{link.icon}</span>
-                  ) : null}
-                  <span className="flex-1 text-center truncate">
+                  {link.thumbnail_url && (
+                    <div className="w-full aspect-video overflow-hidden">
+                      <img src={link.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  <div className="px-4 py-3 text-center truncate">
+                    {!link.thumbnail_url && link.icon && (
+                      <span className="mr-1.5">{link.icon}</span>
+                    )}
                     {link.title || "Sem título"}
-                  </span>
+                  </div>
                 </div>
               )
             )

@@ -228,13 +228,41 @@ const BioPage = () => {
       className="min-h-screen w-full px-5 py-10 flex flex-col items-center"
       style={backgroundStyle(settings)}
     >
-      <div className="w-full max-w-md flex flex-col items-center">
+      <div className="relative w-full max-w-md flex flex-col items-center">
+        {/* Desktop: floating column of social icons to the left */}
+        {activeSocials.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4 }}
+            className="hidden md:flex absolute -left-16 top-32 flex-col gap-3 z-10"
+          >
+            {activeSocials.map((f) => {
+              const handle = settings.socialLinks[f.key];
+              const href = f.urlBuilder(handle);
+              return (
+                <a
+                  key={f.key}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={f.label}
+                  className="w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center hover:scale-110 transition-transform"
+                >
+                  <f.icon className="h-5 w-5 text-gray-900" />
+                </a>
+              );
+            })}
+          </motion.div>
+        )}
+
+        {/* Mobile: horizontal row above content */}
         {activeSocials.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="flex items-center gap-3 mb-6"
+            className="md:hidden flex items-center gap-3 mb-6"
           >
             {activeSocials.map((f) => {
               const handle = settings.socialLinks[f.key];
@@ -327,7 +355,7 @@ const BioPage = () => {
                   rel="noopener noreferrer"
                   onClick={() => trackClick(link.id)}
                   className={cn(
-                    "flex items-center gap-3 w-full px-5 py-4 font-body font-semibold shadow-md",
+                    "block w-full overflow-hidden font-body font-semibold shadow-md",
                     "hover:scale-[1.02] hover:shadow-lg active:scale-[0.98] transition-all duration-200",
                     radius,
                     isOutline && "border-2 bg-transparent"
@@ -338,28 +366,33 @@ const BioPage = () => {
                     borderColor: isOutline ? settings.buttonTextColor : undefined,
                   }}
                 >
-                  {link.thumbnail_url ? (
-                    <img
-                      src={link.thumbnail_url}
-                      alt=""
-                      className="w-9 h-9 rounded-md object-cover shrink-0"
-                    />
-                  ) : link.icon ? (
-                    <span className="text-lg shrink-0">{link.icon}</span>
-                  ) : null}
-                  <span className="flex-1 text-center truncate">{link.title}</span>
+                  {link.thumbnail_url && (
+                    <div className="w-full aspect-video overflow-hidden">
+                      <img
+                        src={link.thumbnail_url}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <div className="px-5 py-4 text-center truncate">
+                    {!link.thumbnail_url && link.icon && (
+                      <span className="mr-2">{link.icon}</span>
+                    )}
+                    {link.title}
+                  </div>
                 </motion.a>
               );
             })
           )}
         </motion.div>
 
-        <Link
-          to="/"
-          className="mt-12 text-xs text-gray-800/80 hover:text-gray-900 font-body transition drop-shadow-sm"
-        >
-          Feito com 💜 CreatorsFlow
-        </Link>
+        <p className="text-center text-[10px] text-gray-900/50 mt-8 font-body drop-shadow-sm">
+          Feito com 💜{" "}
+          <Link to="/" className="underline hover:text-gray-900/80 transition">
+            CreatorsFlow
+          </Link>
+        </p>
       </div>
     </div>
   );
