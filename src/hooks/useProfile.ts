@@ -3,8 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Database } from "@/integrations/supabase/types";
 
-export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
-type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
+export type Profile = Database["public"]["Tables"]["profiles"]["Row"] & {
+  role?: string | null;
+};
+type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"] & {
+  role?: string | null;
+};
 
 export function useProfile() {
   const { user } = useAuth();
@@ -36,7 +40,7 @@ export function useProfile() {
       if (!userId) throw new Error("Not authenticated");
       const { error } = await supabase
         .from("profiles")
-        .update(updates)
+        .update(updates as never)
         .eq("id", userId);
       if (error) throw error;
     },

@@ -14,6 +14,7 @@ import {
   Grid3X3,
   Sparkles,
   BarChart3,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
@@ -151,6 +152,32 @@ export function AppSidebar() {
             </SidebarGroupContent>
           </SidebarGroup>
         ))}
+
+        {profile?.role === "admin" && (
+          <SidebarGroup>
+            {!collapsed && (
+              <SidebarGroupLabel className="text-[11px] font-display font-semibold uppercase tracking-wider text-muted-foreground/60 px-3 mt-4 mb-1.5">
+                Admin
+              </SidebarGroupLabel>
+            )}
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Admin">
+                    <NavLink
+                      to="/app/admin"
+                      className="group relative rounded-xl px-3 py-2.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-all duration-150"
+                      activeClassName="bg-red-500/10 text-red-500 font-semibold before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-5 before:bg-red-500 before:rounded-r-full before:content-['']"
+                    >
+                      <Shield className="h-5 w-5 flex-shrink-0 text-red-500" strokeWidth={1.5} />
+                      {!collapsed && <span className="font-body text-sm">Admin</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="mt-auto">

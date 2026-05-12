@@ -21,6 +21,7 @@ const Tarefas = lazy(() => import("./pages/app/Tarefas"));
 const Criando = lazy(() => import("./pages/app/Criando"));
 const Feed = lazy(() => import("./pages/app/Feed"));
 const Relatorios = lazy(() => import("./pages/app/Relatorios"));
+const Admin = lazy(() => import("./pages/app/Admin"));
 const Plano = lazy(() => import("./pages/app/Plano"));
 const Biblioteca = lazy(() => import("./pages/app/Biblioteca"));
 const Arquivos = lazy(() => import("./pages/app/Arquivos"));
@@ -67,6 +68,7 @@ const App = () => (
                 <Route path="criando" element={<ErrorBoundary><Criando /></ErrorBoundary>} />
                 <Route path="feed" element={<ErrorBoundary><Feed /></ErrorBoundary>} />
                 <Route path="relatorios" element={<ErrorBoundary><Relatorios /></ErrorBoundary>} />
+                <Route path="admin" element={<ErrorBoundary><Admin /></ErrorBoundary>} />
                 <Route path="tarefas" element={<ErrorBoundary><Tarefas /></ErrorBoundary>} />
                 <Route path="plano" element={<ErrorBoundary><Plano /></ErrorBoundary>} />
                 <Route path="biblioteca" element={<ErrorBoundary><Biblioteca /></ErrorBoundary>} />
