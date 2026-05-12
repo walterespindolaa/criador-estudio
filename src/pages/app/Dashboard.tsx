@@ -74,13 +74,14 @@ const getDaysOfWeek = () => {
 
 type PeriodKey = "tudo" | "hoje" | "semana" | "quinzenal" | "mes" | "ano" | "personalizado";
 
-const PERIOD_OPTIONS: { key: PeriodKey; label: string }[] = [
-  { key: "tudo", label: "Tudo" },
+// `primary` periods are visible on mobile; the rest collapse to >= sm.
+const PERIOD_OPTIONS: { key: PeriodKey; label: string; primary?: boolean }[] = [
+  { key: "tudo", label: "Tudo", primary: true },
   { key: "hoje", label: "Hoje" },
-  { key: "semana", label: "Semana" },
+  { key: "semana", label: "Semana", primary: true },
   { key: "quinzenal", label: "Quinzenal" },
-  { key: "mes", label: "Mês" },
-  { key: "ano", label: "Ano" },
+  { key: "mes", label: "Mês", primary: true },
+  { key: "ano", label: "Ano", primary: true },
   { key: "personalizado", label: "Personalizado" },
 ];
 
@@ -282,7 +283,7 @@ const Dashboard = () => {
               <LayoutDashboard className="h-5 w-5 text-white" strokeWidth={1.75} />
             </div>
             <div>
-              <h1 className="text-2xl md:text-3xl font-display font-extrabold text-foreground tracking-tight mb-0.5">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-display font-extrabold text-foreground tracking-tight mb-0.5">
                 {getGreeting(profile?.name || "criador")}
               </h1>
               <p className="text-sm text-muted-foreground font-body flex items-center gap-1.5">
@@ -302,6 +303,7 @@ const Dashboard = () => {
                 }}
                 className={cn(
                   "px-3 py-1.5 rounded-full text-xs font-body font-medium transition-all duration-200",
+                  !opt.primary && "hidden sm:inline-flex",
                   period === opt.key
                     ? "bg-card text-foreground shadow-warm-sm font-semibold"
                     : "text-muted-foreground hover:text-foreground"
@@ -316,7 +318,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
           <div className="lg:col-span-8 space-y-6">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
               {stats.map((s, i) => (
                 <motion.button
                   key={i}
@@ -325,18 +327,18 @@ const Dashboard = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
                   className={cn(
-                    "relative overflow-hidden bg-gradient-to-br p-5 rounded-2xl border border-border/50",
+                    "relative overflow-hidden bg-gradient-to-br p-3 sm:p-5 rounded-2xl border border-border/50",
                     "hover:shadow-warm-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-200",
                     "text-left w-full group cursor-pointer",
                     s.bg
                   )}
                 >
-                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center mb-3 shadow-sm", s.iconBg)}>
-                    <s.icon className={cn("h-5 w-5", s.iconColor)} strokeWidth={1.75} />
+                  <div className={cn("w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center mb-2 sm:mb-3 shadow-sm", s.iconBg)}>
+                    <s.icon className={cn("h-4 w-4 sm:h-5 sm:w-5", s.iconColor)} strokeWidth={1.75} />
                   </div>
-                  <p className="text-3xl font-display font-extrabold text-foreground tracking-tight">{s.value}</p>
-                  <p className="text-[11px] uppercase tracking-wider font-body font-semibold text-muted-foreground mt-0.5">{s.label}</p>
-                  <ArrowRight className="absolute top-4 right-4 h-4 w-4 text-muted-foreground/30 group-hover:text-foreground/50 group-hover:translate-x-0.5 transition-all" />
+                  <p className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">{s.value}</p>
+                  <p className="text-[10px] sm:text-[11px] uppercase tracking-wider font-body font-semibold text-muted-foreground mt-0.5">{s.label}</p>
+                  <ArrowRight className="absolute top-3 right-3 sm:top-4 sm:right-4 h-4 w-4 text-muted-foreground/30 group-hover:text-foreground/50 group-hover:translate-x-0.5 transition-all" />
                 </motion.button>
               ))}
             </div>
@@ -348,7 +350,7 @@ const Dashboard = () => {
               <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
                 <Lightbulb className="h-4 w-4 text-primary" /> Captura Rápida
               </h3>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Input
                   placeholder="O que você está pensando?"
                   className="rounded-xl border-border bg-background/50 h-11"
@@ -356,7 +358,7 @@ const Dashboard = () => {
                   onChange={(e) => setQuickIdea(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleQuickCapture()}
                 />
-                <Button onClick={handleQuickCapture} variant="hero" size="lg">Capturar</Button>
+                <Button onClick={handleQuickCapture} variant="hero" size="lg" className="w-full sm:w-auto">Capturar</Button>
               </div>
             </DCard>
           </div>
