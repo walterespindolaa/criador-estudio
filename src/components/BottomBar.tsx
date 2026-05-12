@@ -7,6 +7,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { useCriaAI } from "@/contexts/CriaAIContext";
 
 const leftItems = [
   { title: "Início", url: "/app", icon: Home, exact: true },
@@ -34,6 +35,7 @@ export function BottomBar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const { openCria } = useCriaAI();
 
   const handleSignOut = async () => {
     setMoreOpen(false);
@@ -118,7 +120,7 @@ export function BottomBar() {
 
           <button
             type="button"
-            onClick={() => toast.info("Cria IA estará disponível em breve! 🚀", { description: "Seu assistente criativo pessoal." })}
+            onClick={() => openCria()}
             className="flex flex-col items-center justify-center gap-0.5 px-1 flex-1"
             aria-label="Cria IA"
           >

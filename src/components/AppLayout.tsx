@@ -10,6 +10,8 @@ import { applySidebarColor } from "@/lib/sidebarTheme";
 import { applyThemeFont } from "@/components/settings/SettingsVisual";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { CriaAIProvider } from "@/contexts/CriaAIContext";
+import { CriaAIPanel } from "@/components/ai/CriaAIPanel";
 
 const AppLayout = () => {
   const { profile } = useProfile();
@@ -24,9 +26,11 @@ const AppLayout = () => {
   }, [profile]);
 
   return (
+    <CriaAIProvider>
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
         <PWAInstallBanner />
+        <CriaAIPanel />
 
         <div className="hidden md:block">
           <AppSidebar />
@@ -67,6 +71,7 @@ const AppLayout = () => {
         </div>
       </div>
     </SidebarProvider>
+    </CriaAIProvider>
   );
 };
 

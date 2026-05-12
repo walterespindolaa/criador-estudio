@@ -19,7 +19,7 @@ import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
+import { useCriaAI } from "@/contexts/CriaAIContext";
 import {
   Sidebar,
   SidebarContent,
@@ -74,6 +74,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { profile } = useProfile();
   const { signOut } = useAuth();
+  const { openCria } = useCriaAI();
 
   const handleSignOut = async () => {
     await signOut();
@@ -149,7 +150,7 @@ export function AppSidebar() {
         <div className={cn("border-t border-border", collapsed ? "p-2" : "p-3")}>
           <button
             type="button"
-            onClick={() => toast.info("Cria IA estará disponível em breve! 🚀", { description: "Seu assistente criativo pessoal." })}
+            onClick={() => openCria()}
             className={cn(
               "w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-primary transition-all group",
               "bg-gradient-to-r from-primary/10 via-purple-500/10 to-pink-500/10",
