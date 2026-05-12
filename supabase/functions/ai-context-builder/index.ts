@@ -172,138 +172,116 @@ REGRAS DE COMPORTAMENTO:
         maxTokens = 60
         break
       case 'idea-suggestions':
+        operationPrompt = `Você é um estrategista de conteúdo especialista em redes sociais brasileiras. Gere EXATAMENTE 3 posts prontos para executar.
 
-        operationPrompt = `Você é um estrategista de conteúdo especializado em criar posts virais para redes sociais brasileiras.
+FRAMEWORK DE PILARES DE CONTEÚDO:
+Cada sugestão deve cobrir um pilar diferente:
+1. EDUCACIONAL (40% do mix) — How-tos, dicas, frameworks, erros comuns
+2. BASTIDORES (20%) — Processo, rotina, dia-a-dia, vulnerabilidade
+3. ENGAJAMENTO (15%) — Perguntas, debates, polêmicas leves, "qual você prefere?"
+4. PROVA SOCIAL (15%) — Resultados, transformações, antes/depois, depoimentos
+5. PROMOCIONAL (10%) — Produtos, serviços, ofertas, CTAs diretos
 
-TAREFA: A partir da ideia/assunto do creator, gere EXATAMENTE 3 posts prontos para executar. Cada post deve ser uma abordagem COMPLETAMENTE DIFERENTE do mesmo tema.
+FÓRMULAS DE HOOK POR PLATAFORMA:
+Instagram/Reels: "Save isso pra depois", "Testei [X] por [tempo]. Resultado:", "POV: você acabou de descobrir [benefício]", "O que [público] erra sobre [tema]:", "Meu processo exato pra [resultado]:"
+TikTok: "Espera, você ainda faz [jeito antigo]?", "O hack de [tema] que ninguém te mostrou", "Se você é [público], assiste isso", "Story time: [setup intrigante]"
+YouTube: "Tutorial completo:", "[número] erros que estão travando seu [tema]", "Testei por [tempo] — vale a pena?"
 
-REGRAS PARA TÍTULOS:
+REGRAS:
+- Títulos são HOOKS — a primeira coisa que a pessoa lê/ouve. Máximo 70 caracteres.
+- Cada sugestão com ângulo editorial DIFERENTE: tutorial, bastidor, opinião, storytelling, lista, antes/depois, mito vs verdade, trend adaptada
+- Formatos: varie entre reels, carrossel, foto, video, story, shorts
+- Objetivos: engajamento, autoridade, venda, relacionamento — varie entre as 3
+- Linguagem de rede social BR: informal, direta, como amigo falando
+- NUNCA use títulos genéricos como "Reflexão sobre X" ou "Dicas de X"
 
-- O título É o gancho do post — deve ser a primeira frase que a pessoa lê/ouve
+FORMATO JSON (APENAS o array, sem texto):
+[{"titulo":"max 70 chars","formato":"reels|carrossel|foto|video|story","angulo":"descritivo e específico","objetivo":"engajamento|autoridade|venda|relacionamento"}]
 
-- Use padrões virais: curiosidade ("O que ninguém te conta sobre..."), contraste ("Pare de X se quiser Y"), identificação ("Se você é X, esse post é pra você"), storytelling ("Eu perdi X por não saber disso"), lista prática ("3 formas de..."), polêmica leve ("Isso vai incomodar quem...")
-
-- Linguagem de rede social: informal, direta, como se estivesse falando com um amigo
-
-- NUNCA use títulos genéricos como "Reflexão sobre X" ou "Dicas de X" — seja específico e provocativo
-
-- Máximo 70 caracteres
-
-- O título deve funcionar sozinho como hook de abertura do conteúdo
-
-REGRAS PARA ÂNGULOS:
-
-- Cada sugestão deve ter um ângulo editorial diferente: tutorial, bastidor, opinião, storytelling, lista, antes/depois, mito vs verdade, desabafo, comparação, trend adaptada
-
-- O ângulo deve ser descritivo e específico (ex: "bastidor do processo criativo", não apenas "bastidor")
-
-REGRAS PARA FORMATOS:
-
-- Varie entre os formatos disponíveis: reels, carrossel, foto, video, story
-
-- Escolha o formato que MELHOR se encaixa no ângulo (ex: tutorial = carrossel, bastidor = reels, opinião = story)
-
-- Respeite a plataforma informada
-
-REGRAS PARA OBJETIVOS:
-
-- Cada post deve ter um objetivo claro: engajamento (comentários/saves), autoridade (posicionamento como referência), venda (direcionar para produto/serviço), relacionamento (conexão emocional)
-
-- Varie os objetivos entre as 3 sugestões
-
-FORMATO DE RESPOSTA:
-
-Retorne APENAS um array JSON válido com 3 objetos. Nenhum texto antes ou depois.
-
-Cada objeto: {"titulo":"string max 70 chars","formato":"reels|carrossel|foto|video|story","angulo":"string curta e descritiva","objetivo":"engajamento|autoridade|venda|relacionamento"}
-
-EXEMPLO DE BOA RESPOSTA para a ideia "rotina matinal":
-
-[{"titulo":"Minha rotina antes de abrir o Instagram mudou tudo","formato":"reels","angulo":"bastidor com storytelling pessoal","objetivo":"relacionamento"},{"titulo":"5 coisas que faço antes das 8h que triplicaram meu engajamento","formato":"carrossel","angulo":"lista prática com resultados","objetivo":"autoridade"},{"titulo":"Sua rotina matinal está sabotando seu conteúdo. Veja porquê.","formato":"story","angulo":"opinião provocativa com dica","objetivo":"engajamento"}]`
-
-        userPrompt = `IDEIA DO CREATOR: "${data.ideiaTexto || 'conteúdo geral'}"
-
-PLATAFORMA PRINCIPAL: ${data.platform || 'instagram'}
-
-PILAR DE CONTEÚDO: ${data.pilar || 'geral'}
-
+EXEMPLO para "rotina matinal":
+[{"titulo":"Minha rotina antes de abrir o Instagram mudou tudo","formato":"reels","angulo":"bastidor com storytelling pessoal","objetivo":"relacionamento"},{"titulo":"5 coisas que faço antes das 8h que triplicaram meu engajamento","formato":"carrossel","angulo":"lista prática com resultados","objetivo":"autoridade"},{"titulo":"Sua rotina matinal tá sabotando seu conteúdo. Veja porquê.","formato":"story","angulo":"opinião provocativa com dica","objetivo":"engajamento"}]`
+        userPrompt = `IDEIA: "${data.ideiaTexto || 'conteúdo geral'}"
+PLATAFORMA: ${data.platform || 'instagram'}
+PILAR: ${data.pilar || 'geral'}
 NICHO: ${data.niche || 'lifestyle'}
-
-Gere 3 posts prontos para executar sobre essa ideia. Lembre-se: títulos devem ser ganchos virais, não títulos de blog.`
-
+Gere 3 posts. Títulos são hooks virais, não títulos de blog.`
         maxTokens = 600
-
         break
       case 'generate-caption':
-
+        const toneGuide: Record<string, string> = {
+          descontraido: 'Casual, como conversa entre amigos. Usa gírias leves. Frases curtas.',
+          profissional: 'Polido mas acessível. Sem gírias. Frases claras e diretas.',
+          inspirador: 'Motivacional sem ser clichê. Storytelling pessoal. Vulnerable.',
+          educativo: 'Didático, passo a passo. Usa "você" direto. Entrega valor concreto.',
+          provocativo: 'Contrarian. Desafia o senso comum. Polêmica leve que gera debate.'
+        }
+        const lengthGuide: Record<string, string> = {
+          curto: '1-2 linhas. Ideal pra reels e stories. Vai direto ao ponto.',
+          medio: '3-5 linhas. Gancho + valor + CTA. O sweet spot do Instagram.',
+          longo: '5-10 linhas. Storytelling com início-meio-fim. Pra carrossel e posts de autoridade.'
+        }
         operationPrompt = `Você é um copywriter expert em redes sociais brasileiras. Gere UMA legenda pronta para publicar.
 
+TOM: ${toneGuide[data.tom] || toneGuide.descontraido}
+TAMANHO: ${lengthGuide[data.tamanho] || lengthGuide.medio}
+
+FRAMEWORKS DE COPY A USAR:
+- PAS (Problema→Agitação→Solução): comece com uma dor, amplifique, apresente a solução
+- AIDA (Atenção→Interesse→Desejo→Ação): hook → por que importa → como ficaria → CTA
+- Before-After-Bridge: situação atual → situação desejada → como chegar lá
+
 REGRAS:
-
-- Tom: ${data.tom || 'descontraido'}
-
-- Tamanho: ${data.tamanho === 'curto' ? '1-2 linhas' : data.tamanho === 'longo' ? '5-8 linhas com storytelling' : '3-5 linhas'}
-
 - Formato: ${data.formato || 'post'} para ${data.plataforma || 'instagram'}
+- NUNCA comece com "Olá", "Ei", "Você sabia que" — comece com IMPACTO
+- Emojis: 2-3 no máximo, posicionados estrategicamente
+- CTA no final: pergunta aberta, convite à ação, ou chamada pro próximo passo
+- Se carrossel: legenda complementa os slides (não repete)
+- Se reels: curta e direta (gancho → valor → CTA)
+- Se story: ultra-curta, 1-2 linhas com CTA direto
+- SEM hashtags (sistema adiciona separadamente)
+- Linguagem natural brasileira — como pessoa real falando
+- Use line breaks pra respirar (não um bloco de texto)
 
-- Use emojis com moderação (2-3 por legenda, MAX)
+TÁTICA DE ENGAJAMENTO:
+Termine 100% das legendas com algo que provoque resposta:
+- Pergunta aberta: "E você, como faz?"
+- Debate: "Concorda ou discorda?"
+- Ação: "Salva pra quando precisar"
+- Comunidade: "Marca alguém que precisa ver isso"
 
-- Inclua um CTA no final (pergunta, chamada pra ação, ou convite)
-
-- Se o formato for carrossel, a legenda deve complementar os slides (não repetir)
-
-- Se for reels, a legenda deve ser curta e direta (gancho → valor → CTA)
-
-- NÃO inclua hashtags (o sistema adiciona separadamente)
-
-- Linguagem natural brasileira, como se fosse uma pessoa real falando
-
-- NUNCA comece com "Olá" ou "Ei" ou "Você sabia que" — comece com impacto
-
-RESPONDA APENAS COM A LEGENDA, sem título, sem explicação, sem aspas.`
-
-        userPrompt = `Título do post: "${data.titulo || ''}"
-
-Conteúdo/roteiro do post: ${data.conteudo || data.roteiro || 'não informado'}
-
-Pilar de conteúdo: ${data.pilar || 'geral'}
-
-Nicho: ${data.nicho || 'lifestyle'}`
-
-        maxTokens = 400
-
+RESPONDA APENAS COM A LEGENDA. Sem título, sem aspas, sem explicação.`
+        userPrompt = `TÍTULO DO POST: "${data.titulo || ''}"
+PILAR: ${data.pilar || 'geral'}
+NICHO: ${data.nicho || 'lifestyle'}
+CONTEÚDO/ROTEIRO: ${(data.conteudo || data.roteiro || 'não informado').slice(0, 500)}`
+        maxTokens = 500
         break
       case 'suggest-hashtags':
-        operationPrompt = `Você é um especialista em hashtags para redes sociais brasileiras. Gere uma lista de hashtags relevantes para o post.
+        operationPrompt = `Você é especialista em estratégia de hashtags para redes sociais brasileiras.
+
+FRAMEWORK DE HASHTAGS EM 3 CAMADAS:
+1. NICHO (7 hashtags) — Menos de 100K posts. Alta relevância, fácil de ranquear. Específicas pro sub-nicho do criador.
+2. MÉDIO (7 hashtags) — 100K-1M posts. Boa descoberta com competição moderada. Relevantes pro nicho geral.
+3. AMPLO (6 hashtags) — 1M+ posts. Alta descoberta, pouca chance de ranquear, mas amplia alcance.
 
 REGRAS:
+- EXATAMENTE 20 hashtags, nessa ordem: 7 nicho + 7 médio + 6 amplo
+- Apenas em português BR (exceto termos universais: reels, tiktok, etc)
+- SEM # na frente — apenas a palavra/frase
+- Considere a plataforma: Instagram usa 15-20 no caption/comentário, TikTok usa 3-5 curtas
+- Formato ${data.formato || 'post'}: reels/video usam hashtags de formato (#reelsbrasil), carrossel usa hashtags educativas
+- Misture hashtags de comunidade (#criadorbrasileiro) com hashtags de tema (#dicasdeconteudo)
+- NUNCA use hashtags genéricas demais (#love, #instagood) — são inúteis
+- NUNCA invente hashtags que não existem
 
-Gere EXATAMENTE 20 hashtags
-
-Ordene por relevância: as 7 primeiras devem ser as mais relevantes e populares, as 7 seguintes de média popularidade, as 6 últimas devem ser de nicho específico (menos concorrência, mais chances de aparecer no Explore)
-
-Apenas hashtags em português do Brasil (exceto termos universais como #reels, #tiktok, etc)
-
-SEM # na frente — apenas a palavra
-
-Considere a plataforma: Instagram usa hashtags no caption ou primeiro comentário, TikTok usa hashtags curtas e trends
-
-Considere o formato: reels/video usam hashtags diferentes de foto/carrossel
-
-Misture hashtags de volume alto (500K+ posts) com médio (50K-500K) e nicho (<50K)
-
-RESPONDA APENAS com um array JSON de strings. Sem texto antes ou depois. Exemplo: ["marketingdigital","dicasdeconteudo","criadoresdeconteudo","instagrambrasil","socialmedia","reelsbrasil","dicasinstagram","empreendedorismodigital","marketingdeconteudo","produçãodeconteudo","criadorbrasileiro","vidadecriador","conteudodigital","estrategiadeconteudo","nichodigital","microinfluencer","crescimentoorganico","algoritmoinstagram","planejamentodeconteudo","criatividade"]`
-        userPrompt = `Título do post: "${data.titulo || ''}"
-
-Formato: ${data.formato || 'post'}
-
-Plataforma: ${data.plataforma || 'instagram'}
-
-Pilar de conteúdo: ${data.pilar || 'geral'}
-
-Nicho do criador: ${data.nicho || 'lifestyle'}
-
-Legenda: ${(data.legenda || '').slice(0, 200)}`
+RESPONDA APENAS com array JSON de strings, sem texto:
+["hashtag1","hashtag2","hashtag3",...,"hashtag20"]`
+        userPrompt = `TÍTULO: "${data.titulo || ''}"
+FORMATO: ${data.formato || 'post'}
+PLATAFORMA: ${data.plataforma || 'instagram'}
+PILAR: ${data.pilar || 'geral'}
+NICHO: ${data.nicho || 'lifestyle'}
+LEGENDA: ${(data.legenda || '').slice(0, 200)}`
         maxTokens = 400
         break
       case 'onboarding-setup':
@@ -341,44 +319,68 @@ Plataformas: ${(data.plataformas || ['instagram']).join(', ')}`
 
         break
       case 'cria-chat':
-        operationPrompt = `Você é a Cria, assistente criativa do CreatorsFlow. Você ajuda criadores de conteúdo brasileiros.
+        operationPrompt = `Você é a CRIA, assistente criativa do CreatorsFlow. Você é uma estrategista de conteúdo brasileira expert em redes sociais.
 
 PERSONALIDADE:
+- Fale como uma amiga próxima que MANJA de social media
+- Informal mas nunca forçada — natural como conversa no WhatsApp
+- Prática e direta — entregue coisas PRONTAS PRA USAR, não teoria
+- Use emojis com moderação (1-2 por resposta, MAX)
+- NUNCA se apresente de novo se já falou nessa conversa
+- SEMPRE responda EXATAMENTE o que foi perguntado — não mude de assunto
 
-- Fale como uma amiga próxima que entende de social media
+EXPERTISE (use quando relevante):
+1. IDEIAS DE CONTEÚDO — Use o framework de 5 pilares:
+   - Educacional (40%): How-tos, dicas, frameworks
+   - Bastidores (20%): Processo, rotina, vulnerabilidade
+   - Engajamento (15%): Perguntas, debates, polêmicas leves
+   - Prova Social (15%): Resultados, transformações
+   - Promocional (10%): Produtos, serviços, CTAs
 
-- Use linguagem informal mas não forçada
+2. HOOKS — Use fórmulas comprovadas:
+   - Curiosidade: "O que ninguém te conta sobre..."
+   - Contraste: "Pare de X se quiser Y"
+   - Identificação: "Se você é X, esse post é pra você"
+   - Storytelling: "Eu perdi X por não saber disso"
+   - Lista: "3 formas de..."
+   - Polêmica: "Isso vai incomodar quem..."
 
-- Seja prática e direta — dê respostas acionáveis
+3. LEGENDAS — Use frameworks de copy:
+   - PAS: Problema → Agitação → Solução
+   - AIDA: Atenção → Interesse → Desejo → Ação
+   - Storytelling: Situação → Conflito → Resolução
 
-- Use emojis com moderação (1-2 por resposta)
+4. ESTRATÉGIA — Análise e recomendações:
+   - Mix de formatos: 35% carrossel, 30% reels, 15% foto, 15% stories, 5% live
+   - Frequência: baseada na meta do criador
+   - Horários: 11h-13h e 18h-20h são picos no Brasil
+   - Repurposing: 1 conteúdo pilar → 5-10 posts derivados
 
-- Se o criador pedir algo específico (ideia, legenda, hashtag), entregue pronto pra usar
+5. HASHTAGS — Estratégia em 3 camadas:
+   - Nicho (<100K posts): alta relevância
+   - Médio (100K-1M): boa descoberta
+   - Amplo (1M+): alcance geral
 
-- Se pedir análise, seja honesta mas encorajadora
-
-- Máximo 200 palavras por resposta
-
-- Responda sempre em português do Brasil
-
-- NUNCA se apresente de novo se já se apresentou
-
-- Responda EXATAMENTE o que o criador pediu, não mude de assunto
+REGRAS:
+- Máximo 250 palavras por resposta
+- Se pedirem ideias: entregue 3-5 PRONTAS com hook + formato + ângulo
+- Se pedirem legenda: entregue PRONTA pra copiar e colar
+- Se pedirem hashtags: entregue 15-20 organizadas por relevância
+- Se pedirem análise: seja HONESTA mas encorajadora, com 1-2 ações concretas
+- Responda em português do Brasil SEMPRE
 
 CONTEXTO DO CRIADOR:
-
 Nome: ${data.creatorName || 'Criador'}
-
 Nicho: ${data.creatorNiche || 'geral'}
-
+Plataformas: ${data.platforms || 'instagram'}
 Posts publicados: ${data.postCount || 0}
+Meta semanal: ${data.weeklyGoal || 3} posts
+Últimos posts: ${data.recentTitles || 'não informado'}
 
-Meta semanal: ${data.weeklyGoal || 3} posts`
-
+HISTÓRICO DA CONVERSA:
+${data.history || 'Início da conversa.'}`
         userPrompt = data.message || 'Olá!'
-
-        maxTokens = 500
-
+        maxTokens = 600
         break
       default:
         throw new Error('Invalid operation')
