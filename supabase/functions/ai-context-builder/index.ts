@@ -172,67 +172,40 @@ REGRAS DE COMPORTAMENTO:
         maxTokens = 60
         break
       case 'idea-suggestions':
+        operationPrompt = `Você é um estrategista de conteúdo especialista em redes sociais brasileiras. Gere EXATAMENTE 3 posts prontos para executar.
 
-        operationPrompt = `Você é um estrategista de conteúdo especializado em criar posts virais para redes sociais brasileiras.
+FRAMEWORK DE PILARES DE CONTEÚDO:
+Cada sugestão deve cobrir um pilar diferente:
+1. EDUCACIONAL (40% do mix) — How-tos, dicas, frameworks, erros comuns
+2. BASTIDORES (20%) — Processo, rotina, dia-a-dia, vulnerabilidade
+3. ENGAJAMENTO (15%) — Perguntas, debates, polêmicas leves, "qual você prefere?"
+4. PROVA SOCIAL (15%) — Resultados, transformações, antes/depois, depoimentos
+5. PROMOCIONAL (10%) — Produtos, serviços, ofertas, CTAs diretos
 
-TAREFA: A partir da ideia/assunto do creator, gere EXATAMENTE 3 posts prontos para executar. Cada post deve ser uma abordagem COMPLETAMENTE DIFERENTE do mesmo tema.
+FÓRMULAS DE HOOK POR PLATAFORMA:
+Instagram/Reels: "Save isso pra depois", "Testei [X] por [tempo]. Resultado:", "POV: você acabou de descobrir [benefício]", "O que [público] erra sobre [tema]:", "Meu processo exato pra [resultado]:"
+TikTok: "Espera, você ainda faz [jeito antigo]?", "O hack de [tema] que ninguém te mostrou", "Se você é [público], assiste isso", "Story time: [setup intrigante]"
+YouTube: "Tutorial completo:", "[número] erros que estão travando seu [tema]", "Testei por [tempo] — vale a pena?"
 
-REGRAS PARA TÍTULOS:
+REGRAS:
+- Títulos são HOOKS — a primeira coisa que a pessoa lê/ouve. Máximo 70 caracteres.
+- Cada sugestão com ângulo editorial DIFERENTE: tutorial, bastidor, opinião, storytelling, lista, antes/depois, mito vs verdade, trend adaptada
+- Formatos: varie entre reels, carrossel, foto, video, story, shorts
+- Objetivos: engajamento, autoridade, venda, relacionamento — varie entre as 3
+- Linguagem de rede social BR: informal, direta, como amigo falando
+- NUNCA use títulos genéricos como "Reflexão sobre X" ou "Dicas de X"
 
-- O título É o gancho do post — deve ser a primeira frase que a pessoa lê/ouve
+FORMATO JSON (APENAS o array, sem texto):
+[{"titulo":"max 70 chars","formato":"reels|carrossel|foto|video|story","angulo":"descritivo e específico","objetivo":"engajamento|autoridade|venda|relacionamento"}]
 
-- Use padrões virais: curiosidade ("O que ninguém te conta sobre..."), contraste ("Pare de X se quiser Y"), identificação ("Se você é X, esse post é pra você"), storytelling ("Eu perdi X por não saber disso"), lista prática ("3 formas de..."), polêmica leve ("Isso vai incomodar quem...")
-
-- Linguagem de rede social: informal, direta, como se estivesse falando com um amigo
-
-- NUNCA use títulos genéricos como "Reflexão sobre X" ou "Dicas de X" — seja específico e provocativo
-
-- Máximo 70 caracteres
-
-- O título deve funcionar sozinho como hook de abertura do conteúdo
-
-REGRAS PARA ÂNGULOS:
-
-- Cada sugestão deve ter um ângulo editorial diferente: tutorial, bastidor, opinião, storytelling, lista, antes/depois, mito vs verdade, desabafo, comparação, trend adaptada
-
-- O ângulo deve ser descritivo e específico (ex: "bastidor do processo criativo", não apenas "bastidor")
-
-REGRAS PARA FORMATOS:
-
-- Varie entre os formatos disponíveis: reels, carrossel, foto, video, story
-
-- Escolha o formato que MELHOR se encaixa no ângulo (ex: tutorial = carrossel, bastidor = reels, opinião = story)
-
-- Respeite a plataforma informada
-
-REGRAS PARA OBJETIVOS:
-
-- Cada post deve ter um objetivo claro: engajamento (comentários/saves), autoridade (posicionamento como referência), venda (direcionar para produto/serviço), relacionamento (conexão emocional)
-
-- Varie os objetivos entre as 3 sugestões
-
-FORMATO DE RESPOSTA:
-
-Retorne APENAS um array JSON válido com 3 objetos. Nenhum texto antes ou depois.
-
-Cada objeto: {"titulo":"string max 70 chars","formato":"reels|carrossel|foto|video|story","angulo":"string curta e descritiva","objetivo":"engajamento|autoridade|venda|relacionamento"}
-
-EXEMPLO DE BOA RESPOSTA para a ideia "rotina matinal":
-
-[{"titulo":"Minha rotina antes de abrir o Instagram mudou tudo","formato":"reels","angulo":"bastidor com storytelling pessoal","objetivo":"relacionamento"},{"titulo":"5 coisas que faço antes das 8h que triplicaram meu engajamento","formato":"carrossel","angulo":"lista prática com resultados","objetivo":"autoridade"},{"titulo":"Sua rotina matinal está sabotando seu conteúdo. Veja porquê.","formato":"story","angulo":"opinião provocativa com dica","objetivo":"engajamento"}]`
-
-        userPrompt = `IDEIA DO CREATOR: "${data.ideiaTexto || 'conteúdo geral'}"
-
-PLATAFORMA PRINCIPAL: ${data.platform || 'instagram'}
-
-PILAR DE CONTEÚDO: ${data.pilar || 'geral'}
-
+EXEMPLO para "rotina matinal":
+[{"titulo":"Minha rotina antes de abrir o Instagram mudou tudo","formato":"reels","angulo":"bastidor com storytelling pessoal","objetivo":"relacionamento"},{"titulo":"5 coisas que faço antes das 8h que triplicaram meu engajamento","formato":"carrossel","angulo":"lista prática com resultados","objetivo":"autoridade"},{"titulo":"Sua rotina matinal tá sabotando seu conteúdo. Veja porquê.","formato":"story","angulo":"opinião provocativa com dica","objetivo":"engajamento"}]`
+        userPrompt = `IDEIA: "${data.ideiaTexto || 'conteúdo geral'}"
+PLATAFORMA: ${data.platform || 'instagram'}
+PILAR: ${data.pilar || 'geral'}
 NICHO: ${data.niche || 'lifestyle'}
-
-Gere 3 posts prontos para executar sobre essa ideia. Lembre-se: títulos devem ser ganchos virais, não títulos de blog.`
-
+Gere 3 posts. Títulos são hooks virais, não títulos de blog.`
         maxTokens = 600
-
         break
       case 'generate-caption':
 
