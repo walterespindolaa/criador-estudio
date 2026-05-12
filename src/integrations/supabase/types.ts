@@ -101,7 +101,9 @@ export type Database = {
           icon: string | null
           id: string
           is_active: boolean | null
+          link_type: string | null
           position: number | null
+          thumbnail_url: string | null
           title: string
           url: string
           user_id: string
@@ -112,7 +114,9 @@ export type Database = {
           icon?: string | null
           id?: string
           is_active?: boolean | null
+          link_type?: string | null
           position?: number | null
+          thumbnail_url?: string | null
           title: string
           url: string
           user_id: string
@@ -123,7 +127,9 @@ export type Database = {
           icon?: string | null
           id?: string
           is_active?: boolean | null
+          link_type?: string | null
           position?: number | null
+          thumbnail_url?: string | null
           title?: string
           url?: string
           user_id?: string
@@ -1018,6 +1024,7 @@ export type Database = {
           ai_ideas_used_month: number | null
           avatar_url: string | null
           bio: string | null
+          bio_settings: Json | null
           bio_slug: string | null
           bio_theme: Json | null
           created_at: string | null
@@ -1048,6 +1055,7 @@ export type Database = {
           ai_ideas_used_month?: number | null
           avatar_url?: string | null
           bio?: string | null
+          bio_settings?: Json | null
           bio_slug?: string | null
           bio_theme?: Json | null
           created_at?: string | null
@@ -1078,6 +1086,7 @@ export type Database = {
           ai_ideas_used_month?: number | null
           avatar_url?: string | null
           bio?: string | null
+          bio_settings?: Json | null
           bio_slug?: string | null
           bio_theme?: Json | null
           created_at?: string | null
