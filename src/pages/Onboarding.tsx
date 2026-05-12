@@ -212,15 +212,16 @@ const Onboarding = () => {
         platform: idea.platform ?? platforms[0] ?? "instagram",
       })).filter((idea) => idea.title);
 
-      const profileUpdates = {
-        ...(sanitizedName ? { name: sanitizedName } : {}),
-        ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
-        ...(sanitizedHandle ? { instagram_handle: sanitizedHandle } : {}),
-        ...(niches.length > 0 ? { niche: niches[0] } : {}),
-        ...(platforms.length > 0 ? { platforms } : {}),
-        weekly_goal: weeklyGoal,
+      const profileUpdates: Record<string, unknown> = {
         onboarding_completed: true,
+        weekly_goal: weeklyGoal,
       };
+
+      if (sanitizedName) profileUpdates.name = sanitizedName;
+      if (avatarUrl) profileUpdates.avatar_url = avatarUrl;
+      if (sanitizedHandle) profileUpdates.instagram_handle = sanitizedHandle;
+      if (niches.length > 0) profileUpdates.niche = niches[0];
+      if (platforms.length > 0) profileUpdates.platforms = platforms;
 
       await updateProfile.mutateAsync(profileUpdates);
 

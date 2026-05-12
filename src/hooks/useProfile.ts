@@ -36,15 +36,21 @@ export function useProfile() {
   });
 
   const updateProfile = useMutation({
-    mutationFn: async (updates: ProfileUpdate): Promise<void> => {
+    mutationFn: async (updates: ProfileUpdate): Promise<ProfileUpdate> => {
       if (!userId) throw new Error("Not authenticated");
       const { error } = await supabase
         .from("profiles")
         .update(updates as never)
         .eq("id", userId);
       if (error) throw error;
+      return updates;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: (updates) => {
+      queryClient.setQueryData<Profile | null>(queryKey, (prev) =>
+        prev ? { ...prev, ...updates } : prev
+      );
+      queryClient.invalidateQueries({ queryKey });
+    },
   });
 
   return { profile, isLoading, error, updateProfile, refetch };
