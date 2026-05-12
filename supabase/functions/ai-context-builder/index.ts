@@ -200,8 +200,13 @@ FORMATO JSON (APENAS o array, sem texto):
 
 EXEMPLO para "rotina matinal":
 [{"titulo":"Minha rotina antes de abrir o Instagram mudou tudo","formato":"reels","angulo":"bastidor com storytelling pessoal","objetivo":"relacionamento"},{"titulo":"5 coisas que faço antes das 8h que triplicaram meu engajamento","formato":"carrossel","angulo":"lista prática com resultados","objetivo":"autoridade"},{"titulo":"Sua rotina matinal tá sabotando seu conteúdo. Veja porquê.","formato":"story","angulo":"opinião provocativa com dica","objetivo":"engajamento"}]${data.brandContext ? `\nCONTEXTO DA MARCA DO CRIADOR:\n${data.brandContext}\nUse essas informações pra personalizar o conteúdo ao estilo e tom da marca.` : ''}`
-        userPrompt = `IDEIA: "${data.ideiaTexto || 'conteúdo geral'}"`
-
+        userPrompt = `IDEIA: "${data.ideiaTexto || 'conteúdo geral'}"
+PLATAFORMA: ${data.platform || 'instagram'}
+PILAR: ${data.pilar || 'geral'}
+NICHO: ${data.niche || 'lifestyle'}
+Gere 3 posts. Títulos são hooks virais, não títulos de blog.`
+        maxTokens = 600
+        break
       case 'generate-caption':
         const toneGuide: Record<string, string> = {
           descontraido: 'Casual, como conversa entre amigos. Usa gírias leves. Frases curtas.',
@@ -244,8 +249,7 @@ Termine 100% das legendas com algo que provoque resposta:
 - Ação: "Salva pra quando precisar"
 - Comunidade: "Marca alguém que precisa ver isso"
 
-RESPONDA APENAS COM A LEGENDA. Sem título, sem aspas, sem explicação.`
-${data.brandContext ? `\nCONTEXTO DA MARCA DO CRIADOR:\n${data.brandContext}\nUse essas informações pra personalizar o conteúdo ao estilo e tom da marca.` : ''}
+RESPONDA APENAS COM A LEGENDA. Sem título, sem aspas, sem explicação.${data.brandContext ? `\nCONTEXTO DA MARCA DO CRIADOR:\n${data.brandContext}\nUse essas informações pra personalizar o conteúdo ao estilo e tom da marca.` : ''}`
         userPrompt = `TÍTULO DO POST: "${data.titulo || ''}"
 PILAR: ${data.pilar || 'geral'}
 NICHO: ${data.nicho || 'lifestyle'}
@@ -271,8 +275,7 @@ REGRAS:
 - NUNCA invente hashtags que não existem
 
 RESPONDA APENAS com array JSON de strings, sem texto:
-["hashtag1","hashtag2","hashtag3",...,"hashtag20"]`
-${data.brandContext ? `\nCONTEXTO DA MARCA DO CRIADOR:\n${data.brandContext}\nUse essas informações pra personalizar o conteúdo ao estilo e tom da marca.` : ''}
+["hashtag1","hashtag2","hashtag3",...,"hashtag20"]${data.brandContext ? `\nCONTEXTO DA MARCA DO CRIADOR:\n${data.brandContext}\nUse essas informações pra personalizar o conteúdo ao estilo e tom da marca.` : ''}`
         userPrompt = `TÍTULO: "${data.titulo || ''}"
 FORMATO: ${data.formato || 'post'}
 PLATAFORMA: ${data.plataforma || 'instagram'}
@@ -347,13 +350,9 @@ Meta semanal: ${data.meta_semanal || 3} posts
 
 HISTÓRICO:
 
-${Array.isArray(data.historico) ? data.historico.map((m: any) => `${m.role}: ${m.content}`).join('\n') : 'Início da conversa.'}`
-${data.brandContext ? `\nCONTEXTO DA MARCA DO CRIADOR:\n${data.brandContext}\nUse essas informações pra personalizar o conteúdo ao estilo e tom da marca.` : ''}
-
+${Array.isArray(data.historico) ? data.historico.map((m: any) => `${m.role}: ${m.content}`).join('\n') : 'Início da conversa.'}${data.brandContext ? `\nCONTEXTO DA MARCA DO CRIADOR:\n${data.brandContext}\nUse essas informações pra personalizar o conteúdo ao estilo e tom da marca.` : ''}`
         userPrompt = data.mensagem || 'Olá!'
-
         maxTokens = 600
-
         break
       case 'repurpose-content':
         operationPrompt = `Você é um especialista em repurposing de conteúdo para redes sociais brasileiras.
@@ -383,7 +382,6 @@ REGRAS:
 RESPONDA APENAS com JSON válido:
 
 {"titulo":"novo hook max 70 chars","legenda":"legenda adaptada","hashtags":["tag1","tag2"],"dica":"dica de execução"}`
-
         userPrompt = `POST ORIGINAL:
 
 Título: "${data.titulo_original || ''}"
@@ -403,9 +401,7 @@ Plataforma: ${data.plataforma_destino || 'tiktok'}
 Tom: ${data.tom || 'descontraido'}
 
 Nicho: ${data.nicho || 'lifestyle'}`
-
         maxTokens = 600
-
         break
       case 'refine-caption':
         operationPrompt = `Você é um copywriter expert em redes sociais brasileiras.
@@ -416,9 +412,7 @@ Aplique a instrução e retorne APENAS a legenda nova, sem explicações, sem as
 
 Mantenha os emojis se houver. Mantenha hashtags se houver.
 
-Linguagem natural brasileira.`
-${data.brandContext ? `\nCONTEXTO DA MARCA DO CRIADOR:\n${data.brandContext}\nUse essas informações pra personalizar o conteúdo ao estilo e tom da marca.` : ''}
-
+Linguagem natural brasileira.${data.brandContext ? `\nCONTEXTO DA MARCA DO CRIADOR:\n${data.brandContext}\nUse essas informações pra personalizar o conteúdo ao estilo e tom da marca.` : ''}`
         userPrompt = `INSTRUÇÃO: ${data.instrucao || 'Reescreva'}
 
 LEGENDA ORIGINAL:
@@ -430,9 +424,7 @@ PLATAFORMA: ${data.plataforma || 'instagram'}
 FORMATO: ${data.formato || 'post'}
 
 NICHO: ${data.nicho || 'geral'}`
-
         maxTokens = 500
-
         break
       default:
         throw new Error('Invalid operation')
