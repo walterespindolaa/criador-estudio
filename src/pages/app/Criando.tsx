@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { PostDrawer } from "@/components/kanban/PostDrawer";
+import { PostEditor } from "@/components/kanban/PostEditor";
 import { FORMAT_LABELS, STATUS_OPTIONS } from "@/lib/constants";
 import { InfoTooltip } from "@/components/shared/InfoTooltip";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
@@ -333,7 +333,7 @@ const Criando = () => {
           })}
         </div>
       </motion.div>
-      <PostDrawer open={drawerOpen} onOpenChange={setDrawerOpen} post={selectedPost} pillars={pillars} userId={user?.id || ""} onSaved={() => { /* invalidations */ }} />
+      <PostEditor open={drawerOpen} onOpenChange={setDrawerOpen} post={selectedPost} pillars={pillars} userId={user?.id || ""} onSaved={() => { /* invalidations */ }} />
     </div>
   );
 };

@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { PostDrawer } from "@/components/kanban/PostDrawer";
+import { PostEditor } from "@/components/kanban/PostEditor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { sanitizeText } from "@/lib/sanitize";
 import { useIdeas, type Idea } from "@/hooks/useIdeas";
@@ -423,7 +423,7 @@ const Ideias = () => {
       </Dialog>
 
       {promotedPost && (
-        <PostDrawer
+        <PostEditor
           open={postDrawerOpen}
           onOpenChange={setPostDrawerOpen}
           post={promotedPost}

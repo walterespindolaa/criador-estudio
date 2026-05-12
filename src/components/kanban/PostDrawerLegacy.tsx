@@ -71,7 +71,7 @@ interface Pillar {
   color: string;
 }
 
-interface PostDrawerProps {
+interface PostDrawerLegacyProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   post: Post | null;
@@ -99,7 +99,7 @@ const FALLBACK_PROMPTS = [
   { title: "Carrossel", text: "Monte carrossel de 8 slides sobre [TEMA]. Slide 1 = hook. Último = CTA.", category: "roteiro" },
 ];
 
-export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved }: PostDrawerProps) {
+export function PostDrawerLegacy({ open, onOpenChange, post, pillars, userId, onSaved }: PostDrawerLegacyProps) {
   const isNew = !post;
   const [title, setTitle] = useState("");
   const [platform, setPlatform] = useState("instagram");

@@ -20,7 +20,7 @@ import {
   Plus, Trash2, CalendarDays, Target, BarChart3, Check, ChevronLeft, ChevronRight,
   Flag, TrendingUp, ListChecks, Save, Milestone,
 } from "lucide-react";
-import { PostDrawer } from "@/components/kanban/PostDrawer";
+import { PostEditor } from "@/components/kanban/PostEditor";
 import { InfoTooltip } from "@/components/shared/InfoTooltip";
 import { WeekTab } from "@/components/plano/WeekTab";
 import { MonthTab } from "@/components/plano/MonthTab";
@@ -386,7 +386,7 @@ const Plano = () => {
         </Tabs>
       </motion.div>
 
-      <PostDrawer
+      <PostEditor
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         post={selectedPost}
