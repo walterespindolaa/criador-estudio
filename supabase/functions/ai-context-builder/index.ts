@@ -285,38 +285,11 @@ LEGENDA: ${(data.legenda || '').slice(0, 200)}`
         maxTokens = 400
         break
       case 'onboarding-setup':
-        operationPrompt = `Você é um estrategista de conteúdo brasileiro. Configure o espaço criativo de um novo criador.
-
-Baseado no nicho e plataformas do criador, retorne um JSON com:
-
-1. pilares: 3 pilares de conteúdo (name + color hex)
-
-2. habitos: 3 hábitos diários de criação (strings curtas)
-
-3. ideias: 5 ideias de posts (title + format + platform)
-
-REGRAS:
-
-- Pilares devem ser específicos pro nicho (não genéricos como "Educação")
-
-- Hábitos devem ser ações concretas e rápidas (ex: "Filmar 1 story", não "Criar conteúdo")
-
-- Ideias devem ter títulos estilo hook viral (como se fossem o gancho do post)
-
-- Formatos: reels, carrossel, foto, story, video, shorts
-
-- Cores dos pilares: use cores vibrantes distintas (#FF6B6B, #4DABF7, #FFBE0B, #20B2AA, #FF69B4, #7C5CFC)
-
-RESPONDA APENAS com JSON válido:
-
+        operationPrompt = `Você é um estrategista de conteúdo brasileiro. Configure o espaço criativo de um novo criador. Retorne APENAS JSON válido, sem texto antes ou depois.
 {"pilares":[{"name":"string","color":"#hex"}],"habitos":["string"],"ideias":[{"title":"string","format":"string","platform":"string"}]}`
-
         userPrompt = `Nicho: ${data.nicho || 'lifestyle'}
-
-Plataformas: ${(data.plataformas || ['instagram']).join(', ')}`
-
+Plataformas: ${Array.isArray(data.plataformas) ? data.plataformas.join(', ') : data.plataformas || 'instagram'}`
         maxTokens = 600
-
         break
       case 'cria-chat':
         operationPrompt = `Você é a CRIA, assistente criativa do CreatorsFlow. Estrategista de conteúdo brasileira expert em redes sociais.
