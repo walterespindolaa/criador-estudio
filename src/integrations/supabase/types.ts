@@ -1026,7 +1026,6 @@ export type Database = {
           bio: string | null
           bio_settings: Json | null
           bio_slug: string | null
-          bio_theme: Json | null
           created_at: string | null
           id: string
           instagram_handle: string | null
@@ -1057,7 +1056,6 @@ export type Database = {
           bio?: string | null
           bio_settings?: Json | null
           bio_slug?: string | null
-          bio_theme?: Json | null
           created_at?: string | null
           id: string
           instagram_handle?: string | null
@@ -1088,7 +1086,6 @@ export type Database = {
           bio?: string | null
           bio_settings?: Json | null
           bio_slug?: string | null
-          bio_theme?: Json | null
           created_at?: string | null
           id?: string
           instagram_handle?: string | null
@@ -1474,11 +1471,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      is_admin: { Args: never; Returns: boolean }
       increment_bio_link_click: {
         Args: { link_id: string }
         Returns: undefined
       }
+      is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

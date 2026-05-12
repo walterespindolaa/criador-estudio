@@ -409,6 +409,32 @@ Nicho: ${data.nicho || 'lifestyle'}`
         maxTokens = 600
 
         break
+      case 'refine-caption':
+        operationPrompt = `Você é um copywriter expert em redes sociais brasileiras.
+
+Recebeu uma legenda existente e uma instrução de como refiná-la.
+
+Aplique a instrução e retorne APENAS a legenda nova, sem explicações, sem aspas, sem prefixo.
+
+Mantenha os emojis se houver. Mantenha hashtags se houver.
+
+Linguagem natural brasileira.`
+
+        userPrompt = `INSTRUÇÃO: ${data.instrucao || 'Reescreva'}
+
+LEGENDA ORIGINAL:
+
+${data.legenda_original || ''}
+
+PLATAFORMA: ${data.plataforma || 'instagram'}
+
+FORMATO: ${data.formato || 'post'}
+
+NICHO: ${data.nicho || 'geral'}`
+
+        maxTokens = 500
+
+        break
       default:
         throw new Error('Invalid operation')
     }
