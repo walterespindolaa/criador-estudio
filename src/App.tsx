@@ -20,6 +20,7 @@ const Ideias = lazy(() => import("./pages/app/Ideias"));
 const Tarefas = lazy(() => import("./pages/app/Tarefas"));
 const Criando = lazy(() => import("./pages/app/Criando"));
 const Feed = lazy(() => import("./pages/app/Feed"));
+const Relatorios = lazy(() => import("./pages/app/Relatorios"));
 const Plano = lazy(() => import("./pages/app/Plano"));
 const Biblioteca = lazy(() => import("./pages/app/Biblioteca"));
 const Arquivos = lazy(() => import("./pages/app/Arquivos"));
@@ -65,6 +66,7 @@ const App = () => (
                 <Route path="ideias" element={<ErrorBoundary><Ideias /></ErrorBoundary>} />
                 <Route path="criando" element={<ErrorBoundary><Criando /></ErrorBoundary>} />
                 <Route path="feed" element={<ErrorBoundary><Feed /></ErrorBoundary>} />
+                <Route path="relatorios" element={<ErrorBoundary><Relatorios /></ErrorBoundary>} />
                 <Route path="tarefas" element={<ErrorBoundary><Tarefas /></ErrorBoundary>} />
                 <Route path="plano" element={<ErrorBoundary><Plano /></ErrorBoundary>} />
                 <Route path="biblioteca" element={<ErrorBoundary><Biblioteca /></ErrorBoundary>} />

@@ -13,6 +13,7 @@ import {
   LogOut,
   Grid3X3,
   Sparkles,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
@@ -59,9 +60,15 @@ const groups = [
     ],
   },
   {
-    label: "Histórico",
+    label: "Análise",
     items: [
+      { title: "Relatórios", url: "/app/relatorios", icon: BarChart3 },
       { title: "Histórico", url: "/app/historico", icon: Archive },
+    ],
+  },
+  {
+    label: "Ajustes",
+    items: [
       { title: "Aprender", url: "/app/aprender", icon: GraduationCap },
       { title: "Configurações", url: "/app/configuracoes", icon: Settings },
     ],
