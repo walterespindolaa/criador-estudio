@@ -288,7 +288,7 @@ const Plano = () => {
   })();
 
   return (
-    <div className="max-w-5xl pb-20 md:pb-0">
+    <div className="w-full pb-20 md:pb-0">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center shadow-sm shrink-0">
