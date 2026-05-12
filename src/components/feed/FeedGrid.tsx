@@ -40,7 +40,7 @@ export function FeedGrid({ posts, pillars, thumbnails, onRemove }: Props) {
                     {...dragProvided.draggableProps}
                     {...dragProvided.dragHandleProps}
                     className={cn(
-                      "aspect-square relative group cursor-pointer overflow-hidden bg-muted",
+                      "aspect-[4/5] relative group cursor-pointer overflow-hidden bg-muted",
                       dragSnapshot.isDragging && "ring-2 ring-primary shadow-warm-lg z-10"
                     )}
                     style={dragProvided.draggableProps.style}
@@ -94,7 +94,7 @@ export function FeedGrid({ posts, pillars, thumbnails, onRemove }: Props) {
           {Array.from({ length: emptyCount }).map((_, i) => (
             <div
               key={`empty-${i}`}
-              className="aspect-square border border-dashed border-border/50 flex items-center justify-center bg-background/40"
+              className="aspect-[4/5] border border-dashed border-border/50 flex items-center justify-center bg-background/40"
             >
               <Plus className="h-5 w-5 text-muted-foreground/30" strokeWidth={1.5} />
             </div>
