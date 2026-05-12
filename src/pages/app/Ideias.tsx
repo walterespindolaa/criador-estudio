@@ -289,7 +289,11 @@ const Ideias = () => {
                 <LayoutGrid className="h-3.5 w-3.5 mr-1 inline" /> Galeria
               </button>
             </div>
-            <Button variant="hero" onClick={openNew} className="hidden md:flex"><Plus className="h-4 w-4 mr-1" /> Nova Ideia</Button>
+            <Button variant="hero" onClick={openNew} className="shrink-0" size="sm">
+              <Plus className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Nova Ideia</span>
+              <span className="sm:hidden">Nova</span>
+            </Button>
           </div>
         </div>
 

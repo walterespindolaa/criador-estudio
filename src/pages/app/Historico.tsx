@@ -166,16 +166,16 @@ const Historico = () => {
 
         {/* Filters */}
         {posts.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-6">
+          <div className="flex flex-wrap gap-1.5 mb-6">
             {/* Platform filter */}
-            <div className="flex gap-1">
+            <div className="flex gap-1 flex-wrap">
               <button onClick={() => setFilterPlatform(null)}
-                className={`p-2 rounded-xl border transition-colors ${!filterPlatform ? "bg-primary/10 border-primary" : "bg-card border-border"}`}>
-                <Filter className="h-4 w-4" />
+                className={`p-1.5 sm:p-2 rounded-xl border transition-colors ${!filterPlatform ? "bg-primary/10 border-primary" : "bg-card border-border"}`}>
+                <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </button>
               {(["instagram", "tiktok", "youtube"] as const).map(p => (
                 <button key={p} onClick={() => setFilterPlatform(filterPlatform === p ? null : p)}
-                  className={`p-2 rounded-xl border transition-colors ${filterPlatform === p ? "bg-primary/10 border-primary" : "bg-card border-border"}`}>
+                  className={`p-1.5 sm:p-2 rounded-xl border transition-colors ${filterPlatform === p ? "bg-primary/10 border-primary" : "bg-card border-border"}`}>
                   <PlatformIcon platform={p} size="sm" />
                 </button>
               ))}
@@ -184,7 +184,7 @@ const Historico = () => {
             <div className="flex gap-1 flex-wrap">
               {pillars.map(p => (
                 <button key={p.id} onClick={() => setFilterPillar(filterPillar === p.id ? null : p.id)}
-                  className={`px-2.5 py-1 rounded-xl text-xs font-body border transition-colors ${
+                  className={`px-2 py-1 sm:px-2.5 rounded-xl text-[10px] sm:text-xs font-body border transition-colors ${
                     filterPillar === p.id ? "text-primary-foreground border-transparent" : "bg-card border-border"
                   }`}
                   style={filterPillar === p.id ? { backgroundColor: p.color } : {}}>
@@ -193,10 +193,10 @@ const Historico = () => {
               ))}
             </div>
             {/* Period filter */}
-            <div className="flex gap-1 ml-auto">
+            <div className="flex gap-1 flex-wrap sm:ml-auto">
               {PERIOD_OPTIONS.map(o => (
                 <button key={o.key} onClick={() => setFilterPeriod(o.key)}
-                  className={`px-2.5 py-1 rounded-xl text-xs font-body border transition-colors ${
+                  className={`px-2 py-1 sm:px-2.5 rounded-xl text-[10px] sm:text-xs font-body border transition-colors ${
                     filterPeriod === o.key ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"
                   }`}>
                   {o.label}
@@ -251,9 +251,9 @@ const Historico = () => {
                             <div className="flex items-start gap-3">
                               <PlatformIcon platform={post.platform as any} size="sm" className="mt-0.5 flex-shrink-0" />
                               <div className="flex-1 min-w-0">
-                                <p className="font-body font-medium text-sm text-foreground">{post.title}</p>
+                                <p className="font-body font-medium text-sm text-foreground truncate">{post.title}</p>
                                 {post.archive_summary && (
-                                  <p className="text-xs text-primary font-body italic mt-0.5">"{post.archive_summary}"</p>
+                                  <p className="text-xs text-primary font-body italic mt-0.5 line-clamp-2">"{post.archive_summary}"</p>
                                 )}
                                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                                   <span className="text-xs bg-muted px-1.5 py-0.5 rounded font-body">{FORMAT_LABELS[post.format] || post.format}</span>
@@ -267,7 +267,7 @@ const Historico = () => {
                                   </span>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-3 text-xs text-muted-foreground font-body flex-shrink-0">
+                              <div className="hidden sm:flex items-center gap-3 text-xs text-muted-foreground font-body flex-shrink-0">
                                 {post.result_views != null && <span className="flex items-center gap-0.5"><Eye className="h-3 w-3" />{post.result_views}</span>}
                                 {post.result_saves != null && <span className="flex items-center gap-0.5"><Bookmark className="h-3 w-3" />{post.result_saves}</span>}
                                 {post.result_comments != null && <span className="flex items-center gap-0.5"><MessageSquare className="h-3 w-3" />{post.result_comments}</span>}
@@ -280,6 +280,22 @@ const Historico = () => {
                                   <Repeat2 className="h-3 w-3" /> Reaproveitar
                                 </Button>
                               </div>
+                            </div>
+                            {/* Mobile-only stats + action row */}
+                            <div className="sm:hidden mt-2 flex items-center justify-between flex-wrap gap-2 pl-7">
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground font-body">
+                                {post.result_views != null && <span className="flex items-center gap-0.5"><Eye className="h-3 w-3" />{post.result_views}</span>}
+                                {post.result_saves != null && <span className="flex items-center gap-0.5"><Bookmark className="h-3 w-3" />{post.result_saves}</span>}
+                                {post.result_comments != null && <span className="flex items-center gap-0.5"><MessageSquare className="h-3 w-3" />{post.result_comments}</span>}
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs gap-1"
+                                onClick={() => setRepurposeTarget(post)}
+                              >
+                                <Repeat2 className="h-3 w-3" /> Reaproveitar
+                              </Button>
                             </div>
                           </div>
                         );

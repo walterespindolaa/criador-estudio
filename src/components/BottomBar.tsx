@@ -61,9 +61,14 @@ export function BottomBar() {
       >
         <item.icon
           className={cn("h-5 w-5 transition-colors", active ? "text-primary" : "text-muted-foreground")}
-          strokeWidth={1.5}
+          strokeWidth={active ? 2 : 1.5}
         />
-        <span className={cn("text-[10px] font-body font-medium", active ? "text-primary" : "text-muted-foreground")}>
+        <span
+          className={cn(
+            "text-[10px] font-body transition-colors",
+            active ? "text-primary font-semibold" : "text-muted-foreground font-medium"
+          )}
+        >
           {item.title}
         </span>
         <span className={cn("h-1 w-1 rounded-full mt-0.5 transition-colors", active ? "bg-primary" : "bg-transparent")} />
@@ -125,8 +130,8 @@ export function BottomBar() {
             className="flex flex-col items-center justify-center gap-0.5 px-1 flex-1"
             aria-label="Cria IA"
           >
-            <span className="h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-glow -mt-4">
-              <Sparkles className="h-5 w-5" strokeWidth={1.8} />
+            <span className="h-12 w-12 rounded-full bg-gradient-to-br from-primary to-purple-600 text-white flex items-center justify-center shadow-lg shadow-primary/30 -mt-5 transition-transform active:scale-95">
+              <Sparkles className="h-5 w-5" strokeWidth={2} />
             </span>
             <span className="text-[10px] font-body font-semibold text-primary">Cria</span>
           </button>

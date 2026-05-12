@@ -285,7 +285,7 @@ const Configuracoes = () => {
         </div>
 
         <Tabs defaultValue="perfil" className="w-full">
-          <div className="overflow-x-auto mb-6 -mx-4 px-4 scrollbar-none">
+          <div className="overflow-x-auto mb-6 -mx-4 px-4 scrollbar-none flex justify-center sm:justify-start">
             <TabsList className="inline-flex h-auto bg-card border border-border rounded-2xl p-1.5 gap-1 min-w-max">
               <TabsTrigger value="perfil" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><User className="h-3.5 w-3.5 shrink-0" /><span className="hidden sm:inline">Perfil</span></TabsTrigger>
               <TabsTrigger value="pilares" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><LayoutGrid className="h-3.5 w-3.5 shrink-0" /><span className="hidden sm:inline">Pilares & Hábitos</span></TabsTrigger>
@@ -388,9 +388,9 @@ const Configuracoes = () => {
                   </div>
                   <div className="space-y-2">
                     <Label className="font-body text-sm">Plataformas</Label>
-                    <div className="flex gap-3">
+                    <div className="flex flex-wrap gap-2">
                       {(["instagram", "tiktok", "youtube"] as const).map(p => (
-                        <button key={p} type="button" onClick={() => togglePlatform(p)} className={`px-4 py-2 rounded-xl border text-sm font-body transition-colors flex items-center gap-2 ${platforms.includes(p) ? "bg-primary/10 border-primary" : "bg-background border-border"}`}>
+                        <button key={p} type="button" onClick={() => togglePlatform(p)} className={`shrink-0 px-3 sm:px-4 py-2 rounded-xl border text-sm font-body transition-colors flex items-center gap-2 ${platforms.includes(p) ? "bg-primary/10 border-primary" : "bg-background border-border"}`}>
                           <PlatformIcon platform={p} size="sm" />
                           {p === "instagram" ? "Instagram" : p === "tiktok" ? "TikTok" : "YouTube"}
                         </button>
@@ -474,15 +474,17 @@ const Configuracoes = () => {
                   <h3 className="font-display font-semibold text-foreground flex items-center gap-2"><HardDrive className="h-5 w-5 text-primary" /> Google Drive</h3>
                   <p className="text-sm text-muted-foreground font-body leading-relaxed">Conecte seu Google Drive para buscar imagens e vídeos diretamente para o moodboard e brandbook.</p>
                   {driveConnection ? (
-                    <div className="flex items-center justify-between p-4 bg-primary/5 rounded-xl border border-primary/20">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">G</div>
-                        <div>
-                          <p className="text-sm font-body font-semibold text-foreground">{driveConnection.google_email || "Conectado"}</p>
+                    <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-primary/5 rounded-xl border border-primary/20 overflow-hidden">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0">G</div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-body font-semibold text-foreground truncate max-w-[200px] sm:max-w-none" title={driveConnection.google_email || undefined}>
+                            {driveConnection.google_email || "Conectado"}
+                          </p>
                           <p className="text-xs font-body text-muted-foreground">Acesso apenas leitura</p>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm" onClick={handleDriveDisconnect}><Unplug className="h-4 w-4 mr-2" /> Desconectar</Button>
+                      <Button variant="outline" size="sm" onClick={handleDriveDisconnect} className="shrink-0"><Unplug className="h-4 w-4 mr-2" /> Desconectar</Button>
                     </div>
                   ) : (
                     <Button variant="hero" onClick={handleDriveConnect} disabled={connectingDrive} className="w-full sm:w-auto">
