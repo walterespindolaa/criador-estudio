@@ -257,36 +257,31 @@ CONTEÚDO/ROTEIRO: ${(data.conteudo || data.roteiro || 'não informado').slice(0
         maxTokens = 500
         break
       case 'suggest-hashtags':
-        operationPrompt = `Você é um especialista em hashtags para redes sociais brasileiras. Gere uma lista de hashtags relevantes para o post.
+        operationPrompt = `Você é especialista em estratégia de hashtags para redes sociais brasileiras.
+
+FRAMEWORK DE HASHTAGS EM 3 CAMADAS:
+1. NICHO (7 hashtags) — Menos de 100K posts. Alta relevância, fácil de ranquear. Específicas pro sub-nicho do criador.
+2. MÉDIO (7 hashtags) — 100K-1M posts. Boa descoberta com competição moderada. Relevantes pro nicho geral.
+3. AMPLO (6 hashtags) — 1M+ posts. Alta descoberta, pouca chance de ranquear, mas amplia alcance.
 
 REGRAS:
+- EXATAMENTE 20 hashtags, nessa ordem: 7 nicho + 7 médio + 6 amplo
+- Apenas em português BR (exceto termos universais: reels, tiktok, etc)
+- SEM # na frente — apenas a palavra/frase
+- Considere a plataforma: Instagram usa 15-20 no caption/comentário, TikTok usa 3-5 curtas
+- Formato ${data.formato || 'post'}: reels/video usam hashtags de formato (#reelsbrasil), carrossel usa hashtags educativas
+- Misture hashtags de comunidade (#criadorbrasileiro) com hashtags de tema (#dicasdeconteudo)
+- NUNCA use hashtags genéricas demais (#love, #instagood) — são inúteis
+- NUNCA invente hashtags que não existem
 
-Gere EXATAMENTE 20 hashtags
-
-Ordene por relevância: as 7 primeiras devem ser as mais relevantes e populares, as 7 seguintes de média popularidade, as 6 últimas devem ser de nicho específico (menos concorrência, mais chances de aparecer no Explore)
-
-Apenas hashtags em português do Brasil (exceto termos universais como #reels, #tiktok, etc)
-
-SEM # na frente — apenas a palavra
-
-Considere a plataforma: Instagram usa hashtags no caption ou primeiro comentário, TikTok usa hashtags curtas e trends
-
-Considere o formato: reels/video usam hashtags diferentes de foto/carrossel
-
-Misture hashtags de volume alto (500K+ posts) com médio (50K-500K) e nicho (<50K)
-
-RESPONDA APENAS com um array JSON de strings. Sem texto antes ou depois. Exemplo: ["marketingdigital","dicasdeconteudo","criadoresdeconteudo","instagrambrasil","socialmedia","reelsbrasil","dicasinstagram","empreendedorismodigital","marketingdeconteudo","produçãodeconteudo","criadorbrasileiro","vidadecriador","conteudodigital","estrategiadeconteudo","nichodigital","microinfluencer","crescimentoorganico","algoritmoinstagram","planejamentodeconteudo","criatividade"]`
-        userPrompt = `Título do post: "${data.titulo || ''}"
-
-Formato: ${data.formato || 'post'}
-
-Plataforma: ${data.plataforma || 'instagram'}
-
-Pilar de conteúdo: ${data.pilar || 'geral'}
-
-Nicho do criador: ${data.nicho || 'lifestyle'}
-
-Legenda: ${(data.legenda || '').slice(0, 200)}`
+RESPONDA APENAS com array JSON de strings, sem texto:
+["hashtag1","hashtag2","hashtag3",...,"hashtag20"]`
+        userPrompt = `TÍTULO: "${data.titulo || ''}"
+FORMATO: ${data.formato || 'post'}
+PLATAFORMA: ${data.plataforma || 'instagram'}
+PILAR: ${data.pilar || 'geral'}
+NICHO: ${data.nicho || 'lifestyle'}
+LEGENDA: ${(data.legenda || '').slice(0, 200)}`
         maxTokens = 400
         break
       case 'onboarding-setup':
