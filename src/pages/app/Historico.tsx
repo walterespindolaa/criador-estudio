@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Archive, Eye, Bookmark, MessageSquare, BarChart3, Calendar, Filter, ChevronDown, ChevronRight } from "lucide-react";
+import { Archive, Eye, Bookmark, MessageSquare, BarChart3, Calendar, Filter, ChevronDown, ChevronRight, Repeat2 } from "lucide-react";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { usePosts, type Post } from "@/hooks/usePosts";
+import { Button } from "@/components/ui/button";
+import { RepurposeSheet } from "@/components/kanban/RepurposeSheet";
 import { usePillars } from "@/hooks/usePillars";
 import { FORMAT_LABELS } from "@/lib/constants";
 
@@ -110,6 +112,8 @@ const Historico = () => {
   };
 
   const getPillar = (id: string | null) => pillars.find(p => p.id === id);
+
+  const [repurposeTarget, setRepurposeTarget] = useState<Post | null>(null);
 
   return (
     <div className="max-w-4xl pb-20 md:pb-0">
@@ -267,6 +271,14 @@ const Historico = () => {
                                 {post.result_views != null && <span className="flex items-center gap-0.5"><Eye className="h-3 w-3" />{post.result_views}</span>}
                                 {post.result_saves != null && <span className="flex items-center gap-0.5"><Bookmark className="h-3 w-3" />{post.result_saves}</span>}
                                 {post.result_comments != null && <span className="flex items-center gap-0.5"><MessageSquare className="h-3 w-3" />{post.result_comments}</span>}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs gap-1 -mr-1"
+                                  onClick={() => setRepurposeTarget(post)}
+                                >
+                                  <Repeat2 className="h-3 w-3" /> Reaproveitar
+                                </Button>
                               </div>
                             </div>
                           </div>
@@ -280,6 +292,14 @@ const Historico = () => {
           </div>
         )}
       </motion.div>
+
+      {repurposeTarget && (
+        <RepurposeSheet
+          open={!!repurposeTarget}
+          onOpenChange={(open) => { if (!open) setRepurposeTarget(null); }}
+          originalPost={repurposeTarget}
+        />
+      )}
     </div>
   );
 };

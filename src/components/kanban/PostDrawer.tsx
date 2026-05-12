@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CopyButton } from "@/components/shared/CopyButton";
-import { Sparkles, MessageSquareText, FileCode2, Anchor, PenLine, MessageSquare, Megaphone, ClipboardList, BarChart3, Eye, Bookmark, Target, Clock, Cloud, ExternalLink, X, Trash2, HardDrive, Play, Layers, Type, Radio, MousePointerClick, Link, Download, Plus, Minus, BookOpen, Loader2, Hash, Copy } from "lucide-react";
+import { Sparkles, MessageSquareText, FileCode2, Anchor, PenLine, MessageSquare, Megaphone, ClipboardList, BarChart3, Eye, Bookmark, Target, Clock, Cloud, ExternalLink, X, Trash2, HardDrive, Play, Layers, Type, Radio, MousePointerClick, Link, Download, Plus, Minus, BookOpen, Loader2, Hash, Copy, Repeat2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getFormatStructure } from "@/lib/format-structures";
 import { PostTasks } from "./PostTasks";
@@ -32,10 +32,11 @@ import { AIAssistantSection } from "./drawer/AIAssistantSection";
 import { HashtagsSection } from "./drawer/HashtagsSection";
 import { PostMetadataForm, PostScheduleFields } from "./drawer/PostMetadataForm";
 import { ScriptEditor, emptySection, type Section } from "./drawer/ScriptEditor";
+import { RepurposeSheet } from "./RepurposeSheet";
 import { PostPreviewModal } from "./PostPreviewModal";
 import { useProfile } from "@/hooks/useProfile";
 import { useGoogleDrive } from "@/hooks/useGoogleDrive";
-import { usePosts } from "@/hooks/usePosts";
+import { usePosts, type Post as DbPost } from "@/hooks/usePosts";
 import { useReferenceLibrary, useUserLibrary } from "@/hooks/useLibrary";
 import { RoteiroPdfTemplate } from "@/components/pdf/RoteiroPdfTemplate";
 import { usePdfExport } from "@/hooks/usePdfExport";
@@ -122,6 +123,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   const [referenceLink, setReferenceLink] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [refsOpen, setRefsOpen] = useState(false);
+  const [repurposeOpen, setRepurposeOpen] = useState(false);
   const { profile } = useProfile();
   const pdfRef = useRef<HTMLDivElement>(null);
   const { exportPdf } = usePdfExport();
@@ -782,12 +784,24 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
           <Button variant="outline" className="flex-1" onClick={() => setPreviewOpen(true)}>
             <Eye className="h-4 w-4 mr-1.5" /> Prévia
           </Button>
+          {!isNew && post && (status === "publicado" || status === "agendado") && (
+            <Button variant="outline" className="flex-1" onClick={() => setRepurposeOpen(true)}>
+              <Repeat2 className="h-4 w-4 mr-1.5" /> Reaproveitar
+            </Button>
+          )}
           <Button variant="hero" className="flex-[2]" onClick={handleSave} disabled={!title.trim()}>
             {isNew ? "Criar post 🎬" : "Salvar alterações"}
           </Button>
         </div>
       </DialogContent>
     </Dialog>
+    {post && (
+      <RepurposeSheet
+        open={repurposeOpen}
+        onOpenChange={setRepurposeOpen}
+        originalPost={post as unknown as DbPost}
+      />
+    )}
     <PostPreviewModal
       open={previewOpen}
       onOpenChange={setPreviewOpen}
