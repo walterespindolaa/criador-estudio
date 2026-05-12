@@ -12,6 +12,7 @@ import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, parseISO, isWithinInterval } from "date-fns";
 import { usePosts, type Post } from "@/hooks/usePosts";
+import { toast } from "sonner";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
 import { usePillars } from "@/hooks/usePillars";
 import { useTasks } from "@/hooks/useTasks";
@@ -72,7 +73,7 @@ type ContentBlocks = { tema?: string; roteiro?: string; midia?: string; legenda?
 
 const Criando = () => {
   const { user } = useAuth();
-  const { posts, updatePost, isLoading: postsLoading } = usePosts();
+  const { posts, updatePost, deletePost, isLoading: postsLoading } = usePosts();
   const { pillars } = usePillars();
   const { tasks } = useTasks();
 
@@ -275,8 +276,24 @@ const Criando = () => {
                     return (
                       <motion.div key={post.id} layout draggable onDragStart={() => setDraggedPost(post.id)} onClick={() => openEdit(post)}
                         style={{ borderLeftColor: STATUS_HEX[post.status ?? "ideia"] ?? "transparent", borderLeftWidth: 4 }}
-                        className={`bg-card rounded-xl p-4 shadow-warm-sm border border-border cursor-grab active:cursor-grabbing hover:shadow-warm-md hover:scale-[1.01] transition-all duration-200 ${isPublished ? "opacity-70" : ""}`}>
-                        <p className="font-body font-medium text-sm text-foreground mb-2 leading-snug line-clamp-2">{post.title}</p>
+                        className={`group relative bg-card rounded-xl p-4 shadow-warm-sm border border-border cursor-grab active:cursor-grabbing hover:shadow-warm-md hover:scale-[1.01] transition-all duration-200 ${isPublished ? "opacity-70" : ""}`}>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm(`Excluir "${post.title}"?`)) {
+                              deletePost.mutate(post.id, {
+                                onSuccess: () => toast.success("Post excluído"),
+                                onError: () => toast.error("Erro ao excluir post."),
+                              });
+                            }
+                          }}
+                          className="absolute top-2 right-2 h-6 w-6 rounded-full bg-destructive/80 hover:bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity z-10"
+                          aria-label="Excluir post"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                        <p className="font-body font-medium text-sm text-foreground mb-2 leading-snug line-clamp-2 pr-7">{post.title}</p>
                         {blocks && (
                           <div className="flex gap-1 mb-2">
                             {(["tema", "roteiro", "midia", "legenda"] as const).map(k => (

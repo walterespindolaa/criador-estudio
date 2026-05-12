@@ -139,7 +139,7 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
   const { pickAndSave, picking } = useGoogleDrive();
 
   // Posts mutations
-  const { createPost, updatePost } = usePosts();
+  const { createPost, updatePost, deletePost } = usePosts();
 
   // Library data
   const { referenceFormats } = useReferenceLibrary();
@@ -764,6 +764,26 @@ export function PostDrawer({ open, onOpenChange, post, pillars, userId, onSaved 
         </div>
 
         <div className="px-6 py-4 border-t border-border bg-card/50 shrink-0 flex gap-3">
+          {!isNew && post && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => {
+                if (window.confirm(`Excluir "${title || post.title}"?`)) {
+                  deletePost.mutate(post.id, {
+                    onSuccess: () => {
+                      toast.success("Post excluído");
+                      onOpenChange(false);
+                    },
+                    onError: () => toast.error("Erro ao excluir post."),
+                  });
+                }
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Excluir
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
