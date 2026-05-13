@@ -3,7 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Database } from "@/integrations/supabase/types";
 
-export type FileRecord = Database["public"]["Tables"]["files"]["Row"];
+export type FileRecord = Database["public"]["Tables"]["files"]["Row"] & {
+  source?: string | null;
+  expires_at?: string | null;
+};
 
 const STORAGE_BUCKET = "files";
 
@@ -12,6 +15,8 @@ export type UploadFileInput = {
   category?: string | null;
   postId?: string | null;
   tags?: string[] | null;
+  source?: string;
+  expiresAt?: string | null;
 };
 
 export function useFiles() {
@@ -41,7 +46,7 @@ export function useFiles() {
   const uploadFile = useMutation({
     mutationFn: async (input: UploadFileInput): Promise<FileRecord> => {
       if (!userId) throw new Error("Not authenticated");
-      const { file, category = null, postId = null, tags = null } = input;
+      const { file, category = null, postId = null, tags = null, source = "upload", expiresAt = null } = input;
       const ext = file.name.split(".").pop() ?? "bin";
       const path = `${userId}/${Date.now()}.${ext}`;
 
@@ -50,18 +55,22 @@ export function useFiles() {
         .upload(path, file);
       if (uploadError) throw uploadError;
 
+      const insertPayload: Record<string, unknown> = {
+        user_id: userId,
+        name: file.name,
+        storage_path: path,
+        file_type: file.type || null,
+        size_bytes: file.size,
+        category,
+        post_id: postId,
+        tags,
+        source,
+        expires_at: expiresAt,
+      };
+
       const { data, error } = await supabase
         .from("files")
-        .insert({
-          user_id: userId,
-          name: file.name,
-          storage_path: path,
-          file_type: file.type || null,
-          size_bytes: file.size,
-          category,
-          post_id: postId,
-          tags,
-        })
+        .insert(insertPayload as never)
         .select()
         .single();
       if (error) {
