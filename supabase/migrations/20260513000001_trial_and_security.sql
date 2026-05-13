@@ -62,7 +62,8 @@ CREATE POLICY "Service role manages subscriptions" ON public.subscriptions
 
 -- 5. Auditar RLS nas tabelas novas de bio
 ALTER TABLE public.bio_links ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "Users manage own bio links" ON public.bio_links
+DROP POLICY IF EXISTS "Users manage own bio links" ON public.bio_links;
+CREATE POLICY "Users manage own bio links" ON public.bio_links
   FOR ALL USING (auth.uid() = user_id);
 
 -- 6. Índices de performance

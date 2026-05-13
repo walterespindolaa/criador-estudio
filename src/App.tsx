@@ -5,7 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AuthOnlyRoute, ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
@@ -30,6 +30,7 @@ const Configuracoes = lazy(() => import("./pages/app/Configuracoes"));
 const Aprender = lazy(() => import("./pages/app/Aprender"));
 const Brandbook = lazy(() => import("./pages/app/Brandbook"));
 const LinkInBio = lazy(() => import("./pages/app/LinkInBio"));
+const Assinar = lazy(() => import("./pages/app/Assinar"));
 const BioPage = lazy(() => import("./pages/BioPage"));
 
 const queryClient = new QueryClient({
@@ -62,6 +63,9 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/onboarding" element={
                 <ProtectedRoute><Onboarding /></ProtectedRoute>
+              } />
+              <Route path="/app/assinar" element={
+                <AuthOnlyRoute><Assinar /></AuthOnlyRoute>
               } />
               <Route path="/app" element={
                 <ProtectedRoute><AppLayout /></ProtectedRoute>
