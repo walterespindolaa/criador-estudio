@@ -77,6 +77,38 @@ serve(async (req) => {
     const { operation, data } = await req.json()
     const userId = user.id // use this, ignore userId from body
 
+    // ── Rate limiting ──────────────────────────────────────────
+    const RATE_LIMIT = 20; // chamadas por hora
+    const now = new Date();
+    const windowStart = new Date(now);
+    windowStart.setMinutes(0, 0, 0); // início da hora atual
+
+    const { data: rateRow, error: rateErr } = await supabase
+      .from("ai_rate_limit")
+      .select("id, call_count")
+      .eq("user_id", userId)
+      .eq("window_start", windowStart.toISOString())
+      .single();
+
+    if (!rateErr && rateRow && rateRow.call_count >= RATE_LIMIT) {
+      return new Response(
+        JSON.stringify({ error: "rate_limited", message: "Limite de uso de IA atingido. Tente novamente na próxima hora." }),
+        { status: 429, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!rateErr && rateRow) {
+      await supabase
+        .from("ai_rate_limit")
+        .update({ call_count: rateRow.call_count + 1 })
+        .eq("id", rateRow.id);
+    } else {
+      await supabase
+        .from("ai_rate_limit")
+        .insert({ user_id: userId, window_start: windowStart.toISOString(), call_count: 1 });
+    }
+    // ── fim rate limiting ──────────────────────────────────────
+
     // Fetch user context
     let userContext = ''
     if (userId) {
