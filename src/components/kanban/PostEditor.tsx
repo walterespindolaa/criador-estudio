@@ -8,7 +8,7 @@ import { CopyButton } from "@/components/shared/CopyButton";
 import {
   Sparkles, MessageSquareText, FileCode2, Anchor, PenLine, MessageSquare,
   ClipboardList, BarChart3, Eye, Bookmark, Target, Clock, Cloud, Image as ImageIcon, X, Trash2,
-  Layers, Type, Radio, MousePointerClick, Link as LinkIcon, Download, BookOpen,
+  Layers, Type, Radio, MousePointerClick, Link as LinkIcon, Link2, Download, BookOpen,
   Loader2, Hash, Copy, Repeat2, FileText, ListChecks, Calendar, ChevronDown,
   RefreshCw, Minus, Plus, SmilePlus, Briefcase,
 } from "lucide-react";
@@ -51,6 +51,7 @@ import { useBrandContext } from "@/hooks/useBrandContext";
 import { RoteiroPdfTemplate } from "@/components/pdf/RoteiroPdfTemplate";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { sanitizeText } from "@/lib/sanitize";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Post {
   id: string;
@@ -197,7 +198,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
   const [driveMedia, setDriveMedia] = useState<DriveRef[]>([]);
   const [pendingDriveFiles, setPendingDriveFiles] = useState<DriveRef[]>([]);
   const [uploadingLocal, setUploadingLocal] = useState(false);
+  const [driveLink, setDriveLink] = useState("");
   const localFileInputRef = useRef<HTMLInputElement>(null);
+  const isMobile = useIsMobile();
   const { pickAndSave, picking } = useGoogleDrive();
   const { createPost, updatePost, deletePost } = usePosts();
   const { referenceFormats } = useReferenceLibrary();
@@ -390,6 +393,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
     const files = e.target.files;
     e.target.value = "";
     if (!files || files.length === 0 || !userId) return;
+    let anyUploaded = false;
     try {
       setUploadingLocal(true);
       for (const raw of Array.from(files)) {
@@ -404,6 +408,14 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
           .upload(path, file, { upsert: true });
         if (upErr) { toast.error(`Erro ao enviar ${file.name}`); continue; }
         const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
+        const tempRef: DriveRef = {
+          id: path,
+          file_name: file.name,
+          file_type: file.type,
+          thumbnail_url: urlData.publicUrl,
+          view_url: urlData.publicUrl,
+          external_file_id: path,
+        };
         if (post?.id) {
           await supabase.from("external_media_refs").insert({
             user_id: userId,
@@ -414,19 +426,16 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
             view_url: urlData.publicUrl,
             external_file_id: path,
           });
-          fetchDriveMedia(post.id);
+          setDriveMedia((prev) => [...prev, tempRef]);
         } else {
-          setPendingDriveFiles((prev) => [...prev, {
-            id: path,
-            file_name: file.name,
-            file_type: file.type,
-            thumbnail_url: urlData.publicUrl,
-            view_url: urlData.publicUrl,
-            external_file_id: path,
-          } as DriveRef]);
+          setPendingDriveFiles((prev) => [...prev, tempRef]);
         }
+        anyUploaded = true;
       }
-      toast.success("Mídia adicionada!");
+      if (anyUploaded) {
+        if (post?.id) fetchDriveMedia(post.id);
+        toast.success("Mídia adicionada!");
+      }
     } catch (err) {
       console.error(err);
       toast.error("Erro ao enviar mídia.");
@@ -462,6 +471,42 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
       await pickAndSave(post?.id);
       if (post) fetchDriveMedia(post.id);
     }
+  };
+
+  const handleAddDriveLink = async () => {
+    if (!driveLink.trim() || !userId) return;
+    const match = driveLink.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    const fileId = match?.[1];
+    const thumbnailUrl = fileId
+      ? `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`
+      : null;
+    const viewUrl = fileId
+      ? `https://drive.google.com/file/d/${fileId}/preview`
+      : driveLink;
+
+    if (post?.id) {
+      await supabase.from("external_media_refs").insert({
+        user_id: userId,
+        post_id: post.id,
+        file_name: fileId ? `drive-${fileId}` : "link-externo",
+        file_type: "image/jpeg",
+        thumbnail_url: thumbnailUrl || driveLink,
+        view_url: viewUrl,
+        external_file_id: fileId || driveLink,
+      });
+      fetchDriveMedia(post.id);
+    } else {
+      setPendingDriveFiles((prev) => [...prev, {
+        id: driveLink,
+        file_name: fileId ? `drive-${fileId}` : "link-externo",
+        file_type: "image/jpeg",
+        thumbnail_url: thumbnailUrl || driveLink,
+        view_url: viewUrl,
+        external_file_id: fileId || driveLink,
+      } as DriveRef]);
+    }
+    setDriveLink("");
+    toast.success("Mídia adicionada!");
   };
 
   const handleSave = async () => {
@@ -1284,34 +1329,80 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                               className="hidden"
                               onChange={handleLocalUpload}
                             />
-                            <div className="grid grid-cols-2 gap-2">
-                              <button
-                                type="button"
-                                onClick={handleDrivePick}
-                                disabled={picking}
-                                className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all p-4 text-center"
-                              >
-                                <Cloud className="h-6 w-6 text-muted-foreground" />
-                                <span className="text-xs font-body text-muted-foreground">
-                                  {picking ? "Abrindo..." : "Google Drive"}
-                                </span>
-                              </button>
+                            {isMobile ? (
+                              <div className="flex flex-col gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => localFileInputRef.current?.click()}
+                                  disabled={uploadingLocal}
+                                  className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all p-4 text-center w-full"
+                                >
+                                  <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                                  <span className="text-xs font-body text-muted-foreground">
+                                    {uploadingLocal ? "Enviando..." : "Adicionar da galeria"}
+                                  </span>
+                                </button>
 
-                              <button
-                                type="button"
-                                onClick={() => localFileInputRef.current?.click()}
-                                disabled={uploadingLocal}
-                                className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all p-4 text-center"
-                              >
-                                <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                                <span className="text-xs font-body text-muted-foreground">
-                                  {uploadingLocal ? "Enviando..." : "Galeria / PC"}
-                                </span>
-                              </button>
-                            </div>
-                            <p className="text-[10px] text-muted-foreground/60 font-body text-center">
-                              💡 Para melhor qualidade, use arquivos do Google Drive. Uploads diretos ficam disponíveis por 30 dias.
-                            </p>
+                                <div className="space-y-1.5">
+                                  <label className="text-[10px] font-body font-semibold uppercase tracking-wider text-muted-foreground/70">
+                                    Ou cole um link do Google Drive
+                                  </label>
+                                  <div className="flex gap-2">
+                                    <input
+                                      type="url"
+                                      placeholder="https://drive.google.com/file/d/..."
+                                      value={driveLink}
+                                      onChange={(e) => setDriveLink(e.target.value)}
+                                      className="flex-1 h-9 px-3 rounded-lg border border-border bg-card text-sm font-body text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/40"
+                                    />
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={handleAddDriveLink}
+                                      disabled={!driveLink.trim()}
+                                      className="h-9 px-3"
+                                    >
+                                      <Link2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
+                                  <p className="text-[10px] text-muted-foreground/50 font-body">
+                                    Cole o link de compartilhamento do Google Drive
+                                  </p>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={handleDrivePick}
+                                    disabled={picking}
+                                    className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all p-4 text-center"
+                                  >
+                                    <Cloud className="h-6 w-6 text-muted-foreground" />
+                                    <span className="text-xs font-body text-muted-foreground">
+                                      {picking ? "Abrindo..." : "Google Drive"}
+                                    </span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => localFileInputRef.current?.click()}
+                                    disabled={uploadingLocal}
+                                    className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all p-4 text-center"
+                                  >
+                                    <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                                    <span className="text-xs font-body text-muted-foreground">
+                                      {uploadingLocal ? "Enviando..." : "Galeria / PC"}
+                                    </span>
+                                  </button>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground/60 font-body text-center">
+                                  💡 Para melhor qualidade, use arquivos do Google Drive. Uploads diretos ficam disponíveis por 30 dias.
+                                </p>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>
