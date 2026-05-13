@@ -126,8 +126,8 @@ const Dashboard = () => {
   const today = useMemo(() => new Date().toISOString().split("T")[0], []);
   const weekDays = useMemo(() => getDaysOfWeek(), []);
 
-  const { ideas, createIdea } = useIdeas();
-  const { posts } = usePosts();
+  const { ideas, createIdea } = useIdeas({ limit: 20 });
+  const { posts } = usePosts({ limit: 20 });
   const {
     habits,
     habitLogs,
@@ -135,8 +135,8 @@ const Dashboard = () => {
     updateHabit: updateHabitMutation,
     deleteHabit,
     toggleHabitLog,
-  } = useHabits({ date: today });
-  const { tasks } = useTasks();
+  } = useHabits({ date: today, limit: 20 });
+  const { tasks } = useTasks({ limit: 20 });
 
   const [period, setPeriod] = useState<PeriodKey>("semana");
   const [customRange, setCustomRange] = useState<{ from: Date; to: Date }>({ from: new Date(), to: new Date() });

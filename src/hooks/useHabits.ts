@@ -7,7 +7,7 @@ export type Habit = Database["public"]["Tables"]["habits"]["Row"];
 export type HabitLog = Database["public"]["Tables"]["habit_logs"]["Row"];
 
 export type DateRange = { start: string; end: string };
-export type HabitsLogsParams = { date?: string; dateRange?: DateRange };
+export type HabitsLogsParams = { date?: string; dateRange?: DateRange; limit?: number };
 
 export type CreateHabitInput = { name: string; position?: number };
 export type UpdateHabitInput = { id: string; name: string };
@@ -24,7 +24,8 @@ export function useHabits(params: HabitsLogsParams = {}) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const userId = user?.id;
-  const habitsKey = ["habits", userId] as const;
+  const limit = params.limit;
+  const habitsKey = ["habits", userId, limit ?? null] as const;
   const habitLogsKey = logsKey(userId, params);
 
   const {
@@ -34,11 +35,12 @@ export function useHabits(params: HabitsLogsParams = {}) {
   } = useQuery<Habit[]>({
     queryKey: habitsKey,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("habits")
         .select("*")
-        .eq("user_id", userId!)
-        .order("position");
+        .eq("user_id", userId!);
+      if (limit) query = query.limit(limit);
+      const { data, error } = await query.order("position");
       if (error) throw error;
       return (data ?? []) as Habit[];
     },
@@ -84,7 +86,7 @@ export function useHabits(params: HabitsLogsParams = {}) {
       if (error) throw error;
       return data as Habit;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: habitsKey }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["habits", userId] }),
   });
 
   const updateHabit = useMutation({
@@ -98,7 +100,7 @@ export function useHabits(params: HabitsLogsParams = {}) {
       if (error) throw error;
       return data as Habit;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: habitsKey }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["habits", userId] }),
   });
 
   const deleteHabit = useMutation({
@@ -112,7 +114,7 @@ export function useHabits(params: HabitsLogsParams = {}) {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: habitsKey });
+      queryClient.invalidateQueries({ queryKey: ["habits", userId] });
       invalidateLogs();
     },
   });

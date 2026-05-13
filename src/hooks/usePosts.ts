@@ -10,11 +10,12 @@ type PostUpdate = Database["public"]["Tables"]["posts"]["Update"];
 export type CreatePostInput = Omit<PostInsert, "user_id" | "id" | "created_at" | "updated_at">;
 export type UpdatePostInput = { id: string; updates: PostUpdate };
 
-export function usePosts() {
+export function usePosts(options?: { limit?: number }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const userId = user?.id;
-  const queryKey = ["posts", userId] as const;
+  const limit = options?.limit;
+  const queryKey = ["posts", userId, limit ?? null] as const;
 
   const {
     data: posts = [],
@@ -23,11 +24,12 @@ export function usePosts() {
   } = useQuery<Post[]>({
     queryKey,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("posts")
         .select("*")
-        .eq("user_id", userId!)
-        .order("created_at");
+        .eq("user_id", userId!);
+      if (limit) query = query.limit(limit);
+      const { data, error } = await query.order("created_at");
       if (error) throw error;
       return (data ?? []) as Post[];
     },
@@ -45,7 +47,7 @@ export function usePosts() {
       if (error) throw error;
       return data as Post;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["posts", userId] }),
   });
 
   const updatePost = useMutation({
@@ -59,7 +61,7 @@ export function usePosts() {
       if (error) throw error;
       return data as Post;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["posts", userId] }),
   });
 
   const deletePost = useMutation({
@@ -67,7 +69,7 @@ export function usePosts() {
       const { error } = await supabase.from("posts").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["posts", userId] }),
   });
 
   return { posts, isLoading, error, createPost, updatePost, deletePost };

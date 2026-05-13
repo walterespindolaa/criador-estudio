@@ -12,11 +12,12 @@ export type CreateTaskInput = Pick<
 >;
 export type UpdateTaskStatusInput = { id: string; status: string };
 
-export function useTasks() {
+export function useTasks(options?: { limit?: number }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const userId = user?.id;
-  const queryKey = ["tasks", userId] as const;
+  const limit = options?.limit;
+  const queryKey = ["tasks", userId, limit ?? null] as const;
 
   const {
     data: tasks = [],
@@ -25,11 +26,12 @@ export function useTasks() {
   } = useQuery<Task[]>({
     queryKey,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("tasks")
         .select("*")
-        .eq("user_id", userId!)
-        .order("created_at", { ascending: false });
+        .eq("user_id", userId!);
+      if (limit) query = query.limit(limit);
+      const { data, error } = await query.order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Task[];
     },
@@ -47,7 +49,7 @@ export function useTasks() {
       if (error) throw error;
       return data as Task;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks", userId] }),
   });
 
   const updateTaskStatus = useMutation({
@@ -61,7 +63,7 @@ export function useTasks() {
       if (error) throw error;
       return data as Task;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks", userId] }),
   });
 
   const deleteTask = useMutation({
@@ -69,7 +71,7 @@ export function useTasks() {
       const { error } = await supabase.from("tasks").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks", userId] }),
   });
 
   return { tasks, isLoading, error, createTask, updateTaskStatus, deleteTask };

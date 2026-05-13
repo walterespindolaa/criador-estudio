@@ -16,11 +16,12 @@ export type PromoteIdeaInput = {
   post: Omit<PostInsert, "user_id" | "id" | "created_at" | "updated_at">;
 };
 
-export function useIdeas() {
+export function useIdeas(options?: { limit?: number }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const userId = user?.id;
-  const queryKey = ["ideas", userId] as const;
+  const limit = options?.limit;
+  const queryKey = ["ideas", userId, limit ?? null] as const;
 
   const {
     data: ideas = [],
@@ -29,11 +30,12 @@ export function useIdeas() {
   } = useQuery<Idea[]>({
     queryKey,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("ideas")
         .select("*")
-        .eq("user_id", userId!)
-        .order("created_at", { ascending: false });
+        .eq("user_id", userId!);
+      if (limit) query = query.limit(limit);
+      const { data, error } = await query.order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Idea[];
     },
@@ -51,7 +53,7 @@ export function useIdeas() {
       if (error) throw error;
       return data as Idea;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ideas", userId] }),
   });
 
   const updateIdea = useMutation({
@@ -65,7 +67,7 @@ export function useIdeas() {
       if (error) throw error;
       return data as Idea;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ideas", userId] }),
   });
 
   const deleteIdea = useMutation({
@@ -73,7 +75,7 @@ export function useIdeas() {
       const { error } = await supabase.from("ideas").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ideas", userId] }),
   });
 
   const promoteToPost = useMutation({
@@ -105,7 +107,7 @@ export function useIdeas() {
       return createdPost as Post;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: ["ideas", userId] });
       queryClient.invalidateQueries({ queryKey: ["posts", userId] });
     },
   });
