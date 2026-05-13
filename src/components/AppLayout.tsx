@@ -13,6 +13,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { CriaAIProvider } from "@/contexts/CriaAIContext";
 import { CriaAIPanel } from "@/components/ai/CriaAIPanel";
 import { TrialBanner } from "@/components/TrialBanner";
+import { StorageWarningBanner } from "@/components/StorageWarningBanner";
 
 const AppLayout = () => {
   const { profile } = useProfile();
@@ -31,6 +32,7 @@ const AppLayout = () => {
     <SidebarProvider>
       <div className="min-h-screen flex flex-col w-full bg-background">
         <TrialBanner />
+        <StorageWarningBanner />
         <div className="flex flex-1 w-full min-h-0">
           <PWAInstallBanner />
           <CriaAIPanel />
