@@ -356,7 +356,6 @@ export function CriaAIPanel() {
                   disabled={loading}
                   rows={1}
                   className="rounded-2xl border-border ring-1 ring-border/50 pr-12 resize-none min-h-[44px] max-h-32 text-sm font-body"
-                  autoFocus
                 />
                 <Button
                   type="submit"

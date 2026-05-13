@@ -38,6 +38,56 @@ const setStoredToken = (token: string, expiresInSeconds = 3600) => {
 export function useGoogleDrive() {
   const { user } = useAuth();
   const [picking, setPicking] = useState(false);
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+  const pickFromDeviceFallback = useCallback(async (postId?: string) => {
+    if (!user) {
+      toast.error("Faça login para enviar mídia.");
+      return;
+    }
+    const userId = user.id;
+
+    return new Promise<void>((resolve) => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*,video/*";
+      input.multiple = true;
+      input.onchange = async (e) => {
+        const files = (e.target as HTMLInputElement).files;
+        if (!files || files.length === 0) { resolve(); return; }
+        try {
+          setPicking(true);
+          for (const file of Array.from(files)) {
+            const path = `${userId}/${Date.now()}-${file.name}`;
+            const { error: upErr } = await supabase.storage
+              .from("media")
+              .upload(path, file, { upsert: true });
+            if (upErr) { toast.error(`Erro ao enviar ${file.name}`); continue; }
+            const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
+            const publicUrl = urlData.publicUrl;
+            await supabase.from("external_media_refs").insert({
+              user_id: userId,
+              post_id: postId || null,
+              provider: "device",
+              external_file_id: path,
+              file_name: file.name,
+              file_type: file.type,
+              thumbnail_url: publicUrl,
+              view_url: publicUrl,
+            });
+          }
+          toast.success("Mídia adicionada!");
+        } catch (err) {
+          console.error(err);
+          toast.error("Erro ao enviar mídia.");
+        } finally {
+          setPicking(false);
+          resolve();
+        }
+      };
+      input.click();
+    });
+  }, [user]);
 
   const loadGoogleScripts = useCallback((): Promise<void> => {
     return new Promise((resolve) => {
@@ -203,6 +253,12 @@ export function useGoogleDrive() {
 
   const pickAndSave = useCallback(async (postId?: string) => {
     if (picking) return;
+
+    if (isMobile) {
+      await pickFromDeviceFallback(postId);
+      return;
+    }
+
     setPicking(true);
 
     try {
@@ -236,7 +292,7 @@ export function useGoogleDrive() {
     } finally {
       setPicking(false);
     }
-  }, [picking, loadGoogleScripts, getAccessToken, openPicker, saveExternalRefs]);
+  }, [picking, isMobile, pickFromDeviceFallback, loadGoogleScripts, getAccessToken, openPicker, saveExternalRefs]);
 
   return { pickAndSave, picking };
 }

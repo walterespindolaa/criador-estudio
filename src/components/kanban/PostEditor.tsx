@@ -604,10 +604,13 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-none w-screen h-screen sm:w-[96vw] sm:h-[94vh] sm:max-w-[1400px] p-0 overflow-hidden flex flex-col bg-background rounded-none sm:rounded-2xl">
+        <DialogContent
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          className="max-w-none w-screen h-screen sm:w-[96vw] sm:h-[94vh] sm:max-w-[1400px] p-0 overflow-hidden overflow-x-hidden flex flex-col bg-background rounded-none sm:rounded-2xl"
+        >
           <DialogHeader className="px-4 sm:px-6 pt-3 pb-2 shrink-0 border-b border-border">
             <DialogTitle className="sr-only">{isNew ? "Novo Post" : "Editar Post"}</DialogTitle>
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0 overflow-hidden">
               <div className="flex-1 min-w-0 flex items-center gap-3">
                 <input
                   value={title}
@@ -706,7 +709,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
             <div className="flex flex-1 overflow-hidden md:flex-row">
             {/* ─── LEFT: Configuration + AI ─────────── */}
             <aside className={cn(
-              "w-full md:w-[40%] md:max-w-[480px] md:border-r border-border bg-muted/30 overflow-y-auto",
+              "w-full md:w-[40%] md:max-w-[480px] md:border-r border-border bg-muted/30 overflow-y-auto overflow-x-hidden",
               mobileTab === "config" ? "block" : "hidden md:block"
             )}>
               <div className="p-4 sm:p-5 space-y-5">
