@@ -56,6 +56,35 @@ export type Database = {
           },
         ]
       }
+      ai_rate_limit: {
+        Row: {
+          call_count: number
+          id: string
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          call_count?: number
+          id?: string
+          user_id: string
+          window_start?: string
+        }
+        Update: {
+          call_count?: number
+          id?: string
+          user_id?: string
+          window_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_rate_limit_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string
@@ -1045,6 +1074,8 @@ export type Database = {
           theme_preset: string | null
           theme_sidebar: string | null
           tiktok_handle: string | null
+          trial_ends_at: string | null
+          trial_started_at: string | null
           updated_at: string | null
           weekly_goal: number | null
           youtube_handle: string | null
@@ -1075,6 +1106,8 @@ export type Database = {
           theme_preset?: string | null
           theme_sidebar?: string | null
           tiktok_handle?: string | null
+          trial_ends_at?: string | null
+          trial_started_at?: string | null
           updated_at?: string | null
           weekly_goal?: number | null
           youtube_handle?: string | null
@@ -1105,6 +1138,8 @@ export type Database = {
           theme_preset?: string | null
           theme_sidebar?: string | null
           tiktok_handle?: string | null
+          trial_ends_at?: string | null
+          trial_started_at?: string | null
           updated_at?: string | null
           weekly_goal?: number | null
           youtube_handle?: string | null
@@ -1253,6 +1288,68 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "structured_goals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          amount_cents: number | null
+          canceled_at: string | null
+          created_at: string | null
+          currency: string | null
+          current_period_end: string | null
+          current_period_start: string | null
+          gateway: string
+          gateway_customer_id: string | null
+          gateway_payment_id: string | null
+          gateway_subscription_id: string | null
+          id: string
+          plan: string
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_cents?: number | null
+          canceled_at?: string | null
+          created_at?: string | null
+          currency?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          gateway?: string
+          gateway_customer_id?: string | null
+          gateway_payment_id?: string | null
+          gateway_subscription_id?: string | null
+          id?: string
+          plan?: string
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number | null
+          canceled_at?: string | null
+          created_at?: string | null
+          currency?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          gateway?: string
+          gateway_customer_id?: string | null
+          gateway_payment_id?: string | null
+          gateway_subscription_id?: string | null
+          id?: string
+          plan?: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
