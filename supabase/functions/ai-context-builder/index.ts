@@ -93,7 +93,7 @@ serve(async (req) => {
     if (!rateErr && rateRow && rateRow.call_count >= RATE_LIMIT) {
       return new Response(
         JSON.stringify({ error: "rate_limited", message: "Limite de uso de IA atingido. Tente novamente na próxima hora." }),
-        { status: 429, headers: { "Content-Type": "application/json" } }
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
