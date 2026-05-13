@@ -12,6 +12,7 @@ import { usePosts } from "@/hooks/usePosts";
 import { useIdeas } from "@/hooks/useIdeas";
 import { useCriaAI } from "@/contexts/CriaAIContext";
 import { useBrandContext } from "@/hooks/useBrandContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type Message = {
   id: string;
@@ -94,6 +95,7 @@ function renderMarkdown(text: string) {
 
 export function CriaAIPanel() {
   const { open, closeCria, consumeInitialPrompt } = useCriaAI();
+  const isMobile = useIsMobile();
   const { user } = useAuth();
   const { profile } = useProfile();
   const { posts } = usePosts();
@@ -378,7 +380,8 @@ export function CriaAIPanel() {
         <button
           type="button"
           onClick={handleRestore}
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-primary to-purple-600 shadow-glow hover:shadow-glow-hover hover:scale-105 transition-all flex items-center justify-center"
+          className="fixed right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-primary to-purple-600 shadow-glow hover:shadow-glow-hover hover:scale-105 transition-all flex items-center justify-center md:bottom-6"
+          style={isMobile ? { bottom: 'calc(72px + env(safe-area-inset-bottom, 0px) + 12px)' } : undefined}
           aria-label="Abrir Cria IA"
         >
           <Sparkles className="h-6 w-6 text-white" strokeWidth={1.75} />
