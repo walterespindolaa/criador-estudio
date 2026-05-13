@@ -23,7 +23,7 @@ export function DriveMediaPreview({ fileName, fileType, thumbnailUrl, viewUrl, s
         className={`${dim} rounded-xl border border-border bg-muted flex items-center justify-center overflow-hidden hover:ring-2 hover:ring-primary transition-all`}
       >
         {thumbnailUrl ? (
-          <img src={thumbnailUrl} alt={fileName} className="w-full h-full object-cover" />
+          <img src={thumbnailUrl} alt={fileName} className="w-full h-full object-cover" loading="lazy" />
         ) : isImage ? (
           <Image className="h-6 w-6 text-muted-foreground" />
         ) : isVideo ? (

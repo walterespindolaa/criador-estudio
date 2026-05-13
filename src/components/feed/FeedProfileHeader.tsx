@@ -18,7 +18,7 @@ export function FeedProfileHeader({ profile, postCount }: Props) {
         <div className="flex items-center gap-6">
           <div className="w-20 h-20 rounded-full ring-[3px] ring-primary/30 ring-offset-2 ring-offset-background overflow-hidden shrink-0">
             {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+              <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" />
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
                 <span className="text-2xl font-display font-bold text-white">{initial}</span>

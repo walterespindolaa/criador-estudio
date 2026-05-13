@@ -1303,6 +1303,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                     src={imgSrc}
                                     alt={primary.file_name}
                                     className="w-full h-full object-cover"
+                                    loading="lazy"
                                     onError={(e) => { (e.target as HTMLImageElement).src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`; }}
                                   />
                                 );

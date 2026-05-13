@@ -105,7 +105,7 @@ export function AppSidebar() {
         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary via-purple-500 to-pink-500 p-[2px] overflow-hidden shrink-0">
           <div className="w-full h-full rounded-full bg-card overflow-hidden flex items-center justify-center">
             {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+              <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" />
             ) : (
               <span className="text-primary font-display font-bold text-sm">{initial}</span>
             )}

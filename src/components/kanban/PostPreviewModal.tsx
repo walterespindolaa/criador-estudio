@@ -50,7 +50,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
       }}
     >
       {avatarUrl
-        ? <img src={avatarUrl} className="w-full h-full object-cover" alt={userName} />
+        ? <img src={avatarUrl} className="w-full h-full object-cover" alt={userName} loading="lazy" />
         : <span style={{ fontSize: size * 0.4, fontWeight: 700 }} className="text-white">{initials}</span>}
     </div>
   );
@@ -103,7 +103,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
       return (
         <div className="relative w-full aspect-[4/5] overflow-hidden">
           {imgUrl ? (
-            <img src={imgUrl} alt={`Lâmina ${carouselIdx + 1}`} className="w-full h-full object-cover"
+            <img src={imgUrl} alt={`Lâmina ${carouselIdx + 1}`} className="w-full h-full object-cover" loading="lazy"
               onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
           ) : (
             <GradientPlaceholder>
@@ -128,7 +128,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
               className="w-full h-full object-cover"
             />
           ) : (
-            <img src={activeMediaUrl} alt="preview" className="w-full h-full object-cover" />
+            <img src={activeMediaUrl} alt="preview" className="w-full h-full object-cover" loading="lazy" />
           )
         ) : (
           <GradientPlaceholder>
@@ -160,7 +160,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
                 className="absolute inset-0 w-full h-full object-cover"
               />
             ) : (
-              <img src={activeMediaUrl} alt="preview" className="absolute inset-0 w-full h-full object-cover" />
+              <img src={activeMediaUrl} alt="preview" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
             )
           ) : (
             <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)" }} />
@@ -257,7 +257,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
                 <div className="flex items-center gap-2 px-3 py-2 bg-card">
                   <div className="w-8 h-8 rounded-full overflow-hidden bg-primary/20 flex items-center justify-center shrink-0">
                     {avatarUrl
-                      ? <img src={avatarUrl} className="w-full h-full object-cover" alt={userName} />
+                      ? <img src={avatarUrl} className="w-full h-full object-cover" alt={userName} loading="lazy" />
                       : <span className="text-xs font-bold text-primary">{initials}</span>}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -321,7 +321,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <img src={activeMediaUrl} alt="thumbnail" className="w-full h-full object-cover" />
+                      <img src={activeMediaUrl} alt="thumbnail" className="w-full h-full object-cover" loading="lazy" />
                     )
                   ) : (
                     <GradientPlaceholder>
@@ -333,7 +333,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
                 <div className="flex gap-2.5">
                   <div className="w-9 h-9 rounded-full overflow-hidden bg-primary/20 flex items-center justify-center shrink-0">
                     {avatarUrl
-                      ? <img src={avatarUrl} className="w-full h-full object-cover" alt={userName} />
+                      ? <img src={avatarUrl} className="w-full h-full object-cover" alt={userName} loading="lazy" />
                       : <span className="text-xs font-bold text-primary">{initials}</span>}
                   </div>
                   <div className="flex-1 min-w-0">
