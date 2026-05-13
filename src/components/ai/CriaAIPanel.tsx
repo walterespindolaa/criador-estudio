@@ -13,6 +13,7 @@ import { useIdeas } from "@/hooks/useIdeas";
 import { useCriaAI } from "@/contexts/CriaAIContext";
 import { useBrandContext } from "@/hooks/useBrandContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import DOMPurify from "dompurify";
 
 type Message = {
   id: string;
@@ -310,7 +311,7 @@ export function CriaAIPanel() {
                         <div className="bg-card border border-border rounded-2xl rounded-tl-md px-4 py-3 max-w-[85%] shadow-warm-sm">
                           <p
                             className="text-sm font-body text-foreground leading-relaxed"
-                            dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }}
+                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderMarkdown(msg.content)) }}
                           />
                         </div>
                       </div>
