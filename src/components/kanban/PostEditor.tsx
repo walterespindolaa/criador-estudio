@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CopyButton } from "@/components/shared/CopyButton";
 import {
   Sparkles, MessageSquareText, FileCode2, Anchor, PenLine, MessageSquare,
-  ClipboardList, BarChart3, Eye, Bookmark, Target, Clock, Cloud, X, Trash2,
+  ClipboardList, BarChart3, Eye, Bookmark, Target, Clock, Cloud, Image as ImageIcon, X, Trash2,
   Layers, Type, Radio, MousePointerClick, Link as LinkIcon, Download, BookOpen,
   Loader2, Hash, Copy, Repeat2, FileText, ListChecks, Calendar, ChevronDown,
   RefreshCw, Minus, Plus, SmilePlus, Briefcase,
@@ -196,6 +196,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
 
   const [driveMedia, setDriveMedia] = useState<DriveRef[]>([]);
   const [pendingDriveFiles, setPendingDriveFiles] = useState<DriveRef[]>([]);
+  const [uploadingLocal, setUploadingLocal] = useState(false);
+  const localFileInputRef = useRef<HTMLInputElement>(null);
   const { pickAndSave, picking } = useGoogleDrive();
   const { createPost, updatePost, deletePost } = usePosts();
   const { referenceFormats } = useReferenceLibrary();
@@ -355,6 +357,81 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
       console.error("AI References failed", e);
     } finally {
       setIsRefAiLoading(false);
+    }
+  };
+
+  const compressImage = async (file: File): Promise<File> => {
+    if (!file.type.startsWith("image/")) return file;
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const MAX = 1920;
+        let { width, height } = img;
+        if (width > MAX || height > MAX) {
+          if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+          else { width = Math.round(width * MAX / height); height = MAX; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        canvas.getContext("2d")?.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          URL.revokeObjectURL(url);
+          if (!blob || blob.size >= file.size) { resolve(file); return; }
+          resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" }));
+        }, "image/jpeg", 0.82);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+  };
+
+  const handleLocalUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    e.target.value = "";
+    if (!files || files.length === 0 || !userId) return;
+    try {
+      setUploadingLocal(true);
+      for (const raw of Array.from(files)) {
+        if (raw.size > 50 * 1024 * 1024) {
+          toast.error(`"${raw.name}" ultrapassa 50MB.`);
+          continue;
+        }
+        const file = await compressImage(raw);
+        const path = `${userId}/${Date.now()}-${file.name}`;
+        const { error: upErr } = await supabase.storage
+          .from("media")
+          .upload(path, file, { upsert: true });
+        if (upErr) { toast.error(`Erro ao enviar ${file.name}`); continue; }
+        const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
+        if (post?.id) {
+          await supabase.from("external_media_refs").insert({
+            user_id: userId,
+            post_id: post.id,
+            file_name: file.name,
+            file_type: file.type,
+            thumbnail_url: urlData.publicUrl,
+            view_url: urlData.publicUrl,
+            external_file_id: path,
+          });
+          fetchDriveMedia(post.id);
+        } else {
+          setPendingDriveFiles((prev) => [...prev, {
+            id: path,
+            file_name: file.name,
+            file_type: file.type,
+            thumbnail_url: urlData.publicUrl,
+            view_url: urlData.publicUrl,
+            external_file_id: path,
+          } as DriveRef]);
+        }
+      }
+      toast.success("Mídia adicionada!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao enviar mídia.");
+    } finally {
+      setUploadingLocal(false);
     }
   };
 
@@ -1198,15 +1275,44 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                             </div>
                           </div>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={handleDrivePick}
-                            disabled={picking}
-                            className="w-full py-8 flex flex-col items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
-                          >
-                            <Cloud className="h-6 w-6" />
-                            <span className="text-xs font-body">{picking ? "Abrindo Drive..." : "Adicionar mídia do Google Drive"}</span>
-                          </button>
+                          <div className="flex flex-col gap-3 p-3">
+                            <input
+                              ref={localFileInputRef}
+                              type="file"
+                              accept="image/*,video/*"
+                              multiple
+                              className="hidden"
+                              onChange={handleLocalUpload}
+                            />
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                onClick={handleDrivePick}
+                                disabled={picking}
+                                className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all p-4 text-center"
+                              >
+                                <Cloud className="h-6 w-6 text-muted-foreground" />
+                                <span className="text-xs font-body text-muted-foreground">
+                                  {picking ? "Abrindo..." : "Google Drive"}
+                                </span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => localFileInputRef.current?.click()}
+                                disabled={uploadingLocal}
+                                className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all p-4 text-center"
+                              >
+                                <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                                <span className="text-xs font-body text-muted-foreground">
+                                  {uploadingLocal ? "Enviando..." : "Galeria / PC"}
+                                </span>
+                              </button>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground/60 font-body text-center">
+                              💡 Para melhor qualidade, use arquivos do Google Drive. Uploads diretos ficam disponíveis por 30 dias.
+                            </p>
+                          </div>
                         )}
                       </div>
                     </div>
