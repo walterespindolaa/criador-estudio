@@ -37,7 +37,7 @@ import { PostPreviewModal } from "./PostPreviewModal";
 import { useProfile } from "@/hooks/useProfile";
 import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 import { usePosts, type Post as DbPost } from "@/hooks/usePosts";
-import { useReferenceLibrary, useUserLibrary } from "@/hooks/useLibrary";
+import { useReferenceLibrary, useUserLibrary, type UserHook, type UserPrompt } from "@/hooks/useLibrary";
 import { RoteiroPdfTemplate } from "@/components/pdf/RoteiroPdfTemplate";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { sanitizeText } from "@/lib/sanitize";
@@ -61,7 +61,7 @@ interface Post {
   result_saves: number | null;
   result_comments: number | null;
   archive_summary: string | null;
-  content_blocks: any | null;
+  content_blocks: Record<string, unknown> | null;
   user_id: string;
 }
 
@@ -182,14 +182,14 @@ export function PostDrawerLegacy({ open, onOpenChange, post, pillars, userId, on
       setCaption(post.caption || "");
       setCta(post.cta || "");
       setScheduledDate(post.scheduled_date || "");
-      setScheduledTime((post as any).scheduled_time || "");
+      setScheduledTime((post as unknown as { scheduled_time?: string }).scheduled_time || "");
       setViews(post.result_views?.toString() || "");
       setSaves(post.result_saves?.toString() || "");
       setComments(post.result_comments?.toString() || "");
       setShowResults(post.status === "publicado");
-      setReferenceLink((post as any).reference_link || "");
+      setReferenceLink((post as unknown as { reference_link?: string }).reference_link || "");
       try {
-        const parsed = JSON.parse((post as any).sections || "[]");
+        const parsed = JSON.parse((post as unknown as { sections?: string }).sections || "[]");
         setSections(parsed.length > 0 ? parsed.map((s: any) => typeof s === 'string' ? { ...emptySection(), text: s } : { ...emptySection(), ...s }) : Array(5).fill(null).map(emptySection));
       } catch { setSections(Array(5).fill(null).map(emptySection)); }
     } else {
@@ -272,7 +272,7 @@ export function PostDrawerLegacy({ open, onOpenChange, post, pillars, userId, on
   const handleSave = async () => {
     if (!title.trim()) return;
     const wasPublished = status === "publicado" && post?.status !== "publicado";
-    const data: any = {
+    const data: Record<string, unknown> = {
       title: sanitizeText(title),
       platform,
       format,
@@ -689,7 +689,7 @@ export function PostDrawerLegacy({ open, onOpenChange, post, pillars, userId, on
                     {userRefHooks.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-border">
                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Meus Hooks</p>
-                        {userRefHooks.map((h: any, i: number) => (
+                        {userRefHooks.map((h: UserHook, i: number) => (
                           <div key={`uh-${i}`} className="bg-card rounded-xl p-3 border border-border mb-2">
                             <span className="inline-block px-1.5 py-0.5 rounded text-xs font-body bg-secondary/10 text-secondary mb-1 capitalize">
                               {h.category}
@@ -744,7 +744,7 @@ export function PostDrawerLegacy({ open, onOpenChange, post, pillars, userId, on
                     {userRefPrompts.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-border">
                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Meus Prompts</p>
-                        {userRefPrompts.map((p: any, i: number) => (
+                        {userRefPrompts.map((p: UserPrompt, i: number) => (
                           <div key={i} className="bg-card rounded-xl p-3 border border-border mb-2">
                             <span className="inline-block px-1.5 py-0.5 rounded text-xs font-body bg-secondary/10 text-secondary mb-1 capitalize">
                               {p.category}
