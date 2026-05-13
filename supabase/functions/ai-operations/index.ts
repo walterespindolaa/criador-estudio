@@ -37,6 +37,21 @@ serve(async (req) => {
     }
 
     const { operation, data, userContext } = await req.json()
+
+    const VALID_OPERATIONS = ['tag-suggestion', 'reference-filter', 'archive-summary', 'daily-insight']
+    if (!VALID_OPERATIONS.includes(operation)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid operation' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const truncate = (s: unknown, max: number) =>
+      typeof s === 'string' ? s.slice(0, max) : s
+    if (data) {
+      data.ideaTitle = truncate(data.ideaTitle, 500)
+    }
+
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY')
 
     if (!apiKey) {

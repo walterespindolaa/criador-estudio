@@ -77,6 +77,15 @@ serve(async (req) => {
     const { operation, data } = await req.json()
     const userId = user.id // use this, ignore userId from body
 
+    const truncate = (s: unknown, max: number) =>
+      typeof s === 'string' ? s.slice(0, max) : s
+    if (data) {
+      data.titulo = truncate(data.titulo, 500)
+      data.brandContext = truncate(data.brandContext, 3000)
+      data.roteiro = truncate(data.roteiro, 5000)
+      data.legenda_original = truncate(data.legenda_original, 3000)
+    }
+
     // ── Rate limiting ──────────────────────────────────────────
     const RATE_LIMIT = 20; // chamadas por hora
     const now = new Date();
