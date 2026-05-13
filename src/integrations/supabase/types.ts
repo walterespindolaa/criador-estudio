@@ -347,11 +347,13 @@ export type Database = {
         Row: {
           category: string | null
           created_at: string | null
+          expires_at: string | null
           file_type: string | null
           id: string
           name: string
           post_id: string | null
           size_bytes: number | null
+          source: string | null
           storage_path: string
           tags: string[] | null
           user_id: string
@@ -359,11 +361,13 @@ export type Database = {
         Insert: {
           category?: string | null
           created_at?: string | null
+          expires_at?: string | null
           file_type?: string | null
           id?: string
           name: string
           post_id?: string | null
           size_bytes?: number | null
+          source?: string | null
           storage_path: string
           tags?: string[] | null
           user_id: string
@@ -371,11 +375,13 @@ export type Database = {
         Update: {
           category?: string | null
           created_at?: string | null
+          expires_at?: string | null
           file_type?: string | null
           id?: string
           name?: string
           post_id?: string | null
           size_bytes?: number | null
+          source?: string | null
           storage_path?: string
           tags?: string[] | null
           user_id?: string
@@ -1064,6 +1070,9 @@ export type Database = {
           plan: string | null
           platforms: string[] | null
           role: string | null
+          storage_quota_bytes: number | null
+          storage_retention_days: number | null
+          storage_used_bytes: number | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           subscription_status: string | null
@@ -1096,6 +1105,9 @@ export type Database = {
           plan?: string | null
           platforms?: string[] | null
           role?: string | null
+          storage_quota_bytes?: number | null
+          storage_retention_days?: number | null
+          storage_used_bytes?: number | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_status?: string | null
@@ -1128,6 +1140,9 @@ export type Database = {
           plan?: string | null
           platforms?: string[] | null
           role?: string | null
+          storage_quota_bytes?: number | null
+          storage_retention_days?: number | null
+          storage_used_bytes?: number | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_status?: string | null
