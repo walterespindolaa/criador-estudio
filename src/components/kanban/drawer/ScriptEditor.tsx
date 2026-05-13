@@ -1,4 +1,4 @@
-import { Cloud, Minus, PenLine, Plus, X } from "lucide-react";
+import { Cloud, Image as ImageIcon, Minus, PenLine, Plus, X } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -24,9 +24,19 @@ type Props = {
   sectionLabel: string;
   picking: boolean;
   onPickDriveForSection: (index: number) => Promise<void>;
+  uploadingLocal?: boolean;
+  onUploadLocalForSection?: (index: number) => void;
 };
 
-export function ScriptEditor({ sections, onChange, sectionLabel, picking, onPickDriveForSection }: Props) {
+export function ScriptEditor({
+  sections,
+  onChange,
+  sectionLabel,
+  picking,
+  onPickDriveForSection,
+  uploadingLocal = false,
+  onUploadLocalForSection,
+}: Props) {
   const updateAt = (index: number, patch: Partial<Section>) => {
     onChange(prev => prev.map((s, j) => (j === index ? { ...s, ...patch } : s)));
   };
@@ -83,7 +93,7 @@ export function ScriptEditor({ sections, onChange, sectionLabel, picking, onPick
           />
 
           {!sec.driveFileId && (
-            <div className="px-3 pb-2.5">
+            <div className="px-3 pb-2.5 flex flex-wrap gap-1.5">
               <button
                 type="button"
                 disabled={picking}
@@ -91,8 +101,19 @@ export function ScriptEditor({ sections, onChange, sectionLabel, picking, onPick
                 className="flex items-center gap-1.5 text-[10px] font-body text-muted-foreground hover:text-primary border border-dashed border-border/60 hover:border-primary/40 rounded-lg px-2 py-1 transition-all"
               >
                 <Cloud className="h-3 w-3" />
-                Adicionar mídia
+                {picking ? "Abrindo..." : "Drive"}
               </button>
+              {onUploadLocalForSection && (
+                <button
+                  type="button"
+                  disabled={uploadingLocal}
+                  onClick={() => onUploadLocalForSection(i)}
+                  className="flex items-center gap-1.5 text-[10px] font-body text-muted-foreground hover:text-primary border border-dashed border-border/60 hover:border-primary/40 rounded-lg px-2 py-1 transition-all"
+                >
+                  <ImageIcon className="h-3 w-3" />
+                  {uploadingLocal ? "Enviando..." : "Galeria / PC"}
+                </button>
+              )}
             </div>
           )}
         </div>

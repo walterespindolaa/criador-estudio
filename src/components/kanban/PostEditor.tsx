@@ -1358,6 +1358,49 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                             onChange={setSections}
                             sectionLabel={formatStructure.sectionLabel ?? "Seção"}
                             picking={picking}
+                            uploadingLocal={uploadingLocal}
+                            onUploadLocalForSection={(index) => {
+                              if (!userId) return;
+                              const input = document.createElement("input");
+                              input.type = "file";
+                              input.accept = "image/*,video/*";
+                              input.onchange = async () => {
+                                const raw = input.files?.[0];
+                                if (!raw) return;
+                                if (raw.size > 50 * 1024 * 1024) {
+                                  toast.error(`"${raw.name}" ultrapassa 50MB.`);
+                                  return;
+                                }
+                                try {
+                                  setUploadingLocal(true);
+                                  const file = await compressImage(raw);
+                                  const path = `${userId}/${Date.now()}-${file.name}`;
+                                  const { error: upErr } = await supabase.storage
+                                    .from("media")
+                                    .upload(path, file, { upsert: true });
+                                  if (upErr) { toast.error(`Erro ao enviar ${file.name}`); return; }
+                                  const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
+                                  setSections((prev) =>
+                                    prev.map((s, j) =>
+                                      j === index
+                                        ? {
+                                            ...s,
+                                            driveFileId: path,
+                                            driveFileName: file.name,
+                                            driveThumbnail: urlData.publicUrl,
+                                          }
+                                        : s
+                                    )
+                                  );
+                                } catch (err) {
+                                  console.error(err);
+                                  toast.error("Erro ao enviar mídia.");
+                                } finally {
+                                  setUploadingLocal(false);
+                                }
+                              };
+                              input.click();
+                            }}
                             onPickDriveForSection={async (index) => {
                               const before = new Date().toISOString();
                               await pickAndSave(undefined);
