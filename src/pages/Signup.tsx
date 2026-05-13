@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { Mail } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -36,19 +37,22 @@ const Signup = () => {
   const navigate = useNavigate();
   const { signUp } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailValue, setEmailValue] = useState("");
 
   const { register, handleSubmit, formState: { errors } } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
   });
 
   const onSubmit = async (data: SignupFormData) => {
+    setEmailValue(data.email);
     setLoading(true);
     const { error } = await signUp(data.email, data.password, data.name);
     setLoading(false);
     if (error) {
       toast.error(error.message || "Erro ao criar conta.");
     } else {
-      navigate("/onboarding");
+      setEmailSent(true);
     }
   };
 
@@ -73,56 +77,84 @@ const Signup = () => {
           <Link to="/" className="text-2xl font-display font-extrabold text-foreground mb-8 block">
             Criadores
           </Link>
-          <h3 className="text-2xl font-display font-extrabold text-foreground mb-2">Criar conta</h3>
-          <p className="text-muted-foreground font-body mb-8">Comece a organizar seu conteúdo hoje</p>
 
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            className="w-full mb-4 flex items-center gap-3"
-            onClick={handleGoogleSignup}
-          >
-            <GoogleIcon />
-            <span className="font-body">Criar conta com Google</span>
-          </Button>
+          {emailSent ? (
+            <div className="flex flex-col items-center text-center max-w-sm mx-auto mt-16 gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
+                <Mail className="h-8 w-8 text-primary" />
+              </div>
+              <h2 className="text-2xl font-display font-bold text-foreground">
+                Confirme seu email
+              </h2>
+              <p className="text-muted-foreground font-body text-sm leading-relaxed">
+                Enviamos um link de confirmação para{" "}
+                <strong className="text-foreground">{emailValue}</strong>.
+                Abra o email e clique no link para ativar sua conta.
+              </p>
+              <p className="text-xs text-muted-foreground font-body">
+                Não recebeu? Verifique a pasta de spam ou{" "}
+                <button
+                  className="text-primary underline"
+                  onClick={() => setEmailSent(false)}
+                >
+                  tente novamente
+                </button>.
+              </p>
+            </div>
+          ) : (
+            <>
+              <h3 className="text-2xl font-display font-extrabold text-foreground mb-2">Criar conta</h3>
+              <p className="text-muted-foreground font-body mb-8">Comece a organizar seu conteúdo hoje</p>
 
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground font-body">ou</span>
-            </div>
-          </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                className="w-full mb-4 flex items-center gap-3"
+                onClick={handleGoogleSignup}
+              >
+                <GoogleIcon />
+                <span className="font-body">Criar conta com Google</span>
+              </Button>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="name" className="font-body">Seu nome</Label>
-              <Input id="name" type="text" placeholder="Como quer ser chamada?" {...register("name")} className="rounded-xl h-12" />
-              {errors.name && <p className="text-xs text-destructive mt-1">{errors.name.message}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email" className="font-body">E-mail</Label>
-              <Input id="email" type="email" placeholder="seu@email.com" {...register("email")} className="rounded-xl h-12" />
-              {errors.email && <p className="text-xs text-destructive mt-1">{errors.email.message}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password" className="font-body">Senha</Label>
-              <Input id="password" type="password" placeholder="Mínimo 8 caracteres" {...register("password")} className="rounded-xl h-12" />
-              {errors.password && <p className="text-xs text-destructive mt-1">{errors.password.message}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="font-body">Confirmar senha</Label>
-              <Input id="confirmPassword" type="password" placeholder="Repita a senha" {...register("confirmPassword")} className="rounded-xl h-12" />
-              {errors.confirmPassword && <p className="text-xs text-destructive mt-1">{errors.confirmPassword.message}</p>}
-            </div>
-            <Button type="submit" variant="hero" size="lg" className="w-full" disabled={loading}>
-              {loading ? "Criando conta..." : "Criar minha conta"}
-            </Button>
-          </form>
-          <p className="text-sm text-muted-foreground font-body mt-6 text-center">
-            Já tem conta?{" "}
-            <Link to="/login" className="text-primary font-medium hover:underline">Entrar</Link>
-          </p>
+              <div className="relative mb-6">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground font-body">ou</span>
+                </div>
+              </div>
+
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="font-body">Seu nome</Label>
+                  <Input id="name" type="text" placeholder="Como quer ser chamada?" {...register("name")} className="rounded-xl h-12" />
+                  {errors.name && <p className="text-xs text-destructive mt-1">{errors.name.message}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="font-body">E-mail</Label>
+                  <Input id="email" type="email" placeholder="seu@email.com" {...register("email")} className="rounded-xl h-12" />
+                  {errors.email && <p className="text-xs text-destructive mt-1">{errors.email.message}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="font-body">Senha</Label>
+                  <Input id="password" type="password" placeholder="Mínimo 8 caracteres" {...register("password")} className="rounded-xl h-12" />
+                  {errors.password && <p className="text-xs text-destructive mt-1">{errors.password.message}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="font-body">Confirmar senha</Label>
+                  <Input id="confirmPassword" type="password" placeholder="Repita a senha" {...register("confirmPassword")} className="rounded-xl h-12" />
+                  {errors.confirmPassword && <p className="text-xs text-destructive mt-1">{errors.confirmPassword.message}</p>}
+                </div>
+                <Button type="submit" variant="hero" size="lg" className="w-full" disabled={loading}>
+                  {loading ? "Criando conta..." : "Criar minha conta"}
+                </Button>
+              </form>
+              <p className="text-sm text-muted-foreground font-body mt-6 text-center">
+                Já tem conta?{" "}
+                <Link to="/login" className="text-primary font-medium hover:underline">Entrar</Link>
+              </p>
+            </>
+          )}
         </motion.div>
       </div>
     </div>
