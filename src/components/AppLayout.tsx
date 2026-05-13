@@ -12,6 +12,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { CriaAIProvider } from "@/contexts/CriaAIContext";
 import { CriaAIPanel } from "@/components/ai/CriaAIPanel";
+import { TrialBanner } from "@/components/TrialBanner";
 
 const AppLayout = () => {
   const { profile } = useProfile();
@@ -28,46 +29,49 @@ const AppLayout = () => {
   return (
     <CriaAIProvider>
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
-        <PWAInstallBanner />
-        <CriaAIPanel />
+      <div className="min-h-screen flex flex-col w-full bg-background">
+        <TrialBanner />
+        <div className="flex flex-1 w-full min-h-0">
+          <PWAInstallBanner />
+          <CriaAIPanel />
 
-        <div className="hidden md:block">
-          <AppSidebar />
-        </div>
+          <div className="hidden md:block">
+            <AppSidebar />
+          </div>
 
-        <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-12 hidden md:flex items-center justify-between px-4 border-b border-border bg-background sticky top-0 z-40">
-            <SidebarTrigger className="mr-3" />
-            <div className="flex items-center gap-1">
-              <NotificationsBell />
-            </div>
-          </header>
+          <div className="flex-1 flex flex-col min-w-0">
+            <header className="h-12 hidden md:flex items-center justify-between px-4 border-b border-border bg-background sticky top-0 z-40">
+              <SidebarTrigger className="mr-3" />
+              <div className="flex items-center gap-1">
+                <NotificationsBell />
+              </div>
+            </header>
 
-          <header className="h-14 fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 bg-background border-b border-border md:hidden">
-            <NavLink to="/app" className="flex items-center">
-              <h1
-                className="text-xl font-display font-semibold text-foreground tracking-tight"
-                style={{ fontVariationSettings: "'opsz' 9" }}
-              >
-                CreatorsFlow
-              </h1>
-            </NavLink>
-            <div className="flex items-center gap-1">
-              <NotificationsBell />
-              <NavLink to="/app/configuracoes" className="p-2 hover:bg-accent/60 rounded-xl transition-colors">
-                <Settings className="h-5 w-5 text-muted-foreground hover:text-foreground" />
+            <header className="h-14 fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 bg-background border-b border-border md:hidden">
+              <NavLink to="/app" className="flex items-center">
+                <h1
+                  className="text-xl font-display font-semibold text-foreground tracking-tight"
+                  style={{ fontVariationSettings: "'opsz' 9" }}
+                >
+                  CreatorsFlow
+                </h1>
               </NavLink>
-            </div>
-          </header>
+              <div className="flex items-center gap-1">
+                <NotificationsBell />
+                <NavLink to="/app/configuracoes" className="p-2 hover:bg-accent/60 rounded-xl transition-colors">
+                  <Settings className="h-5 w-5 text-muted-foreground hover:text-foreground" />
+                </NavLink>
+              </div>
+            </header>
 
-          <main className="flex-1 pt-14 pb-20 md:pb-0 md:pt-0 w-full">
-            <div className="max-w-screen-2xl mx-auto px-4 py-4 md:px-8 md:py-6">
-              <Outlet />
-            </div>
-          </main>
+            <main className="flex-1 pt-14 pb-20 md:pb-0 md:pt-0 w-full">
+              <div className="max-w-screen-2xl mx-auto px-4 py-4 md:px-8 md:py-6">
+                <Outlet />
+              </div>
+            </main>
 
-          <BottomBar />
+            <BottomBar />
+          </div>
         </div>
       </div>
     </SidebarProvider>
