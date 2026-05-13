@@ -57,7 +57,7 @@ export function BottomBar() {
       <NavLink
         key={item.url}
         to={item.url}
-        className="flex flex-col items-center justify-center gap-0.5 px-1 flex-1"
+        className="flex flex-col items-center justify-center gap-1 px-1 flex-1"
       >
         <item.icon
           className={cn("h-5 w-5 transition-colors", active ? "text-primary" : "text-muted-foreground")}
@@ -121,16 +121,16 @@ export function BottomBar() {
         className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card/95 backdrop-blur-lg border-t border-border"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
-        <div className="relative flex items-end justify-around h-[68px] px-1">
+        <div className="relative flex items-center justify-around h-[64px] px-1">
           {leftItems.map(renderNavItem)}
 
           <button
             type="button"
             onClick={() => openCria()}
-            className="flex flex-col items-center justify-center gap-0.5 px-1 flex-1"
+            className="flex flex-col items-center justify-center gap-1 px-1 flex-1"
             aria-label="Cria IA"
           >
-            <span className="h-12 w-12 rounded-full bg-gradient-to-br from-primary to-purple-600 text-white flex items-center justify-center shadow-lg shadow-primary/30 -mt-5 transition-transform active:scale-95">
+            <span className="h-11 w-11 rounded-full bg-gradient-to-br from-primary to-purple-600 text-white flex items-center justify-center shadow-lg shadow-primary/30 transition-transform active:scale-95">
               <Sparkles className="h-5 w-5" strokeWidth={2} />
             </span>
             <span className="text-[10px] font-body font-semibold text-primary">Cria</span>
@@ -141,7 +141,7 @@ export function BottomBar() {
           <button
             type="button"
             onClick={() => setMoreOpen(!moreOpen)}
-            className="flex flex-col items-center justify-center gap-0.5 px-1 flex-1"
+            className="flex flex-col items-center justify-center gap-1 px-1 flex-1"
           >
             <ChevronUp
               className={cn(

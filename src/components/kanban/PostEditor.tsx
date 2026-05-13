@@ -606,11 +606,19 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="max-w-none w-screen h-screen sm:w-[96vw] sm:h-[94vh] sm:max-w-[1400px] p-0 overflow-hidden overflow-x-hidden flex flex-col bg-background rounded-none sm:rounded-2xl"
+          className="[&>button:last-child]:hidden max-w-none w-screen h-screen sm:w-[96vw] sm:h-[94vh] sm:max-w-[1400px] p-0 overflow-hidden overflow-x-hidden flex flex-col bg-background rounded-none sm:rounded-2xl"
         >
           <DialogHeader className="px-4 sm:px-6 pt-3 pb-2 shrink-0 border-b border-border">
             <DialogTitle className="sr-only">{isNew ? "Novo Post" : "Editar Post"}</DialogTitle>
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => onOpenChange(false)}
+                className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground shrink-0"
+                aria-label="Fechar"
+              >
+                <X className="h-4 w-4" />
+              </button>
               <div className="flex-1 min-w-0 flex items-center gap-3">
                 <input
                   value={title}
