@@ -24,6 +24,7 @@ import { SettingsVisual } from "@/components/settings/SettingsVisual";
 import { InfoTooltip } from "@/components/shared/InfoTooltip";
 import { sanitizeText, sanitizeUrl } from "@/lib/sanitize";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
+import { cn } from "@/lib/utils";
 
 const PILLAR_COLORS = ["#C4622D", "#5C7A6B", "#8B6F4E", "#A4785C", "#6B8E7B", "#D4956A"];
 const NICHE_OPTIONS = ["Lifestyle", "Moda", "Beleza", "Fitness", "Culinária", "Educação", "Negócios", "Entretenimento", "Saúde", "Tecnologia"];
@@ -493,6 +494,92 @@ const Configuracoes = () => {
                     </Button>
                   )}
                 </div>
+
+                {(() => {
+                  const storageUsed = profile?.storage_used_bytes ?? 0;
+                  const storageQuota = profile?.storage_quota_bytes ?? 524288000;
+                  const retentionDays = profile?.storage_retention_days ?? 30;
+                  const usedMB = (storageUsed / 1048576).toFixed(1);
+                  const quotaMB = (storageQuota / 1048576).toFixed(0);
+                  const pct = storageQuota > 0 ? (storageUsed / storageQuota) * 100 : 0;
+
+                  const handleUpdateRetention = async (days: number) => {
+                    if (days === retentionDays) return;
+                    try {
+                      await updateProfile.mutateAsync({ storage_retention_days: days });
+                      toast.success("Tempo de retenção atualizado.");
+                    } catch {
+                      toast.error("Erro ao atualizar retenção.");
+                    }
+                  };
+
+                  return (
+                    <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border">
+                      <section className="space-y-4">
+                        <h3 className="text-sm font-display font-semibold text-foreground">Armazenamento</h3>
+
+                        <div className="bg-muted/30 rounded-xl p-4 space-y-3">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground font-body">Espaço usado</span>
+                            <span className="font-semibold font-body">{usedMB}MB de {quotaMB}MB</span>
+                          </div>
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div
+                              style={{ width: `${Math.min(pct, 100)}%` }}
+                              className={cn(
+                                "h-full rounded-full transition-all duration-500",
+                                pct >= 80 ? "bg-red-500" : pct >= 60 ? "bg-amber-500" : "bg-primary"
+                              )}
+                            />
+                          </div>
+                          {pct >= 80 && (
+                            <p className="text-xs text-red-500 font-body">
+                              ⚠️ Armazenamento quase cheio. Exclua arquivos ou aguarde a limpeza automática.
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-xs font-body font-semibold uppercase tracking-wider text-muted-foreground/70">
+                            Tempo de retenção de uploads
+                          </label>
+                          <p className="text-xs text-muted-foreground font-body">
+                            Arquivos enviados da galeria são deletados automaticamente após esse período.
+                            Arquivos do Google Drive nunca expiram.
+                          </p>
+                          <div className="flex gap-2">
+                            {[15, 30].map((days) => (
+                              <button
+                                key={days}
+                                type="button"
+                                onClick={() => handleUpdateRetention(days)}
+                                disabled={updateProfile.isPending}
+                                className={cn(
+                                  "px-4 py-2 rounded-xl text-sm font-body font-medium border transition-colors",
+                                  retentionDays === days
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "bg-card border-border text-foreground hover:border-primary/40"
+                                )}
+                              >
+                                {days} dias
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between bg-primary/5 border border-primary/15 rounded-xl px-4 py-3">
+                          <div>
+                            <p className="text-sm font-body font-semibold text-foreground">Plano Pro</p>
+                            <p className="text-xs text-muted-foreground font-body">+250MB de armazenamento</p>
+                          </div>
+                          <Button variant="outline" size="sm" onClick={() => navigate("/app/assinar")}>
+                            Ver plano →
+                          </Button>
+                        </div>
+                      </section>
+                    </div>
+                  );
+                })()}
               </div>
             </TabsContent>
 
