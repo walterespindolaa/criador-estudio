@@ -169,6 +169,12 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
   const [refineLoading, setRefineLoading] = useState<string | null>(null);
   const [refinedPreview, setRefinedPreview] = useState<string | null>(null);
 
+  const [mobileTab, setMobileTab] = useState<"config" | "criar">("config");
+  const mainRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (mobileTab === "criar") mainRef.current?.scrollTo({ top: 0 });
+  }, [mobileTab]);
+
   // References panel
   const [refsOpen, setRefsOpen] = useState(false);
   const [isRefAiLoading, setIsRefAiLoading] = useState(false);
@@ -669,9 +675,40 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
           </DialogHeader>
 
           {/* Body: split view */}
-          <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
+          <div className="flex flex-1 overflow-hidden flex-col">
+            {/* Mobile tab switcher */}
+            <div className="flex md:hidden shrink-0 border-b border-border bg-muted/30">
+              <button
+                type="button"
+                onClick={() => setMobileTab("config")}
+                className={cn(
+                  "flex-1 py-2.5 text-sm font-body font-semibold transition-colors",
+                  mobileTab === "config"
+                    ? "text-primary border-b-2 border-primary bg-card"
+                    : "text-muted-foreground"
+                )}
+              >
+                ⚙ Configurar
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileTab("criar")}
+                className={cn(
+                  "flex-1 py-2.5 text-sm font-body font-semibold transition-colors",
+                  mobileTab === "criar"
+                    ? "text-primary border-b-2 border-primary bg-card"
+                    : "text-muted-foreground"
+                )}
+              >
+                ✦ Criar conteúdo
+              </button>
+            </div>
+            <div className="flex flex-1 overflow-hidden md:flex-row">
             {/* ─── LEFT: Configuration + AI ─────────── */}
-            <aside className="w-full md:w-[40%] md:max-w-[480px] md:border-r border-border bg-muted/30 overflow-y-auto">
+            <aside className={cn(
+              "w-full md:w-[40%] md:max-w-[480px] md:border-r border-border bg-muted/30 overflow-y-auto",
+              mobileTab === "config" ? "block" : "hidden md:block"
+            )}>
               <div className="p-4 sm:p-5 space-y-5">
                 {/* Metadata */}
                 <section className="space-y-4">
@@ -952,7 +989,13 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
             </aside>
 
             {/* ─── RIGHT: Content tabs ─────────── */}
-            <main className="flex-1 overflow-y-auto bg-card">
+            <main
+              ref={mainRef}
+              className={cn(
+                "flex-1 overflow-y-auto bg-card",
+                mobileTab === "criar" ? "block" : "hidden md:block"
+              )}
+            >
               <Tabs defaultValue="legenda" className="h-full flex flex-col">
                 <TabsList className="bg-transparent border-b border-border rounded-none px-4 sm:px-6 h-12 shrink-0 justify-start gap-0">
                   <TabsTrigger
@@ -1361,6 +1404,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                 </TabsContent>
               </Tabs>
             </main>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

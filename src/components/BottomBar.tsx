@@ -84,8 +84,8 @@ export function BottomBar() {
 
       {moreOpen && (
         <div
-          className="fixed bottom-[72px] left-0 right-0 z-50 md:hidden bg-card border-t border-border rounded-t-2xl shadow-warm-lg p-4 bottom-bar-safe"
-          style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+          className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card border-t border-border rounded-t-2xl shadow-warm-lg p-4 bottom-bar-safe"
+          style={{ paddingBottom: 'calc(68px + env(safe-area-inset-bottom, 0px))' }}
         >
           <div className="w-8 h-1 bg-border rounded-full mx-auto mb-4" />
           <div className="grid grid-cols-4 gap-3">
@@ -119,9 +119,9 @@ export function BottomBar() {
 
       <nav
         className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card/95 backdrop-blur-lg border-t border-border"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
-        <div className="relative flex items-end justify-around h-[72px] px-1">
+        <div className="relative flex items-end justify-around h-[68px] px-1">
           {leftItems.map(renderNavItem)}
 
           <button
