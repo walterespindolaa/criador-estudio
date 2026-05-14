@@ -212,7 +212,6 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
   const [pendingDriveFiles, setPendingDriveFiles] = useState<DriveRef[]>([]);
   const [uploadingLocal, setUploadingLocal] = useState(false);
   const [driveLink, setDriveLink] = useState("");
-  const localFileInputRef = useRef<HTMLInputElement>(null);
   const isMobile = useIsMobile();
   const { pickAndSave, picking } = useGoogleDrive();
   const { createPost, updatePost, deletePost } = usePosts();
@@ -474,6 +473,19 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
       setUploadingLocal(false);
     }
   };
+
+  const openLocalFilePicker = useCallback(() => {
+    if (!userId) return;
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*,video/*";
+    input.multiple = true;
+    input.style.display = "none";
+    input.addEventListener("change", async (e) => {
+      await handleLocalUpload(e as unknown as React.ChangeEvent<HTMLInputElement>);
+    });
+    input.click();
+  }, [userId, handleLocalUpload]);
 
   const handleDrivePick = async () => {
     if (picking) return;
@@ -1380,19 +1392,11 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                           </div>
                         ) : (
                           <div className="flex flex-col gap-3 p-3">
-                            <input
-                              ref={localFileInputRef}
-                              type="file"
-                              accept="image/*,video/*"
-                              multiple
-                              className="hidden"
-                              onChange={handleLocalUpload}
-                            />
                             {isMobile ? (
                               <div className="flex flex-col gap-3">
                                 <button
                                   type="button"
-                                  onClick={() => localFileInputRef.current?.click()}
+                                  onClick={openLocalFilePicker}
                                   disabled={uploadingLocal}
                                   className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all p-4 text-center w-full"
                                 >
@@ -1447,7 +1451,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
 
                                   <button
                                     type="button"
-                                    onClick={() => localFileInputRef.current?.click()}
+                                    onClick={openLocalFilePicker}
                                     disabled={uploadingLocal}
                                     className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all p-4 text-center"
                                   >
