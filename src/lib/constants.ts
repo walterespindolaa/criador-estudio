@@ -21,4 +21,12 @@ export const STATUS_OPTIONS = [
   { key: "publicado", label: "Publicado" },
 ];
 
-export const PILLAR_COLORS = ["#C4622D", "#5C7A6B", "#8B6F4E", "#A4785C", "#6B8E7B", "#D4956A"];
+export const PILLAR_COLORS = [
+  "#7C3AED", // Roxo vibrante
+  "#2563EB", // Azul elétrico
+  "#059669", // Verde esmeralda
+  "#DC2626", // Vermelho coral
+  "#D97706", // Amarelo âmbar
+  "#DB2777", // Rosa magenta
+  "#0891B2", // Ciano profundo
+];
