@@ -433,7 +433,12 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
         anyUploaded = true;
       }
       if (anyUploaded) {
-        if (post?.id) fetchDriveMedia(post.id);
+        if (post?.id) {
+          // Delay o refetch para dar tempo do banco confirmar o insert
+          // antes do select sobrescrever o tempRef otimista por uma lista vazia.
+          const pid = post.id;
+          setTimeout(() => fetchDriveMedia(pid), 1500);
+        }
         toast.success("Mídia adicionada!");
       }
     } catch (err) {
@@ -1290,6 +1295,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                 const primary = mediaList[0];
                                 const fileId = primary.external_file_id || primary.id;
                                 const isVideo = primary.file_type?.startsWith("video/");
+                                const isSupabaseUpload = !!primary.thumbnail_url
+                                  && !primary.thumbnail_url.includes("drive.google")
+                                  && !primary.thumbnail_url.includes("lh3.google");
                                 const driveImgSrc = `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w600`;
                                 const imgSrc = primary.thumbnail_url || primary.view_url || driveImgSrc;
                                 const driveVideoSrc = `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview`;
@@ -1308,8 +1316,11 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                     className="w-full h-full object-cover"
                                     loading="lazy"
                                     onError={(e) => {
-                                      if (!primary.thumbnail_url) {
-                                        (e.target as HTMLImageElement).src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
+                                      const el = e.target as HTMLImageElement;
+                                      if (!isSupabaseUpload) {
+                                        el.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
+                                      } else {
+                                        el.style.display = "none";
                                       }
                                     }}
                                   />
