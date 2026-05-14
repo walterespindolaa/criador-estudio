@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Trash2, Camera, Lock, AlertTriangle, Shield, Paintbrush, HardDrive, ExternalLink, Unplug, User, LayoutGrid, Plug, Settings } from "lucide-react";
+import { Plus, Trash2, Camera, Lock, AlertTriangle, Shield, Paintbrush, HardDrive, ExternalLink, Unplug, User, LayoutGrid, Plug, Settings, Pencil } from "lucide-react";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,7 +46,7 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 const Configuracoes = () => {
   const { user, signOut } = useAuth();
   const { profile, updateProfile } = useProfile();
-  const { pillars, createPillar, deletePillar: deletePillarMutation } = usePillars();
+  const { pillars, createPillar, updatePillar: updatePillarMutation, deletePillar: deletePillarMutation } = usePillars();
   const { habits, createHabit, deleteHabit: deleteHabitMutation } = useHabits();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -62,6 +62,8 @@ const Configuracoes = () => {
 
   const [newPillarName, setNewPillarName] = useState("");
   const [newPillarColor, setNewPillarColor] = useState(PILLAR_COLORS[0]);
+  const [editingPillarId, setEditingPillarId] = useState<string | null>(null);
+  const [editingPillarName, setEditingPillarName] = useState("");
   const [newHabitName, setNewHabitName] = useState("");
   const [selectedNiches, setSelectedNiches] = useState<string[]>([]);
   const [customNiche, setCustomNiche] = useState("");
@@ -183,7 +185,7 @@ const Configuracoes = () => {
 
   const addPillar = async () => {
     const sanitized = sanitizeText(newPillarName);
-    if (!sanitized || pillars.length >= 5) return;
+    if (!sanitized || pillars.length >= 7) return;
     try {
       await createPillar.mutateAsync({ name: sanitized, color: newPillarColor });
       setNewPillarName("");
@@ -198,6 +200,18 @@ const Configuracoes = () => {
       await deletePillarMutation.mutateAsync(id);
     } catch {
       toast.error("Erro ao remover pilar.");
+    }
+  };
+
+  const handleSavePillarEdit = async (id: string) => {
+    const sanitized = sanitizeText(editingPillarName).trim();
+    if (!sanitized) return;
+    try {
+      await updatePillarMutation.mutateAsync({ id, name: sanitized });
+      setEditingPillarId(null);
+      setEditingPillarName("");
+    } catch {
+      toast.error("Erro ao editar pilar.");
     }
   };
 
@@ -426,15 +440,54 @@ const Configuracoes = () => {
               <div className="max-w-2xl space-y-6">
                 <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
                   <h3 className="font-display font-semibold text-foreground">Pilares de Conteúdo</h3>
-                  <p className="text-xs text-muted-foreground font-body">Máximo 5 pilares</p>
+                  <p className="text-xs text-muted-foreground font-body">Máximo 7 pilares</p>
                   {pillars.map(p => (
                     <div key={p.id} className="flex items-center gap-3">
                       <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: p.color }} />
-                      <span className="font-body text-sm text-foreground flex-1">{p.name}</span>
+                      {editingPillarId === p.id ? (
+                        <div className="flex items-center gap-2 flex-1">
+                          <input
+                            autoFocus
+                            value={editingPillarName}
+                            onChange={(e) => setEditingPillarName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleSavePillarEdit(p.id);
+                              if (e.key === "Escape") setEditingPillarId(null);
+                            }}
+                            className="flex-1 h-7 px-2 rounded-lg border border-primary/40 bg-card text-sm font-body focus:outline-none focus:ring-1 focus:ring-primary/40"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleSavePillarEdit(p.id)}
+                            className="text-xs text-primary font-body font-medium hover:underline"
+                          >
+                            Salvar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingPillarId(null)}
+                            className="text-xs text-muted-foreground font-body hover:underline"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 flex-1 group">
+                          <span className="flex-1 text-sm font-body">{p.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => { setEditingPillarId(p.id); setEditingPillarName(p.name); }}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-muted"
+                            aria-label="Editar pilar"
+                          >
+                            <Pencil className="h-3 w-3 text-muted-foreground" />
+                          </button>
+                        </div>
+                      )}
                       <button type="button" onClick={() => handleDeletePillar(p.id)} className="p-1 hover:bg-destructive/10 rounded"><Trash2 className="h-3.5 w-3.5 text-destructive" /></button>
                     </div>
                   ))}
-                  {pillars.length < 5 && (
+                  {pillars.length < 7 && (
                     <div className="space-y-2">
                       <div className="flex gap-2">
                         <Input placeholder="Novo pilar..." value={newPillarName} onChange={(e) => setNewPillarName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addPillar()} className="rounded-xl text-sm" />
@@ -452,7 +505,7 @@ const Configuracoes = () => {
                 <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
                   <h3 className="font-display font-semibold text-foreground">Meus Hábitos</h3>
                   {habits.map(h => (
-                    <div key={h.id} className="flex items-center gap-3">
+                    <div key={h.id} className="flex items-center justify-between px-3 py-2 bg-muted/30 rounded-xl border border-border/30">
                       <span className="font-body text-sm text-foreground flex-1">{h.name}</span>
                       <button type="button" onClick={() => handleDeleteHabit(h.id)} className="p-1 hover:bg-destructive/10 rounded"><Trash2 className="h-3.5 w-3.5 text-destructive" /></button>
                     </div>

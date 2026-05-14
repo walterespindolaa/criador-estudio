@@ -53,6 +53,20 @@ export function usePillars() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey }),
   });
 
+  const updatePillar = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }): Promise<Pillar> => {
+      const { data, error } = await supabase
+        .from("pillars")
+        .update({ name })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as Pillar;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+  });
+
   const deletePillar = useMutation({
     mutationFn: async (id: string): Promise<void> => {
       const { error } = await supabase.from("pillars").delete().eq("id", id);
@@ -61,5 +75,5 @@ export function usePillars() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey }),
   });
 
-  return { pillars, isLoading, error, createPillar, deletePillar };
+  return { pillars, isLoading, error, createPillar, updatePillar, deletePillar };
 }
