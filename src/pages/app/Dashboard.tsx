@@ -327,8 +327,8 @@ const Dashboard = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
                   className={cn(
-                    "relative overflow-hidden bg-gradient-to-br p-3 sm:p-5 rounded-2xl border border-border/50",
-                    "hover:shadow-warm-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-200",
+                    "relative overflow-hidden bg-gradient-to-br p-3 sm:p-5 rounded-2xl border border-border/30",
+                    "hover:shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all duration-200",
                     "text-left w-full group cursor-pointer",
                     s.bg
                   )}
