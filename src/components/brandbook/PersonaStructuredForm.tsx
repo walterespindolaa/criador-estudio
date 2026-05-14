@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Plus, Save, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,18 +16,17 @@ export interface PersonaData {
   interests: string[];
   pain_points: string[];
   desires: string[];
+  how_you_help: string;
   platforms: string[];
   notes: string;
 }
 
-type TagField = "interests" | "pain_points" | "desires";
+export type TagField = "interests" | "pain_points" | "desires";
 
 type Props = {
   persona: PersonaData;
-  newTag: string;
   onPersonaChange: (next: PersonaData | ((prev: PersonaData) => PersonaData)) => void;
-  onNewTagChange: (value: string) => void;
-  onAddTag: (field: TagField) => void;
+  onAddTag: (field: TagField, value: string) => void;
   onRemoveTag: (field: TagField, idx: number) => void;
   onSave: () => void;
 };
@@ -37,17 +37,42 @@ const TAG_SECTIONS: ReadonlyArray<{ label: string; field: TagField }> = [
   { label: "Desejos", field: "desires" },
 ];
 
+const AGE_OPTIONS = ["18-24", "25-34", "35-44", "45+"] as const;
+
+function parseAgeRanges(value: string): string[] {
+  return value ? value.split(",").map(s => s.trim()).filter(Boolean) : [];
+}
+
 export function PersonaStructuredForm({
   persona,
-  newTag,
   onPersonaChange,
-  onNewTagChange,
   onAddTag,
   onRemoveTag,
   onSave,
 }: Props) {
   const setField = <K extends keyof PersonaData>(key: K, value: PersonaData[K]) => {
     onPersonaChange(prev => ({ ...prev, [key]: value }));
+  };
+
+  const [newTagDraft, setNewTagDraft] = useState<Record<TagField, string>>({
+    interests: "",
+    pain_points: "",
+    desires: "",
+  });
+
+  const handleAddTag = (field: TagField) => {
+    const value = newTagDraft[field].trim();
+    if (!value) return;
+    onAddTag(field, value);
+    setNewTagDraft(prev => ({ ...prev, [field]: "" }));
+  };
+
+  const ageRanges = parseAgeRanges(persona.age_range);
+  const toggleAgeRange = (option: string) => {
+    const next = ageRanges.includes(option)
+      ? ageRanges.filter(a => a !== option)
+      : [...ageRanges, option];
+    setField("age_range", next.join(", "));
   };
 
   return (
@@ -71,13 +96,13 @@ export function PersonaStructuredForm({
         <div className="space-y-2">
           <Label className="font-body text-sm">Faixa etária</Label>
           <div className="flex gap-2 flex-wrap">
-            {["18-24", "25-34", "35-44", "45+"].map(a => (
+            {AGE_OPTIONS.map(a => (
               <button
                 key={a}
                 type="button"
-                onClick={() => setField("age_range", persona.age_range === a ? "" : a)}
+                onClick={() => toggleAgeRange(a)}
                 className={`px-3 py-1.5 rounded-xl text-sm font-body border transition-colors ${
-                  persona.age_range === a
+                  ageRanges.includes(a)
                     ? "bg-primary text-primary-foreground border-primary"
                     : "bg-background border-border"
                 }`}
@@ -138,19 +163,32 @@ export function PersonaStructuredForm({
             <div className="flex gap-2">
               <Input
                 placeholder={`Adicionar ${section.label.toLowerCase()}...`}
-                value={newTag}
-                onChange={(e) => onNewTagChange(e.target.value)}
+                value={newTagDraft[section.field]}
+                onChange={(e) => setNewTagDraft(prev => ({ ...prev, [section.field]: e.target.value }))}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") onAddTag(section.field);
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddTag(section.field);
+                  }
                 }}
                 className="rounded-xl text-sm"
               />
-              <Button variant="outline" size="sm" onClick={() => onAddTag(section.field)}>
+              <Button variant="outline" size="sm" onClick={() => handleAddTag(section.field)}>
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
           </div>
         ))}
+
+        <div className="space-y-2">
+          <Label className="font-body text-sm">Como você ajuda essa persona</Label>
+          <Textarea
+            placeholder="Ex: Ensino ela a criar conteúdo de forma simples e consistente..."
+            value={persona.how_you_help}
+            onChange={(e) => setField("how_you_help", e.target.value)}
+            className="rounded-xl min-h-[60px]"
+          />
+        </div>
 
         <div className="space-y-2">
           <Label className="font-body text-sm">Plataformas que usa</Label>

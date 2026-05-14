@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils";
 import { BrandHubOverview } from "@/components/brandbook/BrandHubOverview";
 import { GuidedSection } from "@/components/brandbook/GuidedSection";
 import { BrandValuesSection } from "@/components/brandbook/BrandValuesSection";
-import { PersonaStructuredForm } from "@/components/brandbook/PersonaStructuredForm";
+import { PersonaStructuredForm, type TagField } from "@/components/brandbook/PersonaStructuredForm";
 import { MoodboardSection } from "@/components/brandbook/MoodboardSection";
 import { EditorialSection } from "@/components/brandbook/EditorialSection";
 import { BrandPdfTemplate } from "@/components/pdf/BrandPdfTemplate";
@@ -39,6 +39,7 @@ interface PersonaData {
   interests: string[];
   pain_points: string[];
   desires: string[];
+  how_you_help: string;
   platforms: string[];
   notes: string;
 }
@@ -209,12 +210,11 @@ const Brandbook = () => {
 
   const emptyPersona: PersonaData = {
     id: null, name: "", age_range: "", gender: "",
-    location: "", interests: [], pain_points: [], desires: [], platforms: [], notes: "",
+    location: "", interests: [], pain_points: [], desires: [], how_you_help: "", platforms: [], notes: "",
   };
   const [editingPersona, setEditingPersona] = useState<PersonaData | null>(null);
   const [deletingPersonaId, setDeletingPersonaId] = useState<string | null>(null);
   const [savingPersona, setSavingPersona] = useState(false);
-  const [newTag, setNewTag] = useState("");
 
   const allSectionKeys = useMemo(() => Object.keys(QUESTION_SECTIONS) as QuestionSectionKey[], []);
   const loaded = !moodboardLoading && !brandLoading && !personaLoading;
@@ -293,12 +293,12 @@ const Brandbook = () => {
         interests: editingPersona.interests.length > 0 ? editingPersona.interests : null,
         pain_points: editingPersona.pain_points.length > 0 ? editingPersona.pain_points : null,
         desires: editingPersona.desires.length > 0 ? editingPersona.desires : null,
+        how_you_help: editingPersona.how_you_help || null,
         platforms: editingPersona.platforms.length > 0 ? editingPersona.platforms : null,
         notes: editingPersona.notes || null,
       });
       toast.success("Persona salva!");
       setEditingPersona(null);
-      setNewTag("");
     } catch {
       toast.error("Erro ao salvar persona.");
     } finally {
@@ -319,14 +319,12 @@ const Brandbook = () => {
   };
 
   const openNewPersona = () => {
-    setNewTag("");
     setEditingPersona({ ...emptyPersona, name: `Persona ${personas.length + 1}` });
   };
 
   const openEditPersona = (id: string) => {
     const target = personas.find(p => p.id === id);
     if (!target) return;
-    setNewTag("");
     setEditingPersona({
       id: target.id,
       name: target.name || "",
@@ -336,21 +334,22 @@ const Brandbook = () => {
       interests: target.interests || [],
       pain_points: target.pain_points || [],
       desires: target.desires || [],
+      how_you_help: target.how_you_help || "",
       platforms: target.platforms || [],
       notes: target.notes || "",
     });
   };
 
-  const addTagTo = (field: keyof PersonaData) => {
+  const addTagTo = (field: TagField, value: string) => {
     if (!editingPersona) return;
-    if (!newTag.trim()) return;
+    const trimmed = value.trim();
+    if (!trimmed) return;
     const arr = editingPersona[field] as string[];
-    if (arr.includes(newTag.trim())) return;
-    setEditingPersona(prev => prev ? { ...prev, [field]: [...(prev[field] as string[]), newTag.trim()] } : prev);
-    setNewTag("");
+    if (arr.includes(trimmed)) return;
+    setEditingPersona(prev => prev ? { ...prev, [field]: [...(prev[field] as string[]), trimmed] } : prev);
   };
 
-  const removeTag = (field: keyof PersonaData, idx: number) => {
+  const removeTag = (field: TagField, idx: number) => {
     setEditingPersona(prev => prev ? { ...prev, [field]: (prev[field] as string[]).filter((_, i) => i !== idx) } : prev);
   };
 
@@ -647,6 +646,14 @@ const Brandbook = () => {
               )}
 
               {/* Insights de audiência (compartilhados — persona-brand do moodboard) */}
+              <div className="bg-primary/5 border border-primary/15 rounded-xl px-4 py-3 mb-4">
+                <p className="text-sm font-body text-foreground/80 leading-relaxed">
+                  💡 <strong className="text-foreground">Não sabe quem é a sua persona?</strong>{" "}
+                  Preencha as informações abaixo com o que você sabe até agora e peça ajuda
+                  ao ChatGPT ou Claude — eles vão te ajudar a construir sua persona ideal
+                  com base nas suas respostas.
+                </p>
+              </div>
               {renderGuidedSection("persona-brand", true)}
             </motion.div>
           </TabsContent>
@@ -682,7 +689,7 @@ const Brandbook = () => {
         </Tabs>
       </motion.div>
 
-      <Sheet open={editingPersona !== null} onOpenChange={(open) => { if (!open) { setEditingPersona(null); setNewTag(""); } }}>
+      <Sheet open={editingPersona !== null} onOpenChange={(open) => { if (!open) setEditingPersona(null); }}>
         <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="font-display">
@@ -697,9 +704,7 @@ const Brandbook = () => {
             <div className="mt-6">
               <PersonaStructuredForm
                 persona={editingPersona}
-                newTag={newTag}
                 onPersonaChange={(next) => setEditingPersona(prev => prev ? (typeof next === "function" ? next(prev) : next) : prev)}
-                onNewTagChange={setNewTag}
                 onAddTag={addTagTo}
                 onRemoveTag={removeTag}
                 onSave={savePersona}
