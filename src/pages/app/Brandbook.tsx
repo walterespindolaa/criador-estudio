@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
@@ -689,16 +689,16 @@ const Brandbook = () => {
         </Tabs>
       </motion.div>
 
-      <Sheet open={editingPersona !== null} onOpenChange={(open) => { if (!open) setEditingPersona(null); }}>
-        <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle className="font-display">
+      <Dialog open={editingPersona !== null} onOpenChange={(open) => { if (!open) setEditingPersona(null); }}>
+        <DialogContent className="max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display">
               {editingPersona?.id ? "Editar persona" : "Nova persona"}
-            </SheetTitle>
-            <SheetDescription>
+            </DialogTitle>
+            <DialogDescription>
               Detalhe quem é essa pessoa. Quanto mais específico, melhor a IA personaliza as sugestões.
-            </SheetDescription>
-          </SheetHeader>
+            </DialogDescription>
+          </DialogHeader>
 
           {editingPersona && (
             <div className="mt-6">
@@ -714,8 +714,8 @@ const Brandbook = () => {
               )}
             </div>
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={deletingPersonaId !== null} onOpenChange={(open) => { if (!open) setDeletingPersonaId(null); }}>
         <AlertDialogContent>
