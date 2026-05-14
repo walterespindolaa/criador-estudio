@@ -19,6 +19,7 @@ import { useIdeas } from "@/hooks/useIdeas";
 import { usePosts } from "@/hooks/usePosts";
 import { useHabits } from "@/hooks/useHabits";
 import { useTasks } from "@/hooks/useTasks";
+import { usePillars } from "@/hooks/usePillars";
 import { BestTimeToPost } from "@/components/insights/BestTimeToPost";
 import { SmartNotificationsCard } from "@/components/notifications/SmartNotificationsCard";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
@@ -137,6 +138,13 @@ const Dashboard = () => {
     toggleHabitLog,
   } = useHabits({ date: today, limit: 20 });
   const { tasks } = useTasks({ limit: 20 });
+  const { pillars } = usePillars();
+
+  const editorialDays = useMemo(() => ["SEG", "TER", "QUA", "QUI", "SEX", "SÁB", "DOM"], []);
+  const todayIndex = useMemo(() => {
+    const d = new Date().getDay();
+    return d === 0 ? 6 : d - 1;
+  }, []);
 
   const [period, setPeriod] = useState<PeriodKey>("semana");
   const [customRange, setCustomRange] = useState<{ from: Date; to: Date }>({ from: new Date(), to: new Date() });
@@ -342,6 +350,69 @@ const Dashboard = () => {
                 </motion.button>
               ))}
             </div>
+
+            <section className="bg-card border border-border/30 rounded-2xl p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-display font-semibold text-foreground">
+                  Linha Editorial
+                </h3>
+                <span className="text-xs text-muted-foreground font-body">
+                  baseada nos seus pilares
+                </span>
+              </div>
+
+              {pillars.length > 0 ? (
+                <div className="grid grid-cols-7 gap-1.5">
+                  {editorialDays.map((day, index) => {
+                    const pilar = pillars[index % pillars.length];
+                    const isToday = index === todayIndex;
+                    return (
+                      <div
+                        key={day}
+                        className={cn(
+                          "flex flex-col items-center gap-1.5 rounded-xl p-2 transition-colors",
+                          isToday
+                            ? "bg-primary/10 border border-primary/20"
+                            : "bg-muted/20 border border-transparent"
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "text-[10px] font-body font-semibold uppercase tracking-wide",
+                            isToday ? "text-primary" : "text-muted-foreground"
+                          )}
+                        >
+                          {day}
+                        </span>
+                        <div
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: pilar.color || "#6B7280" }}
+                        />
+                        <span
+                          className={cn(
+                            "text-[9px] font-body text-center leading-tight line-clamp-2",
+                            isToday ? "text-foreground font-medium" : "text-muted-foreground"
+                          )}
+                        >
+                          {pilar.name}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground font-body text-center py-2">
+                  Cadastre seus pilares em{" "}
+                  <button
+                    onClick={() => navigate("/app/configuracoes")}
+                    className="text-primary underline"
+                  >
+                    Configurações
+                  </button>{" "}
+                  para ver sua linha editorial.
+                </p>
+              )}
+            </section>
 
             <DCard className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-transparent to-primary/10 border-primary/15 group">
               <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
