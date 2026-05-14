@@ -70,7 +70,7 @@ const groups = [
     ],
   },
   {
-    label: "Ajustes",
+    label: "Comece por aqui",
     items: [
       { title: "Aprender", url: "/app/aprender", icon: GraduationCap },
       { title: "Configurações", url: "/app/configuracoes", icon: Settings },
