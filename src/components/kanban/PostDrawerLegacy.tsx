@@ -272,7 +272,7 @@ export function PostDrawerLegacy({ open, onOpenChange, post, pillars, userId, on
   const handleSave = async () => {
     if (!title.trim()) return;
     const wasPublished = status === "publicado" && post?.status !== "publicado";
-    const data: Record<string, unknown> = {
+    const data: CreatePostInput & { user_id?: string; archive_summary?: string; published_at?: string } = {
       title: sanitizeText(title),
       platform,
       format,
