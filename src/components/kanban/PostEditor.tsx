@@ -759,6 +759,13 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
           onOpenAutoFocus={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => {
+            // Permite fechar via ESC, mas bloqueia "clique fora" — que é falsamente
+            // disparado pelo file picker nativo do SO ao abrir <input type="file">.
+            // Issue conhecida: radix-ui/primitives#1280.
+            e.preventDefault();
+          }}
           className="[&>button:last-child]:hidden max-w-none w-screen h-screen sm:w-[96vw] sm:h-[94vh] sm:max-w-[1400px] p-0 overflow-hidden overflow-x-hidden flex flex-col bg-background rounded-none sm:rounded-2xl"
         >
           <DialogHeader className="px-4 sm:px-6 pt-3 pb-2 shrink-0 border-b border-border">
