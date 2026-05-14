@@ -409,13 +409,14 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
         if (upErr) { toast.error(`Erro ao enviar ${file.name}`); continue; }
         const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
         const tempRef: DriveRef = {
-          id: path,
+          id: `temp-${Date.now()}`,
           file_name: file.name,
           file_type: file.type,
           thumbnail_url: urlData.publicUrl,
           view_url: urlData.publicUrl,
           external_file_id: path,
         };
+        setDriveMedia((prev) => [...prev, tempRef]);
         if (post?.id) {
           await supabase.from("external_media_refs").insert({
             user_id: userId,
@@ -426,7 +427,6 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
             view_url: urlData.publicUrl,
             external_file_id: path,
           });
-          setDriveMedia((prev) => [...prev, tempRef]);
         } else {
           setPendingDriveFiles((prev) => [...prev, tempRef]);
         }
