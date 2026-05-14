@@ -402,22 +402,27 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
   };
 
   const handleLocalUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    // CRÍTICO: snapshot dos arquivos como Array ANTES de qualquer manipulação.
+    // FileList é live — `e.target.value = ""` esvazia o FileList referenciado, então
+    // precisamos copiar para um Array primeiro.
+    const fileList = e.target.files;
+    const files: File[] = fileList ? Array.from(fileList) : [];
+    e.target.value = ""; // agora seguro — `files` já é snapshot independente
+
     console.log("[upload] start", {
-      hasFiles: !!e.target.files,
-      filesLength: e.target.files?.length,
+      filesLength: files.length,
       userId,
       userIdType: typeof userId,
     });
-    const files = e.target.files;
-    e.target.value = "";
-    if (!files || files.length === 0 || !userId) {
-      console.log("[upload] early return", { files: !!files, len: files?.length, userId });
+
+    if (files.length === 0 || !userId) {
+      console.log("[upload] early return", { len: files.length, userId });
       return;
     }
     let anyUploaded = false;
     try {
       setUploadingLocal(true);
-      for (const raw of Array.from(files)) {
+      for (const raw of files) {
         if (raw.size > 50 * 1024 * 1024) {
           console.log("[upload] skip oversized", raw.name, raw.size);
           toast.error(`"${raw.name}" ultrapassa 50MB.`);
