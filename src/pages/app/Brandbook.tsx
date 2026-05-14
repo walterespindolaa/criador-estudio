@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { BookOpen, Users, Mic, Save, Sparkles, Eye, Palette, Heart, Paintbrush, Languages, MessageSquareText, MessageSquare, Ban, Plus, Trash2, BookMarked } from "lucide-react";
+import { BookOpen, Users, Mic, Save, Sparkles, Eye, Palette, Heart, Paintbrush, Languages, MessageSquareText, MessageSquare, Ban, Plus, Trash2, BookMarked, Download, Pencil } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -8,13 +8,18 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { toast } from "sonner";
 import { InfoTooltip } from "@/components/shared/InfoTooltip";
 import { useBrandItems } from "@/hooks/useBrandItems";
 import { useMoodboard } from "@/hooks/useMoodboard";
-import { usePersonas } from "@/hooks/usePersonas";
+import { usePersonas, MAX_PERSONAS } from "@/hooks/usePersonas";
+import { usePillars } from "@/hooks/usePillars";
+import { useProfile } from "@/hooks/useProfile";
+import { usePdfExport } from "@/hooks/usePdfExport";
 import { cn } from "@/lib/utils";
 import { BrandHubOverview } from "@/components/brandbook/BrandHubOverview";
 import { GuidedSection } from "@/components/brandbook/GuidedSection";
@@ -22,6 +27,7 @@ import { BrandValuesSection } from "@/components/brandbook/BrandValuesSection";
 import { PersonaStructuredForm } from "@/components/brandbook/PersonaStructuredForm";
 import { MoodboardSection } from "@/components/brandbook/MoodboardSection";
 import { EditorialSection } from "@/components/brandbook/EditorialSection";
+import { BrandPdfTemplate } from "@/components/pdf/BrandPdfTemplate";
 
 interface EntryMap { [key: string]: string }
 interface PersonaData {
@@ -158,7 +164,17 @@ const BRAND_ITEM_SECTIONS = [
 const Brandbook = () => {
   const { entries: moodboardEntries, isLoading: moodboardLoading, saveAnswer } = useMoodboard();
   const { brandItems, createBrandItem, deleteBrandItem: deleteBrandItemMutation, isLoading: brandLoading } = useBrandItems();
-  const { persona: personaRow, savePersona: savePersonaMutation, isLoading: personaLoading } = usePersonas();
+  const {
+    personas,
+    savePersona: savePersonaMutation,
+    deletePersona: deletePersonaMutation,
+    isLoading: personaLoading,
+  } = usePersonas();
+  const { pillars } = usePillars();
+  const { profile } = useProfile();
+  const { exportPdf } = usePdfExport();
+  const pdfRef = useRef<HTMLDivElement>(null);
+  const [exporting, setExporting] = useState(false);
 
   const [answers, setAnswers] = useState<Record<string, EntryMap>>({});
   const [activeTab, setActiveTab] = useState<string>("visao-geral");
@@ -175,17 +191,19 @@ const Brandbook = () => {
   const [newItemValue, setNewItemValue] = useState("");
   const [activeSection, setActiveSection] = useState("");
 
-  const [persona, setPersona] = useState<PersonaData>({
-    id: null, name: "Meu público principal", age_range: "", gender: "",
+  const emptyPersona: PersonaData = {
+    id: null, name: "", age_range: "", gender: "",
     location: "", interests: [], pain_points: [], desires: [], platforms: [], notes: "",
-  });
+  };
+  const [editingPersona, setEditingPersona] = useState<PersonaData | null>(null);
+  const [deletingPersonaId, setDeletingPersonaId] = useState<string | null>(null);
+  const [savingPersona, setSavingPersona] = useState(false);
   const [newTag, setNewTag] = useState("");
 
   const allSectionKeys = useMemo(() => Object.keys(QUESTION_SECTIONS) as QuestionSectionKey[], []);
   const loaded = !moodboardLoading && !brandLoading && !personaLoading;
 
   const answersHydratedRef = useRef(false);
-  const personaHydratedRef = useRef(false);
 
   useEffect(() => {
     if (answersHydratedRef.current || moodboardLoading) return;
@@ -197,27 +215,6 @@ const Brandbook = () => {
     setAnswers(grouped);
     answersHydratedRef.current = true;
   }, [moodboardEntries, allSectionKeys, moodboardLoading]);
-
-  useEffect(() => {
-    if (personaHydratedRef.current || personaLoading) return;
-    if (!personaRow) {
-      personaHydratedRef.current = true;
-      return;
-    }
-    setPersona({
-      id: personaRow.id,
-      name: personaRow.name || "",
-      age_range: personaRow.age_range || "",
-      gender: personaRow.gender || "",
-      location: personaRow.location || "",
-      interests: personaRow.interests || [],
-      pain_points: personaRow.pain_points || [],
-      desires: personaRow.desires || [],
-      platforms: personaRow.platforms || [],
-      notes: personaRow.notes || "",
-    });
-    personaHydratedRef.current = true;
-  }, [personaRow, personaLoading]);
 
   const saveSection = useCallback(async (section: string) => {
     const config = QUESTION_SECTIONS[section as QuestionSectionKey];
@@ -264,37 +261,95 @@ const Brandbook = () => {
   };
 
   const savePersona = async () => {
+    if (!editingPersona) return;
+    if (!editingPersona.name.trim()) {
+      toast.error("Dê um nome para a persona.");
+      return;
+    }
+    setSavingPersona(true);
     try {
-      const saved = await savePersonaMutation.mutateAsync({
-        name: persona.name,
-        age_range: persona.age_range || null,
-        gender: persona.gender || null,
-        location: persona.location || null,
-        interests: persona.interests.length > 0 ? persona.interests : null,
-        pain_points: persona.pain_points.length > 0 ? persona.pain_points : null,
-        desires: persona.desires.length > 0 ? persona.desires : null,
-        platforms: persona.platforms.length > 0 ? persona.platforms : null,
-        notes: persona.notes || null,
+      await savePersonaMutation.mutateAsync({
+        id: editingPersona.id ?? undefined,
+        name: editingPersona.name.trim(),
+        age_range: editingPersona.age_range || null,
+        gender: editingPersona.gender || null,
+        location: editingPersona.location || null,
+        interests: editingPersona.interests.length > 0 ? editingPersona.interests : null,
+        pain_points: editingPersona.pain_points.length > 0 ? editingPersona.pain_points : null,
+        desires: editingPersona.desires.length > 0 ? editingPersona.desires : null,
+        platforms: editingPersona.platforms.length > 0 ? editingPersona.platforms : null,
+        notes: editingPersona.notes || null,
       });
-      if (saved?.id && !persona.id) {
-        setPersona(prev => ({ ...prev, id: saved.id }));
-      }
       toast.success("Persona salva!");
+      setEditingPersona(null);
+      setNewTag("");
     } catch {
       toast.error("Erro ao salvar persona.");
+    } finally {
+      setSavingPersona(false);
     }
   };
 
+  const handleConfirmDeletePersona = async () => {
+    if (!deletingPersonaId) return;
+    try {
+      await deletePersonaMutation.mutateAsync(deletingPersonaId);
+      toast.success("Persona removida.");
+    } catch {
+      toast.error("Erro ao remover persona.");
+    } finally {
+      setDeletingPersonaId(null);
+    }
+  };
+
+  const openNewPersona = () => {
+    setNewTag("");
+    setEditingPersona({ ...emptyPersona, name: `Persona ${personas.length + 1}` });
+  };
+
+  const openEditPersona = (id: string) => {
+    const target = personas.find(p => p.id === id);
+    if (!target) return;
+    setNewTag("");
+    setEditingPersona({
+      id: target.id,
+      name: target.name || "",
+      age_range: target.age_range || "",
+      gender: target.gender || "",
+      location: target.location || "",
+      interests: target.interests || [],
+      pain_points: target.pain_points || [],
+      desires: target.desires || [],
+      platforms: target.platforms || [],
+      notes: target.notes || "",
+    });
+  };
+
   const addTagTo = (field: keyof PersonaData) => {
+    if (!editingPersona) return;
     if (!newTag.trim()) return;
-    const arr = persona[field] as string[];
+    const arr = editingPersona[field] as string[];
     if (arr.includes(newTag.trim())) return;
-    setPersona(prev => ({ ...prev, [field]: [...(prev[field] as string[]), newTag.trim()] }));
+    setEditingPersona(prev => prev ? { ...prev, [field]: [...(prev[field] as string[]), newTag.trim()] } : prev);
     setNewTag("");
   };
 
   const removeTag = (field: keyof PersonaData, idx: number) => {
-    setPersona(prev => ({ ...prev, [field]: (prev[field] as string[]).filter((_, i) => i !== idx) }));
+    setEditingPersona(prev => prev ? { ...prev, [field]: (prev[field] as string[]).filter((_, i) => i !== idx) } : prev);
+  };
+
+  const handleExportPdf = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const slug = (profile?.name || "brandbook").toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+      await exportPdf(pdfRef, `brandbook-${slug || "creator"}`);
+      toast.success("PDF exportado!");
+    } catch {
+      toast.error("Erro ao exportar PDF.");
+    } finally {
+      setExporting(false);
+    }
   };
 
   // ─── Helpers ────────────────────────────────────────
@@ -328,7 +383,7 @@ const Brandbook = () => {
       return sum + QUESTION_SECTIONS[k].questions.filter(q => (answers[k]?.[q.key] || "").trim().length > 0).length;
     }, 0);
     const brandFilled = brandItems.length > 0 ? 1 : 0;
-    const personaFilled = persona.name && persona.name !== "Meu público principal" ? 1 : 0;
+    const personaFilled = personas.length > 0 ? 1 : 0;
     return Math.round(((filled + brandFilled + personaFilled) / (total + 2)) * 100);
   };
 
@@ -375,11 +430,23 @@ const Brandbook = () => {
               </p>
             </div>
           </div>
-          <div className="text-right hidden sm:block">
-            <span className="text-xs text-muted-foreground font-body">Completude geral</span>
-            <div className="flex items-center gap-2 mt-1">
-              <Progress value={getOverallProgress()} className="w-28 h-2" />
-              <span className="text-sm font-body font-semibold text-foreground">{getOverallProgress()}%</span>
+          <div className="flex items-center gap-3 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportPdf}
+              disabled={exporting}
+              className="gap-1.5"
+            >
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">{exporting ? "Exportando..." : "Exportar PDF"}</span>
+            </Button>
+            <div className="text-right hidden sm:block">
+              <span className="text-xs text-muted-foreground font-body">Completude geral</span>
+              <div className="flex items-center gap-2 mt-1">
+                <Progress value={getOverallProgress()} className="w-28 h-2" />
+                <span className="text-sm font-body font-semibold text-foreground">{getOverallProgress()}%</span>
+              </div>
             </div>
           </div>
         </div>
@@ -389,7 +456,7 @@ const Brandbook = () => {
             identidade: countSectionAnswers("moodboard-identidade"),
             visual: countSectionAnswers("moodboard-visual") + brandItems.length,
             comunicacao: countSectionAnswers("linha-editorial"),
-            publico: persona.name ? 1 : 0,
+            publico: personas.length,
             valores: countSectionAnswers("moodboard-contexto"),
             tom: countSectionAnswers("tom-de-voz"),
           }}
@@ -445,7 +512,7 @@ const Brandbook = () => {
                 {[
                   { key: "moodboard", label: "Moodboard", icon: Heart, desc: "Sensações, visual e inspirações", progress: Math.round(MOODBOARD_KEYS.reduce((s, k) => s + getSectionProgress(k), 0) / MOODBOARD_KEYS.length) },
                   { key: "linha-editorial", label: "Linha Editorial", icon: BookOpen, desc: "Temas, transformação e conteúdo", progress: getSectionProgress("linha-editorial") },
-                  { key: "persona", label: "Persona", icon: Users, desc: "Quem é seu público", progress: persona.name && persona.name !== "Meu público principal" ? 60 : 0 },
+                  { key: "persona", label: "Persona", icon: Users, desc: "Quem é seu público", progress: Math.min(100, personas.length * Math.round(100 / MAX_PERSONAS)) },
                   { key: "tom-de-voz", label: "Tom de Voz", icon: Mic, desc: "Como você se comunica", progress: getSectionProgress("tom-de-voz") },
                   { key: "identidade", label: "Identidade", icon: Palette, desc: "Cores, fontes e elementos visuais", progress: brandItems.length > 0 ? Math.min(100, brandItems.length * 20) : 0 },
                 ].map(item => (
@@ -485,28 +552,86 @@ const Brandbook = () => {
           {/* ═══ PERSONA ═══ */}
           <TabsContent value="persona">
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Users className="h-5 w-5 text-primary" />
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Users className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-display font-semibold text-foreground">Personas</h2>
+                    <p className="text-sm text-muted-foreground font-body">
+                      Mapeie quem te acompanha. Até {MAX_PERSONAS} personas.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-lg font-display font-semibold text-foreground">Persona / Público</h2>
-                  <p className="text-sm text-muted-foreground font-body">Conheça profundamente quem te acompanha.</p>
-                </div>
+                <Button
+                  onClick={openNewPersona}
+                  disabled={personas.length >= MAX_PERSONAS}
+                  size="sm"
+                  className="gap-1.5"
+                >
+                  <Plus className="h-4 w-4" /> Nova Persona
+                </Button>
               </div>
 
-              {/* Guided questions (persona-brand from moodboard_entries) */}
-              {renderGuidedSection("persona-brand", true)}
+              {personas.length === 0 ? (
+                <Card className="border-dashed border-border">
+                  <CardContent className="py-12 text-center">
+                    <Users className="h-8 w-8 text-muted-foreground/50 mx-auto mb-3" />
+                    <p className="text-sm font-body text-foreground mb-1">Nenhuma persona ainda</p>
+                    <p className="text-xs text-muted-foreground font-body mb-4">
+                      Crie sua primeira persona para personalizar as sugestões da IA.
+                    </p>
+                    <Button onClick={openNewPersona} size="sm" variant="outline" className="gap-1.5">
+                      <Plus className="h-4 w-4" /> Criar persona
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {personas.map(p => {
+                    const firstPain = p.pain_points?.[0];
+                    return (
+                      <Card key={p.id} className="border-border shadow-sm hover:border-primary/30 transition-colors">
+                        <CardContent className="pt-5 pb-4 flex flex-col gap-3">
+                          <div>
+                            <p className="text-sm font-body font-semibold text-foreground truncate">{p.name || "Persona sem nome"}</p>
+                            {firstPain ? (
+                              <p className="text-xs text-muted-foreground font-body mt-1 line-clamp-2">
+                                <span className="text-muted-foreground/70">Dor: </span>{firstPain}
+                              </p>
+                            ) : (
+                              <p className="text-xs text-muted-foreground/60 font-body mt-1 italic">Sem dores cadastradas</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1 gap-1.5"
+                              onClick={() => openEditPersona(p.id)}
+                            >
+                              <Pencil className="h-3.5 w-3.5" /> Editar
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-muted-foreground hover:text-destructive"
+                              onClick={() => setDeletingPersonaId(p.id)}
+                              aria-label={`Excluir ${p.name || "persona"}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
 
-              <PersonaStructuredForm
-                persona={persona}
-                newTag={newTag}
-                onPersonaChange={setPersona}
-                onNewTagChange={setNewTag}
-                onAddTag={addTagTo}
-                onRemoveTag={removeTag}
-                onSave={savePersona}
-              />
+              {/* Insights de audiência (compartilhados — persona-brand do moodboard) */}
+              {renderGuidedSection("persona-brand", true)}
             </motion.div>
           </TabsContent>
 
@@ -540,6 +665,64 @@ const Brandbook = () => {
           </TabsContent>
         </Tabs>
       </motion.div>
+
+      <Sheet open={editingPersona !== null} onOpenChange={(open) => { if (!open) { setEditingPersona(null); setNewTag(""); } }}>
+        <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="font-display">
+              {editingPersona?.id ? "Editar persona" : "Nova persona"}
+            </SheetTitle>
+            <SheetDescription>
+              Detalhe quem é essa pessoa. Quanto mais específico, melhor a IA personaliza as sugestões.
+            </SheetDescription>
+          </SheetHeader>
+
+          {editingPersona && (
+            <div className="mt-6">
+              <PersonaStructuredForm
+                persona={editingPersona}
+                newTag={newTag}
+                onPersonaChange={(next) => setEditingPersona(prev => prev ? (typeof next === "function" ? next(prev) : next) : prev)}
+                onNewTagChange={setNewTag}
+                onAddTag={addTagTo}
+                onRemoveTag={removeTag}
+                onSave={savePersona}
+              />
+              {savingPersona && (
+                <p className="text-xs text-muted-foreground font-body mt-3 text-center">Salvando...</p>
+              )}
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      <AlertDialog open={deletingPersonaId !== null} onOpenChange={(open) => { if (!open) setDeletingPersonaId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display">Excluir persona?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Essa ação remove a persona permanentemente. Não dá pra desfazer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDeletePersona} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <div style={{ position: "fixed", left: "-9999px", top: 0, zIndex: -1 }} aria-hidden="true">
+        <BrandPdfTemplate
+          ref={pdfRef}
+          profile={profile}
+          brandItems={brandItems}
+          persona={personas[0]}
+          pillars={pillars}
+          moodboardEntries={moodboardEntries}
+        />
+      </div>
     </div>
   );
 };

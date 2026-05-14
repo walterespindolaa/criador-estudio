@@ -7,7 +7,11 @@ export type Persona = Database["public"]["Tables"]["personas"]["Row"];
 type PersonaInsert = Database["public"]["Tables"]["personas"]["Insert"];
 type PersonaUpdate = Database["public"]["Tables"]["personas"]["Update"];
 
-export type SavePersonaInput = Omit<PersonaInsert, "user_id" | "id" | "created_at">;
+export type SavePersonaInput = Omit<PersonaInsert, "user_id" | "id" | "created_at"> & {
+  id?: string | null;
+};
+
+export const MAX_PERSONAS = 3;
 
 export function usePersonas() {
   const { user } = useAuth();
@@ -16,19 +20,19 @@ export function usePersonas() {
   const queryKey = ["personas", userId] as const;
 
   const {
-    data: persona = null,
+    data: personas = [],
     isLoading,
     error,
-  } = useQuery<Persona | null>({
+  } = useQuery<Persona[]>({
     queryKey,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("personas")
         .select("*")
         .eq("user_id", userId!)
-        .limit(1);
+        .order("created_at", { ascending: true });
       if (error) throw error;
-      return (data?.[0] ?? null) as Persona | null;
+      return (data ?? []) as Persona[];
     },
     enabled: !!userId,
   });
@@ -36,12 +40,13 @@ export function usePersonas() {
   const savePersona = useMutation({
     mutationFn: async (input: SavePersonaInput): Promise<Persona> => {
       if (!userId) throw new Error("Not authenticated");
-      if (persona) {
-        const updates: PersonaUpdate = { ...input };
+      const { id, ...payload } = input;
+      if (id) {
+        const updates: PersonaUpdate = { ...payload };
         const { data, error } = await supabase
           .from("personas")
           .update(updates)
-          .eq("id", persona.id)
+          .eq("id", id)
           .select()
           .single();
         if (error) throw error;
@@ -49,7 +54,7 @@ export function usePersonas() {
       }
       const { data, error } = await supabase
         .from("personas")
-        .insert({ ...input, user_id: userId })
+        .insert({ ...payload, user_id: userId })
         .select()
         .single();
       if (error) throw error;
@@ -58,5 +63,13 @@ export function usePersonas() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey }),
   });
 
-  return { persona, isLoading, error, savePersona };
+  const deletePersona = useMutation({
+    mutationFn: async (id: string): Promise<void> => {
+      const { error } = await supabase.from("personas").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+  });
+
+  return { personas, isLoading, error, savePersona, deletePersona };
 }

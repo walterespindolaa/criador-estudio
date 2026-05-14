@@ -32,7 +32,7 @@ const SECTION_LABELS: Record<string, string> = {
  */
 export function useBrandContext() {
   const { brandItems } = useBrandItems();
-  const { persona } = usePersonas();
+  const { personas } = usePersonas();
   const { entries } = useMoodboard();
 
   const brandContext = useMemo(() => {
@@ -63,21 +63,23 @@ export function useBrandContext() {
       parts.push(`${label}: ${answers.join(". ")}`);
     }
 
-    // Persona
-    if (persona?.name) {
+    // Personas (uma ou mais)
+    personas.forEach((persona, idx) => {
+      if (!persona?.name) return;
       const headerBits = [persona.name];
       if (persona.age_range) headerBits.push(persona.age_range);
       if (persona.gender) headerBits.push(persona.gender);
       if (persona.location) headerBits.push(persona.location);
-      let line = `Público-alvo: ${headerBits.join(", ")}`;
+      const prefix = personas.length > 1 ? `Persona ${idx + 1}` : "Público-alvo";
+      let line = `${prefix}: ${headerBits.join(", ")}`;
       if (persona.pain_points?.length) line += `. Dores: ${persona.pain_points.join(", ")}`;
       if (persona.desires?.length) line += `. Desejos: ${persona.desires.join(", ")}`;
       if (persona.interests?.length) line += `. Interesses: ${persona.interests.join(", ")}`;
       parts.push(line);
-    }
+    });
 
     return parts.join("\n");
-  }, [brandItems, persona, entries]);
+  }, [brandItems, personas, entries]);
 
   return { brandContext, hasBrandContext: brandContext.length > 0 };
 }
