@@ -36,7 +36,7 @@ import { RepurposeSheet } from "./RepurposeSheet";
 import { PostPreviewModal } from "./PostPreviewModal";
 import { useProfile } from "@/hooks/useProfile";
 import { useGoogleDrive } from "@/hooks/useGoogleDrive";
-import { usePosts, type Post as DbPost } from "@/hooks/usePosts";
+import { usePosts, type Post as DbPost, type CreatePostInput } from "@/hooks/usePosts";
 import { useReferenceLibrary, useUserLibrary, type UserHook, type UserPrompt } from "@/hooks/useLibrary";
 import { RoteiroPdfTemplate } from "@/components/pdf/RoteiroPdfTemplate";
 import { usePdfExport } from "@/hooks/usePdfExport";
