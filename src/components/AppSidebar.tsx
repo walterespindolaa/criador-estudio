@@ -167,7 +167,7 @@ export function AppSidebar() {
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild tooltip="Admin">
                     <NavLink
-                      to="/app/admin"
+                      to="/app/cf-admin-panel"
                       className="group relative rounded-xl px-3 py-2.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-all duration-150"
                       activeClassName="bg-red-500/10 text-red-500 font-semibold before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-5 before:bg-red-500 before:rounded-r-full before:content-['']"
                     >

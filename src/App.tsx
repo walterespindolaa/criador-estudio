@@ -76,7 +76,7 @@ const App = () => (
                 <Route path="criando" element={<ErrorBoundary><Criando /></ErrorBoundary>} />
                 <Route path="feed" element={<ErrorBoundary><Feed /></ErrorBoundary>} />
                 <Route path="relatorios" element={<ErrorBoundary><Relatorios /></ErrorBoundary>} />
-                <Route path="admin" element={<ErrorBoundary><Admin /></ErrorBoundary>} />
+                <Route path="cf-admin-panel" element={<ErrorBoundary><Admin /></ErrorBoundary>} />
                 <Route path="tarefas" element={<ErrorBoundary><Tarefas /></ErrorBoundary>} />
                 <Route path="plano" element={<ErrorBoundary><Plano /></ErrorBoundary>} />
                 <Route path="biblioteca" element={<ErrorBoundary><Biblioteca /></ErrorBoundary>} />
