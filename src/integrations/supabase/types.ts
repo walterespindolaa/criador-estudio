@@ -856,6 +856,7 @@ export type Database = {
           created_at: string | null
           desires: string[] | null
           gender: string | null
+          how_you_help: string | null
           id: string
           interests: string[] | null
           location: string | null
@@ -870,6 +871,7 @@ export type Database = {
           created_at?: string | null
           desires?: string[] | null
           gender?: string | null
+          how_you_help?: string | null
           id?: string
           interests?: string[] | null
           location?: string | null
@@ -884,6 +886,7 @@ export type Database = {
           created_at?: string | null
           desires?: string[] | null
           gender?: string | null
+          how_you_help?: string | null
           id?: string
           interests?: string[] | null
           location?: string | null
