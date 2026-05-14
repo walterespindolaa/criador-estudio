@@ -856,6 +856,8 @@ export type Database = {
           created_at: string | null
           desires: string[] | null
           gender: string | null
+          how_you_help: string | null
+          icon: string | null
           id: string
           interests: string[] | null
           location: string | null
@@ -870,6 +872,8 @@ export type Database = {
           created_at?: string | null
           desires?: string[] | null
           gender?: string | null
+          how_you_help?: string | null
+          icon?: string | null
           id?: string
           interests?: string[] | null
           location?: string | null
@@ -884,6 +888,8 @@ export type Database = {
           created_at?: string | null
           desires?: string[] | null
           gender?: string | null
+          how_you_help?: string | null
+          icon?: string | null
           id?: string
           interests?: string[] | null
           location?: string | null
@@ -1062,6 +1068,7 @@ export type Database = {
           bio_settings: Json | null
           bio_slug: string | null
           created_at: string | null
+          editorial_line: Json | null
           id: string
           instagram_handle: string | null
           name: string
@@ -1097,6 +1104,7 @@ export type Database = {
           bio_settings?: Json | null
           bio_slug?: string | null
           created_at?: string | null
+          editorial_line?: Json | null
           id: string
           instagram_handle?: string | null
           name: string
@@ -1132,6 +1140,7 @@ export type Database = {
           bio_settings?: Json | null
           bio_slug?: string | null
           created_at?: string | null
+          editorial_line?: Json | null
           id?: string
           instagram_handle?: string | null
           name?: string

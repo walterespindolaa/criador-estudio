@@ -1,22 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import type { Database } from "@/integrations/supabase/types";
 
-export type Persona = Database["public"]["Tables"]["personas"]["Row"] & {
+export interface Persona {
+  id: string;
+  user_id: string;
+  name: string;
+  age_range?: string | null;
+  gender?: string | null;
+  location?: string | null;
+  interests?: string[] | null;
+  pain_points?: string[] | null;
+  desires?: string[] | null;
+  platforms?: string[] | null;
+  notes?: string | null;
   how_you_help?: string | null;
   icon?: string | null;
-};
-type PersonaInsert = Database["public"]["Tables"]["personas"]["Insert"] & {
-  how_you_help?: string | null;
-  icon?: string | null;
-};
-type PersonaUpdate = Database["public"]["Tables"]["personas"]["Update"] & {
-  how_you_help?: string | null;
-  icon?: string | null;
-};
+  created_at?: string | null;
+}
 
-export type SavePersonaInput = Omit<PersonaInsert, "user_id" | "id" | "created_at"> & {
+export type SavePersonaInput = Omit<Persona, "id" | "user_id" | "created_at"> & {
   id?: string | null;
 };
 
@@ -41,7 +44,7 @@ export function usePersonas() {
         .eq("user_id", userId!)
         .order("created_at", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as Persona[];
+      return (data ?? []) as unknown as Persona[];
     },
     enabled: !!userId,
   });
@@ -51,23 +54,22 @@ export function usePersonas() {
       if (!userId) throw new Error("Not authenticated");
       const { id, ...payload } = input;
       if (id) {
-        const updates: PersonaUpdate = { ...payload };
         const { data, error } = await supabase
           .from("personas")
-          .update(updates)
+          .update(payload as any)
           .eq("id", id)
           .select()
           .single();
         if (error) throw error;
-        return data as Persona;
+        return data as unknown as Persona;
       }
       const { data, error } = await supabase
         .from("personas")
-        .insert({ ...payload, user_id: userId })
+        .insert({ ...payload, user_id: userId } as any)
         .select()
         .single();
       if (error) throw error;
-      return data as Persona;
+      return data as unknown as Persona;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey }),
   });
