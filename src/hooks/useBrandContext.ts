@@ -19,6 +19,8 @@ const SECTION_LABELS: Record<string, string> = {
   "moodboard-visual": "Visual",
   "moodboard-contexto": "Contexto e propósito",
   "moodboard-inspiracoes": "Inspirações",
+  "visao-de-mundo": "Visão de mundo",
+  "sobre-voce": "Sobre o criador",
   "linha-editorial": "Linha editorial",
   "tom-de-voz": "Tom de voz",
   "persona-brand": "Persona da marca",

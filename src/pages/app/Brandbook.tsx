@@ -77,6 +77,22 @@ const QUESTION_SECTIONS = {
       { key: "conteudos", label: "Conteúdos que te marcaram?", placeholder: "Ex: Um vídeo, uma frase, um podcast..." },
     ],
   },
+  "visao-de-mundo": {
+    title: "Visão de Mundo",
+    questions: [
+      { key: "verdade-pouco-dita", label: "Que verdade você acredita que poucas pessoas do seu nicho falam?", placeholder: "Ex: Que estilo não tem a ver com dinheiro, é repertório e intenção..." },
+      { key: "crenca-a-quebrar", label: "Que crença você quer quebrar no seu público?", placeholder: "Ex: A ideia de que 'corpo bonito é só um tipo de corpo'..." },
+      { key: "incomodo-mercado", label: "Que comportamento do mercado mais te incomoda?", placeholder: "Ex: Vender insegurança disfarçada de solução, copy genérico, promessa milagrosa..." },
+    ],
+  },
+  "sobre-voce": {
+    title: "Sobre Você",
+    questions: [
+      { key: "comeco", label: "O que fez você querer começar a criar conteúdo?", placeholder: "Ex: Cansei de não me ver representada e percebi que outras mulheres sentiam o mesmo..." },
+      { key: "conflito", label: "Que conflito você viveu que hoje quer ajudar outras pessoas?", placeholder: "Ex: Passei anos achando que era 'sem estilo' porque não cabia no padrão..." },
+      { key: "meta", label: "Onde você quer chegar? Qual é sua meta com a criação de conteúdo?", placeholder: "Ex: Construir uma comunidade de 100 mil mulheres se sentindo bem com elas mesmas..." },
+    ],
+  },
   "linha-editorial": {
     title: "Linha Editorial",
     questions: [
@@ -151,7 +167,7 @@ RESPOSTAS DO CRIADOR:
 
 type QuestionSectionKey = keyof typeof QUESTION_SECTIONS;
 
-const MOODBOARD_KEYS: QuestionSectionKey[] = ["moodboard-identidade", "moodboard-visual", "moodboard-contexto", "moodboard-inspiracoes"];
+const MOODBOARD_KEYS: QuestionSectionKey[] = ["moodboard-identidade", "moodboard-visual", "moodboard-contexto", "moodboard-inspiracoes", "visao-de-mundo", "sobre-voce"];
 
 const BRAND_ITEM_SECTIONS = [
   { type: "cor", label: "Cores da marca", icon: Paintbrush, placeholder: "Ex: #C4622D" },

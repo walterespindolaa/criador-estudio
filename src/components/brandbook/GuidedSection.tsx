@@ -88,15 +88,20 @@ export function GuidedSection({
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-body font-semibold text-foreground flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary" />
-              Perguntar ao Chat
+              Seu Guia Editorial Personalizado
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-xs text-muted-foreground font-body">
-              Copie o prompt e cole no ChatGPT ou Claude para gerar um guia completo.
+              Com base em tudo que você respondeu, esse prompt vai gerar um guia completo para nortear sua criação de conteúdo. Copie, cole no ChatGPT ou Claude e receba um plano prático feito para você.
             </p>
             <div className="bg-card rounded-xl p-4 border border-border max-h-48 overflow-y-auto">
               <pre className="text-xs font-body text-foreground whitespace-pre-wrap">{chatPrompt}</pre>
+            </div>
+            <div className="bg-amber-500/8 border border-amber-500/20 rounded-xl px-4 py-3 mb-3">
+              <p className="text-xs font-body text-amber-700 leading-relaxed">
+                💡 <strong>Lembre-se:</strong> o guia gerado é um ponto de partida para destravar suas ideias e dar o primeiro passo. A sua essência, experiências e conhecimento são insubstituíveis — use o guia como bússola, não como roteiro fechado.
+              </p>
             </div>
             <CopyButton text={chatPrompt} />
           </CardContent>
