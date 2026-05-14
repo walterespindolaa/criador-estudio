@@ -1290,10 +1290,13 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                 const primary = mediaList[0];
                                 const fileId = primary.external_file_id || primary.id;
                                 const isVideo = primary.file_type?.startsWith("video/");
-                                const imgSrc = `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w600`;
+                                const driveImgSrc = `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w600`;
+                                const imgSrc = primary.thumbnail_url || primary.view_url || driveImgSrc;
+                                const driveVideoSrc = `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview`;
+                                const videoSrc = primary.view_url || driveVideoSrc;
                                 return isVideo ? (
                                   <iframe
-                                    src={`https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview`}
+                                    src={videoSrc}
                                     className="w-full h-full"
                                     allow="autoplay"
                                     title={primary.file_name}
@@ -1304,7 +1307,11 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                     alt={primary.file_name}
                                     className="w-full h-full object-cover"
                                     loading="lazy"
-                                    onError={(e) => { (e.target as HTMLImageElement).src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`; }}
+                                    onError={(e) => {
+                                      if (!primary.thumbnail_url) {
+                                        (e.target as HTMLImageElement).src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
+                                      }
+                                    }}
                                   />
                                 );
                               })()}
@@ -1681,9 +1688,14 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
         avatarUrl={profile?.avatar_url || null}
         mediaUrl={
           mediaList.length > 0
-            ? mediaList[0].file_type?.includes("video")
-              ? `https://drive.google.com/uc?id=${encodeURIComponent(mediaList[0].external_file_id || mediaList[0].id)}`
-              : `https://lh3.googleusercontent.com/d/${encodeURIComponent(mediaList[0].external_file_id || mediaList[0].id)}=w800`
+            ? (() => {
+                const first = mediaList[0];
+                const fid = first.external_file_id || first.id;
+                if (first.file_type?.includes("video")) {
+                  return first.view_url || `https://drive.google.com/uc?id=${encodeURIComponent(fid)}`;
+                }
+                return first.thumbnail_url || first.view_url || `https://lh3.googleusercontent.com/d/${encodeURIComponent(fid)}=w800`;
+              })()
             : undefined
         }
         mediaType={mediaList.length > 0 ? (mediaList[0].file_type?.includes("video") ? "video" : "image") : "image"}
