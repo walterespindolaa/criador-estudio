@@ -364,7 +364,8 @@ const Dashboard = () => {
               {pillars.length > 0 ? (
                 <div className="grid grid-cols-7 gap-1.5">
                   {editorialDays.map((day, index) => {
-                    const pilar = pillars[index % pillars.length];
+                    const pilarId = profile?.editorial_line?.[day];
+                    const pilar = pilarId ? pillars.find(p => p.id === pilarId) : undefined;
                     const isToday = index === todayIndex;
                     return (
                       <div
@@ -386,7 +387,7 @@ const Dashboard = () => {
                         </span>
                         <div
                           className="w-2.5 h-2.5 rounded-full shrink-0"
-                          style={{ backgroundColor: pilar.color || "#6B7280" }}
+                          style={{ backgroundColor: pilar?.color || "#d4d4d8" }}
                         />
                         <span
                           className={cn(
@@ -394,7 +395,7 @@ const Dashboard = () => {
                             isToday ? "text-foreground font-medium" : "text-muted-foreground"
                           )}
                         >
-                          {pilar.name}
+                          {pilar?.name || "—"}
                         </span>
                       </div>
                     );

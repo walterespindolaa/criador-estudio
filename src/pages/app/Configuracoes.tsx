@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 
 const PILLAR_COLORS = ["#C4622D", "#5C7A6B", "#8B6F4E", "#A4785C", "#6B8E7B", "#D4956A"];
 const NICHE_OPTIONS = ["Lifestyle", "Moda", "Beleza", "Fitness", "Culinária", "Educação", "Negócios", "Entretenimento", "Saúde", "Tecnologia"];
+const EDITORIAL_DAYS = ["SEG", "TER", "QUA", "QUI", "SEX", "SÁB", "DOM"] as const;
 
 const profileSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório").max(100, "Máximo 100 caracteres").trim(),
@@ -65,6 +66,9 @@ const Configuracoes = () => {
   const [editingPillarId, setEditingPillarId] = useState<string | null>(null);
   const [editingPillarName, setEditingPillarName] = useState("");
   const [newHabitName, setNewHabitName] = useState("");
+  const [editorialLine, setEditorialLine] = useState<Record<string, string>>({});
+  const [savingEditorialLine, setSavingEditorialLine] = useState(false);
+  const editorialLineHydratedRef = useRef(false);
   const [selectedNiches, setSelectedNiches] = useState<string[]>([]);
   const [customNiche, setCustomNiche] = useState("");
 
@@ -97,8 +101,25 @@ const Configuracoes = () => {
         .map((s) => s.trim())
         .filter(Boolean);
       setSelectedNiches(list);
+      if (!editorialLineHydratedRef.current) {
+        setEditorialLine(profile.editorial_line ?? {});
+        editorialLineHydratedRef.current = true;
+      }
     }
   }, [profile, reset]);
+
+  const saveEditorialLine = async () => {
+    if (savingEditorialLine) return;
+    setSavingEditorialLine(true);
+    try {
+      await updateProfile.mutateAsync({ editorial_line: editorialLine });
+      toast.success("Linha editorial salva!");
+    } catch {
+      toast.error("Erro ao salvar linha editorial.");
+    } finally {
+      setSavingEditorialLine(false);
+    }
+  };
 
   const toggleNiche = (n: string) => {
     setSelectedNiches((prev) => {
@@ -499,6 +520,50 @@ const Configuracoes = () => {
                         ))}
                       </div>
                     </div>
+                  )}
+                </div>
+
+                <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
+                  <div>
+                    <h3 className="font-display font-semibold text-foreground">Linha Editorial da Semana</h3>
+                    <p className="text-xs text-muted-foreground font-body mt-0.5">Escolha qual pilar trabalhar em cada dia da semana.</p>
+                  </div>
+                  {pillars.length === 0 ? (
+                    <p className="text-xs text-muted-foreground font-body">
+                      Cadastre pelo menos um pilar acima para montar a linha editorial.
+                    </p>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-7 gap-2">
+                        {EDITORIAL_DAYS.map((day) => (
+                          <div key={day} className="flex flex-col gap-1">
+                            <label className="text-[10px] font-body font-semibold uppercase tracking-wider text-muted-foreground">
+                              {day}
+                            </label>
+                            <select
+                              value={editorialLine[day] ?? ""}
+                              onChange={(e) => setEditorialLine(prev => ({ ...prev, [day]: e.target.value }))}
+                              className="rounded-lg border border-border bg-card text-xs font-body p-1.5"
+                            >
+                              <option value="">—</option>
+                              {pillars.map(p => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex justify-end">
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={saveEditorialLine}
+                          disabled={savingEditorialLine}
+                        >
+                          {savingEditorialLine ? "Salvando..." : "Salvar"}
+                        </Button>
+                      </div>
+                    </>
                   )}
                 </div>
 
