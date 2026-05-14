@@ -1,15 +1,26 @@
 import { useState } from "react";
-import { Plus, Save, Users } from "lucide-react";
+import { Plus, Save, Users, Bot, Wand2, Trophy, SmilePlus, Crown, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
+import { cn } from "@/lib/utils";
+
+export const PERSONA_ICONS = [
+  { id: "bot", icon: Bot, label: "Digital" },
+  { id: "wand", icon: Wand2, label: "Criativo" },
+  { id: "trophy", icon: Trophy, label: "Conquista" },
+  { id: "smile", icon: SmilePlus, label: "Conexão" },
+  { id: "crown", icon: Crown, label: "Liderança" },
+  { id: "briefcase", icon: Briefcase, label: "Profissional" },
+] as const;
 
 export interface PersonaData {
   id: string | null;
   name: string;
+  icon: string;
   age_range: string;
   gender: string;
   location: string;
@@ -91,6 +102,29 @@ export function PersonaStructuredForm({
             onChange={(e) => setField("name", e.target.value)}
             className="rounded-xl"
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label className="font-body text-sm">Ícone</Label>
+          <div className="grid grid-cols-6 gap-2">
+            {PERSONA_ICONS.map(({ id, icon: Icon, label }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setField("icon", id)}
+                title={label}
+                aria-label={label}
+                className={cn(
+                  "h-11 w-full rounded-xl flex items-center justify-center transition-all border-2",
+                  persona.icon === id
+                    ? "border-primary bg-primary/10 text-primary scale-105"
+                    : "border-border bg-muted/20 text-muted-foreground hover:border-primary/40 hover:text-primary"
+                )}
+              >
+                <Icon className="h-5 w-5" strokeWidth={1.75} />
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="space-y-2">

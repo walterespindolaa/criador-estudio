@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { BookOpen, Users, Mic, Save, Sparkles, Eye, Palette, Heart, Paintbrush, Languages, MessageSquareText, MessageSquare, Ban, Plus, Trash2, BookMarked, Download, Pencil } from "lucide-react";
+import { BookOpen, Users, Mic, Save, Sparkles, Eye, Palette, Heart, Paintbrush, Languages, MessageSquareText, MessageSquare, Ban, Plus, Trash2, BookMarked, Download, Pencil, Bot, Wand2, Trophy, SmilePlus, Crown, Briefcase, type LucideIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -33,6 +33,7 @@ interface EntryMap { [key: string]: string }
 interface PersonaData {
   id: string | null;
   name: string;
+  icon: string;
   age_range: string;
   gender: string;
   location: string;
@@ -43,6 +44,10 @@ interface PersonaData {
   platforms: string[];
   notes: string;
 }
+
+const PERSONA_ICON_MAP: Record<string, LucideIcon> = {
+  bot: Bot, wand: Wand2, trophy: Trophy, smile: SmilePlus, crown: Crown, briefcase: Briefcase,
+};
 
 // ─── Section definitions for guided questions ────────────
 const QUESTION_SECTIONS = {
@@ -209,7 +214,7 @@ const Brandbook = () => {
   const [activeSection, setActiveSection] = useState("");
 
   const emptyPersona: PersonaData = {
-    id: null, name: "", age_range: "", gender: "",
+    id: null, name: "", icon: "bot", age_range: "", gender: "",
     location: "", interests: [], pain_points: [], desires: [], how_you_help: "", platforms: [], notes: "",
   };
   const [editingPersona, setEditingPersona] = useState<PersonaData | null>(null);
@@ -287,6 +292,7 @@ const Brandbook = () => {
       await savePersonaMutation.mutateAsync({
         id: editingPersona.id ?? undefined,
         name: editingPersona.name.trim(),
+        icon: editingPersona.icon || "bot",
         age_range: editingPersona.age_range || null,
         gender: editingPersona.gender || null,
         location: editingPersona.location || null,
@@ -328,6 +334,7 @@ const Brandbook = () => {
     setEditingPersona({
       id: target.id,
       name: target.name || "",
+      icon: target.icon || "bot",
       age_range: target.age_range || "",
       gender: target.gender || "",
       location: target.location || "",
@@ -606,18 +613,24 @@ const Brandbook = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {personas.map(p => {
                     const firstPain = p.pain_points?.[0];
+                    const PersonaIcon = PERSONA_ICON_MAP[p.icon ?? "bot"] ?? Bot;
                     return (
                       <Card key={p.id} className="border-border shadow-sm hover:border-primary/30 transition-colors">
                         <CardContent className="pt-5 pb-4 flex flex-col gap-3">
-                          <div>
-                            <p className="text-sm font-body font-semibold text-foreground truncate">{p.name || "Persona sem nome"}</p>
-                            {firstPain ? (
-                              <p className="text-xs text-muted-foreground font-body mt-1 line-clamp-2">
-                                <span className="text-muted-foreground/70">Dor: </span>{firstPain}
-                              </p>
-                            ) : (
-                              <p className="text-xs text-muted-foreground/60 font-body mt-1 italic">Sem dores cadastradas</p>
-                            )}
+                          <div className="flex items-start gap-3">
+                            <div className="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                              <PersonaIcon className="h-6 w-6" strokeWidth={1.5} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-body font-semibold text-foreground truncate">{p.name || "Persona sem nome"}</p>
+                              {firstPain ? (
+                                <p className="text-xs text-muted-foreground font-body mt-1 line-clamp-2">
+                                  <span className="text-muted-foreground/70">Dor: </span>{firstPain}
+                                </p>
+                              ) : (
+                                <p className="text-xs text-muted-foreground/60 font-body mt-1 italic">Sem dores cadastradas</p>
+                              )}
+                            </div>
                           </div>
                           <div className="flex items-center gap-2 mt-1">
                             <Button

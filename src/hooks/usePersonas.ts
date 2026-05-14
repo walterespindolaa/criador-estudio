@@ -5,12 +5,15 @@ import type { Database } from "@/integrations/supabase/types";
 
 export type Persona = Database["public"]["Tables"]["personas"]["Row"] & {
   how_you_help?: string | null;
+  icon?: string | null;
 };
 type PersonaInsert = Database["public"]["Tables"]["personas"]["Insert"] & {
   how_you_help?: string | null;
+  icon?: string | null;
 };
 type PersonaUpdate = Database["public"]["Tables"]["personas"]["Update"] & {
   how_you_help?: string | null;
+  icon?: string | null;
 };
 
 export type SavePersonaInput = Omit<PersonaInsert, "user_id" | "id" | "created_at"> & {
