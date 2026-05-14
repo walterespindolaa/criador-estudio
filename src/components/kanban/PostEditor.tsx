@@ -100,6 +100,19 @@ interface DriveRef {
   view_url: string | null;
 }
 
+const sanitizeStoragePath = (name: string): string => {
+  const lastDot = name.lastIndexOf(".");
+  const base = lastDot > 0 ? name.slice(0, lastDot) : name;
+  const ext = lastDot > 0 ? name.slice(lastDot) : "";
+  const clean = base
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase()
+    .slice(0, 80) || "file";
+  return `${clean}${ext.toLowerCase()}`;
+};
+
 const TONE_OPTIONS = [
   { key: "descontraido", label: "Descontraído" },
   { key: "profissional", label: "Profissional" },
@@ -402,47 +415,60 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
           continue;
         }
         const file = await compressImage(raw);
-        const path = `${userId}/${Date.now()}-${file.name}`;
+        const safeName = sanitizeStoragePath(file.name);
+        const path = `${userId}/${Date.now()}-${safeName}`;
+
         const { error: upErr } = await supabase.storage
           .from("media")
-          .upload(path, file, { upsert: true });
-        if (upErr) { toast.error(`Erro ao enviar ${file.name}`); continue; }
+          .upload(path, file, { upsert: true, contentType: file.type });
+        if (upErr) {
+          console.error("[upload] storage error", upErr);
+          toast.error(`Erro ao enviar ${file.name}: ${upErr.message}`);
+          continue;
+        }
+
         const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
-        const tempRef: DriveRef = {
-          id: `temp-${Date.now()}`,
-          file_name: file.name,
-          file_type: file.type,
-          thumbnail_url: urlData.publicUrl,
-          view_url: urlData.publicUrl,
-          external_file_id: path,
-        };
-        setDriveMedia((prev) => [...prev, tempRef]);
+        const publicUrl = urlData.publicUrl;
+
         if (post?.id) {
-          await supabase.from("external_media_refs").insert({
-            user_id: userId,
-            post_id: post.id,
+          // Insert + select retorna o ID real — sem tempRef, sem refetch com setTimeout.
+          const { data: inserted, error: insErr } = await supabase
+            .from("external_media_refs")
+            .insert({
+              user_id: userId,
+              post_id: post.id,
+              provider: "device",
+              file_name: file.name,
+              file_type: file.type,
+              thumbnail_url: publicUrl,
+              view_url: publicUrl,
+              external_file_id: path,
+            })
+            .select("id, external_file_id, file_name, file_type, thumbnail_url, view_url")
+            .single();
+          if (insErr || !inserted) {
+            console.error("[upload] insert error", insErr);
+            toast.error(`Erro ao salvar referência de ${file.name}`);
+            continue;
+          }
+          setDriveMedia((prev) => [...prev, inserted as DriveRef]);
+        } else {
+          // Post ainda não existe: guarda pending e vincula depois no handleSave.
+          const tempRef: DriveRef = {
+            id: `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
             file_name: file.name,
             file_type: file.type,
-            thumbnail_url: urlData.publicUrl,
-            view_url: urlData.publicUrl,
+            thumbnail_url: publicUrl,
+            view_url: publicUrl,
             external_file_id: path,
-          });
-        } else {
+          };
           setPendingDriveFiles((prev) => [...prev, tempRef]);
         }
         anyUploaded = true;
       }
-      if (anyUploaded) {
-        if (post?.id) {
-          // Delay o refetch para dar tempo do banco confirmar o insert
-          // antes do select sobrescrever o tempRef otimista por uma lista vazia.
-          const pid = post.id;
-          setTimeout(() => fetchDriveMedia(pid), 1500);
-        }
-        toast.success("Mídia adicionada!");
-      }
+      if (anyUploaded) toast.success("Mídia adicionada!");
     } catch (err) {
-      console.error(err);
+      console.error("[upload] unexpected", err);
       toast.error("Erro ao enviar mídia.");
     } finally {
       setUploadingLocal(false);
@@ -1320,7 +1346,14 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                       if (!isSupabaseUpload) {
                                         el.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
                                       } else {
-                                        el.style.display = "none";
+                                        console.warn("[media] Supabase upload falhou ao carregar", {
+                                          src: el.src,
+                                          fileName: primary.file_name,
+                                          path: primary.external_file_id,
+                                        });
+                                        // Em vez de esconder, manter placeholder visível para o usuário saber que algo quebrou.
+                                        el.src = "/placeholder.svg";
+                                        el.classList.add("opacity-40");
                                       }
                                     }}
                                   />
@@ -1484,11 +1517,16 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                 try {
                                   setUploadingLocal(true);
                                   const file = await compressImage(raw);
-                                  const path = `${userId}/${Date.now()}-${file.name}`;
+                                  const safeName = sanitizeStoragePath(file.name);
+                                  const path = `${userId}/${Date.now()}-${safeName}`;
                                   const { error: upErr } = await supabase.storage
                                     .from("media")
-                                    .upload(path, file, { upsert: true });
-                                  if (upErr) { toast.error(`Erro ao enviar ${file.name}`); return; }
+                                    .upload(path, file, { upsert: true, contentType: file.type });
+                                  if (upErr) {
+                                    console.error("[section-upload] storage error", upErr);
+                                    toast.error(`Erro ao enviar ${file.name}: ${upErr.message}`);
+                                    return;
+                                  }
                                   const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
                                   setSections((prev) =>
                                     prev.map((s, j) =>
@@ -1503,7 +1541,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                     )
                                   );
                                 } catch (err) {
-                                  console.error(err);
+                                  console.error("[section-upload] unexpected", err);
                                   toast.error("Erro ao enviar mídia.");
                                 } finally {
                                   setUploadingLocal(false);

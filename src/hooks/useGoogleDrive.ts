@@ -3,6 +3,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
+const sanitizeStoragePath = (name: string): string => {
+  const lastDot = name.lastIndexOf(".");
+  const base = lastDot > 0 ? name.slice(0, lastDot) : name;
+  const ext = lastDot > 0 ? name.slice(lastDot) : "";
+  const clean = base
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase()
+    .slice(0, 80) || "file";
+  return `${clean}${ext.toLowerCase()}`;
+};
+
 declare global {
   interface Window {
     google: any;
@@ -58,11 +71,16 @@ export function useGoogleDrive() {
         try {
           setPicking(true);
           for (const file of Array.from(files)) {
-            const path = `${userId}/${Date.now()}-${file.name}`;
+            const safeName = sanitizeStoragePath(file.name);
+            const path = `${userId}/${Date.now()}-${safeName}`;
             const { error: upErr } = await supabase.storage
               .from("media")
-              .upload(path, file, { upsert: true });
-            if (upErr) { toast.error(`Erro ao enviar ${file.name}`); continue; }
+              .upload(path, file, { upsert: true, contentType: file.type });
+            if (upErr) {
+              console.error("[device-fallback] storage error", upErr);
+              toast.error(`Erro ao enviar ${file.name}: ${upErr.message}`);
+              continue;
+            }
             const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
             const publicUrl = urlData.publicUrl;
             await supabase.from("external_media_refs").insert({
