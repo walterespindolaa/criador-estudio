@@ -480,10 +480,30 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
     input.type = "file";
     input.accept = "image/*,video/*";
     input.multiple = true;
-    input.style.display = "none";
+    // Off-screen mas no DOM — garante que o input não seja GC'd antes do change event
+    input.style.cssText = "position:fixed;left:-9999px;top:-9999px;opacity:0;pointer-events:none";
+
+    const cleanup = () => {
+      if (input.parentNode) input.parentNode.removeChild(input);
+    };
+
     input.addEventListener("change", async (e) => {
-      await handleLocalUpload(e as unknown as React.ChangeEvent<HTMLInputElement>);
-    });
+      try {
+        await handleLocalUpload(e as unknown as React.ChangeEvent<HTMLInputElement>);
+      } finally {
+        cleanup();
+      }
+    }, { once: true });
+
+    // Chrome dispara 'cancel' quando o usuário fecha o picker sem selecionar nada
+    input.addEventListener("cancel", cleanup, { once: true });
+
+    // Fallback: se nada acontecer em 5min, limpa
+    setTimeout(() => {
+      if (!input.files || input.files.length === 0) cleanup();
+    }, 5 * 60 * 1000);
+
+    document.body.appendChild(input);
     input.click();
   }, [userId, handleLocalUpload]);
 
@@ -1518,46 +1538,63 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                               const input = document.createElement("input");
                               input.type = "file";
                               input.accept = "image/*,video/*";
-                              input.onchange = async () => {
-                                const raw = input.files?.[0];
-                                if (!raw) return;
-                                if (raw.size > 50 * 1024 * 1024) {
-                                  toast.error(`"${raw.name}" ultrapassa 50MB.`);
-                                  return;
-                                }
+                              input.style.cssText = "position:fixed;left:-9999px;top:-9999px;opacity:0;pointer-events:none";
+
+                              const cleanup = () => {
+                                if (input.parentNode) input.parentNode.removeChild(input);
+                              };
+
+                              input.addEventListener("change", async () => {
                                 try {
-                                  setUploadingLocal(true);
-                                  const file = await compressImage(raw);
-                                  const safeName = sanitizeStoragePath(file.name);
-                                  const path = `${userId}/${Date.now()}-${safeName}`;
-                                  const { error: upErr } = await supabase.storage
-                                    .from("media")
-                                    .upload(path, file, { upsert: true, contentType: file.type });
-                                  if (upErr) {
-                                    console.error("[section-upload] storage error", upErr);
-                                    toast.error(`Erro ao enviar ${file.name}: ${upErr.message}`);
+                                  const raw = input.files?.[0];
+                                  if (!raw) return;
+                                  if (raw.size > 50 * 1024 * 1024) {
+                                    toast.error(`"${raw.name}" ultrapassa 50MB.`);
                                     return;
                                   }
-                                  const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
-                                  setSections((prev) =>
-                                    prev.map((s, j) =>
-                                      j === index
-                                        ? {
-                                            ...s,
-                                            driveFileId: path,
-                                            driveFileName: file.name,
-                                            driveThumbnail: urlData.publicUrl,
-                                          }
-                                        : s
-                                    )
-                                  );
-                                } catch (err) {
-                                  console.error("[section-upload] unexpected", err);
-                                  toast.error("Erro ao enviar mídia.");
+                                  try {
+                                    setUploadingLocal(true);
+                                    const file = await compressImage(raw);
+                                    const safeName = sanitizeStoragePath(file.name);
+                                    const path = `${userId}/${Date.now()}-${safeName}`;
+                                    const { error: upErr } = await supabase.storage
+                                      .from("media")
+                                      .upload(path, file, { upsert: true, contentType: file.type });
+                                    if (upErr) {
+                                      console.error("[section-upload] storage error", upErr);
+                                      toast.error(`Erro ao enviar ${file.name}: ${upErr.message}`);
+                                      return;
+                                    }
+                                    const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
+                                    setSections((prev) =>
+                                      prev.map((s, j) =>
+                                        j === index
+                                          ? {
+                                              ...s,
+                                              driveFileId: path,
+                                              driveFileName: file.name,
+                                              driveThumbnail: urlData.publicUrl,
+                                            }
+                                          : s
+                                      )
+                                    );
+                                  } catch (err) {
+                                    console.error("[section-upload] unexpected", err);
+                                    toast.error("Erro ao enviar mídia.");
+                                  } finally {
+                                    setUploadingLocal(false);
+                                  }
                                 } finally {
-                                  setUploadingLocal(false);
+                                  cleanup();
                                 }
-                              };
+                              }, { once: true });
+
+                              input.addEventListener("cancel", cleanup, { once: true });
+                              setTimeout(() => {
+                                if (!input.files || input.files.length === 0) cleanup();
+                              }, 5 * 60 * 1000);
+
+                              document.body.appendChild(input);
                               input.click();
                             }}
                             onPickDriveForSection={async (index) => {

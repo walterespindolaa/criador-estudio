@@ -65,44 +65,64 @@ export function useGoogleDrive() {
       input.type = "file";
       input.accept = "image/*,video/*";
       input.multiple = true;
-      input.onchange = async (e) => {
-        const files = (e.target as HTMLInputElement).files;
-        if (!files || files.length === 0) { resolve(); return; }
+      input.style.cssText = "position:fixed;left:-9999px;top:-9999px;opacity:0;pointer-events:none";
+
+      const cleanup = () => {
+        if (input.parentNode) input.parentNode.removeChild(input);
+      };
+
+      input.addEventListener("change", async () => {
         try {
-          setPicking(true);
-          for (const file of Array.from(files)) {
-            const safeName = sanitizeStoragePath(file.name);
-            const path = `${userId}/${Date.now()}-${safeName}`;
-            const { error: upErr } = await supabase.storage
-              .from("media")
-              .upload(path, file, { upsert: true, contentType: file.type });
-            if (upErr) {
-              console.error("[device-fallback] storage error", upErr);
-              toast.error(`Erro ao enviar ${file.name}: ${upErr.message}`);
-              continue;
+          const files = input.files;
+          if (!files || files.length === 0) return;
+          try {
+            setPicking(true);
+            for (const file of Array.from(files)) {
+              const safeName = sanitizeStoragePath(file.name);
+              const path = `${userId}/${Date.now()}-${safeName}`;
+              const { error: upErr } = await supabase.storage
+                .from("media")
+                .upload(path, file, { upsert: true, contentType: file.type });
+              if (upErr) {
+                console.error("[device-fallback] storage error", upErr);
+                toast.error(`Erro ao enviar ${file.name}: ${upErr.message}`);
+                continue;
+              }
+              const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
+              const publicUrl = urlData.publicUrl;
+              await supabase.from("external_media_refs").insert({
+                user_id: userId,
+                post_id: postId || null,
+                provider: "device",
+                external_file_id: path,
+                file_name: file.name,
+                file_type: file.type,
+                thumbnail_url: publicUrl,
+                view_url: publicUrl,
+              });
             }
-            const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
-            const publicUrl = urlData.publicUrl;
-            await supabase.from("external_media_refs").insert({
-              user_id: userId,
-              post_id: postId || null,
-              provider: "device",
-              external_file_id: path,
-              file_name: file.name,
-              file_type: file.type,
-              thumbnail_url: publicUrl,
-              view_url: publicUrl,
-            });
+            toast.success("Mídia adicionada!");
+          } catch (err) {
+            console.error(err);
+            toast.error("Erro ao enviar mídia.");
+          } finally {
+            setPicking(false);
           }
-          toast.success("Mídia adicionada!");
-        } catch (err) {
-          console.error(err);
-          toast.error("Erro ao enviar mídia.");
         } finally {
-          setPicking(false);
+          cleanup();
           resolve();
         }
-      };
+      }, { once: true });
+
+      input.addEventListener("cancel", () => { cleanup(); resolve(); }, { once: true });
+      setTimeout(() => {
+        if (!input.files || input.files.length === 0) {
+          cleanup();
+          resolve();
+        }
+      }, 5 * 60 * 1000);
+
+      document.body.appendChild(input);
       input.click();
     });
   }, [user]);
