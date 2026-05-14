@@ -436,7 +436,7 @@ const Dashboard = () => {
 
           <div className="lg:col-span-4 space-y-6">
             <SmartNotificationsCard />
-             <DCard>
+             <DCard className="border-border/20">
               <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
                 <Flame className="h-4 w-4 text-primary" /> Hábitos de Criação
               </h3>
