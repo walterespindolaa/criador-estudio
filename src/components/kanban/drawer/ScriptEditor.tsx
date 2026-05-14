@@ -58,10 +58,21 @@ export function ScriptEditor({
             {sec.driveFileId && (
               <div className="ml-auto flex items-center gap-1">
                 <img
-                  src={`https://lh3.googleusercontent.com/d/${encodeURIComponent(sec.driveFileId)}=w80`}
+                  src={
+                    sec.driveThumbnail
+                      ?? `https://lh3.googleusercontent.com/d/${encodeURIComponent(sec.driveFileId!)}=w80`
+                  }
                   alt=""
                   className="w-5 h-5 rounded object-cover"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  onError={(e) => {
+                    const el = e.target as HTMLImageElement;
+                    // Se driveThumbnail falhou, tenta fallback pro Google CDN antes de esconder
+                    if (sec.driveThumbnail && el.src === sec.driveThumbnail && sec.driveFileId) {
+                      el.src = `https://lh3.googleusercontent.com/d/${encodeURIComponent(sec.driveFileId)}=w80`;
+                      return;
+                    }
+                    el.style.display = "none";
+                  }}
                 />
                 <button
                   type="button"
