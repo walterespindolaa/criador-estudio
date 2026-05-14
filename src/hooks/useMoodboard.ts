@@ -28,8 +28,9 @@ export function useMoodboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("moodboard_entries")
-        .select("section, question_key, answer")
-        .eq("user_id", userId!);
+        .select("section, question_key, answer, updated_at")
+        .eq("user_id", userId!)
+        .order("updated_at", { ascending: true });
       if (error) throw error;
       return (data ?? []) as MoodboardEntry[];
     },

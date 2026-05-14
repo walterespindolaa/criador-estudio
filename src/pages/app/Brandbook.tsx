@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { BookOpen, Users, Mic, Save, Sparkles, Eye, Palette, Heart, Paintbrush, Languages, MessageSquareText, MessageSquare, Ban, Plus, Trash2, BookMarked } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -184,17 +184,26 @@ const Brandbook = () => {
   const allSectionKeys = useMemo(() => Object.keys(QUESTION_SECTIONS) as QuestionSectionKey[], []);
   const loaded = !moodboardLoading && !brandLoading && !personaLoading;
 
+  const answersHydratedRef = useRef(false);
+  const personaHydratedRef = useRef(false);
+
   useEffect(() => {
+    if (answersHydratedRef.current || moodboardLoading) return;
     const grouped: Record<string, EntryMap> = {};
     allSectionKeys.forEach(k => { grouped[k] = {}; });
     moodboardEntries.forEach(e => {
       if (grouped[e.section]) grouped[e.section][e.question_key] = e.answer || "";
     });
     setAnswers(grouped);
-  }, [moodboardEntries, allSectionKeys]);
+    answersHydratedRef.current = true;
+  }, [moodboardEntries, allSectionKeys, moodboardLoading]);
 
   useEffect(() => {
-    if (!personaRow) return;
+    if (personaHydratedRef.current || personaLoading) return;
+    if (!personaRow) {
+      personaHydratedRef.current = true;
+      return;
+    }
     setPersona({
       id: personaRow.id,
       name: personaRow.name || "",
@@ -207,7 +216,8 @@ const Brandbook = () => {
       platforms: personaRow.platforms || [],
       notes: personaRow.notes || "",
     });
-  }, [personaRow]);
+    personaHydratedRef.current = true;
+  }, [personaRow, personaLoading]);
 
   const saveSection = useCallback(async (section: string) => {
     const config = QUESTION_SECTIONS[section as QuestionSectionKey];
@@ -303,8 +313,8 @@ const Brandbook = () => {
   const buildPrompt = (section: string) => {
     const config = QUESTION_SECTIONS[section as QuestionSectionKey];
     if (!config || !("chatPrompt" in config)) return "";
-    let prompt = (config as any).chatPrompt as string;
-    config.questions.forEach(q => {
+    let prompt = (config as { chatPrompt: string }).chatPrompt;
+    config.questions.forEach((q: { key: string; label: string }) => {
       const ans = answers[section]?.[q.key] || "(não respondido)";
       prompt += `\n${q.label}\n→ ${ans}\n`;
     });
