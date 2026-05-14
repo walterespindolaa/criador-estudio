@@ -3,9 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Database } from "@/integrations/supabase/types";
 
-export type Persona = Database["public"]["Tables"]["personas"]["Row"];
-type PersonaInsert = Database["public"]["Tables"]["personas"]["Insert"];
-type PersonaUpdate = Database["public"]["Tables"]["personas"]["Update"];
+export type Persona = Database["public"]["Tables"]["personas"]["Row"] & {
+  how_you_help?: string | null;
+};
+type PersonaInsert = Database["public"]["Tables"]["personas"]["Insert"] & {
+  how_you_help?: string | null;
+};
+type PersonaUpdate = Database["public"]["Tables"]["personas"]["Update"] & {
+  how_you_help?: string | null;
+};
 
 export type SavePersonaInput = Omit<PersonaInsert, "user_id" | "id" | "created_at"> & {
   id?: string | null;
