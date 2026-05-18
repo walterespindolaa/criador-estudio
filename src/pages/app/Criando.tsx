@@ -99,6 +99,7 @@ const Criando = () => {
   const [customRange, setCustomRange] = useState<{ from: Date; to: Date } | undefined>();
   const [filterPlatform, setFilterPlatform] = useState<string | null>(null);
   const [filterPillar, setFilterPillar] = useState<string | null>(null);
+  const [filterWeek, setFilterWeek] = useState<number | null>(null);
 
   const handlePeriodChange = (p: PeriodKey) => {
     setPeriod(p);
@@ -123,6 +124,7 @@ const Criando = () => {
     return posts.filter(post => {
       if (filterPlatform && post.platform !== filterPlatform) return false;
       if (filterPillar && post.pillar_id !== filterPillar) return false;
+      if (filterWeek != null && post.week_number !== filterWeek) return false;
       if (dateRange) {
         const postDate = post.scheduled_date || post.created_at?.split("T")[0];
         if (!postDate) return period === "tudo";
@@ -133,7 +135,7 @@ const Criando = () => {
       }
       return true;
     });
-  }, [posts, filterPlatform, filterPillar, dateRange, period]);
+  }, [posts, filterPlatform, filterPillar, filterWeek, dateRange, period]);
 
   const openNew = () => { setSelectedPost(null); setDrawerOpen(true); };
   const openEdit = (post: Post) => { setSelectedPost(post); setDrawerOpen(true); };
@@ -165,7 +167,7 @@ const Criando = () => {
 
   const getPillar = (id: string | null) => pillars.find(p => p.id === id);
 
-  const hasActiveFilters = filterPlatform || filterPillar || period !== "semana";
+  const hasActiveFilters = filterPlatform || filterPillar || filterWeek != null || period !== "semana";
 
   if (postsLoading && posts.length === 0) {
     return (
@@ -232,6 +234,28 @@ const Criando = () => {
                 ))}
               </div>
             )}
+
+            {posts.some(p => p.week_number != null) && (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  onClick={() => setFilterWeek(null)}
+                  className={`px-3 py-1 rounded-xl text-xs font-body border transition-colors ${filterWeek == null ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"}`}
+                >
+                  Todas semanas
+                </button>
+                {Array.from(new Set(posts.map(p => p.week_number).filter((n): n is number => n != null)))
+                  .sort((a, b) => a - b)
+                  .map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => setFilterWeek(filterWeek === n ? null : n)}
+                      className={`px-3 py-1 rounded-xl text-xs font-body border transition-colors ${filterWeek === n ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"}`}
+                    >
+                      S{n}
+                    </button>
+                  ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -254,7 +278,7 @@ const Criando = () => {
           <span>·</span>
           <span>{filteredPosts.filter(p => p.scheduled_date).length} agendados</span>
           {hasActiveFilters && (
-            <button onClick={() => { setFilterPlatform(null); setFilterPillar(null); handlePeriodChange("semana"); }}
+            <button onClick={() => { setFilterPlatform(null); setFilterPillar(null); setFilterWeek(null); handlePeriodChange("semana"); }}
               className="ml-2 text-primary hover:underline flex items-center gap-1">
               <X className="h-3 w-3" /> Limpar filtros
             </button>
@@ -311,6 +335,11 @@ const Criando = () => {
                           <PlatformIcon platform={post.platform} size="sm" />
                           <span className="text-xs bg-muted px-1.5 py-0.5 rounded font-body">{FORMAT_LABELS[post.format] || post.format}</span>
                           {pillar && <span className="px-1.5 py-0.5 rounded text-xs font-body text-primary-foreground" style={{ backgroundColor: pillar.color }}>{pillar.name}</span>}
+                          {post.week_number != null && (
+                            <span className="px-1.5 py-0.5 rounded text-xs font-body bg-muted text-muted-foreground border border-border">
+                              S{post.week_number}
+                            </span>
+                          )}
                           {isPublished && <span className="px-1.5 py-0.5 rounded text-xs font-body bg-secondary text-secondary-foreground">Publicado</span>}
                         </div>
                         {post.scheduled_date && <p className="text-xs text-muted-foreground font-body mt-2 flex items-center gap-1"><Calendar className="h-3 w-3" /> {post.scheduled_date}{post.scheduled_time ? ` às ${post.scheduled_time}` : ""}</p>}

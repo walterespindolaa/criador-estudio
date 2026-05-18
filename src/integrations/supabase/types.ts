@@ -974,6 +974,7 @@ export type Database = {
           title: string
           updated_at: string | null
           user_id: string
+          week_number: number | null
         }
         Insert: {
           archive_summary?: string | null
@@ -1004,6 +1005,7 @@ export type Database = {
           title: string
           updated_at?: string | null
           user_id: string
+          week_number?: number | null
         }
         Update: {
           archive_summary?: string | null
@@ -1034,6 +1036,7 @@ export type Database = {
           title?: string
           updated_at?: string | null
           user_id?: string
+          week_number?: number | null
         }
         Relationships: [
           {

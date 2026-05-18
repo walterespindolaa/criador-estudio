@@ -10,7 +10,7 @@ import {
   ClipboardList, BarChart3, Eye, Bookmark, Target, Clock, Cloud, Image as ImageIcon, X, Trash2,
   Layers, Type, Radio, MousePointerClick, Link as LinkIcon, Link2, Download, BookOpen,
   Loader2, Hash, Copy, Repeat2, FileText, ListChecks, Calendar, ChevronDown,
-  RefreshCw, Minus, Plus, SmilePlus, Briefcase,
+  RefreshCw, Minus, Plus, SmilePlus, Briefcase, StickyNote,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getFormatStructure } from "@/lib/format-structures";
@@ -68,6 +68,7 @@ interface Post {
   scheduled_time: string | null;
   published_at: string | null;
   notes: string | null;
+  week_number: number | null;
   result_views: number | null;
   result_saves: number | null;
   result_comments: number | null;
@@ -160,6 +161,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
   const [scheduledDate, setScheduledDate] = useState("");
   const [scheduledTime, setScheduledTime] = useState("");
   const [notes, setNotes] = useState("");
+  const [weekNumber, setWeekNumber] = useState<number | null>(null);
   const [views, setViews] = useState("");
   const [saves, setSaves] = useState("");
   const [comments, setComments] = useState("");
@@ -261,6 +263,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
       setScheduledDate(post.scheduled_date || "");
       setScheduledTime(post.scheduled_time || "");
       setNotes(post.notes || "");
+      setWeekNumber(post.week_number ?? null);
       setViews(post.result_views?.toString() || "");
       setSaves(post.result_saves?.toString() || "");
       setComments(post.result_comments?.toString() || "");
@@ -282,6 +285,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
       setTitle(""); setPlatform("instagram"); setFormat("reels");
       setPillarId(""); setStatus("ideia"); setHook(""); setScript("");
       setCaption(""); setCta(""); setScheduledDate(""); setScheduledTime(""); setNotes("");
+      setWeekNumber(null);
       setViews(""); setSaves(""); setComments(""); setShowResults(false); setReferenceLink("");
       setSections(Array(5).fill(null).map(emptySection));
       setDriveMedia([]);
@@ -325,6 +329,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
     scheduled_date: scheduledDate || null,
     scheduled_time: scheduledTime || null,
     notes: notes ? sanitizeText(notes) : null,
+    week_number: weekNumber,
     result_views: views ? parseInt(views) : null,
     result_saves: saves ? parseInt(saves) : null,
     result_comments: comments ? parseInt(comments) : null,
@@ -334,7 +339,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
     reference_link: referenceLink || null,
     user_id: userId,
   }), [title, platform, format, pillarId, status, hook, script, caption, cta,
-       scheduledDate, scheduledTime, notes, views, saves, comments, sections, referenceLink, userId]);
+       scheduledDate, scheduledTime, notes, weekNumber, views, saves, comments, sections, referenceLink, userId]);
 
   // Debounced auto-save for existing posts.
   // Skipped for new posts (would create empty drafts) and during initial load.
@@ -357,7 +362,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title, platform, format, pillarId, status, hook, script, caption, cta,
-       scheduledDate, scheduledTime, notes, referenceLink, sections, open, post?.id]);
+       scheduledDate, scheduledTime, notes, weekNumber, referenceLink, sections, open, post?.id]);
 
   const handleAiReferences = async () => {
     if (aiHookCategories.length > 0 || isRefAiLoading) return;
@@ -1026,6 +1031,30 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                       })}
                     </div>
                   </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                      Semana
+                    </Label>
+                    <Select
+                      value={weekNumber === null ? "none" : String(weekNumber)}
+                      onValueChange={(val) => setWeekNumber(val === "none" ? null : Number(val))}
+                    >
+                      <SelectTrigger className="rounded-xl h-10 text-sm bg-card">
+                        <SelectValue placeholder="Sem semana" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">
+                          <span className="text-muted-foreground">Sem semana</span>
+                        </SelectItem>
+                        {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                          <SelectItem key={n} value={String(n)}>
+                            Semana {n}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </section>
 
                 {/* Content Assistant */}
@@ -1149,7 +1178,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                   </div>
                 </section>
 
-                {/* Notes + Reference link */}
+                {/* Reference link */}
                 <section className="space-y-3">
                   <div className="space-y-1.5">
                     <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80 flex items-center gap-1.5">
@@ -1160,17 +1189,6 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                       value={referenceLink}
                       onChange={(e) => setReferenceLink(e.target.value)}
                       className="rounded-xl h-10 text-sm bg-card"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80 flex items-center gap-1.5">
-                      <ClipboardList className="h-3 w-3" /> Notas
-                    </Label>
-                    <Textarea
-                      placeholder="Anotações extras..."
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      className="rounded-xl text-sm bg-card min-h-[80px]"
                     />
                   </div>
                 </section>
@@ -1237,6 +1255,12 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                     className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-body text-sm px-3"
                   >
                     <ListChecks className="h-3.5 w-3.5 mr-1.5" /> Tarefas
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="notas"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-body text-sm px-3"
+                  >
+                    <StickyNote className="h-3.5 w-3.5 mr-1.5" /> Notas
                   </TabsTrigger>
                   <TabsTrigger
                     value="refs"
@@ -1658,6 +1682,18 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                       Salve o post primeiro para adicionar tarefas.
                     </div>
                   )}
+                </TabsContent>
+
+                {/* Tab: Notas */}
+                <TabsContent value="notas" className="flex-1 px-4 sm:px-6 py-5 m-0 outline-none">
+                  <div className="relative">
+                    <textarea
+                      placeholder="Anote ideias soltas, links de inspiração, lembretes para esse conteúdo…"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      className="w-full min-h-[400px] bg-transparent border-none outline-none focus:outline-none focus:ring-0 font-body text-base text-foreground placeholder:text-muted-foreground/40 resize-none leading-relaxed"
+                    />
+                  </div>
                 </TabsContent>
 
                 {/* Tab: Refs */}
