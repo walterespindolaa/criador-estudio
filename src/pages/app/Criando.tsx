@@ -219,43 +219,59 @@ const Criando = () => {
               ))}
             </div>
 
-            {pillars.length > 0 && (
-              <div className="flex items-center gap-1">
-                <button onClick={() => setFilterPillar(null)}
-                  className={`px-3 py-1 rounded-xl text-xs font-body border transition-colors ${!filterPillar ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"}`}>
-                  Pilares
-                </button>
-                {pillars.map(p => (
-                  <button key={p.id} onClick={() => setFilterPillar(filterPillar === p.id ? null : p.id)}
-                    className={`px-3 py-1 rounded-xl text-xs font-body border transition-colors ${filterPillar === p.id ? "text-primary-foreground border-transparent" : "bg-card border-border"}`}
-                    style={filterPillar === p.id ? { backgroundColor: p.color } : {}}>
-                    {p.name}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {posts.some(p => p.week_number != null) && (
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <button
-                  onClick={() => setFilterWeek(null)}
-                  className={`px-3 py-1 rounded-xl text-xs font-body border transition-colors ${filterWeek == null ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"}`}
+            <div className="flex items-center gap-2 flex-wrap">
+              {pillars.length > 0 && (
+                <Select
+                  value={filterPillar ?? "all"}
+                  onValueChange={(v) => setFilterPillar(v === "all" ? null : v)}
                 >
-                  Todas semanas
-                </button>
-                {Array.from(new Set(posts.map(p => p.week_number).filter((n): n is number => n != null)))
-                  .sort((a, b) => a - b)
-                  .map((n) => (
-                    <button
-                      key={n}
-                      onClick={() => setFilterWeek(filterWeek === n ? null : n)}
-                      className={`px-3 py-1 rounded-xl text-xs font-body border transition-colors ${filterWeek === n ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"}`}
-                    >
-                      S{n}
-                    </button>
-                  ))}
-              </div>
-            )}
+                  <SelectTrigger className="w-[180px] h-9 rounded-xl text-xs font-body bg-card">
+                    <SelectValue placeholder="Todos os pilares" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      <span className="font-body">Todos os pilares</span>
+                    </SelectItem>
+                    {pillars.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        <span className="flex items-center gap-2 font-body">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full shrink-0"
+                            style={{ backgroundColor: p.color }}
+                          />
+                          {p.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
+              {posts.some((p) => p.week_number != null) && (
+                <Select
+                  value={filterWeek == null ? "all" : String(filterWeek)}
+                  onValueChange={(v) => setFilterWeek(v === "all" ? null : Number(v))}
+                >
+                  <SelectTrigger className="w-[160px] h-9 rounded-xl text-xs font-body bg-card">
+                    <SelectValue placeholder="Todas as semanas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      <span className="font-body">Todas as semanas</span>
+                    </SelectItem>
+                    {Array.from(
+                      new Set(posts.map((p) => p.week_number).filter((n): n is number => n != null))
+                    )
+                      .sort((a, b) => a - b)
+                      .map((n) => (
+                        <SelectItem key={n} value={String(n)}>
+                          <span className="font-body">Semana {n}</span>
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
         </div>
 
