@@ -947,13 +947,11 @@ export type Database = {
       posts: {
         Row: {
           archive_summary: string | null
-          calendar_synced_at: string | null
           caption: string | null
           content_blocks: Json | null
           created_at: string | null
           cta: string | null
           format: string
-          google_event_id: string | null
           hook: string | null
           id: string
           idea_id: string | null
@@ -980,13 +978,11 @@ export type Database = {
         }
         Insert: {
           archive_summary?: string | null
-          calendar_synced_at?: string | null
           caption?: string | null
           content_blocks?: Json | null
           created_at?: string | null
           cta?: string | null
           format: string
-          google_event_id?: string | null
           hook?: string | null
           id?: string
           idea_id?: string | null
@@ -1013,13 +1009,11 @@ export type Database = {
         }
         Update: {
           archive_summary?: string | null
-          calendar_synced_at?: string | null
           caption?: string | null
           content_blocks?: Json | null
           created_at?: string | null
           cta?: string | null
           format?: string
-          google_event_id?: string | null
           hook?: string | null
           id?: string
           idea_id?: string | null
