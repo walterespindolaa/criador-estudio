@@ -11,6 +11,7 @@ import {
   Layers, Type, Radio, MousePointerClick, Link as LinkIcon, Link2, Download, BookOpen,
   Loader2, Hash, Copy, Repeat2, FileText, ListChecks, Calendar, ChevronDown,
   RefreshCw, Minus, Plus, SmilePlus, Briefcase, StickyNote,
+  CalendarPlus, CalendarCheck, CalendarX,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getFormatStructure } from "@/lib/format-structures";
@@ -52,6 +53,7 @@ import { RoteiroPdfTemplate } from "@/components/pdf/RoteiroPdfTemplate";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { sanitizeText } from "@/lib/sanitize";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useGoogleCalendar } from "@/hooks/useGoogleCalendar";
 
 interface Post {
   id: string;
@@ -69,6 +71,7 @@ interface Post {
   published_at: string | null;
   notes: string | null;
   week_number: number | null;
+  google_event_id: string | null;
   result_views: number | null;
   result_saves: number | null;
   result_comments: number | null;
@@ -162,6 +165,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
   const [scheduledTime, setScheduledTime] = useState("");
   const [notes, setNotes] = useState("");
   const [weekNumber, setWeekNumber] = useState<number | null>(null);
+  const [googleEventId, setGoogleEventId] = useState<string | null>(null);
   const [views, setViews] = useState("");
   const [saves, setSaves] = useState("");
   const [comments, setComments] = useState("");
@@ -216,6 +220,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
   const [driveLink, setDriveLink] = useState("");
   const isMobile = useIsMobile();
   const { pickAndSave, picking } = useGoogleDrive();
+  const { syncPost: syncCalendarPost, removeFromCalendar, syncing: calendarSyncing } = useGoogleCalendar();
   const { createPost, updatePost, deletePost } = usePosts();
   const { referenceFormats } = useReferenceLibrary();
   const { userHooks, userPrompts } = useUserLibrary();
@@ -264,6 +269,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
       setScheduledTime(post.scheduled_time || "");
       setNotes(post.notes || "");
       setWeekNumber(post.week_number ?? null);
+      setGoogleEventId(post.google_event_id ?? null);
       setViews(post.result_views?.toString() || "");
       setSaves(post.result_saves?.toString() || "");
       setComments(post.result_comments?.toString() || "");
@@ -286,6 +292,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
       setPillarId(""); setStatus("ideia"); setHook(""); setScript("");
       setCaption(""); setCta(""); setScheduledDate(""); setScheduledTime(""); setNotes("");
       setWeekNumber(null);
+      setGoogleEventId(null);
       setViews(""); setSaves(""); setComments(""); setShowResults(false); setReferenceLink("");
       setSections(Array(5).fill(null).map(emptySection));
       setDriveMedia([]);
@@ -1176,6 +1183,60 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                       />
                     </div>
                   </div>
+
+                  {!isNew && post && scheduledDate && (
+                    <div className="space-y-2 pt-1">
+                      <Button
+                        variant={googleEventId ? "outline" : "secondary"}
+                        size="sm"
+                        disabled={calendarSyncing}
+                        onClick={async () => {
+                          const newId = await syncCalendarPost({
+                            id: post.id,
+                            title: title || post.title,
+                            scheduled_date: scheduledDate,
+                            scheduled_time: scheduledTime || null,
+                            caption: caption || null,
+                            notes: notes || null,
+                            platform,
+                            format,
+                            google_event_id: googleEventId,
+                          });
+                          if (newId) setGoogleEventId(newId);
+                        }}
+                        className="w-full rounded-xl"
+                      >
+                        {calendarSyncing ? (
+                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sincronizando…</>
+                        ) : googleEventId ? (
+                          <><CalendarCheck className="h-4 w-4 mr-2" /> Atualizar na Agenda</>
+                        ) : (
+                          <><CalendarPlus className="h-4 w-4 mr-2" /> Adicionar à Google Agenda</>
+                        )}
+                      </Button>
+
+                      {googleEventId && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={calendarSyncing}
+                          onClick={async () => {
+                            await removeFromCalendar({
+                              id: post.id,
+                              title: title || post.title,
+                              scheduled_date: scheduledDate,
+                              scheduled_time: scheduledTime || null,
+                              google_event_id: googleEventId,
+                            });
+                            setGoogleEventId(null);
+                          }}
+                          className="w-full rounded-xl text-muted-foreground hover:text-destructive"
+                        >
+                          <CalendarX className="h-4 w-4 mr-2" /> Remover da Agenda
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </section>
 
                 {/* Reference link */}
