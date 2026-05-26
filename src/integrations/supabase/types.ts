@@ -1601,6 +1601,31 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_public_bio_links_by_slug: {
+        Args: { _slug: string }
+        Returns: {
+          icon: string
+          id: string
+          link_type: string
+          position: number
+          thumbnail_url: string
+          title: string
+          url: string
+        }[]
+      }
+      get_public_profile_by_slug: {
+        Args: { _slug: string }
+        Returns: {
+          avatar_url: string
+          bio: string
+          bio_settings: Json
+          bio_slug: string
+          id: string
+          instagram_handle: string
+          name: string
+          niche: string
+        }[]
+      }
       increment_bio_link_click: {
         Args: { link_id: string }
         Returns: undefined
