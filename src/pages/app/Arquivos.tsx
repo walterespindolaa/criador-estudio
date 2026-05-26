@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { FolderOpen, Upload, Search, Trash2, FileText, Cloud, ImageIcon, Crown } from "lucide-react";
