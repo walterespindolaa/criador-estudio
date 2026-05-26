@@ -94,7 +94,7 @@ const Criando = () => {
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
 
   const [period, setPeriod] = useState<PeriodKey>(() => {
-    return (localStorage.getItem("criando-period") as PeriodKey) || "semana";
+    return (localStorage.getItem("criando-period") as PeriodKey) || "tudo";
   });
   const [customRange, setCustomRange] = useState<{ from: Date; to: Date } | undefined>();
   const [filterPlatform, setFilterPlatform] = useState<string | null>(null);
@@ -167,7 +167,7 @@ const Criando = () => {
 
   const getPillar = (id: string | null) => pillars.find(p => p.id === id);
 
-  const hasActiveFilters = filterPlatform || filterPillar || filterWeek != null || period !== "semana";
+  const hasActiveFilters = filterPlatform || filterPillar || filterWeek != null || period !== "tudo";
 
   if (postsLoading && posts.length === 0) {
     return (
@@ -294,7 +294,7 @@ const Criando = () => {
           <span>·</span>
           <span>{filteredPosts.filter(p => p.scheduled_date).length} agendados</span>
           {hasActiveFilters && (
-            <button onClick={() => { setFilterPlatform(null); setFilterPillar(null); setFilterWeek(null); handlePeriodChange("semana"); }}
+            <button onClick={() => { setFilterPlatform(null); setFilterPillar(null); setFilterWeek(null); handlePeriodChange("tudo"); }}
               className="ml-2 text-primary hover:underline flex items-center gap-1">
               <X className="h-3 w-3" /> Limpar filtros
             </button>
