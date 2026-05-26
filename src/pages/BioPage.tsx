@@ -157,11 +157,9 @@ const BioPage = () => {
     async function load() {
       if (!slug) return;
       setLoading(true);
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("id, name, bio, avatar_url, niche, instagram_handle, bio_settings")
-        .eq("bio_slug", slug)
-        .maybeSingle();
+      const { data: profileRows, error: profileError } = await supabase
+        .rpc("get_public_profile_by_slug", { _slug: slug });
+      const profileData = Array.isArray(profileRows) ? profileRows[0] : null;
 
       if (cancelled) return;
       if (profileError || !profileData) {
@@ -171,11 +169,7 @@ const BioPage = () => {
       }
 
       const { data: linkData } = await supabase
-        .from("bio_links")
-        .select("id, title, url, icon, position, link_type, thumbnail_url")
-        .eq("user_id", profileData.id)
-        .eq("is_active", true)
-        .order("position", { ascending: true });
+        .rpc("get_public_bio_links_by_slug", { _slug: slug });
 
       if (cancelled) return;
       setProfile(profileData as ProfileLite);
