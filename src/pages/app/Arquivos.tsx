@@ -74,6 +74,9 @@ function SignedImage({
   }, [path, resolve]);
   if (!url) return <ImageIcon className="h-8 w-8 text-muted-foreground" />;
   return <img src={url} alt={alt} className="w-full h-full object-cover" loading="lazy" />;
+}
+
+
 
 const Arquivos = () => {
   const { user } = useAuth();
