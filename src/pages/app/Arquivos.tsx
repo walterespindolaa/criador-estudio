@@ -53,6 +53,28 @@ async function compressImage(file: File): Promise<File> {
   }
 }
 
+function SignedImage({
+  path,
+  alt,
+  resolve,
+}: {
+  path: string;
+  alt: string;
+  resolve: (p: string) => Promise<string>;
+}) {
+  const [url, setUrl] = useState<string>("");
+  useEffect(() => {
+    let cancelled = false;
+    resolve(path).then((u) => {
+      if (!cancelled) setUrl(u);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [path, resolve]);
+  if (!url) return <ImageIcon className="h-8 w-8 text-muted-foreground" />;
+  return <img src={url} alt={alt} className="w-full h-full object-cover" loading="lazy" />;
+
 const Arquivos = () => {
   const { user } = useAuth();
   const { profile } = useProfile();
