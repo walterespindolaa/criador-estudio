@@ -315,7 +315,7 @@ const Arquivos = () => {
                       >
                         <div className="aspect-square bg-muted flex items-center justify-center overflow-hidden">
                           {isImage(f.file_type) ? (
-                            <img src={getPublicUrl(f.storage_path)} alt={f.name} className="w-full h-full object-cover" loading="lazy" />
+                            <SignedImage path={f.storage_path} alt={f.name} resolve={getPublicUrl} />
                           ) : (
                             <FileText className="h-8 w-8 text-muted-foreground" />
                           )}
