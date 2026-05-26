@@ -94,9 +94,12 @@ export function useFiles() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey }),
   });
 
-  const getPublicUrl = (path: string): string => {
-    const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
-    return data.publicUrl;
+  const getPublicUrl = async (path: string): Promise<string> => {
+    const { data, error } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .createSignedUrl(path, 60 * 60);
+    if (error || !data) return "";
+    return data.signedUrl;
   };
 
   return { files, isLoading, error, uploadFile, deleteFile, getPublicUrl };
