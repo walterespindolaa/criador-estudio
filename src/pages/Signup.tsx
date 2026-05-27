@@ -59,7 +59,7 @@ const Signup = () => {
   const handleGoogleSignup = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: window.location.origin + "/app" },
+      options: { redirectTo: window.location.origin + "/onboarding" },
     });
     if (error) toast.error("Erro ao conectar com Google.");
   };
