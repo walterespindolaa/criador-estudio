@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Outlet, NavLink } from "react-router-dom";
+import { Outlet, NavLink, Navigate, useLocation } from "react-router-dom";
 import { BottomBar } from "@/components/BottomBar";
 import { PWAInstallBanner } from "@/components/shared/PWAInstallBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
@@ -16,7 +16,8 @@ import { TrialBanner } from "@/components/TrialBanner";
 import { StorageWarningBanner } from "@/components/StorageWarningBanner";
 
 const AppLayout = () => {
-  const { profile } = useProfile();
+  const { profile, isLoading } = useProfile();
+  const location = useLocation();
 
   useEffect(() => {
     if (profile?.theme_preset) {
@@ -26,6 +27,12 @@ const AppLayout = () => {
     applySidebarColor(profile?.theme_sidebar || null);
     if (profile?.theme_font) applyThemeFont(profile.theme_font);
   }, [profile]);
+
+  if (!isLoading && profile && profile.onboarding_completed === false) {
+    if (location.pathname !== "/onboarding") {
+      return <Navigate to="/onboarding" replace />;
+    }
+  }
 
   return (
     <CriaAIProvider>
