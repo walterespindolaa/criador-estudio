@@ -250,28 +250,37 @@ const Onboarding = () => {
 
       await updateProfile.mutateAsync(profileUpdates);
 
-      for (let i = 0; i < finalPillars.length; i++) {
-        await supabase.from("pillars").insert({
-          user_id: user.id,
-          name: finalPillars[i].name,
-          color: finalPillars[i].color,
-          position: i,
-        });
+      if (finalPillars.length > 0) {
+        const { error: pillarsErr } = await supabase.from("pillars").insert(
+          finalPillars.map((p, i) => ({
+            user_id: user.id,
+            name: p.name,
+            color: p.color,
+            position: i,
+          }))
+        );
+        if (pillarsErr) console.warn("[onboarding] pillars batch insert failed:", pillarsErr);
       }
 
-      for (let i = 0; i < habitsToCreate.length; i++) {
-        await supabase.from("habits").insert({
-          user_id: user.id,
-          name: habitsToCreate[i],
-          position: i,
-        });
+      if (habitsToCreate.length > 0) {
+        const { error: habitsErr } = await supabase.from("habits").insert(
+          habitsToCreate.map((name, i) => ({
+            user_id: user.id,
+            name,
+            position: i,
+          }))
+        );
+        if (habitsErr) console.warn("[onboarding] habits batch insert failed:", habitsErr);
       }
 
-      for (const idea of ideasToCreate) {
-        await supabase.from("ideas").insert({
-          user_id: user.id,
-          title: idea.title,
-        });
+      if (ideasToCreate.length > 0) {
+        const { error: ideasErr } = await supabase.from("ideas").insert(
+          ideasToCreate.map((idea) => ({
+            user_id: user.id,
+            title: idea.title,
+          }))
+        );
+        if (ideasErr) console.warn("[onboarding] ideas batch insert failed:", ideasErr);
       }
 
       setSetupDone(true);
