@@ -21,7 +21,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCriaAI } from "@/contexts/CriaAIContext";
@@ -109,11 +109,13 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <div className="flex items-center justify-center px-2 py-4 border-b border-sidebar-border/50">
-        {collapsed ? (
-          <Logo icon className="h-8 w-8" />
-        ) : (
-          <Logo className="h-9 w-auto" />
-        )}
+        <Link to="/app" className="block transition-opacity hover:opacity-80" aria-label="Ir pra home">
+          {collapsed ? (
+            <Logo icon className="h-8 w-8" />
+          ) : (
+            <Logo className="h-9 w-auto" />
+          )}
+        </Link>
       </div>
 
       <button
