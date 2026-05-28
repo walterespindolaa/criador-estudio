@@ -30,9 +30,8 @@ export const UPLOAD_LIMITS = {
 
 export type UploadKind = keyof typeof UPLOAD_LIMITS;
 
-export type ValidationResult =
-  | { ok: true }
-  | { ok: false; reason: string };
+export type ValidationResult = { ok: boolean; reason?: string };
+
 
 export function validateUpload(file: File, kind: UploadKind): ValidationResult {
   const limits = UPLOAD_LIMITS[kind];
