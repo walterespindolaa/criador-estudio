@@ -16,7 +16,9 @@ import {
   BarChart3,
   Shield,
   Link2,
+  Handshake,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
@@ -36,6 +38,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Logo } from "@/components/shared/Logo";
+import { AiUsageBadge } from "@/components/shared/AiUsageBadge";
+import { useTier } from "@/hooks/useTier";
 
 const groups = [
   {
@@ -64,6 +68,13 @@ const groups = [
     ],
   },
   {
+    label: "Monetização",
+    studioOnly: true,
+    items: [
+      { title: "Collabs", url: "/app/collabs", icon: Handshake, comingSoon: true },
+    ],
+  },
+  {
     label: "Análise",
     items: [
       { title: "Relatórios", url: "/app/relatorios", icon: BarChart3 },
@@ -86,6 +97,7 @@ export function AppSidebar() {
   const { profile } = useProfile();
   const { signOut } = useAuth();
   const { openCria } = useCriaAI();
+  const { tier } = useTier();
 
   const handleSignOut = async () => {
     await signOut();
@@ -144,21 +156,49 @@ export function AppSidebar() {
             )}
             <SidebarGroupContent>
               <SidebarMenu>
-                {group.items.map((item) => (
-                  <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton asChild tooltip={item.title}>
-                      <NavLink
-                        to={item.url}
-                        end={(item as { end?: boolean }).end}
-                        className="group relative rounded-xl px-3 py-2.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-all duration-150"
-                        activeClassName="bg-primary/10 text-primary font-semibold before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-5 before:bg-primary before:rounded-r-full before:content-['']"
-                      >
-                        <item.icon className="h-5 w-5 flex-shrink-0" strokeWidth={1.5} />
-                        {!collapsed && <span className="font-body text-sm">{item.title}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {group.items.map((item) => {
+                  const comingSoon = (item as { comingSoon?: boolean }).comingSoon;
+                  if (comingSoon) {
+                    const locked = tier !== "studio";
+                    return (
+                      <SidebarMenuItem key={item.url}>
+                        <SidebarMenuButton
+                          tooltip={item.title}
+                          onClick={() => {
+                            if (locked) navigate("/app/assinar");
+                            else toast("Collabs chega em breve! 🚀");
+                          }}
+                          className="group relative rounded-xl px-3 py-2.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-all duration-150"
+                        >
+                          <item.icon className="h-5 w-5 flex-shrink-0" strokeWidth={1.5} />
+                          {!collapsed && (
+                            <>
+                              <span className="font-body text-sm">{item.title}</span>
+                              <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                                {locked ? "Studio" : "Em breve"}
+                              </span>
+                            </>
+                          )}
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  }
+                  return (
+                    <SidebarMenuItem key={item.url}>
+                      <SidebarMenuButton asChild tooltip={item.title}>
+                        <NavLink
+                          to={item.url}
+                          end={(item as { end?: boolean }).end}
+                          className="group relative rounded-xl px-3 py-2.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-all duration-150"
+                          activeClassName="bg-primary/10 text-primary font-semibold before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-5 before:bg-primary before:rounded-r-full before:content-['']"
+                        >
+                          <item.icon className="h-5 w-5 flex-shrink-0" strokeWidth={1.5} />
+                          {!collapsed && <span className="font-body text-sm">{item.title}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -192,6 +232,7 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="mt-auto">
+        {!collapsed && <AiUsageBadge />}
         <div className={cn("border-t border-border", collapsed ? "p-2" : "p-3")}>
           <button
             type="button"
