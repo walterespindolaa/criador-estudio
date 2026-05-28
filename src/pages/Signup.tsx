@@ -77,8 +77,8 @@ const Signup = () => {
       </div>
       <div className="flex-1 flex items-center justify-center p-8">
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-sm">
-          <Link to="/" className="mb-8 inline-block">
-            <Logo className="h-10 w-auto" />
+          <Link to="/" className="mb-8 flex justify-center lg:justify-start">
+            <Logo className="h-16 lg:h-10 w-auto" />
           </Link>
 
           {emailSent ? (
