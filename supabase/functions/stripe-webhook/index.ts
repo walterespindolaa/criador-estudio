@@ -21,7 +21,8 @@ serve(async (req) => {
   try {
     event = await stripe.webhooks.constructEventAsync(body, signature!, webhookSecret);
   } catch (err) {
-    return new Response(`Webhook Error: ${err}`, { status: 400 });
+    console.error("[stripe-webhook] signature verification failed:", err);
+    return new Response("Webhook Error", { status: 400 });
   }
 
   const session = event.data.object as Stripe.Checkout.Session | Stripe.Subscription;

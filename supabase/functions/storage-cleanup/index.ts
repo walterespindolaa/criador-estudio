@@ -51,8 +51,8 @@ serve(async (req) => {
       headers: { "Content-Type": "application/json" }
     });
   } catch (err) {
-    console.error("Cleanup error:", err);
-    return new Response(JSON.stringify({ error: String(err) }), {
+    console.error("[storage-cleanup] unhandled error:", err);
+    return new Response(JSON.stringify({ error: "internal_error" }), {
       status: 500,
       headers: { "Content-Type": "application/json" }
     });

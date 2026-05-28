@@ -548,8 +548,8 @@ NICHO: ${data.nicho || 'geral'}`
     })
 
   } catch (error) {
-    console.error('ai-context-builder error:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('[ai-context-builder] unhandled error:', error)
+    return new Response(JSON.stringify({ error: 'internal_error' }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

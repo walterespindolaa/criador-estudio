@@ -65,7 +65,8 @@ Deno.serve(async (req) => {
         .single();
 
       if (error) {
-        return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        console.error("[google-drive-connect] upsert google_drive_connections failed:", error);
+        return new Response(JSON.stringify({ error: 'internal_error' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
       return new Response(JSON.stringify({ connection: data }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -81,6 +82,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ error: 'Invalid action' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    console.error("[google-drive-connect] unhandled error:", err);
+    return new Response(JSON.stringify({ error: 'internal_error' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });

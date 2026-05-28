@@ -186,7 +186,7 @@ Deno.serve(async (req) => {
 
     return json({ error: 'Invalid action' }, 400)
   } catch (err) {
-    console.error('google-calendar-sync error:', err)
-    return json({ error: String(err) }, 500)
+    console.error('[google-calendar-sync] unhandled error:', err)
+    return json({ error: 'internal_error' }, 500)
   }
 })
