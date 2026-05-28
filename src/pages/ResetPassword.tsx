@@ -35,11 +35,12 @@ const ResetPassword = () => {
     if (hash.includes("type=recovery")) {
       setIsRecovery(true);
     }
-    supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         setIsRecovery(true);
       }
     });
+    return () => subscription.unsubscribe();
   }, []);
 
   const onSubmit = async (data: ResetFormData) => {

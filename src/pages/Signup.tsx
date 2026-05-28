@@ -50,7 +50,8 @@ const Signup = () => {
     const { error } = await signUp(data.email, data.password, data.name);
     setLoading(false);
     if (error) {
-      toast.error(error.message || "Erro ao criar conta.");
+      console.warn("[signup] error:", error.message);
+      toast.error("Não foi possível criar a conta. Verifique seus dados e tente novamente.");
     } else {
       setEmailSent(true);
     }
