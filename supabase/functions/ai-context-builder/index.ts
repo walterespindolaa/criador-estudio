@@ -74,6 +74,33 @@ serve(async (req) => {
       })
     }
 
+    // ── Access gate: trial ativo, subscription ativa, ou admin ─────
+    const { data: accessRow, error: accessErr } = await supabase
+      .from("profiles")
+      .select("role, subscription_status, trial_ends_at")
+      .eq("id", user.id)
+      .single();
+
+    if (accessErr || !accessRow) {
+      return new Response(
+        JSON.stringify({ error: "profile_not_found" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const _isAdmin = accessRow.role === "admin";
+    const _isActive = accessRow.subscription_status === "active";
+    const _trialEnds = accessRow.trial_ends_at ? new Date(accessRow.trial_ends_at).getTime() : 0;
+    const _trialOk = _trialEnds > Date.now();
+
+    if (!_isAdmin && !_isActive && !_trialOk) {
+      return new Response(
+        JSON.stringify({ error: "subscription_required", message: "Seu período de teste encerrou. Assine para continuar usando a IA." }),
+        { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    // ── fim access gate ───────────────────────────────────────────
+
     const { operation, data } = await req.json()
     const userId = user.id // use this, ignore userId from body
 
