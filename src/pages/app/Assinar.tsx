@@ -1,40 +1,87 @@
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Check, Sparkles, ArrowLeft, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSubscription } from "@/hooks/useSubscription";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
-const PLAN_FEATURES = [
-  "Banco de ideias ilimitado",
-  "Pipeline kanban completo",
-  "Calendário + metas mensais",
-  "cria — legendas, hashtags e roteiros",
-  "Agendamento para Instagram, TikTok e YouTube",
-  "Preview de feed do Instagram",
-  "Link in Bio profissional",
-  "Brandbook + Biblioteca pessoal",
-  "Relatórios e analytics das redes",
-  "Suporte prioritário",
+const PLANS = [
+  {
+    id: "pro" as const,
+    name: "cria Pro",
+    price: "R$ 32,90",
+    tagline: "Seu estúdio de conteúdo completo",
+    features: [
+      "Banco de ideias ilimitado",
+      "Pipeline kanban de produção",
+      "Calendário + metas mensais",
+      "IA: 150 gerações/mês (legendas, roteiros, ideias)",
+      "Agendamento Instagram, TikTok e YouTube",
+      "Link in Bio profissional",
+      "Brandbook + Biblioteca",
+      "Relatórios e analytics",
+    ],
+    highlighted: false,
+  },
+  {
+    id: "studio" as const,
+    name: "cria Studio",
+    price: "R$ 49,90",
+    tagline: "Para quem vive de conteúdo",
+    features: [
+      "Tudo do cria Pro",
+      "🤝 Collabs: parcerias com marcas",
+      "💰 Financeiro: controle de cachês",
+      "📊 Acompanhamento de campanhas",
+      "🎓 Acesso aos cursos",
+      "IA: 500 gerações/mês",
+      "Suporte prioritário",
+    ],
+    highlighted: true,
+  },
 ];
 
 export default function Assinar() {
   const navigate = useNavigate();
   const { status } = useSubscription();
+  const [searchParams] = useSearchParams();
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   const isExpired = status === "trial_expired" || status === "blocked";
 
-  const handleCheckout = async () => {
-    window.open(
-      "mailto:contato@criadores.flow?subject=Quero assinar o cria",
-      "_blank"
-    );
+  useEffect(() => {
+    if (searchParams.get("checkout") === "cancel") {
+      toast("Checkout cancelado. Você pode tentar de novo quando quiser.");
+    }
+  }, [searchParams]);
+
+  const handleSubscribe = async (planId: "pro" | "studio") => {
+    setLoadingPlan(planId);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { plan: planId },
+      });
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("checkout sem URL");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Não foi possível iniciar o checkout. Tente novamente.");
+      setLoadingPlan(null);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-16">
+    <div className="min-h-screen bg-background flex flex-col items-center px-4 py-16">
       {!isExpired && (
         <button
           onClick={() => navigate("/app")}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors"
+          className="self-start sm:self-center flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Voltar ao app
@@ -53,48 +100,77 @@ export default function Assinar() {
         </div>
       )}
 
-      <div className="w-full max-w-md bg-card border border-border rounded-2xl p-8 shadow-warm">
-        <div className="flex justify-center mb-6">
-          <span className="inline-flex items-center gap-1.5 bg-primary/10 text-primary border border-primary/20 rounded-full px-3 py-1 text-xs font-body font-semibold">
-            <Sparkles className="h-3 w-3" />
-            Plano Criador Pro
-          </span>
-        </div>
+      <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6">
+        {PLANS.map((plan) => {
+          const isLoading = loadingPlan === plan.id;
+          return (
+            <div
+              key={plan.id}
+              className={cn(
+                "relative bg-card border rounded-2xl p-8 shadow-warm flex flex-col",
+                plan.highlighted
+                  ? "border-primary ring-1 ring-primary/30"
+                  : "border-border",
+              )}
+            >
+              {plan.highlighted && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <span className="inline-flex items-center gap-1 bg-primary text-primary-foreground rounded-full px-3 py-1 text-[11px] font-body font-semibold shadow-sm">
+                    <Sparkles className="h-3 w-3" />
+                    Mais completo
+                  </span>
+                </div>
+              )}
 
-        <div className="text-center mb-8">
-          <div className="flex items-end justify-center gap-1 mb-1">
-            <span className="text-4xl font-display font-extrabold text-foreground">R$ 29</span>
-            <span className="text-muted-foreground font-body mb-1">/mês</span>
-          </div>
-          <p className="text-xs text-muted-foreground font-body">
-            ou R$ 297/ano · 2 meses grátis
-          </p>
-        </div>
-
-        <ul className="space-y-3 mb-8">
-          {PLAN_FEATURES.map((feat) => (
-            <li key={feat} className="flex items-start gap-3">
-              <div className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center shrink-0 mt-0.5">
-                <Check className="h-3 w-3 text-primary" />
+              <div className="text-center mb-6">
+                <h2 className="text-xl font-display font-extrabold text-foreground mb-1">
+                  {plan.name}
+                </h2>
+                <p className="text-xs text-muted-foreground font-body">{plan.tagline}</p>
               </div>
-              <span className="text-sm font-body text-foreground">{feat}</span>
-            </li>
-          ))}
-        </ul>
 
-        <Button
-          variant="hero"
-          size="lg"
-          className="w-full text-base"
-          onClick={handleCheckout}
-        >
-          Assinar agora
-        </Button>
+              <div className="text-center mb-6">
+                <div className="flex items-end justify-center gap-1">
+                  <span className="text-4xl font-display font-extrabold text-foreground">
+                    {plan.price}
+                  </span>
+                  <span className="text-muted-foreground font-body mb-1">/mês</span>
+                </div>
+              </div>
 
-        <p className="text-center text-xs text-muted-foreground font-body mt-3">
-          Pagamento seguro · Cancele quando quiser
-        </p>
+              <ul className="space-y-3 mb-8 flex-1">
+                {plan.features.map((feat) => (
+                  <li key={feat} className="flex items-start gap-3">
+                    <div
+                      className={cn(
+                        "w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5",
+                        plan.highlighted ? "bg-primary/20" : "bg-primary/15",
+                      )}
+                    >
+                      <Check className="h-3 w-3 text-primary" />
+                    </div>
+                    <span className="text-sm font-body text-foreground">{feat}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <Button
+                variant={plan.highlighted ? "hero" : "outline"}
+                size="lg"
+                className="w-full text-base"
+                onClick={() => handleSubscribe(plan.id)}
+                disabled={isLoading}
+              >
+                {isLoading ? "Redirecionando..." : `Assinar ${plan.name}`}
+              </Button>
+            </div>
+          );
+        })}
       </div>
+
+      <p className="text-center text-xs text-muted-foreground font-body mt-6">
+        Pagamento seguro · Cancele quando quiser
+      </p>
     </div>
   );
 }
