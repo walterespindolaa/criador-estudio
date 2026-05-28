@@ -1,5 +1,11 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import Stripe from "https://esm.sh/stripe@14?target=deno";
+
+const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
+  apiVersion: "2024-06-20",
+  httpClient: Stripe.createFetchHttpClient(),
+});
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": Deno.env.get("ALLOWED_ORIGIN") || "https://localhost:8080",
@@ -89,6 +95,25 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // ── Cancelar assinatura no Stripe (se houver) ───────────────
+    try {
+      const { data: profile } = await admin
+        .from("profiles")
+        .select("stripe_subscription_id")
+        .eq("id", user.id)
+        .single();
+
+      if (profile?.stripe_subscription_id) {
+        await stripe.subscriptions.cancel(profile.stripe_subscription_id as string);
+        console.log("[delete-account] stripe subscription canceled:", profile.stripe_subscription_id);
+      }
+    } catch (stripeErr) {
+      // Não bloqueia o delete se o cancel falhar (ex: já cancelada).
+      // Mas LOGA pra você ver depois — pode ser que precise cancelar manual.
+      console.error("[delete-account] failed to cancel stripe subscription:", stripeErr);
+    }
+    // ────────────────────────────────────────────────────────────
 
     await deleteUserStorage(admin, user.id);
 
