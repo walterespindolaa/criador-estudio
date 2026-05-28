@@ -15,11 +15,12 @@ export type AdminProfile = {
   onboarding_completed: boolean | null;
   created_at: string;
   updated_at: string;
+  last_seen_at: string | null;
   avatar_url: string | null;
   instagram_handle: string | null;
 };
 
-type AdminUserStats = {
+export type AdminStats = {
   totalUsers: number;
   activeUsers: number;
   admins: number;
@@ -31,68 +32,118 @@ type AdminUserStats = {
   };
 };
 
-export function useAdmin() {
+export type AdminFilters = {
+  page: number;
+  pageSize: number;
+  search?: string;
+  planFilter?: string;
+  roleFilter?: string;
+};
+
+const EMPTY_STATS: AdminStats = {
+  totalUsers: 0,
+  activeUsers: 0,
+  admins: 0,
+  onboarded: 0,
+  byPlan: { free: 0, pro: 0, premium: 0 },
+};
+
+export function useAdmin(filters: AdminFilters) {
   const { user } = useAuth();
   const { profile } = useProfile();
   const queryClient = useQueryClient();
   const isAdmin = profile?.role === "admin";
 
-  const { data: users = [], isLoading, error } = useQuery<AdminProfile[]>({
-    queryKey: ["admin-users"],
+  const statsQuery = useQuery<AdminStats>({
+    queryKey: ["admin-stats"],
     enabled: !!user && isAdmin,
     queryFn: async () => {
-      const { data, error: queryError } = await supabase
+      const { data, error } = await supabase.rpc("get_admin_stats");
+      if (error) throw error;
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!row) return EMPTY_STATS;
+      return {
+        totalUsers: Number(row.total_users ?? 0),
+        activeUsers: Number(row.active_users_7d ?? 0),
+        admins: Number(row.admins ?? 0),
+        onboarded: Number(row.onboarded ?? 0),
+        byPlan: {
+          free: Number(row.plan_free ?? 0),
+          pro: Number(row.plan_pro ?? 0),
+          premium: Number(row.plan_premium ?? 0),
+        },
+      };
+    },
+  });
+
+  const usersQuery = useQuery<{ rows: AdminProfile[]; count: number }>({
+    queryKey: ["admin-users", filters],
+    enabled: !!user && isAdmin,
+    queryFn: async () => {
+      const from = filters.page * filters.pageSize;
+      const to = from + filters.pageSize - 1;
+
+      let q = supabase
         .from("profiles")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (queryError) throw queryError;
-      return (data ?? []) as unknown as AdminProfile[];
+        .select("*", { count: "exact" })
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      if (filters.search && filters.search.trim().length > 0) {
+        q = q.ilike("name", `%${filters.search.trim()}%`);
+      }
+      if (filters.planFilter && filters.planFilter !== "todos") {
+        q = q.eq("plan", filters.planFilter);
+      }
+      if (filters.roleFilter && filters.roleFilter !== "todos") {
+        q = q.eq("role", filters.roleFilter);
+      }
+
+      const { data, error, count } = await q;
+      if (error) throw error;
+      return {
+        rows: (data ?? []) as unknown as AdminProfile[],
+        count: count ?? 0,
+      };
     },
   });
 
   const updateUserRole = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
-      const { error: updateError } = await supabase
+      const { error } = await supabase
         .from("profiles")
         .update({ role } as never)
         .eq("id", userId);
-      if (updateError) throw updateError;
+      if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+    },
   });
 
   const updateUserPlan = useMutation({
     mutationFn: async ({ userId, plan }: { userId: string; plan: string }) => {
-      const { error: updateError } = await supabase
+      const { error } = await supabase
         .from("profiles")
         .update({ plan } as never)
         .eq("id", userId);
-      if (updateError) throw updateError;
+      if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+    },
   });
 
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-  const stats: AdminUserStats = {
-    totalUsers: users.length,
-    activeUsers: users.filter((u) => {
-      if (!u.updated_at) return false;
-      try {
-        return new Date(u.updated_at) > sevenDaysAgo;
-      } catch {
-        return false;
-      }
-    }).length,
-    admins: users.filter((u) => u.role === "admin").length,
-    onboarded: users.filter((u) => u.onboarding_completed).length,
-    byPlan: {
-      free: users.filter((u) => !u.plan || u.plan === "free").length,
-      pro: users.filter((u) => u.plan === "pro").length,
-      premium: users.filter((u) => u.plan === "premium").length,
-    },
+  return {
+    users: usersQuery.data?.rows ?? [],
+    totalCount: usersQuery.data?.count ?? 0,
+    stats: statsQuery.data ?? EMPTY_STATS,
+    isLoading: usersQuery.isLoading || statsQuery.isLoading,
+    error: usersQuery.error ?? statsQuery.error,
+    isAdmin,
+    updateUserRole,
+    updateUserPlan,
   };
-
-  return { users, isLoading, error, isAdmin, stats, updateUserRole, updateUserPlan };
 }

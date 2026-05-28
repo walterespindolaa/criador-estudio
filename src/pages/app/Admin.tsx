@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Activity,
@@ -64,25 +64,21 @@ function initials(name: string | null | undefined) {
 }
 
 const AdminInner = () => {
-  const { users, isLoading, stats, updateUserRole, updateUserPlan } = useAdmin();
   const [search, setSearch] = useState("");
   const [planFilter, setPlanFilter] = useState("todos");
   const [roleFilter, setRoleFilter] = useState("todos");
   const [page, setPage] = useState(0);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return users.filter((u) => {
-      const matchSearch = !q || u.name?.toLowerCase().includes(q);
-      const matchPlan = planFilter === "todos" || (u.plan ?? "free") === planFilter;
-      const matchRole = roleFilter === "todos" || (u.role ?? "user") === roleFilter;
-      return matchSearch && matchPlan && matchRole;
-    });
-  }, [users, search, planFilter, roleFilter]);
+  const { users, totalCount, stats, isLoading, updateUserRole, updateUserPlan } = useAdmin({
+    page,
+    pageSize: PAGE_SIZE,
+    search,
+    planFilter,
+    roleFilter,
+  });
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
-  const paginated = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
 
   if (isLoading) {
     return (
@@ -241,7 +237,7 @@ const AdminInner = () => {
                 </tr>
               </thead>
               <tbody>
-                {paginated.length === 0 ? (
+                {users.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-10 text-center">
                       <p className="text-sm text-muted-foreground font-body">
@@ -250,7 +246,7 @@ const AdminInner = () => {
                     </td>
                   </tr>
                 ) : (
-                  paginated.map((u) => <AdminUserRow
+                  users.map((u) => <AdminUserRow
                     key={u.id}
                     user={u}
                     onRoleChange={handleRoleChange}
@@ -262,11 +258,11 @@ const AdminInner = () => {
           </div>
 
           {/* Pagination */}
-          {filtered.length > PAGE_SIZE && (
+          {totalCount > PAGE_SIZE && (
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-border">
               <p className="text-xs text-muted-foreground font-body">
-                {safePage * PAGE_SIZE + 1}–{Math.min((safePage + 1) * PAGE_SIZE, filtered.length)} de{" "}
-                {filtered.length}
+                {safePage * PAGE_SIZE + 1}–{Math.min((safePage + 1) * PAGE_SIZE, totalCount)} de{" "}
+                {totalCount}
               </p>
               <div className="flex items-center gap-2">
                 <Button
