@@ -113,35 +113,29 @@ serve(async (req) => {
       data.legenda_original = truncate(data.legenda_original, 3000)
     }
 
-    // ── Rate limiting ──────────────────────────────────────────
+    // ── Rate limiting (atômico via RPC) ────────────────────────
     const RATE_LIMIT = 20; // chamadas por hora
-    const now = new Date();
-    const windowStart = new Date(now);
+    const _now = new Date();
+    const windowStart = new Date(_now);
     windowStart.setMinutes(0, 0, 0); // início da hora atual
 
-    const { data: rateRow, error: rateErr } = await supabase
-      .from("ai_rate_limit")
-      .select("id, call_count")
-      .eq("user_id", userId)
-      .eq("window_start", windowStart.toISOString())
-      .single();
+    const { error: rateErr } = await supabase.rpc("bump_ai_rate_limit", {
+      _user: userId,
+      _window: windowStart.toISOString(),
+      _max: RATE_LIMIT,
+    });
 
-    if (!rateErr && rateRow && rateRow.call_count >= RATE_LIMIT) {
-      return new Response(
-        JSON.stringify({ error: "rate_limited", message: "Limite de uso de IA atingido. Tente novamente na próxima hora." }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!rateErr && rateRow) {
-      await supabase
-        .from("ai_rate_limit")
-        .update({ call_count: rateRow.call_count + 1 })
-        .eq("id", rateRow.id);
-    } else {
-      await supabase
-        .from("ai_rate_limit")
-        .insert({ user_id: userId, window_start: windowStart.toISOString(), call_count: 1 });
+    if (rateErr) {
+      if (rateErr.message?.includes("rate_limited")) {
+        return new Response(
+          JSON.stringify({
+            error: "rate_limited",
+            message: "Limite de uso de IA atingido. Tente novamente na próxima hora.",
+          }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      console.warn("[ai-context-builder] bump_ai_rate_limit failed:", rateErr.message);
     }
     // ── fim rate limiting ──────────────────────────────────────
 
