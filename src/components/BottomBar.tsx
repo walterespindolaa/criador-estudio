@@ -128,12 +128,12 @@ export function BottomBar() {
             type="button"
             onClick={() => openCria()}
             className="flex flex-col items-center justify-center gap-1 px-1 flex-1"
-            aria-label="Cria IA"
+            aria-label="cria"
           >
             <span className="h-11 w-11 rounded-full bg-gradient-to-br from-primary to-purple-600 text-white flex items-center justify-center shadow-lg shadow-primary/30 transition-transform active:scale-95">
               <Sparkles className="h-5 w-5" strokeWidth={2} />
             </span>
-            <span className="text-[10px] font-body font-semibold text-primary">Cria</span>
+            <span className="text-[10px] font-body font-semibold text-primary">cria</span>
           </button>
 
           {rightItems.map(renderNavItem)}

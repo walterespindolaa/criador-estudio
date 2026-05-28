@@ -638,7 +638,7 @@ const Onboarding = () => {
                       Preparando seu espaço criativo...
                     </h1>
                     <p className="text-base text-muted-foreground font-body max-w-md mx-auto">
-                      A Cria IA está montando seus pilares de conteúdo, hábitos e primeiras ideias com base no que você nos contou.
+                      A cria está montando seus pilares de conteúdo, hábitos e primeiras ideias com base no que você nos contou.
                     </p>
                   </div>
                   <div className="flex items-center justify-center gap-2 text-sm font-body text-muted-foreground">

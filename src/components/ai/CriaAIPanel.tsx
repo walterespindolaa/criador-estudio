@@ -383,7 +383,7 @@ export function CriaAIPanel() {
           onClick={handleRestore}
           className="fixed right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-primary to-purple-600 shadow-glow hover:shadow-glow-hover hover:scale-105 transition-all flex items-center justify-center md:bottom-6"
           style={isMobile ? { bottom: 'calc(72px + env(safe-area-inset-bottom, 0px) + 12px)' } : undefined}
-          aria-label="Abrir Cria IA"
+          aria-label="Abrir cria"
         >
           <Sparkles className="h-6 w-6 text-white" strokeWidth={1.75} />
           {unread > 0 && (

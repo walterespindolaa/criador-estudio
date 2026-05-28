@@ -193,12 +193,12 @@ export function AppSidebar() {
               "hover:from-primary/15 hover:via-purple-500/15 hover:to-pink-500/15",
               collapsed && "justify-center px-2"
             )}
-            aria-label="Cria IA"
+            aria-label="cria"
           >
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-sm group-hover:shadow-glow transition-shadow flex-shrink-0">
               <Sparkles className="h-3.5 w-3.5 text-white" strokeWidth={2} />
             </div>
-            {!collapsed && <span className="text-sm font-display font-semibold">Cria IA</span>}
+            {!collapsed && <span className="text-sm font-display font-semibold">cria</span>}
           </button>
         </div>
         <div className={cn(collapsed ? "px-2 pb-3" : "px-3 pb-3")}>

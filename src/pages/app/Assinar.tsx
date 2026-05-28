@@ -7,7 +7,7 @@ const PLAN_FEATURES = [
   "Banco de ideias ilimitado",
   "Pipeline kanban completo",
   "Calendário + metas mensais",
-  "Cria IA — legendas, hashtags e roteiros",
+  "cria — legendas, hashtags e roteiros",
   "Agendamento para Instagram, TikTok e YouTube",
   "Preview de feed do Instagram",
   "Link in Bio profissional",

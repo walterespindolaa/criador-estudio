@@ -104,7 +104,7 @@ const featuresList = [
   },
   {
     icon: Sparkles,
-    title: "Cria IA",
+    title: "cria",
     description: "IA que conhece seu nicho: gera legendas, hashtags, ideias e roteiros no seu tom.",
     gradient: "from-primary to-purple-600",
   },
@@ -180,7 +180,7 @@ const testimonialsList = [
   {
     name: "Carla Mendonça",
     handle: "@carlamendonca",
-    quote: "A Cria IA me dá ideias quando trava. É como ter uma sócia criativa disponível 24h.",
+    quote: "A cria me dá ideias quando trava. É como ter uma sócia criativa disponível 24h.",
     gradient: "from-violet-500 to-purple-500",
     initial: "C"
   }
@@ -410,7 +410,7 @@ export default function Landing() {
                   <Sparkles className="w-4 h-4" /> Inteligência Artificial
                 </div>
                 <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight mb-4">
-                  A Cria IA trabalha enquanto você cria.
+                  A cria trabalha enquanto você cria.
                 </h2>
                 <p className="text-lg text-muted-foreground leading-relaxed mb-8">
                   Não é um chatbot genérico. É uma IA que conhece seu nicho, seu tom e seu público.
@@ -567,7 +567,7 @@ export default function Landing() {
                   "Pipeline kanban completo",
                   "Calendário + metas mensais",
                   "Acompanhamento de hábitos",
-                  "Cria IA (legendas, hashtags, ideias, roteiros)",
+                  "cria (legendas, hashtags, ideias, roteiros)",
                   "Agendamento Instagram, TikTok e YouTube",
                   "Preview de feed do Instagram",
                   "Link in Bio profissional",

@@ -574,7 +574,7 @@ const Relatorios = () => {
                 <Sparkles className="h-4 w-4 text-white" strokeWidth={1.75} />
               </div>
               <div>
-                <h3 className="text-sm font-display font-semibold text-foreground">Insight da Cria IA</h3>
+                <h3 className="text-sm font-display font-semibold text-foreground">Insight da cria</h3>
                 <p className="text-[10px] text-muted-foreground font-body">Análise dos seus dados</p>
               </div>
             </div>
