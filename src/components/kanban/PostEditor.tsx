@@ -422,14 +422,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
     const files: File[] = fileList ? Array.from(fileList) : [];
     e.target.value = ""; // agora seguro — `files` já é snapshot independente
 
-    console.log("[upload] start", {
-      filesLength: files.length,
-      userId,
-      userIdType: typeof userId,
-    });
-
     if (files.length === 0 || !userId) {
-      console.log("[upload] early return", { len: files.length, userId });
       return;
     }
     let anyUploaded = false;
@@ -438,7 +431,6 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
       for (const raw of files) {
         const validation = validateUpload(raw, "postMedia");
         if (!validation.ok) {
-          console.log("[upload] skip invalid", raw.name, validation.reason);
           toast.error(validation.reason);
           continue;
         }
@@ -457,7 +449,6 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
 
         const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
         const publicUrl = urlData.publicUrl;
-        console.log("[upload] storage OK, inserting ref", { path, publicUrl });
 
         if (post?.id) {
           // Insert + select retorna o ID real — sem tempRef, sem refetch com setTimeout.
@@ -481,7 +472,6 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
             continue;
           }
           setDriveMedia((prev) => [...prev, inserted as DriveRef]);
-          console.log("[upload] state updated", { isNew, hasPostId: !!post?.id });
         } else {
           // Post ainda não existe: guarda pending e vincula depois no handleSave.
           const tempRef: DriveRef = {
@@ -493,11 +483,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
             external_file_id: path,
           };
           setPendingDriveFiles((prev) => [...prev, tempRef]);
-          console.log("[upload] state updated", { isNew, hasPostId: !!post?.id });
         }
         anyUploaded = true;
       }
-      console.log("[upload] done", { anyUploaded });
       if (anyUploaded) toast.success("Mídia adicionada!");
     } catch (err) {
       console.error("[upload] unexpected", err);
