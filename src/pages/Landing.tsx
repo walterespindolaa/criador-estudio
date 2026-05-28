@@ -25,6 +25,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Logo } from "@/components/shared/Logo";
 
 // --- Components ---
 
@@ -236,11 +237,8 @@ export default function Landing() {
         )}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2 font-display font-extrabold text-xl tracking-tight cursor-pointer" onClick={() => scrollTo("hero")}>
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary via-purple-600 to-pink-500 flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
-            cria
+          <div className="flex items-center cursor-pointer" onClick={() => scrollTo("hero")}>
+            <Logo className="h-8 w-auto" />
           </div>
 
           <nav className="hidden md:flex items-center gap-8 font-medium text-sm text-muted-foreground">
@@ -648,11 +646,8 @@ export default function Landing() {
       {/* ─── 12. FOOTER ─── */}
       <footer className="py-12 border-t border-border bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-2 font-display font-extrabold text-lg">
-            <div className="w-6 h-6 rounded bg-gradient-to-br from-primary via-purple-600 to-pink-500 flex items-center justify-center">
-              <Sparkles className="w-3 h-3 text-white" />
-            </div>
-            cria
+          <div className="flex items-center">
+            <Logo className="h-6 w-auto" />
           </div>
           
           <div className="flex flex-wrap justify-center items-center gap-6 text-sm font-medium text-muted-foreground">

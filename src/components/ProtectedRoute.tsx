@@ -1,43 +1,30 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
+import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { ReactNode } from "react";
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const { status, canAccess } = useSubscription();
 
-  // Aguarda auth carregar
-  if (authLoading || status === "loading") {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground font-body animate-pulse">Carregando...</p>
-      </div>
-    );
-  }
+  if (authLoading) return <LoadingScreen />;
 
-  // Não autenticado
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
+  if (!user) return <Navigate to="/login" replace />;
 
-  // Trial expirado ou bloqueado → redireciona para paywall
-  if (!canAccess) {
-    return <Navigate to="/app/assinar" replace />;
-  }
+  if (status === "loading") return <LoadingScreen />;
+
+  if (!canAccess) return <Navigate to="/app/assinar" replace />;
 
   return <>{children}</>;
 }
 
 export function AuthOnlyRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground font-body animate-pulse">Carregando...</p>
-      </div>
-    );
-  }
+
+  if (loading) return <LoadingScreen />;
+
   if (!user) return <Navigate to="/login" replace />;
+
   return <>{children}</>;
 }
