@@ -14,6 +14,7 @@ import {
   CalendarPlus, CalendarCheck, CalendarX,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { validateUpload } from "@/lib/upload-validation";
 import { getFormatStructure } from "@/lib/format-structures";
 import { PostTasks } from "./PostTasks";
 import {
@@ -435,9 +436,10 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
     try {
       setUploadingLocal(true);
       for (const raw of files) {
-        if (raw.size > 50 * 1024 * 1024) {
-          console.log("[upload] skip oversized", raw.name, raw.size);
-          toast.error(`"${raw.name}" ultrapassa 50MB.`);
+        const validation = validateUpload(raw, "postMedia");
+        if (!validation.ok) {
+          console.log("[upload] skip invalid", raw.name, validation.reason);
+          toast.error(validation.reason);
           continue;
         }
         const file = await compressImage(raw);
@@ -1652,8 +1654,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                 try {
                                   const raw = input.files?.[0];
                                   if (!raw) return;
-                                  if (raw.size > 50 * 1024 * 1024) {
-                                    toast.error(`"${raw.name}" ultrapassa 50MB.`);
+                                  const validation = validateUpload(raw, "postMedia");
+                                  if (!validation.ok) {
+                                    toast.error(validation.reason);
                                     return;
                                   }
                                   try {

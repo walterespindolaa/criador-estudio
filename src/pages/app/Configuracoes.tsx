@@ -16,6 +16,7 @@ import { usePillars } from "@/hooks/usePillars";
 import { useHabits } from "@/hooks/useHabits";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { validateUpload } from "@/lib/upload-validation";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
@@ -173,6 +174,13 @@ const Configuracoes = () => {
     // Reset the input so picking the same file twice re-fires onChange
     e.target.value = "";
     if (!file) return;
+
+    const validation = validateUpload(file, "avatar");
+    if (!validation.ok) {
+      toast.error(validation.reason);
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       setRawImageSrc(reader.result as string);

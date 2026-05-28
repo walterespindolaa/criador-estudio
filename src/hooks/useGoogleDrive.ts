@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { validateUpload } from "@/lib/upload-validation";
 
 const sanitizeStoragePath = (name: string): string => {
   const lastDot = name.lastIndexOf(".");
@@ -78,6 +79,11 @@ export function useGoogleDrive() {
           try {
             setPicking(true);
             for (const file of Array.from(files)) {
+              const validation = validateUpload(file, "postMedia");
+              if (!validation.ok) {
+                toast.error(validation.reason);
+                continue;
+              }
               const safeName = sanitizeStoragePath(file.name);
               const path = `${userId}/${Date.now()}-${safeName}`;
               const { error: upErr } = await supabase.storage

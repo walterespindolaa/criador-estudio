@@ -37,6 +37,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useBioLinks, type BioLink } from "@/hooks/useBioLinks";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { validateUpload } from "@/lib/upload-validation";
 
 type BgType = "color" | "gradient" | "image";
 type ButtonStyle = "rounded" | "pill" | "square" | "outline";
@@ -313,6 +314,13 @@ const LinkInBio = () => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file || !user) return;
+
+    const validation = validateUpload(file, "bioMedia");
+    if (!validation.ok) {
+      toast.error(validation.reason);
+      return;
+    }
+
     try {
       setUploadingBg(true);
       const path = `${user.id}/bg-${Date.now()}.${file.name.split(".").pop() ?? "jpg"}`;
@@ -793,6 +801,13 @@ function LinkCard({
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+
+    const validation = validateUpload(file, "bioMedia");
+    if (!validation.ok) {
+      toast.error(validation.reason);
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       setRawThumbSrc(reader.result as string);

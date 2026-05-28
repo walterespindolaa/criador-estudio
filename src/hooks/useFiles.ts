@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { validateUpload } from "@/lib/upload-validation";
 import type { Database } from "@/integrations/supabase/types";
 
 export type FileRecord = Database["public"]["Tables"]["files"]["Row"] & {
@@ -47,6 +48,10 @@ export function useFiles() {
     mutationFn: async (input: UploadFileInput): Promise<FileRecord> => {
       if (!userId) throw new Error("Not authenticated");
       const { file, category = null, postId = null, tags = null, source = "upload", expiresAt = null } = input;
+
+      const validation = validateUpload(file, "file");
+      if (!validation.ok) throw new Error(validation.reason);
+
       const ext = file.name.split(".").pop() ?? "bin";
       const path = `${userId}/${Date.now()}.${ext}`;
 

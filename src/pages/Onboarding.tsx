@@ -18,6 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { validateUpload } from "@/lib/upload-validation";
 import { cn } from "@/lib/utils";
 import { sanitizeText } from "@/lib/sanitize";
 import { callAIContextBuilder } from "@/lib/ai/claude";
@@ -108,6 +109,13 @@ const Onboarding = () => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+
+    const validation = validateUpload(file, "avatar");
+    if (!validation.ok) {
+      toast.error(validation.reason);
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (ev) => {
       setRawImageSrc((ev.target?.result as string) ?? null);
