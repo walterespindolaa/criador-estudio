@@ -14,10 +14,13 @@ import { CriaAIProvider } from "@/contexts/CriaAIContext";
 import { CriaAIPanel } from "@/components/ai/CriaAIPanel";
 import { TrialBanner } from "@/components/TrialBanner";
 import { StorageWarningBanner } from "@/components/StorageWarningBanner";
+import { useLastSeen } from "@/hooks/useLastSeen";
 
 const AppLayout = () => {
   const { profile, isLoading } = useProfile();
   const location = useLocation();
+
+  useLastSeen();
 
   useEffect(() => {
     if (profile?.theme_preset) {
