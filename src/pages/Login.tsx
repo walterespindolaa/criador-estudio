@@ -95,6 +95,7 @@ const Login = () => {
     <div className="min-h-screen bg-background flex">
       <div className="hidden lg:flex lg:w-1/2 bg-card items-center justify-center p-12">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }} className="max-w-md">
+          <Logo className="h-14 w-auto mb-8" />
           <h2 className="text-4xl font-display font-extrabold text-foreground tracking-tight mb-4">Bem-vindo de volta, criador. ✨</h2>
           <p className="text-muted-foreground font-body text-lg leading-relaxed">Suas ideias estão te esperando. Continue de onde parou.</p>
         </motion.div>
