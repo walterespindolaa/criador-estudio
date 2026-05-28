@@ -4,6 +4,7 @@ import { BottomBar } from "@/components/BottomBar";
 import { PWAInstallBanner } from "@/components/shared/PWAInstallBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { PlanBadge } from "@/components/shared/PlanBadge";
+import { AppFooter } from "@/components/shared/AppFooter";
 import { Settings } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { applyTheme } from "@/lib/applyTheme";
@@ -83,6 +84,7 @@ const AppLayout = () => {
               <div className="max-w-screen-2xl mx-auto px-4 py-4 md:px-8 md:py-6">
                 <Outlet />
               </div>
+              <AppFooter />
             </main>
 
             <BottomBar />
