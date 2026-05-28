@@ -18,7 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { validateUpload } from "@/lib/upload-validation";
 import { useNavigate } from "react-router-dom";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 import { useGoogleDriveConnection } from "@/hooks/useGoogleDriveConnection";
 import { SettingsVisual } from "@/components/settings/SettingsVisual";
@@ -84,6 +84,9 @@ const Configuracoes = () => {
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteEmail, setDeleteEmail] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const [cropModalOpen, setCropModalOpen] = useState(false);
   const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
@@ -282,6 +285,36 @@ const Configuracoes = () => {
   };
 
   const handleSignOut = async () => { await signOut(); navigate("/"); };
+
+  const handleDeleteAccount = async () => {
+    if (!user?.email) return;
+    if (deleteEmail.trim().toLowerCase() !== user.email.toLowerCase()) {
+      toast.error("O email digitado não confere.");
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const { error } = await supabase.functions.invoke("delete-account", {
+        body: { confirm_email: deleteEmail.trim().toLowerCase() },
+      });
+
+      if (error) {
+        console.error("[delete-account] invoke failed:", error);
+        toast.error("Não foi possível excluir a conta. Tente novamente.");
+        setDeleting(false);
+        return;
+      }
+
+      toast.success("Conta excluída. Até logo.");
+      await signOut();
+      navigate("/");
+    } catch (e) {
+      console.error("[delete-account] exception:", e);
+      toast.error("Erro inesperado. Tente novamente.");
+      setDeleting(false);
+    }
+  };
 
   const handleDriveConnect = async () => {
     setConnectingDrive(true);
@@ -728,6 +761,22 @@ const Configuracoes = () => {
                 <div className="bg-card border-destructive/20 rounded-2xl p-6 shadow-[var(--shadow-warm)] border space-y-4">
                   <h3 className="font-display font-semibold text-destructive flex items-center gap-2"><AlertTriangle className="h-5 w-5" /> Zona de Perigo</h3>
                   <Button variant="outline" onClick={() => setLogoutOpen(true)} className="text-destructive hover:bg-destructive/10 border-destructive/20">Sair da conta</Button>
+                  <div className="pt-4 border-t border-destructive/10">
+                    <p className="text-sm text-muted-foreground font-body mb-3">
+                      Esta ação é permanente. Todos os seus dados — posts, ideias, brandbook, hábitos, arquivos — serão apagados e não podem ser recuperados.
+                    </p>
+                    <Button
+                      variant="outline"
+                      className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => {
+                        setDeleteEmail("");
+                        setDeleteOpen(true);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir minha conta
+                    </Button>
+                  </div>
                 </div>
               </div>
             </TabsContent>
@@ -748,6 +797,52 @@ const Configuracoes = () => {
           <DialogContent className="sm:max-w-sm">
             <DialogHeader><DialogTitle className="font-display text-center">Sair da conta?</DialogTitle></DialogHeader>
             <div className="flex gap-3 mt-4"><Button variant="outline" className="flex-1" onClick={() => setLogoutOpen(false)}>Cancelar</Button><Button variant="destructive" className="flex-1" onClick={handleSignOut}>Sair</Button></div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={deleteOpen} onOpenChange={(open) => !deleting && setDeleteOpen(open)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="font-display flex items-center gap-2">
+                <Trash2 className="h-5 w-5 text-destructive" />
+                Excluir minha conta
+              </DialogTitle>
+              <DialogDescription className="font-body">
+                Esta ação <strong>não pode ser desfeita</strong>. Todos os seus dados serão apagados permanentemente.
+                <br /><br />
+                Pra confirmar, digite seu email: <strong>{user?.email}</strong>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-2">
+              <Input
+                type="email"
+                placeholder="Digite seu email"
+                value={deleteEmail}
+                onChange={(e) => setDeleteEmail(e.target.value)}
+                disabled={deleting}
+                className="rounded-xl"
+              />
+            </div>
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteOpen(false)}
+                disabled={deleting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteAccount}
+                disabled={deleting || deleteEmail.trim().toLowerCase() !== user?.email?.toLowerCase()}
+              >
+                {deleting ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Excluindo...</>
+                ) : (
+                  "Sim, excluir conta"
+                )}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 
