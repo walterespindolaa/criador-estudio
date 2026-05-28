@@ -2,6 +2,7 @@ import { NavLink } from "react-router-dom";
 import { Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
+import { PlanBadge } from "@/components/shared/PlanBadge";
 
 const groupProducao = [
   { title: "Ideias", url: "/app/ideias" },
@@ -69,7 +70,8 @@ export function TopBar() {
           <NavGroup items={groupHistorico} />
         </nav>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          <PlanBadge />
           <NotificationsBell />
           <NavLink to="/app/configuracoes" className="p-2 hover:bg-accent/60 rounded-xl transition-colors">
             <Settings className="h-5 w-5 text-muted-foreground hover:text-foreground" />

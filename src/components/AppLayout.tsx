@@ -3,6 +3,7 @@ import { Outlet, NavLink, Navigate, useLocation } from "react-router-dom";
 import { BottomBar } from "@/components/BottomBar";
 import { PWAInstallBanner } from "@/components/shared/PWAInstallBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
+import { PlanBadge } from "@/components/shared/PlanBadge";
 import { Settings } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { applyTheme } from "@/lib/applyTheme";
@@ -54,7 +55,8 @@ const AppLayout = () => {
           <div className="flex-1 flex flex-col min-w-0">
             <header className="h-12 hidden md:flex items-center justify-between px-4 border-b border-border bg-background sticky top-0 z-40">
               <SidebarTrigger className="mr-3" />
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2">
+                <PlanBadge />
                 <NotificationsBell />
               </div>
             </header>
@@ -68,7 +70,8 @@ const AppLayout = () => {
                   cria
                 </h1>
               </NavLink>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
+                <PlanBadge />
                 <NotificationsBell />
                 <NavLink to="/app/configuracoes" className="p-2 hover:bg-accent/60 rounded-xl transition-colors">
                   <Settings className="h-5 w-5 text-muted-foreground hover:text-foreground" />
