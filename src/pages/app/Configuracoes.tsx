@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Trash2, Camera, Lock, AlertTriangle, Shield, Paintbrush, HardDrive, ExternalLink, Unplug, User, LayoutGrid, Plug, Settings, Pencil } from "lucide-react";
+import { Plus, Trash2, Camera, Lock, AlertTriangle, Shield, Paintbrush, HardDrive, ExternalLink, Unplug, User, LayoutGrid, Plug, Settings, Pencil, CreditCard } from "lucide-react";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 import { useGoogleDriveConnection } from "@/hooks/useGoogleDriveConnection";
+import { useManageSubscription } from "@/hooks/useManageSubscription";
 import { SettingsVisual } from "@/components/settings/SettingsVisual";
 import { InfoTooltip } from "@/components/shared/InfoTooltip";
 import { sanitizeText, sanitizeUrl } from "@/lib/sanitize";
@@ -56,6 +57,7 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 const Configuracoes = () => {
   const { user, signOut } = useAuth();
   const { profile, updateProfile } = useProfile();
+  const { openPortal, isLoading: portalLoading } = useManageSubscription();
   const { pillars, createPillar, updatePillar: updatePillarMutation, deletePillar: deletePillarMutation } = usePillars();
   const { habits, createHabit, deleteHabit: deleteHabitMutation } = useHabits();
   const navigate = useNavigate();
@@ -758,6 +760,25 @@ const Configuracoes = () => {
                     <Button variant="outline" onClick={() => setPasswordOpen(true)} className="w-full sm:w-auto"><Lock className="h-4 w-4 mr-2" /> Alterar Senha</Button>
                   </div>
                 </div>
+                {profile?.stripe_customer_id && (
+                  <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
+                    <h3 className="font-display font-semibold text-foreground flex items-center gap-2">
+                      <CreditCard className="h-5 w-5" /> Assinatura
+                    </h3>
+                    <p className="text-sm text-muted-foreground font-body">
+                      Gerencie seu método de pagamento, baixe recibos, troque de plano ou cancele a qualquer momento no portal do Stripe.
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={openPortal}
+                      disabled={portalLoading}
+                      className="w-full sm:w-auto"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      {portalLoading ? "Abrindo..." : "Gerenciar assinatura"}
+                    </Button>
+                  </div>
+                )}
                 <div className="bg-card border-destructive/20 rounded-2xl p-6 shadow-[var(--shadow-warm)] border space-y-4">
                   <h3 className="font-display font-semibold text-destructive flex items-center gap-2"><AlertTriangle className="h-5 w-5" /> Zona de Perigo</h3>
                   <Button variant="outline" onClick={() => setLogoutOpen(true)} className="text-destructive hover:bg-destructive/10 border-destructive/20">Sair da conta</Button>

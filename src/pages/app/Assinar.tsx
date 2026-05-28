@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Check, Sparkles, ArrowLeft, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useProfile } from "@/hooks/useProfile";
+import { useManageSubscription } from "@/hooks/useManageSubscription";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -46,6 +48,8 @@ const PLANS = [
 export default function Assinar() {
   const navigate = useNavigate();
   const { status } = useSubscription();
+  const { profile } = useProfile();
+  const { openPortal, isLoading: portalLoading } = useManageSubscription();
   const [searchParams] = useSearchParams();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
@@ -167,6 +171,19 @@ export default function Assinar() {
           );
         })}
       </div>
+
+      {profile?.stripe_customer_id && (
+        <div className="mt-6">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={openPortal}
+            disabled={portalLoading}
+          >
+            {portalLoading ? "Abrindo..." : "Gerenciar minha assinatura"}
+          </Button>
+        </div>
+      )}
 
       <p className="text-center text-xs text-muted-foreground font-body mt-6">
         Pagamento seguro · Cancele quando quiser
