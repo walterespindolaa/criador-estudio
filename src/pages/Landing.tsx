@@ -166,7 +166,7 @@ const testimonialsList = [
   {
     name: "Ana Vitória",
     handle: "@anavitoria.lifestyle",
-    quote: "Finalmente parei de improvisar. O CreatorsFlow virou meu cérebro fora do cérebro.",
+    quote: "Finalmente parei de improvisar. O cria virou meu cérebro fora do cérebro.",
     gradient: "from-pink-500 to-rose-500",
     initial: "A"
   },
@@ -189,7 +189,7 @@ const testimonialsList = [
 const faqs = [
   {
     q: "Preciso saber mexer com tecnologia?",
-    a: "Não. O CreatorsFlow foi feito para criadores, não para especialistas em marketing. A interface é guiada e intuitiva do zero."
+    a: "Não. O cria foi feito para criadores, não para especialistas em marketing. A interface é guiada e intuitiva do zero."
   },
   {
     q: "Funciona com qual plataforma?",
@@ -240,7 +240,7 @@ export default function Landing() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary via-purple-600 to-pink-500 flex items-center justify-center">
               <Sparkles className="w-4 h-4 text-white" />
             </div>
-            CreatorsFlow
+            cria
           </div>
 
           <nav className="hidden md:flex items-center gap-8 font-medium text-sm text-muted-foreground">
@@ -444,7 +444,7 @@ export default function Landing() {
                 Por que não Buffer, mLabs ou Later?
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Essas ferramentas foram feitas para agências. O CreatorsFlow foi feito para você.
+                Essas ferramentas foram feitas para agências. O cria foi feito para você.
               </p>
             </motion.div>
             
@@ -453,7 +453,7 @@ export default function Landing() {
                 <thead>
                   <tr className="border-b border-border text-sm font-display font-bold text-foreground">
                     <th className="p-4 sm:p-6 w-2/5">Funcionalidade</th>
-                    <th className="p-4 sm:p-6 w-1/5 text-center bg-primary/10 border-x border-primary/20 text-primary">CreatorsFlow</th>
+                    <th className="p-4 sm:p-6 w-1/5 text-center bg-primary/10 border-x border-primary/20 text-primary">cria</th>
                     <th className="p-4 sm:p-6 w-1/5 text-center text-muted-foreground">Buffer/Later</th>
                     <th className="p-4 sm:p-6 w-1/5 text-center text-muted-foreground">mLabs</th>
                   </tr>
@@ -652,7 +652,7 @@ export default function Landing() {
             <div className="w-6 h-6 rounded bg-gradient-to-br from-primary via-purple-600 to-pink-500 flex items-center justify-center">
               <Sparkles className="w-3 h-3 text-white" />
             </div>
-            CreatorsFlow
+            cria
           </div>
           
           <div className="flex flex-wrap justify-center items-center gap-6 text-sm font-medium text-muted-foreground">
@@ -669,7 +669,7 @@ export default function Landing() {
           </div>
         </div>
         <div className="mt-8 text-center text-sm text-muted-foreground">
-          © 2025 CreatorsFlow. Feito com ♥ para criadores brasileiros.
+          © 2025 cria. Feito com ♥ para criadores brasileiros.
         </div>
       </footer>
     </div>

@@ -269,7 +269,7 @@ export const BrandPdfTemplate = forwardRef<HTMLDivElement, BrandPdfProps>(
 
           {/* Footer */}
           <div style={{ marginTop: 48, borderTop: "1px solid #eee", paddingTop: 16, display: "flex", justifyContent: "space-between" }}>
-            <p style={{ fontSize: 10, color: "#bbb", margin: 0 }}>Criado com CreatorsFlow</p>
+            <p style={{ fontSize: 10, color: "#bbb", margin: 0 }}>Criado com cria</p>
             <p style={{ fontSize: 10, color: "#bbb", margin: 0 }}>{new Date().toLocaleDateString("pt-BR")}</p>
           </div>
         </div>

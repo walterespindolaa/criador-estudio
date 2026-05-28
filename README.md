@@ -1,4 +1,4 @@
-# CreatorsFlow
+# cria
 
 SaaS de criação de conteúdo para redes sociais — um hub operacional completo para criadores individuais. Da ideia ao publicado: ideação, planejamento, roteirização com IA, produção, agendamento e análise.
 

@@ -24,7 +24,7 @@ export default function Assinar() {
 
   const handleCheckout = async () => {
     window.open(
-      "mailto:contato@criadores.flow?subject=Quero assinar o CreatorsFlow",
+      "mailto:contato@criadores.flow?subject=Quero assinar o cria",
       "_blank"
     );
   };
@@ -48,7 +48,7 @@ export default function Assinar() {
             Seu período de teste encerrou
           </div>
           <p className="text-muted-foreground text-sm font-body max-w-sm">
-            Para continuar acessando o CreatorsFlow, escolha um plano abaixo.
+            Para continuar acessando o cria, escolha um plano abaixo.
           </p>
         </div>
       )}

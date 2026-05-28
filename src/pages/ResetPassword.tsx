@@ -10,6 +10,7 @@ import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Lock } from "lucide-react";
+import { Logo } from "@/components/shared/Logo";
 
 const resetSchema = z.object({
   password: z.string().min(8, "Mínimo 8 caracteres").max(128, "Máximo 128 caracteres"),
@@ -72,12 +73,9 @@ const ResetPassword = () => {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-8">
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
-        <h1
-          className="text-2xl font-display font-bold text-foreground mb-2"
-          style={{ fontVariationSettings: "'opsz' 9" }}
-        >
-          Criadores
-        </h1>
+        <div className="mb-2">
+          <Logo className="h-10 w-auto" />
+        </div>
         <h3 className="text-2xl font-display font-semibold text-foreground mb-2">Nova senha</h3>
         <p className="text-muted-foreground font-body mb-8">Escolha uma nova senha para sua conta.</p>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">

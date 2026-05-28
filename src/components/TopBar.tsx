@@ -57,7 +57,7 @@ export function TopBar() {
             className="text-xl font-display font-semibold text-foreground tracking-tight"
             style={{ fontVariationSettings: "'opsz' 9" }}
           >
-            CreatorsFlow
+            cria
           </h1>
         </NavLink>
 

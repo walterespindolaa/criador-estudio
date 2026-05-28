@@ -384,7 +384,7 @@ const BioPage = () => {
         <p className="text-center text-[10px] text-gray-900/50 mt-8 font-body drop-shadow-sm">
           Feito com 💜{" "}
           <Link to="/" className="underline hover:text-gray-900/80 transition">
-            CreatorsFlow
+            cria
           </Link>
         </p>
       </div>

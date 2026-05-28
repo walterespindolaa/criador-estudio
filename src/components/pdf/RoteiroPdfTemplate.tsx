@@ -158,7 +158,7 @@ export const RoteiroPdfTemplate = forwardRef<HTMLDivElement, RoteiroPdfProps>(
                 <p style={{ fontSize: 10, color: "#3B82F6", margin: 0, wordBreak: "break-all" }}>{referenceLink}</p>
               </div>
             ) : <div />}
-            <p style={{ fontSize: 9, color: "#ccc", margin: 0 }}>CreatorsFlow · {new Date().toLocaleDateString("pt-BR")}</p>
+            <p style={{ fontSize: 9, color: "#ccc", margin: 0 }}>cria · {new Date().toLocaleDateString("pt-BR")}</p>
           </div>
         </div>
       </div>
