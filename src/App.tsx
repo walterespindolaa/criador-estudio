@@ -15,6 +15,8 @@ import ResetPassword from "./pages/ResetPassword";
 import Onboarding from "./pages/Onboarding";
 import AppLayout from "./components/AppLayout";
 import NotFound from "./pages/NotFound";
+import Termos from "./pages/Termos";
+import Privacidade from "./pages/Privacidade";
 
 const Dashboard = lazy(() => import("./pages/app/Dashboard"));
 const Ideias = lazy(() => import("./pages/app/Ideias"));
@@ -59,6 +61,8 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/termos" element={<Termos />} />
+              <Route path="/privacidade" element={<Privacidade />} />
               <Route path="/onboarding" element={
                 <AuthOnlyRoute><Onboarding /></AuthOnlyRoute>
               } />
