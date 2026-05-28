@@ -35,6 +35,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { Logo } from "@/components/shared/Logo";
 
 const groups = [
   {
@@ -95,6 +96,14 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+      <div className="flex items-center justify-center px-2 py-4 border-b border-sidebar-border/50">
+        {collapsed ? (
+          <Logo icon className="h-8 w-8" />
+        ) : (
+          <Logo className="h-9 w-auto" />
+        )}
+      </div>
+
       <button
         onClick={() => navigate("/app")}
         className={cn(
