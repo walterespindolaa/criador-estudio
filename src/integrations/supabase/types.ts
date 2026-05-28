@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_deletion_log: {
+        Row: {
+          deleted_at: string | null
+          email_hash: string
+          id: string
+          request_metadata: Json | null
+          user_id_hash: string
+        }
+        Insert: {
+          deleted_at?: string | null
+          email_hash: string
+          id?: string
+          request_metadata?: Json | null
+          user_id_hash: string
+        }
+        Update: {
+          deleted_at?: string | null
+          email_hash?: string
+          id?: string
+          request_metadata?: Json | null
+          user_id_hash?: string
+        }
+        Relationships: []
+      }
       admin_actions: {
         Row: {
           action: string
@@ -1107,6 +1131,7 @@ export type Database = {
           editorial_line: Json | null
           id: string
           instagram_handle: string | null
+          last_seen_at: string | null
           name: string
           niche: string | null
           onboarding_completed: boolean | null
@@ -1119,6 +1144,8 @@ export type Database = {
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           subscription_status: string | null
+          terms_accepted_at: string | null
+          terms_version: string | null
           theme_accent: string | null
           theme_color: string | null
           theme_font: string | null
@@ -1143,6 +1170,7 @@ export type Database = {
           editorial_line?: Json | null
           id: string
           instagram_handle?: string | null
+          last_seen_at?: string | null
           name: string
           niche?: string | null
           onboarding_completed?: boolean | null
@@ -1155,6 +1183,8 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_status?: string | null
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           theme_accent?: string | null
           theme_color?: string | null
           theme_font?: string | null
@@ -1179,6 +1209,7 @@ export type Database = {
           editorial_line?: Json | null
           id?: string
           instagram_handle?: string | null
+          last_seen_at?: string | null
           name?: string
           niche?: string | null
           onboarding_completed?: boolean | null
@@ -1191,6 +1222,8 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_status?: string | null
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           theme_accent?: string | null
           theme_color?: string | null
           theme_font?: string | null
@@ -1471,6 +1504,41 @@ export type Database = {
           },
         ]
       }
+      terms_acceptances: {
+        Row: {
+          accepted_at: string
+          id: string
+          ip_address: string | null
+          terms_version: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          id?: string
+          ip_address?: string | null
+          terms_version: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          id?: string
+          ip_address?: string | null
+          terms_version?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "terms_acceptances_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_formats: {
         Row: {
           created_at: string | null
@@ -1628,9 +1696,36 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ai_monthly_quota: { Args: never; Returns: number }
+      ai_usage_this_month: {
+        Args: never
+        Returns: {
+          quota: number
+          used: number
+        }[]
+      }
+      bump_ai_quota: {
+        Args: { _user: string }
+        Returns: {
+          quota: number
+          used: number
+        }[]
+      }
       bump_ai_rate_limit: {
         Args: { _max: number; _user: string; _window: string }
         Returns: number
+      }
+      get_admin_stats: {
+        Args: never
+        Returns: {
+          active_users_7d: number
+          admins: number
+          onboarded: number
+          plan_free: number
+          plan_premium: number
+          plan_pro: number
+          total_users: number
+        }[]
       }
       get_public_bio_links_by_slug: {
         Args: { _slug: string }
@@ -1663,6 +1758,8 @@ export type Database = {
         Returns: undefined
       }
       is_admin: { Args: never; Returns: boolean }
+      touch_last_seen: { Args: never; Returns: undefined }
+      user_tier: { Args: never; Returns: string }
     }
     Enums: {
       [_ in never]: never
