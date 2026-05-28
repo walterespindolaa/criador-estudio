@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { sanitizeText } from "@/lib/sanitize";
 import { callAIContextBuilder } from "@/lib/ai/claude";
 import { PILLAR_COLORS } from "@/lib/constants";
+import { Logo } from "@/components/shared/Logo";
 import { fireConfetti } from "@/lib/confetti";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 
@@ -301,7 +302,7 @@ const Onboarding = () => {
   }, [step, setupDone, runSetup]);
 
   const enterApp = () => {
-    toast.success("Bem-vindo ao CreatorsFlow! 🎉");
+    toast.success("Bem-vindo ao cria! 🎉");
     navigate("/app");
   };
 
@@ -316,7 +317,7 @@ const Onboarding = () => {
       {/* Progress bar */}
       <div className="sticky top-0 z-20 bg-background/85 backdrop-blur-md border-b border-border/60">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
-          <span className="text-base font-display font-extrabold text-foreground">CreatorsFlow</span>
+          <Logo className="h-6 w-auto" />
           <div className="flex-1 flex items-center gap-1.5 ml-4">
             {Array.from({ length: TOTAL_STEPS }).map((_, i) => {
               const idx = i + 1;
@@ -382,7 +383,7 @@ const Onboarding = () => {
                 </button>
                 <div className="flex-1">
                   <p className="text-sm font-display font-bold text-foreground">
-                    {name.trim() ? `Bem-vindo, ${name.trim()}! 🎉` : "Bem-vindo ao CreatorsFlow 🎉"}
+                    {name.trim() ? `Bem-vindo, ${name.trim()}! 🎉` : "Bem-vindo ao cria 🎉"}
                   </p>
                   <p className="text-xs text-muted-foreground font-body mt-0.5">Toque para adicionar uma foto</p>
                 </div>
@@ -684,7 +685,7 @@ const Onboarding = () => {
                     </p>
                   </div>
                   <Button variant="hero" size="lg" onClick={enterApp} className="text-base">
-                    Entrar no CreatorsFlow <ArrowRight className="ml-1 h-5 w-5" />
+                    Entrar no cria <ArrowRight className="ml-1 h-5 w-5" />
                   </Button>
                 </motion.div>
               )}

@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Mail } from "lucide-react";
+import { Logo } from "@/components/shared/Logo";
 import {
   Dialog,
   DialogContent,
@@ -100,8 +101,8 @@ const Login = () => {
       </div>
       <div className="flex-1 flex items-center justify-center p-8">
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-sm">
-          <Link to="/" className="text-2xl font-display font-extrabold text-foreground mb-8 block">
-            Criadores
+          <Link to="/" className="mb-8 inline-block">
+            <Logo className="h-10 w-auto" />
           </Link>
           <h3 className="text-2xl font-display font-extrabold text-foreground mb-2">Entrar</h3>
           <p className="text-muted-foreground font-body mb-8">Acesse seu estúdio criativo</p>

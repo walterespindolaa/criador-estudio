@@ -1,14 +1,15 @@
 {
-  "name": "Criadores",
-  "short_name": "Criadores",
+  "name": "cria",
+  "short_name": "cria",
   "description": "Seu segundo cérebro criativo",
   "start_url": "/app",
   "display": "standalone",
   "background_color": "#FAF8F4",
-  "theme_color": "#C4622D",
+  "theme_color": "#8B5CF6",
   "orientation": "any",
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "/app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/maskable-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
