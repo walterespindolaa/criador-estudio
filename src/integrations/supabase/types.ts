@@ -123,6 +123,33 @@ export type Database = {
           },
         ]
       }
+      billing_events: {
+        Row: {
+          event_id: string
+          gateway: string
+          id: string
+          payload: Json | null
+          processed_at: string | null
+          type: string
+        }
+        Insert: {
+          event_id: string
+          gateway: string
+          id?: string
+          payload?: Json | null
+          processed_at?: string | null
+          type: string
+        }
+        Update: {
+          event_id?: string
+          gateway?: string
+          id?: string
+          payload?: Json | null
+          processed_at?: string | null
+          type?: string
+        }
+        Relationships: []
+      }
       bio_links: {
         Row: {
           clicks: number | null
@@ -1601,6 +1628,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bump_ai_rate_limit: {
+        Args: { _max: number; _user: string; _window: string }
+        Returns: number
+      }
       get_public_bio_links_by_slug: {
         Args: { _slug: string }
         Returns: {
@@ -1626,6 +1657,7 @@ export type Database = {
           niche: string
         }[]
       }
+      has_access: { Args: never; Returns: boolean }
       increment_bio_link_click: {
         Args: { link_id: string }
         Returns: undefined
