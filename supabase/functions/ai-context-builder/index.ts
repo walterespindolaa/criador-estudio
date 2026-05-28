@@ -113,31 +113,35 @@ serve(async (req) => {
       data.legenda_original = truncate(data.legenda_original, 3000)
     }
 
-    // ── Rate limiting (atômico via RPC) ────────────────────────
-    const RATE_LIMIT = 20; // chamadas por hora
-    const _now = new Date();
-    const windowStart = new Date(_now);
-    windowStart.setMinutes(0, 0, 0); // início da hora atual
-
-    const { error: rateErr } = await supabase.rpc("bump_ai_rate_limit", {
+    // ── Cota mensal de IA por tier (pro 150 / studio 500) ──────
+    const { data: quotaData, error: quotaErr } = await supabase.rpc("bump_ai_quota", {
       _user: userId,
-      _window: windowStart.toISOString(),
-      _max: RATE_LIMIT,
     });
 
-    if (rateErr) {
-      if (rateErr.message?.includes("rate_limited")) {
+    if (quotaErr) {
+      const msg = quotaErr.message ?? "";
+      if (msg.includes("quota_exceeded")) {
         return new Response(
           JSON.stringify({
-            error: "rate_limited",
-            message: "Limite de uso de IA atingido. Tente novamente na próxima hora.",
+            error: "quota_exceeded",
+            message: "Você atingiu o limite de gerações de IA deste mês. Faça upgrade para continuar.",
           }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      console.warn("[ai-context-builder] bump_ai_rate_limit failed:", rateErr.message);
+      if (msg.includes("no_access")) {
+        return new Response(
+          JSON.stringify({
+            error: "no_access",
+            message: "Seu acesso não permite usar a IA. Assine um plano para continuar.",
+          }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      // erro inesperado: loga mas não bloqueia (fail-open pra não quebrar UX)
+      console.warn("[ai-context-builder] bump_ai_quota error:", msg);
     }
-    // ── fim rate limiting ──────────────────────────────────────
+    // ── fim cota ───────────────────────────────────────────────
 
     // Fetch user context
     let userContext = ''
