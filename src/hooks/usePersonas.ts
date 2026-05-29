@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 
 export interface Persona {
   id: string;
@@ -26,9 +26,9 @@ export type SavePersonaInput = Omit<Persona, "id" | "user_id" | "created_at"> & 
 export const MAX_PERSONAS = 3;
 
 export function usePersonas() {
-  const { user } = useAuth();
+  const { activeAccountId } = useActiveAccount();
   const queryClient = useQueryClient();
-  const userId = user?.id;
+  const userId = activeAccountId;
   const queryKey = ["personas", userId] as const;
 
   const {

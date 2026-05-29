@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import type { Database } from "@/integrations/supabase/types";
 
 export type BioLink = Database["public"]["Tables"]["bio_links"]["Row"];
@@ -14,9 +14,9 @@ export type CreateBioLinkInput = Omit<
 export type UpdateBioLinkInput = { id: string; updates: BioLinkUpdate };
 
 export function useBioLinks() {
-  const { user } = useAuth();
+  const { activeAccountId } = useActiveAccount();
   const queryClient = useQueryClient();
-  const userId = user?.id;
+  const userId = activeAccountId;
   const queryKey = ["bio-links", userId] as const;
 
   const {

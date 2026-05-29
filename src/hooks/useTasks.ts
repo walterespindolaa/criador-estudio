@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import type { Database } from "@/integrations/supabase/types";
 
 export type Task = Database["public"]["Tables"]["tasks"]["Row"];
@@ -13,9 +13,9 @@ export type CreateTaskInput = Pick<
 export type UpdateTaskStatusInput = { id: string; status: string };
 
 export function useTasks(options?: { limit?: number }) {
-  const { user } = useAuth();
+  const { activeAccountId } = useActiveAccount();
   const queryClient = useQueryClient();
-  const userId = user?.id;
+  const userId = activeAccountId;
   const limit = options?.limit;
   const queryKey = ["tasks", userId, limit ?? null] as const;
 

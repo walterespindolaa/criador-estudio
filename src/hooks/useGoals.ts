@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import type { Database } from "@/integrations/supabase/types";
 
 export type StructuredGoal = Database["public"]["Tables"]["structured_goals"]["Row"];
@@ -20,9 +20,9 @@ export type CreateMilestoneInput = Omit<MilestoneInsert, "user_id" | "id" | "cre
 export type UpdateMilestoneInput = { id: string; updates: MilestoneUpdate };
 
 export function useGoals() {
-  const { user } = useAuth();
+  const { activeAccountId } = useActiveAccount();
   const queryClient = useQueryClient();
-  const userId = user?.id;
+  const userId = activeAccountId;
   const goalsKey = ["goals", userId] as const;
   const milestonesKey = ["milestones", userId] as const;
 

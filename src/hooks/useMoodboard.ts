@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import type { Database } from "@/integrations/supabase/types";
 
 type MoodboardEntryRow = Database["public"]["Tables"]["moodboard_entries"]["Row"];
@@ -14,9 +14,9 @@ export type SaveMoodboardAnswerInput = {
 };
 
 export function useMoodboard() {
-  const { user } = useAuth();
+  const { activeAccountId } = useActiveAccount();
   const queryClient = useQueryClient();
-  const userId = user?.id;
+  const userId = activeAccountId;
   const queryKey = ["moodboard", userId] as const;
 
   const {

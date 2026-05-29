@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import type { Database } from "@/integrations/supabase/types";
 
 export type BrandItem = Database["public"]["Tables"]["brand_items"]["Row"];
@@ -11,9 +11,9 @@ export type CreateBrandItemInput = Pick<BrandItemInsert, "type" | "name" | "valu
 };
 
 export function useBrandItems() {
-  const { user } = useAuth();
+  const { activeAccountId } = useActiveAccount();
   const queryClient = useQueryClient();
-  const userId = user?.id;
+  const userId = activeAccountId;
   const queryKey = ["brand-items", userId] as const;
 
   const {

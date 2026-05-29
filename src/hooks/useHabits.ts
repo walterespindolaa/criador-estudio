@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import type { Database } from "@/integrations/supabase/types";
 
 export type Habit = Database["public"]["Tables"]["habits"]["Row"];
@@ -21,9 +21,9 @@ function logsKey(userId: string | undefined, params: HabitsLogsParams) {
 }
 
 export function useHabits(params: HabitsLogsParams = {}) {
-  const { user } = useAuth();
+  const { activeAccountId } = useActiveAccount();
   const queryClient = useQueryClient();
-  const userId = user?.id;
+  const userId = activeAccountId;
   const limit = params.limit;
   const habitsKey = ["habits", userId, limit ?? null] as const;
   const habitLogsKey = logsKey(userId, params);

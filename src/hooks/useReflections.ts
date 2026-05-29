@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import type { Database } from "@/integrations/supabase/types";
 
 export type Reflection = Database["public"]["Tables"]["monthly_reflections"]["Row"];
@@ -13,9 +13,9 @@ export type SaveReflectionInput = Omit<
 >;
 
 export function useReflections(month: string) {
-  const { user } = useAuth();
+  const { activeAccountId } = useActiveAccount();
   const queryClient = useQueryClient();
-  const userId = user?.id;
+  const userId = activeAccountId;
   const queryKey = ["reflection", userId, month] as const;
 
   const {

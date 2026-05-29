@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import type { Database } from "@/integrations/supabase/types";
 
 export type Pillar = Database["public"]["Tables"]["pillars"]["Row"];
@@ -11,9 +11,9 @@ export type CreatePillarInput = Pick<PillarInsert, "name" | "color"> & {
 };
 
 export function usePillars() {
-  const { user } = useAuth();
+  const { activeAccountId } = useActiveAccount();
   const queryClient = useQueryClient();
-  const userId = user?.id;
+  const userId = activeAccountId;
   const queryKey = ["pillars", userId] as const;
 
   const {

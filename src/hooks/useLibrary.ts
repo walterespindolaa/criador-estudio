@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import type { Database } from "@/integrations/supabase/types";
 
 export type ReferenceHook = Database["public"]["Tables"]["reference_hooks"]["Row"];
@@ -106,9 +106,9 @@ export function useReferenceLibrary() {
 }
 
 export function useUserLibrary() {
-  const { user } = useAuth();
+  const { activeAccountId } = useActiveAccount();
   const queryClient = useQueryClient();
-  const userId = user?.id;
+  const userId = activeAccountId;
 
   const userHooksKey = ["user-hooks", userId] as const;
   const userFormatsKey = ["user-formats", userId] as const;

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import type { Database } from "@/integrations/supabase/types";
 
 export type Post = Database["public"]["Tables"]["posts"]["Row"];
@@ -11,9 +11,9 @@ export type CreatePostInput = Omit<PostInsert, "user_id" | "id" | "created_at" |
 export type UpdatePostInput = { id: string; updates: PostUpdate };
 
 export function usePosts(options?: { limit?: number }) {
-  const { user } = useAuth();
+  const { activeAccountId } = useActiveAccount();
   const queryClient = useQueryClient();
-  const userId = user?.id;
+  const userId = activeAccountId;
   const limit = options?.limit;
   const queryKey = ["posts", userId, limit ?? null] as const;
 
