@@ -40,6 +40,7 @@ import {
 import { Logo } from "@/components/shared/Logo";
 import { AiUsageBadge } from "@/components/shared/AiUsageBadge";
 import { useTier } from "@/hooks/useTier";
+import { AccountSwitcher } from "@/components/accounts/AccountSwitcher";
 
 const groups = [
   {
@@ -117,6 +118,12 @@ export function AppSidebar() {
           )}
         </Link>
       </div>
+
+      {!collapsed && (
+        <div className="px-3 pt-3">
+          <AccountSwitcher />
+        </div>
+      )}
 
       <button
         onClick={() => navigate("/app")}

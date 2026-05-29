@@ -16,6 +16,7 @@ import { CriaAIProvider } from "@/contexts/CriaAIContext";
 import { CriaAIPanel } from "@/components/ai/CriaAIPanel";
 import { TrialBanner } from "@/components/TrialBanner";
 import { StorageWarningBanner } from "@/components/StorageWarningBanner";
+import { ManagingBanner } from "@/components/accounts/ManagingBanner";
 import { useLastSeen } from "@/hooks/useLastSeen";
 
 const AppLayout = () => {
@@ -43,6 +44,7 @@ const AppLayout = () => {
     <CriaAIProvider>
     <SidebarProvider>
       <div className="min-h-screen flex flex-col w-full bg-background">
+        <ManagingBanner />
         <TrialBanner />
         <StorageWarningBanner />
         <div className="flex flex-1 w-full min-h-0">

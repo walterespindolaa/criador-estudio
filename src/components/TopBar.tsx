@@ -3,6 +3,7 @@ import { Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { PlanBadge } from "@/components/shared/PlanBadge";
+import { AccountSwitcher } from "@/components/accounts/AccountSwitcher";
 
 const groupProducao = [
   { title: "Ideias", url: "/app/ideias" },
@@ -71,6 +72,9 @@ export function TopBar() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <div className="max-w-[180px]">
+            <AccountSwitcher />
+          </div>
           <PlanBadge />
           <NotificationsBell />
           <NavLink to="/app/configuracoes" className="p-2 hover:bg-accent/60 rounded-xl transition-colors">
