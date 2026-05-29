@@ -5,6 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { AccountProvider } from "@/contexts/AccountContext";
 import { AuthOnlyRoute, ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
@@ -50,7 +51,8 @@ const queryClient = new QueryClient({
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider delayDuration={0}>
+      <AccountProvider>
+        <TooltipProvider delayDuration={0}>
         <Toaster />
         <Sonner />
         <BrowserRouter>
@@ -92,7 +94,8 @@ const App = () => (
             </Routes>
           </Suspense>
         </BrowserRouter>
-      </TooltipProvider>
+        </TooltipProvider>
+      </AccountProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
