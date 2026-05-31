@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { ensureUnsubscribeToken } from "../_shared/unsubscribe-token.ts";
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -15,6 +14,14 @@ function tempPassword(): string {
   let out = A[buf[0] % A.length] + a[buf[1] % a.length] + n[buf[2] % n.length] + s[buf[3] % s.length];
   for (let i = 4; i < 14; i++) out += all[buf[i] % all.length];
   return out;
+}
+
+async function ensureUnsubscribeToken(svc: SupabaseClient, email: string): Promise<string> {
+  const token = crypto.randomUUID();
+  await svc.from("email_unsubscribe_tokens").upsert({ email, token }, { onConflict: "email", ignoreDuplicates: true });
+  const { data, error } = await svc.from("email_unsubscribe_tokens").select("token").eq("email", email).single();
+  if (error || !data?.token) throw new Error("could_not_get_unsubscribe_token");
+  return data.token as string;
 }
 
 serve(async (req) => {
