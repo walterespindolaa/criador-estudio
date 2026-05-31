@@ -35,6 +35,10 @@ const AppLayout = () => {
     if (profile?.theme_font) applyThemeFont(profile.theme_font);
   }, [profile]);
 
+  if (!isLoading && profile?.must_change_password === true && location.pathname !== "/app/trocar-senha") {
+    return <Navigate to="/app/trocar-senha" replace />;
+  }
+
   if (!isLoading && profile && profile.onboarding_completed === false) {
     if (location.pathname !== "/onboarding") {
       return <Navigate to="/onboarding" replace />;

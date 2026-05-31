@@ -34,6 +34,7 @@ const Configuracoes = lazy(() => import("./pages/app/Configuracoes"));
 const Aprender = lazy(() => import("./pages/app/Aprender"));
 const Brandbook = lazy(() => import("./pages/app/Brandbook"));
 const LinkInBio = lazy(() => import("./pages/app/LinkInBio"));
+const TrocarSenha = lazy(() => import("./pages/app/TrocarSenha"));
 const Assinar = lazy(() => import("./pages/app/Assinar"));
 const BioPage = lazy(() => import("./pages/BioPage"));
 
@@ -70,6 +71,9 @@ const App = () => (
               } />
               <Route path="/app/assinar" element={
                 <AuthOnlyRoute><Assinar /></AuthOnlyRoute>
+              } />
+              <Route path="/app/trocar-senha" element={
+                <AuthOnlyRoute><TrocarSenha /></AuthOnlyRoute>
               } />
               <Route path="/app" element={
                 <ProtectedRoute><AppLayout /></ProtectedRoute>
