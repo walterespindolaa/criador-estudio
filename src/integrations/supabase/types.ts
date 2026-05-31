@@ -38,6 +38,54 @@ export type Database = {
         }
         Relationships: []
       }
+      account_members: {
+        Row: {
+          accepted_at: string | null
+          id: string
+          invited_at: string
+          member_email: string
+          member_id: string | null
+          owner_id: string
+          role: string
+          status: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          id?: string
+          invited_at?: string
+          member_email: string
+          member_id?: string | null
+          owner_id: string
+          role?: string
+          status?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          id?: string
+          invited_at?: string
+          member_email?: string
+          member_id?: string | null
+          owner_id?: string
+          role?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_members_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_actions: {
         Row: {
           action: string
@@ -1219,9 +1267,11 @@ export type Database = {
           id: string
           instagram_handle: string | null
           last_seen_at: string | null
+          must_change_password: boolean
           name: string
           niche: string | null
           onboarding_completed: boolean | null
+          phone: string | null
           plan: string | null
           platforms: string[] | null
           role: string | null
@@ -1258,9 +1308,11 @@ export type Database = {
           id: string
           instagram_handle?: string | null
           last_seen_at?: string | null
+          must_change_password?: boolean
           name: string
           niche?: string | null
           onboarding_completed?: boolean | null
+          phone?: string | null
           plan?: string | null
           platforms?: string[] | null
           role?: string | null
@@ -1297,9 +1349,11 @@ export type Database = {
           id?: string
           instagram_handle?: string | null
           last_seen_at?: string | null
+          must_change_password?: boolean
           name?: string
           niche?: string | null
           onboarding_completed?: boolean | null
+          phone?: string | null
           plan?: string | null
           platforms?: string[] | null
           role?: string | null
@@ -1826,6 +1880,7 @@ export type Database = {
         Args: { _max: number; _user: string; _window: string }
         Returns: number
       }
+      claim_account_invites: { Args: never; Returns: number }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -1876,6 +1931,7 @@ export type Database = {
         Args: { link_id: string }
         Returns: undefined
       }
+      is_account_manager: { Args: { _owner: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       move_to_dlq: {
         Args: {
@@ -1885,6 +1941,16 @@ export type Database = {
           source_queue: string
         }
         Returns: number
+      }
+      my_managed_accounts: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          instagram_handle: string
+          name: string
+          niche: string
+          owner_id: string
+        }[]
       }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
