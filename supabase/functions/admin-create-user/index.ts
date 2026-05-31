@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { ensureUnsubscribeToken } from "../_shared/unsubscribe-token.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -63,6 +64,7 @@ serve(async (req) => {
     const loginUrl = (req.headers.get("origin") ?? "https://app.criasocialclub.com.br") + "/login";
     const html = credentialsEmailHtml({ name, email, pwd, loginUrl });
     const messageId = crypto.randomUUID();
+    const unsubscribeToken = await ensureUnsubscribeToken(svc, String(email).trim().toLowerCase());
     await svc.rpc("enqueue_email", {
       queue_name: "transactional_emails",
       payload: {
@@ -71,7 +73,8 @@ serve(async (req) => {
         sender_domain: "notify.criasocialclub.com.br",
         purpose: "transactional",
         html, text: `Olá ${name}. Acesse ${loginUrl} com e-mail ${email} e senha provisória ${pwd}.`,
-        label: "admin_invite", idempotency_key: messageId, message_id: messageId, queued_at: new Date().toISOString(),
+        label: "admin_invite", idempotency_key: messageId, unsubscribe_token: unsubscribeToken,
+        message_id: messageId, queued_at: new Date().toISOString(),
       },
     });
 
