@@ -63,22 +63,24 @@ serve(async (req) => {
           .eq("owner_id", user.id).eq("member_email", normEmail);
       }
       const html = inviteHtml({ ownerName: owner?.name ?? "um criador", email: normEmail, pwd, loginUrl });
+      const messageId = crypto.randomUUID();
       await svc.rpc("enqueue_email", { queue_name: "transactional_emails", payload: {
         to: normEmail, subject: `${owner?.name ?? "Um criador"} convidou você para gerenciar a conta`,
         from: "cria <noreply@criasocialclub.com.br>",
         sender_domain: "notify.criasocialclub.com.br",
         purpose: "transactional",
         html, text: `Você foi convidado. Acesse ${loginUrl} com ${normEmail} e senha provisória ${pwd}.`,
-        label: "manager_invite_new", message_id: crypto.randomUUID(), queued_at: new Date().toISOString() } });
+        label: "manager_invite_new", idempotency_key: messageId, message_id: messageId, queued_at: new Date().toISOString() } });
     } else {
       const html = inviteExistingHtml({ ownerName: owner?.name ?? "um criador", loginUrl });
+      const messageId = crypto.randomUUID();
       await svc.rpc("enqueue_email", { queue_name: "transactional_emails", payload: {
         to: normEmail, subject: `Você agora gerencia a conta de ${owner?.name ?? "um criador"}`,
         from: "cria <noreply@criasocialclub.com.br>",
         sender_domain: "notify.criasocialclub.com.br",
         purpose: "transactional",
         html, text: `Você foi adicionado como social media. Acesse ${loginUrl} e selecione a conta.`,
-        label: "manager_invite_existing", message_id: crypto.randomUUID(), queued_at: new Date().toISOString() } });
+        label: "manager_invite_existing", idempotency_key: messageId, message_id: messageId, queued_at: new Date().toISOString() } });
     }
 
     return json({ ok: true, status });

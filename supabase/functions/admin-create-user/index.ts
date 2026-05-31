@@ -62,6 +62,7 @@ serve(async (req) => {
     // 4) Enfileira e-mail com credenciais provisórias
     const loginUrl = (req.headers.get("origin") ?? "https://app.criasocialclub.com.br") + "/login";
     const html = credentialsEmailHtml({ name, email, pwd, loginUrl });
+    const messageId = crypto.randomUUID();
     await svc.rpc("enqueue_email", {
       queue_name: "transactional_emails",
       payload: {
@@ -70,7 +71,7 @@ serve(async (req) => {
         sender_domain: "notify.criasocialclub.com.br",
         purpose: "transactional",
         html, text: `Olá ${name}. Acesse ${loginUrl} com e-mail ${email} e senha provisória ${pwd}.`,
-        label: "admin_invite", message_id: crypto.randomUUID(), queued_at: new Date().toISOString(),
+        label: "admin_invite", idempotency_key: messageId, message_id: messageId, queued_at: new Date().toISOString(),
       },
     });
 
