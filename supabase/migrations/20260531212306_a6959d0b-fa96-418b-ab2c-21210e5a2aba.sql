@@ -1,0 +1,1 @@
+COMMENT ON TABLE public.account_members IS 'Vínculos entre dono da conta (criador) e gerentes/social media';
