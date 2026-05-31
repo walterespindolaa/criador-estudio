@@ -66,6 +66,9 @@ serve(async (req) => {
       queue_name: "transactional_emails",
       payload: {
         to: email, subject: "Seu acesso ao cria",
+        from: "cria <noreply@criasocialclub.com.br>",
+        sender_domain: "notify.criasocialclub.com.br",
+        purpose: "transactional",
         html, text: `Olá ${name}. Acesse ${loginUrl} com e-mail ${email} e senha provisória ${pwd}.`,
         label: "admin_invite", message_id: crypto.randomUUID(), queued_at: new Date().toISOString(),
       },
