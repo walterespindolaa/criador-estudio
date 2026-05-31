@@ -14,6 +14,7 @@ function deriveState(
   profile:
     | {
         role?: string | null;
+        account_type?: string | null;
         plan?: string | null;
         subscription_status?: string | null;
         trial_ends_at?: string | null;
@@ -23,6 +24,7 @@ function deriveState(
 ): BadgeState {
   if (!profile) return { kind: "hide" };
   if (profile.role === "admin") return { kind: "hide" };
+  if (profile.account_type === "manager") return { kind: "hide" };
 
   if (profile.subscription_status === "active") {
     if (profile.plan === "studio") return { kind: "studio" };

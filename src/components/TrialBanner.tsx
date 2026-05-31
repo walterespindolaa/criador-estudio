@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { X, Zap, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useProfile } from "@/hooks/useProfile";
 import { cn } from "@/lib/utils";
 
 export function TrialBanner() {
   const { status, daysLeftInTrial } = useSubscription();
+  const { profile } = useProfile();
   const navigate = useNavigate();
   const [dismissed, setDismissed] = useState(false);
 
@@ -20,6 +22,8 @@ export function TrialBanner() {
     sessionStorage.setItem(key, "1");
     setDismissed(true);
   };
+
+  if (profile?.account_type === "manager") return null;
 
   if (dismissed || (status !== "trial_expiring" && status !== "trial_active")) {
     return null;

@@ -18,17 +18,20 @@ import { TrialBanner } from "@/components/TrialBanner";
 import { StorageWarningBanner } from "@/components/StorageWarningBanner";
 import { ManagingBanner } from "@/components/accounts/ManagingBanner";
 import { AccountSwitcher } from "@/components/accounts/AccountSwitcher";
+import { ManagerHome } from "@/components/accounts/ManagerHome";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { useLastSeen } from "@/hooks/useLastSeen";
 
 const AppLayout = () => {
   const { profile, isLoading } = useProfile();
+  const { isManaging } = useActiveAccount();
   const location = useLocation();
 
   useLastSeen();
 
   useEffect(() => {
     if (profile?.theme_preset) {
-      applyTheme(profile.theme_preset, profile.theme_accent || '#C4622D');
+      applyTheme(profile.theme_preset, profile.theme_accent || '#8B5CF6');
     }
     // Apply sidebar color override AFTER theme (so it wins)
     applySidebarColor(profile?.theme_sidebar || null);
@@ -37,6 +40,11 @@ const AppLayout = () => {
 
   if (!isLoading && profile?.must_change_password === true && location.pathname !== "/app/trocar-senha") {
     return <Navigate to="/app/trocar-senha" replace />;
+  }
+
+  // Social media (manager) sem cliente ativo: vê tela exclusiva de seleção, fora do layout normal
+  if (!isLoading && profile?.account_type === "manager" && !isManaging) {
+    return <ManagerHome />;
   }
 
   if (!isLoading && profile && profile.onboarding_completed === false && profile.account_type !== "manager") {
@@ -69,7 +77,7 @@ const AppLayout = () => {
               </div>
             </header>
 
-            <header className="h-14 fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 bg-background border-b border-border md:hidden">
+            <header className="h-14 sticky top-0 z-40 flex items-center justify-between px-4 bg-background border-b border-border md:hidden">
               <NavLink to="/app" className="flex items-center">
                 <h1
                   className="text-xl font-display font-semibold text-foreground tracking-tight"
@@ -88,7 +96,7 @@ const AppLayout = () => {
               </div>
             </header>
 
-            <main className="flex-1 pt-14 pb-24 md:pb-0 md:pt-0 w-full">
+            <main className="flex-1 pb-24 md:pb-0 w-full">
               <div className="max-w-screen-2xl mx-auto px-4 py-4 md:px-8 md:py-6">
                 <Outlet />
               </div>
