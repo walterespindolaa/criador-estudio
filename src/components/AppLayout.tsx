@@ -39,7 +39,7 @@ const AppLayout = () => {
     return <Navigate to="/app/trocar-senha" replace />;
   }
 
-  if (!isLoading && profile && profile.onboarding_completed === false) {
+  if (!isLoading && profile && profile.onboarding_completed === false && profile.account_type !== "manager") {
     if (location.pathname !== "/onboarding") {
       return <Navigate to="/onboarding" replace />;
     }

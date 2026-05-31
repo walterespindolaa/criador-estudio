@@ -5,6 +5,7 @@ import type { Database } from "@/integrations/supabase/types";
 
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"] & {
   role?: string | null;
+  account_type?: string | null;
   trial_started_at?: string | null;
   trial_ends_at?: string | null;
   plan?: string | null;
