@@ -5,20 +5,27 @@ export function ManagingBanner() {
   const { isManaging, managedAccounts, activeAccountId, setActiveAccount } = useActiveAccount();
   if (!isManaging) return null;
   const current = managedAccounts.find((m) => m.owner_id === activeAccountId);
+  const name = current?.name;
 
   return (
-    <div className="w-full bg-primary/10 border-b border-primary/20 px-4 py-2 flex items-center justify-between gap-3">
+    <div className="w-full bg-primary text-primary-foreground px-4 py-2.5 flex items-center justify-between gap-3 shadow-sm">
       <div className="flex items-center gap-2 min-w-0">
-        <Eye className="h-3.5 w-3.5 text-primary shrink-0" strokeWidth={2} />
-        <p className="text-xs sm:text-sm font-body text-foreground truncate">
-          Gerenciando a conta de <b className="font-semibold">{current?.name ?? "cliente"}</b>
+        <Eye className="h-4 w-4 shrink-0" strokeWidth={2} />
+        <p className="text-sm sm:text-base font-body font-semibold truncate">
+          Você está gerenciando a conta de{" "}
+          {name ? (
+            <span className="font-bold">{name}</span>
+          ) : (
+            <span className="opacity-70 italic">carregando…</span>
+          )}
         </p>
       </div>
       <button
         onClick={() => setActiveAccount(null)}
-        className="flex items-center gap-1 text-xs font-body font-semibold text-primary hover:underline shrink-0"
+        className="flex items-center gap-1 text-sm font-body font-semibold bg-white/15 hover:bg-white/25 transition-colors rounded-lg px-3 py-1 shrink-0"
+        aria-label="Sair do modo gerenciando"
       >
-        <X className="h-3.5 w-3.5" /> Sair
+        <X className="h-4 w-4" /> Sair
       </button>
     </div>
   );
