@@ -83,7 +83,7 @@ const AdminInner = () => {
   const [openCreate, setOpenCreate] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", phone: "", plan: "trial" });
   const [creating, setCreating] = useState(false);
-  const [result, setResult] = useState<null | { email: string; tempPassword: string; loginUrl: string }>(null);
+  const [result, setResult] = useState<null | { email: string; inviteLink: string }>(null);
   const queryClient = useQueryClient();
 
   const handleCreate = async () => {
@@ -97,7 +97,7 @@ const AdminInner = () => {
       if (error || (data as { error?: string })?.error) {
         throw new Error((data as { error?: string })?.error ?? "create_failed");
       }
-      setResult({ email: data.email, tempPassword: data.tempPassword, loginUrl: data.loginUrl });
+      setResult({ email: data.email, inviteLink: data.inviteLink });
       setOpenCreate(false);
       setForm({ name: "", email: "", phone: "", plan: "trial" });
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
@@ -406,13 +406,12 @@ const AdminInner = () => {
               <DialogTitle className="font-display">Usuário criado</DialogTitle>
             </DialogHeader>
             <p className="text-sm text-muted-foreground font-body">
-              Credenciais provisórias (mostradas só uma vez). Já foram enviadas por e-mail.
+              Convite enviado por e-mail. O link abaixo já autentica o usuário e leva pra definição de senha.
             </p>
             <div className="space-y-2 mt-2">
               {result && [
                 { label: "E-mail", value: result.email },
-                { label: "Senha provisória", value: result.tempPassword },
-                { label: "Link de acesso", value: result.loginUrl },
+                { label: "Link de acesso", value: result.inviteLink },
               ].map((r) => (
                 <div key={r.label} className="flex items-center justify-between gap-2 rounded-xl border border-border bg-muted/30 px-3 py-2">
                   <div className="min-w-0">

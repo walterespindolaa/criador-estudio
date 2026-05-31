@@ -8,20 +8,42 @@ const cors = {
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
 
-function tempPassword(): string {
-  const A = "ABCDEFGHJKLMNPQRSTUVWXYZ", a = "abcdefghijkmnpqrstuvwxyz", n = "23456789", s = "!@#$%&*";
-  const all = A + a + n + s; const buf = new Uint32Array(14); crypto.getRandomValues(buf);
-  let out = A[buf[0] % A.length] + a[buf[1] % a.length] + n[buf[2] % n.length] + s[buf[3] % s.length];
-  for (let i = 4; i < 14; i++) out += all[buf[i] % all.length];
-  return out;
-}
-
 async function ensureUnsubscribeToken(svc: SupabaseClient, email: string): Promise<string> {
   const token = crypto.randomUUID();
   await svc.from("email_unsubscribe_tokens").upsert({ email, token }, { onConflict: "email", ignoreDuplicates: true });
   const { data, error } = await svc.from("email_unsubscribe_tokens").select("token").eq("email", email).single();
   if (error || !data?.token) throw new Error("could_not_get_unsubscribe_token");
   return data.token as string;
+}
+
+function emailHtml(opts: {
+  title: string;
+  paragraph: string;
+  buttonLabel: string;
+  actionLink: string;
+  secondary: string;
+}): string {
+  return `<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#1f2937">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:32px 16px">
+    <tr><td align="center">
+      <table role="presentation" width="480" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;width:100%;background:#ffffff;border-radius:16px;padding:40px 32px;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
+        <tr><td>
+          <h1 style="margin:0 0 16px 0;font-size:22px;font-weight:700;color:#111827;line-height:1.3">${opts.title}</h1>
+          <p style="margin:0 0 28px 0;font-size:15px;line-height:1.55;color:#4b5563">${opts.paragraph}</p>
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px 0">
+            <tr><td style="border-radius:12px;background:#8B5CF6">
+              <a href="${opts.actionLink}" style="display:inline-block;padding:12px 24px;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:12px">${opts.buttonLabel}</a>
+            </td></tr>
+          </table>
+          <p style="margin:0;font-size:13px;line-height:1.5;color:#9ca3af">${opts.secondary}</p>
+        </td></tr>
+      </table>
+      <p style="margin:24px 0 0 0;font-size:12px;color:#9ca3af">cria · criasocialclub.com.br</p>
+    </td></tr>
+  </table>
+</body></html>`;
 }
 
 serve(async (req) => {
@@ -38,67 +60,72 @@ serve(async (req) => {
 
     const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // 1) Caller precisa ser admin (checado no servidor, nunca confiar no client)
+    // Caller precisa ser admin
     const { data: caller } = await svc.from("profiles").select("role").eq("id", user.id).single();
     if (caller?.role !== "admin") return json({ error: "forbidden" }, 403);
 
     const { name, email, phone, plan } = await req.json();
     if (!email || !name) return json({ error: "missing_fields" }, 400);
+    const normEmail = String(email).trim().toLowerCase();
     const validPlans = ["free", "pro", "premium", "trial"];
     const chosenPlan = validPlans.includes(plan) ? plan : "trial";
 
-    // 2) Cria usuário no auth com senha provisória
-    const pwd = tempPassword();
-    const { data: created, error: cErr } = await svc.auth.admin.createUser({
-      email, password: pwd, email_confirm: true,
-      user_metadata: { name },
+    // Gera invite link (Supabase cria o usuário como parte do generateLink type='invite')
+    const redirectTo = (req.headers.get("origin") ?? "https://app.criasocialclub.com.br") + "/app";
+    const { data: linkData, error: linkErr } = await svc.auth.admin.generateLink({
+      type: "invite",
+      email: normEmail,
+      options: { redirectTo },
     });
-    if (cErr || !created.user) {
-      console.error("[admin-create-user] createUser failed:", cErr);
-      return json({ error: "create_failed" }, 400);
+    if (linkErr || !linkData?.properties?.action_link || !linkData.user) {
+      const msg = linkErr?.message ?? "";
+      if (msg.toLowerCase().includes("already registered") || msg.toLowerCase().includes("already exists")) {
+        return json({ error: "user_exists" }, 409);
+      }
+      console.error("[admin-create-user] generateLink failed:", linkErr);
+      return json({ error: "link_failed" }, 400);
     }
-    const newId = created.user.id;
+    const actionLink = linkData.properties.action_link;
+    const newId = linkData.user.id;
 
-    // 3) Ajusta o profile DEPOIS dos triggers (o trigger de trial seta plan='trial';
-    //    aqui sobrescrevemos com o plano escolhido pelo admin)
-    const patch: Record<string, unknown> = { name, phone: phone ?? null, plan: chosenPlan, must_change_password: true };
+    // Ajusta o profile (o trigger de trial seta plan='trial'; sobrescrevemos com o escolhido)
+    const patch: Record<string, unknown> = {
+      name,
+      phone: phone ?? null,
+      plan: chosenPlan,
+      must_change_password: true,
+    };
     if (["pro", "premium"].includes(chosenPlan)) {
       patch.subscription_status = "active"; // acesso liberado (cortesia/manual)
     }
     await svc.from("profiles").update(patch).eq("id", newId);
 
-    // 4) Enfileira e-mail com credenciais provisórias
-    const loginUrl = (req.headers.get("origin") ?? "https://app.criasocialclub.com.br") + "/login";
-    const html = credentialsEmailHtml({ name, email, pwd, loginUrl });
+    // Enfileira o e-mail (1 botão, sem senha visível)
+    const html = emailHtml({
+      title: "Sua conta está pronta",
+      paragraph: "Criamos sua conta no cria. Clique no botão para acessar e definir sua senha.",
+      buttonLabel: "Acessar minha conta",
+      actionLink,
+      secondary: `Se o botão não funcionar, copie e cole este link no navegador:<br/><span style="word-break:break-all;color:#6b7280">${actionLink}</span>`,
+    });
     const messageId = crypto.randomUUID();
-    const unsubscribeToken = await ensureUnsubscribeToken(svc, String(email).trim().toLowerCase());
+    const unsubscribeToken = await ensureUnsubscribeToken(svc, normEmail);
     await svc.rpc("enqueue_email", {
       queue_name: "transactional_emails",
       payload: {
-        to: email, subject: "Seu acesso ao cria",
+        to: normEmail, subject: "Seu acesso ao cria",
         from: "cria <noreply@criasocialclub.com.br>",
         sender_domain: "notify.criasocialclub.com.br",
         purpose: "transactional",
-        html, text: `Olá ${name}. Acesse ${loginUrl} com e-mail ${email} e senha provisória ${pwd}.`,
+        html, text: `Sua conta no cria está pronta. Acesse: ${actionLink}`,
         label: "admin_invite", idempotency_key: messageId, unsubscribe_token: unsubscribeToken,
         message_id: messageId, queued_at: new Date().toISOString(),
       },
     });
 
-    // 5) Retorna credenciais para o popup do admin (senha provisória mostrada 1x)
-    return json({ ok: true, email, tempPassword: pwd, loginUrl, userId: newId });
+    return json({ ok: true, email: normEmail, inviteLink: actionLink });
   } catch (e) {
     console.error("[admin-create-user] unhandled error:", e);
     return json({ error: "internal_error" }, 500);
   }
 });
-
-function credentialsEmailHtml(p: { name: string; email: string; pwd: string; loginUrl: string }): string {
-  return `<!doctype html><html><body style="font-family:system-ui,Arial,sans-serif;color:#1f2937">
-  <h2>Bem-vindo(a) ao cria, ${p.name}!</h2>
-  <p>Sua conta foi criada. Use as credenciais provisórias abaixo no primeiro acesso:</p>
-  <p><b>E-mail:</b> ${p.email}<br/><b>Senha provisória:</b> <code>${p.pwd}</code></p>
-  <p><a href="${p.loginUrl}" style="display:inline-block;background:#C4622D;color:#fff;padding:10px 18px;border-radius:10px;text-decoration:none">Entrar</a></p>
-  <p style="color:#6b7280;font-size:13px">No primeiro login você será solicitado a trocar a senha.</p>
-  </body></html>`;
-}

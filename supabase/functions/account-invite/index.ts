@@ -8,18 +8,42 @@ const cors = {
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
 
-function tempPassword(): string {
-  const all = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%&*";
-  const buf = new Uint32Array(14); crypto.getRandomValues(buf);
-  let out = ""; for (let i = 0; i < 14; i++) out += all[buf[i] % all.length]; return out;
-}
-
 async function ensureUnsubscribeToken(svc: SupabaseClient, email: string): Promise<string> {
   const token = crypto.randomUUID();
   await svc.from("email_unsubscribe_tokens").upsert({ email, token }, { onConflict: "email", ignoreDuplicates: true });
   const { data, error } = await svc.from("email_unsubscribe_tokens").select("token").eq("email", email).single();
   if (error || !data?.token) throw new Error("could_not_get_unsubscribe_token");
   return data.token as string;
+}
+
+function emailHtml(opts: {
+  title: string;
+  paragraph: string;
+  buttonLabel: string;
+  actionLink: string;
+  secondary: string;
+}): string {
+  return `<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#1f2937">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:32px 16px">
+    <tr><td align="center">
+      <table role="presentation" width="480" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;width:100%;background:#ffffff;border-radius:16px;padding:40px 32px;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
+        <tr><td>
+          <h1 style="margin:0 0 16px 0;font-size:22px;font-weight:700;color:#111827;line-height:1.3">${opts.title}</h1>
+          <p style="margin:0 0 28px 0;font-size:15px;line-height:1.55;color:#4b5563">${opts.paragraph}</p>
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px 0">
+            <tr><td style="border-radius:12px;background:#8B5CF6">
+              <a href="${opts.actionLink}" style="display:inline-block;padding:12px 24px;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:12px">${opts.buttonLabel}</a>
+            </td></tr>
+          </table>
+          <p style="margin:0;font-size:13px;line-height:1.5;color:#9ca3af">${opts.secondary}</p>
+        </td></tr>
+      </table>
+      <p style="margin:24px 0 0 0;font-size:12px;color:#9ca3af">cria · criasocialclub.com.br</p>
+    </td></tr>
+  </table>
+</body></html>`;
 }
 
 serve(async (req) => {
@@ -34,7 +58,7 @@ serve(async (req) => {
     if (!user) return json({ error: "unauthorized" }, 401);
 
     const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { email, name } = await req.json();
+    const { email, name: _ignored } = await req.json();
     if (!email) return json({ error: "missing_email" }, 400);
     const normEmail = String(email).trim().toLowerCase();
 
@@ -42,79 +66,72 @@ serve(async (req) => {
     if (user.email?.toLowerCase() === normEmail) return json({ error: "cannot_invite_self" }, 400);
 
     const { data: owner } = await svc.from("profiles").select("name").eq("id", user.id).single();
+    const ownerName = owner?.name ?? "um criador";
 
-    // Já existe usuário com esse e-mail?
+    // Existe?
     const { data: list } = await svc.auth.admin.listUsers();
     const existing = list?.users?.find((u) => u.email?.toLowerCase() === normEmail);
 
-    // Upsert do vínculo
-    const memberId = existing?.id ?? null;
-    const status = existing ? "active" : "pending";
+    // Gera o link conforme o caso
+    const redirectTo = (req.headers.get("origin") ?? "https://app.criasocialclub.com.br") + "/app";
+    const type: "magiclink" | "invite" = existing ? "magiclink" : "invite";
+    const { data: linkData, error: linkErr } = await svc.auth.admin.generateLink({
+      type,
+      email: normEmail,
+      options: { redirectTo },
+    });
+    if (linkErr || !linkData?.properties?.action_link || !linkData.user) {
+      console.error("[account-invite] generateLink failed:", linkErr);
+      return json({ error: "link_failed" }, 400);
+    }
+    const actionLink = linkData.properties.action_link;
+    const targetUser = linkData.user;
+
+    // Vincula o gerente à conta do dono. Status já 'active': clicar no link é a ativação.
     await svc.from("account_members").upsert({
-      owner_id: user.id, member_email: normEmail, member_id: memberId,
-      status, role: "manager", accepted_at: existing ? new Date().toISOString() : null,
+      owner_id: user.id,
+      member_email: normEmail,
+      member_id: targetUser.id,
+      status: "active",
+      role: "manager",
+      accepted_at: new Date().toISOString(),
     }, { onConflict: "owner_id,member_email" });
 
-    const loginUrl = (req.headers.get("origin") ?? "https://app.criasocialclub.com.br") + "/login";
-
+    // Se for usuário novo (recém-criado pelo invite), força definição de senha no 1º acesso.
     if (!existing) {
-      // Cria conta do gerente com senha provisória (primeiro acesso)
-      const pwd = tempPassword();
-      const { data: created } = await svc.auth.admin.createUser({
-        email: normEmail, password: pwd, email_confirm: true,
-        user_metadata: { name: name ?? "Social Media" },
-      });
-      if (created?.user) {
-        await svc.from("profiles").update({ must_change_password: true }).eq("id", created.user.id);
-        // Liga o vínculo pendente ao usuário recém-criado (handle_new_user também faz, mas garantimos)
-        await svc.from("account_members").update({ member_id: created.user.id, status: "active", accepted_at: new Date().toISOString() })
-          .eq("owner_id", user.id).eq("member_email", normEmail);
-      }
-      const html = inviteHtml({ ownerName: owner?.name ?? "um criador", email: normEmail, pwd, loginUrl });
-      const messageId = crypto.randomUUID();
-      const unsubscribeToken = await ensureUnsubscribeToken(svc, normEmail);
-      await svc.rpc("enqueue_email", { queue_name: "transactional_emails", payload: {
-        to: normEmail, subject: `${owner?.name ?? "Um criador"} convidou você para gerenciar a conta`,
-        from: "cria <noreply@criasocialclub.com.br>",
-        sender_domain: "notify.criasocialclub.com.br",
-        purpose: "transactional",
-        html, text: `Você foi convidado. Acesse ${loginUrl} com ${normEmail} e senha provisória ${pwd}.`,
-        label: "manager_invite_new", idempotency_key: messageId, unsubscribe_token: unsubscribeToken,
-        message_id: messageId, queued_at: new Date().toISOString() } });
-    } else {
-      const html = inviteExistingHtml({ ownerName: owner?.name ?? "um criador", loginUrl });
-      const messageId = crypto.randomUUID();
-      const unsubscribeToken = await ensureUnsubscribeToken(svc, normEmail);
-      await svc.rpc("enqueue_email", { queue_name: "transactional_emails", payload: {
-        to: normEmail, subject: `Você agora gerencia a conta de ${owner?.name ?? "um criador"}`,
-        from: "cria <noreply@criasocialclub.com.br>",
-        sender_domain: "notify.criasocialclub.com.br",
-        purpose: "transactional",
-        html, text: `Você foi adicionado como social media. Acesse ${loginUrl} e selecione a conta.`,
-        label: "manager_invite_existing", idempotency_key: messageId, unsubscribe_token: unsubscribeToken,
-        message_id: messageId, queued_at: new Date().toISOString() } });
+      await svc.from("profiles").update({ must_change_password: true }).eq("id", targetUser.id);
     }
 
-    return json({ ok: true, status });
+    const html = emailHtml({
+      title: "Você foi convidado",
+      paragraph: `${ownerName} convidou você para gerenciar a conta dele(a) no cria como social media. Clique no botão abaixo para acessar — você define sua senha e já entra direto.`,
+      buttonLabel: "Aceitar convite e acessar",
+      actionLink,
+      secondary: "Depois de entrar, selecione o cliente no seletor de contas no topo.",
+    });
+    const messageId = crypto.randomUUID();
+    const unsubscribeToken = await ensureUnsubscribeToken(svc, normEmail);
+    await svc.rpc("enqueue_email", {
+      queue_name: "transactional_emails",
+      payload: {
+        to: normEmail,
+        subject: `${ownerName} convidou você para gerenciar uma conta no cria`,
+        from: "cria <noreply@criasocialclub.com.br>",
+        sender_domain: "notify.criasocialclub.com.br",
+        purpose: "transactional",
+        html,
+        text: `${ownerName} convidou você para gerenciar a conta dele(a) no cria. Acesse: ${actionLink}`,
+        label: existing ? "manager_invite_existing" : "manager_invite_new",
+        idempotency_key: messageId,
+        unsubscribe_token: unsubscribeToken,
+        message_id: messageId,
+        queued_at: new Date().toISOString(),
+      },
+    });
+
+    return json({ ok: true, status: "active" });
   } catch (e) {
     console.error("[account-invite] unhandled error:", e);
     return json({ error: "internal_error" }, 500);
   }
 });
-
-function inviteHtml(p: { ownerName: string; email: string; pwd: string; loginUrl: string }) {
-  return `<!doctype html><html><body style="font-family:system-ui,Arial,sans-serif;color:#1f2937">
-  <h2>${p.ownerName} convidou você como social media</h2>
-  <p>Crie seu acesso ao cria para gerenciar a conta dele(a):</p>
-  <p><b>E-mail:</b> ${p.email}<br/><b>Senha provisória:</b> <code>${p.pwd}</code></p>
-  <p><a href="${p.loginUrl}" style="display:inline-block;background:#C4622D;color:#fff;padding:10px 18px;border-radius:10px;text-decoration:none">Acessar</a></p>
-  <p style="color:#6b7280;font-size:13px">No primeiro acesso você troca a senha. Depois é só selecionar o cliente.</p>
-  </body></html>`;
-}
-function inviteExistingHtml(p: { ownerName: string; loginUrl: string }) {
-  return `<!doctype html><html><body style="font-family:system-ui,Arial,sans-serif;color:#1f2937">
-  <h2>Novo cliente liberado</h2>
-  <p>Você foi adicionado como social media da conta de <b>${p.ownerName}</b>.</p>
-  <p><a href="${p.loginUrl}" style="display:inline-block;background:#C4622D;color:#fff;padding:10px 18px;border-radius:10px;text-decoration:none">Abrir cria</a> e selecione o cliente no seletor de contas.</p>
-  </body></html>`;
-}
