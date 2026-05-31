@@ -22,6 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 
 import { useGoogleDriveConnection } from "@/hooks/useGoogleDriveConnection";
 import { useManageSubscription } from "@/hooks/useManageSubscription";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { SettingsVisual } from "@/components/settings/SettingsVisual";
 import { InfoTooltip } from "@/components/shared/InfoTooltip";
 import { sanitizeText, sanitizeUrl } from "@/lib/sanitize";
@@ -58,6 +59,8 @@ const Configuracoes = () => {
   const { user, signOut } = useAuth();
   const { profile, updateProfile } = useProfile();
   const { openPortal, isLoading: portalLoading } = useManageSubscription();
+  const { isManaging, managedAccounts, activeAccountId, setActiveAccount } = useActiveAccount();
+  const managedName = managedAccounts.find((m) => m.owner_id === activeAccountId)?.name;
   const { pillars, createPillar, updatePillar: updatePillarMutation, deletePillar: deletePillarMutation } = usePillars();
   const { habits, createHabit, deleteHabit: deleteHabitMutation } = useHabits();
   const navigate = useNavigate();
@@ -371,18 +374,30 @@ const Configuracoes = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="perfil" className="w-full">
+        {isManaging && (
+          <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 flex items-center justify-between gap-3">
+            <p className="text-sm font-body text-foreground">
+              Editando o conteúdo da conta de <b>{managedName}</b>. Suas configurações pessoais (perfil, Drive, segurança) ficam em <b>Minha conta</b>.
+            </p>
+            <button onClick={() => setActiveAccount(null)} className="text-sm font-semibold text-primary hover:underline shrink-0 whitespace-nowrap">
+              Ir para Minha conta
+            </button>
+          </div>
+        )}
+
+        <Tabs defaultValue={isManaging ? "pilares" : "perfil"} className="w-full">
           <div className="overflow-x-auto mb-6 -mx-4 px-4 scrollbar-none flex justify-center sm:justify-start">
             <TabsList className="inline-flex h-auto bg-card border border-border rounded-2xl p-1.5 gap-1 min-w-max">
-              <TabsTrigger value="perfil" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><User className="h-3.5 w-3.5 shrink-0" /><span className="hidden sm:inline">Perfil</span></TabsTrigger>
+              {!isManaging && <TabsTrigger value="perfil" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><User className="h-3.5 w-3.5 shrink-0" /><span className="hidden sm:inline">Perfil</span></TabsTrigger>}
               <TabsTrigger value="pilares" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><LayoutGrid className="h-3.5 w-3.5 shrink-0" /><span className="hidden sm:inline">Pilares & Hábitos</span></TabsTrigger>
-              <TabsTrigger value="visual" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Paintbrush className="h-3.5 w-3.5 shrink-0" /><span className="hidden sm:inline">Visual</span></TabsTrigger>
-              <TabsTrigger value="integracoes" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Plug className="h-3.5 w-3.5 shrink-0" /><span className="hidden sm:inline">Integrações</span></TabsTrigger>
-              <TabsTrigger value="seguranca" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Shield className="h-3.5 w-3.5 shrink-0" /><span className="hidden sm:inline">Segurança</span></TabsTrigger>
+              {!isManaging && <TabsTrigger value="visual" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Paintbrush className="h-3.5 w-3.5 shrink-0" /><span className="hidden sm:inline">Visual</span></TabsTrigger>}
+              {!isManaging && <TabsTrigger value="integracoes" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Plug className="h-3.5 w-3.5 shrink-0" /><span className="hidden sm:inline">Integrações</span></TabsTrigger>}
+              {!isManaging && <TabsTrigger value="seguranca" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Shield className="h-3.5 w-3.5 shrink-0" /><span className="hidden sm:inline">Segurança</span></TabsTrigger>}
             </TabsList>
           </div>
 
           <div className="w-full">
+            {!isManaging && (
             <TabsContent value="perfil">
               <form onSubmit={handleSubmit(onSubmit)} className="max-w-2xl space-y-6">
                 <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-5">
@@ -507,6 +522,7 @@ const Configuracoes = () => {
                 </div>
               </form>
             </TabsContent>
+            )}
 
             <TabsContent value="pilares">
               <div className="max-w-2xl space-y-6">
@@ -634,10 +650,13 @@ const Configuracoes = () => {
               </div>
             </TabsContent>
 
+            {!isManaging && (
             <TabsContent value="visual">
               <SettingsVisual />
             </TabsContent>
+            )}
 
+            {!isManaging && (
             <TabsContent value="integracoes">
               <div className="max-w-2xl space-y-6">
                 <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
@@ -751,7 +770,9 @@ const Configuracoes = () => {
                 })()}
               </div>
             </TabsContent>
+            )}
 
+            {!isManaging && (
             <TabsContent value="seguranca">
               <div className="max-w-2xl space-y-6">
                 <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
@@ -801,6 +822,7 @@ const Configuracoes = () => {
                 </div>
               </div>
             </TabsContent>
+            )}
           </div>
         </Tabs>
 

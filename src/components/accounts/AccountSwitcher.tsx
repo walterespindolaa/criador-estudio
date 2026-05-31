@@ -1,5 +1,6 @@
 import { useActiveAccount } from "@/contexts/AccountContext";
-import { ChevronsUpDown, User, Users } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ChevronsUpDown, Settings, User, Users } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -7,6 +8,7 @@ import {
 
 export function AccountSwitcher() {
   const { managedAccounts, hasManagedAccounts, activeAccountId, isManaging, setActiveAccount } = useActiveAccount();
+  const navigate = useNavigate();
   if (!hasManagedAccounts) return null;
 
   const current = managedAccounts.find((m) => m.owner_id === activeAccountId);
@@ -33,6 +35,10 @@ export function AccountSwitcher() {
             )}
           </DropdownMenuItem>
         ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => { setActiveAccount(null); navigate("/app/configuracoes"); }}>
+          <Settings className="h-4 w-4 mr-2" /> Minha conta (configurações)
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
