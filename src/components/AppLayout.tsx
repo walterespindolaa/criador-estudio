@@ -58,10 +58,7 @@ const AppLayout = () => {
   return (
     <CriaAIProvider>
     <SidebarProvider>
-      <div className="min-h-screen flex flex-col w-full bg-background">
-        <ManagingBanner />
-        <TrialBanner />
-        <StorageWarningBanner />
+      <div className="min-h-screen flex w-full bg-background">
         <div className="flex flex-1 w-full min-h-0">
           <PWAInstallBanner />
           <CriaAIPanel />
@@ -71,6 +68,9 @@ const AppLayout = () => {
           </div>
 
           <div className="flex-1 flex flex-col min-w-0">
+            <ManagingBanner />
+            <TrialBanner />
+            <StorageWarningBanner />
             <header className="h-12 hidden md:flex items-center justify-between px-4 border-b border-border bg-background sticky top-0 z-40">
               <SidebarTrigger className="mr-3" />
               <div className="flex items-center gap-2">
