@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Trash2, Camera, Lock, AlertTriangle, Shield, Paintbrush, HardDrive, ExternalLink, Unplug, User, LayoutGrid, Plug, Settings, Pencil, CreditCard } from "lucide-react";
+import { Plus, Trash2, Camera, Lock, AlertTriangle, Shield, Paintbrush, HardDrive, ExternalLink, Unplug, User, Users, LayoutGrid, Plug, Settings, Pencil, CreditCard } from "lucide-react";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,7 @@ import { useGoogleDriveConnection } from "@/hooks/useGoogleDriveConnection";
 import { useManageSubscription } from "@/hooks/useManageSubscription";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { SettingsVisual } from "@/components/settings/SettingsVisual";
+import { SettingsEquipe } from "@/components/settings/SettingsEquipe";
 import { InfoTooltip } from "@/components/shared/InfoTooltip";
 import { sanitizeText, sanitizeUrl } from "@/lib/sanitize";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
@@ -392,6 +393,7 @@ const Configuracoes = () => {
               <TabsTrigger value="pilares" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><LayoutGrid className="h-3.5 w-3.5 shrink-0" /><span className="hidden sm:inline">Pilares & Hábitos</span></TabsTrigger>
               {!isManaging && <TabsTrigger value="visual" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Paintbrush className="h-3.5 w-3.5 shrink-0" /><span className="hidden sm:inline">Visual</span></TabsTrigger>}
               {!isManaging && <TabsTrigger value="integracoes" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Plug className="h-3.5 w-3.5 shrink-0" /><span className="hidden sm:inline">Integrações</span></TabsTrigger>}
+              {!isManaging && <TabsTrigger value="equipe" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Users className="h-3.5 w-3.5 shrink-0" /><span className="hidden sm:inline">Equipe</span></TabsTrigger>}
               {!isManaging && <TabsTrigger value="seguranca" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Shield className="h-3.5 w-3.5 shrink-0" /><span className="hidden sm:inline">Segurança</span></TabsTrigger>}
             </TabsList>
           </div>
@@ -768,6 +770,14 @@ const Configuracoes = () => {
                     </div>
                   );
                 })()}
+              </div>
+            </TabsContent>
+            )}
+
+            {!isManaging && (
+            <TabsContent value="equipe">
+              <div className="max-w-2xl">
+                <SettingsEquipe />
               </div>
             </TabsContent>
             )}
