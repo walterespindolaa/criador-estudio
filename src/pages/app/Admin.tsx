@@ -5,14 +5,17 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Plus,
   Search,
   Shield,
   Users,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -20,11 +23,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAdmin, type AdminProfile } from "@/hooks/useAdmin";
 import { AdminGuard } from "@/components/AdminGuard";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
+import { CopyButton } from "@/components/shared/CopyButton";
+import { supabase } from "@/integrations/supabase/client";
 
 const PAGE_SIZE = 20;
 
@@ -68,6 +80,35 @@ const AdminInner = () => {
   const [planFilter, setPlanFilter] = useState("todos");
   const [roleFilter, setRoleFilter] = useState("todos");
   const [page, setPage] = useState(0);
+  const [openCreate, setOpenCreate] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", phone: "", plan: "trial" });
+  const [creating, setCreating] = useState(false);
+  const [result, setResult] = useState<null | { email: string; tempPassword: string; loginUrl: string }>(null);
+  const queryClient = useQueryClient();
+
+  const handleCreate = async () => {
+    if (!form.name.trim() || !form.email.trim()) {
+      toast.error("Nome e e-mail são obrigatórios");
+      return;
+    }
+    setCreating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-create-user", { body: form });
+      if (error || (data as { error?: string })?.error) {
+        throw new Error((data as { error?: string })?.error ?? "create_failed");
+      }
+      setResult({ email: data.email, tempPassword: data.tempPassword, loginUrl: data.loginUrl });
+      setOpenCreate(false);
+      setForm({ name: "", email: "", phone: "", plan: "trial" });
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+      toast.success("Usuário criado e e-mail enviado!");
+    } catch {
+      toast.error("Erro ao criar usuário.");
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const { users, totalCount, stats, isLoading, updateUserRole, updateUserPlan } = useAdmin({
     page,
@@ -114,7 +155,7 @@ const AdminInner = () => {
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center shadow-sm shrink-0">
             <Shield className="h-5 w-5 text-white" strokeWidth={1.75} />
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">
               Painel Admin
             </h1>
@@ -122,6 +163,9 @@ const AdminInner = () => {
               Gerencie usuários e acompanhe o crescimento.
             </p>
           </div>
+          <Button onClick={() => setOpenCreate(true)} className="shrink-0">
+            <Plus className="h-4 w-4 mr-1.5" /> Adicionar usuário
+          </Button>
         </div>
 
         {/* Metric cards */}
@@ -288,6 +332,102 @@ const AdminInner = () => {
             </div>
           )}
         </div>
+
+        <Dialog open={openCreate} onOpenChange={(o) => !creating && setOpenCreate(o)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="font-display">Adicionar usuário</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs">Nome</Label>
+                <Input
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="Nome completo"
+                  className="rounded-xl"
+                  disabled={creating}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs">E-mail</Label>
+                <Input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  placeholder="email@exemplo.com"
+                  className="rounded-xl"
+                  disabled={creating}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs">Telefone (opcional)</Label>
+                <Input
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  placeholder="+55 47 99999-9999"
+                  className="rounded-xl"
+                  disabled={creating}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs">Plano</Label>
+                <Select
+                  value={form.plan}
+                  onValueChange={(v) => setForm({ ...form, plan: v })}
+                  disabled={creating}
+                >
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="free">Free</SelectItem>
+                    <SelectItem value="trial">Trial</SelectItem>
+                    <SelectItem value="pro">Pro</SelectItem>
+                    <SelectItem value="premium">Premium</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => setOpenCreate(false)} disabled={creating}>
+                Cancelar
+              </Button>
+              <Button onClick={handleCreate} disabled={creating}>
+                {creating ? "Criando..." : "Criar usuário"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!result} onOpenChange={(o) => !o && setResult(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="font-display">Usuário criado</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground font-body">
+              Credenciais provisórias (mostradas só uma vez). Já foram enviadas por e-mail.
+            </p>
+            <div className="space-y-2 mt-2">
+              {result && [
+                { label: "E-mail", value: result.email },
+                { label: "Senha provisória", value: result.tempPassword },
+                { label: "Link de acesso", value: result.loginUrl },
+              ].map((r) => (
+                <div key={r.label} className="flex items-center justify-between gap-2 rounded-xl border border-border bg-muted/30 px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{r.label}</p>
+                    <p className="text-sm font-body text-foreground truncate">{r.value}</p>
+                  </div>
+                  <CopyButton text={r.value} />
+                </div>
+              ))}
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setResult(null)}>Fechar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </motion.div>
     </div>
   );
