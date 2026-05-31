@@ -17,6 +17,7 @@ import { CriaAIPanel } from "@/components/ai/CriaAIPanel";
 import { TrialBanner } from "@/components/TrialBanner";
 import { StorageWarningBanner } from "@/components/StorageWarningBanner";
 import { ManagingBanner } from "@/components/accounts/ManagingBanner";
+import { AccountSwitcher } from "@/components/accounts/AccountSwitcher";
 import { useLastSeen } from "@/hooks/useLastSeen";
 
 const AppLayout = () => {
@@ -74,6 +75,7 @@ const AppLayout = () => {
                 </h1>
               </NavLink>
               <div className="flex items-center gap-1.5">
+                <AccountSwitcher compact />
                 <PlanBadge />
                 <NotificationsBell />
                 <NavLink to="/app/configuracoes" className="p-2 hover:bg-accent/60 rounded-xl transition-colors">

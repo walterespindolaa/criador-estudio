@@ -13,6 +13,7 @@ type Ctx = {
   isManaging: boolean;
   managedAccounts: ManagedAccount[];
   hasManagedAccounts: boolean;
+  accountsLoading: boolean;
   setActiveAccount: (ownerId: string | null) => void; // null => volta pra própria conta
 };
 
@@ -33,7 +34,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     }
   }, [user?.id, queryClient]);
 
-  const { data: managedAccounts = [] } = useQuery<ManagedAccount[]>({
+  const { data: managedAccounts = [], isLoading: accountsLoading } = useQuery<ManagedAccount[]>({
     queryKey: ["managed-accounts", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
@@ -63,8 +64,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     isManaging: !!activeAccountId && activeAccountId !== user?.id,
     managedAccounts,
     hasManagedAccounts: managedAccounts.length > 0,
+    accountsLoading,
     setActiveAccount,
-  }), [effectiveId, activeAccountId, user?.id, managedAccounts]);
+  }), [effectiveId, activeAccountId, user?.id, managedAccounts, accountsLoading]);
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
 }

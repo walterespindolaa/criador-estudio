@@ -6,7 +6,7 @@ import {
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export function AccountSwitcher() {
+export function AccountSwitcher({ compact = false }: { compact?: boolean }) {
   const { managedAccounts, hasManagedAccounts, activeAccountId, isManaging, setActiveAccount } = useActiveAccount();
   const navigate = useNavigate();
   if (!hasManagedAccounts) return null;
@@ -16,12 +16,23 @@ export function AccountSwitcher() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="w-full flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm font-body hover:bg-accent/50 transition-colors">
+      <DropdownMenuTrigger
+        aria-label={compact ? `Trocar de conta (${label})` : undefined}
+        className={
+          compact
+            ? "h-9 w-9 flex items-center justify-center rounded-xl border border-border bg-card hover:bg-accent/50 transition-colors"
+            : "w-full flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm font-body hover:bg-accent/50 transition-colors"
+        }
+      >
         {isManaging ? <Users className="h-4 w-4 text-primary shrink-0" /> : <User className="h-4 w-4 text-muted-foreground shrink-0" />}
-        <span className="truncate flex-1 text-left">{label}</span>
-        <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        {!compact && (
+          <>
+            <span className="truncate flex-1 text-left">{label}</span>
+            <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          </>
+        )}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-56">
+      <DropdownMenuContent align={compact ? "end" : "start"} className="w-56">
         <DropdownMenuLabel className="text-xs">Trocar de conta</DropdownMenuLabel>
         <DropdownMenuItem onClick={() => setActiveAccount(null)}>
           <User className="h-4 w-4 mr-2" /> Minha conta

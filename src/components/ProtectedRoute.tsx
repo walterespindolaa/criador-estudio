@@ -1,12 +1,14 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { ReactNode } from "react";
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const { status, canAccess } = useSubscription();
+  const { hasManagedAccounts, accountsLoading } = useActiveAccount();
 
   if (authLoading) return <LoadingScreen />;
 
@@ -14,7 +16,10 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
   if (status === "loading") return <LoadingScreen />;
 
-  if (!canAccess) return <Navigate to="/app/assinar" replace />;
+  if (!canAccess) {
+    if (accountsLoading) return <LoadingScreen />;          // ainda não sabe se é gerente
+    if (!hasManagedAccounts) return <Navigate to="/app/assinar" replace />;
+  }
 
   return <>{children}</>;
 }
