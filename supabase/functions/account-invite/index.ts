@@ -97,9 +97,18 @@ serve(async (req) => {
       accepted_at: new Date().toISOString(),
     }, { onConflict: "owner_id,member_email" });
 
-    // Se for usuário novo (recém-criado pelo invite), força definição de senha no 1º acesso.
+    // Se for usuário novo (recém-criado pelo invite), marca como social media
+    // e pula o fluxo de criadora (onboarding, trial, plano).
     if (!existing) {
-      await svc.from("profiles").update({ must_change_password: true }).eq("id", targetUser.id);
+      await svc.from("profiles").update({
+        account_type: "manager",
+        onboarding_completed: true,
+        must_change_password: true,
+        trial_started_at: null,
+        trial_ends_at: null,
+        plan: "manager",
+        subscription_status: null,
+      }).eq("id", targetUser.id);
     }
 
     const html = emailHtml({
