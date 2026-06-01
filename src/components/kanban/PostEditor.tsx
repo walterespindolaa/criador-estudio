@@ -104,6 +104,7 @@ interface DriveRef {
   file_type: string | null;
   thumbnail_url: string | null;
   view_url: string | null;
+  provider?: string | null;
 }
 
 const sanitizeStoragePath = (name: string): string => {
@@ -241,7 +242,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
   const fetchDriveMedia = useCallback(async (postId: string) => {
     const { data } = await supabase
       .from("external_media_refs")
-      .select("id, external_file_id, file_name, file_type, thumbnail_url, view_url")
+      .select("id, external_file_id, file_name, file_type, thumbnail_url, view_url, provider")
       .eq("post_id", postId)
       .order("created_at");
     setDriveMedia((data as DriveRef[]) || []);
@@ -437,7 +438,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
               view_url: publicUrl,
               external_file_id: path,
             })
-            .select("id, external_file_id, file_name, file_type, thumbnail_url, view_url")
+            .select("id, external_file_id, file_name, file_type, thumbnail_url, view_url, provider")
             .single();
           if (insErr || !inserted) {
             console.error("[upload] insert error", insErr);
@@ -509,7 +510,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
         await pickAndSave(undefined);
         const { data } = await supabase
           .from("external_media_refs")
-          .select("id, external_file_id, file_name, file_type, thumbnail_url, view_url")
+          .select("id, external_file_id, file_name, file_type, thumbnail_url, view_url, provider")
           .eq("user_id", userId)
           .is("post_id", null)
           .gte("created_at", pickStartedAt)
@@ -1392,12 +1393,21 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                 const primary = mediaList[0];
                                 const fileId = primary.external_file_id || primary.id;
                                 const isVideo = primary.file_type?.startsWith("video/");
+                                const isDeviceVideo = isVideo && primary.provider === "device";
                                 const isSupabaseUpload = !!primary.thumbnail_url
                                   && !primary.thumbnail_url.includes("drive.google")
                                   && !primary.thumbnail_url.includes("lh3.google");
                                 const driveImgSrc = `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w600`;
                                 const imgSrc = primary.thumbnail_url || primary.view_url || driveImgSrc;
-                                return isVideo ? (
+                                return isDeviceVideo ? (
+                                  <video
+                                    src={primary.view_url || primary.thumbnail_url || ""}
+                                    controls
+                                    preload="metadata"
+                                    playsInline
+                                    className="w-full h-full object-cover bg-black"
+                                  />
+                                ) : isVideo ? (
                                   <a
                                     href={`https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`}
                                     target="_blank"
@@ -1463,6 +1473,16 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                 </button>
                               </div>
                             </div>
+                            {mediaList[0].file_type?.startsWith("video/") && mediaList[0].provider === "google_drive" && (
+                              <a
+                                href={`https://drive.google.com/file/d/${encodeURIComponent(mediaList[0].external_file_id || mediaList[0].id)}/view`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs text-primary font-body hover:underline mt-2 px-3"
+                              >
+                                <ExternalLink className="h-3 w-3" /> Abrir vídeo no Google Drive
+                              </a>
+                            )}
                           </div>
                         ) : (
                           <div className="flex flex-col gap-3 p-3">

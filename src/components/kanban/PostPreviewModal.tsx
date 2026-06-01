@@ -37,6 +37,13 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
   const [carouselIdx, setCarouselIdx] = useState(0);
 
   const activeMediaUrl = mediaUrl || media || thumbnail || coverImage;
+  // Vídeos do Drive não tocam em <video src> (cookie/CORS) → renderiza como imagem (poster lh3).
+  const isDriveVideo = mediaType === "video" && !!activeMediaUrl && activeMediaUrl.includes("drive.google.com");
+  const driveVideoIdMatch = isDriveVideo ? activeMediaUrl!.match(/(?:\/d\/|[?&]id=)([a-zA-Z0-9_-]+)/) : null;
+  const drivePosterUrl = driveVideoIdMatch
+    ? `https://lh3.googleusercontent.com/d/${driveVideoIdMatch[1]}=w800`
+    : null;
+  const isPlayableVideo = mediaType === "video" && !isDriveVideo;
 
   useEffect(() => { if (open) setCarouselIdx(0); }, [open, format]);
 
@@ -118,7 +125,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
     return (
       <div className="relative w-full aspect-[4/5] overflow-hidden">
         {activeMediaUrl ? (
-          mediaType === "video" ? (
+          isPlayableVideo ? (
             <video
               src={activeMediaUrl}
               autoPlay
@@ -128,7 +135,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
               className="w-full h-full object-cover"
             />
           ) : (
-            <img src={activeMediaUrl} alt="preview" className="w-full h-full object-cover" loading="lazy" />
+            <img src={drivePosterUrl || activeMediaUrl} alt="preview" className="w-full h-full object-cover" loading="lazy" />
           )
         ) : (
           <GradientPlaceholder>
@@ -150,7 +157,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
           style={{ aspectRatio: "9/16", borderRadius: 28, boxShadow: "0 20px 60px rgba(0,0,0,0.35)" }}>
           {/* Background media or gradient */}
           {activeMediaUrl ? (
-            mediaType === "video" ? (
+            isPlayableVideo ? (
               <video
                 src={activeMediaUrl}
                 autoPlay
@@ -160,7 +167,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
                 className="absolute inset-0 w-full h-full object-cover"
               />
             ) : (
-              <img src={activeMediaUrl} alt="preview" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+              <img src={drivePosterUrl || activeMediaUrl} alt="preview" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
             )
           ) : (
             <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)" }} />
@@ -311,7 +318,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
               <div className="p-3 bg-card">
                 <div className="relative rounded-xl overflow-hidden aspect-video mb-3">
                   {activeMediaUrl ? (
-                    mediaType === "video" ? (
+                    isPlayableVideo ? (
                       <video
                         src={activeMediaUrl}
                         autoPlay
@@ -321,7 +328,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <img src={activeMediaUrl} alt="thumbnail" className="w-full h-full object-cover" loading="lazy" />
+                      <img src={drivePosterUrl || activeMediaUrl} alt="thumbnail" className="w-full h-full object-cover" loading="lazy" />
                     )
                   ) : (
                     <GradientPlaceholder>

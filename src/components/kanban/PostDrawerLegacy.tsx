@@ -129,7 +129,7 @@ export function PostDrawerLegacy({ open, onOpenChange, post, pillars, userId, on
   const { exportPdf } = usePdfExport();
 
   // Drive media refs
-  interface DriveRef { id: string; external_file_id?: string | null; file_name: string; file_type: string | null; thumbnail_url: string | null; view_url: string | null; }
+  interface DriveRef { id: string; external_file_id?: string | null; file_name: string; file_type: string | null; thumbnail_url: string | null; view_url: string | null; provider?: string | null; }
   const [driveMedia, setDriveMedia] = useState<DriveRef[]>([]);
 
   // Pending drive files for new posts (no post_id yet)
@@ -161,7 +161,7 @@ export function PostDrawerLegacy({ open, onOpenChange, post, pillars, userId, on
   );
 
   const fetchDriveMedia = useCallback(async (postId: string) => {
-    const { data } = await supabase.from("external_media_refs").select("id, external_file_id, file_name, file_type, thumbnail_url, view_url").eq("post_id", postId).order("created_at");
+    const { data } = await supabase.from("external_media_refs").select("id, external_file_id, file_name, file_type, thumbnail_url, view_url, provider").eq("post_id", postId).order("created_at");
     setDriveMedia((data as DriveRef[]) || []);
   }, []);
 
@@ -247,7 +247,7 @@ export function PostDrawerLegacy({ open, onOpenChange, post, pillars, userId, on
         await pickAndSave(undefined);
         const { data } = await supabase
           .from("external_media_refs")
-          .select("id, external_file_id, file_name, file_type, thumbnail_url, view_url")
+          .select("id, external_file_id, file_name, file_type, thumbnail_url, view_url, provider")
           .eq("user_id", userId)
           .is("post_id", null)
           .gte("created_at", pickStartedAt)
@@ -511,8 +511,17 @@ export function PostDrawerLegacy({ open, onOpenChange, post, pillars, userId, on
                           const primary = mediaList[0];
                           const fileId = primary.external_file_id || primary.id;
                           const isVideo = primary.file_type?.startsWith("video/");
+                          const isDeviceVideo = isVideo && primary.provider === "device";
                           const imgSrc = `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w600`;
-                          return isVideo ? (
+                          return isDeviceVideo ? (
+                            <video
+                              src={primary.view_url || primary.thumbnail_url || ""}
+                              controls
+                              preload="metadata"
+                              playsInline
+                              className="w-full h-full object-cover bg-black"
+                            />
+                          ) : isVideo ? (
                             <a
                               href={`https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`}
                               target="_blank"
@@ -563,6 +572,16 @@ export function PostDrawerLegacy({ open, onOpenChange, post, pillars, userId, on
                           </button>
                         </div>
                       </div>
+                      {mediaList[0].file_type?.startsWith("video/") && mediaList[0].provider === "google_drive" && (
+                        <a
+                          href={`https://drive.google.com/file/d/${encodeURIComponent(mediaList[0].external_file_id || mediaList[0].id)}/view`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-primary font-body hover:underline mt-2 px-3"
+                        >
+                          <ExternalLink className="h-3 w-3" /> Abrir vídeo no Google Drive
+                        </a>
+                      )}
                     </div>
                   ) : (
                     <button
