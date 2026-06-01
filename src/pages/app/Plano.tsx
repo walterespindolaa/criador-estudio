@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { useProfile } from "@/hooks/useProfile";
 import { usePosts, type Post } from "@/hooks/usePosts";
 import { usePillars } from "@/hooks/usePillars";
@@ -71,6 +72,7 @@ type ReflectionFormState = {
 
 const Plano = () => {
   const { user } = useAuth();
+  const { activeAccountId } = useActiveAccount();
   const { profile } = useProfile();
   const { posts } = usePosts();
   const { pillars } = usePillars();
@@ -391,7 +393,7 @@ const Plano = () => {
         onOpenChange={setDrawerOpen}
         post={selectedPost}
         pillars={pillars}
-        userId={user?.id || ""}
+        userId={activeAccountId || user?.id || ""}
         onSaved={() => { /* React Query invalidations handle refresh */ }}
       />
     </div>

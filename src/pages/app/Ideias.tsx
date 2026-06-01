@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { toast } from "sonner";
 import { PostEditor } from "@/components/kanban/PostEditor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -75,6 +76,7 @@ function parseSuggestions(result: unknown): AISuggestion[] {
 
 const Ideias = () => {
   const { user } = useAuth();
+  const { activeAccountId } = useActiveAccount();
   const { ideas, createIdea, updateIdea, deleteIdea, promoteToPost, isLoading: ideasLoading } = useIdeas();
   const { pillars } = usePillars();
   const { profile } = useProfile();
@@ -658,7 +660,7 @@ const Ideias = () => {
           onOpenChange={setPostDrawerOpen}
           post={promotedPost}
           pillars={pillars}
-          userId={user?.id || ""}
+          userId={activeAccountId || user?.id || ""}
           onSaved={() => { /* React Query invalidations handle refresh */ }}
         />
       )}

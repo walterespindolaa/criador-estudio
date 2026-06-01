@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { supabase } from "@/integrations/supabase/client";
 import { PostEditor } from "@/components/kanban/PostEditor";
 import { FORMAT_LABELS, STATUS_OPTIONS } from "@/lib/constants";
@@ -83,6 +84,7 @@ type ContentBlocks = { tema?: string; roteiro?: string; midia?: string; legenda?
 
 const Criando = () => {
   const { user } = useAuth();
+  const { activeAccountId } = useActiveAccount();
   const { posts, updatePost, deletePost, isLoading: postsLoading } = usePosts();
   const { pillars } = usePillars();
   const { tasks } = useTasks();
@@ -386,7 +388,7 @@ const Criando = () => {
           })}
         </div>
       </motion.div>
-      <PostEditor open={drawerOpen} onOpenChange={setDrawerOpen} post={selectedPost} pillars={pillars} userId={user?.id || ""} onSaved={() => { /* invalidations */ }} />
+      <PostEditor open={drawerOpen} onOpenChange={setDrawerOpen} post={selectedPost} pillars={pillars} userId={activeAccountId || user?.id || ""} onSaved={() => { /* invalidations */ }} />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
