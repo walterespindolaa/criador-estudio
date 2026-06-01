@@ -14,7 +14,8 @@ import { SettingsManagerDrawer } from "@/components/accounts/SettingsManagerDraw
 import { ClientNotesDrawer } from "@/components/accounts/ClientNotesDrawer";
 import { PartnerApplyDrawer } from "@/components/accounts/PartnerApplyDrawer";
 import { usePartner } from "@/hooks/usePartner";
-import { Handshake, Check, Clock } from "lucide-react";
+import { CopyButton } from "@/components/shared/CopyButton";
+import { Handshake, Check, Clock, Ticket } from "lucide-react";
 
 function initial(name: string | null | undefined) {
   if (!name) return "?";
@@ -38,7 +39,7 @@ export function ManagerHome() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notesAccount, setNotesAccount] = useState<ManagedAccount | null>(null);
   const [partnerOpen, setPartnerOpen] = useState(false);
-  const { isPartner, isPending: isPartnerPending } = usePartner();
+  const { partner, isPartner, isPending: isPartnerPending } = usePartner();
 
   // Upload de avatar inline (sem abrir o drawer)
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -272,7 +273,7 @@ export function ManagerHome() {
 
           {/* Programa de parceiras */}
           {isPartner ? (
-            <section className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-card px-5 py-5">
+            <section className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-card px-5 py-5 space-y-4">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
                   <Handshake className="h-4 w-4 text-primary" />
@@ -282,13 +283,33 @@ export function ManagerHome() {
                     Você é parceira <span aria-hidden>🎉</span>
                   </p>
                   <p className="text-xs text-muted-foreground font-body mt-0.5">
-                    Suas indicações chegam em breve.
+                    Compartilhe seu cupom com seus clientes.
                   </p>
                 </div>
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/15 text-primary text-[11px] font-body font-semibold shrink-0">
                   <Check className="h-3 w-3" /> Aprovada
                 </span>
               </div>
+
+              {partner?.coupon_code && (
+                <div className="rounded-xl border border-primary/30 bg-background/60 backdrop-blur-sm px-4 py-3 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+                    <Ticket className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                      Seu cupom
+                      {partner.coupon_type === "client_discount" && partner.coupon_discount_pct
+                        ? ` · ${partner.coupon_discount_pct}% off na 1ª fatura`
+                        : null}
+                    </p>
+                    <p className="text-lg font-display font-extrabold text-foreground tracking-wider truncate">
+                      {partner.coupon_code}
+                    </p>
+                  </div>
+                  <CopyButton text={partner.coupon_code} />
+                </div>
+              )}
             </section>
           ) : isPartnerPending ? (
             <section className="rounded-2xl border border-border bg-card/50 px-5 py-4 flex items-center gap-3">

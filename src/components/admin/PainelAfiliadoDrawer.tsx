@@ -1,19 +1,24 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { CopyButton } from "@/components/shared/CopyButton";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Check, X, MessageCircle, Loader2, Users, Coins, TrendingUp } from "lucide-react";
+import { Check, X, MessageCircle, Loader2, Users, Coins, TrendingUp, Ticket, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import type { Partner } from "@/hooks/usePartner";
+import type { Partner, PartnerCouponType } from "@/hooks/usePartner";
 
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from as unknown as AnyTable;
@@ -40,7 +45,19 @@ const formatPhone = (phone: string) => {
 export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [confirmAction, setConfirmAction] = useState<"approve" | "reject" | null>(null);
+
+  const [couponType, setCouponType] = useState<PartnerCouponType>("client_discount");
+  const [discountPct, setDiscountPct] = useState<number>(20);
+  const [rejectOpen, setRejectOpen] = useState(false);
+
+  // Reset form ao trocar de parceira ou fechar drawer
+  useEffect(() => {
+    if (open) {
+      setCouponType("client_discount");
+      setDiscountPct(20);
+      setRejectOpen(false);
+    }
+  }, [open, partner?.id]);
 
   // Contagem de contas gerenciadas (account_members onde member_id = partner.user_id e status=active)
   const { data: managedCount = 0 } = useQuery<number>({
@@ -57,30 +74,58 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
     },
   });
 
-  const decide = useMutation({
-    mutationFn: async (action: "approve" | "reject") => {
+  const approve = useMutation({
+    mutationFn: async () => {
       if (!partner) throw new Error("No partner");
-      const patch =
-        action === "approve"
-          ? { status: "approved", approved_at: new Date().toISOString(), approved_by: user?.id ?? null }
-          : { status: "rejected" };
-      const { error } = await sbFrom("partners").update(patch).eq("id", partner.id);
-      if (error) throw error;
-      // TODO A.2: gerar cupom Stripe quando action === "approve"
+      const body: Record<string, unknown> = {
+        partner_id: partner.id,
+        coupon_type: couponType,
+      };
+      if (couponType === "client_discount") {
+        body.discount_pct = discountPct;
+      }
+      const { data, error } = await supabase.functions.invoke("partner-approve", { body });
+      if (error || (data as { error?: string })?.error) {
+        throw new Error((data as { error?: string; message?: string })?.message
+          ?? (data as { error?: string })?.error
+          ?? error?.message
+          ?? "approve_failed");
+      }
+      return data as { ok: true; coupon_code: string };
     },
-    onSuccess: (_data, action) => {
-      toast.success(action === "approve" ? "Parceira aprovada!" : "Solicitação recusada.");
+    onSuccess: (data) => {
+      toast.success(`Cupom gerado: ${data.coupon_code}`);
       queryClient.invalidateQueries({ queryKey: ["admin-partners"] });
       queryClient.invalidateQueries({ queryKey: ["partner", partner?.user_id] });
       onOpenChange(false);
     },
-    onError: () => toast.error("Erro ao processar a decisão."),
+    onError: (err) => {
+      const msg = err instanceof Error ? err.message : "Erro ao aprovar";
+      toast.error(`Não foi possível aprovar: ${msg}`);
+    },
+  });
+
+  const reject = useMutation({
+    mutationFn: async () => {
+      if (!partner) throw new Error("No partner");
+      const { error } = await sbFrom("partners").update({ status: "rejected" }).eq("id", partner.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Solicitação recusada.");
+      queryClient.invalidateQueries({ queryKey: ["admin-partners"] });
+      queryClient.invalidateQueries({ queryKey: ["partner", partner?.user_id] });
+      onOpenChange(false);
+    },
+    onError: () => toast.error("Erro ao recusar a solicitação."),
   });
 
   if (!partner) return null;
 
   const phoneDigits = partner.phone.replace(/\D/g, "");
   const isPending = partner.status === "pending";
+  const isApproved = partner.status === "approved";
+  const busy = approve.isPending || reject.isPending;
 
   return (
     <>
@@ -200,23 +245,86 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
               </div>
             </section>
 
-            {/* Ações */}
+            {/* Cupom (se aprovada) */}
+            {isApproved && partner.coupon_code && (
+              <section className="space-y-2">
+                <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Cupom</h3>
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
+                    <Ticket className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                      {partner.coupon_type === "client_discount"
+                        ? `Desconto ${partner.coupon_discount_pct ?? 0}% (1ª fatura)`
+                        : "Somente rastreio"}
+                    </p>
+                    <p className="text-base font-display font-extrabold text-foreground tracking-wider truncate">
+                      {partner.coupon_code}
+                    </p>
+                  </div>
+                  <CopyButton text={partner.coupon_code} />
+                </div>
+              </section>
+            )}
+
+            {/* Decisão (apenas pendentes) */}
             {isPending && (
-              <section className="space-y-2 pt-2 border-t border-border">
-                <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Decisão</h3>
-                <div className="flex gap-2">
+              <section className="space-y-3 pt-2 border-t border-border">
+                <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Aprovar parceira</h3>
+
+                <div className="space-y-1.5">
+                  <Label className="font-body text-xs">Tipo de cupom</Label>
+                  <Select value={couponType} onValueChange={(v) => setCouponType(v as PartnerCouponType)}>
+                    <SelectTrigger className="rounded-xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="client_discount">Cupom com desconto pro cliente</SelectItem>
+                      <SelectItem value="tracking">Só rastreio, sem desconto</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {couponType === "client_discount" && (
+                  <div className="space-y-1.5">
+                    <Label className="font-body text-xs">% de desconto (1ª fatura)</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={discountPct}
+                      onChange={(e) => {
+                        const n = Number(e.target.value);
+                        if (Number.isFinite(n)) setDiscountPct(n);
+                      }}
+                      className="rounded-xl"
+                      placeholder="20"
+                    />
+                    <p className="text-[11px] text-muted-foreground font-body">
+                      Valor entre 1 e 100. O cupom é aplicado só na primeira cobrança do cliente.
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-1">
                   <Button
-                    onClick={() => setConfirmAction("approve")}
-                    disabled={decide.isPending}
+                    onClick={() => approve.mutate()}
+                    disabled={busy || (couponType === "client_discount" && (discountPct < 1 || discountPct > 100))}
                     className="flex-1"
                   >
-                    <Check className="h-4 w-4 mr-1.5" /> Aprovar
+                    {approve.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                    ) : (
+                      <Sparkles className="h-4 w-4 mr-1.5" />
+                    )}
+                    Aprovar e gerar cupom
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={() => setConfirmAction("reject")}
-                    disabled={decide.isPending}
-                    className="flex-1 border-destructive/40 text-destructive hover:bg-destructive/10"
+                    onClick={() => setRejectOpen(true)}
+                    disabled={busy}
+                    className="border-destructive/40 text-destructive hover:bg-destructive/10"
                   >
                     <X className="h-4 w-4 mr-1.5" /> Recusar
                   </Button>
@@ -227,7 +335,10 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
             {!isPending && (
               <section className="rounded-xl bg-muted/30 px-3 py-2">
                 <p className="text-xs font-body text-muted-foreground">
-                  Status atual: <b className="text-foreground">{partner.status === "approved" ? "Aprovada" : "Recusada"}</b>
+                  Status atual:{" "}
+                  <b className="text-foreground">
+                    {partner.status === "approved" ? "Aprovada" : "Recusada"}
+                  </b>
                 </p>
               </section>
             )}
@@ -235,28 +346,22 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
         </SheetContent>
       </Sheet>
 
-      <AlertDialog open={!!confirmAction} onOpenChange={(o) => !o && setConfirmAction(null)}>
+      <AlertDialog open={rejectOpen} onOpenChange={(o) => !reject.isPending && setRejectOpen(o)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-display">
-              {confirmAction === "approve" ? "Aprovar parceira?" : "Recusar solicitação?"}
-            </AlertDialogTitle>
+            <AlertDialogTitle className="font-display">Recusar solicitação?</AlertDialogTitle>
             <AlertDialogDescription>
-              {confirmAction === "approve"
-                ? `${partner.full_name} entra no programa de parceiras e recebe acesso ao cupom (geração do cupom Stripe será feita na Fase A.2).`
-                : `A solicitação de ${partner.full_name} será marcada como recusada. Ela pode reaplicar depois.`}
+              A solicitação de {partner.full_name} será marcada como recusada. Ela pode reaplicar depois.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={decide.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={reject.isPending}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                if (confirmAction) decide.mutate(confirmAction);
-                setConfirmAction(null);
-              }}
-              disabled={decide.isPending}
+              onClick={() => { reject.mutate(); setRejectOpen(false); }}
+              disabled={reject.isPending}
             >
-              {decide.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar"}
+              {reject.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 mr-1.5" />}
+              Confirmar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

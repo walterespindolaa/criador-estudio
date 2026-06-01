@@ -5,6 +5,8 @@ import { toast } from "sonner";
 
 export type PartnerStatus = "pending" | "approved" | "rejected";
 
+export type PartnerCouponType = "tracking" | "client_discount";
+
 export type Partner = {
   id: string;
   user_id: string;
@@ -19,6 +21,11 @@ export type Partner = {
   created_at: string;
   approved_at: string | null;
   approved_by: string | null;
+  coupon_type: PartnerCouponType | null;
+  coupon_discount_pct: number | null;
+  coupon_code: string | null;
+  stripe_coupon_id: string | null;
+  stripe_promotion_code_id: string | null;
 };
 
 export type PartnerRequestInput = {
