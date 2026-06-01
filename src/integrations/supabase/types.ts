@@ -1430,6 +1430,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          access_expires_at: string | null
           account_type: string
           ai_ideas_reset_at: string | null
           ai_ideas_used_month: number | null
@@ -1472,6 +1473,7 @@ export type Database = {
           youtube_handle: string | null
         }
         Insert: {
+          access_expires_at?: string | null
           account_type?: string
           ai_ideas_reset_at?: string | null
           ai_ideas_used_month?: number | null
@@ -1514,6 +1516,7 @@ export type Database = {
           youtube_handle?: string | null
         }
         Update: {
+          access_expires_at?: string | null
           account_type?: string
           ai_ideas_reset_at?: string | null
           ai_ideas_used_month?: number | null
