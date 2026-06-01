@@ -9,3 +9,5 @@ project_id = "exuxlwdnkgmhtnwoyvwo"
     verify_jwt = true
   [functions.account-invite]
     verify_jwt = true
+  [functions.partner-approve]
+    verify_jwt = true
