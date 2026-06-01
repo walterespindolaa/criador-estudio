@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Handshake,
   Plus,
   Search,
   Shield,
@@ -36,6 +37,8 @@ import { useAdmin, type AdminProfile } from "@/hooks/useAdmin";
 import { AdminGuard } from "@/components/AdminGuard";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
 import { CopyButton } from "@/components/shared/CopyButton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AdminPartners } from "@/components/admin/AdminPartners";
 import { supabase } from "@/integrations/supabase/client";
 
 const PAGE_SIZE = 20;
@@ -168,6 +171,17 @@ const AdminInner = () => {
           </Button>
         </div>
 
+        <Tabs defaultValue="usuarios" className="w-full">
+          <TabsList className="inline-flex h-auto bg-card border border-border rounded-2xl p-1.5 gap-1 mb-6">
+            <TabsTrigger value="usuarios" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              <Users className="h-3.5 w-3.5 shrink-0" /> Usuários
+            </TabsTrigger>
+            <TabsTrigger value="parceiros" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              <Handshake className="h-3.5 w-3.5 shrink-0" /> Parceiros
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="usuarios" className="space-y-0">
         {/* Metric cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
           <StatCard
@@ -332,6 +346,12 @@ const AdminInner = () => {
             </div>
           )}
         </div>
+          </TabsContent>
+
+          <TabsContent value="parceiros">
+            <AdminPartners />
+          </TabsContent>
+        </Tabs>
 
         <Dialog open={openCreate} onOpenChange={(o) => !creating && setOpenCreate(o)}>
           <DialogContent className="sm:max-w-md">

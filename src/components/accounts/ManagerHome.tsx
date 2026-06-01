@@ -12,6 +12,9 @@ import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { validateUpload } from "@/lib/upload-validation";
 import { SettingsManagerDrawer } from "@/components/accounts/SettingsManagerDrawer";
 import { ClientNotesDrawer } from "@/components/accounts/ClientNotesDrawer";
+import { PartnerApplyDrawer } from "@/components/accounts/PartnerApplyDrawer";
+import { usePartner } from "@/hooks/usePartner";
+import { Handshake, Check, Clock } from "lucide-react";
 
 function initial(name: string | null | undefined) {
   if (!name) return "?";
@@ -34,6 +37,8 @@ export function ManagerHome() {
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notesAccount, setNotesAccount] = useState<ManagedAccount | null>(null);
+  const [partnerOpen, setPartnerOpen] = useState(false);
+  const { isPartner, isPending: isPartnerPending } = usePartner();
 
   // Upload de avatar inline (sem abrir o drawer)
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -242,7 +247,7 @@ export function ManagerHome() {
           {/* TODO Parceiros: card "Minha conta" (depende do fluxo de assinatura) */}
 
           {/* Upsell */}
-          <section className="rounded-2xl border border-border bg-card/50 px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+          <section className="rounded-2xl border border-border bg-card/50 px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-4">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
               <Sparkles className="h-4 w-4 text-primary" />
             </div>
@@ -263,6 +268,61 @@ export function ManagerHome() {
               Ver planos
             </Button>
           </section>
+
+          {/* Programa de parceiras */}
+          {isPartner ? (
+            <section className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-card px-5 py-5">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+                  <Handshake className="h-4 w-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-display font-semibold text-foreground flex items-center gap-2">
+                    Você é parceira <span aria-hidden>🎉</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground font-body mt-0.5">
+                    Suas indicações chegam em breve.
+                  </p>
+                </div>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/15 text-primary text-[11px] font-body font-semibold shrink-0">
+                  <Check className="h-3 w-3" /> Aprovada
+                </span>
+              </div>
+            </section>
+          ) : isPartnerPending ? (
+            <section className="rounded-2xl border border-border bg-card/50 px-5 py-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+                <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-display font-semibold text-foreground">
+                  Solicitação em análise
+                </p>
+                <p className="text-xs text-muted-foreground font-body mt-0.5">
+                  Vamos te avisar assim que aprovarmos seu cadastro de parceira.
+                </p>
+              </div>
+            </section>
+          ) : (
+            <section className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-card px-5 py-5">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+                  <Handshake className="h-4 w-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-display font-semibold text-foreground">
+                    Sabia que você pode usar o cria e ganhar comissão por cada cliente?
+                  </p>
+                  <p className="text-xs text-muted-foreground font-body mt-0.5">
+                    Cadastre-se no programa de parceiras e receba um cupom exclusivo pra suas indicações.
+                  </p>
+                </div>
+                <Button onClick={() => setPartnerOpen(true)} className="shrink-0">
+                  Quero ser parceira
+                </Button>
+              </div>
+            </section>
+          )}
         </div>
       </main>
 
@@ -288,6 +348,8 @@ export function ManagerHome() {
         ownerId={notesAccount?.owner_id ?? null}
         clientName={notesAccount?.name ?? null}
       />
+
+      <PartnerApplyDrawer open={partnerOpen} onOpenChange={setPartnerOpen} />
     </div>
   );
 }

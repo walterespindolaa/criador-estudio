@@ -1,0 +1,157 @@
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Sparkles, Loader2 } from "lucide-react";
+import { useProfile } from "@/hooks/useProfile";
+import { usePartner } from "@/hooks/usePartner";
+
+const onlyDigits = (s: string) => s.replace(/\D/g, "");
+
+const schema = z.object({
+  full_name: z.string().trim().min(2, "Informe seu nome completo"),
+  cpf: z.string().refine((v) => onlyDigits(v).length === 11, "CPF inválido (11 dígitos)"),
+  phone: z.string().refine((v) => {
+    const d = onlyDigits(v);
+    return d.length >= 12 && d.length <= 13 && d.startsWith("55");
+  }, "Telefone deve incluir DDI 55 + DDD + número"),
+  pix_key: z.string().trim().min(3, "Informe sua chave Pix"),
+  accept: z.literal(true, { errorMap: () => ({ message: "Você precisa aceitar os termos" }) }),
+});
+
+type FormData = z.infer<typeof schema>;
+
+type Props = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+};
+
+export function PartnerApplyDrawer({ open, onOpenChange }: Props) {
+  const { profile } = useProfile();
+  const { requestPartner } = usePartner();
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<FormData>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      full_name: profile?.name ?? "",
+      cpf: "",
+      phone: "55",
+      pix_key: "",
+      accept: false as unknown as true,
+    },
+  });
+
+  // Atualiza o nome quando profile carrega
+  useEffect(() => {
+    if (open && profile?.name) setValue("full_name", profile.name);
+  }, [open, profile?.name, setValue]);
+
+  // Reset ao fechar
+  useEffect(() => {
+    if (!open) reset();
+  }, [open, reset]);
+
+  const accept = watch("accept");
+
+  const onSubmit = handleSubmit(async (data) => {
+    try {
+      await requestPartner.mutateAsync({
+        full_name: data.full_name.trim(),
+        cpf: onlyDigits(data.cpf),
+        phone: onlyDigits(data.phone),
+        pix_key: data.pix_key.trim(),
+      });
+      onOpenChange(false);
+    } catch {
+      // toast já é tratado no hook
+    }
+  });
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="font-display flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            Quero ser parceira
+          </SheetTitle>
+          <SheetDescription className="font-body text-sm">
+            Preencha seus dados pra solicitar entrada no programa. Após análise, você recebe um cupom exclusivo pra usar com seus clientes.
+          </SheetDescription>
+        </SheetHeader>
+
+        <form onSubmit={onSubmit} className="space-y-4 mt-6">
+          <div className="space-y-1.5">
+            <Label className="font-body text-xs">Nome completo</Label>
+            <Input {...register("full_name")} className="rounded-xl" placeholder="Seu nome completo" />
+            {errors.full_name && <p className="text-xs text-destructive">{errors.full_name.message}</p>}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="font-body text-xs">CPF</Label>
+            <Input
+              {...register("cpf")}
+              className="rounded-xl"
+              placeholder="000.000.000-00"
+              inputMode="numeric"
+            />
+            {errors.cpf && <p className="text-xs text-destructive">{errors.cpf.message}</p>}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="font-body text-xs">WhatsApp (com DDI 55 + DDD)</Label>
+            <Input
+              {...register("phone")}
+              className="rounded-xl"
+              placeholder="5547999999999"
+              inputMode="numeric"
+            />
+            {errors.phone && <p className="text-xs text-destructive">{errors.phone.message}</p>}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="font-body text-xs">Chave Pix</Label>
+            <Input {...register("pix_key")} className="rounded-xl" placeholder="CPF, e-mail, celular ou chave aleatória" />
+            {errors.pix_key && <p className="text-xs text-destructive">{errors.pix_key.message}</p>}
+          </div>
+
+          <div className="flex items-start gap-2 pt-2">
+            <Checkbox
+              id="accept-terms"
+              checked={accept}
+              onCheckedChange={(v) => setValue("accept", v === true as unknown as true, { shouldValidate: true })}
+              className="mt-0.5"
+            />
+            <Label htmlFor="accept-terms" className="text-xs font-body text-muted-foreground leading-relaxed cursor-pointer">
+              Li e aceito os <a href="/termos" target="_blank" rel="noreferrer" className="text-primary hover:underline">termos do programa de parceiras</a>.
+            </Label>
+          </div>
+          {errors.accept && <p className="text-xs text-destructive">{errors.accept.message}</p>}
+
+          <Button type="submit" disabled={isSubmitting || !accept} className="w-full mt-2">
+            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            Enviar solicitação
+          </Button>
+        </form>
+      </SheetContent>
+    </Sheet>
+  );
+}
