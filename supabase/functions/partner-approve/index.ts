@@ -33,7 +33,7 @@ function randomSuffix(): string {
 }
 
 async function isCodeAvailable(svc: SupabaseClient, code: string): Promise<boolean> {
-  const sbFrom = svc.from as unknown as AnyTable;
+  const sbFrom = svc.from.bind(svc) as unknown as AnyTable;
   const { data, error } = await sbFrom("partners").select("id").eq("coupon_code", code).maybeSingle();
   if (error) return false; // se a query falha, assume não disponível (força retry)
   return !data;
@@ -53,7 +53,7 @@ serve(async (req) => {
     if (!user) return json({ error: "unauthorized" }, 401);
 
     const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const sbFrom = svc.from as unknown as AnyTable;
+    const sbFrom = svc.from.bind(svc) as unknown as AnyTable;
 
     // Caller precisa ser admin
     const { data: caller } = await svc.from("profiles").select("role").eq("id", user.id).single();

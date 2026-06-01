@@ -40,7 +40,7 @@ export type PartnerRequestInput = {
 
 // `partners` ainda não está no types.ts gerado — cast no acesso pra não quebrar tsc.
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
-const sbFrom = supabase.from as unknown as AnyTable;
+const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 
 export function usePartner() {
   const { user } = useAuth();
