@@ -10,6 +10,7 @@ export interface SubInput {
   role?: string | null;
   subscriptionStatus: string | null;
   trialEndsAt: string | null;
+  accessExpiresAt?: string | null;
   now?: Date;
 }
 
@@ -17,7 +18,13 @@ export function deriveSubStatus(input: SubInput): SubStatus {
   const now = input.now ?? new Date();
 
   if (input.role === "admin") return "active";
-  if (input.subscriptionStatus === "active") return "active";
+  if (input.subscriptionStatus === "active") {
+    if (input.accessExpiresAt) {
+      const exp = new Date(input.accessExpiresAt).getTime();
+      if (exp <= now.getTime()) return "canceled"; // cortesia vencida → paywall
+    }
+    return "active";
+  }
   if (input.subscriptionStatus === "canceled") return "canceled";
 
   if (input.trialEndsAt) {

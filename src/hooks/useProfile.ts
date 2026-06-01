@@ -8,6 +8,7 @@ export type Profile = Database["public"]["Tables"]["profiles"]["Row"] & {
   account_type?: string | null;
   trial_started_at?: string | null;
   trial_ends_at?: string | null;
+  access_expires_at?: string | null;
   plan?: string | null;
   storage_used_bytes?: number | null;
   storage_quota_bytes?: number | null;
@@ -18,6 +19,7 @@ type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"] & {
   role?: string | null;
   trial_started_at?: string | null;
   trial_ends_at?: string | null;
+  access_expires_at?: string | null;
   plan?: string | null;
   storage_used_bytes?: number | null;
   storage_quota_bytes?: number | null;

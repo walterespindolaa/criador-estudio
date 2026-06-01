@@ -85,6 +85,7 @@ const AdminInner = () => {
   const [page, setPage] = useState(0);
   const [openCreate, setOpenCreate] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", phone: "", plan: "trial" });
+  const [validity, setValidity] = useState("lifetime");
   const [creating, setCreating] = useState(false);
   const [result, setResult] = useState<null | { email: string; inviteLink: string }>(null);
   const queryClient = useQueryClient();
@@ -96,13 +97,14 @@ const AdminInner = () => {
     }
     setCreating(true);
     try {
-      const { data, error } = await supabase.functions.invoke("admin-create-user", { body: form });
+      const { data, error } = await supabase.functions.invoke("admin-create-user", { body: { ...form, validity } });
       if (error || (data as { error?: string })?.error) {
         throw new Error((data as { error?: string })?.error ?? "create_failed");
       }
       setResult({ email: data.email, inviteLink: data.inviteLink });
       setOpenCreate(false);
       setForm({ name: "", email: "", phone: "", plan: "trial" });
+      setValidity("lifetime");
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
       toast.success("Usuário criado e e-mail enviado!");
@@ -408,6 +410,27 @@ const AdminInner = () => {
                   </SelectContent>
                 </Select>
               </div>
+              {(form.plan === "pro" || form.plan === "premium") && (
+                <div className="space-y-1.5">
+                  <Label className="font-body text-xs">Validade do acesso</Label>
+                  <Select value={validity} onValueChange={setValidity} disabled={creating}>
+                    <SelectTrigger className="rounded-xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="15d">15 dias</SelectItem>
+                      <SelectItem value="1m">1 mês</SelectItem>
+                      <SelectItem value="3m">3 meses</SelectItem>
+                      <SelectItem value="6m">6 meses</SelectItem>
+                      <SelectItem value="1y">1 ano</SelectItem>
+                      <SelectItem value="lifetime">Vitalício</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-muted-foreground font-body">
+                    Vitalício não expira. Ao vencer, o usuário vai pro paywall.
+                  </p>
+                </div>
+              )}
             </div>
             <DialogFooter className="gap-2">
               <Button variant="outline" onClick={() => setOpenCreate(false)} disabled={creating}>

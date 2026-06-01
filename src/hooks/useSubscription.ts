@@ -18,6 +18,7 @@ export function useSubscription() {
       role: profile.role,
       subscriptionStatus: profile.subscription_status,
       trialEndsAt: profile.trial_ends_at,
+      accessExpiresAt: profile.access_expires_at,
     });
   }, [profile, isLoading]);
 

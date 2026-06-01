@@ -64,11 +64,16 @@ serve(async (req) => {
     const { data: caller } = await svc.from("profiles").select("role").eq("id", user.id).single();
     if (caller?.role !== "admin") return json({ error: "forbidden" }, 403);
 
-    const { name, email, phone, plan } = await req.json();
+    const { name, email, phone, plan, validity } = await req.json();
     if (!email || !name) return json({ error: "missing_fields" }, 400);
     const normEmail = String(email).trim().toLowerCase();
     const validPlans = ["free", "pro", "premium", "trial"];
     const chosenPlan = validPlans.includes(plan) ? plan : "trial";
+
+    // Cortesia manual: mapeia chave do front pra dias (vitalício = null = sem expiração)
+    const VALIDITY_DAYS: Record<string, number | null> = {
+      "15d": 15, "1m": 30, "3m": 90, "6m": 180, "1y": 365, "lifetime": null,
+    };
 
     // Gera invite link (Supabase cria o usuário como parte do generateLink type='invite')
     const redirectTo = (req.headers.get("origin") ?? "https://app.criasocialclub.com.br") + "/app";
@@ -97,6 +102,11 @@ serve(async (req) => {
     };
     if (["pro", "premium"].includes(chosenPlan)) {
       patch.subscription_status = "active"; // acesso liberado (cortesia/manual)
+      const key = typeof validity === "string" ? validity : "lifetime";
+      const days = key in VALIDITY_DAYS ? VALIDITY_DAYS[key] : null;
+      patch.access_expires_at = days === null
+        ? null
+        : new Date(Date.now() + days * 86400000).toISOString();
     }
     await svc.from("profiles").update(patch).eq("id", newId);
 
