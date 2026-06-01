@@ -1,8 +1,10 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { toast } from "sonner";
 import { validateUpload } from "@/lib/upload-validation";
+import { compressImage } from "@/lib/image-compress";
 
 const sanitizeStoragePath = (name: string): string => {
   const lastDot = name.lastIndexOf(".");
@@ -49,8 +51,20 @@ const setStoredToken = (token: string, expiresInSeconds = 3600) => {
   } catch { /* ignore */ }
 };
 
+const isVideoMime = (mime: string) => mime.startsWith("video/");
+
+async function downloadDriveFileToBlob(fileId: string, accessToken: string): Promise<Blob> {
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!res.ok) throw new Error(`drive_download_${res.status}`);
+  return await res.blob();
+}
+
 export function useGoogleDrive() {
   const { user } = useAuth();
+  const { activeAccountId } = useActiveAccount();
   const [picking, setPicking] = useState(false);
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
@@ -59,7 +73,7 @@ export function useGoogleDrive() {
       toast.error("Faça login para enviar mídia.");
       return;
     }
-    const userId = user.id;
+    const userId = activeAccountId || user.id; // dono do CONTEÚDO (cliente, se gerenciando)
 
     return new Promise<void>((resolve) => {
       const input = document.createElement("input");
@@ -131,7 +145,7 @@ export function useGoogleDrive() {
       document.body.appendChild(input);
       input.click();
     });
-  }, [user]);
+  }, [user, activeAccountId]);
 
   const loadGoogleScripts = useCallback((): Promise<void> => {
     return new Promise((resolve) => {
@@ -270,30 +284,68 @@ export function useGoogleDrive() {
     });
   }, []);
 
-  const saveExternalRefs = useCallback(async (files: PickedFile[], postId?: string) => {
+  const saveExternalRefs = useCallback(async (files: PickedFile[], accessToken: string, postId?: string) => {
     if (!user || files.length === 0) return;
+    const ownerId = activeAccountId || user.id; // dono do CONTEÚDO (cliente, se gerenciando)
+    if (!ownerId) return;
 
-    const rows = files.map((f) => ({
-      user_id: user.id,
-      post_id: postId || null,
-      provider: "google_drive",
-      external_file_id: f.id,
-      file_name: f.name,
-      file_type: f.mimeType,
-      file_size: f.sizeBytes || null,
-      thumbnail_url: f.thumbnailUrl || null,
-      view_url: f.url,
-      download_url: `https://drive.google.com/uc?export=download&id=${f.id}`,
-    }));
+    let imported = 0;
+    let failed = 0;
 
-    const { error } = await supabase.from("external_media_refs").insert(rows);
-    if (error) {
-      toast.error("Erro ao salvar referências.");
-      return;
+    for (const f of files) {
+      try {
+        if (isVideoMime(f.mimeType)) {
+          // VÍDEO: mantém como ref do Drive (preview iframe / link). Não baixa.
+          const { error } = await supabase.from("external_media_refs").insert({
+            user_id: ownerId,
+            post_id: postId || null,
+            provider: "google_drive",
+            external_file_id: f.id,
+            file_name: f.name,
+            file_type: f.mimeType,
+            file_size: f.sizeBytes || null,
+            thumbnail_url: f.thumbnailUrl || null,
+            view_url: f.url,
+            download_url: `https://drive.google.com/uc?export=download&id=${f.id}`,
+          });
+          if (error) throw error;
+        } else {
+          // FOTO: baixa do Drive → comprime → upload pro bucket media → ref como 'device'
+          const driveBlob = await downloadDriveFileToBlob(f.id, accessToken);
+          const sourceFile = new File([driveBlob], f.name, { type: f.mimeType || driveBlob.type });
+          const compressed = await compressImage(sourceFile);
+          const safeName = sanitizeStoragePath(compressed.name);
+          const path = `${ownerId}/${Date.now()}-${safeName}`;
+          const { error: upErr } = await supabase.storage.from("media").upload(path, compressed, {
+            upsert: true,
+            contentType: compressed.type,
+          });
+          if (upErr) throw upErr;
+          const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
+          const publicUrl = urlData.publicUrl;
+          const { error: insErr } = await supabase.from("external_media_refs").insert({
+            user_id: ownerId,
+            post_id: postId || null,
+            provider: "device",
+            external_file_id: path,
+            file_name: f.name,
+            file_type: compressed.type,
+            file_size: compressed.size,
+            thumbnail_url: publicUrl,
+            view_url: publicUrl,
+          });
+          if (insErr) throw insErr;
+        }
+        imported++;
+      } catch (err) {
+        console.error(`[drive-import] ${f.name} failed:`, err);
+        failed++;
+      }
     }
 
-    toast.success(`${files.length} arquivo(s) vinculado(s)!`);
-  }, [user]);
+    if (imported > 0) toast.success(`${imported} arquivo(s) vinculado(s)!`);
+    if (failed > 0) toast.error(`${failed} arquivo(s) falharam ao importar.`);
+  }, [user, activeAccountId]);
 
   const pickAndSave = useCallback(async (postId?: string) => {
     if (picking) return;
@@ -327,7 +379,7 @@ export function useGoogleDrive() {
       } catch { /* ignore */ }
 
       const files = await openPicker(token);
-      if (files.length > 0) await saveExternalRefs(files, postId);
+      if (files.length > 0) await saveExternalRefs(files, token, postId);
     } catch (err: any) {
       if (!err?.message?.includes("popup_closed")) {
         toast.error("Erro ao abrir Google Drive.");
