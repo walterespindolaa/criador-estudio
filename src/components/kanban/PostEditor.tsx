@@ -12,6 +12,7 @@ import {
   Loader2, Hash, Copy, Repeat2, FileText, ListChecks, Calendar, ChevronDown,
   RefreshCw, Minus, Plus, SmilePlus, Briefcase, StickyNote,
   CalendarPlus, CalendarCheck, CalendarX,
+  Play, Video, ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { validateUpload } from "@/lib/upload-validation";
@@ -1396,15 +1397,37 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                   && !primary.thumbnail_url.includes("lh3.google");
                                 const driveImgSrc = `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w600`;
                                 const imgSrc = primary.thumbnail_url || primary.view_url || driveImgSrc;
-                                const driveVideoSrc = `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview`;
-                                const videoSrc = primary.view_url || driveVideoSrc;
                                 return isVideo ? (
-                                  <iframe
-                                    src={videoSrc}
-                                    className="w-full h-full"
-                                    allow="autoplay"
-                                    title={primary.file_name}
-                                  />
+                                  <a
+                                    href={`https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block w-full h-full relative bg-black group"
+                                  >
+                                    <img
+                                      src={driveImgSrc}
+                                      alt={primary.file_name}
+                                      loading="lazy"
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        const el = e.target as HTMLImageElement;
+                                        el.classList.add("hidden");
+                                        el.nextElementSibling?.classList.remove("hidden");
+                                      }}
+                                    />
+                                    <div className="hidden absolute inset-0 bg-muted flex flex-col items-center justify-center gap-2 px-4 text-center">
+                                      <Video className="h-10 w-10 text-muted-foreground" />
+                                      <span className="text-xs text-muted-foreground font-body truncate max-w-full">{primary.file_name}</span>
+                                      <span className="inline-flex items-center gap-1 text-[11px] text-primary font-body font-semibold">
+                                        <ExternalLink className="h-3 w-3" /> Abrir no Drive
+                                      </span>
+                                    </div>
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-gradient-to-t from-black/30 to-transparent group-hover:from-black/40 transition-colors">
+                                      <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                        <Play className="h-6 w-6 text-black ml-0.5" fill="currentColor" />
+                                      </div>
+                                    </div>
+                                  </a>
                                 ) : (
                                   <img
                                     src={imgSrc}

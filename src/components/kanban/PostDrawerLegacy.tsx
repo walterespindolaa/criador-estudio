@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CopyButton } from "@/components/shared/CopyButton";
-import { Sparkles, MessageSquareText, FileCode2, Anchor, PenLine, MessageSquare, Megaphone, ClipboardList, BarChart3, Eye, Bookmark, Target, Clock, Cloud, ExternalLink, X, Trash2, HardDrive, Play, Layers, Type, Radio, MousePointerClick, Link, Download, Plus, Minus, BookOpen, Loader2, Hash, Copy, Repeat2 } from "lucide-react";
+import { Sparkles, MessageSquareText, FileCode2, Anchor, PenLine, MessageSquare, Megaphone, ClipboardList, BarChart3, Eye, Bookmark, Target, Clock, Cloud, ExternalLink, X, Trash2, HardDrive, Play, Video, Layers, Type, Radio, MousePointerClick, Link, Download, Plus, Minus, BookOpen, Loader2, Hash, Copy, Repeat2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getFormatStructure } from "@/lib/format-structures";
 import { PostTasks } from "./PostTasks";
@@ -513,12 +513,36 @@ export function PostDrawerLegacy({ open, onOpenChange, post, pillars, userId, on
                           const isVideo = primary.file_type?.startsWith("video/");
                           const imgSrc = `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w600`;
                           return isVideo ? (
-                            <iframe
-                              src={`https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview`}
-                              className="w-full h-full"
-                              allow="autoplay"
-                              title={primary.file_name}
-                            />
+                            <a
+                              href={`https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block w-full h-full relative bg-black group"
+                            >
+                              <img
+                                src={imgSrc}
+                                alt={primary.file_name}
+                                loading="lazy"
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const el = e.target as HTMLImageElement;
+                                  el.classList.add("hidden");
+                                  el.nextElementSibling?.classList.remove("hidden");
+                                }}
+                              />
+                              <div className="hidden absolute inset-0 bg-muted flex flex-col items-center justify-center gap-2 px-4 text-center">
+                                <Video className="h-10 w-10 text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground font-body truncate max-w-full">{primary.file_name}</span>
+                                <span className="inline-flex items-center gap-1 text-[11px] text-primary font-body font-semibold">
+                                  <ExternalLink className="h-3 w-3" /> Abrir no Drive
+                                </span>
+                              </div>
+                              <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-gradient-to-t from-black/30 to-transparent group-hover:from-black/40 transition-colors">
+                                <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                  <Play className="h-6 w-6 text-black ml-0.5" fill="currentColor" />
+                                </div>
+                              </div>
+                            </a>
                           ) : (
                             <img
                               src={imgSrc}
