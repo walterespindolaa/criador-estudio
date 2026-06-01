@@ -21,7 +21,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { Partner, PartnerCouponType } from "@/hooks/usePartner";
 
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
-const sbFrom = supabase.from as unknown as AnyTable;
+const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 
 type Props = {
   open: boolean;

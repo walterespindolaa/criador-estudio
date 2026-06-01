@@ -10,7 +10,7 @@ import type { Partner, PartnerStatus } from "@/hooks/usePartner";
 import { PainelAfiliadoDrawer } from "./PainelAfiliadoDrawer";
 
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
-const sbFrom = supabase.from as unknown as AnyTable;
+const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 
 type Filter = "todas" | "pendente" | "aprovada" | "recusada";
 
