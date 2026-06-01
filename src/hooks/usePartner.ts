@@ -63,9 +63,11 @@ export function usePartner() {
 
   const requestPartner = useMutation({
     mutationFn: async (input: PartnerRequestInput): Promise<Partner> => {
-      if (!userId) throw new Error("Not authenticated");
+      const { data: { user: freshUser } } = await supabase.auth.getUser();
+      const uid = freshUser?.id;
+      if (!uid) throw new Error("Not authenticated");
       const payload = {
-        user_id: userId,
+        user_id: uid,
         full_name: input.full_name,
         cpf: input.cpf,
         phone: input.phone,
@@ -75,10 +77,7 @@ export function usePartner() {
         time_active: input.time_active,
         status: "pending",
       };
-      const { data, error } = await sbFrom("partners")
-        .insert(payload)
-        .select()
-        .single();
+      const { data, error } = await sbFrom("partners").insert(payload).select().single();
       if (error) throw error;
       return data as Partner;
     },
@@ -86,7 +85,8 @@ export function usePartner() {
       toast.success("Solicitação enviada! Você será avisada após a análise.");
       queryClient.invalidateQueries({ queryKey });
     },
-    onError: () => {
+    onError: (e) => {
+      console.error("[partner] request failed:", e);
       toast.error("Erro ao enviar solicitação. Tente novamente.");
     },
   });
