@@ -474,8 +474,10 @@ export type Database = {
       }
       external_media_refs: {
         Row: {
+          bunny_video_id: string | null
           created_at: string | null
           download_url: string | null
+          expires_at: string | null
           external_file_id: string
           file_name: string
           file_size: number | null
@@ -488,8 +490,10 @@ export type Database = {
           view_url: string | null
         }
         Insert: {
+          bunny_video_id?: string | null
           created_at?: string | null
           download_url?: string | null
+          expires_at?: string | null
           external_file_id: string
           file_name: string
           file_size?: number | null
@@ -502,8 +506,10 @@ export type Database = {
           view_url?: string | null
         }
         Update: {
+          bunny_video_id?: string | null
           created_at?: string | null
           download_url?: string | null
+          expires_at?: string | null
           external_file_id?: string
           file_name?: string
           file_size?: number | null
@@ -534,6 +540,7 @@ export type Database = {
       }
       files: {
         Row: {
+          bunny_video_id: string | null
           category: string | null
           created_at: string | null
           expires_at: string | null
@@ -548,6 +555,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          bunny_video_id?: string | null
           category?: string | null
           created_at?: string | null
           expires_at?: string | null
@@ -562,6 +570,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          bunny_video_id?: string | null
           category?: string | null
           created_at?: string | null
           expires_at?: string | null
