@@ -69,6 +69,7 @@ serve(async (req) => {
     const normEmail = String(email).trim().toLowerCase();
     const validPlans = ["free", "pro", "premium", "trial"];
     const chosenPlan = validPlans.includes(plan) ? plan : "trial";
+    console.log("[admin-create-user] validity recebido:", validity, "plan:", chosenPlan);
 
     // Cortesia manual: mapeia chave do front pra dias (vitalício = null = sem expiração)
     const VALIDITY_DAYS: Record<string, number | null> = {
@@ -108,6 +109,7 @@ serve(async (req) => {
         ? null
         : new Date(Date.now() + days * 86400000).toISOString();
     }
+    console.log("[admin-create-user] patch:", JSON.stringify(patch));
     await svc.from("profiles").update(patch).eq("id", newId);
 
     // Enfileira o e-mail (1 botão, sem senha visível)
