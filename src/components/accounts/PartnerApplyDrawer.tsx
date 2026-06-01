@@ -210,7 +210,7 @@ export function PartnerApplyDrawer({ open, onOpenChange }: Props) {
             <Checkbox
               id="accept-terms"
               checked={accept}
-              onCheckedChange={(v) => setValue("accept", v === true as unknown as true, { shouldValidate: true })}
+              onCheckedChange={(v) => setValue("accept", (v === true) as true, { shouldValidate: true })}
               className="mt-0.5"
             />
             <Label htmlFor="accept-terms" className="text-xs font-body text-muted-foreground leading-relaxed cursor-pointer">
