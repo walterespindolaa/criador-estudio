@@ -23,6 +23,7 @@ export type Partner = {
   approved_by: string | null;
   coupon_type: PartnerCouponType | null;
   coupon_discount_pct: number | null;
+  coupon_duration_months: number | null;
   coupon_code: string | null;
   stripe_coupon_id: string | null;
   stripe_promotion_code_id: string | null;

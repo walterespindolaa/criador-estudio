@@ -64,6 +64,7 @@ serve(async (req) => {
     const partnerId = body?.partner_id;
     const couponType = body?.coupon_type;
     const discountPct = body?.discount_pct;
+    const durationMonths = body?.duration_months;
 
     if (!partnerId || typeof partnerId !== "string") {
       return json({ error: "missing_partner_id" }, 400);
@@ -76,6 +77,9 @@ serve(async (req) => {
         return json({ error: "invalid_discount_pct" }, 400);
       }
     }
+    // Duração só vale pra client_discount; aceita 1,3,6,12; default 1 (só 1ª fatura).
+    const allowedMonths = [1, 3, 6, 12];
+    const months = allowedMonths.includes(durationMonths) ? durationMonths : 1;
 
     // Busca o parceiro
     const { data: partnerRow, error: pErr } = await sbFrom("partners")
@@ -127,7 +131,9 @@ serve(async (req) => {
       try {
         coupon = await stripe.coupons.create({
           percent_off: discountPct,
-          duration: "once", // só na 1ª fatura
+          ...(months === 1
+            ? { duration: "once" }
+            : { duration: "repeating", duration_in_months: months }),
           name: `Parceira ${couponCode}`,
         });
       } catch (err) {
@@ -173,6 +179,7 @@ serve(async (req) => {
       approved_by: user.id,
       coupon_type: couponType,
       coupon_discount_pct: couponType === "client_discount" ? discountPct : null,
+      coupon_duration_months: couponType === "client_discount" ? months : null,
       stripe_coupon_id: stripeCouponId,
       stripe_promotion_code_id: stripePromotionCodeId,
       coupon_code: couponCode,

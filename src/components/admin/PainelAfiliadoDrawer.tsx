@@ -48,6 +48,7 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
 
   const [couponType, setCouponType] = useState<PartnerCouponType>("client_discount");
   const [discountPct, setDiscountPct] = useState<number>(20);
+  const [durationMonths, setDurationMonths] = useState<number>(1);
   const [rejectOpen, setRejectOpen] = useState(false);
 
   // Reset form ao trocar de parceira ou fechar drawer
@@ -55,6 +56,7 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
     if (open) {
       setCouponType("client_discount");
       setDiscountPct(20);
+      setDurationMonths(1);
       setRejectOpen(false);
     }
   }, [open, partner?.id]);
@@ -83,6 +85,7 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
       };
       if (couponType === "client_discount") {
         body.discount_pct = discountPct;
+        body.duration_months = durationMonths;
       }
       const { data, error } = await supabase.functions.invoke("partner-approve", { body });
       if (error || (data as { error?: string })?.error) {
@@ -259,7 +262,11 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
                   <div className="flex-1 min-w-0">
                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
                       {partner.coupon_type === "client_discount"
-                        ? `Desconto ${partner.coupon_discount_pct ?? 0}% (1ª fatura)`
+                        ? `Desconto ${partner.coupon_discount_pct ?? 0}%${
+                            partner.coupon_duration_months && partner.coupon_duration_months > 1
+                              ? ` por ${partner.coupon_duration_months} meses`
+                              : " (1ª fatura)"
+                          }`
                         : "Somente rastreio"}
                     </p>
                     <p className="text-base font-display font-extrabold text-foreground tracking-wider truncate">
@@ -291,7 +298,7 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
 
                 {couponType === "client_discount" && (
                   <div className="space-y-1.5">
-                    <Label className="font-body text-xs">% de desconto (1ª fatura)</Label>
+                    <Label className="font-body text-xs">% de desconto</Label>
                     <Input
                       type="number"
                       min={1}
@@ -305,7 +312,25 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
                       placeholder="20"
                     />
                     <p className="text-[11px] text-muted-foreground font-body">
-                      Valor entre 1 e 100. O cupom é aplicado só na primeira cobrança do cliente.
+                      Valor entre 1 e 100.
+                    </p>
+                  </div>
+                )}
+
+                {couponType === "client_discount" && (
+                  <div className="space-y-1.5">
+                    <Label className="font-body text-xs">Duração do desconto</Label>
+                    <Select value={String(durationMonths)} onValueChange={(v) => setDurationMonths(Number(v))}>
+                      <SelectTrigger className="rounded-xl h-9 text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">Só a 1ª fatura</SelectItem>
+                        <SelectItem value="3">3 meses</SelectItem>
+                        <SelectItem value="6">6 meses</SelectItem>
+                        <SelectItem value="12">12 meses</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[11px] text-muted-foreground font-body">
+                      A comissão é sempre calculada sobre o valor recebido na 1ª fatura.
                     </p>
                   </div>
                 )}
