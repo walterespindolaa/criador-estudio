@@ -43,6 +43,7 @@ export type Database = {
           accepted_at: string | null
           id: string
           invited_at: string
+          manager_notes: string | null
           member_email: string
           member_id: string | null
           owner_id: string
@@ -53,6 +54,7 @@ export type Database = {
           accepted_at?: string | null
           id?: string
           invited_at?: string
+          manager_notes?: string | null
           member_email: string
           member_id?: string | null
           owner_id: string
@@ -63,6 +65,7 @@ export type Database = {
           accepted_at?: string | null
           id?: string
           invited_at?: string
+          manager_notes?: string | null
           member_email?: string
           member_id?: string | null
           owner_id?: string
@@ -1036,6 +1039,174 @@ export type Database = {
           },
         ]
       }
+      partner_program_config: {
+        Row: {
+          deduction_pct: number
+          grace_invoices: number
+          id: boolean
+          updated_at: string
+        }
+        Insert: {
+          deduction_pct?: number
+          grace_invoices?: number
+          id?: boolean
+          updated_at?: string
+        }
+        Update: {
+          deduction_pct?: number
+          grace_invoices?: number
+          id?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      partner_referrals: {
+        Row: {
+          cancel_reason: string | null
+          canceled_at: string | null
+          created_at: string
+          currency: string | null
+          deduction_pct: number | null
+          first_invoice_id: string | null
+          gross_amount_cents: number | null
+          id: string
+          net_amount_cents: number | null
+          paid_at: string | null
+          paid_invoices_count: number
+          partner_id: string
+          referred_user_id: string
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          unlocked_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          cancel_reason?: string | null
+          canceled_at?: string | null
+          created_at?: string
+          currency?: string | null
+          deduction_pct?: number | null
+          first_invoice_id?: string | null
+          gross_amount_cents?: number | null
+          id?: string
+          net_amount_cents?: number | null
+          paid_at?: string | null
+          paid_invoices_count?: number
+          partner_id: string
+          referred_user_id: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          unlocked_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cancel_reason?: string | null
+          canceled_at?: string | null
+          created_at?: string
+          currency?: string | null
+          deduction_pct?: number | null
+          first_invoice_id?: string | null
+          gross_amount_cents?: number | null
+          id?: string
+          net_amount_cents?: number | null
+          paid_at?: string | null
+          paid_invoices_count?: number
+          partner_id?: string
+          referred_user_id?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          unlocked_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_referrals_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_referrals_referred_user_id_fkey"
+            columns: ["referred_user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partners: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          commission_deduction_pct: number | null
+          coupon_code: string | null
+          coupon_discount_pct: number | null
+          coupon_type: string | null
+          cpf: string | null
+          created_at: string
+          current_clients: string | null
+          full_name: string | null
+          id: string
+          instagram_handle: string | null
+          notes: string | null
+          phone: string | null
+          pix_key: string | null
+          status: string
+          stripe_coupon_id: string | null
+          stripe_promotion_code_id: string | null
+          time_active: string | null
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          commission_deduction_pct?: number | null
+          coupon_code?: string | null
+          coupon_discount_pct?: number | null
+          coupon_type?: string | null
+          cpf?: string | null
+          created_at?: string
+          current_clients?: string | null
+          full_name?: string | null
+          id?: string
+          instagram_handle?: string | null
+          notes?: string | null
+          phone?: string | null
+          pix_key?: string | null
+          status?: string
+          stripe_coupon_id?: string | null
+          stripe_promotion_code_id?: string | null
+          time_active?: string | null
+          user_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          commission_deduction_pct?: number | null
+          coupon_code?: string | null
+          coupon_discount_pct?: number | null
+          coupon_type?: string | null
+          cpf?: string | null
+          created_at?: string
+          current_clients?: string | null
+          full_name?: string | null
+          id?: string
+          instagram_handle?: string | null
+          notes?: string | null
+          phone?: string | null
+          pix_key?: string | null
+          status?: string
+          stripe_coupon_id?: string | null
+          stripe_promotion_code_id?: string | null
+          time_active?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       personas: {
         Row: {
           age_range: string | null
@@ -1256,6 +1427,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_type: string
           ai_ideas_reset_at: string | null
           ai_ideas_used_month: number | null
           avatar_url: string | null
@@ -1297,6 +1469,7 @@ export type Database = {
           youtube_handle: string | null
         }
         Insert: {
+          account_type?: string
           ai_ideas_reset_at?: string | null
           ai_ideas_used_month?: number | null
           avatar_url?: string | null
@@ -1338,6 +1511,7 @@ export type Database = {
           youtube_handle?: string | null
         }
         Update: {
+          account_type?: string
           ai_ideas_reset_at?: string | null
           ai_ideas_used_month?: number | null
           avatar_url?: string | null
@@ -1901,6 +2075,7 @@ export type Database = {
           total_users: number
         }[]
       }
+      get_manager_notes: { Args: { _owner_id: string }; Returns: string }
       get_public_bio_links_by_slug: {
         Args: { _slug: string }
         Returns: {
@@ -1960,8 +2135,20 @@ export type Database = {
           read_ct: number
         }[]
       }
+      set_manager_notes: {
+        Args: { _notes: string; _owner_id: string }
+        Returns: undefined
+      }
       touch_last_seen: { Args: never; Returns: undefined }
       user_tier: { Args: never; Returns: string }
+      validate_partner_code: {
+        Args: { _code: string }
+        Returns: {
+          coupon_type: string
+          discount_pct: number
+          partner_name: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
