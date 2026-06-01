@@ -35,19 +35,36 @@ interface PickedFile {
   url: string;
 }
 
+const REQUIRED_SCOPE = "drive.file";
+
 const getStoredToken = (): string | null => {
   try {
     const token = sessionStorage.getItem("gd_access_token");
     const expires = sessionStorage.getItem("gd_token_expires");
-    if (token && expires && parseInt(expires) > Date.now()) return token;
+    const scope = sessionStorage.getItem("gd_token_scope") || "";
+    if (!token || !expires) return null;
+    if (parseInt(expires) <= Date.now()) return null;
+    // Cache antigo gravado quando o app pedia drive.readonly fica inválido:
+    // só devolve token cacheado se o scope concedido inclui drive.file.
+    if (!scope.includes(REQUIRED_SCOPE)) return null;
+    return token;
   } catch { /* ignore */ }
   return null;
 };
 
-const setStoredToken = (token: string, expiresInSeconds = 3600) => {
+const setStoredToken = (token: string, scope: string, expiresInSeconds = 3600) => {
   try {
     sessionStorage.setItem("gd_access_token", token);
+    sessionStorage.setItem("gd_token_scope", scope || "");
     sessionStorage.setItem("gd_token_expires", String(Date.now() + expiresInSeconds * 1000 - 60000));
+  } catch { /* ignore */ }
+};
+
+const clearStoredToken = () => {
+  try {
+    sessionStorage.removeItem("gd_access_token");
+    sessionStorage.removeItem("gd_token_scope");
+    sessionStorage.removeItem("gd_token_expires");
   } catch { /* ignore */ }
 };
 
@@ -94,29 +111,44 @@ export function useGoogleDrive() {
     });
   }, []);
 
-  const getAccessToken = useCallback(async (clientId: string): Promise<string> => {
-    const cached = getStoredToken();
-    if (cached) return cached;
+  const getAccessToken = useCallback(async (clientId: string, forceConsent = false): Promise<string> => {
+    if (!forceConsent) {
+      const cached = getStoredToken();
+      if (cached) return cached;
+    }
 
     const hint = localStorage.getItem("gd_hint") || undefined;
+    const scope = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile";
 
-    return new Promise((resolve, reject) => {
-      const client = window.google.accounts.oauth2.initTokenClient({
-        client_id: clientId,
-        scope: "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile",
-        callback: (resp: any) => {
-          if (resp.error) {
-            reject(new Error(resp.error));
-            return;
-          }
-          setStoredToken(resp.access_token, resp.expires_in || 3600);
-          resolve(resp.access_token);
-        },
-        ...(hint ? { hint } : {}),
+    const requestOnce = (prompt: "" | "consent"): Promise<{ token: string; scope: string; expires: number }> =>
+      new Promise((resolve, reject) => {
+        const client = window.google.accounts.oauth2.initTokenClient({
+          client_id: clientId,
+          scope,
+          callback: (resp: { error?: string; access_token?: string; scope?: string; expires_in?: number }) => {
+            if (resp.error || !resp.access_token) {
+              reject(new Error(resp.error ?? "no_token"));
+              return;
+            }
+            resolve({
+              token: resp.access_token,
+              scope: resp.scope ?? "",
+              expires: resp.expires_in ?? 3600,
+            });
+          },
+          ...(hint ? { hint } : {}),
+        });
+        client.requestAccessToken({ prompt });
       });
 
-      client.requestAccessToken({ prompt: "" });
-    });
+    let result = await requestOnce(forceConsent ? "consent" : "");
+    // Se o consentimento cacheado pelo Google ainda é o antigo (drive.readonly), o silent
+    // pode devolver token sem drive.file. Forçar re-consent pra obter o scope novo.
+    if (!result.scope.includes(REQUIRED_SCOPE)) {
+      result = await requestOnce("consent");
+    }
+    setStoredToken(result.token, result.scope, result.expires);
+    return result.token;
   }, []);
 
   const openPicker = useCallback(async (accessToken: string): Promise<PickedFile[]> => {
@@ -213,6 +245,7 @@ export function useGoogleDrive() {
     let imported = 0;
     let failed = 0;
     let blockedByPolicy = 0;
+    let scopeIssue = 0;
 
     for (const f of files) {
       try {
@@ -237,8 +270,22 @@ export function useGoogleDrive() {
             const status = permRes.status;
             const errText = await permRes.text().catch(() => "");
             console.error(`[drive-import] permissions.create failed for ${f.name}:`, status, errText);
-            // Workspace policy / insufficient permissions → não salva ref
-            if (status === 403 || /insufficient|domain|sharing|policy/i.test(errText)) {
+
+            // Classifica o 403 — scope/auth NÃO é igual a policy de Workspace
+            const isScopeError =
+              (status === 401 || status === 403) &&
+              /scope|insufficient[_ ]?authentication|access[_ ]?token[_ ]?scope|insufficientpermissions/i.test(errText);
+            const isPolicyError =
+              status === 403 &&
+              /sharingratelimitexceeded|domainpolicy|cannotshare|domain/i.test(errText);
+
+            if (isScopeError) {
+              // Token velho (drive.readonly) ainda em cache — derruba e força re-consent na próxima.
+              clearStoredToken();
+              scopeIssue++;
+              continue;
+            }
+            if (isPolicyError) {
               blockedByPolicy++;
               continue;
             }
@@ -294,6 +341,9 @@ export function useGoogleDrive() {
 
     if (imported > 0) toast.success(`${imported} arquivo(s) vinculado(s)!`);
     if (failed > 0) toast.error(`${failed} arquivo(s) falharam ao importar.`);
+    if (scopeIssue > 0) {
+      toast.error("Reconecte seu Google Drive pra atualizar a permissão e tente de novo.");
+    }
     if (blockedByPolicy > 0) {
       toast.error(
         `Sua conta do Google bloqueia compartilhamento público. Pra ${blockedByPolicy} vídeo(s), use o upload direto (Galeria / PC).`,
