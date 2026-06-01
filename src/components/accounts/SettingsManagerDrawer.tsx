@@ -111,7 +111,7 @@ export function SettingsManagerDrawer({ open, onOpenChange }: Props) {
         const g = (window as { google?: { accounts: { oauth2: { initTokenClient: (opts: unknown) => { requestAccessToken: (o: unknown) => void } } } } }).google!;
         const client = g.accounts.oauth2.initTokenClient({
           client_id: config.client_id,
-          scope: "https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile",
+          scope: "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile",
           callback: (resp: { error?: unknown; access_token?: string }) => {
             if (resp.error || !resp.access_token) reject(resp.error ?? "no_token");
             else resolve(resp.access_token);

@@ -2,8 +2,8 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useActiveAccount } from "@/contexts/AccountContext";
+import { useVideoPublicConfirm } from "@/contexts/VideoPublicConfirmContext";
 import { toast } from "sonner";
-import { validateUpload } from "@/lib/upload-validation";
 import { compressImage } from "@/lib/image-compress";
 
 const sanitizeStoragePath = (name: string): string => {
@@ -65,87 +65,8 @@ async function downloadDriveFileToBlob(fileId: string, accessToken: string): Pro
 export function useGoogleDrive() {
   const { user } = useAuth();
   const { activeAccountId } = useActiveAccount();
+  const confirmVideoPublic = useVideoPublicConfirm();
   const [picking, setPicking] = useState(false);
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-  const pickFromDeviceFallback = useCallback(async (postId?: string) => {
-    if (!user) {
-      toast.error("Faça login para enviar mídia.");
-      return;
-    }
-    const userId = activeAccountId || user.id; // dono do CONTEÚDO (cliente, se gerenciando)
-
-    return new Promise<void>((resolve) => {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*,video/*";
-      input.multiple = true;
-      input.style.cssText = "position:fixed;left:-9999px;top:-9999px;opacity:0;pointer-events:none";
-
-      const cleanup = () => {
-        if (input.parentNode) input.parentNode.removeChild(input);
-      };
-
-      input.addEventListener("change", async () => {
-        try {
-          const files = input.files;
-          if (!files || files.length === 0) return;
-          try {
-            setPicking(true);
-            for (const file of Array.from(files)) {
-              const validation = validateUpload(file, "postMedia");
-              if (!validation.ok) {
-                toast.error(validation.reason);
-                continue;
-              }
-              const safeName = sanitizeStoragePath(file.name);
-              const path = `${userId}/${Date.now()}-${safeName}`;
-              const { error: upErr } = await supabase.storage
-                .from("media")
-                .upload(path, file, { upsert: true, contentType: file.type });
-              if (upErr) {
-                console.error("[device-fallback] storage error", upErr);
-                toast.error(`Erro ao enviar ${file.name}: ${upErr.message}`);
-                continue;
-              }
-              const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
-              const publicUrl = urlData.publicUrl;
-              await supabase.from("external_media_refs").insert({
-                user_id: userId,
-                post_id: postId || null,
-                provider: "device",
-                external_file_id: path,
-                file_name: file.name,
-                file_type: file.type,
-                thumbnail_url: publicUrl,
-                view_url: publicUrl,
-              });
-            }
-            toast.success("Mídia adicionada!");
-          } catch (err) {
-            console.error(err);
-            toast.error("Erro ao enviar mídia.");
-          } finally {
-            setPicking(false);
-          }
-        } finally {
-          cleanup();
-          resolve();
-        }
-      }, { once: true });
-
-      input.addEventListener("cancel", () => { cleanup(); resolve(); }, { once: true });
-      setTimeout(() => {
-        if (!input.files || input.files.length === 0) {
-          cleanup();
-          resolve();
-        }
-      }, 5 * 60 * 1000);
-
-      document.body.appendChild(input);
-      input.click();
-    });
-  }, [user, activeAccountId]);
 
   const loadGoogleScripts = useCallback((): Promise<void> => {
     return new Promise((resolve) => {
@@ -182,7 +103,7 @@ export function useGoogleDrive() {
     return new Promise((resolve, reject) => {
       const client = window.google.accounts.oauth2.initTokenClient({
         client_id: clientId,
-        scope: "https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.email",
+        scope: "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile",
         callback: (resp: any) => {
           if (resp.error) {
             reject(new Error(resp.error));
@@ -291,11 +212,39 @@ export function useGoogleDrive() {
 
     let imported = 0;
     let failed = 0;
+    let blockedByPolicy = 0;
 
     for (const f of files) {
       try {
         if (isVideoMime(f.mimeType)) {
-          // VÍDEO: mantém como ref do Drive (preview iframe / link). Não baixa.
+          // VÍDEO: torna público no Drive (drive.file permite via permissions.create)
+          // e mantém como ref do Drive (preview iframe). Não baixa.
+          const ok = await confirmVideoPublic();
+          if (!ok) { failed++; continue; }
+
+          const permRes = await fetch(
+            `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(f.id)}/permissions`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ role: "reader", type: "anyone" }),
+            },
+          );
+          if (!permRes.ok) {
+            const status = permRes.status;
+            const errText = await permRes.text().catch(() => "");
+            console.error(`[drive-import] permissions.create failed for ${f.name}:`, status, errText);
+            // Workspace policy / insufficient permissions → não salva ref
+            if (status === 403 || /insufficient|domain|sharing|policy/i.test(errText)) {
+              blockedByPolicy++;
+              continue;
+            }
+            throw new Error(`permissions_${status}`);
+          }
+
           const { error } = await supabase.from("external_media_refs").insert({
             user_id: ownerId,
             post_id: postId || null,
@@ -345,15 +294,15 @@ export function useGoogleDrive() {
 
     if (imported > 0) toast.success(`${imported} arquivo(s) vinculado(s)!`);
     if (failed > 0) toast.error(`${failed} arquivo(s) falharam ao importar.`);
-  }, [user, activeAccountId]);
+    if (blockedByPolicy > 0) {
+      toast.error(
+        `Sua conta do Google bloqueia compartilhamento público. Pra ${blockedByPolicy} vídeo(s), use o upload direto (Galeria / PC).`,
+      );
+    }
+  }, [user, activeAccountId, confirmVideoPublic]);
 
   const pickAndSave = useCallback(async (postId?: string) => {
     if (picking) return;
-
-    if (isMobile) {
-      await pickFromDeviceFallback(postId);
-      return;
-    }
 
     setPicking(true);
 
@@ -388,7 +337,7 @@ export function useGoogleDrive() {
     } finally {
       setPicking(false);
     }
-  }, [picking, isMobile, pickFromDeviceFallback, loadGoogleScripts, getAccessToken, openPicker, saveExternalRefs]);
+  }, [picking, loadGoogleScripts, getAccessToken, openPicker, saveExternalRefs]);
 
   return { pickAndSave, picking };
 }

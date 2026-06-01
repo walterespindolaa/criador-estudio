@@ -13,6 +13,7 @@ import { applyThemeFont } from "@/components/settings/SettingsVisual";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { CriaAIProvider } from "@/contexts/CriaAIContext";
+import { VideoPublicConfirmProvider } from "@/contexts/VideoPublicConfirmContext";
 import { CriaAIPanel } from "@/components/ai/CriaAIPanel";
 import { TrialBanner } from "@/components/TrialBanner";
 import { StorageWarningBanner } from "@/components/StorageWarningBanner";
@@ -57,6 +58,7 @@ const AppLayout = () => {
 
   return (
     <CriaAIProvider>
+    <VideoPublicConfirmProvider>
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
         <div className="flex flex-1 w-full min-h-0">
@@ -110,6 +112,7 @@ const AppLayout = () => {
         </div>
       </div>
     </SidebarProvider>
+    </VideoPublicConfirmProvider>
     </CriaAIProvider>
   );
 };

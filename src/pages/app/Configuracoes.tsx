@@ -341,7 +341,7 @@ const Configuracoes = () => {
       const token: string = await new Promise((resolve, reject) => {
         const client = (window as any).google.accounts.oauth2.initTokenClient({
           client_id: config.client_id,
-          scope: "https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile",
+          scope: "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile",
           callback: (resp: any) => { if (resp.error) reject(resp.error); else resolve(resp.access_token); },
         });
         client.requestAccessToken({ prompt: "consent" });

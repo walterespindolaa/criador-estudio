@@ -8,7 +8,7 @@ import { CopyButton } from "@/components/shared/CopyButton";
 import {
   Sparkles, MessageSquareText, FileCode2, Anchor, PenLine, MessageSquare,
   ClipboardList, BarChart3, Eye, Bookmark, Target, Clock, Cloud, Image as ImageIcon, X, Trash2,
-  Layers, Type, Radio, MousePointerClick, Link as LinkIcon, Link2, Download, BookOpen,
+  Layers, Type, Radio, MousePointerClick, Link as LinkIcon, Download, BookOpen,
   Loader2, Hash, Copy, Repeat2, FileText, ListChecks, Calendar, ChevronDown,
   RefreshCw, Minus, Plus, SmilePlus, Briefcase, StickyNote,
   CalendarPlus, CalendarCheck, CalendarX,
@@ -54,7 +54,6 @@ import { useBrandContext } from "@/hooks/useBrandContext";
 import { RoteiroPdfTemplate } from "@/components/pdf/RoteiroPdfTemplate";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { sanitizeText } from "@/lib/sanitize";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useGoogleCalendar } from "@/hooks/useGoogleCalendar";
 
 interface Post {
@@ -219,8 +218,6 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
   const [driveMedia, setDriveMedia] = useState<DriveRef[]>([]);
   const [pendingDriveFiles, setPendingDriveFiles] = useState<DriveRef[]>([]);
   const [uploadingLocal, setUploadingLocal] = useState(false);
-  const [driveLink, setDriveLink] = useState("");
-  const isMobile = useIsMobile();
   const { pickAndSave, picking } = useGoogleDrive();
   const { syncPost: syncCalendarPost, removeFromCalendar, syncing: calendarSyncing } = useGoogleCalendar();
   const { createPost, updatePost, deletePost } = usePosts();
@@ -532,41 +529,6 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
     }
   };
 
-  const handleAddDriveLink = async () => {
-    if (!driveLink.trim() || !userId) return;
-    const match = driveLink.match(/\/d\/([a-zA-Z0-9_-]+)/);
-    const fileId = match?.[1];
-    const thumbnailUrl = fileId
-      ? `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`
-      : null;
-    const viewUrl = fileId
-      ? `https://drive.google.com/file/d/${fileId}/preview`
-      : driveLink;
-
-    if (post?.id) {
-      await supabase.from("external_media_refs").insert({
-        user_id: userId,
-        post_id: post.id,
-        file_name: fileId ? `drive-${fileId}` : "link-externo",
-        file_type: "image/jpeg",
-        thumbnail_url: thumbnailUrl || driveLink,
-        view_url: viewUrl,
-        external_file_id: fileId || driveLink,
-      });
-      fetchDriveMedia(post.id);
-    } else {
-      setPendingDriveFiles((prev) => [...prev, {
-        id: driveLink,
-        file_name: fileId ? `drive-${fileId}` : "link-externo",
-        file_type: "image/jpeg",
-        thumbnail_url: thumbnailUrl || driveLink,
-        view_url: viewUrl,
-        external_file_id: fileId || driveLink,
-      } as DriveRef]);
-    }
-    setDriveLink("");
-    toast.success("Mídia adicionada!");
-  };
 
   const handleSave = async () => {
     if (!title.trim()) return;
@@ -1481,80 +1443,34 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                           </div>
                         ) : (
                           <div className="flex flex-col gap-3 p-3">
-                            {isMobile ? (
-                              <div className="flex flex-col gap-3">
-                                <button
-                                  type="button"
-                                  onClick={openLocalFilePicker}
-                                  disabled={uploadingLocal}
-                                  className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all p-4 text-center w-full"
-                                >
-                                  <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                                  <span className="text-xs font-body text-muted-foreground">
-                                    {uploadingLocal ? "Enviando..." : "Adicionar da galeria"}
-                                  </span>
-                                </button>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                onClick={handleDrivePick}
+                                disabled={picking}
+                                className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all p-4 text-center"
+                              >
+                                <Cloud className="h-6 w-6 text-muted-foreground" />
+                                <span className="text-xs font-body text-muted-foreground">
+                                  {picking ? "Abrindo..." : "Google Drive"}
+                                </span>
+                              </button>
 
-                                <div className="space-y-1.5">
-                                  <label className="text-[10px] font-body font-semibold uppercase tracking-wider text-muted-foreground/70">
-                                    Ou cole um link do Google Drive
-                                  </label>
-                                  <div className="flex gap-2">
-                                    <input
-                                      type="url"
-                                      placeholder="https://drive.google.com/file/d/..."
-                                      value={driveLink}
-                                      onChange={(e) => setDriveLink(e.target.value)}
-                                      className="flex-1 h-9 px-3 rounded-lg border border-border bg-card text-sm font-body text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/40"
-                                    />
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={handleAddDriveLink}
-                                      disabled={!driveLink.trim()}
-                                      className="h-9 px-3"
-                                    >
-                                      <Link2 className="h-3.5 w-3.5" />
-                                    </Button>
-                                  </div>
-                                  <p className="text-[10px] text-muted-foreground/50 font-body">
-                                    Cole o link de compartilhamento do Google Drive
-                                  </p>
-                                </div>
-                              </div>
-                            ) : (
-                              <>
-                                <div className="grid grid-cols-2 gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={handleDrivePick}
-                                    disabled={picking}
-                                    className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all p-4 text-center"
-                                  >
-                                    <Cloud className="h-6 w-6 text-muted-foreground" />
-                                    <span className="text-xs font-body text-muted-foreground">
-                                      {picking ? "Abrindo..." : "Google Drive"}
-                                    </span>
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={openLocalFilePicker}
-                                    disabled={uploadingLocal}
-                                    className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all p-4 text-center"
-                                  >
-                                    <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                                    <span className="text-xs font-body text-muted-foreground">
-                                      {uploadingLocal ? "Enviando..." : "Galeria / PC"}
-                                    </span>
-                                  </button>
-                                </div>
-                                <p className="text-[10px] text-muted-foreground/60 font-body text-center">
-                                  💡 Para melhor qualidade, use arquivos do Google Drive. Uploads diretos ficam disponíveis por 30 dias.
-                                </p>
-                              </>
-                            )}
+                              <button
+                                type="button"
+                                onClick={openLocalFilePicker}
+                                disabled={uploadingLocal}
+                                className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all p-4 text-center"
+                              >
+                                <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                                <span className="text-xs font-body text-muted-foreground">
+                                  {uploadingLocal ? "Enviando..." : "Galeria / PC"}
+                                </span>
+                              </button>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground/60 font-body text-center">
+                              💡 Para melhor qualidade, use arquivos do Google Drive. Uploads diretos ficam disponíveis por 30 dias.
+                            </p>
                           </div>
                         )}
                       </div>
