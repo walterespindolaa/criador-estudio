@@ -14,9 +14,9 @@ export const FORMATS = ["reels", "carrossel", "foto", "story", "video", "shorts"
 
 export const STATUS_OPTIONS = [
   { key: "ideia", label: "Ideia" },
-  { key: "roteiro", label: "Roteiro" },
-  { key: "gravando", label: "Gravando" },
-  { key: "editando", label: "Editando" },
+  { key: "roteiro", label: "Planejamento" },
+  { key: "gravando", label: "Produzindo" },
+  { key: "editando", label: "Pronto" },
   { key: "agendado", label: "Agendado" },
   { key: "publicado", label: "Publicado" },
 ];

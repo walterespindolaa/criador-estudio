@@ -64,9 +64,9 @@ const STATUS_HEX: Record<string, string> = {
 
 const COLUMNS = [
   { key: "ideia", label: "Ideia", icon: LayoutDashboard, bg: "bg-muted" },
-  { key: "roteiro", label: "Roteiro", icon: PenLine, bg: "bg-primary/5" },
-  { key: "gravando", label: "Gravando", icon: Video, bg: "bg-secondary/10" },
-  { key: "editando", label: "Editando", icon: Scissors, bg: "bg-accent" },
+  { key: "roteiro", label: "Planejamento", icon: PenLine, bg: "bg-primary/5" },
+  { key: "gravando", label: "Produzindo", icon: Video, bg: "bg-secondary/10" },
+  { key: "editando", label: "Pronto", icon: Scissors, bg: "bg-accent" },
   { key: "agendado", label: "Agendado", icon: Calendar, bg: "bg-primary/10" },
   { key: "publicado", label: "Publicado", icon: CheckCircle2, bg: "bg-secondary/20" },
 ];
@@ -305,9 +305,11 @@ const Criando = () => {
           {COLUMNS.map(col => {
             const colPosts = filteredPosts.filter(p => p.status === col.key);
             const isPublished = col.key === "publicado";
+            const isAfterIdeia = col.key === "roteiro";
+            const showDividerBefore = isPublished || isAfterIdeia;
             const isDragOver = dragOverCol === col.key;
             return (
-              <div key={col.key} className={`min-w-[280px] sm:min-w-[200px] flex-shrink-0 sm:flex-1 snap-start ${isPublished ? "border-l-2 border-dashed border-border pl-4" : ""}`}
+              <div key={col.key} className={`min-w-[280px] sm:min-w-[200px] flex-shrink-0 sm:flex-1 snap-start ${showDividerBefore ? "border-l-2 border-dashed border-border pl-4" : ""}`}
                 onDragOver={(e) => { e.preventDefault(); setDragOverCol(col.key); }} onDragLeave={() => setDragOverCol(null)} onDrop={() => handleDrop(col.key)}>
                 <div className={`${col.bg} rounded-xl px-3 py-2 mb-3 flex items-center justify-between`}>
                 <div className="flex items-center gap-1.5">
