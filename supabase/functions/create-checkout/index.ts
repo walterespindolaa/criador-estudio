@@ -38,7 +38,8 @@ serve(async (req) => {
       });
     }
 
-    const { plan } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const plan = body?.plan;
     if (plan !== "pro" && plan !== "studio") {
       return new Response(JSON.stringify({ error: "invalid_plan" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -72,22 +73,47 @@ serve(async (req) => {
       await svc.from("profiles").update({ stripe_customer_id: customerId }).eq("id", user.id);
     }
 
+    // ── Partner code (opcional) ─────────────────────────────────
+    let partnerMeta: Record<string, string> = {};
+    let appliedPromotionCodeId: string | null = null;
+    const rawCode = (typeof body?.partner_code === "string" ? body.partner_code : "").trim();
+    if (rawCode) {
+      const { data: partner } = await svc
+        .from("partners")
+        .select("id, user_id, status, coupon_type, stripe_promotion_code_id")
+        .ilike("coupon_code", rawCode) // match exato case-insensitive (sem %)
+        .eq("status", "approved")
+        .maybeSingle();
+      // bloqueio básico de auto-indicação no checkout (fingerprint fica pra B.5)
+      if (partner && (partner as { user_id: string }).user_id !== user.id) {
+        const pr = partner as { id: string; coupon_type: string | null; stripe_promotion_code_id: string | null };
+        partnerMeta = { partner_code: rawCode.toUpperCase(), partner_id: pr.id };
+        if (pr.coupon_type === "client_discount" && pr.stripe_promotion_code_id) {
+          appliedPromotionCodeId = pr.stripe_promotion_code_id;
+        }
+      }
+    }
+    // ────────────────────────────────────────────────────────────
+
     const origin = req.headers.get("origin") ?? "https://app.criasocialclub.com.br";
 
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: "subscription",
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
-      // metadata na SESSION (pro checkout.session.completed)
-      metadata: { app: "cria", user_id: user.id, plan },
-      // metadata na SUBSCRIPTION (pros eventos subscription.updated/deleted)
+      metadata: { app: "cria", user_id: user.id, plan, ...partnerMeta },
       subscription_data: {
-        metadata: { app: "cria", user_id: user.id, plan },
+        metadata: { app: "cria", user_id: user.id, plan, ...partnerMeta },
       },
       success_url: `${origin}/app?checkout=success`,
       cancel_url: `${origin}/app/assinar?checkout=cancel`,
-      allow_promotion_codes: true,
-    });
+    };
+    if (appliedPromotionCodeId) {
+      sessionParams.discounts = [{ promotion_code: appliedPromotionCodeId }];
+    } else {
+      sessionParams.allow_promotion_codes = true;
+    }
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     return new Response(JSON.stringify({ url: session.url }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },

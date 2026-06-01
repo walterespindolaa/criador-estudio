@@ -52,8 +52,25 @@ export default function Assinar() {
   const { openPortal, isLoading: portalLoading } = useManageSubscription();
   const [searchParams] = useSearchParams();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [partnerCode, setPartnerCode] = useState("");
+  const [partnerInfo, setPartnerInfo] = useState<{ name: string; discountPct: number | null } | null>(null);
+  const [codeError, setCodeError] = useState(false);
 
   const isExpired = status === "trial_expired" || status === "blocked";
+
+  const validateCode = async () => {
+    const code = partnerCode.trim();
+    setPartnerInfo(null);
+    setCodeError(false);
+    if (!code) return;
+    const { data } = await (supabase.rpc as unknown as (fn: string, args: unknown) => Promise<{ data: unknown }>)(
+      "validate_partner_code",
+      { _code: code },
+    );
+    const row = Array.isArray(data) && data.length ? (data[0] as { partner_name: string; discount_pct: number | null }) : null;
+    if (row) setPartnerInfo({ name: row.partner_name, discountPct: row.discount_pct ?? null });
+    else setCodeError(true);
+  };
 
   useEffect(() => {
     if (searchParams.get("checkout") === "cancel") {
@@ -65,7 +82,7 @@ export default function Assinar() {
     setLoadingPlan(planId);
     try {
       const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: { plan: planId },
+        body: { plan: planId, partner_code: partnerCode.trim() || undefined },
       });
       if (error) throw error;
       if (data?.url) {
@@ -170,6 +187,38 @@ export default function Assinar() {
             </div>
           );
         })}
+      </div>
+
+      <div className="w-full max-w-sm mt-8 rounded-2xl border border-border bg-card px-4 py-3">
+        <label htmlFor="partner-code" className="block text-xs font-body text-muted-foreground mb-1.5">
+          Tem um código de parceira? (opcional)
+        </label>
+        <input
+          id="partner-code"
+          type="text"
+          value={partnerCode}
+          onChange={(e) => {
+            setPartnerCode(e.target.value.toUpperCase());
+            if (codeError || partnerInfo) {
+              setCodeError(false);
+              setPartnerInfo(null);
+            }
+          }}
+          onBlur={validateCode}
+          autoComplete="off"
+          spellCheck={false}
+          className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-body uppercase tracking-wider text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+          placeholder="EX: GABRIELA"
+        />
+        {partnerInfo && (
+          <p className="text-xs font-body text-primary mt-2">
+            Código da {partnerInfo.name} aplicado
+            {partnerInfo.discountPct ? ` — ${partnerInfo.discountPct}% off na 1ª fatura` : ""}
+          </p>
+        )}
+        {codeError && (
+          <p className="text-xs font-body text-red-500 mt-2">Código não encontrado</p>
+        )}
       </div>
 
       {profile?.stripe_customer_id && (
