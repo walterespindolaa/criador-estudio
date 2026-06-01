@@ -1145,6 +1145,7 @@ export type Database = {
           commission_deduction_pct: number | null
           coupon_code: string | null
           coupon_discount_pct: number | null
+          coupon_duration_months: number | null
           coupon_type: string | null
           cpf: string | null
           created_at: string
@@ -1167,6 +1168,7 @@ export type Database = {
           commission_deduction_pct?: number | null
           coupon_code?: string | null
           coupon_discount_pct?: number | null
+          coupon_duration_months?: number | null
           coupon_type?: string | null
           cpf?: string | null
           created_at?: string
@@ -1189,6 +1191,7 @@ export type Database = {
           commission_deduction_pct?: number | null
           coupon_code?: string | null
           coupon_discount_pct?: number | null
+          coupon_duration_months?: number | null
           coupon_type?: string | null
           cpf?: string | null
           created_at?: string
