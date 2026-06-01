@@ -13,3 +13,5 @@ project_id = "exuxlwdnkgmhtnwoyvwo"
     verify_jwt = true
   [functions.partner-manage]
     verify_jwt = true
+  [functions.bunny-create-video]
+    verify_jwt = true
