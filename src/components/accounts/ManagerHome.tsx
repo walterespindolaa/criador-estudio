@@ -86,22 +86,13 @@ export function ManagerHome() {
       {/* Top bar */}
       <header className="px-4 sm:px-6 py-4 flex items-center justify-between border-b border-border">
         <Logo className="h-8 w-auto" />
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setSettingsOpen(true)}
-            className="p-2 rounded-xl hover:bg-accent/60 transition-colors text-muted-foreground hover:text-foreground"
-            aria-label="Configurações"
-          >
-            <SettingsIcon className="h-5 w-5" />
-          </button>
-          <button
-            onClick={handleSignOut}
-            className="p-2 rounded-xl hover:bg-accent/60 transition-colors text-muted-foreground hover:text-foreground"
-            aria-label="Sair"
-          >
-            <LogOut className="h-5 w-5" />
-          </button>
-        </div>
+        <button
+          onClick={handleSignOut}
+          className="p-2 rounded-xl hover:bg-accent/60 transition-colors text-muted-foreground hover:text-foreground"
+          aria-label="Sair"
+        >
+          <LogOut className="h-5 w-5" />
+        </button>
       </header>
 
       {/* Conteúdo */}
@@ -136,9 +127,19 @@ export function ManagerHome() {
               onChange={handleAvatarSelect}
             />
             <div className="min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">
-                {greeting(profile?.name)}
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">
+                  {greeting(profile?.name)}
+                </h1>
+                <button
+                  type="button"
+                  onClick={() => setSettingsOpen(true)}
+                  className="p-1.5 rounded-lg hover:bg-accent/60 transition-colors text-muted-foreground hover:text-foreground"
+                  aria-label="Configurações"
+                >
+                  <SettingsIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                </button>
+              </div>
               <p className="text-sm sm:text-base text-muted-foreground font-body mt-1">
                 Selecione qual cliente você quer gerenciar.
               </p>

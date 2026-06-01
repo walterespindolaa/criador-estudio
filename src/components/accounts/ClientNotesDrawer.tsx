@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Bold, Italic, List, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,11 +53,9 @@ export function ClientNotesDrawer({ open, onOpenChange, ownerId, clientName }: P
   const [saving, setSaving] = useState(false);
   const [hasContent, setHasContent] = useState(false);
 
-  // Carrega notas quando abre
   useEffect(() => {
     if (!open || !ownerId) return;
     setLoading(true);
-    // Tipo do rpc não tipado ainda — RPCs get/set_manager_notes podem não estar no types.ts
     (supabase.rpc as unknown as (fn: string, args: unknown) => Promise<{ data: string | null; error: unknown }>)(
       "get_manager_notes",
       { _owner_id: ownerId },
@@ -71,14 +69,13 @@ export function ClientNotesDrawer({ open, onOpenChange, ownerId, clientName }: P
         const html = (data as string | null) ?? "";
         if (editorRef.current) {
           editorRef.current.innerHTML = html;
-          setHasContent(html.length > 0 && editorRef.current.textContent !== "");
+          setHasContent(html.length > 0 && (editorRef.current.textContent ?? "").trim().length > 0);
         }
         lastSavedRef.current = html;
       })
       .finally(() => setLoading(false));
   }, [open, ownerId]);
 
-  // Reseta editor ao fechar
   useEffect(() => {
     if (!open && debounceRef.current) {
       clearTimeout(debounceRef.current);
@@ -119,31 +116,34 @@ export function ClientNotesDrawer({ open, onOpenChange, ownerId, clientName }: P
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto flex flex-col">
-        <SheetHeader>
-          <SheetTitle className="font-display flex items-center gap-2">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="max-w-2xl min-h-[60vh] flex flex-col"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <DialogHeader>
+          <DialogTitle className="font-display flex items-center gap-2">
             Notas
             {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
-          </SheetTitle>
-          <SheetDescription className="font-body text-sm">
+          </DialogTitle>
+          <DialogDescription className="font-body text-sm">
             {clientName ? <>Sobre <b className="text-foreground">{clientName}</b></> : "Sobre o cliente"}
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="mt-4 flex-1 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col min-h-0">
           {loading ? (
             <div className="flex-1 flex items-center justify-center text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin" />
             </div>
           ) : (
-            <div className="rounded-xl border border-border bg-card flex flex-col flex-1 min-h-[300px]">
-              <div className="flex items-center gap-1 px-2 py-1.5 border-b border-border">
+            <div className="rounded-xl border border-border bg-card flex flex-col flex-1 min-h-[300px] overflow-hidden">
+              <div className="flex items-center gap-1 px-2 py-1.5 border-b border-border shrink-0">
                 <ToolbarButton onClick={() => cmd("bold")} label="Negrito"><Bold className="h-4 w-4" /></ToolbarButton>
                 <ToolbarButton onClick={() => cmd("italic")} label="Itálico"><Italic className="h-4 w-4" /></ToolbarButton>
                 <ToolbarButton onClick={() => cmd("insertUnorderedList")} label="Lista"><List className="h-4 w-4" /></ToolbarButton>
               </div>
-              <div className="relative flex-1">
+              <div className="relative flex-1 overflow-y-auto">
                 {!hasContent && (
                   <p className="absolute top-3 left-3 text-sm text-muted-foreground font-body pointer-events-none">
                     Anote infos do cliente, próximos passos, ideias, contatos…
@@ -160,11 +160,11 @@ export function ClientNotesDrawer({ open, onOpenChange, ownerId, clientName }: P
               </div>
             </div>
           )}
-          <p className="text-[11px] text-muted-foreground font-body mt-2">
+          <p className="text-[11px] text-muted-foreground font-body mt-2 shrink-0">
             As notas são salvas automaticamente.
           </p>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

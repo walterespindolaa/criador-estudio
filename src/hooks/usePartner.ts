@@ -12,6 +12,9 @@ export type Partner = {
   cpf: string;
   phone: string;
   pix_key: string;
+  instagram_handle: string | null;
+  current_clients: string | null;
+  time_active: string | null;
   status: PartnerStatus;
   created_at: string;
   approved_at: string | null;
@@ -23,6 +26,9 @@ export type PartnerRequestInput = {
   cpf: string;
   phone: string;
   pix_key: string;
+  instagram_handle: string;
+  current_clients: string;
+  time_active: string;
 };
 
 // `partners` ainda não está no types.ts gerado — cast no acesso pra não quebrar tsc.
@@ -57,6 +63,9 @@ export function usePartner() {
         cpf: input.cpf,
         phone: input.phone,
         pix_key: input.pix_key,
+        instagram_handle: input.instagram_handle || null,
+        current_clients: input.current_clients,
+        time_active: input.time_active,
         status: "pending",
       };
       const { data, error } = await sbFrom("partners")

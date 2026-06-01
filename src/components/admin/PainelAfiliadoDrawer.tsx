@@ -94,9 +94,9 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
           </SheetHeader>
 
           <div className="space-y-6 mt-6">
-            {/* Dados pessoais */}
+            {/* Sobre */}
             <section className="space-y-2">
-              <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Dados pessoais</h3>
+              <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Sobre</h3>
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-muted/30 px-3 py-2">
                   <div className="min-w-0">
@@ -104,6 +104,37 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
                     <p className="text-sm font-body text-foreground truncate">{partner.full_name}</p>
                   </div>
                 </div>
+                {partner.instagram_handle && (
+                  <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-muted/30 px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Instagram</p>
+                      <a
+                        href={`https://instagram.com/${partner.instagram_handle.replace(/^@/, "")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-body text-primary hover:underline truncate block"
+                      >
+                        @{partner.instagram_handle.replace(/^@/, "")}
+                      </a>
+                    </div>
+                  </div>
+                )}
+                {partner.current_clients && (
+                  <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-muted/30 px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Clientes atendidos hoje</p>
+                      <p className="text-sm font-body text-foreground truncate">{partner.current_clients}</p>
+                    </div>
+                  </div>
+                )}
+                {partner.time_active && (
+                  <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-muted/30 px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Tempo de atuação</p>
+                      <p className="text-sm font-body text-foreground truncate">{partner.time_active}</p>
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-muted/30 px-3 py-2">
                   <div className="min-w-0">
                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">CPF</p>
