@@ -151,7 +151,7 @@ export function useGoogleDrive() {
     return result.token;
   }, []);
 
-  const openPicker = useCallback(async (accessToken: string): Promise<PickedFile[]> => {
+  const openPicker = useCallback(async (accessToken: string, clientId: string): Promise<PickedFile[]> => {
     return new Promise((resolve) => {
       const neutralize = () => {
         const allToDisable = Array.from(document.querySelectorAll("*")).filter((el) => {
@@ -183,11 +183,17 @@ export function useGoogleDrive() {
         });
       };
 
+      // appId = NÚMERO DO PROJETO Google Cloud (prefixo numérico do client_id).
+      // Sem isso, com scope drive.file o Picker não concede acesso (read+manage)
+      // aos arquivos escolhidos → permissions.create cai em "appNotAuthorizedToFile".
+      const appId = clientId.split("-")[0];
+
       const picker = new window.google.picker.PickerBuilder()
         .addView(new window.google.picker.DocsView().setIncludeFolders(false).setSelectFolderEnabled(false))
         .addView(new window.google.picker.DocsView(window.google.picker.ViewId.DOCS_IMAGES))
         .addView(new window.google.picker.DocsView(window.google.picker.ViewId.DOCS_VIDEOS))
         .setOAuthToken(accessToken)
+        .setAppId(appId)
         .setDeveloperKey("")
         .enableFeature(window.google.picker.Feature.MULTISELECT_ENABLED)
         .setTitle("Selecionar do Google Drive")
@@ -377,7 +383,7 @@ export function useGoogleDrive() {
         }
       } catch { /* ignore */ }
 
-      const files = await openPicker(token);
+      const files = await openPicker(token, data.client_id);
       if (files.length > 0) await saveExternalRefs(files, token, postId);
     } catch (err: any) {
       if (!err?.message?.includes("popup_closed")) {
