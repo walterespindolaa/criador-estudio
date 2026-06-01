@@ -15,7 +15,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Check, X, MessageCircle, Loader2, Users, Coins, TrendingUp, Ticket, Sparkles } from "lucide-react";
+import { Check, X, MessageCircle, Loader2, Users, Coins, TrendingUp, Ticket, Sparkles, Pencil, PauseCircle, PlayCircle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Partner, PartnerCouponType } from "@/hooks/usePartner";
@@ -50,16 +50,31 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
   const [discountPct, setDiscountPct] = useState<number>(20);
   const [durationMonths, setDurationMonths] = useState<number>(1);
   const [rejectOpen, setRejectOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [couponCodeInput, setCouponCodeInput] = useState("");
 
   // Reset form ao trocar de parceira ou fechar drawer
   useEffect(() => {
     if (open) {
-      setCouponType("client_discount");
-      setDiscountPct(20);
-      setDurationMonths(1);
       setRejectOpen(false);
+      setConfirmDelete(false);
+      setEditing(false);
+      // Se a parceira já é aprovada/suspensa, pré-preenche com os valores atuais
+      // (caso usuário clique em "Editar" o form abre com os dados corretos).
+      if (partner && (partner.status === "approved" || partner.status === "suspended")) {
+        setCouponType((partner.coupon_type as PartnerCouponType) ?? "client_discount");
+        setDiscountPct(partner.coupon_discount_pct ?? 20);
+        setDurationMonths(partner.coupon_duration_months ?? 1);
+        setCouponCodeInput(partner.coupon_code ?? "");
+      } else {
+        setCouponType("client_discount");
+        setDiscountPct(20);
+        setDurationMonths(1);
+        setCouponCodeInput("");
+      }
     }
-  }, [open, partner?.id]);
+  }, [open, partner?.id, partner?.status, partner?.coupon_type, partner?.coupon_discount_pct, partner?.coupon_duration_months, partner?.coupon_code]);
 
   // Contagem de contas gerenciadas (account_members onde member_id = partner.user_id e status=active)
   const { data: managedCount = 0 } = useQuery<number>({
@@ -123,12 +138,77 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
     onError: () => toast.error("Erro ao recusar a solicitação."),
   });
 
+  const invokeManage = async (extra: Record<string, unknown>) => {
+    if (!partner) throw new Error("No partner");
+    const { data, error } = await supabase.functions.invoke("partner-manage", {
+      body: { partner_id: partner.id, ...extra },
+    });
+    if (error || (data as { error?: string })?.error) {
+      throw new Error(
+        (data as { error?: string; message?: string })?.message
+        ?? (data as { error?: string })?.error
+        ?? error?.message
+        ?? "manage_failed",
+      );
+    }
+    return data as { ok: true; coupon_code?: string };
+  };
+
+  const editCoupon = useMutation({
+    mutationFn: async () => invokeManage({
+      action: "edit_coupon",
+      coupon_type: couponType,
+      ...(couponType === "client_discount"
+        ? { discount_pct: discountPct, duration_months: durationMonths }
+        : {}),
+      coupon_code: couponCodeInput,
+    }),
+    onSuccess: (data) => {
+      toast.success(`Cupom atualizado: ${data.coupon_code ?? ""}`.trim());
+      queryClient.invalidateQueries({ queryKey: ["admin-partners"] });
+      queryClient.invalidateQueries({ queryKey: ["partner", partner?.user_id] });
+      setEditing(false);
+    },
+    onError: (err) => {
+      const msg = err instanceof Error ? err.message : "Erro ao salvar";
+      toast.error(`Não foi possível salvar: ${msg}`);
+    },
+  });
+
+  const suspendOrReactivate = useMutation({
+    mutationFn: async (action: "suspend" | "reactivate") => invokeManage({ action }),
+    onSuccess: (_data, action) => {
+      toast.success(action === "suspend" ? "Parceira suspensa." : "Parceira reativada!");
+      queryClient.invalidateQueries({ queryKey: ["admin-partners"] });
+      queryClient.invalidateQueries({ queryKey: ["partner", partner?.user_id] });
+    },
+    onError: (err) => {
+      const msg = err instanceof Error ? err.message : "Erro";
+      toast.error(`Erro: ${msg}`);
+    },
+  });
+
+  const deletePartner = useMutation({
+    mutationFn: async () => invokeManage({ action: "delete" }),
+    onSuccess: () => {
+      toast.success("Parceira excluída.");
+      queryClient.invalidateQueries({ queryKey: ["admin-partners"] });
+      queryClient.invalidateQueries({ queryKey: ["partner", partner?.user_id] });
+      onOpenChange(false);
+    },
+    onError: (err) => {
+      const msg = err instanceof Error ? err.message : "Erro";
+      toast.error(`Erro ao excluir: ${msg}`);
+    },
+  });
+
   if (!partner) return null;
 
   const phoneDigits = partner.phone.replace(/\D/g, "");
   const isPending = partner.status === "pending";
   const isApproved = partner.status === "approved";
-  const busy = approve.isPending || reject.isPending;
+  const isSuspended = partner.status === "suspended";
+  const busy = approve.isPending || reject.isPending || editCoupon.isPending || suspendOrReactivate.isPending || deletePartner.isPending;
 
   return (
     <>
@@ -251,10 +331,23 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
               </div>
             </section>
 
-            {/* Cupom (se aprovada) */}
-            {isApproved && partner.coupon_code && (
+            {/* Cupom (se aprovada ou suspensa) */}
+            {(isApproved || isSuspended) && partner.coupon_code && !editing && (
               <section className="space-y-2">
-                <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Cupom</h3>
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Cupom</h3>
+                  {isApproved && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setEditing(true)}
+                      disabled={busy}
+                    >
+                      <Pencil className="h-3 w-3 mr-1" /> Editar
+                    </Button>
+                  )}
+                </div>
                 <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 flex items-center gap-3">
                   <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
                     <Ticket className="h-4 w-4 text-primary" />
@@ -274,6 +367,87 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
                     </p>
                   </div>
                   <CopyButton text={partner.coupon_code} />
+                </div>
+              </section>
+            )}
+
+            {/* Edit form */}
+            {editing && (isApproved || isSuspended) && (
+              <section className="space-y-3 pt-2 border-t border-border">
+                <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Editar cupom</h3>
+
+                <div className="space-y-1.5">
+                  <Label className="font-body text-xs">Tipo de cupom</Label>
+                  <Select value={couponType} onValueChange={(v) => setCouponType(v as PartnerCouponType)}>
+                    <SelectTrigger className="rounded-xl h-9 text-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="client_discount">Cupom com desconto pro cliente</SelectItem>
+                      <SelectItem value="tracking">Só rastreio, sem desconto</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {couponType === "client_discount" && (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label className="font-body text-xs">% de desconto</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={discountPct}
+                        onChange={(e) => {
+                          const n = Number(e.target.value);
+                          if (Number.isFinite(n)) setDiscountPct(n);
+                        }}
+                        className="rounded-xl"
+                        placeholder="20"
+                      />
+                      <p className="text-[11px] text-muted-foreground font-body">Valor entre 1 e 100.</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="font-body text-xs">Duração do desconto</Label>
+                      <Select value={String(durationMonths)} onValueChange={(v) => setDurationMonths(Number(v))}>
+                        <SelectTrigger className="rounded-xl h-9 text-sm"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">Só a 1ª fatura</SelectItem>
+                          <SelectItem value="3">3 meses</SelectItem>
+                          <SelectItem value="6">6 meses</SelectItem>
+                          <SelectItem value="12">12 meses</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[11px] text-muted-foreground font-body">A comissão é sempre calculada sobre o valor recebido na 1ª fatura.</p>
+                    </div>
+                  </>
+                )}
+
+                <div className="space-y-1.5">
+                  <Label className="font-body text-xs">Código do cupom</Label>
+                  <Input
+                    value={couponCodeInput}
+                    onChange={(e) => setCouponCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+                    className="rounded-xl tracking-wider font-mono uppercase"
+                    placeholder="EX: GABRIELA"
+                  />
+                  <p className="text-[11px] text-muted-foreground font-body">Mude a palavra ou mantenha. Quem já assinou não é afetado.</p>
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    onClick={() => editCoupon.mutate()}
+                    disabled={busy || (couponType === "client_discount" && (discountPct < 1 || discountPct > 100))}
+                    className="flex-1"
+                  >
+                    {editCoupon.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Check className="h-4 w-4 mr-1.5" />}
+                    Salvar alterações
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setEditing(false)}
+                    disabled={editCoupon.isPending}
+                  >
+                    Cancelar
+                  </Button>
                 </div>
               </section>
             )}
@@ -365,9 +539,55 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
                 <p className="text-xs font-body text-muted-foreground">
                   Status atual:{" "}
                   <b className="text-foreground">
-                    {partner.status === "approved" ? "Aprovada" : "Recusada"}
+                    {isApproved ? "Aprovada" : isSuspended ? "Suspensa" : "Recusada"}
                   </b>
                 </p>
+              </section>
+            )}
+
+            {/* Ações: Suspender / Reativar / Excluir (apenas aprovada ou suspensa) */}
+            {(isApproved || isSuspended) && !editing && (
+              <section className="space-y-2 pt-2 border-t border-border">
+                <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Ações</h3>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  {isApproved && (
+                    <Button
+                      variant="outline"
+                      onClick={() => suspendOrReactivate.mutate("suspend")}
+                      disabled={busy}
+                      className="flex-1 border-amber-500/40 text-amber-600 hover:bg-amber-500/10 dark:text-amber-400"
+                    >
+                      {suspendOrReactivate.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                      ) : (
+                        <PauseCircle className="h-4 w-4 mr-1.5" />
+                      )}
+                      Suspender
+                    </Button>
+                  )}
+                  {isSuspended && (
+                    <Button
+                      onClick={() => suspendOrReactivate.mutate("reactivate")}
+                      disabled={busy}
+                      className="flex-1"
+                    >
+                      {suspendOrReactivate.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                      ) : (
+                        <PlayCircle className="h-4 w-4 mr-1.5" />
+                      )}
+                      Reativar
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    onClick={() => setConfirmDelete(true)}
+                    disabled={busy}
+                    className="flex-1 border-destructive/40 text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="h-4 w-4 mr-1.5" /> Excluir parceira
+                  </Button>
+                </div>
               </section>
             )}
           </div>
@@ -390,6 +610,28 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
             >
               {reject.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 mr-1.5" />}
               Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmDelete} onOpenChange={(o) => !deletePartner.isPending && setConfirmDelete(o)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display">Excluir parceira?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso apaga a parceira e o histórico de indicações. Use só pra dados de teste. Ação irreversível.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletePartner.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { deletePartner.mutate(); setConfirmDelete(false); }}
+              disabled={deletePartner.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletePartner.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1.5" />}
+              Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

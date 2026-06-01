@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
-export type PartnerStatus = "pending" | "approved" | "rejected";
+export type PartnerStatus = "pending" | "approved" | "rejected" | "suspended";
 
 export type PartnerCouponType = "tracking" | "client_discount";
 
