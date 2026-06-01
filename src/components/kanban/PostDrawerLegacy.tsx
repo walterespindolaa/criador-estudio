@@ -511,17 +511,8 @@ export function PostDrawerLegacy({ open, onOpenChange, post, pillars, userId, on
                           const primary = mediaList[0];
                           const fileId = primary.external_file_id || primary.id;
                           const isVideo = primary.file_type?.startsWith("video/");
-                          const isDeviceVideo = isVideo && primary.provider === "device";
                           const imgSrc = `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w600`;
-                          return isDeviceVideo ? (
-                            <video
-                              src={primary.view_url || primary.thumbnail_url || ""}
-                              controls
-                              preload="metadata"
-                              playsInline
-                              className="w-full h-full object-cover bg-black"
-                            />
-                          ) : isVideo ? (
+                          return isVideo ? (
                             <a
                               href={`https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`}
                               target="_blank"
@@ -572,7 +563,7 @@ export function PostDrawerLegacy({ open, onOpenChange, post, pillars, userId, on
                           </button>
                         </div>
                       </div>
-                      {mediaList[0].file_type?.startsWith("video/") && mediaList[0].provider === "google_drive" && (
+                      {mediaList[0].file_type?.startsWith("video/") && (
                         <a
                           href={`https://drive.google.com/file/d/${encodeURIComponent(mediaList[0].external_file_id || mediaList[0].id)}/view`}
                           target="_blank"

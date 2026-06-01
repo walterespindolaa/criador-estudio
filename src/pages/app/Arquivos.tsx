@@ -366,7 +366,6 @@ const Arquivos = () => {
                       fileType={f.file_type}
                       thumbnailUrl={f.thumbnail_url}
                       viewUrl={f.view_url}
-                      provider={f.provider}
                       size="md"
                       onRemove={() => deleteDriveRef(f.id)}
                     />

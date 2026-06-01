@@ -1393,21 +1393,12 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                 const primary = mediaList[0];
                                 const fileId = primary.external_file_id || primary.id;
                                 const isVideo = primary.file_type?.startsWith("video/");
-                                const isDeviceVideo = isVideo && primary.provider === "device";
                                 const isSupabaseUpload = !!primary.thumbnail_url
                                   && !primary.thumbnail_url.includes("drive.google")
                                   && !primary.thumbnail_url.includes("lh3.google");
                                 const driveImgSrc = `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w600`;
                                 const imgSrc = primary.thumbnail_url || primary.view_url || driveImgSrc;
-                                return isDeviceVideo ? (
-                                  <video
-                                    src={primary.view_url || primary.thumbnail_url || ""}
-                                    controls
-                                    preload="metadata"
-                                    playsInline
-                                    className="w-full h-full object-cover bg-black"
-                                  />
-                                ) : isVideo ? (
+                                return isVideo ? (
                                   <a
                                     href={`https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`}
                                     target="_blank"
@@ -1473,7 +1464,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                 </button>
                               </div>
                             </div>
-                            {mediaList[0].file_type?.startsWith("video/") && mediaList[0].provider === "google_drive" && (
+                            {mediaList[0].file_type?.startsWith("video/") && (
                               <a
                                 href={`https://drive.google.com/file/d/${encodeURIComponent(mediaList[0].external_file_id || mediaList[0].id)}/view`}
                                 target="_blank"

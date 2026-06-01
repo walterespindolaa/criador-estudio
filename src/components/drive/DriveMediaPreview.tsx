@@ -5,45 +5,33 @@ interface DriveMediaPreviewProps {
   fileType?: string | null;
   thumbnailUrl?: string | null;
   viewUrl?: string | null;
-  provider?: string | null;
   size?: "sm" | "md";
   onRemove?: () => void;
 }
 
-export function DriveMediaPreview({ fileName, fileType, thumbnailUrl, viewUrl, provider, size = "md", onRemove }: DriveMediaPreviewProps) {
+export function DriveMediaPreview({ fileName, fileType, thumbnailUrl, viewUrl, size = "md", onRemove }: DriveMediaPreviewProps) {
   const isImage = fileType?.startsWith("image/");
   const isVideo = fileType?.startsWith("video/");
-  const isDeviceVideo = isVideo && provider === "device";
   const dim = size === "sm" ? "w-16 h-16" : "w-24 h-24";
 
   return (
     <div className="group relative inline-flex flex-col items-center">
-      {isDeviceVideo ? (
-        <video
-          src={viewUrl || thumbnailUrl || ""}
-          controls
-          preload="metadata"
-          playsInline
-          className={`${dim} rounded-xl border border-border bg-black object-cover`}
-        />
-      ) : (
-        <a
-          href={viewUrl || "#"}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`${dim} rounded-xl border border-border bg-muted flex items-center justify-center overflow-hidden hover:ring-2 hover:ring-primary transition-all`}
-        >
-          {thumbnailUrl ? (
-            <img src={thumbnailUrl} alt={fileName} className="w-full h-full object-cover" loading="lazy" />
-          ) : isImage ? (
-            <Image className="h-6 w-6 text-muted-foreground" />
-          ) : isVideo ? (
-            <Video className="h-6 w-6 text-muted-foreground" />
-          ) : (
-            <FileText className="h-6 w-6 text-muted-foreground" />
-          )}
-        </a>
-      )}
+      <a
+        href={viewUrl || "#"}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`${dim} rounded-xl border border-border bg-muted flex items-center justify-center overflow-hidden hover:ring-2 hover:ring-primary transition-all`}
+      >
+        {thumbnailUrl ? (
+          <img src={thumbnailUrl} alt={fileName} className="w-full h-full object-cover" loading="lazy" />
+        ) : isImage ? (
+          <Image className="h-6 w-6 text-muted-foreground" />
+        ) : isVideo ? (
+          <Video className="h-6 w-6 text-muted-foreground" />
+        ) : (
+          <FileText className="h-6 w-6 text-muted-foreground" />
+        )}
+      </a>
       {onRemove && (
         <button
           onClick={onRemove}

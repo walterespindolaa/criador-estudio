@@ -70,30 +70,6 @@ const clearStoredToken = () => {
 
 const isVideoMime = (mime: string) => mime.startsWith("video/");
 
-const VIDEO_STORAGE_MAX_BYTES = 100 * 1024 * 1024; // 100MB
-
-function extFromMimeOrName(mime: string, name: string): string {
-  const m = name.match(/\.([a-zA-Z0-9]{1,5})$/);
-  if (m) return m[1].toLowerCase();
-  if (mime === "video/quicktime") return "mov";
-  if (mime === "video/webm") return "webm";
-  return "mp4";
-}
-
-async function fetchDriveFileSize(fileId: string, accessToken: string): Promise<number | null> {
-  try {
-    const res = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?fields=size`,
-      { headers: { Authorization: `Bearer ${accessToken}` } },
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data?.size != null ? Number(data.size) : null;
-  } catch {
-    return null;
-  }
-}
-
 async function downloadDriveFileToBlob(fileId: string, accessToken: string): Promise<Blob> {
   const res = await fetch(
     `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`,
@@ -280,41 +256,8 @@ export function useGoogleDrive() {
     for (const f of files) {
       try {
         if (isVideoMime(f.mimeType)) {
-          // VÍDEO: até 100MB vai pro Storage (toca inline como foto).
-          // Acima de 100MB cai no fallback Drive (ref + permissions.create).
-          let sizeBytes: number | null = typeof f.sizeBytes === "number" ? f.sizeBytes : null;
-          if (sizeBytes == null) sizeBytes = await fetchDriveFileSize(f.id, accessToken);
-
-          if (sizeBytes != null && sizeBytes <= VIDEO_STORAGE_MAX_BYTES) {
-            // Pequeno o suficiente → baixa original (sem compressão) → upload Storage → ref device
-            const driveBlob = await downloadDriveFileToBlob(f.id, accessToken);
-            const ext = extFromMimeOrName(f.mimeType, f.name);
-            const path = `${ownerId}/${crypto.randomUUID()}.${ext}`;
-            const { error: upErr } = await supabase.storage.from("media").upload(path, driveBlob, {
-              upsert: true,
-              contentType: f.mimeType || driveBlob.type,
-            });
-            if (upErr) throw upErr;
-            const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
-            const publicUrl = urlData.publicUrl;
-            const { error: insErr } = await supabase.from("external_media_refs").insert({
-              user_id: ownerId,
-              post_id: postId || null,
-              provider: "device",
-              external_file_id: path,
-              file_name: f.name,
-              file_type: f.mimeType || driveBlob.type,
-              file_size: driveBlob.size,
-              thumbnail_url: publicUrl,
-              view_url: publicUrl,
-            });
-            if (insErr) throw insErr;
-            imported++;
-            continue;
-          }
-
-          // Caminho grande (>100MB): mantém vídeo no Drive, torna público, mostra modal
-          toast("Vídeo grande (>100MB) — fica no Drive e abre em nova aba.");
+          // VÍDEO: SEMPRE fica no Drive (codec/tamanho variam — player do Drive transcodifica).
+          // Storage não é usado pra vídeo: HEVC/.mov não toca em <video> e estoura quota.
           const ok = await confirmVideoPublic();
           if (!ok) { failed++; continue; }
 
