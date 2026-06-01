@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
-} from "@/components/ui/sheet";
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -129,14 +129,17 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle className="font-display">Painel da parceira</SheetTitle>
-            <SheetDescription className="font-body text-sm">
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          className="sm:max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl"
+        >
+          <DialogHeader>
+            <DialogTitle className="font-display">Painel da parceira</DialogTitle>
+            <DialogDescription className="font-body text-sm">
               {partner.full_name}
-            </SheetDescription>
-          </SheetHeader>
+            </DialogDescription>
+          </DialogHeader>
 
           <div className="space-y-6 mt-6">
             {/* Sobre */}
@@ -343,8 +346,8 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
               </section>
             )}
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={rejectOpen} onOpenChange={(o) => !reject.isPending && setRejectOpen(o)}>
         <AlertDialogContent>
