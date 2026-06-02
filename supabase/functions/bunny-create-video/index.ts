@@ -42,12 +42,13 @@ Deno.serve(async (req) => {
     const owner = accountId || userId;
 
     // Permissão: dono OU gerente ativo da conta
+    // account_members: owner_id = conta gerenciada, member_id = o gerente, status = 'active'
     if (owner !== userId) {
       const { data: membership } = await supabase
         .from("account_members")
         .select("id")
-        .eq("manager_id", userId)
-        .eq("client_id", owner)
+        .eq("owner_id", owner)
+        .eq("member_id", userId)
         .eq("status", "active")
         .maybeSingle();
       if (!membership) return json({ error: "Sem permissão para essa conta" }, 403);
