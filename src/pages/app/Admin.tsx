@@ -89,7 +89,7 @@ const AdminInner = () => {
   const [validity, setValidity] = useState("lifetime");
   const [creating, setCreating] = useState(false);
   const [result, setResult] = useState<null | { email: string; inviteLink: string }>(null);
-  const [selectedUser, setSelectedUser] = useState<AdminProfile | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const handleCreate = async () => {
@@ -313,7 +313,7 @@ const AdminInner = () => {
                     user={u}
                     onRoleChange={handleRoleChange}
                     onPlanChange={handlePlanChange}
-                    onSelect={setSelectedUser}
+                    onSelect={setSelectedUserId}
                   />)
                 )}
               </tbody>
@@ -479,9 +479,9 @@ const AdminInner = () => {
         </Dialog>
 
         <UserDetailsDrawer
-          open={!!selectedUser}
-          onOpenChange={(o) => !o && setSelectedUser(null)}
-          user={selectedUser}
+          open={!!selectedUserId}
+          onOpenChange={(o) => !o && setSelectedUserId(null)}
+          userId={selectedUserId}
         />
       </motion.div>
     </div>
@@ -514,7 +514,7 @@ type AdminUserRowProps = {
   user: AdminProfile;
   onRoleChange: (userId: string, role: string) => void;
   onPlanChange: (userId: string, plan: string) => void;
-  onSelect: (user: AdminProfile) => void;
+  onSelect: (userId: string) => void;
 };
 
 function AdminUserRow({ user, onRoleChange, onPlanChange, onSelect }: AdminUserRowProps) {
@@ -524,7 +524,7 @@ function AdminUserRow({ user, onRoleChange, onPlanChange, onSelect }: AdminUserR
 
   return (
     <tr
-      onClick={() => onSelect(user)}
+      onClick={() => onSelect(user.id)}
       className="border-b border-border/40 last:border-0 hover:bg-accent/40 transition-colors cursor-pointer"
     >
       <td className="px-4 py-3">
