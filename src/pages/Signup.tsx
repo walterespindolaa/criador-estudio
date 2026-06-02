@@ -132,7 +132,7 @@ const Signup = () => {
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="name" className="font-body">Seu nome</Label>
-                  <Input id="name" type="text" placeholder="Como quer ser chamada?" {...register("name")} className="rounded-xl h-12" />
+                  <Input id="name" type="text" placeholder="Como você quer ser chamado(a)?" {...register("name")} className="rounded-xl h-12" />
                   {errors.name && <p className="text-xs text-destructive mt-1">{errors.name.message}</p>}
                 </div>
                 <div className="space-y-2">

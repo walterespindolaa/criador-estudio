@@ -427,7 +427,7 @@ const LinkInBio = () => {
               </Label>
               <div className="mt-2 flex items-center gap-2">
                 <span className="text-sm font-body text-muted-foreground whitespace-nowrap">
-                  criadores.flow/bio/
+                  criasocialclub.com/bio/
                 </span>
                 <Input
                   value={slug}

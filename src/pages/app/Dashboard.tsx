@@ -2,11 +2,12 @@ import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   Lightbulb, FileText, CheckCircle2, Sparkles, Copy, Check,
-  ListChecks, Pencil, Trash2, Clock, Flame, ArrowRight, TrendingUp, LayoutDashboard
+  ListChecks, Pencil, Trash2, Clock, Flame, ArrowRight, TrendingUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -287,9 +288,12 @@ const Dashboard = () => {
 
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-sm shrink-0">
-              <LayoutDashboard className="h-5 w-5 text-white" strokeWidth={1.75} />
-            </div>
+            <Avatar className="w-10 h-10 shrink-0 border border-border shadow-sm">
+              {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile.name ?? "perfil"} />}
+              <AvatarFallback className="bg-gradient-to-br from-primary to-purple-600 text-white font-display font-bold text-sm">
+                {(profile?.name ?? "C").trim().charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
             <div>
               <h1 className="text-xl sm:text-2xl md:text-3xl font-display font-extrabold text-foreground tracking-tight mb-0.5">
                 {getGreeting(profile?.name || "criador")}
@@ -335,18 +339,22 @@ const Dashboard = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
                   className={cn(
-                    "relative overflow-hidden bg-gradient-to-br p-3 sm:p-5 rounded-2xl border border-transparent",
+                    "relative overflow-hidden bg-gradient-to-br px-3 py-2.5 sm:px-4 sm:py-3 rounded-2xl border border-transparent",
                     "hover:shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all duration-200",
                     "text-left w-full group cursor-pointer",
                     s.bg
                   )}
                 >
-                  <div className={cn("w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center mb-2 sm:mb-3 shadow-sm", s.iconBg)}>
-                    <s.icon className={cn("h-4 w-4 sm:h-5 sm:w-5", s.iconColor)} strokeWidth={1.75} />
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 pr-5">
+                    <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shadow-sm shrink-0", s.iconBg)}>
+                      <s.icon className={cn("h-4 w-4 sm:h-4.5 sm:w-4.5", s.iconColor)} strokeWidth={1.75} />
+                    </div>
+                    <div className="min-w-0 flex-1 flex items-baseline gap-1.5">
+                      <p className="text-xl sm:text-2xl font-display font-extrabold text-foreground tracking-tight leading-none">{s.value}</p>
+                      <p className="text-[10px] sm:text-[11px] uppercase tracking-wider font-body font-semibold text-muted-foreground truncate">{s.label}</p>
+                    </div>
                   </div>
-                  <p className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">{s.value}</p>
-                  <p className="text-[10px] sm:text-[11px] uppercase tracking-wider font-body font-semibold text-muted-foreground mt-0.5">{s.label}</p>
-                  <ArrowRight className="absolute top-3 right-3 sm:top-4 sm:right-4 h-4 w-4 text-muted-foreground/30 group-hover:text-foreground/50 group-hover:translate-x-0.5 transition-all" />
+                  <ArrowRight className="absolute top-1/2 -translate-y-1/2 right-3 h-4 w-4 text-muted-foreground/30 group-hover:text-foreground/50 group-hover:translate-x-0.5 transition-all" />
                 </motion.button>
               ))}
             </div>
