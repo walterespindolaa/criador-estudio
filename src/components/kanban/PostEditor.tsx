@@ -258,6 +258,10 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
 
   const [driveMedia, setDriveMedia] = useState<DriveRef[]>([]);
   const [pendingDriveFiles, setPendingDriveFiles] = useState<DriveRef[]>([]);
+  // Ref ids de mídia de slide (carrossel) inserida com post_id=null
+  // que precisa de backfill no save. Não vai em pendingDriveFiles
+  // porque mediaList usa essa lista pra renderizar a mídia primária do post.
+  const [pendingSectionRefIds, setPendingSectionRefIds] = useState<string[]>([]);
   const [uploadingLocal, setUploadingLocal] = useState(false);
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
   const { pickAndSave, picking } = useGoogleDrive();
@@ -764,13 +768,17 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
       return;
     }
 
-    if (isNew && newPostId && pendingDriveFiles.length > 0) {
-      const pendingIds = pendingDriveFiles.map((f) => f.id);
-      await supabase
-        .from("external_media_refs")
-        .update({ post_id: newPostId })
-        .in("id", pendingIds);
-      setPendingDriveFiles([]);
+    if (isNew && newPostId) {
+      const driveIds = pendingDriveFiles.map((f) => f.id);
+      const allPendingIds = [...driveIds, ...pendingSectionRefIds];
+      if (allPendingIds.length > 0) {
+        await supabase
+          .from("external_media_refs")
+          .update({ post_id: newPostId })
+          .in("id", allPendingIds);
+        setPendingDriveFiles([]);
+        setPendingSectionRefIds([]);
+      }
     }
 
     if (wasPublished) {
@@ -1801,6 +1809,39 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                       return;
                                     }
                                     const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
+
+                                    // Registra em external_media_refs (provider='storage') pra
+                                    // Feed e Arquivos enxergarem; cota é incrementada.
+                                    let mediaRefId: string | null = null;
+                                    const { data: inserted, error: insErr } = await supabase
+                                      .from("external_media_refs")
+                                      .insert({
+                                        user_id: userId,
+                                        post_id: post?.id ?? null,
+                                        provider: "storage",
+                                        external_file_id: path,
+                                        file_name: file.name,
+                                        file_type: file.type || null,
+                                        file_size: file.size,
+                                        thumbnail_url: urlData.publicUrl,
+                                        view_url: urlData.publicUrl,
+                                      })
+                                      .select("id")
+                                      .single();
+                                    if (insErr) {
+                                      console.error("[section-upload] external_media_refs insert error", insErr);
+                                    } else if (inserted) {
+                                      mediaRefId = (inserted as { id: string }).id;
+                                      if (!post?.id) {
+                                        // backfill no save (mesmo mecanismo de pendingDriveFiles, mas em lista própria)
+                                        setPendingSectionRefIds((prev) => [...prev, mediaRefId!]);
+                                      }
+                                      const { error: incErr } = await (supabase.rpc as unknown as (
+                                        fn: string, args: unknown,
+                                      ) => Promise<{ error: unknown }>)("increment_storage", { _user: userId, _delta: file.size });
+                                      if (incErr) console.error("[section-upload] increment_storage failed (+)", incErr);
+                                    }
+
                                     setSections((prev) =>
                                       prev.map((s, j) =>
                                         j === index
@@ -1809,6 +1850,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                               driveFileId: path,
                                               driveFileName: file.name,
                                               driveThumbnail: urlData.publicUrl,
+                                              mediaRefId,
                                             }
                                           : s
                                       )
@@ -1831,6 +1873,51 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
 
                               document.body.appendChild(input);
                               input.click();
+                            }}
+                            onRemoveSectionMedia={async (index) => {
+                              const sec = sections[index];
+                              const refId = sec?.mediaRefId ?? null;
+                              const storagePath = sec?.driveFileId ?? null;
+                              // 1) limpa a UI imediatamente
+                              setSections((prev) =>
+                                prev.map((s, j) =>
+                                  j === index
+                                    ? {
+                                        ...s,
+                                        driveFileId: null,
+                                        driveFileName: null,
+                                        driveThumbnail: null,
+                                        mediaRefId: null,
+                                      }
+                                    : s
+                                )
+                              );
+                              if (!refId) return; // mídia de Drive antiga sem mediaRefId → nada a sincronizar
+                              try {
+                                // Busca file_size pra devolver pra cota
+                                const { data: refRow } = await supabase
+                                  .from("external_media_refs")
+                                  .select("file_size, provider, external_file_id")
+                                  .eq("id", refId)
+                                  .maybeSingle();
+                                await supabase.from("external_media_refs").delete().eq("id", refId);
+                                // remove do state de pending se ainda estava lá (post novo)
+                                setPendingSectionRefIds((prev) => prev.filter((id) => id !== refId));
+                                const provider = (refRow as { provider?: string | null } | null)?.provider;
+                                const sizeBytes = (refRow as { file_size?: number | null } | null)?.file_size ?? null;
+                                const filePath = ((refRow as { external_file_id?: string | null } | null)?.external_file_id) ?? storagePath;
+                                if (provider === "storage" && filePath) {
+                                  await supabase.storage.from("media").remove([filePath]);
+                                  if (sizeBytes && sizeBytes > 0 && userId) {
+                                    const { error: decErr } = await (supabase.rpc as unknown as (
+                                      fn: string, args: unknown,
+                                    ) => Promise<{ error: unknown }>)("increment_storage", { _user: userId, _delta: -sizeBytes });
+                                    if (decErr) console.error("[section-upload] increment_storage failed (-)", decErr);
+                                  }
+                                }
+                              } catch (e) {
+                                console.error("[section-upload] remove sync failed", e);
+                              }
                             }}
                             onPickDriveForSection={async (index) => {
                               const before = new Date().toISOString();

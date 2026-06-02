@@ -8,6 +8,8 @@ export interface Section {
   driveFileId?: string | null;
   driveFileName?: string | null;
   driveThumbnail?: string | null;
+  /** id da row em external_media_refs (quando a mídia foi registrada lá) */
+  mediaRefId?: string | null;
 }
 
 export const emptySection = (): Section => ({
@@ -16,6 +18,7 @@ export const emptySection = (): Section => ({
   driveFileId: null,
   driveFileName: null,
   driveThumbnail: null,
+  mediaRefId: null,
 });
 
 type Props = {
@@ -26,6 +29,7 @@ type Props = {
   onPickDriveForSection: (index: number) => Promise<void>;
   uploadingLocal?: boolean;
   onUploadLocalForSection?: (index: number) => void;
+  onRemoveSectionMedia?: (index: number) => void | Promise<void>;
 };
 
 export function ScriptEditor({
@@ -36,6 +40,7 @@ export function ScriptEditor({
   onPickDriveForSection,
   uploadingLocal = false,
   onUploadLocalForSection,
+  onRemoveSectionMedia,
 }: Props) {
   const updateAt = (index: number, patch: Partial<Section>) => {
     onChange(prev => prev.map((s, j) => (j === index ? { ...s, ...patch } : s)));
@@ -125,7 +130,13 @@ export function ScriptEditor({
                 />
                 <button
                   type="button"
-                  onClick={() => updateAt(i, { driveFileId: null, driveFileName: null, driveThumbnail: null })}
+                  onClick={() => {
+                    if (onRemoveSectionMedia) {
+                      onRemoveSectionMedia(i);
+                    } else {
+                      updateAt(i, { driveFileId: null, driveFileName: null, driveThumbnail: null, mediaRefId: null });
+                    }
+                  }}
                   className="absolute top-1.5 right-1.5 rounded-full bg-black/50 hover:bg-black/70 text-white p-1 transition-colors backdrop-blur-sm"
                   aria-label="Remover mídia"
                 >
