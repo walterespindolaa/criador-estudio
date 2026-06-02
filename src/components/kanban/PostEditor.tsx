@@ -226,6 +226,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
   const [driveMedia, setDriveMedia] = useState<DriveRef[]>([]);
   const [pendingDriveFiles, setPendingDriveFiles] = useState<DriveRef[]>([]);
   const [uploadingLocal, setUploadingLocal] = useState(false);
+  const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
   const { pickAndSave, picking } = useGoogleDrive();
   const { syncPost: syncCalendarPost, removeFromCalendar, syncing: calendarSyncing } = useGoogleCalendar();
   const { createPost, updatePost, deletePost } = usePosts();
@@ -255,20 +256,38 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
   }, []);
 
   const removeDriveRef = async (ref: DriveRef) => {
-    // Vídeos do Bunny: tentar deletar no Bunny PRIMEIRO (a edge confere a ref antes de deletar).
-    // Se o invoke falhar, ainda removemos a row localmente — o purge de 30 dias é a rede de segurança.
-    if (ref.provider === "bunny" && ref.external_file_id) {
-      try {
-        const { error } = await supabase.functions.invoke("bunny-delete-video", {
-          body: { videoGuid: ref.external_file_id, accountId: userId },
-        });
-        if (error) console.error("[bunny-delete-video] invoke error", error);
-      } catch (e) {
-        console.error("[bunny-delete-video] invoke threw", e);
+    // Lock por id: evita re-invocação se o usuário clica no X várias vezes
+    // enquanto a primeira chamada ainda está rolando.
+    if (removingIds.has(ref.id)) return;
+    setRemovingIds((prev) => {
+      const next = new Set(prev);
+      next.add(ref.id);
+      return next;
+    });
+    try {
+      // Vídeos do Bunny: tentar deletar no Bunny PRIMEIRO (a edge confere a ref antes de deletar).
+      // Se o invoke falhar, ainda removemos a row localmente — o purge de 30 dias é a rede de segurança.
+      if (ref.provider === "bunny" && ref.external_file_id) {
+        try {
+          const { error } = await supabase.functions.invoke("bunny-delete-video", {
+            body: { videoGuid: ref.external_file_id, accountId: userId },
+          });
+          if (error) console.error("[bunny-delete-video] invoke error", error);
+        } catch (e) {
+          console.error("[bunny-delete-video] invoke threw", e);
+        }
       }
+      await supabase.from("external_media_refs").delete().eq("id", ref.id);
+    } finally {
+      // Sempre limpar UI local — em ambos os arrays — e liberar o lock.
+      setPendingDriveFiles((prev) => prev.filter((f) => f.id !== ref.id));
+      setDriveMedia((prev) => prev.filter((m) => m.id !== ref.id));
+      setRemovingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(ref.id);
+        return next;
+      });
     }
-    await supabase.from("external_media_refs").delete().eq("id", ref.id);
-    setDriveMedia((prev) => prev.filter((m) => m.id !== ref.id));
   };
 
   // Load post data into form state
@@ -845,12 +864,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
   const mediaList: DriveRef[] = isNew ? pendingDriveFiles : driveMedia;
 
   const handleRemoveAllMedia = () => {
+    // removeDriveRef já cuida do lock + cleanup dos dois arrays.
     if (isNew) {
-      // Refs pending (post não salvo): IDs temp- não casam no DB, mas ainda assim
-      // invocamos bunny-delete-video pros bunny refs (edge retorna 404 quando não
-      // acha row — fica logado, purge de 30d é a rede de segurança).
       pendingDriveFiles.forEach((f) => removeDriveRef(f));
-      setPendingDriveFiles([]);
     } else {
       driveMedia.forEach((m) => removeDriveRef(m));
     }
@@ -1612,7 +1628,11 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                   <Cloud className="h-2.5 w-2.5 text-white" />
                                   <span className="text-[9px] text-white font-body truncate max-w-[120px]">{mediaList[0].file_name}</span>
                                 </div>
-                                <button onClick={() => handleRemoveAllMedia()} className="bg-black/40 backdrop-blur rounded-full p-1">
+                                <button
+                                  onClick={() => handleRemoveAllMedia()}
+                                  disabled={removingIds.size > 0}
+                                  className="bg-black/40 backdrop-blur rounded-full p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
                                   <X className="h-3 w-3 text-white" />
                                 </button>
                               </div>
