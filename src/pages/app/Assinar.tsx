@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Check, Sparkles, ArrowLeft, Shield } from "lucide-react";
+import { Check, Sparkles, ArrowLeft, Shield, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useProfile } from "@/hooks/useProfile";
+import { useAuth } from "@/contexts/AuthContext";
 import { useManageSubscription } from "@/hooks/useManageSubscription";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -14,6 +15,7 @@ export default function Assinar() {
   const navigate = useNavigate();
   const { status } = useSubscription();
   const { profile } = useProfile();
+  const { user } = useAuth();
   const { openPortal, isLoading: portalLoading } = useManageSubscription();
   const [searchParams] = useSearchParams();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
@@ -22,6 +24,32 @@ export default function Assinar() {
   const [codeError, setCodeError] = useState(false);
 
   const isExpired = status === "trial_expired" || status === "blocked";
+
+  // Self-subscribe: conta PF criada por uma gestora via fluxo "Assinar pra mim".
+  // user_metadata.self_subscribe_plan + self_subscribe_partner_code são gravados
+  // pela edge manager-self-subscribe (Entrega 1).
+  const meta = (user?.user_metadata ?? {}) as { self_subscribe_plan?: string; self_subscribe_partner_code?: string };
+  const selfSubscribePlan = meta.self_subscribe_plan;
+  const selfSubscribeCode = meta.self_subscribe_partner_code;
+  const isSelfSubscribeFlow = !!selfSubscribePlan && (selfSubscribePlan === "pro" || selfSubscribePlan === "studio");
+  const prefilledRef = useRef(false);
+
+  useEffect(() => {
+    if (!isSelfSubscribeFlow || prefilledRef.current) return;
+    prefilledRef.current = true;
+    if (selfSubscribeCode) {
+      setPartnerCode(selfSubscribeCode);
+      // Valida no mount pra o badge "Código da X aplicado" aparecer
+      (async () => {
+        const { data } = await (supabase.rpc as unknown as (fn: string, args: unknown) => Promise<{ data: unknown }>)(
+          "validate_partner_code",
+          { _code: selfSubscribeCode },
+        );
+        const row = Array.isArray(data) && data.length ? (data[0] as { partner_name: string; discount_pct: number | null }) : null;
+        if (row) setPartnerInfo({ name: row.partner_name, discountPct: row.discount_pct ?? null });
+      })();
+    }
+  }, [isSelfSubscribeFlow, selfSubscribeCode]);
 
   const validateCode = async () => {
     const code = partnerCode.trim();
@@ -47,7 +75,11 @@ export default function Assinar() {
     setLoadingPlan(planId);
     try {
       const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: { plan: planId, partner_code: partnerCode.trim() || undefined },
+        body: {
+          plan: planId,
+          partner_code: partnerCode.trim() || undefined,
+          self_subscribe: isSelfSubscribeFlow || undefined,
+        },
       });
       if (error) throw error;
       if (data?.url) {
@@ -83,6 +115,22 @@ export default function Assinar() {
           <p className="text-muted-foreground text-sm font-body max-w-sm">
             Para continuar acessando o cria, escolha um plano abaixo.
           </p>
+        </div>
+      )}
+
+      {isSelfSubscribeFlow && (
+        <div className="w-full max-w-4xl mb-6 rounded-2xl border border-primary/30 bg-primary/5 px-5 py-4 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+            <UserCircle className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-display font-semibold text-foreground">
+              Você está finalizando sua assinatura pessoal
+            </p>
+            <p className="text-xs text-muted-foreground font-body mt-0.5">
+              Plano <span className="font-semibold text-foreground capitalize">{selfSubscribePlan}</span> pré-selecionado{selfSubscribeCode ? " · cupom aplicado" : ""}. Clique em "Assinar" pra concluir.
+            </p>
+          </div>
         </div>
       )}
 

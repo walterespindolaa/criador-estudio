@@ -73,6 +73,25 @@ serve(async (req) => {
       await svc.from("profiles").update({ stripe_customer_id: customerId }).eq("id", user.id);
     }
 
+    // ── Self-subscribe (manager assinando pra conta PF dela) ────
+    // O front passa self_subscribe:true quando o user logado tem
+    // user_metadata.self_subscribe_plan. Validamos via account_members:
+    // owner_id=user.id (PF) + pending_self_subscribe=true.
+    const selfSubRequest = body?.self_subscribe === true;
+    let selfSubValidated = false;
+    let selfSubManagerId: string | null = null;
+    if (selfSubRequest) {
+      const { data: link } = await svc.from("account_members")
+        .select("member_id")
+        .eq("owner_id", user.id)
+        .eq("pending_self_subscribe", true)
+        .maybeSingle();
+      if (link) {
+        selfSubValidated = true;
+        selfSubManagerId = (link as { member_id: string | null }).member_id;
+      }
+    }
+
     // ── Partner code (opcional) ─────────────────────────────────
     let partnerMeta: Record<string, string> = {};
     let appliedPromotionCodeId: string | null = null;
@@ -84,15 +103,21 @@ serve(async (req) => {
         .ilike("coupon_code", rawCode) // match exato case-insensitive (sem %)
         .eq("status", "approved")
         .maybeSingle();
-      // bloqueio básico de auto-indicação no checkout (fingerprint fica pra B.5)
-      if (partner && (partner as { user_id: string }).user_id !== user.id) {
-        const pr = partner as { id: string; coupon_type: string | null; stripe_promotion_code_id: string | null };
-        partnerMeta = { partner_code: rawCode.toUpperCase(), partner_id: pr.id };
-        if (pr.coupon_type === "client_discount" && pr.stripe_promotion_code_id) {
-          appliedPromotionCodeId = pr.stripe_promotion_code_id;
+      if (partner) {
+        const pr = partner as { id: string; user_id: string; coupon_type: string | null; stripe_promotion_code_id: string | null };
+        const isAutoIndicacao = pr.user_id === user.id;
+        // Exceção: self-subscribe validado E partner pertence à manager (member_id do vínculo).
+        const allowAutoIndicacao = selfSubValidated && pr.user_id === selfSubManagerId;
+        if (!isAutoIndicacao || allowAutoIndicacao) {
+          partnerMeta = { partner_code: rawCode.toUpperCase(), partner_id: pr.id };
+          if (pr.coupon_type === "client_discount" && pr.stripe_promotion_code_id) {
+            appliedPromotionCodeId = pr.stripe_promotion_code_id;
+          }
         }
       }
     }
+    // Marca self_subscribe nas metadatas — webhook B.2 lê "1" pra NÃO gerar comissão.
+    const selfSubMark: Record<string, string> = selfSubValidated ? { self_subscribe: "1" } : {};
     // ────────────────────────────────────────────────────────────
 
     const origin = req.headers.get("origin") ?? "https://app.criasocialclub.com.br";
@@ -101,9 +126,9 @@ serve(async (req) => {
       mode: "subscription",
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
-      metadata: { app: "cria", user_id: user.id, plan, ...partnerMeta },
+      metadata: { app: "cria", user_id: user.id, plan, ...partnerMeta, ...selfSubMark },
       subscription_data: {
-        metadata: { app: "cria", user_id: user.id, plan, ...partnerMeta },
+        metadata: { app: "cria", user_id: user.id, plan, ...partnerMeta, ...selfSubMark },
       },
       success_url: `${origin}/app?checkout=success`,
       cancel_url: `${origin}/app/assinar?checkout=cancel`,

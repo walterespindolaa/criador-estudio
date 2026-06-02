@@ -60,6 +60,17 @@ serve(async (req) => {
           stripe_subscription_id: s.subscription as string,
           plan,
         }).eq("id", userId);
+
+        // Self-subscribe: ativa vínculo pendente manager→PF.
+        // PF (owner_id) agora aparece automaticamente na equipe da gestora.
+        await supabase.from("account_members")
+          .update({
+            status: "active",
+            pending_self_subscribe: false,
+            accepted_at: new Date().toISOString(),
+          })
+          .eq("owner_id", userId)
+          .eq("pending_self_subscribe", true);
         break;
       }
 
