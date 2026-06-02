@@ -39,11 +39,13 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
   const activeMediaUrl = mediaUrl || media || thumbnail || coverImage;
   // Vídeos do Drive não tocam em <video src> (cookie/CORS) → renderiza como imagem (poster lh3).
   const isDriveVideo = mediaType === "video" && !!activeMediaUrl && activeMediaUrl.includes("drive.google.com");
+  // Vídeos do Bunny vêm como URL de iframe (player nativo do Bunny).
+  const isBunnyVideo = mediaType === "video" && !!activeMediaUrl && activeMediaUrl.includes("iframe.mediadelivery.net");
   const driveVideoIdMatch = isDriveVideo ? activeMediaUrl!.match(/(?:\/d\/|[?&]id=)([a-zA-Z0-9_-]+)/) : null;
   const drivePosterUrl = driveVideoIdMatch
     ? `https://lh3.googleusercontent.com/d/${driveVideoIdMatch[1]}=w800`
     : null;
-  const isPlayableVideo = mediaType === "video" && !isDriveVideo;
+  const isPlayableVideo = mediaType === "video" && !isDriveVideo && !isBunnyVideo;
 
   useEffect(() => { if (open) setCarouselIdx(0); }, [open, format]);
 
@@ -125,7 +127,15 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
     return (
       <div className="relative w-full aspect-[4/5] overflow-hidden">
         {activeMediaUrl ? (
-          isPlayableVideo ? (
+          isBunnyVideo ? (
+            <iframe
+              src={activeMediaUrl}
+              loading="lazy"
+              allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+              allowFullScreen
+              className="w-full h-full border-0"
+            />
+          ) : isPlayableVideo ? (
             <video
               src={activeMediaUrl}
               autoPlay
@@ -157,7 +167,15 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
           style={{ aspectRatio: "9/16", borderRadius: 28, boxShadow: "0 20px 60px rgba(0,0,0,0.35)" }}>
           {/* Background media or gradient */}
           {activeMediaUrl ? (
-            isPlayableVideo ? (
+            isBunnyVideo ? (
+              <iframe
+                src={activeMediaUrl}
+                loading="lazy"
+                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                allowFullScreen
+                className="absolute inset-0 w-full h-full border-0"
+              />
+            ) : isPlayableVideo ? (
               <video
                 src={activeMediaUrl}
                 autoPlay
@@ -318,7 +336,15 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
               <div className="p-3 bg-card">
                 <div className="relative rounded-xl overflow-hidden aspect-video mb-3">
                   {activeMediaUrl ? (
-                    isPlayableVideo ? (
+                    isBunnyVideo ? (
+                      <iframe
+                        src={activeMediaUrl}
+                        loading="lazy"
+                        allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                        allowFullScreen
+                        className="w-full h-full border-0"
+                      />
+                    ) : isPlayableVideo ? (
                       <video
                         src={activeMediaUrl}
                         autoPlay

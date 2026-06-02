@@ -37,7 +37,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { fireConfetti } from "@/lib/confetti";
-import { FORMAT_LABELS, PLATFORMS, FORMATS, STATUS_OPTIONS } from "@/lib/constants";
+import { FORMAT_LABELS, PLATFORMS, FORMATS, STATUS_OPTIONS, BUNNY_CDN_HOSTNAME } from "@/lib/constants";
+import * as tus from "tus-js-client";
 import { getStatusClasses } from "@/lib/statusColors";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import {
@@ -408,6 +409,97 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
           toast.error(validation.reason);
           continue;
         }
+
+        const isVideo = raw.type.startsWith("video/");
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+        if (isVideo) {
+          // Vídeo → Bunny Stream via TUS (player transcodifica qualquer codec)
+          const toastId = toast.loading(`Enviando ${raw.name}… 0%`);
+          try {
+            const { data: sig, error: sigErr } = await supabase.functions.invoke("bunny-create-video", {
+              body: { fileName: raw.name, accountId: userId },
+            });
+            if (sigErr || !sig?.videoGuid) {
+              console.error("[bunny] create-video failed", sigErr ?? sig);
+              toast.error(`Falha ao iniciar upload de ${raw.name}`, { id: toastId });
+              continue;
+            }
+            const { videoGuid, libraryId, signature, expiration } = sig as {
+              videoGuid: string; libraryId: string | number; signature: string; expiration: number;
+            };
+
+            await new Promise<void>((resolve, reject) => {
+              const upload = new tus.Upload(raw, {
+                endpoint: "https://video.bunnycdn.com/tusupload",
+                retryDelays: [0, 3000, 5000, 10000, 20000],
+                headers: {
+                  AuthorizationSignature: signature,
+                  AuthorizationExpire: String(expiration),
+                  VideoId: videoGuid,
+                  LibraryId: String(libraryId),
+                },
+                metadata: { filetype: raw.type, title: raw.name },
+                onProgress: (sent, total) => {
+                  const pct = Math.round((sent / total) * 100);
+                  toast.loading(`Enviando ${raw.name}… ${pct}%`, { id: toastId });
+                },
+                onError: (e) => reject(e),
+                onSuccess: () => resolve(),
+              });
+              upload.start();
+            });
+
+            const viewUrl = `https://iframe.mediadelivery.net/embed/${libraryId}/${videoGuid}`;
+            const thumbUrl = `https://${BUNNY_CDN_HOSTNAME}/${videoGuid}/thumbnail.jpg`;
+
+            if (post?.id) {
+              const { data: inserted, error: insErr } = await supabase
+                .from("external_media_refs")
+                .insert({
+                  user_id: userId,
+                  post_id: post.id,
+                  provider: "bunny",
+                  bunny_video_id: videoGuid,
+                  external_file_id: videoGuid,
+                  file_name: raw.name,
+                  file_type: raw.type,
+                  file_size: raw.size,
+                  thumbnail_url: thumbUrl,
+                  view_url: viewUrl,
+                  expires_at: expiresAt,
+                })
+                .select("id, external_file_id, file_name, file_type, thumbnail_url, view_url, provider")
+                .single();
+              if (insErr || !inserted) {
+                console.error("[bunny] ref insert error", insErr);
+                toast.error(`Erro ao salvar referência de ${raw.name}`, { id: toastId });
+                continue;
+              }
+              setDriveMedia((prev) => [...prev, inserted as DriveRef]);
+            } else {
+              const tempRef: DriveRef = {
+                id: `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                file_name: raw.name,
+                file_type: raw.type,
+                thumbnail_url: thumbUrl,
+                view_url: viewUrl,
+                external_file_id: videoGuid,
+                provider: "bunny",
+              };
+              setPendingDriveFiles((prev) => [...prev, tempRef]);
+            }
+            toast.success(`${raw.name} enviado!`, { id: toastId });
+            anyUploaded = true;
+            continue;
+          } catch (e) {
+            console.error("[bunny] upload failed", e);
+            toast.error(`Falha no upload de ${raw.name}`, { id: toastId });
+            continue;
+          }
+        }
+
+        // FOTO → Storage (compressão + upload + ref device)
         const file = await compressImage(raw);
         const safeName = sanitizeStoragePath(file.name);
         const path = `${userId}/${Date.now()}-${safeName}`;
@@ -425,7 +517,6 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
         const publicUrl = urlData.publicUrl;
 
         if (post?.id) {
-          // Insert + select retorna o ID real — sem tempRef, sem refetch com setTimeout.
           const { data: inserted, error: insErr } = await supabase
             .from("external_media_refs")
             .insert({
@@ -437,6 +528,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
               thumbnail_url: publicUrl,
               view_url: publicUrl,
               external_file_id: path,
+              expires_at: expiresAt,
             })
             .select("id, external_file_id, file_name, file_type, thumbnail_url, view_url, provider")
             .single();
@@ -447,7 +539,6 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
           }
           setDriveMedia((prev) => [...prev, inserted as DriveRef]);
         } else {
-          // Post ainda não existe: guarda pending e vincula depois no handleSave.
           const tempRef: DriveRef = {
             id: `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
             file_name: file.name,
@@ -1393,12 +1484,21 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                 const primary = mediaList[0];
                                 const fileId = primary.external_file_id || primary.id;
                                 const isVideo = primary.file_type?.startsWith("video/");
+                                const isBunny = isVideo && primary.provider === "bunny";
                                 const isSupabaseUpload = !!primary.thumbnail_url
                                   && !primary.thumbnail_url.includes("drive.google")
                                   && !primary.thumbnail_url.includes("lh3.google");
                                 const driveImgSrc = `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w600`;
                                 const imgSrc = primary.thumbnail_url || primary.view_url || driveImgSrc;
-                                return isVideo ? (
+                                return isBunny ? (
+                                  <iframe
+                                    src={primary.view_url ?? ""}
+                                    loading="lazy"
+                                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                                    allowFullScreen
+                                    className="w-full h-full border-0"
+                                  />
+                                ) : isVideo ? (
                                   <a
                                     href={`https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`}
                                     target="_blank"
@@ -1464,7 +1564,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                 </button>
                               </div>
                             </div>
-                            {mediaList[0].file_type?.startsWith("video/") && (
+                            {mediaList[0].file_type?.startsWith("video/") && mediaList[0].provider !== "bunny" && (
                               <a
                                 href={`https://drive.google.com/file/d/${encodeURIComponent(mediaList[0].external_file_id || mediaList[0].id)}/view`}
                                 target="_blank"
