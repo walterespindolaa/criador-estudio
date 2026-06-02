@@ -2088,8 +2088,8 @@ export type Database = {
           admins: number
           onboarded: number
           plan_free: number
-          plan_premium: number
           plan_pro: number
+          plan_studio: number
           total_users: number
         }[]
       }

@@ -30,7 +30,7 @@ export type AdminStats = {
   byPlan: {
     free: number;
     pro: number;
-    premium: number;
+    studio: number;
   };
 };
 
@@ -47,7 +47,7 @@ const EMPTY_STATS: AdminStats = {
   activeUsers: 0,
   admins: 0,
   onboarded: 0,
-  byPlan: { free: 0, pro: 0, premium: 0 },
+  byPlan: { free: 0, pro: 0, studio: 0 },
 };
 
 export function useAdmin(filters: AdminFilters) {
@@ -72,7 +72,7 @@ export function useAdmin(filters: AdminFilters) {
         byPlan: {
           free: Number(row.plan_free ?? 0),
           pro: Number(row.plan_pro ?? 0),
-          premium: Number(row.plan_premium ?? 0),
+          studio: Number(row.plan_studio ?? 0),
         },
       };
     },

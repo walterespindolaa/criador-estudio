@@ -74,7 +74,7 @@ serve(async (req) => {
       return json({ error: "use_different_email" }, 400);
     }
 
-    const validPlans = ["pro", "premium"];
+    const validPlans = ["pro", "studio"];
     if (!validPlans.includes(plan)) return json({ error: "invalid_plan" }, 400);
 
     console.log("[manager-self-subscribe] start", { manager: user.id, pfEmail: normEmail, plan });

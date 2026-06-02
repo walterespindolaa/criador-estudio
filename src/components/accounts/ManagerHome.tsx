@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PLANS, type PlanId } from "@/lib/plans";
+import { cn } from "@/lib/utils";
 import { Logo } from "@/components/shared/Logo";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { validateUpload } from "@/lib/upload-validation";
@@ -48,7 +49,7 @@ export function ManagerHome() {
   // Self-subscribe: criar conta PF + mandar magic link pra finalizar checkout
   const [selfSubOpen, setSelfSubOpen] = useState(false);
   const [selfSubEmail, setSelfSubEmail] = useState("");
-  const [selfSubPlan, setSelfSubPlan] = useState<"pro" | "premium">("pro");
+  const [selfSubPlan, setSelfSubPlan] = useState<PlanId>("studio");
   const [selfSubCoupon, setSelfSubCoupon] = useState(partner?.coupon_code ?? "");
   const [selfSubSubmitting, setSelfSubSubmitting] = useState(false);
   const managerEmail = user?.email?.toLowerCase() ?? "";
@@ -455,17 +456,54 @@ export function ManagerHome() {
               </p>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label className="font-body text-xs">Plano</Label>
-              <Select value={selfSubPlan} onValueChange={(v) => setSelfSubPlan(v as "pro" | "premium")} disabled={selfSubSubmitting}>
-                <SelectTrigger className="rounded-xl">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pro">Pro</SelectItem>
-                  <SelectItem value="premium">Premium</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {PLANS.map((plan) => {
+                  const selected = selfSubPlan === plan.id;
+                  return (
+                    <button
+                      key={plan.id}
+                      type="button"
+                      onClick={() => setSelfSubPlan(plan.id)}
+                      disabled={selfSubSubmitting}
+                      className={cn(
+                        "text-left rounded-xl border-2 px-3 py-3 transition-all min-w-0",
+                        selected
+                          ? "border-primary bg-primary/5"
+                          : "border-border bg-card hover:border-primary/30",
+                        selfSubSubmitting && "opacity-60 cursor-not-allowed",
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-2 min-w-0">
+                        <span className="text-sm font-display font-semibold text-foreground truncate">
+                          {plan.name}
+                        </span>
+                        {plan.highlighted && (
+                          <span className="text-[9px] uppercase tracking-wider font-body font-semibold text-primary shrink-0">
+                            Recomendado
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-base font-display font-bold text-foreground mt-1">{plan.price}<span className="text-[10px] text-muted-foreground font-body font-normal">/mês</span></p>
+                      <p className="text-[11px] text-muted-foreground font-body mt-0.5 line-clamp-2">{plan.tagline}</p>
+                      <ul className="mt-2 space-y-1">
+                        {plan.features.slice(0, 4).map((f) => (
+                          <li key={f} className="flex items-start gap-1.5 text-[11px] font-body text-foreground/85">
+                            <Check className="h-3 w-3 text-primary shrink-0 mt-0.5" />
+                            <span className="min-w-0 break-words">{f}</span>
+                          </li>
+                        ))}
+                        {plan.features.length > 4 && (
+                          <li className="text-[10px] text-muted-foreground font-body pl-4">
+                            + {plan.features.length - 4} benefícios
+                          </li>
+                        )}
+                      </ul>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {isPartner && partner?.coupon_code && (

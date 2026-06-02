@@ -89,7 +89,7 @@ serve(async (req) => {
       const days = VALIDITY_DAYS[key];
       const access_expires_at = days === null ? null : new Date(Date.now() + days * 86400000).toISOString();
       const patch: Record<string, unknown> = { access_expires_at };
-      if (["pro", "premium"].includes(target.plan ?? "") && target.subscription_status !== "active") {
+      if (["pro", "studio"].includes(target.plan ?? "") && target.subscription_status !== "active") {
         patch.subscription_status = "active";
       }
       console.log("[admin-user-actions] set_validity patch:", JSON.stringify(patch));

@@ -8,42 +8,7 @@ import { useManageSubscription } from "@/hooks/useManageSubscription";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-
-const PLANS = [
-  {
-    id: "pro" as const,
-    name: "cria Pro",
-    price: "R$ 32,90",
-    tagline: "Seu estúdio de conteúdo completo",
-    features: [
-      "Banco de ideias ilimitado",
-      "Pipeline kanban de produção",
-      "Calendário + metas mensais",
-      "IA: 150 gerações/mês (legendas, roteiros, ideias)",
-      "Agendamento Instagram, TikTok e YouTube",
-      "Link in Bio profissional",
-      "Brandbook + Biblioteca",
-      "Relatórios e analytics",
-    ],
-    highlighted: false,
-  },
-  {
-    id: "studio" as const,
-    name: "cria Studio",
-    price: "R$ 49,90",
-    tagline: "Para quem vive de conteúdo",
-    features: [
-      "Tudo do cria Pro",
-      "🤝 Collabs: parcerias com marcas",
-      "💰 Financeiro: controle de cachês",
-      "📊 Acompanhamento de campanhas",
-      "🎓 Acesso aos cursos",
-      "IA: 500 gerações/mês",
-      "Suporte prioritário",
-    ],
-    highlighted: true,
-  },
-];
+import { PLANS, type PlanId } from "@/lib/plans";
 
 export default function Assinar() {
   const navigate = useNavigate();
@@ -78,7 +43,7 @@ export default function Assinar() {
     }
   }, [searchParams]);
 
-  const handleSubscribe = async (planId: "pro" | "studio") => {
+  const handleSubscribe = async (planId: PlanId) => {
     setLoadingPlan(planId);
     try {
       const { data, error } = await supabase.functions.invoke("create-checkout", {

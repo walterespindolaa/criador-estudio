@@ -47,7 +47,7 @@ const PAGE_SIZE = 20;
 const PLAN_BADGE: Record<string, string> = {
   free: "bg-muted text-muted-foreground border-border",
   pro: "bg-primary/10 text-primary border-primary/20",
-  premium: "bg-amber-50 text-amber-700 border-amber-200",
+  studio: "bg-amber-50 text-amber-700 border-amber-200",
 };
 
 const ROLE_BADGE: Record<string, string> = {
@@ -65,7 +65,7 @@ const ROLE_OPTIONS = [
 const PLAN_OPTIONS = [
   { value: "free", label: "Free" },
   { value: "pro", label: "Pro" },
-  { value: "premium", label: "Premium" },
+  { value: "studio", label: "Studio" },
 ];
 
 function initials(name: string | null | undefined) {
@@ -409,11 +409,11 @@ const AdminInner = () => {
                     <SelectItem value="free">Free</SelectItem>
                     <SelectItem value="trial">Trial</SelectItem>
                     <SelectItem value="pro">Pro</SelectItem>
-                    <SelectItem value="premium">Premium</SelectItem>
+                    <SelectItem value="studio">Studio</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              {(form.plan === "pro" || form.plan === "premium") && (
+              {(form.plan === "pro" || form.plan === "studio") && (
                 <div className="space-y-1.5">
                   <Label className="font-body text-xs">Validade do acesso</Label>
                   <Select value={validity} onValueChange={setValidity} disabled={creating}>

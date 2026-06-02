@@ -67,7 +67,7 @@ serve(async (req) => {
     const { name, email, phone, plan, validity } = await req.json();
     if (!email || !name) return json({ error: "missing_fields" }, 400);
     const normEmail = String(email).trim().toLowerCase();
-    const validPlans = ["free", "pro", "premium", "trial"];
+    const validPlans = ["free", "pro", "studio", "trial"];
     const chosenPlan = validPlans.includes(plan) ? plan : "trial";
     console.log("[admin-create-user] validity recebido:", validity, "plan:", chosenPlan);
 
@@ -101,7 +101,7 @@ serve(async (req) => {
       plan: chosenPlan,
       must_change_password: true,
     };
-    if (["pro", "premium"].includes(chosenPlan)) {
+    if (["pro", "studio"].includes(chosenPlan)) {
       patch.subscription_status = "active"; // acesso liberado (cortesia/manual)
       const key = typeof validity === "string" ? validity : "lifetime";
       const days = key in VALIDITY_DAYS ? VALIDITY_DAYS[key] : null;
