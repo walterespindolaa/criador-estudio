@@ -44,6 +44,39 @@ import heic2any from "heic2any";
 const VIDEO_EXTS = ["mov", "mp4", "m4v", "webm", "avi", "mkv", "hevc", "3gp"];
 const HEIC_EXTS = ["heic", "heif"];
 const VIDEO_MAX_BYTES = 2 * 1024 * 1024 * 1024; // 2 GB — teto de sanidade pro Bunny
+
+/**
+ * Decode HEIC nativamente via <img> + canvas. Funciona em iPhone/Safari/WebKit
+ * (sistema decoda HEIC). Em Chrome/Windows lança erro → cai no heic2any.
+ */
+async function heicToJpegNative(file: File): Promise<File> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.decoding = "async";
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error("native HEIC decode failed"));
+      img.src = url;
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("no ctx");
+    ctx.drawImage(img, 0, 0);
+    const blob: Blob = await new Promise((resolve, reject) =>
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error("toBlob null")), "image/jpeg", 0.9),
+    );
+    return new File(
+      [blob],
+      file.name.replace(/\.(heic|heif)$/i, ".jpg"),
+      { type: "image/jpeg" },
+    );
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
 import { getStatusClasses } from "@/lib/statusColors";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import {
@@ -550,19 +583,28 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
 
         // FOTO → Storage (HEIC→JPEG se necessário, compressão, upload, ref device)
         if (isHeic) {
+          let converted: File | null = null;
+          // Caminho principal: decode nativo (Safari/WebKit/iPhone resolve isso).
           try {
-            const out = await heic2any({ blob: raw, toType: "image/jpeg", quality: 0.85 });
-            const blob = Array.isArray(out) ? out[0] : out;
-            raw = new File(
-              [blob as Blob],
-              raw.name.replace(/\.(heic|heif)$/i, ".jpg"),
-              { type: "image/jpeg" },
-            );
-          } catch (err) {
-            console.error("[upload] heic conversion failed", { name: initialRaw.name, mime: initialRaw.type, err });
-            toast.error(`Não consegui converter ${initialRaw.name}. Tente exportar como JPEG.`);
-            continue;
+            converted = await heicToJpegNative(raw);
+          } catch (errNative) {
+            console.warn("[upload] heic native decode failed, trying heic2any", { name: initialRaw.name, errNative });
+            // Fallback: heic2any (libheif WASM) — funciona em Chrome/Firefox/Windows.
+            try {
+              const out = await heic2any({ blob: raw, toType: "image/jpeg", quality: 0.85 });
+              const blob = Array.isArray(out) ? out[0] : out;
+              converted = new File(
+                [blob as Blob],
+                raw.name.replace(/\.(heic|heif)$/i, ".jpg"),
+                { type: "image/jpeg" },
+              );
+            } catch (errLib) {
+              console.error("[upload] heic conversion failed (native + heic2any)", { name: initialRaw.name, mime: initialRaw.type, errLib });
+              toast.error(`Não consegui converter ${initialRaw.name}. Tente exportar como JPEG.`);
+              continue;
+            }
           }
+          raw = converted;
         }
         const validation = validateUpload(raw, "postMedia");
         if (!validation.ok) {
