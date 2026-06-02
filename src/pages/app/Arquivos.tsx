@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useActiveAccount } from "@/contexts/AccountContext";
-import { useProfile } from "@/hooks/useProfile";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
@@ -83,7 +83,9 @@ const Arquivos = () => {
   const { user } = useAuth();
   const { activeAccountId } = useActiveAccount();
   const ownerId = activeAccountId || user?.id || "";
-  const { profile } = useProfile();
+  // Barra de cota reflete a CONTA ATIVA (o dono dos arquivos).
+  // NÃO usar pra gate de billing — só exibição.
+  const { profile: activeProfile } = useActiveProfile();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { files, uploadFile, deleteFile, getPublicUrl } = useFiles();
@@ -95,9 +97,9 @@ const Arquivos = () => {
   const [pendingPermanent, setPendingPermanent] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
 
-  const storageUsed = profile?.storage_used_bytes ?? 0;
-  const storageQuota = profile?.storage_quota_bytes ?? DEFAULT_QUOTA;
-  const retentionDays = profile?.storage_retention_days ?? DEFAULT_RETENTION_DAYS;
+  const storageUsed = activeProfile?.storage_used_bytes ?? 0;
+  const storageQuota = activeProfile?.storage_quota_bytes ?? DEFAULT_QUOTA;
+  const retentionDays = activeProfile?.storage_retention_days ?? DEFAULT_RETENTION_DAYS;
   const usagePct = Math.min(100, storageQuota > 0 ? (storageUsed / storageQuota) * 100 : 0);
   const isStorageFull = storageUsed >= storageQuota;
   const uploading = uploadFile.isPending;

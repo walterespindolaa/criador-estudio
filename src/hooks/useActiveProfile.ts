@@ -7,12 +7,25 @@ import { useProfile, type Profile } from "@/hooks/useProfile";
 /**
  * Subset PÚBLICO do profile usado em telas de conteúdo (Dashboard, Tarefas,
  * Brandbook, Relatorios, Arquivos). NÃO inclui billing/gate
- * (subscription_status, plan, access_expires_at, role) — esses são da SESSÃO
- * e continuam vindo de useProfile() onde a tela faz gate.
+ * (subscription_status, plan, access_expires_at) — esses são da SESSÃO e
+ * continuam vindo de useProfile() onde a tela faz gate.
+ *
+ * Storage fields são da CONTA ATIVA (a barra de cota em Arquivos reflete
+ * o dono dos arquivos, não a sessão). NÃO usar pra gate de billing.
  */
 export type ActiveProfile = Pick<
   Profile,
-  "id" | "name" | "avatar_url" | "niche" | "instagram_handle" | "bio" | "weekly_goal" | "role"
+  | "id"
+  | "name"
+  | "avatar_url"
+  | "niche"
+  | "instagram_handle"
+  | "bio"
+  | "weekly_goal"
+  | "role"
+  | "storage_used_bytes"
+  | "storage_quota_bytes"
+  | "storage_retention_days"
 >;
 
 export type UseActiveProfileResult = {
@@ -43,7 +56,7 @@ export function useActiveProfile(): UseActiveProfileResult {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, name, avatar_url, niche, instagram_handle, bio, weekly_goal, role")
+        .select("id, name, avatar_url, niche, instagram_handle, bio, weekly_goal, role, storage_used_bytes, storage_quota_bytes, storage_retention_days")
         .eq("id", ownerId)
         .maybeSingle();
       if (error) throw error;

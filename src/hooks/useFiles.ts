@@ -92,6 +92,7 @@ export function useFiles() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["active-profile"] });
     },
   });
 
@@ -114,6 +115,7 @@ export function useFiles() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["active-profile"] });
     },
   });
 
