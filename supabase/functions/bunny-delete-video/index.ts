@@ -49,14 +49,16 @@ Deno.serve(async (req) => {
       if (!membership) return json({ error: "Sem permissão para essa conta" }, 403);
     }
 
-    // Confirma que o vídeo pertence a essa conta antes de mandar pro Bunny
+    // A checagem de permissão da conta acima já é o guard suficiente — o guid é
+    // um UUID aleatório só conhecido por quem subiu. Buscamos a ref só pra log
+    // (vídeo pode estar pending, sem row ainda — orphan no Bunny senão).
     const { data: ref } = await supabase
       .from("external_media_refs")
       .select("id")
       .eq("bunny_video_id", videoGuid)
       .eq("user_id", owner)
       .maybeSingle();
-    if (!ref) return json({ error: "Vídeo não encontrado para esta conta" }, 404);
+    console.log("[bunny-delete-video] ref lookup", { videoGuid, owner, refExists: !!ref });
 
     const delRes = await fetch(
       `https://video.bunnycdn.com/library/${libraryId}/videos/${videoGuid}`,

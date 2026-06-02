@@ -423,10 +423,13 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
       for (const initialRaw of files) {
         let raw = initialRaw;
         const ext = (raw.name.split(".").pop() || "").toLowerCase();
+        const mimeLower = (raw.type || "").toLowerCase();
         // Detecta vídeo por MIME OU extensão (browsers às vezes não setam MIME pra .mov/.hevc).
-        const isVideo = raw.type.startsWith("video/") || VIDEO_EXTS.includes(ext);
+        const isVideo = mimeLower.startsWith("video/") || VIDEO_EXTS.includes(ext);
+        // HEIC/HEIF inclui Live Photos do iPhone (image/heic-sequence, image/heif-sequence)
+        // e variantes em uppercase (alguns iOS Safari mandam "IMAGE/HEIC").
         const isHeic =
-          raw.type === "image/heic" || raw.type === "image/heif" || HEIC_EXTS.includes(ext);
+          /heic|heif/.test(mimeLower) || HEIC_EXTS.includes(ext);
 
         if (raw.size === 0) {
           toast.error(`${raw.name}: arquivo vazio.`);
@@ -537,8 +540,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
               { type: "image/jpeg" },
             );
           } catch (err) {
-            console.error("[upload] heic conversion failed", err);
-            toast.error(`Erro ao converter ${initialRaw.name}.`);
+            console.error("[upload] heic conversion failed", { name: initialRaw.name, mime: initialRaw.type, err });
+            toast.error(`Não consegui converter ${initialRaw.name}. Tente exportar como JPEG.`);
             continue;
           }
         }
