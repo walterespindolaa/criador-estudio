@@ -32,8 +32,10 @@ import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
-import { useProfile } from "@/hooks/useProfile";
+import { useProfile, type Profile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBioLinks, type BioLink } from "@/hooks/useBioLinks";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -225,8 +227,40 @@ function getInitial(name?: string | null): string {
 
 const LinkInBio = () => {
   const { user } = useAuth();
-  const { profile, updateProfile, isLoading: profileLoading } = useProfile();
+  const { activeAccountId } = useActiveAccount();
+  const { profile: selfProfile, updateProfile, isLoading: selfProfileLoading } = useProfile();
   const { links, isLoading, createLink, updateLink, deleteLink, reorderLinks } = useBioLinks();
+  const queryClient = useQueryClient();
+
+  // Quando o manager gerencia outro, lê/escreve no profile da conta ATIVA,
+  // não no useProfile (que controla auth/gate da SESSÃO).
+  const ownerId = activeAccountId || user?.id || "";
+  const isOwnAccount = !activeAccountId || activeAccountId === user?.id;
+  const managedProfileKey = ["bio-profile", ownerId] as const;
+
+  type BioProfileSubset = Pick<
+    Profile,
+    "id" | "name" | "avatar_url" | "niche" | "instagram_handle" | "bio" | "bio_slug" | "bio_settings"
+  >;
+
+  const { data: managedProfile, isLoading: managedLoading } = useQuery<BioProfileSubset | null>({
+    queryKey: managedProfileKey,
+    enabled: !!ownerId && !isOwnAccount,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, name, avatar_url, niche, instagram_handle, bio, bio_slug, bio_settings")
+        .eq("id", ownerId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as BioProfileSubset | null;
+    },
+  });
+
+  const profile = (isOwnAccount ? selfProfile : managedProfile) as Profile | null;
+  const profileLoading = isOwnAccount ? selfProfileLoading : managedLoading;
+  const [savingAppearance, setSavingAppearance] = useState(false);
+  const isSavingAppearance = isOwnAccount ? updateProfile.isPending : savingAppearance;
 
   const [slug, setSlug] = useState("");
   const [settings, setSettings] = useState<BioSettings>(DEFAULT_SETTINGS);
@@ -323,7 +357,7 @@ const LinkInBio = () => {
 
     try {
       setUploadingBg(true);
-      const path = `${user.id}/bg-${Date.now()}.${file.name.split(".").pop() ?? "jpg"}`;
+      const path = `${ownerId}/bg-${Date.now()}.${file.name.split(".").pop() ?? "jpg"}`;
       const { error: upErr } = await supabase.storage
         .from("bio-media")
         .upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
@@ -345,10 +379,24 @@ const LinkInBio = () => {
       return;
     }
     try {
-      await updateProfile.mutateAsync({
-        bio_slug: cleanSlug,
-        bio_settings: settings as unknown as never,
-      });
+      if (isOwnAccount) {
+        await updateProfile.mutateAsync({
+          bio_slug: cleanSlug,
+          bio_settings: settings as unknown as never,
+        });
+      } else {
+        if (!activeAccountId) throw new Error("Conta ativa não identificada.");
+        setSavingAppearance(true);
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            bio_slug: cleanSlug,
+            bio_settings: settings as unknown as never,
+          })
+          .eq("id", activeAccountId);
+        if (error) throw error;
+        queryClient.invalidateQueries({ queryKey: managedProfileKey });
+      }
       setSlug(cleanSlug);
       setAppearanceDirty(false);
       toast.success("Aparência salva!");
@@ -359,6 +407,8 @@ const LinkInBio = () => {
       } else {
         toast.error(msg);
       }
+    } finally {
+      setSavingAppearance(false);
     }
   };
 
@@ -717,12 +767,12 @@ const LinkInBio = () => {
 
               <Button
                 onClick={handleSaveAppearance}
-                disabled={!appearanceDirty || updateProfile.isPending}
+                disabled={!appearanceDirty || isSavingAppearance}
                 className="w-full"
                 variant="hero"
               >
                 <Save className="h-4 w-4 mr-2" />
-                {updateProfile.isPending ? "Salvando..." : "Salvar alterações"}
+                {isSavingAppearance ? "Salvando..." : "Salvar alterações"}
               </Button>
             </Card>
           </div>
