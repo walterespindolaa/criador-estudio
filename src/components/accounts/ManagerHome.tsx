@@ -428,7 +428,7 @@ export function ManagerHome() {
       <Dialog open={selfSubOpen} onOpenChange={(o) => !selfSubSubmitting && setSelfSubOpen(o)}>
         <DialogContent
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="sm:max-w-md rounded-2xl"
+          className="sm:max-w-md max-h-[85vh] overflow-y-auto rounded-2xl"
         >
           <DialogHeader>
             <DialogTitle className="font-display">Assinar pra mim</DialogTitle>
@@ -492,17 +492,12 @@ export function ManagerHome() {
                       <p className="text-base font-display font-bold text-foreground mt-1">{plan.price}<span className="text-[10px] text-muted-foreground font-body font-normal">/mês</span></p>
                       <p className="text-[11px] text-muted-foreground font-body mt-0.5 line-clamp-2">{plan.tagline}</p>
                       <ul className="mt-2 space-y-1">
-                        {plan.features.slice(0, 4).map((f) => (
+                        {plan.features.map((f) => (
                           <li key={f} className="flex items-start gap-1.5 text-[11px] font-body text-foreground/85">
                             <Check className="h-3 w-3 text-primary shrink-0 mt-0.5" />
                             <span className="min-w-0 break-words">{f}</span>
                           </li>
                         ))}
-                        {plan.features.length > 4 && (
-                          <li className="text-[10px] text-muted-foreground font-body pl-4">
-                            + {plan.features.length - 4} benefícios
-                          </li>
-                        )}
                       </ul>
                     </button>
                   );
