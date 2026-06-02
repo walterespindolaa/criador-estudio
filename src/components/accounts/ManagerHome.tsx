@@ -348,7 +348,11 @@ export function ManagerHome() {
                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
                       Seu cupom
                       {partner.coupon_type === "client_discount" && partner.coupon_discount_pct
-                        ? ` · ${partner.coupon_discount_pct}% off na 1ª fatura`
+                        ? ` · ${partner.coupon_discount_pct}% off ${
+                            partner.coupon_duration_months && partner.coupon_duration_months > 1
+                              ? `por ${partner.coupon_duration_months} meses`
+                              : "na 1ª fatura"
+                          }`
                         : null}
                     </p>
                     <p className="text-lg font-display font-extrabold text-foreground tracking-wider truncate">

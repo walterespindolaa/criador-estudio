@@ -115,6 +115,7 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
       toast.success(`Cupom gerado: ${data.coupon_code}`);
       queryClient.invalidateQueries({ queryKey: ["admin-partners"] });
       queryClient.invalidateQueries({ queryKey: ["partner", partner?.user_id] });
+      queryClient.invalidateQueries({ queryKey: ["partner"] });
       onOpenChange(false);
     },
     onError: (err) => {
@@ -133,6 +134,7 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
       toast.success("Solicitação recusada.");
       queryClient.invalidateQueries({ queryKey: ["admin-partners"] });
       queryClient.invalidateQueries({ queryKey: ["partner", partner?.user_id] });
+      queryClient.invalidateQueries({ queryKey: ["partner"] });
       onOpenChange(false);
     },
     onError: () => toast.error("Erro ao recusar a solicitação."),
@@ -167,6 +169,7 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
       toast.success(`Cupom atualizado: ${data.coupon_code ?? ""}`.trim());
       queryClient.invalidateQueries({ queryKey: ["admin-partners"] });
       queryClient.invalidateQueries({ queryKey: ["partner", partner?.user_id] });
+      queryClient.invalidateQueries({ queryKey: ["partner"] });
       setEditing(false);
     },
     onError: (err) => {
@@ -181,6 +184,7 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
       toast.success(action === "suspend" ? "Parceira suspensa." : "Parceira reativada!");
       queryClient.invalidateQueries({ queryKey: ["admin-partners"] });
       queryClient.invalidateQueries({ queryKey: ["partner", partner?.user_id] });
+      queryClient.invalidateQueries({ queryKey: ["partner"] });
     },
     onError: (err) => {
       const msg = err instanceof Error ? err.message : "Erro";
@@ -194,6 +198,7 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
       toast.success("Parceira excluída.");
       queryClient.invalidateQueries({ queryKey: ["admin-partners"] });
       queryClient.invalidateQueries({ queryKey: ["partner", partner?.user_id] });
+      queryClient.invalidateQueries({ queryKey: ["partner"] });
       onOpenChange(false);
     },
     onError: (err) => {
