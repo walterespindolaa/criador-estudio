@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AnimatePresence, motion } from "framer-motion";
-import { Plus, Trash2, Edit2, Sparkles, Loader2, Lightbulb, List, LayoutGrid } from "lucide-react";
+import { Plus, Trash2, Edit2, Sparkles, Loader2, Lightbulb, List, LayoutGrid, Clapperboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -323,7 +323,7 @@ const Ideias = () => {
                   onClick={() => { if (expandedIdeaId !== idea.id) openEdit(idea); }}
                   className="relative break-inside-avoid bg-card rounded-xl border border-border p-4 hover:shadow-warm-md hover:scale-[1.01] transition-all cursor-pointer group"
                 >
-                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  <div className="absolute top-2 right-2 flex gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity z-10">
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); toggleAiPanel(idea.id); }}
@@ -331,11 +331,21 @@ const Ideias = () => {
                         "h-7 w-7 rounded-lg flex items-center justify-center transition-colors shadow-sm",
                         expandedIdeaId === idea.id
                           ? "bg-primary text-primary-foreground"
-                          : "bg-card border border-border text-muted-foreground hover:text-primary hover:border-primary/50"
+                          : "bg-card border border-border text-primary/70 hover:text-primary hover:border-primary/50"
                       )}
                       aria-label="Sugestões de IA"
                     >
                       <Sparkles className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handlePromoteToPost(idea); }}
+                      disabled={!!idea.promoted_to_post_id || promoteToPost.isPending}
+                      title={idea.promoted_to_post_id ? "Já virou post" : "Virar post"}
+                      className="h-7 w-7 rounded-lg flex items-center justify-center transition-colors shadow-sm bg-card border border-border text-muted-foreground hover:text-primary hover:border-primary/50 disabled:opacity-40 disabled:cursor-not-allowed"
+                      aria-label="Virar post"
+                    >
+                      <Clapperboard className="h-3.5 w-3.5" />
                     </button>
                   </div>
                   {pillar && (
@@ -500,7 +510,7 @@ const Ideias = () => {
                       onClick={(e) => { e.stopPropagation(); toggleAiPanel(idea.id); }}
                       className={cn(
                         "h-7 w-7 rounded-md flex items-center justify-center transition-colors",
-                        isExpanded ? "bg-primary/15 text-primary" : "hover:bg-accent text-muted-foreground hover:text-primary"
+                        isExpanded ? "bg-primary/15 text-primary" : "hover:bg-accent text-primary/70 hover:text-primary"
                       )}
                       aria-label="Sugestões de IA"
                     >
