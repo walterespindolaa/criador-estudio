@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useProfile } from "@/hooks/useProfile";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { getDailyInsight } from "@/lib/ai/claude";
@@ -123,6 +124,8 @@ function DCard({ children, className, onClick }: { children: React.ReactNode; cl
 const Dashboard = () => {
   const { user } = useAuth();
   const { profile, isLoading: profileLoading } = useProfile();
+  // Saudação/avatar do header refletem a CONTA ATIVA (não a manager).
+  const { profile: activeProfile } = useActiveProfile();
   const navigate = useNavigate();
 
   const today = useMemo(() => new Date().toISOString().split("T")[0], []);
@@ -289,14 +292,14 @@ const Dashboard = () => {
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
           <div className="flex items-center gap-3">
             <Avatar className="w-10 h-10 shrink-0 border border-border shadow-sm">
-              {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile.name ?? "perfil"} />}
+              {activeProfile?.avatar_url && <AvatarImage src={activeProfile.avatar_url} alt={activeProfile.name ?? "perfil"} />}
               <AvatarFallback className="bg-gradient-to-br from-primary to-purple-600 text-white font-display font-bold text-sm">
-                {(profile?.name ?? "C").trim().charAt(0).toUpperCase()}
+                {(activeProfile?.name ?? "C").trim().charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div>
               <h1 className="text-xl sm:text-2xl md:text-3xl font-display font-extrabold text-foreground tracking-tight mb-0.5">
-                {getGreeting(profile?.name || "criador")}
+                {getGreeting(activeProfile?.name || "criador")}
               </h1>
               <p className="text-sm text-muted-foreground font-body flex items-center gap-1.5">
                 <TrendingUp className="h-3.5 w-3.5 text-primary" />

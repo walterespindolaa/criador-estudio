@@ -15,6 +15,7 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PostPreviewModal } from "@/components/kanban/PostPreviewModal";
 import { useProfile } from "@/hooks/useProfile";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useTasks, type Task } from "@/hooks/useTasks";
 import { usePosts, type Post } from "@/hooks/usePosts";
 import { cn } from "@/lib/utils";
@@ -51,6 +52,8 @@ const FILTERS = [
 const Tarefas = () => {
   const { user } = useAuth();
   const { profile } = useProfile();
+  // Preview (nome/handle/avatar) reflete a CONTA ATIVA, não a manager.
+  const { profile: activeProfile } = useActiveProfile();
   const { tasks, createTask, updateTaskStatus, deleteTask } = useTasks();
   const { posts } = usePosts();
   const [filter, setFilter] = useState("todas");
@@ -341,9 +344,9 @@ const Tarefas = () => {
           caption={selectedPost.caption || ""}
           platform={selectedPost.platform}
           format={selectedPost.format}
-          userName={profile?.name || "Criador"}
-          userHandle={profile?.instagram_handle || "criador"}
-          avatarUrl={profile?.avatar_url || null}
+          userName={activeProfile?.name || "Criador"}
+          userHandle={activeProfile?.instagram_handle || "criador"}
+          avatarUrl={activeProfile?.avatar_url || null}
         />
       )}
     </div>

@@ -26,6 +26,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePosts } from "@/hooks/usePosts";
 import { usePillars } from "@/hooks/usePillars";
 import { useIdeas } from "@/hooks/useIdeas";
@@ -92,6 +93,9 @@ function formatPercent(n: number) {
 const Relatorios = () => {
   const { user } = useAuth();
   const { profile, isLoading: profileLoading } = useProfile();
+  // niche e weekly_goal são da CONTA ATIVA (relatório/IA são sobre ela);
+  // profile.role (isAdmin) continua da SESSÃO.
+  const { profile: activeProfile } = useActiveProfile();
   const { posts, isLoading: postsLoading } = usePosts();
   const { pillars } = usePillars();
   const { ideas } = useIdeas();
@@ -146,7 +150,7 @@ const Relatorios = () => {
   );
   const ideasCount = ideas.length;
 
-  const weeklyGoal = profile?.weekly_goal ?? 3;
+  const weeklyGoal = activeProfile?.weekly_goal ?? 3;
 
   const weeksData = useMemo(() => {
     type WeekRow = { week: string; total: number; [pillarKey: string]: string | number };
@@ -290,7 +294,7 @@ const Relatorios = () => {
           .map((p) => ({ plataforma: p.label, qtd: p.value })),
         streak_semanas: streak.current,
         streak_maior: streak.longest,
-        nicho: profile?.niche,
+        nicho: activeProfile?.niche,
       };
 
       const raw = await callAIContextBuilder({
@@ -299,7 +303,7 @@ const Relatorios = () => {
         data: {
           mensagem:
             "Você é a Cria, analista de conteúdo. Olhe os dados abaixo e me dê 2-3 insights curtos e acionáveis sobre minha consistência, distribuição e o que eu deveria testar essa semana. Linguagem natural, em português brasileiro, sem markdown.",
-          nicho: profile?.niche,
+          nicho: activeProfile?.niche,
           analise: summary,
         },
       });

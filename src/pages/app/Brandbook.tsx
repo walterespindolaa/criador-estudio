@@ -19,6 +19,7 @@ import { useMoodboard } from "@/hooks/useMoodboard";
 import { usePersonas, MAX_PERSONAS } from "@/hooks/usePersonas";
 import { usePillars } from "@/hooks/usePillars";
 import { useProfile } from "@/hooks/useProfile";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { cn } from "@/lib/utils";
 import { BrandHubOverview } from "@/components/brandbook/BrandHubOverview";
@@ -194,6 +195,8 @@ const Brandbook = () => {
   } = usePersonas();
   const { pillars } = usePillars();
   const { profile } = useProfile();
+  // Brandbook é da CONTA ATIVA — nome/nicho no PDF e no slug refletem ela.
+  const { profile: activeProfile } = useActiveProfile();
   const { exportPdf } = usePdfExport();
   const pdfRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
@@ -364,7 +367,7 @@ const Brandbook = () => {
     if (exporting) return;
     setExporting(true);
     try {
-      const slug = (profile?.name || "brandbook").toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+      const slug = (activeProfile?.name || "brandbook").toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
       await exportPdf(pdfRef, `brandbook-${slug || "creator"}`);
       toast.success("PDF exportado!");
     } catch {
@@ -750,7 +753,7 @@ const Brandbook = () => {
       <div style={{ position: "fixed", left: "-9999px", top: 0, zIndex: -1 }} aria-hidden="true">
         <BrandPdfTemplate
           ref={pdfRef}
-          profile={profile}
+          profile={activeProfile}
           brandItems={brandItems}
           persona={personas[0]}
           pillars={pillars}

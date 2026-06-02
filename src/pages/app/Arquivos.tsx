@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -80,6 +81,8 @@ function SignedImage({
 
 const Arquivos = () => {
   const { user } = useAuth();
+  const { activeAccountId } = useActiveAccount();
+  const ownerId = activeAccountId || user?.id || "";
   const { profile } = useProfile();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -100,18 +103,18 @@ const Arquivos = () => {
   const uploading = uploadFile.isPending;
 
   const { data: driveFiles, refetch: refetchDrive } = useQuery<DriveRef[]>({
-    queryKey: ["drive-files", user?.id],
+    queryKey: ["drive-files", ownerId],
     queryFn: async () => {
-      if (!user) return [];
+      if (!ownerId) return [];
       const { data, error } = await supabase
         .from("external_media_refs")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", ownerId)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as DriveRef[];
     },
-    enabled: !!user,
+    enabled: !!ownerId,
   });
 
   const handleFileSelect = async (rawFile: File) => {
