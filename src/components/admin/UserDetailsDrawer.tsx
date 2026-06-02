@@ -5,13 +5,28 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CopyButton } from "@/components/shared/CopyButton";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Mail, ShieldOff, ShieldCheck, Trash2, Loader2 } from "lucide-react";
 
 interface UserDetailsDrawerProps {
   open: boolean;
@@ -56,19 +71,27 @@ function formatValidity(accessExpiresAt: string | null | undefined): string {
   }
 }
 
-function Field({ label, value, copyable }: { label: string; value: React.ReactNode; copyable?: string }) {
+function FieldBox({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-muted/30 px-3 py-2 min-w-0">
-      <div className="min-w-0 flex-1">
-        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</p>
-        <p className="text-sm font-body text-foreground truncate">{value}</p>
-      </div>
-      {copyable && <CopyButton text={copyable} />}
+    <div className="rounded-xl border border-border bg-muted/30 px-3 py-2 min-w-0">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">{label}</p>
+      {children}
     </div>
   );
 }
 
 export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDrawerProps) {
+  const { user: currentUser } = useAuth();
+  const queryClient = useQueryClient();
+  const [validity, setValidity] = useState<string>("lifetime");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
   const { data, isLoading, error } = useQuery<UserDetails | null>({
     queryKey: ["admin-user-details", userId],
     enabled: open && !!userId,
@@ -85,55 +108,219 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
     },
   });
 
+  const isSelf = !!data && !!currentUser && data.id === currentUser.id;
+  const isSuspended = data?.subscription_status === "suspended";
+
+  const invokeAction = async (payload: Record<string, unknown>) => {
+    const { data, error } = await supabase.functions.invoke("admin-user-actions", { body: payload });
+    if (error || (data as { error?: string })?.error) {
+      throw new Error((data as { error?: string })?.error ?? "action_failed");
+    }
+    return data;
+  };
+
+  const resendMutation = useMutation({
+    mutationFn: () => invokeAction({ user_id: userId, action: "resend_access" }),
+    onSuccess: () => toast.success("E-mail de redefinição enviado."),
+    onError: (e: Error) => toast.error(`Falha ao enviar: ${e.message}`),
+  });
+
+  const setValidityMutation = useMutation({
+    mutationFn: () => invokeAction({ user_id: userId, action: "set_validity", validity }),
+    onSuccess: () => {
+      toast.success("Validade atualizada.");
+      queryClient.invalidateQueries({ queryKey: ["admin-user-details", userId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+    onError: (e: Error) => toast.error(`Falha: ${e.message}`),
+  });
+
+  const toggleSuspendMutation = useMutation({
+    mutationFn: () => invokeAction({ user_id: userId, action: isSuspended ? "reactivate" : "suspend" }),
+    onSuccess: () => {
+      toast.success(isSuspended ? "Acesso reativado." : "Acesso suspenso.");
+      queryClient.invalidateQueries({ queryKey: ["admin-user-details", userId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+    onError: (e: Error) => toast.error(`Falha: ${e.message}`),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => invokeAction({ user_id: userId, action: "delete" }),
+    onSuccess: () => {
+      toast.success("Usuário excluído.");
+      setConfirmDelete(false);
+      onOpenChange(false);
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+    },
+    onError: (e: Error) => toast.error(`Falha ao excluir: ${e.message}`),
+  });
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        onOpenAutoFocus={(e) => e.preventDefault()}
-        className="sm:max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl"
-      >
-        <DialogHeader>
-          <DialogTitle className="font-display">Detalhes do usuário</DialogTitle>
-          <DialogDescription className="font-body text-sm">
-            {data?.name || (isLoading ? "Carregando…" : userId?.slice(0, 8) || "")}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          className="sm:max-w-lg max-h-[85vh] overflow-y-auto overflow-x-hidden rounded-2xl"
+        >
+          <DialogHeader>
+            <DialogTitle className="font-display">Detalhes do usuário</DialogTitle>
+            <DialogDescription className="font-body text-sm truncate">
+              {data?.name || (isLoading ? "Carregando…" : userId?.slice(0, 8) || "")}
+            </DialogDescription>
+          </DialogHeader>
 
-        {isLoading ? (
-          <div className="space-y-2 mt-4">
-            {Array.from({ length: 7 }).map((_, i) => (
-              <Skeleton key={i} className="h-14 w-full rounded-xl" />
-            ))}
+          {isLoading ? (
+            <div className="space-y-2 mt-4">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <Skeleton key={i} className="h-14 w-full rounded-xl" />
+              ))}
+            </div>
+          ) : error ? (
+            <p className="text-sm text-destructive font-body mt-4">Não foi possível carregar os detalhes.</p>
+          ) : data ? (
+            <div className="space-y-6 mt-4 min-w-0">
+              <section className="space-y-2 min-w-0">
+                <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Conta</h3>
+                <div className="space-y-2 min-w-0">
+                  <FieldBox label="Nome">
+                    <p className="text-sm font-body text-foreground break-words">{data.name || "—"}</p>
+                  </FieldBox>
+                  <FieldBox label="E-mail">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="flex-1 min-w-0 truncate text-sm font-body text-foreground">{data.email || "—"}</span>
+                      {data.email && <CopyButton text={data.email} />}
+                    </div>
+                  </FieldBox>
+                  <FieldBox label="Plano">
+                    <p className="text-sm font-body text-foreground truncate">{data.plan ?? "—"}</p>
+                  </FieldBox>
+                  <FieldBox label="Role">
+                    <p className="text-sm font-body text-foreground truncate">{data.role ?? "—"}</p>
+                  </FieldBox>
+                  <FieldBox label="Status de acesso">
+                    <p className="text-sm font-body text-foreground truncate">{data.subscription_status ?? "—"}</p>
+                  </FieldBox>
+                  <FieldBox label="Validade do acesso">
+                    <p className="text-sm font-body text-foreground break-words">{formatValidity(data.access_expires_at)}</p>
+                  </FieldBox>
+                </div>
+              </section>
+
+              <section className="space-y-2 min-w-0">
+                <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Perfil</h3>
+                <div className="space-y-2 min-w-0">
+                  <FieldBox label="Nicho">
+                    <p className="text-sm font-body text-foreground break-words">{data.niche || "—"}</p>
+                  </FieldBox>
+                  <FieldBox label="Cadastro">
+                    <p className="text-sm font-body text-foreground truncate">{formatDate(data.created_at)}</p>
+                  </FieldBox>
+                </div>
+              </section>
+
+              <section className="space-y-3 min-w-0">
+                <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Ações</h3>
+
+                <FieldBox label="Mudar validade">
+                  <div className="flex flex-wrap items-center gap-2 mt-1 min-w-0">
+                    <Select value={validity} onValueChange={setValidity}>
+                      <SelectTrigger className="rounded-lg h-9 flex-1 min-w-[120px] text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="15d">15 dias</SelectItem>
+                        <SelectItem value="1m">1 mês</SelectItem>
+                        <SelectItem value="3m">3 meses</SelectItem>
+                        <SelectItem value="6m">6 meses</SelectItem>
+                        <SelectItem value="1y">1 ano</SelectItem>
+                        <SelectItem value="lifetime">Vitalício</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      onClick={() => setValidityMutation.mutate()}
+                      disabled={setValidityMutation.isPending}
+                    >
+                      {setValidityMutation.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+                      Salvar
+                    </Button>
+                  </div>
+                </FieldBox>
+
+                <div className="flex flex-wrap gap-2 min-w-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => resendMutation.mutate()}
+                    disabled={resendMutation.isPending || !data.email}
+                  >
+                    {resendMutation.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Mail className="h-3 w-3 mr-1" />}
+                    Reenviar acesso
+                  </Button>
+
+                  {!isSelf && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => toggleSuspendMutation.mutate()}
+                      disabled={toggleSuspendMutation.isPending}
+                    >
+                      {toggleSuspendMutation.isPending ? (
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      ) : isSuspended ? (
+                        <ShieldCheck className="h-3 w-3 mr-1" />
+                      ) : (
+                        <ShieldOff className="h-3 w-3 mr-1" />
+                      )}
+                      {isSuspended ? "Reativar" : "Suspender"}
+                    </Button>
+                  )}
+
+                  {!isSelf && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setConfirmDelete(true)}
+                      disabled={deleteMutation.isPending}
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" /> Excluir
+                    </Button>
+                  )}
+                </div>
+              </section>
+            </div>
+          ) : null}
+
+          <div className="flex flex-wrap justify-end gap-2 mt-6">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
           </div>
-        ) : error ? (
-          <p className="text-sm text-destructive font-body mt-4">Não foi possível carregar os detalhes.</p>
-        ) : data ? (
-          <div className="space-y-6 mt-4">
-            <section className="space-y-2">
-              <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Conta</h3>
-              <div className="space-y-2">
-                <Field label="Nome" value={data.name || "—"} />
-                <Field label="E-mail" value={data.email || "—"} copyable={data.email ?? undefined} />
-                <Field label="Plano" value={data.plan ?? "—"} />
-                <Field label="Role" value={data.role ?? "—"} />
-                <Field label="Status de acesso" value={data.subscription_status ?? "—"} />
-                <Field label="Validade do acesso" value={formatValidity(data.access_expires_at)} />
-              </div>
-            </section>
+        </DialogContent>
+      </Dialog>
 
-            <section className="space-y-2">
-              <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Perfil</h3>
-              <div className="space-y-2">
-                <Field label="Nicho" value={data.niche || "—"} />
-                <Field label="Cadastro" value={formatDate(data.created_at)} />
-              </div>
-            </section>
-          </div>
-        ) : null}
-
-        <div className="flex justify-end gap-2 mt-6">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display">Excluir usuário?</AlertDialogTitle>
+            <AlertDialogDescription className="font-body">
+              Isso apaga o usuário e todos os dados dele (perfil, posts, mídia, parcerias).
+              Ação irreversível.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => { e.preventDefault(); deleteMutation.mutate(); }}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+              Excluir definitivamente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
