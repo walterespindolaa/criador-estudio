@@ -22,6 +22,7 @@ import { AccountSwitcher } from "@/components/accounts/AccountSwitcher";
 import { ManagerHome } from "@/components/accounts/ManagerHome";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useLastSeen } from "@/hooks/useLastSeen";
+import { installOverflowDetector } from "@/lib/overflow-detector";
 
 const AppLayout = () => {
   const { profile, isLoading } = useProfile();
@@ -29,6 +30,10 @@ const AppLayout = () => {
   const location = useLocation();
 
   useLastSeen();
+
+  useEffect(() => {
+    installOverflowDetector();
+  }, []);
 
   useEffect(() => {
     if (profile?.theme_preset) {

@@ -960,7 +960,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
             // Issue conhecida: radix-ui/primitives#1280.
             e.preventDefault();
           }}
-          className="[&>button:last-child]:hidden max-w-none w-screen h-screen sm:w-[96vw] sm:h-[94vh] sm:max-w-[1400px] p-0 overflow-hidden overflow-x-hidden flex flex-col bg-background rounded-none sm:rounded-2xl"
+          className="[&>button:last-child]:hidden max-w-none w-full h-screen sm:w-[96vw] sm:h-[94vh] sm:max-w-[1400px] p-0 overflow-hidden overflow-x-hidden flex flex-col bg-background rounded-none sm:rounded-2xl"
         >
           <DialogHeader className="px-4 sm:px-6 pt-3 pb-2 shrink-0 border-b border-border">
             <DialogTitle className="sr-only">{isNew ? "Novo Post" : "Editar Post"}</DialogTitle>
@@ -1429,7 +1429,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
               )}
             >
               <Tabs defaultValue="legenda" className="h-full flex flex-col">
-                <TabsList className="bg-transparent border-b border-border rounded-none px-4 sm:px-6 h-12 shrink-0 justify-start gap-0">
+                <TabsList className="bg-transparent border-b border-border rounded-none px-4 sm:px-6 h-12 shrink-0 justify-start gap-0 max-w-full overflow-x-auto flex-nowrap whitespace-nowrap">
                   <TabsTrigger
                     value="legenda"
                     className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-body text-sm px-3"
@@ -1590,7 +1590,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                       <div className="rounded-2xl border-2 border-dashed border-border/50 overflow-hidden bg-muted/20 hover:border-primary/30 transition-colors">
                         {mediaList.length > 0 ? (
                           <div className="relative">
-                            <div className="aspect-[4/5] relative overflow-hidden max-h-[360px]">
+                            <div className="aspect-[4/5] relative overflow-hidden max-h-[60vh] sm:max-h-[360px] bg-muted">
                               {(() => {
                                 const primary = mediaList[0];
                                 const fileId = primary.external_file_id || primary.id;
@@ -1620,7 +1620,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                       src={driveImgSrc}
                                       alt={primary.file_name}
                                       loading="lazy"
-                                      className="w-full h-full object-cover"
+                                      className="w-full h-full object-contain sm:object-cover"
                                       onError={(e) => {
                                         const el = e.target as HTMLImageElement;
                                         el.classList.add("hidden");
@@ -1644,7 +1644,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                   <img
                                     src={imgSrc}
                                     alt={primary.file_name}
-                                    className="w-full h-full object-cover"
+                                    className="w-full h-full object-contain sm:object-cover"
                                     loading="lazy"
                                     onError={(e) => {
                                       const el = e.target as HTMLImageElement;

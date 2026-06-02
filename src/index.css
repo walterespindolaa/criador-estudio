@@ -98,6 +98,16 @@
     @apply border-border;
   }
 
+  /* Guard global de overflow horizontal (clip preserva position:sticky) */
+  html, body {
+    overflow-x: clip;
+  }
+  #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: var(--active-font-body, var(--font-body));
