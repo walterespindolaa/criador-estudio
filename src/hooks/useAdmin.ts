@@ -18,6 +18,8 @@ export type AdminProfile = {
   last_seen_at: string | null;
   avatar_url: string | null;
   instagram_handle: string | null;
+  subscription_status: string | null;
+  access_expires_at: string | null;
 };
 
 export type AdminStats = {

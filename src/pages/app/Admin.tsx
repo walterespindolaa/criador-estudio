@@ -39,6 +39,7 @@ import { PageSkeleton } from "@/components/shared/PageSkeleton";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminPartners } from "@/components/admin/AdminPartners";
+import { UserDetailsDrawer } from "@/components/admin/UserDetailsDrawer";
 import { supabase } from "@/integrations/supabase/client";
 
 const PAGE_SIZE = 20;
@@ -88,6 +89,7 @@ const AdminInner = () => {
   const [validity, setValidity] = useState("lifetime");
   const [creating, setCreating] = useState(false);
   const [result, setResult] = useState<null | { email: string; inviteLink: string }>(null);
+  const [selectedUser, setSelectedUser] = useState<AdminProfile | null>(null);
   const queryClient = useQueryClient();
 
   const handleCreate = async () => {
@@ -311,6 +313,7 @@ const AdminInner = () => {
                     user={u}
                     onRoleChange={handleRoleChange}
                     onPlanChange={handlePlanChange}
+                    onSelect={setSelectedUser}
                   />)
                 )}
               </tbody>
@@ -444,32 +447,42 @@ const AdminInner = () => {
         </Dialog>
 
         <Dialog open={!!result} onOpenChange={(o) => !o && setResult(null)}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md rounded-2xl">
             <DialogHeader>
               <DialogTitle className="font-display">Usuário criado</DialogTitle>
             </DialogHeader>
             <p className="text-sm text-muted-foreground font-body">
               Convite enviado por e-mail. O link abaixo já autentica o usuário e leva pra definição de senha.
             </p>
-            <div className="space-y-2 mt-2">
-              {result && [
-                { label: "E-mail", value: result.email },
-                { label: "Link de acesso", value: result.inviteLink },
-              ].map((r) => (
-                <div key={r.label} className="flex items-center justify-between gap-2 rounded-xl border border-border bg-muted/30 px-3 py-2">
-                  <div className="min-w-0">
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{r.label}</p>
-                    <p className="text-sm font-body text-foreground truncate">{r.value}</p>
+            {result && (
+              <div className="space-y-2 mt-2">
+                <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-muted/30 px-3 py-2 min-w-0">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">E-mail</p>
+                    <p className="text-sm font-body text-foreground truncate">{result.email}</p>
                   </div>
-                  <CopyButton text={r.value} />
+                  <CopyButton text={result.email} />
                 </div>
-              ))}
-            </div>
+                <div className="rounded-xl border border-border bg-muted/30 px-3 py-2 min-w-0">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Link de acesso</p>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <code className="flex-1 min-w-0 truncate text-xs font-mono bg-muted rounded-lg px-2 py-1.5">{result.inviteLink}</code>
+                    <CopyButton text={result.inviteLink} />
+                  </div>
+                </div>
+              </div>
+            )}
             <DialogFooter>
               <Button onClick={() => setResult(null)}>Fechar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <UserDetailsDrawer
+          open={!!selectedUser}
+          onOpenChange={(o) => !o && setSelectedUser(null)}
+          user={selectedUser}
+        />
       </motion.div>
     </div>
   );
@@ -501,15 +514,19 @@ type AdminUserRowProps = {
   user: AdminProfile;
   onRoleChange: (userId: string, role: string) => void;
   onPlanChange: (userId: string, plan: string) => void;
+  onSelect: (user: AdminProfile) => void;
 };
 
-function AdminUserRow({ user, onRoleChange, onPlanChange }: AdminUserRowProps) {
+function AdminUserRow({ user, onRoleChange, onPlanChange, onSelect }: AdminUserRowProps) {
   const planKey = user.plan ?? "free";
   const roleKey = user.role ?? "user";
   const created = user.created_at ? new Date(user.created_at) : null;
 
   return (
-    <tr className="border-b border-border/40 last:border-0 hover:bg-accent/40 transition-colors">
+    <tr
+      onClick={() => onSelect(user)}
+      className="border-b border-border/40 last:border-0 hover:bg-accent/40 transition-colors cursor-pointer"
+    >
       <td className="px-4 py-3">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/15 flex items-center justify-center overflow-hidden shrink-0">
@@ -555,7 +572,7 @@ function AdminUserRow({ user, onRoleChange, onPlanChange }: AdminUserRowProps) {
           {created ? formatDistanceToNow(created, { locale: ptBR, addSuffix: true }) : "—"}
         </span>
       </td>
-      <td className="px-4 py-3">
+      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2">
           <Select value={roleKey} onValueChange={(v) => onRoleChange(user.id, v)}>
             <SelectTrigger className="h-8 rounded-lg w-24 text-xs">
