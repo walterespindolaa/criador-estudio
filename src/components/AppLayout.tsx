@@ -23,6 +23,8 @@ import { ManagerHome } from "@/components/accounts/ManagerHome";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useLastSeen } from "@/hooks/useLastSeen";
 import { installOverflowDetector } from "@/lib/overflow-detector";
+import { UploadProgressProvider } from "@/contexts/UploadProgressContext";
+import { UploadProgressIndicator } from "@/components/UploadProgressIndicator";
 
 const AppLayout = () => {
   const { profile, isLoading } = useProfile();
@@ -64,6 +66,7 @@ const AppLayout = () => {
   return (
     <CriaAIProvider>
     <VideoPublicConfirmProvider>
+    <UploadProgressProvider>
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
         <div className="flex flex-1 w-full min-h-0">
@@ -82,6 +85,7 @@ const AppLayout = () => {
               <SidebarTrigger className="mr-3" />
               <div className="flex items-center gap-2">
                 <PlanBadge />
+                <UploadProgressIndicator />
                 <NotificationsBell />
               </div>
             </header>
@@ -98,6 +102,7 @@ const AppLayout = () => {
               <div className="flex items-center gap-1.5">
                 <AccountSwitcher compact />
                 <PlanBadge />
+                <UploadProgressIndicator />
                 <NotificationsBell />
                 <NavLink to="/app/configuracoes" className="p-2 hover:bg-accent/60 rounded-xl transition-colors">
                   <Settings className="h-5 w-5 text-muted-foreground hover:text-foreground" />
@@ -117,6 +122,7 @@ const AppLayout = () => {
         </div>
       </div>
     </SidebarProvider>
+    </UploadProgressProvider>
     </VideoPublicConfirmProvider>
     </CriaAIProvider>
   );

@@ -87,6 +87,7 @@ import { RepurposeSheet } from "./RepurposeSheet";
 import { PostPreviewModal } from "./PostPreviewModal";
 import { useProfile } from "@/hooks/useProfile";
 import { useGoogleDrive } from "@/hooks/useGoogleDrive";
+import { useUploadProgress } from "@/contexts/UploadProgressContext";
 import { compressImage } from "@/lib/image-compress";
 import { usePosts, type Post as DbPost } from "@/hooks/usePosts";
 import { useReferenceLibrary, useUserLibrary } from "@/hooks/useLibrary";
@@ -265,6 +266,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
   const [uploadingLocal, setUploadingLocal] = useState(false);
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
   const { pickAndSave, picking } = useGoogleDrive();
+  const { startUpload, updateUpload, finishUpload, hasActive: hasActiveUpload } = useUploadProgress();
   const { syncPost: syncCalendarPost, removeFromCalendar, syncing: calendarSyncing } = useGoogleCalendar();
   const { createPost, updatePost, deletePost } = usePosts();
   const { referenceFormats } = useReferenceLibrary();
@@ -502,6 +504,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
           }
           // Vídeo → Bunny Stream via TUS (player transcodifica qualquer codec)
           const toastId = toast.loading(`Enviando ${raw.name}… 0%`);
+          let trackedUploadId: string | null = null;
           try {
             const { data: sig, error: sigErr } = await supabase.functions.invoke("bunny-create-video", {
               body: { fileName: raw.name, accountId: userId },
@@ -514,6 +517,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
             const { videoGuid, libraryId, signature, expiration } = sig as {
               videoGuid: string; libraryId: string | number; signature: string; expiration: number;
             };
+            // Agora que temos o id, registra no indicador global.
+            startUpload(videoGuid, raw.name);
+            trackedUploadId = videoGuid;
 
             await new Promise<void>((resolve, reject) => {
               const upload = new tus.Upload(raw, {
@@ -529,6 +535,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                 onProgress: (sent, total) => {
                   const pct = Math.round((sent / total) * 100);
                   toast.loading(`Enviando ${raw.name}… ${pct}%`, { id: toastId });
+                  updateUpload(videoGuid, pct);
                 },
                 onError: (e) => reject(e),
                 onSuccess: () => resolve(),
@@ -576,11 +583,13 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
               setPendingDriveFiles((prev) => [...prev, tempRef]);
             }
             toast.success(`${raw.name} enviado!`, { id: toastId });
+            if (trackedUploadId) finishUpload(trackedUploadId, "done");
             anyUploaded = true;
             continue;
           } catch (e) {
             console.error("[bunny] upload failed", e);
             toast.error(`Falha no upload de ${raw.name}`, { id: toastId });
+            if (trackedUploadId) finishUpload(trackedUploadId, "error");
             continue;
           }
         }
@@ -958,7 +967,20 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog
+        open={open}
+        onOpenChange={(o) => {
+          if (!o && hasActiveUpload) {
+            // Confirma fechar enquanto há upload rolando — TUS continua via context, mas
+            // o ref insert do vídeo depende deste componente estar montado. Melhor avisar.
+            const ok = window.confirm(
+              "Há um upload de vídeo em andamento. Se fechar agora, ele pode ser perdido. Fechar mesmo assim?",
+            );
+            if (!ok) return;
+          }
+          onOpenChange(o);
+        }}
+      >
         <DialogContent
           onOpenAutoFocus={(e) => e.preventDefault()}
           onPointerDownOutside={(e) => e.preventDefault()}
