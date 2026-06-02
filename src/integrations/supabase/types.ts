@@ -2116,6 +2116,7 @@ export type Database = {
           niche: string
         }[]
       }
+      get_user_details: { Args: { _user_id: string }; Returns: Json }
       has_access: { Args: never; Returns: boolean }
       increment_bio_link_click: {
         Args: { link_id: string }
