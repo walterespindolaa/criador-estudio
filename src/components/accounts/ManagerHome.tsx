@@ -1,12 +1,16 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Camera, LogOut, Settings as SettingsIcon, Sparkles, StickyNote, Users } from "lucide-react";
+import { ArrowRight, Camera, LogOut, Settings as SettingsIcon, Sparkles, StickyNote, Users, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useActiveAccount, type ManagedAccount } from "@/contexts/AccountContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Logo } from "@/components/shared/Logo";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { validateUpload } from "@/lib/upload-validation";
@@ -40,6 +44,52 @@ export function ManagerHome() {
   const [notesAccount, setNotesAccount] = useState<ManagedAccount | null>(null);
   const [partnerOpen, setPartnerOpen] = useState(false);
   const { partner, isPartner, isPending: isPartnerPending } = usePartner();
+
+  // Self-subscribe: criar conta PF + mandar magic link pra finalizar checkout
+  const [selfSubOpen, setSelfSubOpen] = useState(false);
+  const [selfSubEmail, setSelfSubEmail] = useState("");
+  const [selfSubPlan, setSelfSubPlan] = useState<"pro" | "premium">("pro");
+  const [selfSubCoupon, setSelfSubCoupon] = useState(partner?.coupon_code ?? "");
+  const [selfSubSubmitting, setSelfSubSubmitting] = useState(false);
+  const managerEmail = user?.email?.toLowerCase() ?? "";
+  const emailIsSameAsManager = !!selfSubEmail.trim() && selfSubEmail.trim().toLowerCase() === managerEmail;
+
+  const handleSelfSubscribe = async () => {
+    const email = selfSubEmail.trim();
+    if (!email || !email.includes("@")) {
+      toast.error("Informe um e-mail válido.");
+      return;
+    }
+    if (email.toLowerCase() === managerEmail) {
+      toast.error("Use um e-mail diferente do seu de gestora.");
+      return;
+    }
+    setSelfSubSubmitting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manager-self-subscribe", {
+        body: { email, plan: selfSubPlan, partner_code: selfSubCoupon.trim() || undefined },
+      });
+      if (error || (data as { error?: string })?.error) {
+        const code = (data as { error?: string })?.error ?? "unknown";
+        if (code === "use_different_email") {
+          toast.error("Use um e-mail diferente do seu de gestora.");
+        } else if (code === "forbidden_not_manager") {
+          toast.error("Apenas gestoras podem usar esse fluxo.");
+        } else {
+          toast.error("Não foi possível iniciar a assinatura.");
+        }
+        return;
+      }
+      toast.success("Enviamos um link pro e-mail PF pra finalizar a assinatura.");
+      setSelfSubOpen(false);
+      setSelfSubEmail("");
+    } catch (e) {
+      console.error("[manager-self-subscribe] invoke failed:", e);
+      toast.error("Falha ao chamar o servidor.");
+    } finally {
+      setSelfSubSubmitting(false);
+    }
+  };
 
   // Upload de avatar inline (sem abrir o drawer)
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -246,9 +296,7 @@ export function ManagerHome() {
             )}
           </section>
 
-          {/* TODO Parceiros: card "Minha conta" (depende do fluxo de assinatura) */}
-
-          {/* Upsell */}
+          {/* Minha conta — manager assina o cria pra si */}
           <section className="rounded-2xl border border-border bg-card/50 px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-4">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
               <Sparkles className="h-4 w-4 text-primary" />
@@ -258,16 +306,15 @@ export function ManagerHome() {
                 Quer usar o cria pro seu conteúdo também?
               </p>
               <p className="text-xs text-muted-foreground font-body mt-0.5">
-                Crie sua conta de criadora e ganhe ideias, calendário e IA pra você.
+                Crie uma conta de criadora pra você (com e-mail PF) e ganhe ideias, calendário e IA — sem sair daqui.
               </p>
             </div>
             <Button
-              variant="outline"
               size="sm"
-              onClick={() => navigate("/app/assinar")}
+              onClick={() => setSelfSubOpen(true)}
               className="shrink-0"
             >
-              Ver planos
+              Assinar pra mim
             </Button>
           </section>
 
@@ -372,6 +419,85 @@ export function ManagerHome() {
       />
 
       <PartnerApplyDrawer open={partnerOpen} onOpenChange={setPartnerOpen} />
+
+      <Dialog open={selfSubOpen} onOpenChange={(o) => !selfSubSubmitting && setSelfSubOpen(o)}>
+        <DialogContent
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          className="sm:max-w-md rounded-2xl"
+        >
+          <DialogHeader>
+            <DialogTitle className="font-display">Assinar pra mim</DialogTitle>
+            <DialogDescription className="font-body text-sm">
+              Cria uma conta de criadora num e-mail diferente do seu de gestora. Você recebe um link nesse e-mail pra acessar e finalizar a assinatura.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-2">
+            <div className="space-y-1.5">
+              <Label className="font-body text-xs">E-mail PF</Label>
+              <Input
+                type="email"
+                inputMode="email"
+                autoComplete="off"
+                placeholder="seu-email-pessoal@exemplo.com"
+                value={selfSubEmail}
+                onChange={(e) => setSelfSubEmail(e.target.value)}
+                disabled={selfSubSubmitting}
+                className="rounded-xl"
+              />
+              {emailIsSameAsManager && (
+                <p className="text-[11px] text-destructive font-body">
+                  Use um e-mail diferente do seu de gestora ({managerEmail}).
+                </p>
+              )}
+              <p className="text-[11px] text-muted-foreground font-body">
+                Você não pode usar o mesmo e-mail da sua conta de gestora.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="font-body text-xs">Plano</Label>
+              <Select value={selfSubPlan} onValueChange={(v) => setSelfSubPlan(v as "pro" | "premium")} disabled={selfSubSubmitting}>
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pro">Pro</SelectItem>
+                  <SelectItem value="premium">Premium</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {isPartner && partner?.coupon_code && (
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs">Cupom (seu)</Label>
+                <Input
+                  value={selfSubCoupon}
+                  onChange={(e) => setSelfSubCoupon(e.target.value)}
+                  disabled={selfSubSubmitting}
+                  className="rounded-xl font-mono text-sm"
+                />
+                <p className="text-[11px] text-muted-foreground font-body">
+                  Você pode usar o próprio cupom nesse fluxo (exceção ao bloqueio de auto-indicação).
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap justify-end gap-2 mt-6">
+            <Button variant="outline" onClick={() => setSelfSubOpen(false)} disabled={selfSubSubmitting}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSelfSubscribe}
+              disabled={selfSubSubmitting || emailIsSameAsManager || !selfSubEmail.trim()}
+            >
+              {selfSubSubmitting && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+              Continuar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
