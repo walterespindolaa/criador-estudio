@@ -139,7 +139,14 @@ const Arquivos = () => {
         expiresAt,
       });
       toast.success("Arquivo enviado!");
-    } catch {
+    } catch (e) {
+      console.error("[arquivos] upload failed", {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        category,
+        error: e,
+      });
       toast.error("Erro no upload.");
     }
   };
@@ -157,7 +164,7 @@ const Arquivos = () => {
     if (file) handleFileSelect(file);
   };
 
-  const handleDelete = async (f: { id: string; storage_path: string }) => {
+  const handleDelete = async (f: { id: string; storage_path: string; size_bytes?: number | null }) => {
     try {
       await deleteFile.mutateAsync(f);
       toast.success("Arquivo removido.");
@@ -351,12 +358,12 @@ const Arquivos = () => {
               </div>
             )}
 
-            {/* Seção 2 — Arquivos do Google Drive */}
+            {/* Seção 2 — Mídias vinculadas (Drive + Bunny + outros providers) */}
             {filteredDrive.length > 0 && (
               <div className="mb-6">
                 <p className="text-sm font-body font-semibold text-foreground mb-3 flex items-center gap-2">
                   <Cloud className="h-4 w-4 text-primary" />
-                  Arquivos do Google Drive
+                  Mídias vinculadas
                 </p>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
                   {filteredDrive.map((f) => (

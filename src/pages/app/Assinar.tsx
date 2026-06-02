@@ -20,7 +20,7 @@ export default function Assinar() {
   const [searchParams] = useSearchParams();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [partnerCode, setPartnerCode] = useState("");
-  const [partnerInfo, setPartnerInfo] = useState<{ name: string; discountPct: number | null } | null>(null);
+  const [partnerInfo, setPartnerInfo] = useState<{ name: string; discountPct: number | null; durationMonths: number | null } | null>(null);
   const [codeError, setCodeError] = useState(false);
 
   const isExpired = status === "trial_expired" || status === "blocked";
@@ -45,8 +45,14 @@ export default function Assinar() {
           "validate_partner_code",
           { _code: selfSubscribeCode },
         );
-        const row = Array.isArray(data) && data.length ? (data[0] as { partner_name: string; discount_pct: number | null }) : null;
-        if (row) setPartnerInfo({ name: row.partner_name, discountPct: row.discount_pct ?? null });
+        const row = Array.isArray(data) && data.length
+          ? (data[0] as { partner_name: string; discount_pct: number | null; duration_months: number | null })
+          : null;
+        if (row) setPartnerInfo({
+          name: row.partner_name,
+          discountPct: row.discount_pct != null ? Number(row.discount_pct) : null,
+          durationMonths: row.duration_months ?? null,
+        });
       })();
     }
   }, [isSelfSubscribeFlow, selfSubscribeCode]);
@@ -60,8 +66,14 @@ export default function Assinar() {
       "validate_partner_code",
       { _code: code },
     );
-    const row = Array.isArray(data) && data.length ? (data[0] as { partner_name: string; discount_pct: number | null }) : null;
-    if (row) setPartnerInfo({ name: row.partner_name, discountPct: row.discount_pct ?? null });
+    const row = Array.isArray(data) && data.length
+      ? (data[0] as { partner_name: string; discount_pct: number | null; duration_months: number | null })
+      : null;
+    if (row) setPartnerInfo({
+      name: row.partner_name,
+      discountPct: row.discount_pct != null ? Number(row.discount_pct) : null,
+      durationMonths: row.duration_months ?? null,
+    });
     else setCodeError(true);
   };
 
@@ -226,7 +238,13 @@ export default function Assinar() {
         {partnerInfo && (
           <p className="text-xs font-body text-primary mt-2">
             Código da {partnerInfo.name} aplicado
-            {partnerInfo.discountPct ? ` — ${partnerInfo.discountPct}% off na 1ª fatura` : ""}
+            {partnerInfo.discountPct
+              ? ` — ${partnerInfo.discountPct}% off ${
+                  partnerInfo.durationMonths && partnerInfo.durationMonths > 1
+                    ? `por ${partnerInfo.durationMonths} meses`
+                    : "na 1ª fatura"
+                }`
+              : ""}
           </p>
         )}
         {codeError && (

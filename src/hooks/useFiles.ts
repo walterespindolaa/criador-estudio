@@ -82,21 +82,39 @@ export function useFiles() {
         await supabase.storage.from(STORAGE_BUCKET).remove([path]);
         throw error;
       }
+      // Atualiza a cota (não bloqueia se falhar — log e segue).
+      const { error: incErr } = await (supabase.rpc as unknown as (
+        fn: string, args: unknown,
+      ) => Promise<{ error: unknown }>)("increment_storage", { _user: userId, _delta: file.size });
+      if (incErr) console.error("[useFiles] increment_storage failed (+)", incErr);
       return data as FileRecord;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+    },
   });
 
   const deleteFile = useMutation({
-    mutationFn: async (file: Pick<FileRecord, "id" | "storage_path">): Promise<void> => {
+    mutationFn: async (file: Pick<FileRecord, "id" | "storage_path"> & { size_bytes?: number | null }): Promise<void> => {
       const { error: storageError } = await supabase.storage
         .from(STORAGE_BUCKET)
         .remove([file.storage_path]);
       if (storageError) throw storageError;
       const { error } = await supabase.from("files").delete().eq("id", file.id);
       if (error) throw error;
+      // Decrementa a cota.
+      if (userId && file.size_bytes && file.size_bytes > 0) {
+        const { error: decErr } = await (supabase.rpc as unknown as (
+          fn: string, args: unknown,
+        ) => Promise<{ error: unknown }>)("increment_storage", { _user: userId, _delta: -file.size_bytes });
+        if (decErr) console.error("[useFiles] increment_storage failed (-)", decErr);
+      }
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+    },
   });
 
   const getPublicUrl = async (path: string): Promise<string> => {

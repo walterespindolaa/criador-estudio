@@ -67,9 +67,16 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
   const isCarousel = format === "carrossel" && sections && sections.length > 0;
   const carouselSlides = isCarousel ? sections!.slice(0, 10) : [];
   const currentSlide = carouselSlides[carouselIdx];
-  const currentCarouselMedia = currentSlide?.driveFileId
-    ? `https://lh3.googleusercontent.com/d/${encodeURIComponent(currentSlide.driveFileId)}=w800`
-    : null;
+  // driveThumbnail (URL pronta — vem do Storage do upload local OU do Drive)
+  // tem prioridade. driveFileId só vira URL lh3 quando é um ID real do Drive,
+  // não um path do Storage (que tem "/").
+  const currentCarouselMedia = currentSlide?.driveThumbnail
+    ? currentSlide.driveThumbnail
+    : currentSlide?.driveFileId
+      ? (currentSlide.driveFileId.includes("/")
+          ? currentSlide.driveFileId
+          : `https://lh3.googleusercontent.com/d/${encodeURIComponent(currentSlide.driveFileId)}=w800`)
+      : null;
   const isCurrentSlideVideo = false; // We don't have this info easily for slides yet, keeping as image for now
 
   // Gradient placeholder when no media
