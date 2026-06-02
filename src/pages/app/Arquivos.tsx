@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { FolderOpen, Upload, Search, Trash2, FileText, Cloud, ImageIcon, Crown } from "lucide-react";
+import { FolderOpen, Upload, Search, Trash2, FileText, Cloud, ImageIcon, Crown, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -89,6 +89,7 @@ const Arquivos = () => {
   const [dragOver, setDragOver] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingCategory, setPendingCategory] = useState("geral");
+  const [pendingPermanent, setPendingPermanent] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
 
   const storageUsed = profile?.storage_used_bytes ?? 0;
@@ -126,11 +127,14 @@ const Arquivos = () => {
     }
     setPendingFile(file);
     setPendingCategory("geral");
+    setPendingPermanent(false);
     setCategoryDialogOpen(true);
   };
 
-  const handleUpload = async (file: File, category: string) => {
-    const expiresAt = new Date(Date.now() + retentionDays * 24 * 60 * 60 * 1000).toISOString();
+  const handleUpload = async (file: File, category: string, permanent: boolean) => {
+    const expiresAt = permanent
+      ? null
+      : new Date(Date.now() + retentionDays * 24 * 60 * 60 * 1000).toISOString();
     try {
       await uploadFile.mutateAsync({
         file,
@@ -204,6 +208,9 @@ const Arquivos = () => {
     return matchSearch && matchCat;
   });
 
+  const filteredPermanent = filteredUploads.filter((f) => !f.expires_at);
+  const filteredTemporary = filteredUploads.filter((f) => !!f.expires_at);
+
   const filteredDrive = (driveFiles ?? []).filter((f) =>
     !search || f.file_name?.toLowerCase().includes(search.toLowerCase())
   );
@@ -272,7 +279,7 @@ const Arquivos = () => {
           <p className="text-xs text-muted-foreground font-body mt-1">Máximo 50MB por arquivo</p>
         </div>
         <p className="text-xs text-muted-foreground font-body text-center mb-6">
-          💡 Arquivos enviados ficam disponíveis por {retentionDays} dias. Para armazenamento permanente, use o Google Drive.
+          💡 Arquivos temporários somem em {retentionDays} dias. Escolha "Permanente" no upload pra manter — ocupa sua cota.
         </p>
 
         {/* Filters */}
@@ -302,61 +309,83 @@ const Arquivos = () => {
           </div>
         ) : (
           <>
-            {/* Seção 1 — Arquivos da Galeria (uploads) */}
-            {filteredUploads.length > 0 && (
-              <div className="mb-6">
-                <p className="text-sm font-body font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4 text-primary" />
-                  Arquivos da Galeria
-                </p>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  {filteredUploads.map((f, i) => {
-                    const dleft = daysUntilExpiry(f.expires_at);
-                    return (
-                      <motion.div
-                        key={f.id}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.02 }}
-                        className="bg-card rounded-xl border border-border overflow-hidden group"
-                      >
-                        <div className="aspect-square bg-muted flex items-center justify-center overflow-hidden">
-                          {isImage(f.file_type) ? (
-                            <SignedImage path={f.storage_path} alt={f.name} resolve={getPublicUrl} />
-                          ) : (
-                            <FileText className="h-8 w-8 text-muted-foreground" />
-                          )}
-                        </div>
-                        <div className="p-3">
-                          <p className="text-xs font-body font-medium text-foreground truncate">{f.name}</p>
-                          <div className="flex items-center justify-between mt-1">
-                            <span className="text-[10px] text-muted-foreground font-body">{formatSize(f.size_bytes)}</span>
-                            <button onClick={() => handleDelete(f)} className="p-1 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 rounded transition-opacity">
-                              <Trash2 className="h-3 w-3 text-destructive" />
-                            </button>
-                          </div>
-                          <div className="flex items-center gap-1 flex-wrap mt-1">
-                            {f.category && f.category !== "geral" && (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-body bg-muted text-muted-foreground capitalize">{f.category}</span>
+            {(() => {
+              const renderUploadCard = (f: typeof filteredUploads[number], i: number) => {
+                const dleft = daysUntilExpiry(f.expires_at);
+                return (
+                  <motion.div
+                    key={f.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.02 }}
+                    className="bg-card rounded-xl border border-border overflow-hidden group"
+                  >
+                    <div className="aspect-square bg-muted flex items-center justify-center overflow-hidden">
+                      {isImage(f.file_type) ? (
+                        <SignedImage path={f.storage_path} alt={f.name} resolve={getPublicUrl} />
+                      ) : (
+                        <FileText className="h-8 w-8 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <p className="text-xs font-body font-medium text-foreground truncate">{f.name}</p>
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-[10px] text-muted-foreground font-body">{formatSize(f.size_bytes)}</span>
+                        <button onClick={() => handleDelete(f)} className="p-1 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 rounded transition-opacity">
+                          <Trash2 className="h-3 w-3 text-destructive" />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1 flex-wrap mt-1">
+                        {f.category && f.category !== "geral" && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-body bg-muted text-muted-foreground capitalize">{f.category}</span>
+                        )}
+                        {dleft !== null && (
+                          <span
+                            className={cn(
+                              "px-1.5 py-0.5 rounded text-[10px] font-body",
+                              dleft < 7 ? "bg-amber-500/15 text-amber-700 dark:text-amber-400" : "bg-muted text-muted-foreground"
                             )}
-                            {dleft !== null && (
-                              <span
-                                className={cn(
-                                  "px-1.5 py-0.5 rounded text-[10px] font-body",
-                                  dleft < 7 ? "bg-amber-500/15 text-amber-700 dark:text-amber-400" : "bg-muted text-muted-foreground"
-                                )}
-                              >
-                                {dleft <= 0 ? "Expira hoje" : `Expira em ${dleft}d`}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+                          >
+                            {dleft <= 0 ? "Expira hoje" : `Expira em ${dleft}d`}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              };
+              return (
+                <>
+                  {/* Seção 1 — Permanentes (expires_at = null) */}
+                  {filteredPermanent.length > 0 && (
+                    <div className="mb-6">
+                      <p className="text-sm font-body font-semibold text-foreground mb-3 flex items-center gap-2">
+                        <ImageIcon className="h-4 w-4 text-primary" />
+                        Permanentes
+                        <span className="text-[10px] text-muted-foreground font-normal">({filteredPermanent.length})</span>
+                      </p>
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        {filteredPermanent.map(renderUploadCard)}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Seção 2 — Temporárias (expires_at preenchido) */}
+                  {filteredTemporary.length > 0 && (
+                    <div className="mb-6">
+                      <p className="text-sm font-body font-semibold text-foreground mb-3 flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-primary" />
+                        Temporárias ({retentionDays} dias)
+                        <span className="text-[10px] text-muted-foreground font-normal">({filteredTemporary.length})</span>
+                      </p>
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        {filteredTemporary.map(renderUploadCard)}
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
 
             {/* Seção 2 — Mídias vinculadas (Drive + Bunny + outros providers) */}
             {filteredDrive.length > 0 && (
@@ -364,6 +393,7 @@ const Arquivos = () => {
                 <p className="text-sm font-body font-semibold text-foreground mb-3 flex items-center gap-2">
                   <Cloud className="h-4 w-4 text-primary" />
                   Mídias vinculadas
+                  <span className="text-[10px] text-muted-foreground font-normal">({filteredDrive.length})</span>
                 </p>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
                   {filteredDrive.map((f) => (
@@ -394,7 +424,7 @@ const Arquivos = () => {
             <p className="text-sm font-body text-muted-foreground truncate">{pendingFile?.name}</p>
             {pendingFile && (
               <p className="text-xs text-muted-foreground font-body">
-                Tamanho: {formatSize(pendingFile.size)} · Expira em {retentionDays} dias
+                Tamanho: {formatSize(pendingFile.size)}
               </p>
             )}
             <div className="space-y-2">
@@ -413,12 +443,36 @@ const Arquivos = () => {
                 ))}
               </div>
             </div>
+            <div className="space-y-2">
+              <Label className="font-body text-sm">Armazenamento</Label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPendingPermanent(false)}
+                  className={`flex-1 px-3 py-2 rounded-xl text-xs font-body border transition-colors ${
+                    !pendingPermanent ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"
+                  }`}
+                >
+                  Temporário ({retentionDays} dias)
+                </button>
+                <button
+                  onClick={() => setPendingPermanent(true)}
+                  className={`flex-1 px-3 py-2 rounded-xl text-xs font-body border transition-colors ${
+                    pendingPermanent ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"
+                  }`}
+                >
+                  Permanente
+                </button>
+              </div>
+              <p className="text-[11px] text-muted-foreground font-body">
+                Permanente ocupa sua cota e não é apagado. Temporário some em {retentionDays} dias.
+              </p>
+            </div>
             <Button
               variant="hero"
               className="w-full"
               onClick={() => {
                 setCategoryDialogOpen(false);
-                if (pendingFile) handleUpload(pendingFile, pendingCategory);
+                if (pendingFile) handleUpload(pendingFile, pendingCategory, pendingPermanent);
               }}
             >
               Enviar arquivo
