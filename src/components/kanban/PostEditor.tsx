@@ -254,9 +254,21 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
     setDriveMedia((data as DriveRef[]) || []);
   }, []);
 
-  const removeDriveRef = async (refId: string) => {
-    await supabase.from("external_media_refs").delete().eq("id", refId);
-    setDriveMedia((prev) => prev.filter((m) => m.id !== refId));
+  const removeDriveRef = async (ref: DriveRef) => {
+    // Vídeos do Bunny: tentar deletar no Bunny PRIMEIRO (a edge confere a ref antes de deletar).
+    // Se o invoke falhar, ainda removemos a row localmente — o purge de 30 dias é a rede de segurança.
+    if (ref.provider === "bunny" && ref.external_file_id) {
+      try {
+        const { error } = await supabase.functions.invoke("bunny-delete-video", {
+          body: { videoGuid: ref.external_file_id, accountId: userId },
+        });
+        if (error) console.error("[bunny-delete-video] invoke error", error);
+      } catch (e) {
+        console.error("[bunny-delete-video] invoke threw", e);
+      }
+    }
+    await supabase.from("external_media_refs").delete().eq("id", ref.id);
+    setDriveMedia((prev) => prev.filter((m) => m.id !== ref.id));
   };
 
   // Load post data into form state
@@ -831,10 +843,13 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
 
   const handleRemoveAllMedia = () => {
     if (isNew) {
-      pendingDriveFiles.forEach((f) => supabase.from("external_media_refs").delete().eq("id", f.id));
+      // Refs pending (post não salvo): IDs temp- não casam no DB, mas ainda assim
+      // invocamos bunny-delete-video pros bunny refs (edge retorna 404 quando não
+      // acha row — fica logado, purge de 30d é a rede de segurança).
+      pendingDriveFiles.forEach((f) => removeDriveRef(f));
       setPendingDriveFiles([]);
     } else {
-      driveMedia.forEach((m) => removeDriveRef(m.id));
+      driveMedia.forEach((m) => removeDriveRef(m));
     }
   };
 
