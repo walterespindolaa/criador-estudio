@@ -6,8 +6,12 @@ import { LayoutGrid, Grid3X3 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { usePosts, type Post } from "@/hooks/usePosts";
-import { useProfile } from "@/hooks/useProfile";
+import { useProfile, type Profile } from "@/hooks/useProfile";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { usePillars } from "@/hooks/usePillars";
+
+// Subset do profile renderizado no header do feed; vem direto da conta ATIVA.
+type FeedProfile = Pick<Profile, "name" | "avatar_url" | "niche" | "instagram_handle" | "bio">;
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { FeedProfileHeader } from "@/components/feed/FeedProfileHeader";
@@ -29,9 +33,29 @@ function sortPublishedDesc(a: Post, b: Post): number {
 
 const Feed = () => {
   const { user } = useAuth();
+  const { activeAccountId } = useActiveAccount();
   const { posts, isLoading: postsLoading } = usePosts();
-  const { profile } = useProfile();
+  const { profile: selfProfile } = useProfile();
   const { pillars } = usePillars();
+
+  // Feed mostra a conta ATIVA, não a sessão. Quando manager gerencia outro,
+  // o perfil exibido (avatar/nome/handle) vem da conta gerenciada.
+  const ownerId = activeAccountId || user?.id || "";
+  const isOwnAccount = !!user?.id && ownerId === user.id;
+  const { data: managedProfile } = useQuery<FeedProfile | null>({
+    queryKey: ["feed-profile", ownerId],
+    enabled: !!ownerId && !isOwnAccount,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("name, avatar_url, niche, instagram_handle, bio")
+        .eq("id", ownerId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as FeedProfile | null;
+    },
+  });
+  const profile = isOwnAccount ? selfProfile : (managedProfile as typeof selfProfile);
 
   const feedPosts = useMemo(() => posts.filter((p) => isFeedStatus(p.status)), [posts]);
 
@@ -119,13 +143,13 @@ const Feed = () => {
   const relevantPostIds = useMemo(() => feedPosts.map((p) => p.id), [feedPosts]);
 
   const { data: thumbnails = {} } = useQuery<Record<string, string | null>>({
-    queryKey: ["feed-thumbnails", user?.id, relevantPostIds.sort().join(",")],
-    enabled: !!user?.id && relevantPostIds.length > 0,
+    queryKey: ["feed-thumbnails", ownerId, relevantPostIds.sort().join(",")],
+    enabled: !!ownerId && relevantPostIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("external_media_refs")
         .select("post_id, thumbnail_url, created_at")
-        .eq("user_id", user!.id)
+        .eq("user_id", ownerId)
         .in("post_id", relevantPostIds)
         .order("created_at");
       if (error) throw error;

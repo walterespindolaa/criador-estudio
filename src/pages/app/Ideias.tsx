@@ -504,7 +504,7 @@ const Ideias = () => {
                       </span>
                     )}
                   </div>
-                  <div className="flex gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
+                  <div className="flex gap-0.5 opacity-60 group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); toggleAiPanel(idea.id); }}
@@ -515,6 +515,16 @@ const Ideias = () => {
                       aria-label="Sugestões de IA"
                     >
                       <Sparkles className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handlePromoteToPost(idea); }}
+                      disabled={!!idea.promoted_to_post_id || promoteToPost.isPending}
+                      title={idea.promoted_to_post_id ? "Já virou post" : "Virar post"}
+                      className="h-7 w-7 rounded-md hover:bg-accent flex items-center justify-center text-muted-foreground hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed"
+                      aria-label="Virar post"
+                    >
+                      <Clapperboard className="h-3.5 w-3.5" />
                     </button>
                     <button
                       type="button"
