@@ -140,10 +140,26 @@ serve(async (req) => {
         // sem atribuição ou self-subscribe → sem comissão
         if (!partnerId || !referredUserId || selfSub) break;
 
-        // proteção auto-indicação: partner.user_id === quem assinou
+        // dono do cupom — usado pelas duas checagens abaixo
         const { data: partnerRow } = await supabase
           .from("partners").select("user_id").eq("id", partnerId).maybeSingle();
-        if (partnerRow && (partnerRow as { user_id: string }).user_id === referredUserId) break;
+        const ownerOfCoupon = partnerRow ? (partnerRow as { user_id: string }).user_id : null;
+
+        // proteção auto-indicação: partner.user_id === quem assinou
+        if (ownerOfCoupon && ownerOfCoupon === referredUserId) break;
+
+        // proteção defensiva self-subscribe: não confiar só na metadata.
+        // Se a conta PF (referredUserId) é gerenciada pelo dono do cupom → self-assinatura
+        // da manager (não importa se o front esqueceu a flag self_subscribe="1").
+        if (ownerOfCoupon) {
+          const { data: amLink } = await supabase
+            .from("account_members")
+            .select("id")
+            .eq("owner_id", referredUserId)
+            .eq("member_id", ownerOfCoupon)
+            .maybeSingle();
+          if (amLink) break; // self-subscribe por vínculo → sem comissão
+        }
 
         const billingReason = inv.billing_reason;
         const amountPaid = inv.amount_paid ?? 0; // centavos, valor real (com desconto)
