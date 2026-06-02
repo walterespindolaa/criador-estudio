@@ -47,6 +47,7 @@ export type Database = {
           member_email: string
           member_id: string | null
           owner_id: string
+          pending_self_subscribe: boolean | null
           role: string
           status: string
         }
@@ -58,6 +59,7 @@ export type Database = {
           member_email: string
           member_id?: string | null
           owner_id: string
+          pending_self_subscribe?: boolean | null
           role?: string
           status?: string
         }
@@ -69,6 +71,7 @@ export type Database = {
           member_email?: string
           member_id?: string | null
           owner_id?: string
+          pending_self_subscribe?: boolean | null
           role?: string
           status?: string
         }
