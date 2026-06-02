@@ -7,6 +7,8 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
   httpClient: Stripe.createFetchHttpClient(),
 });
 
+const DEDUCTION_PCT_FALLBACK = 10; // fallback se partner_program_config não tiver linha
+
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -99,6 +101,105 @@ serve(async (req) => {
           if (p) await supabase.from("profiles")
             .update({ subscription_status: "canceled" }).eq("id", p.id);
         }
+        // B.2 — cancelamento antes da liberação anula só 'pending'.
+        // 'payable' (sobreviveu à carência) e 'paid' (já pagamos) são mantidos.
+        await supabase.from("partner_referrals")
+          .update({
+            status: "canceled",
+            canceled_at: new Date().toISOString(),
+            cancel_reason: "subscription_canceled",
+          })
+          .eq("stripe_subscription_id", sub.id)
+          .eq("status", "pending");
+        break;
+      }
+
+      case "invoice.paid": {
+        const inv = event.data.object as Stripe.Invoice;
+        const subId = inv.subscription as string | null;
+        if (!subId) break;
+
+        // metadata de atribuição vive na SUBSCRIPTION, não na invoice
+        const sub = await stripe.subscriptions.retrieve(subId);
+        const md = sub.metadata || {};
+        const partnerId = md.partner_id;
+        const referredUserId = md.user_id;
+        const selfSub = md.self_subscribe === "1";
+
+        // sem atribuição ou self-subscribe → sem comissão
+        if (!partnerId || !referredUserId || selfSub) break;
+
+        // proteção auto-indicação: partner.user_id === quem assinou
+        const { data: partnerRow } = await supabase
+          .from("partners").select("user_id").eq("id", partnerId).maybeSingle();
+        if (partnerRow && (partnerRow as { user_id: string }).user_id === referredUserId) break;
+
+        const billingReason = inv.billing_reason;
+        const amountPaid = inv.amount_paid ?? 0; // centavos, valor real (com desconto)
+
+        const { data: cfg } = await supabase
+          .from("partner_program_config").select("deduction_pct").eq("id", true).maybeSingle();
+        const deductionPct = cfg
+          ? Number((cfg as { deduction_pct: number }).deduction_pct)
+          : DEDUCTION_PCT_FALLBACK;
+
+        const { data: existing } = await supabase
+          .from("partner_referrals").select("*").eq("stripe_subscription_id", subId).maybeSingle();
+
+        if (billingReason === "subscription_create") {
+          // 1ª fatura → cria pending (idempotente)
+          if (!existing) {
+            const net = Math.round(amountPaid * (1 - deductionPct / 100));
+            await supabase.from("partner_referrals").insert({
+              partner_id: partnerId,
+              referred_user_id: referredUserId,
+              stripe_customer_id: inv.customer as string,
+              stripe_subscription_id: subId,
+              first_invoice_id: inv.id,
+              gross_amount_cents: amountPaid,
+              deduction_pct: deductionPct,
+              net_amount_cents: net,
+              currency: inv.currency || "brl",
+              paid_invoices_count: 1,
+              status: "pending",
+            });
+          }
+        } else if (billingReason === "subscription_cycle") {
+          // renovação → incrementa; ao chegar a 2 pagas, libera
+          if (existing) {
+            const e = existing as { id: string; paid_invoices_count: number; status: string };
+            const newCount = (e.paid_invoices_count ?? 1) + 1;
+            const patch: Record<string, unknown> = { paid_invoices_count: newCount };
+            if (newCount >= 2 && e.status === "pending") {
+              patch.status = "payable";
+              patch.unlocked_at = new Date().toISOString();
+            }
+            await supabase.from("partner_referrals").update(patch).eq("id", e.id);
+          }
+        }
+        break;
+      }
+
+      case "charge.refunded": {
+        // estorno total → anula comissão pending OU payable. Não toca em 'paid' (já transferimos).
+        const charge = event.data.object as Stripe.Charge;
+        const invId = charge.invoice as string | null;
+        if (!invId) break;
+        const inv = await stripe.invoices.retrieve(invId);
+        const subId = inv.subscription as string | null;
+        if (!subId) break;
+
+        const fullRefund = charge.refunded === true || (charge.amount_refunded >= charge.amount);
+        if (!fullRefund) break;
+
+        await supabase.from("partner_referrals")
+          .update({
+            status: "canceled",
+            canceled_at: new Date().toISOString(),
+            cancel_reason: "refund",
+          })
+          .eq("stripe_subscription_id", subId)
+          .in("status", ["pending", "payable"]);
         break;
       }
 
