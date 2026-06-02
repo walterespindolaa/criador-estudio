@@ -39,6 +39,11 @@ import { toast } from "sonner";
 import { fireConfetti } from "@/lib/confetti";
 import { FORMAT_LABELS, PLATFORMS, FORMATS, STATUS_OPTIONS, BUNNY_CDN_HOSTNAME } from "@/lib/constants";
 import * as tus from "tus-js-client";
+import heic2any from "heic2any";
+
+const VIDEO_EXTS = ["mov", "mp4", "m4v", "webm", "avi", "mkv", "hevc", "3gp"];
+const HEIC_EXTS = ["heic", "heif"];
+const VIDEO_MAX_BYTES = 2 * 1024 * 1024 * 1024; // 2 GB — teto de sanidade pro Bunny
 import { getStatusClasses } from "@/lib/statusColors";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import {
@@ -403,17 +408,27 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
     let anyUploaded = false;
     try {
       setUploadingLocal(true);
-      for (const raw of files) {
-        const validation = validateUpload(raw, "postMedia");
-        if (!validation.ok) {
-          toast.error(validation.reason);
+      for (const initialRaw of files) {
+        let raw = initialRaw;
+        const ext = (raw.name.split(".").pop() || "").toLowerCase();
+        // Detecta vídeo por MIME OU extensão (browsers às vezes não setam MIME pra .mov/.hevc).
+        const isVideo = raw.type.startsWith("video/") || VIDEO_EXTS.includes(ext);
+        const isHeic =
+          raw.type === "image/heic" || raw.type === "image/heif" || HEIC_EXTS.includes(ext);
+
+        if (raw.size === 0) {
+          toast.error(`${raw.name}: arquivo vazio.`);
           continue;
         }
 
-        const isVideo = raw.type.startsWith("video/");
         const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
         if (isVideo) {
+          // Vídeo: sem limite de 50MB; teto de sanidade de 2GB. Cota do plano controla totais.
+          if (raw.size > VIDEO_MAX_BYTES) {
+            toast.error(`${raw.name}: vídeo muito grande (máx 2GB).`);
+            continue;
+          }
           // Vídeo → Bunny Stream via TUS (player transcodifica qualquer codec)
           const toastId = toast.loading(`Enviando ${raw.name}… 0%`);
           try {
@@ -499,7 +514,27 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
           }
         }
 
-        // FOTO → Storage (compressão + upload + ref device)
+        // FOTO → Storage (HEIC→JPEG se necessário, compressão, upload, ref device)
+        if (isHeic) {
+          try {
+            const out = await heic2any({ blob: raw, toType: "image/jpeg", quality: 0.85 });
+            const blob = Array.isArray(out) ? out[0] : out;
+            raw = new File(
+              [blob as Blob],
+              raw.name.replace(/\.(heic|heif)$/i, ".jpg"),
+              { type: "image/jpeg" },
+            );
+          } catch (err) {
+            console.error("[upload] heic conversion failed", err);
+            toast.error(`Erro ao converter ${initialRaw.name}.`);
+            continue;
+          }
+        }
+        const validation = validateUpload(raw, "postMedia");
+        if (!validation.ok) {
+          toast.error(validation.reason);
+          continue;
+        }
         const file = await compressImage(raw);
         const safeName = sanitizeStoragePath(file.name);
         const path = `${userId}/${Date.now()}-${safeName}`;
