@@ -86,6 +86,7 @@ import {
 import { ScriptEditor, emptySection, type Section } from "./drawer/ScriptEditor";
 import { RepurposeSheet } from "./RepurposeSheet";
 import { PostPreviewModal } from "./PostPreviewModal";
+import { PublishButton } from "./PublishButton";
 import { useProfile } from "@/hooks/useProfile";
 import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 import { useUploadProgress } from "@/contexts/UploadProgressContext";
@@ -1093,6 +1094,22 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                     <span className="hidden sm:inline">Reaproveitar</span>
                   </Button>
                 )}
+                <PublishButton
+                  caption={caption}
+                  mediaUrl={
+                    mediaList.length > 0
+                      ? (() => {
+                          const first = mediaList[0];
+                          const fid = first.external_file_id || first.id;
+                          if (first.file_type?.includes("video")) {
+                            return first.view_url || `https://drive.google.com/uc?id=${encodeURIComponent(fid)}`;
+                          }
+                          return first.thumbnail_url || first.view_url || `https://lh3.googleusercontent.com/d/${encodeURIComponent(fid)}=w800`;
+                        })()
+                      : undefined
+                  }
+                  mediaType={mediaList.length > 0 ? (mediaList[0].file_type?.includes("video") ? "video" : "image") : "image"}
+                />
                 <Button variant="hero" size="sm" onClick={handleSave} disabled={!title.trim()}>
                   {isNew ? "Criar" : "Salvar"}
                 </Button>
