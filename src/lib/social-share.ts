@@ -7,7 +7,9 @@ export function detectMediaOrigin(url?: string | null): MediaOrigin {
   return "storage";
 }
 
-const BUNNY_PULLZONE = import.meta.env.VITE_BUNNY_STREAM_PULLZONE as string | undefined;
+const BUNNY_PULLZONE =
+  (import.meta.env.VITE_BUNNY_STREAM_PULLZONE as string | undefined) ||
+  "vz-4f7de422-7aa.b-cdn.net";
 
 export function resolveShareableUrl(url: string, origin: MediaOrigin): string | null {
   if (origin === "storage") return url;
