@@ -12,6 +12,7 @@ export type ModuleCatalogItem = {
   price_cents: number;
   active: boolean;
   sort_order: number;
+  coming_soon: boolean;
 };
 
 export type ModuleWithStatus = ModuleCatalogItem & {

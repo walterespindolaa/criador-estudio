@@ -37,7 +37,7 @@ function greeting(name: string | null | undefined) {
   return `${part}, ${first}!`;
 }
 
-export function ManagerHome() {
+export function ManagerHome({ embedded = false }: { embedded?: boolean }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { profile, updateProfile } = useProfile();
@@ -145,6 +145,7 @@ export function ManagerHome() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Top bar */}
+      {!embedded && (
       <header className="px-4 sm:px-6 py-4 flex items-center justify-between border-b border-border">
         <Logo className="h-8 w-auto" />
         <button
@@ -155,6 +156,7 @@ export function ManagerHome() {
           <LogOut className="h-5 w-5" />
         </button>
       </header>
+      )}
 
       {/* Conteúdo */}
       <main className="flex-1 px-4 sm:px-6 py-8 sm:py-12">

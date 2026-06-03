@@ -19,7 +19,7 @@ import { TrialBanner } from "@/components/TrialBanner";
 import { StorageWarningBanner } from "@/components/StorageWarningBanner";
 import { ManagingBanner } from "@/components/accounts/ManagingBanner";
 import { AccountSwitcher } from "@/components/accounts/AccountSwitcher";
-import { ManagerHome } from "@/components/accounts/ManagerHome";
+import { ManagerHub } from "@/components/accounts/ManagerHub";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useLastSeen } from "@/hooks/useLastSeen";
 import { installOverflowDetector } from "@/lib/overflow-detector";
@@ -54,7 +54,7 @@ const AppLayout = () => {
 
   // Social media (manager) sem cliente ativo: vê tela exclusiva de seleção, fora do layout normal
   if (!isLoading && profile?.account_type === "manager" && !isManaging) {
-    return <ManagerHome />;
+    return <ManagerHub />;
   }
 
   if (!isLoading && profile && profile.onboarding_completed === false && profile.account_type !== "manager") {
