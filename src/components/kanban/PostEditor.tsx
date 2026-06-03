@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { fireConfetti } from "@/lib/confetti";
 import { FORMAT_LABELS, PLATFORMS, FORMATS, STATUS_OPTIONS, BUNNY_CDN_HOSTNAME } from "@/lib/constants";
@@ -267,6 +268,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
   const { pickAndSave, picking } = useGoogleDrive();
   const { startUpload, updateUpload, finishUpload, hasActive: hasActiveUpload } = useUploadProgress();
+  const queryClient = useQueryClient();
   const { syncPost: syncCalendarPost, removeFromCalendar, syncing: calendarSyncing } = useGoogleCalendar();
   const { createPost, updatePost, deletePost } = usePosts();
   const { referenceFormats } = useReferenceLibrary();
@@ -304,6 +306,18 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
       return next;
     });
     try {
+      // Pega o file_size pra devolver pra cota (DriveRef em memória não tem esse campo).
+      let refSize: number | null = null;
+      const countsTowardQuota = ref.provider === "bunny" || ref.provider === "storage";
+      if (countsTowardQuota && !ref.id.startsWith("temp-")) {
+        const { data: sizeRow } = await supabase
+          .from("external_media_refs")
+          .select("file_size")
+          .eq("id", ref.id)
+          .maybeSingle();
+        refSize = (sizeRow as { file_size: number | null } | null)?.file_size ?? null;
+      }
+
       // Vídeos do Bunny: tentar deletar no Bunny PRIMEIRO (a edge confere a ref antes de deletar).
       // Se o invoke falhar, ainda removemos a row localmente — o purge de 30 dias é a rede de segurança.
       if (ref.provider === "bunny" && ref.external_file_id) {
@@ -317,6 +331,16 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
         }
       }
       await supabase.from("external_media_refs").delete().eq("id", ref.id);
+
+      // Devolve cota (bunny + storage). Drive nunca conta.
+      if (countsTowardQuota && refSize && refSize > 0 && userId) {
+        const { error: decErr } = await (supabase.rpc as unknown as (
+          fn: string, args: unknown,
+        ) => Promise<{ error: unknown }>)("increment_storage", { _user: userId, _delta: -refSize });
+        if (decErr) console.error("[bunny] increment_storage failed (-)", decErr);
+        queryClient.invalidateQueries({ queryKey: ["active-profile"] });
+        queryClient.invalidateQueries({ queryKey: ["profile"] });
+      }
     } finally {
       // Sempre limpar UI local — em ambos os arrays — e liberar o lock.
       setPendingDriveFiles((prev) => prev.filter((f) => f.id !== ref.id));
@@ -582,6 +606,13 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
               };
               setPendingDriveFiles((prev) => [...prev, tempRef]);
             }
+            // Vídeo Bunny conta na cota (é hospedagem do cria).
+            const { error: incErr } = await (supabase.rpc as unknown as (
+              fn: string, args: unknown,
+            ) => Promise<{ error: unknown }>)("increment_storage", { _user: userId, _delta: raw.size });
+            if (incErr) console.error("[bunny] increment_storage failed (+)", incErr);
+            queryClient.invalidateQueries({ queryKey: ["active-profile"] });
+            queryClient.invalidateQueries({ queryKey: ["profile"] });
             toast.success(`${raw.name} enviado!`, { id: toastId });
             if (trackedUploadId) finishUpload(trackedUploadId, "done");
             anyUploaded = true;

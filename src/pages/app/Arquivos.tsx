@@ -11,7 +11,7 @@ import { useActiveAccount } from "@/contexts/AccountContext";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DrivePickerButton } from "@/components/drive/DrivePickerButton";
 import { DriveMediaPreview } from "@/components/drive/DriveMediaPreview";
 import { useFiles } from "@/hooks/useFiles";
@@ -83,6 +83,7 @@ const Arquivos = () => {
   const { user } = useAuth();
   const { activeAccountId } = useActiveAccount();
   const ownerId = activeAccountId || user?.id || "";
+  const queryClient = useQueryClient();
   // Barra de cota reflete a CONTA ATIVA (o dono dos arquivos).
   // NÃO usar pra gate de billing — só exibição.
   const { profile: activeProfile } = useActiveProfile();
@@ -182,11 +183,46 @@ const Arquivos = () => {
     }
   };
 
-  const deleteDriveRef = async (id: string) => {
-    const { error } = await supabase.from("external_media_refs").delete().eq("id", id);
-    if (error) { toast.error("Erro ao remover referência."); return; }
-    refetchDrive();
-    toast.success("Referência removida.");
+  const deleteDriveRef = async (ref: DriveRef) => {
+    try {
+      // 1) Bunny: deletar no Bunny PRIMEIRO (a edge confere a ref antes de remover).
+      if (ref.provider === "bunny" && ref.external_file_id) {
+        try {
+          const { error } = await supabase.functions.invoke("bunny-delete-video", {
+            body: { videoGuid: ref.external_file_id, accountId: ownerId },
+          });
+          if (error) console.error("[bunny-delete-video] invoke error", error);
+        } catch (e) {
+          console.error("[bunny-delete-video] invoke threw", e);
+        }
+      }
+      // 2) Storage: remover do bucket "media" (external_file_id guarda o path).
+      if (ref.provider === "storage" && ref.external_file_id) {
+        const { error: storErr } = await supabase.storage.from("media").remove([ref.external_file_id]);
+        if (storErr) console.error("[arquivos] storage remove failed", storErr);
+      }
+      // 3) Decrementar cota se bunny ou storage. Drive nunca conta.
+      const countsTowardQuota = ref.provider === "bunny" || ref.provider === "storage";
+      const size = ref.file_size ?? 0;
+      if (countsTowardQuota && size > 0 && ownerId) {
+        const { error: decErr } = await (supabase.rpc as unknown as (
+          fn: string, args: unknown,
+        ) => Promise<{ error: unknown }>)("increment_storage", { _user: ownerId, _delta: -size });
+        if (decErr) console.error("[arquivos] increment_storage failed (-)", decErr);
+      }
+      // 4) Apagar a row.
+      const { error } = await supabase.from("external_media_refs").delete().eq("id", ref.id);
+      if (error) { toast.error("Erro ao remover referência."); return; }
+      refetchDrive();
+      if (countsTowardQuota) {
+        queryClient.invalidateQueries({ queryKey: ["active-profile"] });
+        queryClient.invalidateQueries({ queryKey: ["profile"] });
+      }
+      toast.success("Referência removida.");
+    } catch (e) {
+      console.error("[arquivos] deleteDriveRef failed", e);
+      toast.error("Erro ao remover.");
+    }
   };
 
   const isImage = (type: string | null) => type?.startsWith("image/");
@@ -409,7 +445,7 @@ const Arquivos = () => {
                       thumbnailUrl={f.thumbnail_url}
                       viewUrl={f.view_url}
                       size="md"
-                      onRemove={() => deleteDriveRef(f.id)}
+                      onRemove={() => deleteDriveRef(f)}
                     />
                   ))}
                 </div>
