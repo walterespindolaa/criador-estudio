@@ -325,6 +325,8 @@ const Criando = () => {
                   {colPosts.map(post => {
                     const pillar = getPillar(post.pillar_id);
                     const tc = taskCounts.get(post.id);
+                    const approvalStatus = (post as unknown as { approval_status?: string | null }).approval_status ?? null;
+                    const showApprovalBadge = post.status === "editando" && approvalStatus !== "aprovado";
                     const allDone = tc && tc.count > 0 && tc.done === tc.count;
                     const pendingTasks = tc ? tc.count - tc.done : 0;
                     const blocks = (post.content_blocks ?? null) as ContentBlocks | null;
@@ -343,7 +345,16 @@ const Criando = () => {
                         >
                           <X className="h-3 w-3" />
                         </button>
-                        <p className="font-body font-medium text-sm text-foreground mb-2 leading-snug line-clamp-2 pr-7">{post.title}</p>
+                        <p className="font-body font-medium text-sm text-foreground mb-2 leading-snug line-clamp-2 pr-7">
+                          {showApprovalBadge && (
+                            <span
+                              className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-yellow-400 text-yellow-950 text-[10px] font-bold mr-1 align-middle"
+                              title="Aguardando aprovação do cliente"
+                              aria-label="Aguardando aprovação do cliente"
+                            >!</span>
+                          )}
+                          {post.title}
+                        </p>
                         {blocks && (
                           <div className="flex gap-1 mb-2">
                             {(["tema", "roteiro", "midia", "legenda"] as const).map(k => (
