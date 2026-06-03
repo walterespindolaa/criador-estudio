@@ -830,6 +830,28 @@ const Configuracoes = () => {
                     </Button>
                   </div>
                 </div>
+
+                {/* Disclaimer de exclusão de dados — compliance Meta/Google */}
+                <div className="mt-4 rounded-2xl border border-border bg-card/50 p-5">
+                  <h4 className="font-display text-sm font-semibold text-foreground mb-2">
+                    Exclusão de dados
+                  </h4>
+                  <p className="text-xs text-muted-foreground font-body leading-relaxed">
+                    Você pode solicitar a exclusão de todos os seus dados a qualquer momento pelo botão
+                    "Excluir minha conta" acima. Isso remove permanentemente seu perfil, conteúdos, brandbook,
+                    arquivos e qualquer conexão com serviços de terceiros (como Google e redes sociais)
+                    que você tenha autorizado. A remoção é definitiva e não pode ser desfeita. Para detalhes
+                    sobre como tratamos seus dados, consulte nossa{" "}
+                    <a
+                      href="/privacidade"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline underline-offset-2"
+                    >
+                      Política de Privacidade
+                    </a>.
+                  </p>
+                </div>
               </div>
             </TabsContent>
             )}
