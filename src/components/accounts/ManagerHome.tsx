@@ -19,6 +19,7 @@ import { SettingsManagerDrawer } from "@/components/accounts/SettingsManagerDraw
 import { ClientNotesDrawer } from "@/components/accounts/ClientNotesDrawer";
 import { PartnerApplyDrawer } from "@/components/accounts/PartnerApplyDrawer";
 import { PartnerCommissions } from "@/components/accounts/PartnerCommissions";
+import { ApprovalTracker } from "@/components/accounts/ApprovalTracker";
 import { usePartner } from "@/hooks/usePartner";
 import { useManagerApprovalOverview } from "@/hooks/useApprovals";
 import { CopyButton } from "@/components/shared/CopyButton";
@@ -224,6 +225,7 @@ export function ManagerHome() {
           </section>
 
           {/* Comissões da parceria (só parceira aprovada) */}
+          <ApprovalTracker />
           {isPartner && <PartnerCommissions />}
 
           {/* Cards de cliente */}

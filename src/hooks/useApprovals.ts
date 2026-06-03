@@ -133,3 +133,31 @@ export function useManagerApprovalOverview() {
   });
   return { overview: data, isLoading };
 }
+
+export type ApprovalItem = {
+  post_id: string;
+  owner_id: string;
+  client_name: string | null;
+  client_avatar: string | null;
+  title: string;
+  platform: string;
+  format: string;
+  approval_status: "pendente" | "ajuste_solicitado";
+  scheduled_date: string | null;
+  approval_updated_at: string | null;
+  last_comment: string | null;
+  last_comment_role: string | null;
+};
+
+/** Lista compilada (todos os clientes) de posts pendentes/em ajuste — visão da social media. */
+export function useManagerApprovalItems() {
+  const { data = [], isLoading } = useQuery<ApprovalItem[]>({
+    queryKey: ["approval-items"],
+    queryFn: async () => {
+      const { data, error } = await sbRpc("manager_approval_items");
+      if (error) throw new Error(error.message);
+      return (data ?? []) as unknown as ApprovalItem[];
+    },
+  });
+  return { items: data, isLoading };
+}
