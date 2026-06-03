@@ -17,6 +17,7 @@ import {
   Shield,
   Link2,
   Handshake,
+  ClipboardCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -49,6 +50,7 @@ const groups = [
       { title: "Dashboard", url: "/app", icon: LayoutDashboard, end: true },
       { title: "Ideias", url: "/app/ideias", icon: Lightbulb },
       { title: "Criando", url: "/app/criando", icon: Kanban },
+      { title: "Aprovações", url: "/app/aprovacao", icon: ClipboardCheck },
       { title: "Meu Feed", url: "/app/feed", icon: Grid3X3 },
       { title: "Tarefas", url: "/app/tarefas", icon: ListTodo },
     ],

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Home, Lightbulb, Kanban, CalendarDays,
-  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, ChevronUp, LogOut, Sparkles, Grid3X3, Link2
+  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, ChevronUp, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,6 +20,7 @@ const rightItems = [
 ];
 
 const moreItems = [
+  { title: "Aprovações", url: "/app/aprovacao", icon: ClipboardCheck },
   { title: "Meu Feed", url: "/app/feed", icon: Grid3X3 },
   { title: "Biblioteca", url: "/app/biblioteca", icon: BookOpen },
   { title: "Tarefas", url: "/app/tarefas", icon: ListTodo },

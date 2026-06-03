@@ -23,6 +23,7 @@ const Dashboard = lazy(() => import("./pages/app/Dashboard"));
 const Ideias = lazy(() => import("./pages/app/Ideias"));
 const Tarefas = lazy(() => import("./pages/app/Tarefas"));
 const Criando = lazy(() => import("./pages/app/Criando"));
+const Aprovacao = lazy(() => import("./pages/app/Aprovacao"));
 const Feed = lazy(() => import("./pages/app/Feed"));
 const Relatorios = lazy(() => import("./pages/app/Relatorios"));
 const Admin = lazy(() => import("./pages/app/Admin"));
@@ -81,6 +82,7 @@ const App = () => (
                 <Route index element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
                 <Route path="ideias" element={<ErrorBoundary><Ideias /></ErrorBoundary>} />
                 <Route path="criando" element={<ErrorBoundary><Criando /></ErrorBoundary>} />
+                <Route path="aprovacao" element={<ErrorBoundary><Aprovacao /></ErrorBoundary>} />
                 <Route path="feed" element={<ErrorBoundary><Feed /></ErrorBoundary>} />
                 <Route path="relatorios" element={<ErrorBoundary><Relatorios /></ErrorBoundary>} />
                 <Route path="cf-admin-panel" element={<ErrorBoundary><Admin /></ErrorBoundary>} />

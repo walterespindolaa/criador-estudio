@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Camera, LogOut, Settings as SettingsIcon, Sparkles, StickyNote, Users, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -20,6 +20,7 @@ import { ClientNotesDrawer } from "@/components/accounts/ClientNotesDrawer";
 import { PartnerApplyDrawer } from "@/components/accounts/PartnerApplyDrawer";
 import { PartnerCommissions } from "@/components/accounts/PartnerCommissions";
 import { usePartner } from "@/hooks/usePartner";
+import { useManagerApprovalOverview } from "@/hooks/useApprovals";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { Handshake, Check, Clock, Ticket } from "lucide-react";
 
@@ -46,6 +47,12 @@ export function ManagerHome() {
   const [notesAccount, setNotesAccount] = useState<ManagedAccount | null>(null);
   const [partnerOpen, setPartnerOpen] = useState(false);
   const { partner, isPartner, isPending: isPartnerPending } = usePartner();
+  const { overview } = useManagerApprovalOverview();
+  const overviewMap = useMemo(() => {
+    const m: Record<string, { pendentes: number; ajustes: number }> = {};
+    for (const r of overview) m[r.owner_id] = { pendentes: r.pendentes, ajustes: r.ajustes };
+    return m;
+  }, [overview]);
 
   // Self-subscribe: criar conta PF + mandar magic link pra finalizar checkout
   const [selfSubOpen, setSelfSubOpen] = useState(false);
@@ -278,6 +285,27 @@ export function ManagerHome() {
                         )}
                       </div>
                     </div>
+                    {(() => {
+                      const ov = overviewMap[account.owner_id];
+                      if (!ov || (ov.pendentes === 0 && ov.ajustes === 0)) return null;
+                      const goToApprovals = () => { setActiveAccount(account.owner_id); navigate("/app/aprovacao"); };
+                      return (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {ov.pendentes > 0 && (
+                            <button type="button" onClick={goToApprovals}
+                              className="text-[11px] font-body font-semibold px-2 py-1 rounded-full bg-yellow-100 text-yellow-900 border border-yellow-300 hover:bg-yellow-200 transition-colors">
+                              {ov.pendentes} aguardando aprovação
+                            </button>
+                          )}
+                          {ov.ajustes > 0 && (
+                            <button type="button" onClick={goToApprovals}
+                              className="text-[11px] font-body font-semibold px-2 py-1 rounded-full bg-orange-100 text-orange-800 border border-orange-200 hover:bg-orange-200 transition-colors">
+                              {ov.ajustes} em ajuste
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
                     <div className="flex items-center gap-2">
                       <Button
                         onClick={() => setActiveAccount(account.owner_id)}
