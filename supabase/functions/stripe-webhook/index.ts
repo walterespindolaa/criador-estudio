@@ -50,6 +50,22 @@ serve(async (req) => {
     switch (event.type) {
       case "checkout.session.completed": {
         const s = event.data.object as Stripe.Checkout.Session;
+        // ── MÓDULO PAGO: cria o entitlement e NÃO toca na assinatura-base ──
+        if (s.metadata?.kind === "module") {
+          const moduleCode = s.metadata?.module_code;
+          const managerId = s.metadata?.manager_id;
+          if (moduleCode && managerId) {
+            await supabase.from("module_entitlements").upsert({
+              manager_id: managerId,
+              module_code: moduleCode,
+              status: "active",
+              stripe_customer_id: s.customer as string,
+              stripe_subscription_id: s.subscription as string,
+              updated_at: new Date().toISOString(),
+            }, { onConflict: "stripe_subscription_id" });
+          }
+          break;
+        }
         const userId = s.metadata?.user_id;
         const plan = s.metadata?.plan;
         if (!userId || !plan) break;
@@ -76,6 +92,31 @@ serve(async (req) => {
 
       case "customer.subscription.updated": {
         const sub = event.data.object as Stripe.Subscription;
+        // ── MÓDULO PAGO: sincroniza status do entitlement ──
+        if (sub.metadata?.kind === "module") {
+          const moduleCode = sub.metadata?.module_code;
+          const managerId = sub.metadata?.manager_id;
+          const mstatus =
+            sub.status === "active" ? "active" :
+            sub.status === "trialing" ? "active" :
+            sub.status === "past_due" ? "past_due" :
+            sub.status === "unpaid" ? "past_due" :
+            sub.status === "canceled" ? "canceled" : sub.status;
+          const periodEnd = sub.current_period_end
+            ? new Date(sub.current_period_end * 1000).toISOString() : null;
+          if (moduleCode && managerId) {
+            await supabase.from("module_entitlements").upsert({
+              manager_id: managerId,
+              module_code: moduleCode,
+              status: mstatus,
+              stripe_customer_id: sub.customer as string,
+              stripe_subscription_id: sub.id,
+              current_period_end: periodEnd,
+              updated_at: new Date().toISOString(),
+            }, { onConflict: "stripe_subscription_id" });
+          }
+          break;
+        }
         const userId = sub.metadata?.user_id;
         const plan = sub.metadata?.plan;
 
@@ -102,6 +143,13 @@ serve(async (req) => {
 
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
+        // ── MÓDULO PAGO: revoga o entitlement ──
+        if (sub.metadata?.kind === "module") {
+          await supabase.from("module_entitlements")
+            .update({ status: "canceled", updated_at: new Date().toISOString() })
+            .eq("stripe_subscription_id", sub.id);
+          break;
+        }
         const userId = sub.metadata?.user_id;
         if (userId) {
           await supabase.from("profiles")
@@ -133,6 +181,8 @@ serve(async (req) => {
         // metadata de atribuição vive na SUBSCRIPTION, não na invoice
         const sub = await stripe.subscriptions.retrieve(subId);
         const md = sub.metadata || {};
+        // módulo pago não gera comissão de parceira
+        if (md.kind === "module") break;
         const partnerId = md.partner_id;
         const referredUserId = md.user_id;
         const selfSub = md.self_subscribe === "1";
