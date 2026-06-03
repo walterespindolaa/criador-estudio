@@ -777,6 +777,51 @@ export type Database = {
           },
         ]
       }
+      manager_profiles: {
+        Row: {
+          billing_email: string | null
+          business_name: string | null
+          client_range: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          instagram_handle: string | null
+          niche: string | null
+          tax_id: string | null
+          updated_at: string
+          user_id: string
+          whatsapp: string | null
+        }
+        Insert: {
+          billing_email?: string | null
+          business_name?: string | null
+          client_range?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          instagram_handle?: string | null
+          niche?: string | null
+          tax_id?: string | null
+          updated_at?: string
+          user_id: string
+          whatsapp?: string | null
+        }
+        Update: {
+          billing_email?: string | null
+          business_name?: string | null
+          client_range?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          instagram_handle?: string | null
+          niche?: string | null
+          tax_id?: string | null
+          updated_at?: string
+          user_id?: string
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
       media_items: {
         Row: {
           category: string | null
@@ -865,6 +910,83 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      module_entitlements: {
+        Row: {
+          created_at: string
+          current_period_end: string | null
+          id: string
+          manager_id: string
+          module_code: string
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_period_end?: string | null
+          id?: string
+          manager_id: string
+          module_code: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_period_end?: string | null
+          id?: string
+          manager_id?: string
+          module_code?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "module_entitlements_module_code_fkey"
+            columns: ["module_code"]
+            isOneToOne: false
+            referencedRelation: "modules"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      modules: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          description: string | null
+          name: string
+          price_cents: number
+          sort_order: number
+          stripe_price_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          description?: string | null
+          name: string
+          price_cents: number
+          sort_order?: number
+          stripe_price_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          description?: string | null
+          name?: string
+          price_cents?: number
+          sort_order?: number
+          stripe_price_id?: string | null
+        }
+        Relationships: []
       }
       monthly_goals: {
         Row: {
@@ -1086,6 +1208,8 @@ export type Database = {
           paid_at: string | null
           paid_invoices_count: number
           partner_id: string
+          payout_note: string | null
+          payout_proof_url: string | null
           referred_user_id: string
           status: string
           stripe_customer_id: string | null
@@ -1106,6 +1230,8 @@ export type Database = {
           paid_at?: string | null
           paid_invoices_count?: number
           partner_id: string
+          payout_note?: string | null
+          payout_proof_url?: string | null
           referred_user_id: string
           status?: string
           stripe_customer_id?: string | null
@@ -1126,6 +1252,8 @@ export type Database = {
           paid_at?: string | null
           paid_invoices_count?: number
           partner_id?: string
+          payout_note?: string | null
+          payout_proof_url?: string | null
           referred_user_id?: string
           status?: string
           stripe_customer_id?: string | null
@@ -1316,8 +1444,45 @@ export type Database = {
           },
         ]
       }
+      post_approval_comments: {
+        Row: {
+          author_id: string | null
+          author_role: string
+          content: string
+          created_at: string
+          id: string
+          post_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          author_role?: string
+          content: string
+          created_at?: string
+          id?: string
+          post_id: string
+        }
+        Update: {
+          author_id?: string | null
+          author_role?: string
+          content?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_approval_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       posts: {
         Row: {
+          approval_status: string | null
+          approval_updated_at: string | null
           archive_summary: string | null
           calendar_synced_at: string | null
           caption: string | null
@@ -1351,6 +1516,8 @@ export type Database = {
           week_number: number | null
         }
         Insert: {
+          approval_status?: string | null
+          approval_updated_at?: string | null
           archive_summary?: string | null
           calendar_synced_at?: string | null
           caption?: string | null
@@ -1384,6 +1551,8 @@ export type Database = {
           week_number?: number | null
         }
         Update: {
+          approval_status?: string | null
+          approval_updated_at?: string | null
           archive_summary?: string | null
           calendar_synced_at?: string | null
           caption?: string | null
@@ -2053,6 +2222,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_list_referrals: {
+        Args: never
+        Returns: {
+          created_at: string
+          currency: string
+          gross_amount_cents: number
+          id: string
+          net_amount_cents: number
+          paid_at: string
+          paid_invoices_count: number
+          partner_id: string
+          partner_name: string
+          partner_pix: string
+          payout_note: string
+          payout_proof_url: string
+          referred_email: string
+          referred_user_id: string
+          status: string
+          unlocked_at: string
+        }[]
+      }
       ai_monthly_quota: { Args: never; Returns: number }
       ai_usage_this_month: {
         Args: never
@@ -2061,6 +2251,7 @@ export type Database = {
           used: number
         }[]
       }
+      approve_post: { Args: { _post_id: string }; Returns: boolean }
       bump_ai_quota: {
         Args: { _user: string }
         Returns: {
@@ -2094,6 +2285,22 @@ export type Database = {
         }[]
       }
       get_manager_notes: { Args: { _owner_id: string }; Returns: string }
+      get_my_partner_referrals: {
+        Args: never
+        Returns: {
+          created_at: string
+          currency: string
+          deduction_pct: number
+          gross_amount_cents: number
+          id: string
+          net_amount_cents: number
+          paid_at: string
+          paid_invoices_count: number
+          referred_name: string
+          status: string
+          unlocked_at: string
+        }[]
+      }
       get_public_bio_links_by_slug: {
         Args: { _slug: string }
         Returns: {
@@ -2121,12 +2328,45 @@ export type Database = {
       }
       get_user_details: { Args: { _user_id: string }; Returns: Json }
       has_access: { Args: never; Returns: boolean }
+      has_module: { Args: { _code: string; _user?: string }; Returns: boolean }
       increment_bio_link_click: {
         Args: { link_id: string }
         Returns: undefined
       }
+      increment_storage: {
+        Args: { _delta: number; _user: string }
+        Returns: undefined
+      }
       is_account_manager: { Args: { _owner: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
+      manager_approval_items: {
+        Args: never
+        Returns: {
+          approval_status: string
+          approval_updated_at: string
+          client_avatar: string
+          client_name: string
+          format: string
+          last_comment: string
+          last_comment_role: string
+          owner_id: string
+          platform: string
+          post_id: string
+          scheduled_date: string
+          title: string
+        }[]
+      }
+      manager_approval_overview: {
+        Args: never
+        Returns: {
+          ajustes: number
+          aprovados: number
+          avatar_url: string
+          name: string
+          owner_id: string
+          pendentes: number
+        }[]
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -2154,6 +2394,10 @@ export type Database = {
           read_ct: number
         }[]
       }
+      request_post_adjustment: {
+        Args: { _comment: string; _post_id: string }
+        Returns: boolean
+      }
       set_manager_notes: {
         Args: { _notes: string; _owner_id: string }
         Returns: undefined
@@ -2165,6 +2409,7 @@ export type Database = {
         Returns: {
           coupon_type: string
           discount_pct: number
+          duration_months: number
           partner_name: string
         }[]
       }
