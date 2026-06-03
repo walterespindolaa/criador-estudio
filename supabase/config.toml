@@ -21,3 +21,5 @@ project_id = "exuxlwdnkgmhtnwoyvwo"
     verify_jwt = true
   [functions.manager-self-subscribe]
     verify_jwt = true
+  [functions.partner-referral-payout]
+    verify_jwt = true

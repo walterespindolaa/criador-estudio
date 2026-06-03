@@ -18,6 +18,7 @@ import { validateUpload } from "@/lib/upload-validation";
 import { SettingsManagerDrawer } from "@/components/accounts/SettingsManagerDrawer";
 import { ClientNotesDrawer } from "@/components/accounts/ClientNotesDrawer";
 import { PartnerApplyDrawer } from "@/components/accounts/PartnerApplyDrawer";
+import { PartnerCommissions } from "@/components/accounts/PartnerCommissions";
 import { usePartner } from "@/hooks/usePartner";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { Handshake, Check, Clock, Ticket } from "lucide-react";
@@ -213,8 +214,10 @@ export function ManagerHome() {
                 </p>
               </div>
             </div>
-            {/* TODO Parceiros: card "clientes no cupom" + card "receita do mês" */}
           </section>
+
+          {/* Comissões da parceria (só parceira aprovada) */}
+          {isPartner && <PartnerCommissions />}
 
           {/* Cards de cliente */}
           <section className="mb-12">
