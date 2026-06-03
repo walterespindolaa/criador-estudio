@@ -18,6 +18,7 @@ import {
   Link2,
   Handshake,
   ClipboardCheck,
+  Package,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -75,6 +76,12 @@ const groups = [
     studioOnly: true,
     items: [
       { title: "Collabs", url: "/app/collabs", icon: Handshake, comingSoon: true },
+    ],
+  },
+  {
+    label: "Agência",
+    items: [
+      { title: "Módulos", url: "/app/modulos", icon: Package },
     ],
   },
   {
