@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useEffect } from "react";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Heart, MessageCircle, Send, Bookmark, Play, Music2, Share2, ChevronLeft, ChevronRight, Image } from "lucide-react";
+import { VideoEmbed } from "./VideoEmbed";
 
 interface SectionData {
   text: string;
@@ -135,13 +136,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
       <div className="relative w-full aspect-[4/5] overflow-hidden">
         {activeMediaUrl ? (
           isBunnyVideo ? (
-            <iframe
-              src={activeMediaUrl}
-              loading="lazy"
-              allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-              allowFullScreen
-              className="w-full h-full border-0"
-            />
+            <VideoEmbed viewUrl={activeMediaUrl!} className="w-full h-full border-0" />
           ) : isPlayableVideo ? (
             <video
               src={activeMediaUrl}
@@ -175,13 +170,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
           {/* Background media or gradient */}
           {activeMediaUrl ? (
             isBunnyVideo ? (
-              <iframe
-                src={activeMediaUrl}
-                loading="lazy"
-                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-                allowFullScreen
-                className="absolute inset-0 w-full h-full border-0"
-              />
+              <VideoEmbed viewUrl={activeMediaUrl!} className="absolute inset-0 w-full h-full border-0" />
             ) : isPlayableVideo ? (
               <video
                 src={activeMediaUrl}
@@ -344,13 +333,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
                 <div className="relative rounded-xl overflow-hidden aspect-video mb-3">
                   {activeMediaUrl ? (
                     isBunnyVideo ? (
-                      <iframe
-                        src={activeMediaUrl}
-                        loading="lazy"
-                        allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-                        allowFullScreen
-                        className="w-full h-full border-0"
-                      />
+                      <VideoEmbed viewUrl={activeMediaUrl!} className="w-full h-full border-0" />
                     ) : isPlayableVideo ? (
                       <video
                         src={activeMediaUrl}

@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import {
   detectMediaOrigin, resolveShareableUrl, buildShareFile, isMobileDevice,
 } from "@/lib/social-share";
+import { getLocalVideoFile } from "@/lib/media-cache";
 
 interface PublishButtonProps {
   caption: string;
@@ -50,7 +51,8 @@ export function PublishButton({ caption, mediaUrl, mediaType }: PublishButtonPro
     setLoading(true);
     try {
       await navigator.clipboard.writeText(caption || "").catch(() => {});
-      const file = await buildShareFile(fileUrl, mediaType);
+      let file = getLocalVideoFile(mediaUrl!);
+      if (!file) file = await buildShareFile(fileUrl, mediaType);
       if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], text: caption || "" });
         toast.success("Legenda copiada — é só colar no app");

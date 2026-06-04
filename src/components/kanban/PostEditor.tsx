@@ -92,6 +92,8 @@ import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 import { useUploadProgress } from "@/contexts/UploadProgressContext";
 import { compressImage } from "@/lib/image-compress";
 import { resolveShareableUrl, cacheShareFile } from "@/lib/social-share";
+import { VideoEmbed } from "./VideoEmbed";
+import { rememberLocalVideo } from "@/lib/media-cache";
 import { usePosts, type Post as DbPost } from "@/hooks/usePosts";
 import { useReferenceLibrary, useUserLibrary } from "@/hooks/useLibrary";
 import { useBrandContext } from "@/hooks/useBrandContext";
@@ -574,6 +576,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
             // Cacheia o vídeo original pra publicação instantânea (evita rebaixar do Bunny).
             const _shareUrl = resolveShareableUrl(viewUrl, "bunny");
             if (_shareUrl) void cacheShareFile(_shareUrl, raw);
+            rememberLocalVideo(viewUrl, raw);
 
             if (post?.id) {
               const { data: inserted, error: insErr } = await supabase
@@ -1686,13 +1689,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                 const driveImgSrc = `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w600`;
                                 const imgSrc = primary.thumbnail_url || primary.view_url || driveImgSrc;
                                 return isBunny ? (
-                                  <iframe
-                                    src={primary.view_url ?? ""}
-                                    loading="lazy"
-                                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-                                    allowFullScreen
-                                    className="w-full h-full border-0"
-                                  />
+                                  <VideoEmbed viewUrl={primary.view_url ?? ""} className="w-full h-full border-0" />
                                 ) : isVideo ? (
                                   <a
                                     href={`https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`}
@@ -1749,7 +1746,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                 );
                               })()}
                               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
-                              <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
+                              <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
                                 <div className="flex items-center gap-1 bg-black/40 backdrop-blur rounded-full px-2 py-0.5">
                                   <Cloud className="h-2.5 w-2.5 text-white" />
                                   <span className="text-[9px] text-white font-body truncate max-w-[120px]">{mediaList[0].file_name}</span>
