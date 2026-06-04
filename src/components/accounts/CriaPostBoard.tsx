@@ -107,11 +107,11 @@ function ClientDetail({ client, onBack }: { client: ExternalClient; onBack: () =
   const { copyLink } = useExternalClients();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<ExternalPost | null>(null);
-  const [f, setF] = useState<ExternalPostInput>({ title: "", platform: "instagram", format: "reels", caption: "", hook: "" });
+  const [f, setF] = useState<ExternalPostInput>({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "" });
   const [copying, setCopying] = useState(false);
 
-  const openNew = () => { setEditing(null); setF({ title: "", platform: "instagram", format: "reels", caption: "", hook: "" }); setFormOpen(true); };
-  const openEdit = (p: ExternalPost) => { setEditing(p); setF({ title: p.title, platform: p.platform, format: p.format, caption: p.caption ?? "", hook: p.hook ?? "" }); setFormOpen(true); };
+  const openNew = () => { setEditing(null); setF({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "" }); setFormOpen(true); };
+  const openEdit = (p: ExternalPost) => { setEditing(p); setF({ title: p.title, platform: p.platform, format: p.format, caption: p.caption ?? "", hook: p.hook ?? "", approval_mode: (p.approval_mode as "fast"|"flow"|"both") ?? "fast", script: p.script ?? "" }); setFormOpen(true); };
   const submit = async () => {
     if (!f.title.trim()) return;
     if (editing) await update.mutateAsync({ id: editing.id, resend: editing.approval_status === "ajuste_solicitado", ...f });
@@ -152,6 +152,7 @@ function ClientDetail({ client, onBack }: { client: ExternalClient; onBack: () =
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wide">{cap(p.format)} · {cap(p.platform)}</span>
                       <span className={`text-[10px] font-body font-bold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
+                      <span className="text-[10px] font-body font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">{p.approval_mode === "flow" ? "Detalhada" : p.approval_mode === "both" ? "Ambas" : "Simplificada"}</span>
                     </div>
                     <p className="font-display font-bold text-foreground truncate mt-1">{p.title}</p>
                     {p.caption && <p className="text-xs text-muted-foreground font-body line-clamp-2 mt-0.5">{p.caption}</p>}
@@ -183,6 +184,20 @@ function ClientDetail({ client, onBack }: { client: ExternalClient; onBack: () =
                 <div className="flex flex-wrap gap-1.5">{FORMATS.map((ft) => <button key={ft} type="button" onClick={() => setF((p) => ({ ...p, format: ft }))} className={`px-2.5 py-1 rounded-lg text-xs font-body border ${f.format === ft ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>{cap(ft)}</button>)}</div>
               </div>
             </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-body">Tipo de aprovação</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {([["fast","Simplificada"],["flow","Detalhada"],["both","Ambas"]] as [string,string][]).map(([v,l]) => (
+                  <button key={v} type="button" onClick={() => setF((p) => ({ ...p, approval_mode: v as "fast"|"flow"|"both" }))}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-body border ${f.approval_mode === v ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>{l}</button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground font-body">Simplificada = 1 clique · Detalhada = 4 etapas · Ambas = o cliente escolhe.</p>
+            </div>
+            {f.approval_mode !== "fast" && (
+              <div className="space-y-1.5"><Label className="text-xs font-body">Roteiro / conteúdo (etapa "Conteúdo")</Label>
+                <Textarea value={f.script ?? ""} onChange={(e) => setF((p) => ({ ...p, script: e.target.value }))} rows={4} className="rounded-xl" /></div>
+            )}
             <div className="space-y-1.5"><Label className="text-xs font-body">Legenda</Label><Textarea value={f.caption ?? ""} onChange={(e) => setF((p) => ({ ...p, caption: e.target.value }))} rows={4} className="rounded-xl" /></div>
           </div>
           <DialogFooter className="mt-4">

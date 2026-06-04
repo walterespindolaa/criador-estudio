@@ -20,9 +20,10 @@ export type ExternalPost = {
   caption: string | null; hook: string | null;
   approval_status: "pendente" | "ajuste_solicitado" | "aprovado" | null;
   scheduled_date: string | null; created_at: string;
+  approval_mode: string; script: string | null;
   last_comment: string | null; last_comment_role: string | null;
 };
-export type ExternalPostInput = { title: string; platform: string; format: string; caption?: string | null; hook?: string | null };
+export type ExternalPostInput = { title: string; platform: string; format: string; caption?: string | null; hook?: string | null; script?: string | null; approval_mode?: "fast" | "flow" | "both" };
 
 export function useExternalClients() {
   const { user } = useAuth();
@@ -117,8 +118,10 @@ export function useExternalPosts(clientId: string | null) {
 
   const create = useMutation({
     mutationFn: async (input: ExternalPostInput) => {
+      const { approval_mode, ...rest } = input;
       const { error } = await sbFrom("posts").insert({
-        user_id: user!.id, external_client_id: clientId, status: "editando", approval_status: "pendente", ...input,
+        user_id: user!.id, external_client_id: clientId, status: "editando",
+        approval_status: "pendente", approval_mode: approval_mode ?? "fast", ...rest,
       });
       if (error) throw error;
     },

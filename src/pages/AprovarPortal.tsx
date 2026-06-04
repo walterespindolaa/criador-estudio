@@ -101,7 +101,9 @@ function PostApproval({ client, post, busy, onApproveFast, onAdjustFast, onAppro
   onApproveFast: (id: string) => void; onAdjustFast: (id: string, comment: string) => void;
   onApproveStage: (id: string, stage: Stage) => void; onAdjustStage: (id: string, stage: Stage, comment: string) => void;
 }) {
-  const isFlow = post.approval_mode === "flow";
+  const mode = (post.approval_mode as "fast" | "flow" | "both") ?? "fast";
+  const [view, setView] = useState<"fast" | "flow">(mode === "flow" ? "flow" : "fast");
+  const showFlow = view === "flow";
   const stStatus = (s: Stage) => (post.approval_stages?.[s] ?? "pendente");
   const firstOpen = STAGE_ORDER.find((s) => stStatus(s) !== "aprovado") ?? "tema";
   const [tab, setTab] = useState<Stage>(firstOpen);
@@ -124,7 +126,13 @@ function PostApproval({ client, post, busy, onApproveFast, onAdjustFast, onAppro
         {/* direita: aprovação */}
         <div className="w-full max-w-[420px] md:flex-1 md:max-w-[420px] mx-auto md:mx-0">
           <div className="bg-card border border-border rounded-2xl p-5 md:sticky md:top-[88px]">
-            {!isFlow ? (
+            {mode === "both" && (
+              <div className="flex bg-muted rounded-xl p-1 mb-4">
+                <button onClick={() => setView("fast")} className={`flex-1 text-xs font-body font-bold py-2 rounded-lg transition-colors ${view === "fast" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>Rápida</button>
+                <button onClick={() => setView("flow")} className={`flex-1 text-xs font-body font-bold py-2 rounded-lg transition-colors ${view === "flow" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>Detalhada</button>
+              </div>
+            )}
+            {!showFlow ? (
               <>
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <h3 className="text-base font-display font-extrabold text-foreground">Esta publicação</h3>
