@@ -39,6 +39,7 @@ const LinkInBio = lazy(() => import("./pages/app/LinkInBio"));
 const TrocarSenha = lazy(() => import("./pages/app/TrocarSenha"));
 const Assinar = lazy(() => import("./pages/app/Assinar"));
 const BioPage = lazy(() => import("./pages/BioPage"));
+const AprovarPortal = lazy(() => import("./pages/AprovarPortal"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -63,6 +64,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/bio/:slug" element={<BioPage />} />
+              <Route path="/aprovar/:token" element={<AprovarPortal />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/reset-password" element={<ResetPassword />} />
