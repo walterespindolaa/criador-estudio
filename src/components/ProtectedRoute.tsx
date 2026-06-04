@@ -7,7 +7,7 @@ import { ReactNode } from "react";
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth();
-  const { status, canAccess } = useSubscription();
+  const { status, canAccess, profile } = useSubscription();
   const { hasManagedAccounts, accountsLoading } = useActiveAccount();
 
   if (authLoading) return <LoadingScreen />;
@@ -18,7 +18,8 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
   if (!canAccess) {
     if (accountsLoading) return <LoadingScreen />;          // ainda não sabe se é gerente
-    if (!hasManagedAccounts) return <Navigate to="/app/assinar" replace />;
+    const isManager = profile?.account_type === "manager";
+    if (!isManager && !hasManagedAccounts) return <Navigate to="/app/assinar" replace />;
   }
 
   return <>{children}</>;
