@@ -91,6 +91,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 import { useUploadProgress } from "@/contexts/UploadProgressContext";
 import { compressImage } from "@/lib/image-compress";
+import { resolveShareableUrl, cacheShareFile } from "@/lib/social-share";
 import { usePosts, type Post as DbPost } from "@/hooks/usePosts";
 import { useReferenceLibrary, useUserLibrary } from "@/hooks/useLibrary";
 import { useBrandContext } from "@/hooks/useBrandContext";
@@ -570,6 +571,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
 
             const viewUrl = `https://iframe.mediadelivery.net/embed/${libraryId}/${videoGuid}`;
             const thumbUrl = `https://${BUNNY_CDN_HOSTNAME}/${videoGuid}/thumbnail.jpg`;
+            // Cacheia o vídeo original pra publicação instantânea (evita rebaixar do Bunny).
+            const _shareUrl = resolveShareableUrl(viewUrl, "bunny");
+            if (_shareUrl) void cacheShareFile(_shareUrl, raw);
 
             if (post?.id) {
               const { data: inserted, error: insErr } = await supabase
