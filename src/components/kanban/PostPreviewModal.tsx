@@ -199,15 +199,15 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
           )}
 
           {/* Gradient overlays */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/70 z-[1]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/70 z-[1] pointer-events-none" />
 
           {/* Top bar */}
           {isShorts ? (
-            <div className="absolute top-3 left-0 right-0 text-center z-10">
+            <div className="absolute top-3 left-0 right-0 text-center z-10 pointer-events-none">
               <span className="text-white text-[10px] font-bold bg-red-600 px-2.5 py-0.5 rounded">Shorts</span>
             </div>
           ) : (
-            <div className="absolute top-3 left-3 flex items-center gap-2 z-10">
+            <div className="absolute top-3 left-3 flex items-center gap-2 z-10 pointer-events-none">
               <AvatarCircle size={28} border />
               <div>
                 <p className="text-white text-[11px] font-semibold leading-tight">{userName}</p>
@@ -220,7 +220,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
           )}
 
           {/* Side actions */}
-          <div className="absolute right-2.5 bottom-20 flex flex-col gap-4 items-center z-10">
+          <div className="absolute right-2.5 bottom-20 flex flex-col gap-4 items-center z-10 pointer-events-none">
             {isTiktok && (
               <div className="flex flex-col items-center gap-0.5">
                 <AvatarCircle size={34} border />
@@ -243,7 +243,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
           </div>
 
           {/* Bottom text */}
-          <div className="absolute bottom-4 left-3 right-14 z-10">
+          <div className="absolute bottom-4 left-3 right-14 z-10 pointer-events-none">
             {isTiktok && <p className="text-white text-[11px] font-semibold mb-0.5">@{userHandle}</p>}
             {(hook || title) && <p className="text-white text-xs font-semibold mb-0.5 line-clamp-2 drop-shadow">{hook || title}</p>}
             {caption && <p className="text-white/80 text-[10px] line-clamp-2">{caption}</p>}
@@ -368,7 +368,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
                       <Play className="h-10 w-10 text-white/30" />
                     </GradientPlaceholder>
                   )}
-                  <div className="absolute bottom-1.5 right-1.5 bg-black/80 text-white text-[10px] px-1.5 py-0.5 rounded font-body">8:42</div>
+                  <div className="absolute bottom-1.5 right-1.5 bg-black/80 text-white text-[10px] px-1.5 py-0.5 rounded font-body pointer-events-none">8:42</div>
                 </div>
                 <div className="flex gap-2.5">
                   <div className="w-9 h-9 rounded-full overflow-hidden bg-primary/20 flex items-center justify-center shrink-0">

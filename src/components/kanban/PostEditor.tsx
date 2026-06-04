@@ -1748,7 +1748,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                   />
                                 );
                               })()}
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
                               <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
                                 <div className="flex items-center gap-1 bg-black/40 backdrop-blur rounded-full px-2 py-0.5">
                                   <Cloud className="h-2.5 w-2.5 text-white" />
