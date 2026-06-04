@@ -25,11 +25,12 @@ import { PartnerApplyDrawer } from "@/components/accounts/PartnerApplyDrawer";
 import { PartnerCommissions } from "@/components/accounts/PartnerCommissions";
 import { ApprovalTracker } from "@/components/accounts/ApprovalTracker";
 import { ModulePopup } from "@/components/accounts/ModulePopup";
+import { CriaPostBoard } from "@/components/accounts/CriaPostBoard";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { usePartner } from "@/hooks/usePartner";
 import { useModules, type ModuleWithStatus } from "@/hooks/useModules";
 
-type Section = "inicio" | "parceria" | "comissoes" | "contas" | "aprovacoes";
+type Section = "inicio" | "parceria" | "comissoes" | "contas" | "aprovacoes" | "criapost";
 type ApprovalFilter = "pendente" | "ajuste_solicitado" | "aprovado" | null;
 const brl = (c: number) => `R$ ${(c / 100).toFixed(2).replace(".", ",")}`;
 const MODICONS: Record<string, typeof Send> = { aprovapost_externo: Send, crm: Users2, financeiro: Wallet };
@@ -193,7 +194,9 @@ export function ManagerHub() {
           const Icon = MODICONS[m.code] ?? Boxes;
           const active = m.status === "active" || m.status === "past_due";
           return (
-            <button key={m.code} className={navBtn(false)} onClick={() => setSelectedModule(m)}>
+            <button key={m.code}
+              className={navBtn(m.code === "aprovapost_externo" && section === "criapost")}
+              onClick={() => { if (m.code === "aprovapost_externo" && active) go("criapost"); else setSelectedModule(m); }}>
               <Icon className="h-4 w-4" /> <span className="flex-1">{m.name}</span>
               <span className={cn("text-[9.5px] font-bold px-2 py-0.5 rounded-full",
                 active ? "bg-green-100 text-green-700" : m.coming_soon ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary")}>
@@ -355,6 +358,9 @@ export function ManagerHub() {
                 </div>
               </div>
             )}
+
+            {/* ---------- CRIA POST (clientes externos) ---------- */}
+            {section === "criapost" && <CriaPostBoard />}
 
             {/* ---------- ACOMPANHAMENTO ---------- */}
             {section === "aprovacoes" && (
