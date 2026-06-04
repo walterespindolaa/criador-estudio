@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Link2, Pencil, Loader2, Users, ArrowRight, ArrowLeft, Trash2, RotateCcw } from "lucide-react";
+import { CriaPostMedia } from "@/components/accounts/CriaPostMedia";
 
 const PLATFORMS = ["instagram", "tiktok", "youtube"];
 const FORMATS = ["reels", "carrossel", "foto", "story", "video"];
@@ -199,6 +200,10 @@ function ClientDetail({ client, onBack }: { client: ExternalClient; onBack: () =
                 <Textarea value={f.script ?? ""} onChange={(e) => setF((p) => ({ ...p, script: e.target.value }))} rows={4} className="rounded-xl" /></div>
             )}
             <div className="space-y-1.5"><Label className="text-xs font-body">Legenda</Label><Textarea value={f.caption ?? ""} onChange={(e) => setF((p) => ({ ...p, caption: e.target.value }))} rows={4} className="rounded-xl" /></div>
+            {/* só quando o post já existe (tem id salvo) — a mídia é adicionada depois que o post existe */}
+            {editing && (
+              <div className="space-y-1.5"><Label className="text-xs font-body">Mídia</Label><CriaPostMedia postId={editing.id} /></div>
+            )}
           </div>
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setFormOpen(false)}>Cancelar</Button>
