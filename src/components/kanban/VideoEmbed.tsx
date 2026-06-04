@@ -6,7 +6,7 @@ export function VideoEmbed({ viewUrl, className }: { viewUrl: string; className?
   const localUrl = getLocalVideoObjectUrl(viewUrl);
 
   if (localUrl) {
-    return <video src={localUrl} controls playsInline className={className} />;
+    return <video src={localUrl} controls autoPlay muted loop playsInline className={className} />;
   }
   return (
     <iframe
