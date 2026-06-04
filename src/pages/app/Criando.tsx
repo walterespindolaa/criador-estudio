@@ -311,7 +311,7 @@ const Criando = () => {
             const showDividerBefore = isPublished || isAfterIdeia;
             const isDragOver = dragOverCol === col.key;
             return (
-              <div key={col.key} className={`min-w-[280px] sm:min-w-[200px] flex-shrink-0 sm:flex-1 snap-start ${showDividerBefore ? "border-l-2 border-dashed border-border pl-4" : ""}`}
+              <div key={col.key} className={`w-[85vw] max-w-[320px] sm:w-auto sm:max-w-none sm:min-w-[200px] flex-shrink-0 sm:flex-1 snap-start ${showDividerBefore ? "border-l-2 border-dashed border-border pl-4" : ""}`}
                 onDragOver={(e) => { e.preventDefault(); setDragOverCol(col.key); }} onDragLeave={() => setDragOverCol(null)} onDrop={() => handleDrop(col.key)}>
                 <div className={`${col.bg} rounded-xl px-3 py-2 mb-3 flex items-center justify-between`}>
                 <div className="flex items-center gap-1.5">

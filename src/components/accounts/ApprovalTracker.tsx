@@ -7,12 +7,22 @@ function initial(name: string | null) {
   return (name ?? "?").trim().charAt(0).toUpperCase() || "?";
 }
 
-export function ApprovalTracker() {
+type ApprovalTrackerProps = {
+  hideHeader?: boolean;
+  limit?: number;
+  statusFilter?: "pendente" | "ajuste_solicitado" | "aprovado" | null;
+};
+
+export function ApprovalTracker({ hideHeader = false, limit, statusFilter = null }: ApprovalTrackerProps = {}) {
   const navigate = useNavigate();
   const { setActiveAccount } = useActiveAccount();
   const { items, isLoading } = useManagerApprovalItems();
 
   if (isLoading || items.length === 0) return null;
+
+  const filtered = statusFilter ? items.filter((it) => it.approval_status === statusFilter) : items;
+  const visible = typeof limit === "number" ? filtered.slice(0, limit) : filtered;
+  if (visible.length === 0) return null;
 
   const open = (ownerId: string) => {
     setActiveAccount(ownerId);
@@ -21,11 +31,13 @@ export function ApprovalTracker() {
 
   return (
     <section className="mb-8">
-      <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-        Acompanhamento de aprovações
-      </h2>
+      {!hideHeader && (
+        <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+          Acompanhamento de aprovações
+        </h2>
+      )}
       <div className="rounded-2xl border border-border bg-card overflow-hidden">
-        {items.map((it) => {
+        {visible.map((it) => {
           const isAdjust = it.approval_status === "ajuste_solicitado";
           return (
             <button
