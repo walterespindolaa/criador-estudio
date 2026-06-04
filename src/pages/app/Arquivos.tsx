@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DrivePickerButton } from "@/components/drive/DrivePickerButton";
+import { FilePreviewModal } from "@/components/files/FilePreviewModal";
 import { DriveMediaPreview } from "@/components/drive/DriveMediaPreview";
 import { useFiles } from "@/hooks/useFiles";
 import { cn } from "@/lib/utils";
@@ -91,6 +92,7 @@ const Arquivos = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { files, uploadFile, deleteFile, getPublicUrl } = useFiles();
   const [search, setSearch] = useState("");
+  const [preview, setPreview] = useState<{ kind: "image" | "iframe" | "none"; url: string | null; name: string } | null>(null);
   const [catFilter, setCatFilter] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -351,6 +353,15 @@ const Arquivos = () => {
         ) : (
           <>
             {(() => {
+              const openUpload = async (f: typeof filteredUploads[number]) => {
+                const url = await getPublicUrl(f.storage_path);
+                if (!url) { toast.error("Não foi possível abrir o arquivo."); return; }
+                if (isImage(f.file_type)) {
+                  setPreview({ kind: "image", url, name: f.name });
+                } else {
+                  window.open(url, "_blank", "noopener,noreferrer");
+                }
+              };
               const renderUploadCard = (f: typeof filteredUploads[number], i: number) => {
                 const dleft = daysUntilExpiry(f.expires_at);
                 return (
@@ -359,7 +370,8 @@ const Arquivos = () => {
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.02 }}
-                    className="bg-card rounded-xl border border-border overflow-hidden group"
+                    onClick={() => openUpload(f)}
+                    className="bg-card rounded-xl border border-border overflow-hidden group cursor-pointer hover:shadow-warm-md hover:border-primary/30 transition-all"
                   >
                     <div className="aspect-square bg-muted flex items-center justify-center overflow-hidden">
                       {isImage(f.file_type) ? (
@@ -372,7 +384,7 @@ const Arquivos = () => {
                       <p className="text-xs font-body font-medium text-foreground truncate">{f.name}</p>
                       <div className="flex items-center justify-between mt-1">
                         <span className="text-[10px] text-muted-foreground font-body">{formatSize(f.size_bytes)}</span>
-                        <button onClick={() => handleDelete(f)} className="p-1 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 rounded transition-opacity">
+                        <button onClick={(e) => { e.stopPropagation(); handleDelete(f); }} className="p-1 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 rounded transition-opacity">
                           <Trash2 className="h-3 w-3 text-destructive" />
                         </button>
                       </div>
@@ -405,7 +417,7 @@ const Arquivos = () => {
                         Permanentes
                         <span className="text-[10px] text-muted-foreground font-normal">({filteredPermanent.length})</span>
                       </p>
-                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                         {filteredPermanent.map(renderUploadCard)}
                       </div>
                     </div>
@@ -419,7 +431,7 @@ const Arquivos = () => {
                         Temporárias ({retentionDays} dias)
                         <span className="text-[10px] text-muted-foreground font-normal">({filteredTemporary.length})</span>
                       </p>
-                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                         {filteredTemporary.map(renderUploadCard)}
                       </div>
                     </div>
@@ -436,7 +448,7 @@ const Arquivos = () => {
                   Mídias vinculadas
                   <span className="text-[10px] text-muted-foreground font-normal">({filteredDrive.length})</span>
                 </p>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                   {filteredDrive.map((f) => (
                     <DriveMediaPreview
                       key={f.id}
@@ -446,6 +458,7 @@ const Arquivos = () => {
                       viewUrl={f.view_url}
                       size="md"
                       onRemove={() => deleteDriveRef(f)}
+                      onOpen={() => setPreview({ kind: "iframe", url: f.view_url, name: f.file_name })}
                     />
                   ))}
                 </div>
@@ -521,6 +534,14 @@ const Arquivos = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <FilePreviewModal
+        open={!!preview}
+        onOpenChange={(o) => !o && setPreview(null)}
+        kind={preview?.kind ?? "none"}
+        url={preview?.url ?? null}
+        name={preview?.name ?? ""}
+      />
     </div>
   );
 };
