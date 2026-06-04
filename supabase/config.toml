@@ -23,3 +23,9 @@ project_id = "exuxlwdnkgmhtnwoyvwo"
     verify_jwt = true
   [functions.partner-referral-payout]
     verify_jwt = true
+  [functions.criapost-image-upload]
+    verify_jwt = true
+  [functions.criapost-media-delete]
+    verify_jwt = true
+  [functions.criapost-media-cleanup]
+    verify_jwt = false
