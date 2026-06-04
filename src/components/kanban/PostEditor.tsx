@@ -1026,7 +1026,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
             // Issue conhecida: radix-ui/primitives#1280.
             e.preventDefault();
           }}
-          className="[&>button:last-child]:hidden top-0 translate-y-0 sm:top-1/2 sm:-translate-y-1/2 max-w-none w-full h-screen sm:w-[96vw] sm:h-[94vh] sm:max-w-[1400px] p-0 overflow-hidden overflow-x-hidden flex flex-col bg-background rounded-none sm:rounded-2xl"
+          className="[&>button:last-child]:hidden top-0 translate-y-0 sm:top-1/2 sm:-translate-y-1/2 max-w-none w-full h-[100dvh] sm:w-[96vw] sm:h-[94vh] sm:max-w-[1400px] p-0 overflow-hidden overflow-x-hidden flex flex-col bg-background rounded-none sm:rounded-2xl"
         >
           <DialogHeader className="px-4 sm:px-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 shrink-0 border-b border-border">
             <DialogTitle className="sr-only">{isNew ? "Novo Post" : "Editar Post"}</DialogTitle>
@@ -1158,7 +1158,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
               "w-full md:w-[40%] md:max-w-[480px] md:border-r border-border bg-muted/30 overflow-y-auto overflow-x-hidden",
               mobileTab === "config" ? "block" : "hidden md:block"
             )}>
-              <div className="p-4 sm:p-5 space-y-5">
+              <div className="p-4 sm:p-5 space-y-5 pb-[calc(2rem+env(safe-area-inset-bottom))]">
                 {/* Metadata */}
                 <section className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
