@@ -2362,6 +2362,22 @@ export type Database = {
         Returns: number
       }
       claim_account_invites: { Args: never; Returns: number }
+      criapost_add_media: {
+        Args: {
+          p_bunny_video_id: string
+          p_download_url: string
+          p_external_file_id: string
+          p_file_name: string
+          p_file_size: number
+          p_file_type: string
+          p_post_id: string
+          p_provider: string
+          p_thumbnail_url: string
+          p_view_url: string
+        }
+        Returns: string
+      }
+      criapost_touch_media: { Args: { p_post_id: string }; Returns: undefined }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
