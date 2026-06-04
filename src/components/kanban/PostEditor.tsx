@@ -1665,8 +1665,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                     </div>
                   )}
 
-                  {/* Drive media (only for formats without dynamic sections) */}
-                  {!formatStructure.hasDynamicSections && (
+                  {/* Mídia final do post — todos os formatos exceto carrossel (que usa as lâminas) */}
+                  {format !== "carrossel" && (
                     <div className="space-y-2">
                       <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
                         Mídia
@@ -1855,7 +1855,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                               if (!userId) return;
                               const input = document.createElement("input");
                               input.type = "file";
-                              input.accept = "image/*,video/*";
+                              input.accept = "image/*";
                               input.style.cssText = "position:fixed;left:-9999px;top:-9999px;opacity:0;pointer-events:none";
 
                               const cleanup = () => {
