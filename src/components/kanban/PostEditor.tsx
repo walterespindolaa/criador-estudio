@@ -251,6 +251,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
   const [previewOpen, setPreviewOpen] = useState(false);
   const [repurposeOpen, setRepurposeOpen] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [videoTipOpen, setVideoTipOpen] = useState(false);
+  const [dontShowVideoTip, setDontShowVideoTip] = useState(false);
 
   // Auto-save indicator
   const [autoSaveStatus, setAutoSaveStatus] = useState<null | "saving" | "saved">(null);
@@ -499,6 +501,13 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
     const fileList = e.target.files;
     const files: File[] = fileList ? Array.from(fileList) : [];
     e.target.value = ""; // agora seguro — `files` já é snapshot independente
+    const hasVideo = files.some((f) => {
+      const ext = (f.name.split(".").pop() || "").toLowerCase();
+      return (f.type || "").toLowerCase().startsWith("video/") || VIDEO_EXTS.includes(ext);
+    });
+    if (hasVideo && localStorage.getItem("hide_video_upload_tip") !== "true") {
+      setVideoTipOpen(true);
+    }
 
     if (files.length === 0 || !userId) {
       return;
@@ -2234,6 +2243,34 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
               onClick={handleConfirmDelete}
             >
               Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={videoTipOpen} onOpenChange={setVideoTipOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Seu vídeo está sendo enviado 🎬</AlertDialogTitle>
+            <AlertDialogDescription>
+              O envio pode levar de 1 a 3 minutos, dependendo do tamanho do arquivo e da sua internet — não some em poucos segundos. Você pode salvar o post e continuar usando o sistema normalmente; o vídeo aparece sozinho quando ficar pronto.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <label className="flex items-center gap-2 text-sm text-muted-foreground font-body cursor-pointer px-1">
+            <input
+              type="checkbox"
+              checked={dontShowVideoTip}
+              onChange={(e) => setDontShowVideoTip(e.target.checked)}
+              className="h-4 w-4 rounded border-border"
+            />
+            Não mostrar este aviso novamente
+          </label>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => {
+              if (dontShowVideoTip) localStorage.setItem("hide_video_upload_tip", "true");
+              setVideoTipOpen(false);
+            }}>
+              Entendi
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
