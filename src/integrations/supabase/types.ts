@@ -163,6 +163,44 @@ export type Database = {
           },
         ]
       }
+      approval_tokens: {
+        Row: {
+          active: boolean
+          created_at: string
+          expires_at: string | null
+          external_client_id: string
+          id: string
+          manager_id: string
+          token: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          expires_at?: string | null
+          external_client_id: string
+          id?: string
+          manager_id: string
+          token?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          expires_at?: string | null
+          external_client_id?: string
+          id?: string
+          manager_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_tokens_external_client_id_fkey"
+            columns: ["external_client_id"]
+            isOneToOne: false
+            referencedRelation: "external_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string
@@ -472,6 +510,39 @@ export type Database = {
           id?: string
           token?: string
           used_at?: string | null
+        }
+        Relationships: []
+      }
+      external_clients: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          instagram_handle: string | null
+          logo_url: string | null
+          manager_id: string
+          name: string
+          notes: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          instagram_handle?: string | null
+          logo_url?: string | null
+          manager_id: string
+          name: string
+          notes?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          instagram_handle?: string | null
+          logo_url?: string | null
+          manager_id?: string
+          name?: string
+          notes?: string | null
         }
         Relationships: []
       }
@@ -959,6 +1030,7 @@ export type Database = {
         Row: {
           active: boolean
           code: string
+          coming_soon: boolean
           created_at: string
           description: string | null
           name: string
@@ -969,6 +1041,7 @@ export type Database = {
         Insert: {
           active?: boolean
           code: string
+          coming_soon?: boolean
           created_at?: string
           description?: string | null
           name: string
@@ -979,6 +1052,7 @@ export type Database = {
         Update: {
           active?: boolean
           code?: string
+          coming_soon?: boolean
           created_at?: string
           description?: string | null
           name?: string
@@ -1481,6 +1555,8 @@ export type Database = {
       }
       posts: {
         Row: {
+          approval_mode: string
+          approval_stages: Json | null
           approval_status: string | null
           approval_updated_at: string | null
           archive_summary: string | null
@@ -1489,6 +1565,7 @@ export type Database = {
           content_blocks: Json | null
           created_at: string | null
           cta: string | null
+          external_client_id: string | null
           format: string
           google_event_id: string | null
           hook: string | null
@@ -1516,6 +1593,8 @@ export type Database = {
           week_number: number | null
         }
         Insert: {
+          approval_mode?: string
+          approval_stages?: Json | null
           approval_status?: string | null
           approval_updated_at?: string | null
           archive_summary?: string | null
@@ -1524,6 +1603,7 @@ export type Database = {
           content_blocks?: Json | null
           created_at?: string | null
           cta?: string | null
+          external_client_id?: string | null
           format: string
           google_event_id?: string | null
           hook?: string | null
@@ -1551,6 +1631,8 @@ export type Database = {
           week_number?: number | null
         }
         Update: {
+          approval_mode?: string
+          approval_stages?: Json | null
           approval_status?: string | null
           approval_updated_at?: string | null
           archive_summary?: string | null
@@ -1559,6 +1641,7 @@ export type Database = {
           content_blocks?: Json | null
           created_at?: string | null
           cta?: string | null
+          external_client_id?: string | null
           format?: string
           google_event_id?: string | null
           hook?: string | null
@@ -1586,6 +1669,13 @@ export type Database = {
           week_number?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "posts_external_client_id_fkey"
+            columns: ["external_client_id"]
+            isOneToOne: false
+            referencedRelation: "external_clients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "posts_idea_id_fkey"
             columns: ["idea_id"]
@@ -2252,6 +2342,14 @@ export type Database = {
         }[]
       }
       approve_post: { Args: { _post_id: string }; Returns: boolean }
+      approve_post_by_token: {
+        Args: { _post_id: string; _token: string }
+        Returns: undefined
+      }
+      approve_stage_by_token: {
+        Args: { _post_id: string; _stage: string; _token: string }
+        Returns: undefined
+      }
       bump_ai_quota: {
         Args: { _user: string }
         Returns: {
@@ -2282,6 +2380,14 @@ export type Database = {
           plan_pro: number
           plan_studio: number
           total_users: number
+        }[]
+      }
+      get_external_client_by_token: {
+        Args: { _token: string }
+        Returns: {
+          client_logo: string
+          client_name: string
+          manager_name: string
         }[]
       }
       get_manager_notes: { Args: { _owner_id: string }; Returns: string }
@@ -2339,6 +2445,26 @@ export type Database = {
       }
       is_account_manager: { Args: { _owner: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
+      list_posts_by_token: {
+        Args: { _token: string }
+        Returns: {
+          approval_mode: string
+          approval_stages: Json
+          approval_status: string
+          caption: string
+          content_blocks: Json
+          format: string
+          hook: string
+          last_comment: string
+          last_comment_role: string
+          media: Json
+          platform: string
+          post_id: string
+          scheduled_date: string
+          script: string
+          title: string
+        }[]
+      }
       manager_approval_items: {
         Args: never
         Returns: {
@@ -2394,9 +2520,22 @@ export type Database = {
           read_ct: number
         }[]
       }
+      request_adjustment_by_token: {
+        Args: { _comment: string; _post_id: string; _token: string }
+        Returns: undefined
+      }
       request_post_adjustment: {
         Args: { _comment: string; _post_id: string }
         Returns: boolean
+      }
+      request_stage_adjustment_by_token: {
+        Args: {
+          _comment: string
+          _post_id: string
+          _stage: string
+          _token: string
+        }
+        Returns: undefined
       }
       set_manager_notes: {
         Args: { _notes: string; _owner_id: string }
