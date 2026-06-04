@@ -1,12 +1,25 @@
+import { useRef } from "react";
 import { getLocalVideoObjectUrl } from "@/lib/media-cache";
 
 export function VideoEmbed({ viewUrl, className }: { viewUrl: string; className?: string }) {
-  // Lê o cache a cada render (não trava num valor do mount). Se houver arquivo
-  // local (vídeo recém-subido), toca na hora; senão, cai no player do Bunny.
+  const ref = useRef<HTMLVideoElement>(null);
   const localUrl = getLocalVideoObjectUrl(viewUrl);
 
   if (localUrl) {
-    return <video src={localUrl} controls autoPlay muted loop playsInline className={className} />;
+    return (
+      <video
+        ref={ref}
+        src={localUrl}
+        controls
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+        onLoadedData={() => { ref.current?.play().catch(() => {}); }}
+        className={className}
+      />
+    );
   }
   return (
     <iframe
