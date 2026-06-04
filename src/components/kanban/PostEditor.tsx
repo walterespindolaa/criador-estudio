@@ -1024,7 +1024,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
           }}
           className="[&>button:last-child]:hidden max-w-none w-full h-screen sm:w-[96vw] sm:h-[94vh] sm:max-w-[1400px] p-0 overflow-hidden overflow-x-hidden flex flex-col bg-background rounded-none sm:rounded-2xl"
         >
-          <DialogHeader className="px-4 sm:px-6 pt-3 pb-2 shrink-0 border-b border-border">
+          <DialogHeader className="px-4 sm:px-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 shrink-0 border-b border-border">
             <DialogTitle className="sr-only">{isNew ? "Novo Post" : "Editar Post"}</DialogTitle>
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0 overflow-hidden">
               <button

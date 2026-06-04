@@ -481,66 +481,39 @@ const Ideias = () => {
             const pillar = idea.pillar_id ? pillars.find(p => p.id === idea.pillar_id) : null;
             return (
               <div key={idea.id}>
-                <div
-                  onClick={() => openEdit(idea)}
-                  className="flex items-center gap-3 px-3 sm:px-4 py-3 hover:bg-accent/30 cursor-pointer group transition-colors"
-                >
-                  <div className="w-5 h-5 rounded border-2 border-border shrink-0 group-hover:border-primary/50 transition-colors" />
-                  <p className="font-body text-sm text-foreground flex-1 truncate">
-                    {idea.title}
-                  </p>
-                  <div className="hidden sm:flex gap-1 shrink-0">
-                    {pillar && (
-                      <span
-                        className="text-[10px] px-2 py-0.5 rounded-full font-body whitespace-nowrap"
-                        style={{ backgroundColor: `${pillar.color}20`, color: pillar.color }}
-                      >
-                        {pillar.name}
-                      </span>
-                    )}
-                    {idea.promoted_to_post_id && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary/15 text-secondary font-body whitespace-nowrap">
-                        ✓ Post
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex gap-0.5 opacity-60 group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); toggleAiPanel(idea.id); }}
-                      className={cn(
-                        "h-7 w-7 rounded-md flex items-center justify-center transition-colors",
-                        isExpanded ? "bg-primary/15 text-primary" : "hover:bg-accent text-primary/70 hover:text-primary"
+                <div className="px-3 sm:px-4 py-3 hover:bg-accent/30 group transition-colors">
+                  <div onClick={() => openEdit(idea)} className="flex items-center gap-3 cursor-pointer">
+                    <div className="w-5 h-5 rounded border-2 border-border shrink-0 group-hover:border-primary/50 transition-colors" />
+                    <p className="font-body text-sm text-foreground flex-1 truncate">{idea.title}</p>
+                    <div className="hidden sm:flex gap-1 shrink-0">
+                      {pillar && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-body whitespace-nowrap"
+                          style={{ backgroundColor: `${pillar.color}20`, color: pillar.color }}>{pillar.name}</span>
                       )}
-                      aria-label="Sugestões de IA"
-                    >
-                      <Sparkles className="h-3.5 w-3.5" />
+                      {idea.promoted_to_post_id && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary/15 text-secondary font-body whitespace-nowrap">✓ Post</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+                    <button type="button" onClick={(e) => { e.stopPropagation(); toggleAiPanel(idea.id); }}
+                      className={cn("flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-body transition-colors",
+                        isExpanded ? "bg-primary/15 text-primary" : "hover:bg-accent text-primary/80 hover:text-primary")}>
+                      <Sparkles className="h-3.5 w-3.5" /> IA
                     </button>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); handlePromoteToPost(idea); }}
+                    <button type="button" onClick={(e) => { e.stopPropagation(); handlePromoteToPost(idea); }}
                       disabled={!!idea.promoted_to_post_id || promoteToPost.isPending}
-                      title={idea.promoted_to_post_id ? "Já virou post" : "Virar post"}
-                      className="h-7 w-7 rounded-md hover:bg-accent flex items-center justify-center text-muted-foreground hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed"
-                      aria-label="Virar post"
-                    >
-                      <Clapperboard className="h-3.5 w-3.5" />
+                      className="flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-body hover:bg-accent text-muted-foreground hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed">
+                      <Clapperboard className="h-3.5 w-3.5" /> {idea.promoted_to_post_id ? "Já é post" : "Virar post"}
                     </button>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); openEdit(idea); }}
-                      className="h-7 w-7 rounded-md hover:bg-accent flex items-center justify-center text-muted-foreground hover:text-foreground"
-                      aria-label="Editar"
-                    >
-                      <Edit2 className="h-3.5 w-3.5" />
+                    <button type="button" onClick={(e) => { e.stopPropagation(); openEdit(idea); }}
+                      className="flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-body hover:bg-accent text-muted-foreground hover:text-foreground">
+                      <Edit2 className="h-3.5 w-3.5" /> Editar
                     </button>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: idea.id, title: idea.title }); }}
-                      className="h-7 w-7 rounded-md hover:bg-destructive/10 flex items-center justify-center text-destructive"
-                      aria-label="Excluir"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
+                    <button type="button" onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: idea.id, title: idea.title }); }}
+                      className="flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-body hover:bg-destructive/10 text-destructive">
+                      <Trash2 className="h-3.5 w-3.5" /> Excluir
                     </button>
                   </div>
                 </div>
@@ -653,7 +626,7 @@ const Ideias = () => {
       </motion.div>
 
       <Dialog open={sheetOpen} onOpenChange={setSheetOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader><DialogTitle>{editingIdea ? "Editar Ideia" : "Nova Ideia"}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit(handleSave)} className="space-y-4 pt-4">
             <div className="space-y-2">
