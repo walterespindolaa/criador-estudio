@@ -1,26 +1,7 @@
-import { useRef } from "react";
-import { getLocalVideoObjectUrl } from "@/lib/media-cache";
-
 export function VideoEmbed({ viewUrl, className }: { viewUrl: string; className?: string }) {
-  const ref = useRef<HTMLVideoElement>(null);
-  const localUrl = getLocalVideoObjectUrl(viewUrl);
-
-  if (localUrl) {
-    return (
-      <video
-        ref={ref}
-        src={localUrl}
-        controls
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="auto"
-        onLoadedData={() => { ref.current?.play().catch(() => {}); }}
-        className={className}
-      />
-    );
-  }
+  // iOS Safari não reproduz vídeo via blob local (limitação do WebKit), então
+  // o preview usa sempre o player do Bunny. O cache em memória segue valendo
+  // para a PUBLICAÇÃO (compartilhar o arquivo), que não depende de reprodução.
   return (
     <iframe
       src={viewUrl}
