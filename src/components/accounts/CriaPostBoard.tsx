@@ -231,7 +231,8 @@ function ClientDetail({ client, onBack }: { client: ExternalClient; onBack: () =
             <div className="order-4 md:col-start-2 md:row-start-1 md:row-span-5">
               <label className="text-xs font-semibold mb-1.5 block">Mídia</label>
               {editing?.id ? (
-                <CriaPostMedia postId={editing.id} platform={f.platform} format={f.format} caption={f.caption ?? undefined} />
+                <CriaPostMedia postId={editing.id} platform={f.platform} format={f.format}
+                  caption={f.caption ?? undefined} handle={client.instagram_handle || client.name} />
               ) : (
                 <p className="text-xs text-muted-foreground">Salve o post primeiro para anexar mídia.</p>
               )}

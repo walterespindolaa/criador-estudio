@@ -38,6 +38,8 @@ const STAGE_LABEL: Record<Stage, string> = { tema: "Tema", conteudo: "Conteúdo"
 function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
   const media = Array.isArray(post.media) ? post.media : [];
   const handle = (client.client_name || "perfil").toLowerCase().replace(/\s+/g, "");
+  const aspect = postAspect(post.platform, post.format);
+  const vertical = aspect === "9 / 16";
   return (
     <article className="bg-white border border-border rounded-3xl overflow-hidden shadow-[0_8px_30px_rgba(27,26,24,0.07)]">
       <div className="flex items-center gap-2.5 px-3.5 py-3">
@@ -50,14 +52,28 @@ function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
         <span className="ml-auto text-foreground font-bold tracking-widest">···</span>
       </div>
 
-      <PostMediaCarousel media={media} aspect={postAspect(post.platform, post.format)} />
-
-      <div className="flex items-center gap-4 px-3.5 pt-3 pb-1.5 text-foreground">
-        <Heart className="h-6 w-6" /><MessageCircle className="h-6 w-6" /><Send className="h-6 w-6" />
-        <Bookmark className="h-6 w-6 ml-auto" />
-      </div>
-      {post.caption && (
-        <p className="px-3.5 pb-4 text-[13.5px] leading-snug text-foreground"><span className="font-bold mr-1.5">{handle}</span>{post.caption}</p>
+      {vertical ? (
+        <div className="relative">
+          <PostMediaCarousel media={media} aspect={aspect} capVh={62} />
+          <div className="absolute right-2.5 bottom-3 z-10 flex flex-col items-center gap-4 text-white drop-shadow-md pointer-events-none">
+            <Heart className="h-6 w-6" /><MessageCircle className="h-6 w-6" /><Send className="h-6 w-6" /><Bookmark className="h-6 w-6" />
+          </div>
+          {post.caption && (
+            <div className="absolute left-3 right-14 bottom-3 z-10 text-white text-[12.5px] leading-snug drop-shadow-md pointer-events-none line-clamp-2">
+              <span className="font-bold mr-1">{handle}</span>{post.caption}
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          <PostMediaCarousel media={media} aspect={aspect} />
+          <div className="flex items-center gap-4 px-3.5 pt-3 pb-1.5 text-foreground">
+            <Heart className="h-6 w-6" /><MessageCircle className="h-6 w-6" /><Send className="h-6 w-6" /><Bookmark className="h-6 w-6 ml-auto" />
+          </div>
+          {post.caption && (
+            <p className="px-3.5 pb-4 text-[13.5px] leading-snug text-foreground"><span className="font-bold mr-1.5">{handle}</span>{post.caption}</p>
+          )}
+        </>
       )}
     </article>
   );

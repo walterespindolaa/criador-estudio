@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input";
 import { ImagePlus, Video, FileImage, Link2, Loader2, Heart, MessageCircle, Send, Bookmark } from "lucide-react";
 import { toast } from "sonner";
 
-export function CriaPostMedia({ postId, platform, format, caption }: {
-  postId: string; platform: string; format: string; caption?: string;
+export function CriaPostMedia({ postId, platform, format, caption, handle }: {
+  postId: string; platform: string; format: string; caption?: string; handle?: string;
 }) {
   const { list, uploadImage, uploadVideo, addDriveLink, remove } = useCriaPostMedia(postId);
   const imgRef = useRef<HTMLInputElement>(null);
@@ -33,9 +33,15 @@ export function CriaPostMedia({ postId, platform, format, caption }: {
     try { await addDriveLink.mutateAsync(driveUrl.trim()); setDriveUrl(""); setShowDrive(false); toast.success("Link adicionado"); }
     catch (err) { toast.error(err instanceof Error ? err.message : "Falha ao adicionar"); }
   };
+  const onRemoveMedia = async (id: string) => {
+    try { await remove.mutateAsync(id); toast.success("Mídia removida"); }
+    catch (err) { toast.error(err instanceof Error ? err.message : "Falha ao remover"); }
+  };
 
   const media = list.data ?? [];
-  const handle = "@cliente";
+  const aspect = postAspect(platform, format);
+  const vertical = aspect === "9 / 16";
+  const h = handle ? (handle.startsWith("@") ? handle : "@" + handle) : "@cliente";
 
   return (
     <div className="space-y-3">
@@ -57,15 +63,30 @@ export function CriaPostMedia({ postId, platform, format, caption }: {
         </div>
       )}
 
-      {/* Prévia estilo post (igual o cliente vê) */}
       <div className="bg-white border border-border rounded-2xl overflow-hidden">
-        <PostMediaCarousel media={media} aspect={postAspect(platform, format)} onRemove={(id) => remove.mutate(id)} />
-        <div className="flex items-center gap-4 px-3.5 pt-3 pb-1.5 text-foreground/80">
-          <Heart className="h-5 w-5" /><MessageCircle className="h-5 w-5" /><Send className="h-5 w-5" /><Bookmark className="h-5 w-5 ml-auto" />
-        </div>
-        {caption && caption.trim()
-          ? <p className="px-3.5 pb-3.5 text-[13px] leading-snug text-foreground whitespace-pre-wrap"><span className="font-bold mr-1.5">{handle}</span>{caption}</p>
-          : <p className="px-3.5 pb-3.5 text-xs text-muted-foreground">A legenda aparece aqui.</p>}
+        {vertical ? (
+          <div className="relative">
+            <PostMediaCarousel media={media} aspect={aspect} capVh={52} onRemove={onRemoveMedia} />
+            <div className="absolute right-2.5 bottom-3 z-10 flex flex-col items-center gap-3.5 text-white drop-shadow-md pointer-events-none">
+              <Heart className="h-6 w-6" /><MessageCircle className="h-6 w-6" /><Send className="h-6 w-6" /><Bookmark className="h-6 w-6" />
+            </div>
+            {caption?.trim() && (
+              <div className="absolute left-3 right-14 bottom-3 z-10 text-white text-[12px] leading-snug drop-shadow-md pointer-events-none line-clamp-2">
+                <span className="font-bold mr-1">{h}</span>{caption}
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            <PostMediaCarousel media={media} aspect={aspect} onRemove={onRemoveMedia} />
+            <div className="flex items-center gap-4 px-3.5 pt-3 pb-1.5 text-foreground/80">
+              <Heart className="h-5 w-5" /><MessageCircle className="h-5 w-5" /><Send className="h-5 w-5" /><Bookmark className="h-5 w-5 ml-auto" />
+            </div>
+            {caption?.trim()
+              ? <p className="px-3.5 pb-3.5 text-[13px] leading-snug text-foreground whitespace-pre-wrap"><span className="font-bold mr-1.5">{h}</span>{caption}</p>
+              : <p className="px-3.5 pb-3.5 text-xs text-muted-foreground">A legenda aparece aqui.</p>}
+          </>
+        )}
       </div>
     </div>
   );
