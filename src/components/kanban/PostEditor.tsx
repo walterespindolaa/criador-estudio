@@ -540,8 +540,10 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
             continue;
           }
           // Vídeo → Bunny Stream via TUS (player transcodifica qualquer codec)
-          const toastId = toast.loading(`Enviando ${raw.name}… 0%`);
+          const toastId = toast.loading(`Preparando ${raw.name}…`);
           let trackedUploadId: string | null = null;
+          let createdRefId: string | null = null;   // ref já exibido (pra limpar se o envio falhar)
+          let createdRefIsTemp = false;
           try {
             const { data: sig, error: sigErr } = await supabase.functions.invoke("bunny-create-video", {
               body: { fileName: raw.name, accountId: userId },
@@ -562,7 +564,60 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
             const { videoGuid, libraryId, signature, expiration } = sig as {
               videoGuid: string; libraryId: string | number; signature: string; expiration: number;
             };
-            // Agora que temos o id, registra no indicador global.
+
+            const viewUrl = `https://iframe.mediadelivery.net/embed/${libraryId}/${videoGuid}`;
+            const thumbUrl = `https://${BUNNY_CDN_HOSTNAME}/${videoGuid}/thumbnail.jpg`;
+
+            // 1) Cacheia o arquivo local AGORA → já dá pra publicar na hora, sem esperar o envio.
+            const _shareUrl = resolveShareableUrl(viewUrl, "bunny");
+            if (_shareUrl) void cacheShareFile(_shareUrl, raw);
+            rememberLocalVideo(viewUrl, raw);
+
+            // 2) Mostra o vídeo no editor JÁ (publicável). O envio pro Bunny roda em segundo plano.
+            if (post?.id) {
+              const { data: inserted, error: insErr } = await supabase
+                .from("external_media_refs")
+                .insert({
+                  user_id: userId,
+                  post_id: post.id,
+                  provider: "bunny",
+                  bunny_video_id: videoGuid,
+                  external_file_id: videoGuid,
+                  file_name: raw.name,
+                  file_type: raw.type,
+                  file_size: raw.size,
+                  thumbnail_url: thumbUrl,
+                  view_url: viewUrl,
+                  expires_at: expiresAt,
+                })
+                .select("id, external_file_id, file_name, file_type, thumbnail_url, view_url, provider")
+                .single();
+              if (insErr || !inserted) {
+                console.error("[bunny] ref insert error", insErr);
+                toast.error(`Erro ao salvar referência de ${raw.name}`, { id: toastId });
+                continue;
+              }
+              setDriveMedia((prev) => [...prev, inserted as DriveRef]);
+              createdRefId = (inserted as DriveRef).id;
+              createdRefIsTemp = false;
+            } else {
+              const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+              const tempRef: DriveRef = {
+                id: tempId,
+                file_name: raw.name,
+                file_type: raw.type,
+                thumbnail_url: thumbUrl,
+                view_url: viewUrl,
+                external_file_id: videoGuid,
+                provider: "bunny",
+              };
+              setPendingDriveFiles((prev) => [...prev, tempRef]);
+              createdRefId = tempId;
+              createdRefIsTemp = true;
+            }
+
+            // 3) Envio em segundo plano.
+            toast.loading(`Enviando ${raw.name}… 0%`, { id: toastId });
             startUpload(videoGuid, raw.name);
             trackedUploadId = videoGuid;
 
@@ -588,50 +643,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
               upload.start();
             });
 
-            const viewUrl = `https://iframe.mediadelivery.net/embed/${libraryId}/${videoGuid}`;
-            const thumbUrl = `https://${BUNNY_CDN_HOSTNAME}/${videoGuid}/thumbnail.jpg`;
-            // Cacheia o vídeo original pra publicação instantânea (evita rebaixar do Bunny).
-            const _shareUrl = resolveShareableUrl(viewUrl, "bunny");
-            if (_shareUrl) void cacheShareFile(_shareUrl, raw);
-            rememberLocalVideo(viewUrl, raw);
-
-            if (post?.id) {
-              const { data: inserted, error: insErr } = await supabase
-                .from("external_media_refs")
-                .insert({
-                  user_id: userId,
-                  post_id: post.id,
-                  provider: "bunny",
-                  bunny_video_id: videoGuid,
-                  external_file_id: videoGuid,
-                  file_name: raw.name,
-                  file_type: raw.type,
-                  file_size: raw.size,
-                  thumbnail_url: thumbUrl,
-                  view_url: viewUrl,
-                  expires_at: expiresAt,
-                })
-                .select("id, external_file_id, file_name, file_type, thumbnail_url, view_url, provider")
-                .single();
-              if (insErr || !inserted) {
-                console.error("[bunny] ref insert error", insErr);
-                toast.error(`Erro ao salvar referência de ${raw.name}`, { id: toastId });
-                continue;
-              }
-              setDriveMedia((prev) => [...prev, inserted as DriveRef]);
-            } else {
-              const tempRef: DriveRef = {
-                id: `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-                file_name: raw.name,
-                file_type: raw.type,
-                thumbnail_url: thumbUrl,
-                view_url: viewUrl,
-                external_file_id: videoGuid,
-                provider: "bunny",
-              };
-              setPendingDriveFiles((prev) => [...prev, tempRef]);
-            }
-            // Vídeo Bunny conta na cota (é hospedagem do cria).
+            // 4) Envio concluído → conta cota e finaliza.
             const { error: incErr } = await (supabase.rpc as unknown as (
               fn: string, args: unknown,
             ) => Promise<{ error: unknown }>)("increment_storage", { _user: userId, _delta: raw.size });
@@ -646,6 +658,16 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
             console.error("[bunny] upload failed", e);
             toast.error(`Falha no upload de ${raw.name}`, { id: toastId });
             if (trackedUploadId) finishUpload(trackedUploadId, "error");
+            // Remove o vídeo que já tinha sido exibido (o envio falhou).
+            if (createdRefId) {
+              const refId = createdRefId;
+              if (createdRefIsTemp) {
+                setPendingDriveFiles((prev) => prev.filter((f) => f.id !== refId));
+              } else {
+                setDriveMedia((prev) => prev.filter((m) => m.id !== refId));
+                await supabase.from("external_media_refs").delete().eq("id", refId);
+              }
+            }
             continue;
           }
         }
