@@ -2288,9 +2288,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
       <AlertDialog open={videoTipOpen} onOpenChange={setVideoTipOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Seu vídeo está sendo enviado 🎬</AlertDialogTitle>
+            <AlertDialogTitle>Vídeo adicionado 🎬</AlertDialogTitle>
             <AlertDialogDescription>
-              O envio pode levar de 1 a 3 minutos, dependendo do tamanho do arquivo e da sua internet — não some em poucos segundos. Você pode salvar o post e continuar usando o sistema normalmente; o vídeo aparece sozinho quando ficar pronto.
+              Você não precisa esperar: já pode tocar em Publicar que o vídeo vai direto pro app na hora. O envio pra pré-visualização leva de 1 a 3 minutos e roda em segundo plano — pode salvar o post e seguir usando o sistema normalmente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <label className="flex items-center gap-2 text-sm text-muted-foreground font-body cursor-pointer px-1">
