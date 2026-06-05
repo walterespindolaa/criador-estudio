@@ -19,7 +19,7 @@ function Thumb({ m }: { m: CriaMedia }) {
   const src = m.thumbnail_url || m.view_url || "";
   return (
     <div className="relative w-full h-full bg-muted">
-      {src ? <img src={src} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+      {src ? <img src={src} alt="" draggable={false} className="w-full h-full object-cover select-none" onError={(e) => { e.currentTarget.style.display = "none"; }} />
         : <div className="w-full h-full flex items-center justify-center text-muted-foreground"><FileImage className="h-5 w-5" /></div>}
       {video && <span className="absolute inset-0 flex items-center justify-center pointer-events-none"><Play className="h-5 w-5 text-white [filter:drop-shadow(0_1px_2px_rgba(0,0,0,.7))]" /></span>}
     </div>
@@ -128,7 +128,7 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
           <Reorder.Group axis="x" values={ordered} onReorder={(v) => { dirty.current = true; setOrder(v.map((m) => m.id)); }}
             className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
             {ordered.map((m, i) => (
-              <Reorder.Item key={m.id} value={m} className="relative shrink-0 w-16 h-16 rounded-xl overflow-hidden border border-border cursor-grab active:cursor-grabbing bg-muted">
+              <Reorder.Item key={m.id} value={m} style={{ touchAction: "none" }} className="relative shrink-0 w-16 h-16 rounded-xl overflow-hidden border border-border cursor-grab active:cursor-grabbing bg-muted select-none">
                 <Thumb m={m} />
                 <span className="absolute top-0.5 left-0.5 z-10 bg-black/65 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{i + 1}</span>
                 <button type="button" onClick={() => onRemoveMedia(m.id)} className="absolute top-0.5 right-0.5 z-10 bg-black/65 text-white rounded-full p-0.5"><X className="h-3 w-3" /></button>
