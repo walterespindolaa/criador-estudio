@@ -15,6 +15,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PipelineBoard } from "@/components/accounts/crm/PipelineBoard";
+import { ContractsTab } from "@/components/accounts/crm/ContractsTab";
 import { cn } from "@/lib/utils";
 
 const BRAND_FIELDS: { key: string; label: string; multiline?: boolean }[] = [
@@ -34,6 +37,24 @@ export default function CriaCrm() {
 }
 
 function CrmInner() {
+  return (
+    <div>
+      <ManagerSectionTitle t="Cria Gestão" s="Carteira, pipeline e contratos da sua operação." />
+      <Tabs defaultValue="clientes" className="w-full">
+        <TabsList className="bg-card border border-border rounded-2xl p-1.5 mb-5">
+          <TabsTrigger value="clientes" className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Clientes</TabsTrigger>
+          <TabsTrigger value="pipeline" className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Pipeline</TabsTrigger>
+          <TabsTrigger value="contratos" className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Contratos</TabsTrigger>
+        </TabsList>
+        <TabsContent value="clientes"><ClientsTab /></TabsContent>
+        <TabsContent value="pipeline"><PipelineBoard /></TabsContent>
+        <TabsContent value="contratos"><ContractsTab /></TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function ClientsTab() {
   const navigate = useNavigate();
   const { managedAccounts, setActiveAccount } = useActiveAccount();
   const { data: clients = [], isLoading } = useCrmClients();
@@ -65,14 +86,11 @@ function CrmInner() {
 
   return (
     <div>
-      <div className="flex items-start justify-between gap-3 flex-wrap mb-5">
-        <ManagerSectionTitle t="Cria Gestão" s="Sua carteira de clientes — cadastro, marca e moodboard num lugar só." />
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => importCria.mutate()} disabled={importCria.isPending || managedAccounts.length === 0}>
-            <Download className="h-3.5 w-3.5 mr-1.5" /> Importar do cria
-          </Button>
-          <Button size="sm" onClick={() => setCreating(true)}><Plus className="h-3.5 w-3.5 mr-1.5" /> Novo cliente</Button>
-        </div>
+      <div className="flex items-center justify-end gap-2 mb-4">
+        <Button variant="outline" size="sm" onClick={() => importCria.mutate()} disabled={importCria.isPending || managedAccounts.length === 0}>
+          <Download className="h-3.5 w-3.5 mr-1.5" /> Importar do cria
+        </Button>
+        <Button size="sm" onClick={() => setCreating(true)}><Plus className="h-3.5 w-3.5 mr-1.5" /> Novo cliente</Button>
       </div>
 
       <div className="flex items-center gap-2 mb-4 flex-wrap">

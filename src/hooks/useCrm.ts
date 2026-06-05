@@ -167,3 +167,96 @@ export function useDeleteCrmRef() {
     onError: () => toast.error("Erro ao remover imagem."),
   });
 }
+
+// ===================== LEADS =====================
+export const CRM_STAGES = ["lead","contato","reuniao","proposta","negociacao","fechado","perdido"] as const;
+export type CrmStage = typeof CRM_STAGES[number];
+export const CRM_STAGE_LABELS: Record<CrmStage, string> = {
+  lead: "Lead", contato: "Contato", reuniao: "Reunião", proposta: "Proposta",
+  negociacao: "Negociação", fechado: "Fechado", perdido: "Perdido",
+};
+
+export type CrmLead = {
+  id: string; manager_id: string; name: string; company: string | null; email: string | null;
+  phone: string | null; instagram: string | null; segment: string | null; stage: CrmStage;
+  monthly_value: number | null; notes: string | null; lead_origin: string | null; is_referral: boolean | null;
+  referred_by: string | null; main_pain: string | null; main_objection: string | null; next_steps: string | null;
+  next_interaction_date: string | null; closing_potential: "alto" | "medio" | "baixo" | null;
+  created_at: string; updated_at: string;
+};
+export type CrmLeadInput = Partial<Omit<CrmLead, "id" | "manager_id" | "created_at" | "updated_at">> & { name: string };
+
+export function useCrmLeads() {
+  const { user } = useAuth();
+  return useQuery<CrmLead[]>({
+    queryKey: ["crm-leads", user?.id], enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("crm_leads").select("*").eq("manager_id", user!.id).order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as CrmLead[];
+    },
+  });
+}
+export function useCreateCrmLead() {
+  const { user } = useAuth(); const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: CrmLeadInput) => {
+      if (!user?.id) throw new Error("Sem sessão");
+      const { error } = await sbFrom("crm_leads").insert({ ...input, manager_id: user.id } as never);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-leads"] }),
+    onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao criar lead."),
+  });
+}
+export function useUpdateCrmLead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string } & Partial<CrmLeadInput>) => {
+      const { error } = await sbFrom("crm_leads").update(updates as never).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-leads"] }),
+    onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao atualizar lead."),
+  });
+}
+export function useDeleteCrmLead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => { const { error } = await sbFrom("crm_leads").delete().eq("id", id); if (error) throw error; },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-leads"] }),
+    onError: () => toast.error("Erro ao excluir lead."),
+  });
+}
+
+// ===================== CONTRATOS =====================
+export type CrmContract = {
+  id: string; manager_id: string; crm_lead_id: string | null; crm_client_id: string | null;
+  title: string; status: "enviado" | "fechado" | "encerrado"; monthly_value: number | null; contract_value: number | null;
+  sent_date: string | null; closed_date: string | null; ended_date: string | null; notes: string | null; created_at: string;
+};
+export type CrmContractInput = Partial<Omit<CrmContract, "id" | "manager_id" | "created_at">> & { title: string };
+
+export function useCrmContracts() {
+  const { user } = useAuth();
+  return useQuery<CrmContract[]>({
+    queryKey: ["crm-contracts", user?.id], enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("crm_contracts").select("*").eq("manager_id", user!.id).order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as CrmContract[];
+    },
+  });
+}
+export function useCreateCrmContract() {
+  const { user } = useAuth(); const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: CrmContractInput) => {
+      if (!user?.id) throw new Error("Sem sessão");
+      const { error } = await sbFrom("crm_contracts").insert({ ...input, manager_id: user.id } as never);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-contracts"] }),
+    onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao criar contrato."),
+  });
+}
