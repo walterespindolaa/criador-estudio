@@ -43,6 +43,7 @@ const AprovarPortal = lazy(() => import("./pages/AprovarPortal"));
 const ManagerLayout = lazy(() => import("./components/accounts/ManagerLayout"));
 const ManagerHome = lazy(() => import("./pages/socialmidia/ManagerHome"));
 const CriaPost = lazy(() => import("./pages/socialmidia/CriaPost"));
+const CriaCrm = lazy(() => import("./pages/socialmidia/CriaCrm"));
 const Parceria = lazy(() => import("./pages/socialmidia/Parceria"));
 const Comissoes = lazy(() => import("./pages/socialmidia/Comissoes"));
 const Contas = lazy(() => import("./pages/socialmidia/Contas"));
@@ -113,6 +114,7 @@ const App = () => (
                 <Route index element={<Navigate to="/socialmidia/dashboard" replace />} />
                 <Route path="dashboard" element={<ErrorBoundary><ManagerHome /></ErrorBoundary>} />
                 <Route path="criapost" element={<ErrorBoundary><CriaPost /></ErrorBoundary>} />
+                <Route path="criacrm" element={<ErrorBoundary><CriaCrm /></ErrorBoundary>} />
                 <Route path="parceria" element={<ErrorBoundary><Parceria /></ErrorBoundary>} />
                 <Route path="comissoes" element={<ErrorBoundary><Comissoes /></ErrorBoundary>} />
                 <Route path="contas" element={<ErrorBoundary><Contas /></ErrorBoundary>} />
