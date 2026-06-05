@@ -1398,16 +1398,16 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                     <span className="text-sm font-display font-semibold">Agendamento</span>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
+                    <div className="space-y-1 min-w-0">
                       <Label className="text-[11px] text-muted-foreground">Data</Label>
                       <Input
                         type="date"
                         value={scheduledDate}
                         onChange={(e) => setScheduledDate(e.target.value)}
-                        className="rounded-xl h-10 text-sm"
+                        className="rounded-xl h-10 text-sm w-full min-w-0"
                       />
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1 min-w-0">
                       <Label className="text-[11px] text-muted-foreground flex items-center gap-1">
                         <Clock className="h-3 w-3" /> Hora
                       </Label>
@@ -1415,7 +1415,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                         type="time"
                         value={scheduledTime}
                         onChange={(e) => setScheduledTime(e.target.value)}
-                        className="rounded-xl h-10 text-sm"
+                        className="rounded-xl h-10 text-sm w-full min-w-0"
                       />
                     </div>
                   </div>
