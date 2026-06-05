@@ -1715,7 +1715,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                         Mídia
                       </Label>
                       <div className="rounded-2xl border-2 border-dashed border-border/50 overflow-hidden bg-muted/20 hover:border-primary/30 transition-colors">
-                        {activeUpload && mediaList.length === 0 ? (
+                        {activeUpload ? (
                           <div className="relative">
                             <div className="aspect-[4/5] relative overflow-hidden max-h-[60vh] sm:max-h-[360px] bg-muted">
                               <MediaPreparingPlaceholder pct={activeUpload.pct} label="Enviando vídeo…" />
