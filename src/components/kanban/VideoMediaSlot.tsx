@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { VideoEmbed } from "./VideoEmbed";
 
 export function MediaPreparingPlaceholder({ pct, label }: { pct?: number | null; label?: string }) {
@@ -19,26 +20,37 @@ export function MediaPreparingPlaceholder({ pct, label }: { pct?: number | null;
   );
 }
 
-export function VideoMediaSlot({ viewUrl, thumbUrl, className }: {
+export function VideoMediaSlot({ viewUrl, videoGuid, className }: {
   viewUrl: string;
-  thumbUrl?: string | null;
+  videoGuid?: string | null;
   className?: string;
 }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!thumbUrl) { setReady(true); return; }
+    if (!videoGuid) { setReady(true); return; }
     let cancelled = false;
     let timer: number | undefined;
-    const check = () => {
-      const img = new Image();
-      img.onload = () => { if (!cancelled) setReady(true); };
-      img.onerror = () => { if (!cancelled) timer = window.setTimeout(check, 5000); };
-      img.src = `${thumbUrl}?t=${Date.now()}`;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 40; // ~4 min; depois mostra o player de qualquer forma
+
+    const check = async () => {
+      attempts += 1;
+      try {
+        const { data } = await supabase.functions.invoke("bunny-video-status", {
+          body: { videoGuid },
+        });
+        if (cancelled) return;
+        if ((data as { ready?: boolean } | null)?.ready) { setReady(true); return; }
+      } catch { /* tenta de novo */ }
+      if (!cancelled) {
+        if (attempts >= MAX_ATTEMPTS) { setReady(true); return; }
+        timer = window.setTimeout(check, 6000);
+      }
     };
     check();
     return () => { cancelled = true; if (timer) clearTimeout(timer); };
-  }, [thumbUrl]);
+  }, [videoGuid]);
 
   if (ready) return <VideoEmbed viewUrl={viewUrl} className={className} />;
   return <MediaPreparingPlaceholder label="Preparando vídeo…" />;

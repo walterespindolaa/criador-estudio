@@ -1713,7 +1713,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                 const driveImgSrc = `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w600`;
                                 const imgSrc = primary.thumbnail_url || primary.view_url || driveImgSrc;
                                 return isBunny ? (
-                                  <VideoMediaSlot viewUrl={primary.view_url ?? ""} thumbUrl={primary.thumbnail_url} className="w-full h-full border-0" />
+                                  <VideoMediaSlot viewUrl={primary.view_url ?? ""} videoGuid={primary.external_file_id} className="w-full h-full border-0" />
                                 ) : isVideo ? (
                                   <a
                                     href={`https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`}
