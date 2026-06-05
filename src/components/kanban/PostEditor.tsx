@@ -547,8 +547,16 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
               body: { fileName: raw.name, accountId: userId },
             });
             if (sigErr || !sig?.videoGuid) {
-              console.error("[bunny] create-video failed", sigErr ?? sig);
-              toast.error(`Falha ao iniciar upload de ${raw.name}`, { id: toastId });
+              let reason: string | undefined = (sig as { error?: string } | null)?.error;
+              if (!reason && sigErr) {
+                try {
+                  const body = await (sigErr as unknown as { context?: { json?: () => Promise<{ error?: string }> } }).context?.json?.();
+                  reason = body?.error;
+                } catch { /* corpo já consumido */ }
+                reason = reason ?? (sigErr as Error).message;
+              }
+              console.error("[bunny] create-video failed", reason, sigErr ?? sig);
+              toast.error(`Falha ao iniciar: ${reason ?? "erro desconhecido"}`, { id: toastId });
               continue;
             }
             const { videoGuid, libraryId, signature, expiration } = sig as {
