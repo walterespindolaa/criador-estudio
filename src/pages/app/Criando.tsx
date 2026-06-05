@@ -303,7 +303,7 @@ const Criando = () => {
           )}
         </div>
 
-        <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-mandatory scrollbar-none">
+        <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-proximity kanban-scroll">
           {COLUMNS.map(col => {
             const colPosts = filteredPosts.filter(p => p.status === col.key);
             const isPublished = col.key === "publicado";
