@@ -99,9 +99,17 @@ export default function Assinar() {
       } else {
         throw new Error("checkout sem URL");
       }
-    } catch (e) {
+    } catch (e: unknown) {
+      let detail = e instanceof Error ? e.message : String(e);
+      try {
+        const ctx = (e as { context?: Response })?.context;
+        if (ctx && typeof ctx.json === "function") {
+          const body = await ctx.json();
+          if (body?.error) detail = String(body.error);
+        }
+      } catch { /* ignore */ }
       console.error(e);
-      toast.error("Não foi possível iniciar o checkout. Tente novamente.");
+      toast.error(`Checkout: ${detail}`);
       setLoadingPlan(null);
     }
   };
