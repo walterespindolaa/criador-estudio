@@ -557,6 +557,7 @@ export type Database = {
           file_size: number | null
           file_type: string | null
           id: string
+          position: number | null
           post_id: string | null
           provider: string
           thumbnail_url: string | null
@@ -573,6 +574,7 @@ export type Database = {
           file_size?: number | null
           file_type?: string | null
           id?: string
+          position?: number | null
           post_id?: string | null
           provider?: string
           thumbnail_url?: string | null
@@ -589,6 +591,7 @@ export type Database = {
           file_size?: number | null
           file_type?: string | null
           id?: string
+          position?: number | null
           post_id?: string | null
           provider?: string
           thumbnail_url?: string | null
@@ -2376,6 +2379,10 @@ export type Database = {
           p_view_url: string
         }
         Returns: string
+      }
+      criapost_reorder_media: {
+        Args: { p_ids: string[]; p_post_id: string }
+        Returns: undefined
       }
       criapost_touch_media: { Args: { p_post_id: string }; Returns: undefined }
       delete_email: {
