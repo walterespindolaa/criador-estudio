@@ -251,6 +251,28 @@ export function ManagerHub() {
                   </button>
                 </div>
 
+                <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">Seus módulos</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+                  {modules.map((m) => {
+                    const active = m.status === "active" || m.status === "past_due";
+                    return (
+                      <button key={m.code} type="button"
+                        onClick={() => active && m.code === "aprovapost_externo" ? go("criapost") : setSelectedModule(m)}
+                        className="text-left bg-card border border-border rounded-2xl p-4 hover:border-primary/40 transition-colors">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="font-display font-bold text-foreground text-sm">{m.name}</span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${active ? "bg-green-100 text-green-700" : m.coming_soon ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"}`}>
+                            {active ? "Ativo" : m.coming_soon ? "Em breve" : "Adquirir"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground font-body">
+                          {active ? "Toque para abrir" : m.coming_soon ? "Em desenvolvimento" : "Toque para conhecer"}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider">Aprovações recentes</h2>
                   <button onClick={goAprovacoes} className="text-primary font-body font-bold text-xs flex items-center gap-1 hover:underline">Ver todas <ArrowRight className="h-3 w-3" /></button>
