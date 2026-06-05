@@ -38,7 +38,12 @@ Deno.serve(async (req) => {
     if (!res.ok) return json({ error: "Falha ao consultar status", status: res.status }, 502);
     const v = await res.json();
     // Bunny: 0 created,1 uploaded,2 processing,3 transcoding,4 finished,5 error,6 uploadFailed
-    return json({ status: v.status, ready: typeof v.status === "number" && v.status >= 4 });
+    const status = typeof v.status === "number" ? v.status : null;
+    const encodeProgress = typeof v.encodeProgress === "number" ? v.encodeProgress : null;
+    // Só está realmente tocável quando o encoding chega a 100% E o status é Finished (4).
+    // status >= 4 sozinho é cedo demais — o player ainda mostra "Processing".
+    const ready = status === 4 && (encodeProgress ?? 0) >= 100;
+    return json({ status, encodeProgress, ready });
   } catch (e) {
     return json({ error: String(e) }, 500);
   }
