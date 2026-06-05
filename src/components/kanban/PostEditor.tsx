@@ -92,7 +92,7 @@ import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 import { useUploadProgress } from "@/contexts/UploadProgressContext";
 import { compressImage } from "@/lib/image-compress";
 import { resolveShareableUrl, cacheShareFile } from "@/lib/social-share";
-import { VideoEmbed } from "./VideoEmbed";
+import { VideoMediaSlot, MediaPreparingPlaceholder } from "./VideoMediaSlot";
 import { rememberLocalVideo } from "@/lib/media-cache";
 import { usePosts, type Post as DbPost } from "@/hooks/usePosts";
 import { useReferenceLibrary, useUserLibrary } from "@/hooks/useLibrary";
@@ -273,7 +273,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
   const [uploadingLocal, setUploadingLocal] = useState(false);
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
   const { pickAndSave, picking } = useGoogleDrive();
-  const { startUpload, updateUpload, finishUpload, hasActive: hasActiveUpload } = useUploadProgress();
+  const { startUpload, updateUpload, finishUpload, hasActive: hasActiveUpload, uploads } = useUploadProgress();
   const queryClient = useQueryClient();
   const { syncPost: syncCalendarPost, removeFromCalendar, syncing: calendarSyncing } = useGoogleCalendar();
   const { createPost, updatePost, deletePost } = usePosts();
@@ -969,6 +969,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
   };
 
   const mediaList: DriveRef[] = isNew ? pendingDriveFiles : driveMedia;
+  const activeUpload = uploads.find((u) => u.status === "uploading") ?? null;
 
   const handleRemoveAllMedia = () => {
     // removeDriveRef já cuida do lock + cleanup dos dois arrays.
@@ -1684,7 +1685,13 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                         Mídia
                       </Label>
                       <div className="rounded-2xl border-2 border-dashed border-border/50 overflow-hidden bg-muted/20 hover:border-primary/30 transition-colors">
-                        {mediaList.length > 0 ? (
+                        {activeUpload && mediaList.length === 0 ? (
+                          <div className="relative">
+                            <div className="aspect-[4/5] relative overflow-hidden max-h-[60vh] sm:max-h-[360px] bg-muted">
+                              <MediaPreparingPlaceholder pct={activeUpload.pct} label="Enviando vídeo…" />
+                            </div>
+                          </div>
+                        ) : mediaList.length > 0 ? (
                           <div className="relative">
                             <div className="aspect-[4/5] relative overflow-hidden max-h-[60vh] sm:max-h-[360px] bg-muted">
                               {(() => {
@@ -1698,7 +1705,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                                 const driveImgSrc = `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w600`;
                                 const imgSrc = primary.thumbnail_url || primary.view_url || driveImgSrc;
                                 return isBunny ? (
-                                  <VideoEmbed viewUrl={primary.view_url ?? ""} className="w-full h-full border-0" />
+                                  <VideoMediaSlot viewUrl={primary.view_url ?? ""} thumbUrl={primary.thumbnail_url} className="w-full h-full border-0" />
                                 ) : isVideo ? (
                                   <a
                                     href={`https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`}
