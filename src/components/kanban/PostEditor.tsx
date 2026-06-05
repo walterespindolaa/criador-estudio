@@ -1419,9 +1419,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-display font-semibold">Agendamento</span>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex items-end gap-2">
                     <div className="flex-1 min-w-0 space-y-1">
-                      <Label className="text-[11px] text-muted-foreground">Data</Label>
+                      <Label className="text-[11px] text-muted-foreground flex items-center h-4">Data</Label>
                       <Input
                         type="date"
                         value={scheduledDate}
@@ -1430,7 +1430,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                       />
                     </div>
                     <div className="flex-1 min-w-0 space-y-1">
-                      <Label className="text-[11px] text-muted-foreground flex items-center gap-1">
+                      <Label className="text-[11px] text-muted-foreground flex items-center gap-1 h-4">
                         <Clock className="h-3 w-3" /> Hora
                       </Label>
                       <Input
