@@ -5,7 +5,7 @@ import { VideoEmbed } from "./VideoEmbed";
 export function MediaPreparingPlaceholder({ pct, label }: { pct?: number | null; label?: string }) {
   return (
     <div className="w-full h-full flex flex-col items-center justify-center gap-4 bg-black/90 px-6">
-      <img src="/logo-icon-white.png" alt="CRIA" className="w-14 h-14 animate-pulse opacity-90" />
+      <img src="/logo-cria-white.png" alt="CRIA" className="w-28 h-auto animate-pulse opacity-90" />
       <div className="w-40 h-1.5 rounded-full bg-white/20 overflow-hidden">
         {typeof pct === "number" ? (
           <div className="h-full bg-white/80 transition-all duration-300" style={{ width: `${Math.max(3, pct)}%` }} />
