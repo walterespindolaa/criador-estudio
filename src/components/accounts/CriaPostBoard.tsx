@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Link2, Pencil, Loader2, Users, ArrowRight, ArrowLeft, Trash2, RotateCcw } from "lucide-react";
 import { CriaPostMedia } from "@/components/accounts/CriaPostMedia";
+import { FORMATS_BY_PLATFORM, FORMAT_LABELS } from "@/lib/constants";
 
 const PLATFORMS = ["instagram", "tiktok", "youtube"];
 const FORMATS = ["reels", "carrossel", "foto", "story", "video"];
@@ -120,6 +121,13 @@ function ClientDetail({ client, onBack }: { client: ExternalClient; onBack: () =
     setFormOpen(false);
   };
   const doCopy = async () => { setCopying(true); await copyLink(client.id); setCopying(false); };
+  const onChangePlatform = (pl: string) => {
+    setF((prev) => {
+      const allowed = FORMATS_BY_PLATFORM[pl] ?? [];
+      const format = allowed.length && !allowed.includes(prev.format) ? allowed[0] : prev.format;
+      return { ...prev, platform: pl, format };
+    });
+  };
 
   return (
     <div>
@@ -173,36 +181,74 @@ function ClientDetail({ client, onBack }: { client: ExternalClient; onBack: () =
       )}
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-md rounded-2xl max-h-[88vh] overflow-y-auto">
+        <DialogContent className="max-w-md md:max-w-2xl rounded-2xl max-h-[88vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="font-display">{editing ? "Editar post" : "Novo post"}</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5"><Label className="text-xs font-body">Título *</Label><Input value={f.title} onChange={(e) => setF((p) => ({ ...p, title: e.target.value }))} className="rounded-xl" /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5"><Label className="text-xs font-body">Plataforma</Label>
-                <div className="flex flex-wrap gap-1.5">{PLATFORMS.map((pl) => <button key={pl} type="button" onClick={() => setF((p) => ({ ...p, platform: pl }))} className={`px-2.5 py-1 rounded-lg text-xs font-body border ${f.platform === pl ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>{cap(pl)}</button>)}</div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-[1.15fr_0.85fr] md:gap-5">
+
+            {/* 1 — Título */}
+            <div className="order-1 md:col-start-1 md:row-start-1 space-y-1.5">
+              <Label className="text-xs font-body">Título *</Label>
+              <Input value={f.title} onChange={(e) => setF((p) => ({ ...p, title: e.target.value }))} className="rounded-xl" />
+            </div>
+
+            {/* 2 — Plataforma + Formato */}
+            <div className="order-2 md:col-start-1 md:row-start-2 space-y-3">
+              <div>
+                <label className="text-xs font-semibold mb-1.5 block">Plataforma</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {PLATFORMS.map((pl) => (
+                    <button key={pl} type="button" onClick={() => onChangePlatform(pl)}
+                      className={`rounded-full border text-sm py-2 transition-colors ${f.platform === pl ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>{cap(pl)}</button>
+                  ))}
+                </div>
               </div>
-              <div className="space-y-1.5"><Label className="text-xs font-body">Formato</Label>
-                <div className="flex flex-wrap gap-1.5">{FORMATS.map((ft) => <button key={ft} type="button" onClick={() => setF((p) => ({ ...p, format: ft }))} className={`px-2.5 py-1 rounded-lg text-xs font-body border ${f.format === ft ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>{cap(ft)}</button>)}</div>
+              <div>
+                <label className="text-xs font-semibold mb-1.5 block">Formato</label>
+                <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+                  {(FORMATS_BY_PLATFORM[f.platform] ?? FORMATS).map((ft) => (
+                    <button key={ft} type="button" onClick={() => setF((p) => ({ ...p, format: ft }))}
+                      className={`rounded-full border text-xs px-3 py-1.5 transition-colors ${f.format === ft ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>{FORMAT_LABELS[ft] ?? cap(ft)}</button>
+                  ))}
+                </div>
               </div>
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-body">Tipo de aprovação</Label>
-              <div className="flex flex-wrap gap-1.5">
+
+            {/* 3 — Tipo de aprovação */}
+            <div className="order-3 md:col-start-1 md:row-start-3">
+              <label className="text-xs font-semibold mb-1.5 block">Tipo de aprovação</label>
+              <div className="grid grid-cols-3 gap-2">
                 {([["fast","Simplificada"],["flow","Detalhada"],["both","Ambas"]] as [string,string][]).map(([v,l]) => (
                   <button key={v} type="button" onClick={() => setF((p) => ({ ...p, approval_mode: v as "fast"|"flow"|"both" }))}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-body border ${f.approval_mode === v ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>{l}</button>
+                    className={`rounded-full border text-xs px-2 py-2 text-center transition-colors ${f.approval_mode === v ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>{l}</button>
                 ))}
               </div>
-              <p className="text-[11px] text-muted-foreground font-body">Simplificada = 1 clique · Detalhada = 4 etapas · Ambas = o cliente escolhe.</p>
+              <p className="text-[11px] text-muted-foreground mt-2 hidden md:block">
+                Simplificada = 1 clique · Detalhada = 4 etapas · Ambas = o cliente escolhe.
+              </p>
             </div>
+
+            {/* 4 — Mídia (direita no desktop, posição 4 no mobile) */}
+            <div className="order-4 md:col-start-2 md:row-start-1 md:row-span-5">
+              <label className="text-xs font-semibold mb-1.5 block">Mídia</label>
+              {editing?.id ? (
+                <CriaPostMedia postId={editing.id} />
+              ) : (
+                <p className="text-xs text-muted-foreground">Salve o post primeiro para anexar mídia.</p>
+              )}
+            </div>
+
+            {/* 5 — Legenda */}
+            <div className="order-5 md:col-start-1 md:row-start-4 space-y-1.5">
+              <Label className="text-xs font-body">Legenda</Label>
+              <Textarea value={f.caption ?? ""} onChange={(e) => setF((p) => ({ ...p, caption: e.target.value }))} rows={4} className="rounded-xl" />
+            </div>
+
+            {/* 6 — Roteiro / conteúdo */}
             {f.approval_mode !== "fast" && (
-              <div className="space-y-1.5"><Label className="text-xs font-body">Roteiro / conteúdo (etapa "Conteúdo")</Label>
-                <Textarea value={f.script ?? ""} onChange={(e) => setF((p) => ({ ...p, script: e.target.value }))} rows={4} className="rounded-xl" /></div>
-            )}
-            <div className="space-y-1.5"><Label className="text-xs font-body">Legenda</Label><Textarea value={f.caption ?? ""} onChange={(e) => setF((p) => ({ ...p, caption: e.target.value }))} rows={4} className="rounded-xl" /></div>
-            {/* só quando o post já existe (tem id salvo) — a mídia é adicionada depois que o post existe */}
-            {editing && (
-              <div className="space-y-1.5"><Label className="text-xs font-body">Mídia</Label><CriaPostMedia postId={editing.id} /></div>
+              <div className="order-6 md:col-start-1 md:row-start-5 space-y-1.5">
+                <Label className="text-xs font-body">Roteiro / conteúdo (etapa "Conteúdo")</Label>
+                <Textarea value={f.script ?? ""} onChange={(e) => setF((p) => ({ ...p, script: e.target.value }))} rows={4} className="rounded-xl" />
+              </div>
             )}
           </div>
           <DialogFooter className="mt-4">
