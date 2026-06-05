@@ -20,6 +20,9 @@ export type CrmClient = {
   renewal_date: string | null;
   services: string[] | null;
   brand_core: Record<string, string>;
+  persona: Record<string, string>;
+  diagnosis: Record<string, string>;
+  competitors: { name?: string; instagram?: string; followers?: string; frequency?: string; contentType?: string }[];
   active: boolean;
   notes: string | null;
   created_at: string;
@@ -44,6 +47,19 @@ export function useCrmClients() {
       const { data, error } = await sbFrom("crm_clients").select("*").eq("manager_id", user!.id).order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as CrmClient[];
+    },
+  });
+}
+
+export function useCrmClient(id: string | undefined) {
+  const { user } = useAuth();
+  return useQuery<CrmClient | null>({
+    queryKey: ["crm-client", id],
+    enabled: !!user?.id && !!id,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("crm_clients").select("*").eq("id", id!).maybeSingle();
+      if (error) throw error;
+      return (data as unknown as CrmClient) ?? null;
     },
   });
 }

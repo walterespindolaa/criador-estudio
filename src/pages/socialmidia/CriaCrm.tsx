@@ -1,18 +1,15 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Download, Search, Building2, Instagram, DollarSign, Trash2, ArrowRight, X, ImagePlus, Sparkles } from "lucide-react";
-import { toast } from "sonner";
+import { Plus, Download, Search, Building2, Instagram, DollarSign, ArrowRight } from "lucide-react";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import {
-  useCrmClients, useCreateCrmClient, useUpdateCrmClient, useDeleteCrmClient,
-  useImportCriaClients, useCrmClientRefs, useAddCrmRef, useDeleteCrmRef, type CrmClient,
+  useCrmClients, useCreateCrmClient, useImportCriaClients, type CrmClient,
 } from "@/hooks/useCrm";
 import { ModuleGate } from "@/components/accounts/ModuleGate";
 import { ManagerSectionTitle } from "@/components/accounts/ManagerSectionTitle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,15 +17,6 @@ import { PipelineBoard } from "@/components/accounts/crm/PipelineBoard";
 import { ContractsTab } from "@/components/accounts/crm/ContractsTab";
 import { cn } from "@/lib/utils";
 
-const BRAND_FIELDS: { key: string; label: string; multiline?: boolean }[] = [
-  { key: "archetype", label: "Arquétipo da marca" },
-  { key: "personality", label: "Personalidade", multiline: true },
-  { key: "toneOfVoice", label: "Tom de voz" },
-  { key: "communicationStyle", label: "Estilo de comunicação", multiline: true },
-  { key: "colorPalette", label: "Paleta de cores" },
-  { key: "typography", label: "Tipografia" },
-  { key: "visualExpression", label: "Expressão visual", multiline: true },
-];
 const brl = (v?: number | null) => `R$ ${Number(v ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 function initial(name?: string | null) { return name ? name.trim().charAt(0).toUpperCase() : "?"; }
 
@@ -60,11 +48,9 @@ function ClientsTab() {
   const { data: clients = [], isLoading } = useCrmClients();
   const importCria = useImportCriaClients();
   const createClient = useCreateCrmClient();
-  const delClient = useDeleteCrmClient();
 
   const [search, setSearch] = useState("");
   const [segFilter, setSegFilter] = useState<string | null>(null);
-  const [editing, setEditing] = useState<CrmClient | null>(null);
   const [creating, setCreating] = useState(false);
 
   // avatar dos clientes importados do cria
@@ -121,7 +107,7 @@ function ClientsTab() {
           {filtered.map((c) => {
             const avatar = c.cria_owner_id ? criaAvatar.get(c.cria_owner_id) : null;
             return (
-              <div key={c.id} className="group rounded-2xl border border-border bg-card p-5 flex flex-col gap-3 hover:shadow-md hover:border-primary/40 transition-all cursor-pointer" onClick={() => setEditing(c)}>
+              <div key={c.id} className="group rounded-2xl border border-border bg-card p-5 flex flex-col gap-3 hover:shadow-md hover:border-primary/40 transition-all cursor-pointer" onClick={() => navigate(`/socialmidia/criacrm/${c.id}`)}>
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary via-purple-600 to-pink-500 p-[2px] shrink-0 overflow-hidden">
                     <div className="w-full h-full rounded-2xl bg-card flex items-center justify-center overflow-hidden">
@@ -153,15 +139,8 @@ function ClientsTab() {
       <CreateClientDialog
         open={creating}
         onOpenChange={setCreating}
-        onCreate={async (input) => { const c = await createClient.mutateAsync(input); setCreating(false); setEditing(c); }}
+        onCreate={async (input) => { const c = await createClient.mutateAsync(input); setCreating(false); navigate(`/socialmidia/criacrm/${c.id}`); }}
         saving={createClient.isPending}
-      />
-
-      {/* EDITAR CLIENTE (cadastro + brand core + moodboard) */}
-      <EditClientDialog
-        client={editing}
-        onClose={() => setEditing(null)}
-        onDelete={async (id) => { if (confirm("Excluir este cliente?")) { await delClient.mutateAsync(id); setEditing(null); } }}
       />
     </div>
   );
@@ -193,117 +172,4 @@ function CreateClientDialog({ open, onOpenChange, onCreate, saving }: {
       </DialogContent>
     </Dialog>
   );
-}
-
-function EditClientDialog({ client, onClose, onDelete }: { client: CrmClient | null; onClose: () => void; onDelete: (id: string) => void; }) {
-  const update = useUpdateCrmClient();
-  const { data: refs = [] } = useCrmClientRefs(client?.id ?? null);
-  const addRef = useAddCrmRef(); const delRef = useDeleteCrmRef();
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  const [form, setForm] = useState<CrmClient | null>(client);
-  // sincroniza quando troca de cliente
-  if (client && (!form || form.id !== client.id)) setForm(client);
-
-  if (!client || !form) return null;
-  const isCria = !!client.cria_owner_id;
-  const bc = form.brand_core ?? {};
-
-  const save = async () => {
-    await update.mutateAsync({
-      id: form.id, name: form.name, instagram: form.instagram, email: form.email, phone: form.phone,
-      segment: form.segment, monthly_value: form.monthly_value, contract_date: form.contract_date,
-      renewal_date: form.renewal_date, notes: form.notes, brand_core: bc,
-    });
-    toast.success("Cliente salvo!");
-    onClose();
-  };
-  const onPickFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; e.target.value = "";
-    if (file) await addRef.mutateAsync({ crmClientId: form.id, file });
-  };
-
-  return (
-    <Dialog open={!!client} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-2xl max-h-[88vh] overflow-y-auto rounded-2xl">
-        <DialogHeader>
-          <DialogTitle className="font-display flex items-center gap-2">{form.name}{isCria && <Badge variant="secondary" className="text-[9px] h-4">cria</Badge>}</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-5 mt-2">
-          {/* Dados */}
-          <section className="space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Dados</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Nome"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="rounded-xl" /></Field>
-              <Field label="Segmento"><Input value={form.segment ?? ""} onChange={(e) => setForm({ ...form, segment: e.target.value })} className="rounded-xl" /></Field>
-              <Field label="Instagram"><Input value={form.instagram ?? ""} onChange={(e) => setForm({ ...form, instagram: e.target.value })} className="rounded-xl" /></Field>
-              <Field label="Telefone"><Input value={form.phone ?? ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="rounded-xl" /></Field>
-              <Field label="E-mail"><Input value={form.email ?? ""} onChange={(e) => setForm({ ...form, email: e.target.value })} className="rounded-xl" /></Field>
-              <Field label="Valor mensal (R$)"><Input type="number" value={form.monthly_value ?? 0} onChange={(e) => setForm({ ...form, monthly_value: Number(e.target.value) })} className="rounded-xl" /></Field>
-              <Field label="Início do contrato"><Input type="date" value={form.contract_date ?? ""} onChange={(e) => setForm({ ...form, contract_date: e.target.value || null })} className="rounded-xl" /></Field>
-              <Field label="Renovação"><Input type="date" value={form.renewal_date ?? ""} onChange={(e) => setForm({ ...form, renewal_date: e.target.value || null })} className="rounded-xl" /></Field>
-            </div>
-          </section>
-
-          {isCria && (
-            <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-xs font-body text-foreground flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary shrink-0" /> Brandbook, ideias e conteúdo deste cliente ficam no cria. Use “Abrir no cria” no card.
-            </div>
-          )}
-
-          {/* Brand core (só faz sentido editar aqui pra cliente externo) */}
-          {!isCria && (
-            <section className="space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Brand core</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {BRAND_FIELDS.map((f) => (
-                  <Field key={f.key} label={f.label} full={f.multiline}>
-                    {f.multiline
-                      ? <Textarea rows={2} value={bc[f.key] ?? ""} onChange={(e) => setForm({ ...form, brand_core: { ...bc, [f.key]: e.target.value } })} className="rounded-xl text-sm" />
-                      : <Input value={bc[f.key] ?? ""} onChange={(e) => setForm({ ...form, brand_core: { ...bc, [f.key]: e.target.value } })} className="rounded-xl" />}
-                  </Field>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Moodboard */}
-          <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Moodboard</h3>
-              <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={addRef.isPending}><ImagePlus className="h-3.5 w-3.5 mr-1.5" /> Adicionar</Button>
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickFile} />
-            </div>
-            {refs.length === 0 ? (
-              <p className="text-xs text-muted-foreground font-body">Nenhuma referência ainda.</p>
-            ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                {refs.map((r) => (
-                  <div key={r.id} className="relative group aspect-square rounded-xl overflow-hidden border border-border">
-                    <img src={r.image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
-                    <button onClick={() => delRef.mutate(r)} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><X className="h-3.5 w-3.5" /></button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <div className="space-y-1.5"><Label className="text-xs">Notas</Label><Textarea rows={2} value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="rounded-xl text-sm" /></div>
-        </div>
-
-        <div className="flex items-center justify-between gap-2 mt-6">
-          <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={() => onDelete(form.id)}><Trash2 className="h-4 w-4 mr-1.5" /> Excluir</Button>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose}>Fechar</Button>
-            <Button onClick={save} disabled={update.isPending}>Salvar</Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function Field({ label, children, full }: { label: string; children: React.ReactNode; full?: boolean }) {
-  return <div className={cn("space-y-1.5", full && "sm:col-span-2")}><Label className="text-xs">{label}</Label>{children}</div>;
 }
