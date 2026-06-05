@@ -1,11 +1,15 @@
 import { useRef, useState } from "react";
 import { useCriaPostMedia } from "@/hooks/useCriaPostMedia";
+import { PostMediaCarousel } from "@/components/shared/PostMediaCarousel";
+import { postAspect } from "@/lib/post-aspect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ImagePlus, Video, FileImage, Link2, X, Loader2, Play } from "lucide-react";
+import { ImagePlus, Video, FileImage, Link2, Loader2, Heart, MessageCircle, Send, Bookmark } from "lucide-react";
 import { toast } from "sonner";
 
-export function CriaPostMedia({ postId }: { postId: string }) {
+export function CriaPostMedia({ postId, platform, format, caption }: {
+  postId: string; platform: string; format: string; caption?: string;
+}) {
   const { list, uploadImage, uploadVideo, addDriveLink, remove } = useCriaPostMedia(postId);
   const imgRef = useRef<HTMLInputElement>(null);
   const vidRef = useRef<HTMLInputElement>(null);
@@ -31,6 +35,7 @@ export function CriaPostMedia({ postId }: { postId: string }) {
   };
 
   const media = list.data ?? [];
+  const handle = "@cliente";
 
   return (
     <div className="space-y-3">
@@ -52,22 +57,16 @@ export function CriaPostMedia({ postId }: { postId: string }) {
         </div>
       )}
 
-      {media.length > 0 ? (
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-          {media.map((m) => (
-            <div key={m.id} className="relative group aspect-square rounded-xl overflow-hidden border border-border bg-muted">
-              {m.provider === "bunny_stream" ? (
-                <div className="w-full h-full flex items-center justify-center bg-foreground/5"><Play className="h-6 w-6 text-muted-foreground" /></div>
-              ) : (
-                <img src={m.thumbnail_url || m.view_url || ""} alt={m.file_name} loading="lazy" className="w-full h-full object-cover" />
-              )}
-              <button type="button" onClick={() => remove.mutate(m.id)} className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"><X className="h-3.5 w-3.5" /></button>
-            </div>
-          ))}
+      {/* Prévia estilo post (igual o cliente vê) */}
+      <div className="bg-white border border-border rounded-2xl overflow-hidden">
+        <PostMediaCarousel media={media} aspect={postAspect(platform, format)} onRemove={(id) => remove.mutate(id)} />
+        <div className="flex items-center gap-4 px-3.5 pt-3 pb-1.5 text-foreground/80">
+          <Heart className="h-5 w-5" /><MessageCircle className="h-5 w-5" /><Send className="h-5 w-5" /><Bookmark className="h-5 w-5 ml-auto" />
         </div>
-      ) : (
-        !busy && <p className="text-xs text-muted-foreground font-body">Nenhuma mídia ainda. Adicione imagem, vídeo, GIF ou link do Drive.</p>
-      )}
+        {caption && caption.trim()
+          ? <p className="px-3.5 pb-3.5 text-[13px] leading-snug text-foreground whitespace-pre-wrap"><span className="font-bold mr-1.5">{handle}</span>{caption}</p>
+          : <p className="px-3.5 pb-3.5 text-xs text-muted-foreground">A legenda aparece aqui.</p>}
+      </div>
     </div>
   );
 }

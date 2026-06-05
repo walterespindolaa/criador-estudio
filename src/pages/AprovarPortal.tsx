@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Check, RotateCcw, Loader2, ImageOff, Sparkles, Heart, MessageCircle, Send, Bookmark } from "lucide-react";
+import { PostMediaCarousel } from "@/components/shared/PostMediaCarousel";
+import { postAspect } from "@/lib/post-aspect";
 
 type AnyRpc = (fn: string, args?: Record<string, unknown>) => ReturnType<typeof supabase.rpc>;
 const sbRpc = supabase.rpc.bind(supabase) as unknown as AnyRpc;
@@ -17,7 +19,7 @@ type MediaItem = {
 type PortalPost = {
   post_id: string; title: string; platform: string; format: string;
   caption: string | null; hook: string | null; script: string | null; content_blocks: unknown;
-  approval_mode: "fast" | "flow"; approval_stages: Record<string, string> | null;
+  approval_mode: "fast" | "flow" | "both"; approval_stages: Record<string, string> | null;
   approval_status: "pendente" | "ajuste_solicitado" | "aprovado";
   scheduled_date: string | null; media: MediaItem[];
   last_comment: string | null; last_comment_role: string | null;
@@ -32,16 +34,6 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 const STAGE_ORDER = ["tema", "conteudo", "midia", "legenda"] as const;
 type Stage = (typeof STAGE_ORDER)[number];
 const STAGE_LABEL: Record<Stage, string> = { tema: "Tema", conteudo: "Conteúdo", midia: "Mídia", legenda: "Legenda" };
-
-function Media({ item }: { item: MediaItem }) {
-  const isVideo = (item.file_type?.startsWith("video")) || !!item.bunny_video_id;
-  const src = item.view_url || item.thumbnail_url || item.download_url || "";
-  if (isVideo && item.view_url) {
-    return <iframe src={item.view_url} className="w-full h-full bg-black" allow="autoplay; fullscreen; picture-in-picture" loading="lazy" title={item.file_name || "vídeo"} />;
-  }
-  if (src) return <img src={src} alt={item.file_name || ""} className="w-full h-full object-cover bg-muted" loading="lazy" />;
-  return <div className="w-full h-full bg-muted flex items-center justify-center text-muted-foreground"><ImageOff className="h-8 w-8" /></div>;
-}
 
 function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
   const media = Array.isArray(post.media) ? post.media : [];
@@ -58,16 +50,7 @@ function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
         <span className="ml-auto text-foreground font-bold tracking-widest">···</span>
       </div>
 
-      <div className="relative w-full bg-black" style={{ aspectRatio: "4 / 5" }}>
-        {media.length > 1 ? (
-          <div className="flex w-full h-full overflow-x-auto snap-x snap-mandatory">
-            {media.map((m, i) => <div key={i} className="w-full h-full shrink-0 snap-center"><Media item={m} /></div>)}
-          </div>
-        ) : media.length === 1 ? <Media item={media[0]} /> : (
-          <div className="w-full h-full flex items-center justify-center text-white/40"><ImageOff className="h-10 w-10" /></div>
-        )}
-        {media.length > 1 && <span className="absolute top-3 right-3 bg-black/55 text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full">1/{media.length}</span>}
-      </div>
+      <PostMediaCarousel media={media} aspect={postAspect(post.platform, post.format)} />
 
       <div className="flex items-center gap-4 px-3.5 pt-3 pb-1.5 text-foreground">
         <Heart className="h-6 w-6" /><MessageCircle className="h-6 w-6" /><Send className="h-6 w-6" />
@@ -101,7 +84,7 @@ function PostApproval({ client, post, busy, onApproveFast, onAdjustFast, onAppro
   onApproveFast: (id: string) => void; onAdjustFast: (id: string, comment: string) => void;
   onApproveStage: (id: string, stage: Stage) => void; onAdjustStage: (id: string, stage: Stage, comment: string) => void;
 }) {
-  const mode = (post.approval_mode as "fast" | "flow" | "both") ?? "fast";
+  const mode = post.approval_mode ?? "fast";
   const [view, setView] = useState<"fast" | "flow">(mode === "flow" ? "flow" : "fast");
   const showFlow = view === "flow";
   const stStatus = (s: Stage) => (post.approval_stages?.[s] ?? "pendente");

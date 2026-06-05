@@ -181,9 +181,9 @@ function ClientDetail({ client, onBack }: { client: ExternalClient; onBack: () =
       )}
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-md md:max-w-2xl rounded-2xl max-h-[88vh] overflow-y-auto">
+        <DialogContent className="max-w-md md:max-w-4xl bg-white rounded-2xl max-h-[88vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="font-display">{editing ? "Editar post" : "Novo post"}</DialogTitle></DialogHeader>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-[1.15fr_0.85fr] md:gap-5">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-[1.1fr_0.9fr] md:gap-5">
 
             {/* 1 — Título */}
             <div className="order-1 md:col-start-1 md:row-start-1 space-y-1.5">
@@ -231,7 +231,7 @@ function ClientDetail({ client, onBack }: { client: ExternalClient; onBack: () =
             <div className="order-4 md:col-start-2 md:row-start-1 md:row-span-5">
               <label className="text-xs font-semibold mb-1.5 block">Mídia</label>
               {editing?.id ? (
-                <CriaPostMedia postId={editing.id} />
+                <CriaPostMedia postId={editing.id} platform={f.platform} format={f.format} caption={f.caption ?? undefined} />
               ) : (
                 <p className="text-xs text-muted-foreground">Salve o post primeiro para anexar mídia.</p>
               )}
