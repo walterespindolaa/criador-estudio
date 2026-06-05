@@ -17,6 +17,8 @@ project_id = "exuxlwdnkgmhtnwoyvwo"
     verify_jwt = true
   [functions.bunny-delete-video]
     verify_jwt = true
+  [functions.bunny-video-status]
+    verify_jwt = true
   [functions.admin-user-actions]
     verify_jwt = true
   [functions.manager-self-subscribe]
