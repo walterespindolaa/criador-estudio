@@ -19,6 +19,7 @@ export interface CriaMedia {
   view_url: string | null;
   thumbnail_url: string | null;
   bunny_video_id: string | null;
+  position: number | null;
 }
 
 const isHeic = (f: File) => /heic|heif/i.test(f.type) || /\.(heic|heif)$/i.test(f.name);
@@ -40,8 +41,9 @@ export function useCriaPostMedia(postId: string | null) {
     enabled: !!postId,
     queryFn: async (): Promise<CriaMedia[]> => {
       const { data, error } = await sbFrom("external_media_refs")
-        .select("id, provider, external_file_id, file_name, file_type, view_url, thumbnail_url, bunny_video_id")
+        .select("id, provider, external_file_id, file_name, file_type, view_url, thumbnail_url, bunny_video_id, position")
         .eq("post_id", postId)
+        .order("position", { ascending: true, nullsFirst: true })
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data ?? []) as CriaMedia[];
@@ -130,5 +132,13 @@ export function useCriaPostMedia(postId: string | null) {
     onSuccess: invalidate,
   });
 
-  return { list, uploadImage, uploadVideo, addDriveLink, remove };
+  const reorder = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await sbRpc("criapost_reorder_media", { p_post_id: postId, p_ids: ids });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: invalidate,
+  });
+
+  return { list, uploadImage, uploadVideo, addDriveLink, remove, reorder };
 }
