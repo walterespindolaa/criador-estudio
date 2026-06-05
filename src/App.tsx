@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -40,6 +40,13 @@ const TrocarSenha = lazy(() => import("./pages/app/TrocarSenha"));
 const Assinar = lazy(() => import("./pages/app/Assinar"));
 const BioPage = lazy(() => import("./pages/BioPage"));
 const AprovarPortal = lazy(() => import("./pages/AprovarPortal"));
+const ManagerLayout = lazy(() => import("./components/accounts/ManagerLayout"));
+const ManagerHome = lazy(() => import("./pages/socialmidia/ManagerHome"));
+const CriaPost = lazy(() => import("./pages/socialmidia/CriaPost"));
+const Parceria = lazy(() => import("./pages/socialmidia/Parceria"));
+const Comissoes = lazy(() => import("./pages/socialmidia/Comissoes"));
+const Contas = lazy(() => import("./pages/socialmidia/Contas"));
+const Aprovacoes = lazy(() => import("./pages/socialmidia/Aprovacoes"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -99,6 +106,17 @@ const App = () => (
                 <Route path="brandbook" element={<ErrorBoundary><Brandbook /></ErrorBoundary>} />
                 <Route path="linkinbio" element={<ErrorBoundary><LinkInBio /></ErrorBoundary>} />
                 <Route path="configuracoes" element={<ErrorBoundary><Configuracoes /></ErrorBoundary>} />
+              </Route>
+              <Route path="/socialmidia" element={
+                <ProtectedRoute><ManagerLayout /></ProtectedRoute>
+              }>
+                <Route index element={<Navigate to="/socialmidia/dashboard" replace />} />
+                <Route path="dashboard" element={<ErrorBoundary><ManagerHome /></ErrorBoundary>} />
+                <Route path="criapost" element={<ErrorBoundary><CriaPost /></ErrorBoundary>} />
+                <Route path="parceria" element={<ErrorBoundary><Parceria /></ErrorBoundary>} />
+                <Route path="comissoes" element={<ErrorBoundary><Comissoes /></ErrorBoundary>} />
+                <Route path="contas" element={<ErrorBoundary><Contas /></ErrorBoundary>} />
+                <Route path="aprovacoes" element={<ErrorBoundary><Aprovacoes /></ErrorBoundary>} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

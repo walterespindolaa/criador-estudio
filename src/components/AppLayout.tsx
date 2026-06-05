@@ -19,7 +19,6 @@ import { TrialBanner } from "@/components/TrialBanner";
 import { StorageWarningBanner } from "@/components/StorageWarningBanner";
 import { ManagingBanner } from "@/components/accounts/ManagingBanner";
 import { AccountSwitcher } from "@/components/accounts/AccountSwitcher";
-import { ManagerHub } from "@/components/accounts/ManagerHub";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useLastSeen } from "@/hooks/useLastSeen";
 import { installOverflowDetector } from "@/lib/overflow-detector";
@@ -52,9 +51,9 @@ const AppLayout = () => {
     return <Navigate to="/app/trocar-senha" replace />;
   }
 
-  // Social media (manager) sem cliente ativo: vê tela exclusiva de seleção, fora do layout normal
+  // Social media (manager) sem cliente ativo: vai pra área dedicada /socialmidia
   if (!isLoading && profile?.account_type === "manager" && !isManaging) {
-    return <ManagerHub />;
+    return <Navigate to="/socialmidia/dashboard" replace />;
   }
 
   if (!isLoading && profile && profile.onboarding_completed === false && profile.account_type !== "manager") {

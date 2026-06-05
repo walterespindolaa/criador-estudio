@@ -1,4 +1,5 @@
 import { useActiveAccount } from "@/contexts/AccountContext";
+import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
 import { ChevronsUpDown, Settings, User, Users } from "lucide-react";
 import {
@@ -8,6 +9,8 @@ import {
 
 export function AccountSwitcher({ compact = false }: { compact?: boolean }) {
   const { managedAccounts, hasManagedAccounts, activeAccountId, isManaging, setActiveAccount } = useActiveAccount();
+  const { profile } = useProfile();
+  const isManager = profile?.account_type === "manager";
   const navigate = useNavigate();
   if (!hasManagedAccounts) return null;
 
@@ -47,7 +50,7 @@ export function AccountSwitcher({ compact = false }: { compact?: boolean }) {
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => { setActiveAccount(null); navigate("/app/configuracoes"); }}>
+        <DropdownMenuItem onClick={() => { setActiveAccount(null); navigate(isManager ? "/socialmidia/dashboard" : "/app/configuracoes"); }}>
           <Settings className="h-4 w-4 mr-2" /> Minha conta (configurações)
         </DropdownMenuItem>
       </DropdownMenuContent>
