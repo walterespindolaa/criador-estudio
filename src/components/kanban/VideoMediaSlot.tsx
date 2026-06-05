@@ -26,13 +26,14 @@ export function VideoMediaSlot({ viewUrl, videoGuid, className }: {
   className?: string;
 }) {
   const [ready, setReady] = useState(false);
+  const [progress, setProgress] = useState<number | null>(null);
 
   useEffect(() => {
     if (!videoGuid) { setReady(true); return; }
     let cancelled = false;
     let timer: number | undefined;
     let attempts = 0;
-    const MAX_ATTEMPTS = 40; // ~4 min; depois mostra o player de qualquer forma
+    const MAX_ATTEMPTS = 60; // ~5 min de segurança
 
     const check = async () => {
       attempts += 1;
@@ -41,11 +42,13 @@ export function VideoMediaSlot({ viewUrl, videoGuid, className }: {
           body: { videoGuid },
         });
         if (cancelled) return;
-        if ((data as { ready?: boolean } | null)?.ready) { setReady(true); return; }
+        const d = data as { ready?: boolean; encodeProgress?: number | null } | null;
+        if (typeof d?.encodeProgress === "number") setProgress(d.encodeProgress);
+        if (d?.ready) { setReady(true); return; }
       } catch { /* tenta de novo */ }
       if (!cancelled) {
         if (attempts >= MAX_ATTEMPTS) { setReady(true); return; }
-        timer = window.setTimeout(check, 6000);
+        timer = window.setTimeout(check, 5000);
       }
     };
     check();
@@ -53,5 +56,10 @@ export function VideoMediaSlot({ viewUrl, videoGuid, className }: {
   }, [videoGuid]);
 
   if (ready) return <VideoEmbed viewUrl={viewUrl} className={className} />;
-  return <MediaPreparingPlaceholder label="Preparando vídeo…" />;
+  return (
+    <MediaPreparingPlaceholder
+      pct={progress}
+      label={progress != null ? `Preparando vídeo… ${progress}%` : "Preparando vídeo…"}
+    />
+  );
 }
