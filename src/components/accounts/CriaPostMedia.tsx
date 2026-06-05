@@ -25,7 +25,7 @@ export function CriaPostMedia({ postId, platform, format, caption, handle }: {
   };
   const onVid = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]; e.target.value = ""; if (!f) return;
-    try { await uploadVideo.mutateAsync(f); toast.success("Vídeo adicionado"); }
+    try { await uploadVideo.mutateAsync(f); toast.success("Vídeo enviado, processando…"); }
     catch (err) { toast.error(err instanceof Error ? err.message : "Falha no upload"); }
   };
   const onDrive = async () => {
@@ -42,6 +42,7 @@ export function CriaPostMedia({ postId, platform, format, caption, handle }: {
   const aspect = postAspect(platform, format);
   const vertical = aspect === "9 / 16";
   const h = handle ? (handle.startsWith("@") ? handle : "@" + handle) : "@cliente";
+  const onReady = () => toast.success("Vídeo pronto!");
 
   return (
     <div className="space-y-3">
@@ -63,22 +64,23 @@ export function CriaPostMedia({ postId, platform, format, caption, handle }: {
         </div>
       )}
 
-      <div className="bg-white border border-border rounded-2xl overflow-hidden">
+      <div className={`bg-white border border-border rounded-2xl overflow-hidden ${vertical ? "max-w-[300px]" : ""}`}>
         {vertical ? (
           <div className="relative">
-            <PostMediaCarousel media={media} aspect={aspect} onRemove={onRemoveMedia} />
-            <div className="absolute right-2.5 bottom-3 z-10 flex flex-col items-center gap-3.5 text-white drop-shadow-md pointer-events-none">
+            <PostMediaCarousel media={media} aspect={aspect} onRemove={onRemoveMedia} onVideoReady={onReady} />
+            <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/65 to-transparent pointer-events-none" />
+            <div className="absolute right-3 bottom-14 z-10 flex flex-col items-center gap-3.5 text-white pointer-events-none [filter:drop-shadow(0_1px_2px_rgba(0,0,0,.6))]">
               <Heart className="h-6 w-6" /><MessageCircle className="h-6 w-6" /><Send className="h-6 w-6" /><Bookmark className="h-6 w-6" />
             </div>
             {caption?.trim() && (
-              <div className="absolute left-3 right-14 bottom-3 z-10 text-white text-[12px] leading-snug drop-shadow-md pointer-events-none line-clamp-2">
+              <div className="absolute left-3 right-14 bottom-3 z-10 text-white text-[12px] leading-snug pointer-events-none line-clamp-2 [text-shadow:0_1px_3px_rgba(0,0,0,.6)]">
                 <span className="font-bold mr-1">{h}</span>{caption}
               </div>
             )}
           </div>
         ) : (
           <>
-            <PostMediaCarousel media={media} aspect={aspect} onRemove={onRemoveMedia} />
+            <PostMediaCarousel media={media} aspect={aspect} onRemove={onRemoveMedia} onVideoReady={onReady} />
             <div className="flex items-center gap-4 px-3.5 pt-3 pb-1.5 text-foreground/80">
               <Heart className="h-5 w-5" /><MessageCircle className="h-5 w-5" /><Send className="h-5 w-5" /><Bookmark className="h-5 w-5 ml-auto" />
             </div>

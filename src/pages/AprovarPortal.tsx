@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, RotateCcw, Loader2, ImageOff, Sparkles, Heart, MessageCircle, Send, Bookmark } from "lucide-react";
+import { Check, RotateCcw, Loader2, ImageOff, Sparkles, Heart, MessageCircle, Send, Bookmark, Zap, ListChecks } from "lucide-react";
 import { PostMediaCarousel } from "@/components/shared/PostMediaCarousel";
 import { postAspect } from "@/lib/post-aspect";
 
@@ -34,6 +34,7 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 const STAGE_ORDER = ["tema", "conteudo", "midia", "legenda"] as const;
 type Stage = (typeof STAGE_ORDER)[number];
 const STAGE_LABEL: Record<Stage, string> = { tema: "Tema", conteudo: "Conteúdo", midia: "Mídia", legenda: "Legenda" };
+const STAGE_ICON: Record<Stage, string> = { tema: "💡", conteudo: "📝", midia: "🖼️", legenda: "✍️" };
 
 function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
   const media = Array.isArray(post.media) ? post.media : [];
@@ -55,12 +56,13 @@ function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
       {vertical ? (
         <div className="relative">
           <PostMediaCarousel media={media} aspect={aspect} />
-          <div className="absolute right-2.5 bottom-3 z-10 flex flex-col items-center gap-4 text-white drop-shadow-md pointer-events-none">
-            <Heart className="h-6 w-6" /><MessageCircle className="h-6 w-6" /><Send className="h-6 w-6" /><Bookmark className="h-6 w-6" />
+          <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
+          <div className="absolute right-3 bottom-16 z-10 flex flex-col items-center gap-4 text-white pointer-events-none [filter:drop-shadow(0_1px_2px_rgba(0,0,0,.6))]">
+            <Heart className="h-7 w-7" /><MessageCircle className="h-7 w-7" /><Send className="h-7 w-7" /><Bookmark className="h-7 w-7" />
           </div>
           {post.caption && (
-            <div className="absolute left-3 right-14 bottom-3 z-10 text-white text-[12.5px] leading-snug drop-shadow-md pointer-events-none line-clamp-2">
-              <span className="font-bold mr-1">{handle}</span>{post.caption}
+            <div className="absolute left-3.5 right-16 bottom-3.5 z-10 text-white text-[13px] leading-snug pointer-events-none line-clamp-3 [text-shadow:0_1px_3px_rgba(0,0,0,.6)]">
+              <span className="font-bold mr-1.5">{handle}</span>{post.caption}
             </div>
           )}
         </div>
@@ -70,9 +72,7 @@ function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
           <div className="flex items-center gap-4 px-3.5 pt-3 pb-1.5 text-foreground">
             <Heart className="h-6 w-6" /><MessageCircle className="h-6 w-6" /><Send className="h-6 w-6" /><Bookmark className="h-6 w-6 ml-auto" />
           </div>
-          {post.caption && (
-            <p className="px-3.5 pb-4 text-[13.5px] leading-snug text-foreground"><span className="font-bold mr-1.5">{handle}</span>{post.caption}</p>
-          )}
+          {post.caption && <p className="px-3.5 pb-4 text-[13.5px] leading-snug text-foreground"><span className="font-bold mr-1.5">{handle}</span>{post.caption}</p>}
         </>
       )}
     </article>
@@ -109,93 +109,94 @@ function PostApproval({ client, post, busy, onApproveFast, onAdjustFast, onAppro
   const [adjOpen, setAdjOpen] = useState(false);
   const [comment, setComment] = useState("");
   const fullyApproved = post.approval_status === "aprovado";
+  const approvedCount = STAGE_ORDER.filter((s) => stStatus(s) === "aprovado").length;
+  const vertical = postAspect(post.platform, post.format) === "9 / 16";
 
   const openAdjust = () => { setAdjOpen(true); setComment(""); };
   const sendFast = () => { onAdjustFast(post.post_id, comment.trim()); setAdjOpen(false); setComment(""); };
   const sendStage = () => { onAdjustStage(post.post_id, tab, comment.trim()); setAdjOpen(false); setComment(""); };
 
   return (
-    <div className="border-b border-border pb-9 mb-9 last:border-0 last:pb-0 last:mb-0">
-      <div className="flex flex-col md:flex-row md:items-start gap-6 md:gap-7 md:justify-center">
-        {/* esquerda: post */}
-        <div className="w-full max-w-[420px] md:w-[372px] md:max-w-none md:shrink-0 mx-auto md:mx-0">
+    <div className="border-b border-border pb-10 mb-10 last:border-0 last:pb-0 last:mb-0">
+      <div className="flex flex-col md:flex-row md:items-start gap-6 md:gap-8 md:justify-center">
+        <div className={`w-full mx-auto md:mx-0 md:shrink-0 ${vertical ? "max-w-[330px] md:w-[330px]" : "max-w-[420px] md:w-[388px]"}`}>
           <CardIG client={client} post={post} />
         </div>
-
-        {/* direita: aprovação */}
-        <div className="w-full max-w-[420px] md:flex-1 md:max-w-[420px] mx-auto md:mx-0">
-          <div className="bg-card border border-border rounded-2xl p-5 md:sticky md:top-[88px]">
+        <div className="w-full max-w-[440px] md:flex-1 md:max-w-[440px] mx-auto md:mx-0">
+          <div className="bg-card border border-border rounded-3xl p-6 md:sticky md:top-[88px] shadow-[0_8px_30px_rgba(27,26,24,0.05)]">
             {mode === "both" && (
-              <div className="flex bg-muted rounded-xl p-1 mb-4">
-                <button onClick={() => setView("fast")} className={`flex-1 text-xs font-body font-bold py-2 rounded-lg transition-colors ${view === "fast" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>Rápida</button>
-                <button onClick={() => setView("flow")} className={`flex-1 text-xs font-body font-bold py-2 rounded-lg transition-colors ${view === "flow" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>Detalhada</button>
+              <div className="flex bg-muted rounded-2xl p-1.5 mb-5">
+                <button onClick={() => setView("fast")} className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-body font-extrabold py-3 rounded-xl transition-colors ${view === "fast" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}><Zap className="h-4 w-4" /> Rápida</button>
+                <button onClick={() => setView("flow")} className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-body font-extrabold py-3 rounded-xl transition-colors ${view === "flow" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}><ListChecks className="h-4 w-4" /> Detalhada</button>
               </div>
             )}
             {!showFlow ? (
               <>
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <h3 className="text-base font-display font-extrabold text-foreground">Esta publicação</h3>
-                  <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${STATUS[post.approval_status].cls}`}>{STATUS[post.approval_status].label}</span>
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <h3 className="text-lg font-display font-extrabold text-foreground">Esta publicação</h3>
+                  <span className={`text-[11px] font-bold px-3 py-1 rounded-full ${STATUS[post.approval_status].cls}`}>{STATUS[post.approval_status].label}</span>
                 </div>
-                <p className="text-xs text-muted-foreground font-body mb-3">{post.format} · {post.platform}</p>
+                <p className="text-xs text-muted-foreground font-body mb-4 capitalize">{post.format} · {post.platform}</p>
                 {post.last_comment && post.last_comment_role === "cliente_externo" && (
-                  <div className="text-xs font-body text-orange-700 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2 mb-3">Você pediu: "{post.last_comment}"</div>
+                  <div className="text-xs font-body text-orange-700 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2.5 mb-4">Você pediu: "{post.last_comment}"</div>
                 )}
                 {fullyApproved ? (
-                  <div className="flex items-center gap-1.5 text-sm font-body font-semibold text-green-700"><Check className="h-4 w-4" /> Aprovado — obrigada!</div>
+                  <div className="flex items-center gap-2 text-sm font-body font-bold text-green-700 bg-green-50 rounded-2xl px-4 py-3.5"><Check className="h-5 w-5" /> Aprovado — obrigada!</div>
                 ) : !adjOpen ? (
-                  <div className="flex gap-2">
-                    <Button className="flex-1 h-11 rounded-xl" onClick={() => onApproveFast(post.post_id)} disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1.5" /> Aprovar</>}</Button>
-                    <Button variant="outline" className="h-11 rounded-xl" onClick={openAdjust} disabled={busy}><RotateCcw className="h-4 w-4 mr-1.5" /> Pedir ajuste</Button>
+                  <div className="flex gap-3">
+                    <Button className="flex-1 h-14 rounded-2xl text-base font-bold shadow-lg shadow-primary/25" onClick={() => onApproveFast(post.post_id)} disabled={busy}>{busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Check className="h-5 w-5 mr-1.5" /> Aprovar</>}</Button>
+                    <Button variant="secondary" className="h-14 rounded-2xl px-5" onClick={openAdjust} disabled={busy}><RotateCcw className="h-4 w-4 mr-1.5" /> Ajuste</Button>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="O que você quer ajustar?" className="rounded-xl" rows={3} />
-                    <div className="flex gap-2">
-                      <Button className="flex-1 h-11 rounded-xl" disabled={busy || !comment.trim()} onClick={sendFast}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar ajuste"}</Button>
-                      <Button variant="ghost" className="h-11 rounded-xl" onClick={() => setAdjOpen(false)} disabled={busy}>Cancelar</Button>
+                  <div className="space-y-2.5">
+                    <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="O que você quer ajustar?" className="rounded-2xl" rows={3} />
+                    <div className="flex gap-2.5">
+                      <Button className="flex-1 h-12 rounded-2xl" disabled={busy || !comment.trim()} onClick={sendFast}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar ajuste"}</Button>
+                      <Button variant="ghost" className="h-12 rounded-2xl" onClick={() => setAdjOpen(false)} disabled={busy}>Cancelar</Button>
                     </div>
                   </div>
                 )}
               </>
             ) : (
               <>
-                <h3 className="text-base font-display font-extrabold text-foreground">Aprovação por etapas</h3>
-                <p className="text-xs text-muted-foreground font-body mb-3">{STAGE_ORDER.filter((s) => stStatus(s) === "aprovado").length} de 4 etapas aprovadas</p>
-                <div className="grid grid-cols-2 gap-2 mb-4">
+                <h3 className="text-lg font-display font-extrabold text-foreground">Aprovação por etapas</h3>
+                <div className="flex items-center gap-3 mt-3 mb-5">
+                  <div className="flex-1 h-2 rounded-full bg-primary/10 overflow-hidden"><div className="h-full bg-primary rounded-full transition-all" style={{ width: `${(approvedCount / 4) * 100}%` }} /></div>
+                  <span className="text-xs font-bold text-primary shrink-0">{approvedCount} de 4</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3 mb-5">
                   {STAGE_ORDER.map((s) => {
-                    const st = stStatus(s);
+                    const st = stStatus(s); const on = tab === s;
                     return (
                       <button key={s} onClick={() => { setTab(s); setAdjOpen(false); }}
-                        className={`text-left rounded-xl border px-3 py-2 transition-colors ${tab === s ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/30"}`}>
-                        <span className="block text-[13px] font-bold text-foreground">{STAGE_LABEL[s]}</span>
-                        <span className={`block text-[10.5px] font-bold mt-0.5 ${st === "aprovado" ? "text-green-700" : st === "ajuste_solicitado" ? "text-orange-700" : "text-amber-700"}`}>
+                        className={`text-left rounded-2xl border-[1.5px] p-4 transition-colors ${on ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/30"}`}>
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg mb-2.5 ${on ? "bg-card" : "bg-primary/5"}`}>{STAGE_ICON[s]}</div>
+                        <span className="block text-[15px] font-display font-bold text-foreground">{STAGE_LABEL[s]}</span>
+                        <span className={`inline-flex items-center gap-1 text-[11px] font-bold mt-1.5 px-2 py-0.5 rounded-full ${st === "aprovado" ? "bg-green-100 text-green-700" : st === "ajuste_solicitado" ? "bg-orange-100 text-orange-700" : "bg-amber-100 text-amber-700"}`}>
                           {st === "aprovado" ? "✓ Aprovado" : st === "ajuste_solicitado" ? "↺ Em ajuste" : "⏳ Revisar"}
                         </span>
                       </button>
                     );
                   })}
                 </div>
-
                 <StageContent post={post} stage={tab} />
-
                 {stStatus(tab) === "aprovado" ? (
-                  <div className="mt-4 flex items-center gap-1.5 text-sm font-body font-semibold text-green-700"><Check className="h-4 w-4" /> Etapa aprovada</div>
+                  <div className="mt-5 flex items-center gap-2 text-sm font-body font-bold text-green-700 bg-green-50 rounded-2xl px-4 py-3.5"><Check className="h-5 w-5" /> Etapa aprovada</div>
                 ) : !adjOpen ? (
-                  <div className="flex gap-2 mt-4">
-                    <Button className="flex-1 h-11 rounded-xl" onClick={() => onApproveStage(post.post_id, tab)} disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1.5" /> Aprovar etapa</>}</Button>
-                    <Button variant="outline" className="h-11 rounded-xl" onClick={openAdjust} disabled={busy}><RotateCcw className="h-4 w-4 mr-1.5" /> Ajuste</Button>
+                  <div className="flex gap-3 mt-5">
+                    <Button className="flex-1 h-14 rounded-2xl text-base font-bold shadow-lg shadow-primary/25" onClick={() => onApproveStage(post.post_id, tab)} disabled={busy}>{busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Check className="h-5 w-5 mr-1.5" /> Aprovar etapa</>}</Button>
+                    <Button variant="secondary" className="h-14 rounded-2xl px-5" onClick={openAdjust} disabled={busy}><RotateCcw className="h-4 w-4 mr-1.5" /> Ajuste</Button>
                   </div>
                 ) : (
-                  <div className="space-y-2 mt-4">
-                    <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder={`O que ajustar em "${STAGE_LABEL[tab]}"?`} className="rounded-xl" rows={3} />
-                    <div className="flex gap-2">
-                      <Button className="flex-1 h-11 rounded-xl" disabled={busy || !comment.trim()} onClick={sendStage}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar ajuste"}</Button>
-                      <Button variant="ghost" className="h-11 rounded-xl" onClick={() => setAdjOpen(false)} disabled={busy}>Cancelar</Button>
+                  <div className="space-y-2.5 mt-5">
+                    <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder={`O que ajustar em "${STAGE_LABEL[tab]}"?`} className="rounded-2xl" rows={3} />
+                    <div className="flex gap-2.5">
+                      <Button className="flex-1 h-12 rounded-2xl" disabled={busy || !comment.trim()} onClick={sendStage}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar ajuste"}</Button>
+                      <Button variant="ghost" className="h-12 rounded-2xl" onClick={() => setAdjOpen(false)} disabled={busy}>Cancelar</Button>
                     </div>
                   </div>
                 )}
-                {fullyApproved && <div className="mt-4 flex items-center gap-1.5 text-sm font-body font-semibold text-green-700"><Check className="h-4 w-4" /> Tudo aprovado — obrigada!</div>}
+                {fullyApproved && <div className="mt-5 flex items-center gap-2 text-sm font-body font-bold text-green-700 bg-green-50 rounded-2xl px-4 py-3.5"><Check className="h-5 w-5" /> Tudo aprovado — obrigada!</div>}
               </>
             )}
           </div>
