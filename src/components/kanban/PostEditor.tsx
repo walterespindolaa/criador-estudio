@@ -1426,7 +1426,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                         type="date"
                         value={scheduledDate}
                         onChange={(e) => setScheduledDate(e.target.value)}
-                        className="rounded-xl h-10 text-sm w-full min-w-0 px-2"
+                        className="rounded-xl h-10 text-sm w-full min-w-0 px-3 text-left [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:text-left"
                       />
                     </div>
                     <div className="flex-1 min-w-0 space-y-1">
@@ -1437,7 +1437,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                         type="time"
                         value={scheduledTime}
                         onChange={(e) => setScheduledTime(e.target.value)}
-                        className="rounded-xl h-10 text-sm w-full min-w-0 px-2"
+                        className="rounded-xl h-10 text-sm w-full min-w-0 px-3 text-left [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:text-left"
                       />
                     </div>
                   </div>
