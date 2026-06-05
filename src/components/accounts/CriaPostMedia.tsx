@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ImagePlus, Video, FileImage, Link2, Loader2, Heart, MessageCircle, Send, Bookmark } from "lucide-react";
 import { toast } from "sonner";
+import { CriaPostPublishButton } from "@/components/accounts/CriaPostPublishButton";
 
-export function CriaPostMedia({ postId, platform, format, caption, handle }: {
-  postId: string; platform: string; format: string; caption?: string; handle?: string;
+export function CriaPostMedia({ postId, platform, format, caption, handle, approved }: {
+  postId: string; platform: string; format: string; caption?: string; handle?: string; approved?: boolean;
 }) {
   const { list, uploadImage, uploadVideo, addDriveLink, remove } = useCriaPostMedia(postId);
   const imgRef = useRef<HTMLInputElement>(null);
@@ -46,6 +47,12 @@ export function CriaPostMedia({ postId, platform, format, caption, handle }: {
 
   return (
     <div className="space-y-3">
+      {approved && (
+        <div className="rounded-2xl border border-green-200 bg-green-50 p-3 space-y-2">
+          <p className="text-xs font-body font-bold text-green-800">Aprovado pelo cliente — pronto pra publicar.</p>
+          <CriaPostPublishButton caption={caption ?? ""} media={media} />
+        </div>
+      )}
       <div className="flex items-center gap-2 flex-wrap">
         <input ref={imgRef} type="file" accept="image/*,.heic,.heif" hidden onChange={onImg} />
         <input ref={vidRef} type="file" accept="video/*" hidden onChange={onVid} />

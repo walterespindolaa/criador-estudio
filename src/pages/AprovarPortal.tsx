@@ -122,7 +122,7 @@ function PostApproval({ client, post, busy, onApproveFast, onAdjustFast, onAppro
         <div className={`w-full mx-auto md:mx-0 md:shrink-0 ${vertical ? "max-w-[330px] md:w-[330px]" : "max-w-[420px] md:w-[388px]"}`}>
           <CardIG client={client} post={post} />
         </div>
-        <div className="w-full max-w-[440px] md:flex-1 md:max-w-[440px] mx-auto md:mx-0">
+        <div className="w-full max-w-[440px] md:flex-1 md:max-w-[660px] mx-auto md:mx-0">
           <div className="bg-card border border-border rounded-3xl p-6 md:sticky md:top-[88px] shadow-[0_8px_30px_rgba(27,26,24,0.05)]">
             {mode === "both" && (
               <div className="flex bg-muted rounded-2xl p-1.5 mb-5">
@@ -254,7 +254,7 @@ export default function AprovarPortal() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card/60 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-5 py-3.5 flex items-center gap-3">
+        <div className="max-w-6xl mx-auto px-5 py-3.5 flex items-center gap-3">
           <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-primary via-purple-600 to-pink-500 p-[2px] shrink-0">
             <div className="w-full h-full rounded-2xl bg-card overflow-hidden flex items-center justify-center">
               {c.client_logo ? <img src={c.client_logo} alt="" className="w-full h-full object-cover" /> : <span className="font-display font-extrabold text-primary">{(c.client_name || "?").charAt(0).toUpperCase()}</span>}
@@ -265,7 +265,7 @@ export default function AprovarPortal() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-5 py-7">
+      <main className="max-w-6xl mx-auto px-5 py-7">
         <div className="text-center mb-7">
           <h1 className="font-display font-extrabold text-foreground text-xl sm:text-2xl">Aprove seus posts</h1>
           <p className="text-sm text-muted-foreground font-body mt-1">Revise o conteúdo e aprove ou peça ajustes.</p>
