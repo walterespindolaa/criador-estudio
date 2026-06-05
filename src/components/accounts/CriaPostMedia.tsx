@@ -66,7 +66,7 @@ export function CriaPostMedia({ postId, platform, format, caption, handle }: {
       <div className="bg-white border border-border rounded-2xl overflow-hidden">
         {vertical ? (
           <div className="relative">
-            <PostMediaCarousel media={media} aspect={aspect} capVh={52} onRemove={onRemoveMedia} />
+            <PostMediaCarousel media={media} aspect={aspect} onRemove={onRemoveMedia} />
             <div className="absolute right-2.5 bottom-3 z-10 flex flex-col items-center gap-3.5 text-white drop-shadow-md pointer-events-none">
               <Heart className="h-6 w-6" /><MessageCircle className="h-6 w-6" /><Send className="h-6 w-6" /><Bookmark className="h-6 w-6" />
             </div>

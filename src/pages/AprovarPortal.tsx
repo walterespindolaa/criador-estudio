@@ -54,7 +54,7 @@ function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
 
       {vertical ? (
         <div className="relative">
-          <PostMediaCarousel media={media} aspect={aspect} capVh={62} />
+          <PostMediaCarousel media={media} aspect={aspect} />
           <div className="absolute right-2.5 bottom-3 z-10 flex flex-col items-center gap-4 text-white drop-shadow-md pointer-events-none">
             <Heart className="h-6 w-6" /><MessageCircle className="h-6 w-6" /><Send className="h-6 w-6" /><Bookmark className="h-6 w-6" />
           </div>

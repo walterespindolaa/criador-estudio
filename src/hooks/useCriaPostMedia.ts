@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import * as tus from "tus-js-client";
 import heic2any from "heic2any";
+import { BUNNY_CRIAPOST_CDN_HOSTNAME } from "@/lib/constants";
 
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
@@ -93,10 +94,11 @@ export function useCriaPostMedia(postId: string | null) {
         upload.start();
       });
       const view_url = `https://iframe.mediadelivery.net/embed/${libraryId}/${videoGuid}`;
+      const thumbnail_url = `https://${BUNNY_CRIAPOST_CDN_HOSTNAME}/${videoGuid}/thumbnail.jpg`;
       const { error: addErr } = await sbRpc("criapost_add_media", {
         p_post_id: postId, p_provider: "bunny_stream", p_external_file_id: videoGuid,
         p_file_name: file.name, p_file_type: file.type || "video/mp4", p_file_size: file.size,
-        p_view_url: view_url, p_thumbnail_url: null, p_download_url: null, p_bunny_video_id: videoGuid,
+        p_view_url: view_url, p_thumbnail_url: thumbnail_url, p_download_url: null, p_bunny_video_id: videoGuid,
       });
       if (addErr) throw new Error(addErr.message);
     },

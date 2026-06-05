@@ -2,6 +2,8 @@ export const PLATFORMS = ["instagram", "tiktok", "youtube"] as const;
 
 export const BUNNY_CDN_HOSTNAME = "vz-4f7de422-7aa.b-cdn.net";
 
+export const BUNNY_CRIAPOST_CDN_HOSTNAME = "vz-86788381-03e.b-cdn.net";
+
 export const FORMAT_LABELS: Record<string, string> = {
   reels: "Reels",
   carrossel: "Carrossel",
