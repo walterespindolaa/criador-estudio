@@ -231,6 +231,14 @@ export function ManagerHub() {
             {/* ---------- INÍCIO ---------- */}
             {section === "inicio" && (
               <div>
+                <div className="flex items-center justify-end gap-2 md:hidden mb-4">
+                  <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={() => setSettingsOpen(true)}>
+                    <SettingsIcon className="h-4 w-4 mr-1.5" /> Configurações
+                  </Button>
+                  <Button type="button" variant="ghost" size="sm" className="rounded-full text-muted-foreground" onClick={handleSignOut}>
+                    <LogOut className="h-4 w-4 mr-1.5" /> Sair
+                  </Button>
+                </div>
                 <div className="flex items-center gap-4 mb-8">
                   <button type="button" onClick={() => fileInputRef.current?.click()}
                     className="relative w-[72px] h-[72px] rounded-3xl bg-gradient-to-br from-primary via-purple-600 to-pink-500 p-[3px] shrink-0 hover:scale-[1.02] transition-transform" aria-label="Trocar foto">
