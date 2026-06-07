@@ -45,6 +45,7 @@ const ManagerHome = lazy(() => import("./pages/socialmidia/ManagerHome"));
 const CriaPost = lazy(() => import("./pages/socialmidia/CriaPost"));
 const CriaCrm = lazy(() => import("./pages/socialmidia/CriaCrm"));
 const CriaCrmClient = lazy(() => import("./pages/socialmidia/CriaCrmClient"));
+const CriaCaixa = lazy(() => import("./pages/socialmidia/CriaCaixa"));
 const Parceria = lazy(() => import("./pages/socialmidia/Parceria"));
 const Comissoes = lazy(() => import("./pages/socialmidia/Comissoes"));
 const Contas = lazy(() => import("./pages/socialmidia/Contas"));
@@ -117,6 +118,7 @@ const App = () => (
                 <Route path="criapost" element={<ErrorBoundary><CriaPost /></ErrorBoundary>} />
                 <Route path="criacrm" element={<ErrorBoundary><CriaCrm /></ErrorBoundary>} />
                 <Route path="criacrm/:id" element={<ErrorBoundary><CriaCrmClient /></ErrorBoundary>} />
+                <Route path="criacaixa" element={<ErrorBoundary><CriaCaixa /></ErrorBoundary>} />
                 <Route path="parceria" element={<ErrorBoundary><Parceria /></ErrorBoundary>} />
                 <Route path="comissoes" element={<ErrorBoundary><Comissoes /></ErrorBoundary>} />
                 <Route path="contas" element={<ErrorBoundary><Contas /></ErrorBoundary>} />
