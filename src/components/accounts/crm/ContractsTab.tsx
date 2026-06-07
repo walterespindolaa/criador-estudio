@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ContractGeneratorDialog } from "@/components/accounts/crm/ContractGeneratorDialog";
 
 const brl = (v?: number | null) => `R$ ${Number(v ?? 0).toLocaleString("pt-BR")}`;
 const STATUS_LABEL: Record<string, string> = { enviado: "Enviado", fechado: "Fechado", encerrado: "Encerrado" };
@@ -15,6 +16,7 @@ export function ContractsTab() {
   const { data: clients = [] } = useCrmClients();
   const create = useCreateCrmContract();
   const [open, setOpen] = useState(false);
+  const [genOpen, setGenOpen] = useState(false);
   const [title, setTitle] = useState(""); const [clientId, setClientId] = useState("");
   const [value, setValue] = useState(""); const [status, setStatus] = useState("enviado");
 
@@ -31,9 +33,12 @@ export function ContractsTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <h3 className="text-sm font-display font-bold text-foreground">Contratos</h3>
-        <Button size="sm" onClick={() => setOpen(true)}><Plus className="h-3.5 w-3.5 mr-1.5" /> Novo contrato</Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={() => setGenOpen(true)}><FileText className="h-3.5 w-3.5 mr-1.5" /> Gerar contrato</Button>
+          <Button size="sm" variant="outline" onClick={() => setOpen(true)}><Plus className="h-3.5 w-3.5 mr-1.5" /> Novo contrato</Button>
+        </div>
       </div>
       {isLoading ? (
         <div className="h-24 rounded-2xl bg-muted animate-pulse" />
@@ -81,6 +86,7 @@ export function ContractsTab() {
           <div className="flex justify-end gap-2 mt-5"><Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button><Button onClick={save} disabled={!title.trim() || create.isPending}>Criar</Button></div>
         </DialogContent>
       </Dialog>
+      <ContractGeneratorDialog open={genOpen} onOpenChange={setGenOpen} />
     </div>
   );
 }
