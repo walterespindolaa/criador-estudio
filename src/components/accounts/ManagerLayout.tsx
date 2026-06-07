@@ -86,7 +86,7 @@ export default function ManagerLayout() {
   const ctx: ManagerOutletContext = { openModule };
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background flex" style={{ ["--active-font-display" as string]: "'Bricolage Grotesque', 'Plus Jakarta Sans', sans-serif" }}>
       <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-border bg-card/40 px-3 py-5 sticky top-0 h-screen overflow-y-auto">
         <div className="px-2 mb-5"><Logo className="h-8 w-auto" /></div>
         <button className={navBtn(isActive("/socialmidia/dashboard"))} onClick={() => navigate("/socialmidia/dashboard")}><Home className="h-4 w-4" /> Início</button>

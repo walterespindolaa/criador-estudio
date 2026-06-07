@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Save, Plus, Trash2, ImagePlus, X, Sparkles } from "lucide-react";
+import {
+  ArrowLeft, ArrowRight, Save, Trash2, Plus, X, ImagePlus, Pencil,
+  Instagram, Mail, Phone, Palette, Type, MessageSquare, Image as ImageIcon,
+  Brain, HeartCrack, Heart, Lightbulb, Activity, NotebookPen, Target, Building2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useCrmClient, useUpdateCrmClient, useDeleteCrmClient, useCrmClientRefs, useAddCrmRef, useDeleteCrmRef, type CrmClient } from "@/hooks/useCrm";
@@ -9,12 +13,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 const CONSCIOUSNESS = ["Inconsciente do problema", "Consciente do problema", "Consciente da solução", "Consciente do produto", "Totalmente consciente"];
-const RATINGS = [["baixo", "Baixo"], ["medio", "Médio"], ["alto", "Alto"]] as const;
+const brl = (v?: number | null) => `R$ ${Number(v ?? 0).toLocaleString("pt-BR")}`;
+const initial = (n?: string | null) => (n ? n.trim().charAt(0).toUpperCase() : "?");
+const monthYear = (d?: string | null) => d ? new Date(d + "T00:00:00").toLocaleDateString("pt-BR", { month: "short", year: "numeric" }) : "—";
+const parseHex = (s?: string) => (s ?? "").split(/[\s,;]+/).filter((x) => /^#([0-9a-f]{3,8})$/i.test(x)).slice(0, 8);
+const DIAG = { baixo: { l: "Baixo", c: "text-red-600" }, medio: { l: "Médio", c: "text-amber-600" }, alto: { l: "Alto", c: "text-green-600" } } as const;
 
 export default function CriaCrmClient() {
   return <ModuleGate code="crm"><ClientWorkspace /></ModuleGate>;
@@ -32,7 +39,7 @@ function ClientWorkspace() {
   useEffect(() => { if (client) setForm(client); }, [client]);
 
   if (isLoading || !form) {
-    return <div className="space-y-3"><div className="h-8 w-48 rounded-xl bg-muted animate-pulse" /><div className="h-64 rounded-2xl bg-muted animate-pulse" /></div>;
+    return <div className="space-y-4"><div className="h-32 rounded-3xl bg-muted animate-pulse" /><div className="h-72 rounded-3xl bg-muted animate-pulse" /></div>;
   }
 
   const isCria = !!form.cria_owner_id;
@@ -56,171 +63,243 @@ function ClientWorkspace() {
     toast.success("Cliente salvo!");
   };
 
+  const swatches = parseHex(bc.colorPalette);
+  const diagOverall = dg.overall && DIAG[dg.overall as keyof typeof DIAG];
+
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3 min-w-0">
-          <button onClick={() => navigate("/socialmidia/criacrm")} className="p-2 rounded-xl hover:bg-accent/60"><ArrowLeft className="h-4 w-4" /></button>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-display font-extrabold text-foreground truncate">{form.name}</h1>
-              {isCria && <Badge variant="secondary" className="text-[9px] h-4">cria</Badge>}
+    <div className="pb-4">
+      <button onClick={() => navigate("/socialmidia/criacrm")} className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-primary mb-4 transition-colors">
+        <ArrowLeft className="h-4 w-4" /> Voltar pra carteira
+      </button>
+
+      {/* HERO */}
+      <div className="rounded-3xl border border-border bg-card p-6 sm:p-7 shadow-sm mb-6">
+        <div className="flex items-start gap-4 sm:gap-5 flex-wrap">
+          <div className="w-[72px] h-[72px] rounded-3xl p-[3px] bg-gradient-to-br from-primary via-purple-500 to-pink-400 shrink-0">
+            <div className="w-full h-full rounded-[20px] bg-card flex items-center justify-center overflow-hidden">
+              <span className="font-display font-extrabold text-3xl text-primary">{form.logo && form.logo.length <= 2 ? form.logo : initial(form.name)}</span>
             </div>
-            {form.segment && <p className="text-sm text-muted-foreground font-body">{form.segment}</p>}
+          </div>
+          <div className="flex-1 min-w-0 pt-0.5">
+            <h1 className="font-display font-bold text-2xl sm:text-3xl tracking-tight text-foreground truncate">{form.name || "Sem nome"}</h1>
+            <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+              {form.segment && <span className="text-xs font-semibold px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/15">{form.segment}</span>}
+              <span className="text-xs font-semibold px-3 py-1 rounded-full bg-muted text-foreground/70 border border-border inline-flex items-center gap-1.5">{isCria ? "cria" : <><span className="w-1.5 h-1.5 rounded-full bg-green-500" />Ativo</>}</span>
+              {form.instagram && <span className="text-xs font-semibold px-3 py-1 rounded-full bg-muted text-foreground/70 border border-border inline-flex items-center gap-1"><Instagram className="h-3 w-3" />{form.instagram.replace(/^@/, "")}</span>}
+            </div>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={async () => { if (confirm("Excluir este cliente?")) { await del.mutateAsync(form.id); navigate("/socialmidia/criacrm"); } }}><Trash2 className="h-4 w-4" /></Button>
+            {isCria && <Button variant="outline" size="sm" className="rounded-xl" onClick={() => { setActiveAccount(form.cria_owner_id!); navigate("/app"); }}>Abrir no cria <ArrowRight className="h-3.5 w-3.5 ml-1" /></Button>}
+            <Button size="sm" className="rounded-xl shadow-sm" onClick={save} disabled={update.isPending}><Save className="h-3.5 w-3.5 mr-1.5" /> Salvar</Button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {isCria && <Button variant="outline" size="sm" onClick={() => { setActiveAccount(form.cria_owner_id!); navigate("/app"); }}>Abrir no cria <ArrowRight className="h-3.5 w-3.5 ml-1" /></Button>}
-          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive"
-            onClick={async () => { if (confirm("Excluir este cliente? Essa ação não pode ser desfeita.")) { await del.mutateAsync(form.id); navigate("/socialmidia/criacrm"); } }}>
-            <Trash2 className="h-4 w-4 mr-1.5" /> Excluir
-          </Button>
-          <Button size="sm" onClick={save} disabled={update.isPending}><Save className="h-3.5 w-3.5 mr-1.5" /> Salvar</Button>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-border">
+          <Stat k="Valor mensal" v={brl(form.monthly_value)} s="por mês" accent />
+          <Stat k="Cliente desde" v={monthYear(form.contract_date)} />
+          <Stat k="Renovação" v={monthYear(form.renewal_date)} />
+          <Stat k="Diagnóstico" v={diagOverall ? diagOverall.l : "—"} cls={diagOverall ? diagOverall.c : ""} />
         </div>
       </div>
 
-      <Tabs defaultValue="dados" className="w-full">
-        <TabsList className="bg-card border border-border rounded-2xl p-1.5 mb-5 flex-wrap h-auto">
-          {[["dados", "Dados"], ["brand", "Brand Core"], ["persona", "Persona"], ["diag", "Diagnóstico"], ["conc", "Concorrência"]].map(([v, l]) => (
-            <TabsTrigger key={v} value={v} className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">{l}</TabsTrigger>
+      {/* TABS */}
+      <Tabs defaultValue="resumo" className="w-full">
+        <TabsList className="bg-card border border-border rounded-2xl p-1.5 mb-6 flex-wrap h-auto shadow-sm">
+          {[["resumo", "Resumo"], ["brand", "Brand Core"], ["persona", "Persona"], ["diag", "Diagnóstico"], ["conc", "Concorrência"]].map(([v, l]) => (
+            <TabsTrigger key={v} value={v} className="rounded-xl px-4 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none font-display">{l}</TabsTrigger>
           ))}
         </TabsList>
 
-        <TabsContent value="dados">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Txt label="Nome" v={form.name} on={(x) => setForm({ ...form, name: x })} />
-            <Txt label="Segmento" v={form.segment ?? ""} on={(x) => setForm({ ...form, segment: x })} />
-            <Txt label="Instagram" v={form.instagram ?? ""} on={(x) => setForm({ ...form, instagram: x })} />
-            <Txt label="Telefone" v={form.phone ?? ""} on={(x) => setForm({ ...form, phone: x })} />
-            <Txt label="E-mail" v={form.email ?? ""} on={(x) => setForm({ ...form, email: x })} />
-            <Txt label="Valor mensal (R$)" type="number" v={String(form.monthly_value ?? 0)} on={(x) => setForm({ ...form, monthly_value: Number(x) })} />
-            <Txt label="Início do contrato" type="date" v={form.contract_date ?? ""} on={(x) => setForm({ ...form, contract_date: x || null })} />
-            <Txt label="Renovação" type="date" v={form.renewal_date ?? ""} on={(x) => setForm({ ...form, renewal_date: x || null })} />
-            <Area label="Notas" full v={form.notes ?? ""} on={(x) => setForm({ ...form, notes: x })} />
+        {/* RESUMO */}
+        <TabsContent value="resumo" className="mt-0 space-y-4">
+          <Card icon={<NotebookPen />} title="Sobre o cliente">
+            <Textarea rows={3} value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Contexto, objetivo, observações..." className="rounded-xl text-sm" />
+          </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card icon={<Phone />} title="Contato">
+              <div className="grid grid-cols-1 gap-3">
+                <F label="Instagram"><Input value={form.instagram ?? ""} onChange={(e) => setForm({ ...form, instagram: e.target.value })} className="rounded-xl" /></F>
+                <F label="E-mail"><Input value={form.email ?? ""} onChange={(e) => setForm({ ...form, email: e.target.value })} className="rounded-xl" /></F>
+                <F label="Telefone"><Input value={form.phone ?? ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="rounded-xl" /></F>
+              </div>
+            </Card>
+            <Card icon={<Activity />} title="Comercial">
+              <div className="grid grid-cols-2 gap-3">
+                <F label="Segmento"><Input value={form.segment ?? ""} onChange={(e) => setForm({ ...form, segment: e.target.value })} className="rounded-xl" /></F>
+                <F label="Valor mensal (R$)"><Input type="number" value={form.monthly_value ?? 0} onChange={(e) => setForm({ ...form, monthly_value: Number(e.target.value) })} className="rounded-xl" /></F>
+                <F label="Início do contrato"><Input type="date" value={form.contract_date ?? ""} onChange={(e) => setForm({ ...form, contract_date: e.target.value || null })} className="rounded-xl" /></F>
+                <F label="Renovação"><Input type="date" value={form.renewal_date ?? ""} onChange={(e) => setForm({ ...form, renewal_date: e.target.value || null })} className="rounded-xl" /></F>
+              </div>
+            </Card>
           </div>
         </TabsContent>
 
-        <TabsContent value="brand">
+        {/* BRAND CORE */}
+        <TabsContent value="brand" className="mt-0 space-y-4">
           {isCria && <CriaHint />}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Txt label="Arquétipo da marca" v={bc.archetype ?? ""} on={(x) => setBc("archetype", x)} />
-            <Txt label="Tom de voz" v={bc.toneOfVoice ?? ""} on={(x) => setBc("toneOfVoice", x)} />
-            <Area label="Personalidade" full v={bc.personality ?? ""} on={(x) => setBc("personality", x)} />
-            <Area label="Estilo de comunicação" full v={bc.communicationStyle ?? ""} on={(x) => setBc("communicationStyle", x)} />
-            <Txt label="Paleta de cores" v={bc.colorPalette ?? ""} on={(x) => setBc("colorPalette", x)} />
-            <Txt label="Tipografia" v={bc.typography ?? ""} on={(x) => setBc("typography", x)} />
-            <Area label="Expressão visual" full v={bc.visualExpression ?? ""} on={(x) => setBc("visualExpression", x)} />
+          {bc.archetype && (
+            <div className="rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/10 to-card p-5 flex items-center gap-4">
+              <span className="font-display font-extrabold text-sm text-primary-foreground bg-primary px-4 py-2 rounded-xl">{bc.archetype}</span>
+              <span className="text-sm text-muted-foreground">Arquétipo da marca</span>
+            </div>
+          )}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card icon={<MessageSquare />} title="Voz & personalidade">
+              <F label="Arquétipo da marca"><Input value={bc.archetype ?? ""} onChange={(e) => setBc("archetype", e.target.value)} className="rounded-xl" /></F>
+              <F label="Tom de voz" className="mt-3"><Input value={bc.toneOfVoice ?? ""} onChange={(e) => setBc("toneOfVoice", e.target.value)} className="rounded-xl" /></F>
+              <F label="Personalidade" className="mt-3"><Textarea rows={2} value={bc.personality ?? ""} onChange={(e) => setBc("personality", e.target.value)} className="rounded-xl text-sm" /></F>
+              <F label="Estilo de comunicação" className="mt-3"><Textarea rows={2} value={bc.communicationStyle ?? ""} onChange={(e) => setBc("communicationStyle", e.target.value)} className="rounded-xl text-sm" /></F>
+            </Card>
+            <Card icon={<Type />} title="Tipografia & visual">
+              <div className="rounded-xl border border-border bg-muted/40 p-5 mb-3">
+                <p className="font-display font-bold text-3xl tracking-tight text-foreground">Aa Bb Cc</p>
+                <p className="text-xs font-semibold text-muted-foreground mt-2">{bc.typography || "tipografia não definida"}</p>
+              </div>
+              <F label="Tipografia"><Input value={bc.typography ?? ""} onChange={(e) => setBc("typography", e.target.value)} placeholder="Ex: Fraunces + Inter" className="rounded-xl" /></F>
+              <F label="Expressão visual" className="mt-3"><Textarea rows={2} value={bc.visualExpression ?? ""} onChange={(e) => setBc("visualExpression", e.target.value)} className="rounded-xl text-sm" /></F>
+            </Card>
           </div>
+          <Card icon={<Palette />} title="Paleta de cores">
+            {swatches.length > 0 && (
+              <div className="flex gap-2.5 flex-wrap mb-3">
+                {swatches.map((hex, i) => (
+                  <div key={i} className="text-center">
+                    <div className="w-14 h-14 rounded-xl border border-black/5" style={{ background: hex }} />
+                    <p className="text-[10px] font-semibold text-muted-foreground mt-1.5 uppercase">{hex}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            <F label="Paleta (cole os HEX separados por vírgula)"><Input value={bc.colorPalette ?? ""} onChange={(e) => setBc("colorPalette", e.target.value)} placeholder="#7A3B2E, #D98E5A, #F3E7D6" className="rounded-xl" /></F>
+          </Card>
           <Moodboard clientId={form.id} />
         </TabsContent>
 
-        <TabsContent value="persona">
+        {/* PERSONA */}
+        <TabsContent value="persona" className="mt-0 space-y-4">
           {isCria && <CriaHint />}
-          <div className="space-y-5">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Estado de consciência</Label>
-              <select value={pe.consciousness ?? ""} onChange={(e) => setPe("consciousness", e.target.value)} className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
-                <option value="">—</option>{CONSCIOUSNESS.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
+          <Card icon={<Brain />} title="Estado de consciência">
+            <div className="flex gap-1.5 flex-wrap">
+              {CONSCIOUSNESS.map((c) => (
+                <button key={c} onClick={() => setPe("consciousness", pe.consciousness === c ? "" : c)}
+                  className={cn("text-xs font-semibold px-3 py-2 rounded-lg border transition-colors flex-1 min-w-[120px]", pe.consciousness === c ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground")}>{c}</button>
+              ))}
             </div>
-            <Sec title="Psicologia">
-              <Area label="Dores (uma por linha)" v={pe.pains ?? ""} on={(x) => setPe("pains", x)} />
-              <Area label="Desejos (um por linha)" v={pe.desires ?? ""} on={(x) => setPe("desires", x)} />
-              <Area label="Frases reais (uma por linha)" v={pe.realPhrases ?? ""} on={(x) => setPe("realPhrases", x)} />
-              <Area label="Obstáculos internos" v={pe.internalObstacles ?? ""} on={(x) => setPe("internalObstacles", x)} />
-              <Area label="Obstáculos externos" v={pe.externalObstacles ?? ""} on={(x) => setPe("externalObstacles", x)} />
-            </Sec>
-            <Sec title="Estratégia">
-              <Area label="Objetivos" v={pe.objectives ?? ""} on={(x) => setPe("objectives", x)} />
-              <Area label="Promessas irresistíveis" v={pe.promises ?? ""} on={(x) => setPe("promises", x)} />
-              <Area label="Gatilhos que funcionam" v={pe.triggers ?? ""} on={(x) => setPe("triggers", x)} />
-              <Area label="Exemplos de copy" v={pe.copyExamples ?? ""} on={(x) => setPe("copyExamples", x)} />
-              <Area label="Estratégia de conteúdo" v={pe.contentStrategy ?? ""} on={(x) => setPe("contentStrategy", x)} />
-            </Sec>
+          </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card icon={<HeartCrack />} title="Dores"><Textarea rows={4} value={pe.pains ?? ""} onChange={(e) => setPe("pains", e.target.value)} placeholder="Uma dor por linha..." className="rounded-xl text-sm" /></Card>
+            <Card icon={<Heart />} title="Desejos"><Textarea rows={4} value={pe.desires ?? ""} onChange={(e) => setPe("desires", e.target.value)} placeholder="Um desejo por linha..." className="rounded-xl text-sm" /></Card>
           </div>
+          <Card icon={<Lightbulb />} title="Estratégia">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <F label="Objetivos"><Textarea rows={2} value={pe.objectives ?? ""} onChange={(e) => setPe("objectives", e.target.value)} className="rounded-xl text-sm" /></F>
+              <F label="Promessas"><Textarea rows={2} value={pe.promises ?? ""} onChange={(e) => setPe("promises", e.target.value)} className="rounded-xl text-sm" /></F>
+              <F label="Gatilhos"><Textarea rows={2} value={pe.triggers ?? ""} onChange={(e) => setPe("triggers", e.target.value)} className="rounded-xl text-sm" /></F>
+              <F label="Estratégia de conteúdo"><Textarea rows={2} value={pe.contentStrategy ?? ""} onChange={(e) => setPe("contentStrategy", e.target.value)} className="rounded-xl text-sm" /></F>
+            </div>
+          </Card>
         </TabsContent>
 
-        <TabsContent value="diag">
-          <div className="rounded-2xl border border-border bg-card p-4 space-y-1">
+        {/* DIAGNÓSTICO */}
+        <TabsContent value="diag" className="mt-0 space-y-4">
+          <Card icon={<Activity />} title="Diagnóstico do perfil">
             {[["visualIdentity", "Identidade visual"], ["bio", "Bio do perfil"], ["highlights", "Destaques (Highlights)"], ["positioning", "Clareza de posicionamento"]].map(([k, l]) => (
               <Rating key={k} label={l} value={dg[k] ?? ""} on={(x) => setDg(k, x)} />
             ))}
-            <div className="pt-2"><Rating label="Classificação geral" value={dg.overall ?? ""} on={(x) => setDg("overall", x)} bold /></div>
-          </div>
-          <div className="mt-3"><Area label="Notas do diagnóstico" v={dg.notes ?? ""} on={(x) => setDg("notes", x)} /></div>
+            <Rating label="Classificação geral" value={dg.overall ?? ""} on={(x) => setDg("overall", x)} bold />
+          </Card>
+          <Card icon={<NotebookPen />} title="Notas do diagnóstico"><Textarea rows={3} value={dg.notes ?? ""} onChange={(e) => setDg("notes", e.target.value)} className="rounded-xl text-sm" /></Card>
         </TabsContent>
 
-        <TabsContent value="conc">
-          <div className="space-y-3">
-            {comps.map((c, i) => (
-              <div key={i} className="rounded-2xl border border-border bg-card p-3 grid grid-cols-1 sm:grid-cols-5 gap-2 items-end">
-                <CompField label="Nome" v={c.name ?? ""} on={(x) => setComp(i, { name: x })} />
-                <CompField label="Instagram" v={c.instagram ?? ""} on={(x) => setComp(i, { instagram: x })} />
-                <CompField label="Seguidores" v={c.followers ?? ""} on={(x) => setComp(i, { followers: x })} />
-                <CompField label="Frequência" v={c.frequency ?? ""} on={(x) => setComp(i, { frequency: x })} />
-                <div className="flex items-end gap-2">
-                  <CompField label="Conteúdo" v={c.contentType ?? ""} on={(x) => setComp(i, { contentType: x })} />
-                  <Button variant="ghost" size="icon" className="text-destructive shrink-0" onClick={() => setForm({ ...form, competitors: comps.filter((_, j) => j !== i) })}><Trash2 className="h-4 w-4" /></Button>
-                </div>
+        {/* CONCORRÊNCIA */}
+        <TabsContent value="conc" className="mt-0 space-y-3">
+          {comps.map((c, i) => (
+            <div key={i} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-display font-bold">{initial(c.name)}</div>
+                <span className="flex-1 font-display font-bold text-sm text-foreground">{c.name || "Novo concorrente"}</span>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => setForm({ ...form, competitors: comps.filter((_, j) => j !== i) })}><Trash2 className="h-4 w-4" /></Button>
               </div>
-            ))}
-            <Button variant="outline" size="sm" onClick={() => setForm({ ...form, competitors: [...comps, {}] })}><Plus className="h-3.5 w-3.5 mr-1.5" /> Adicionar concorrente</Button>
-          </div>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                <CF label="Nome" v={c.name ?? ""} on={(x) => setComp(i, { name: x })} />
+                <CF label="Instagram" v={c.instagram ?? ""} on={(x) => setComp(i, { instagram: x })} />
+                <CF label="Seguidores" v={c.followers ?? ""} on={(x) => setComp(i, { followers: x })} />
+                <CF label="Frequência" v={c.frequency ?? ""} on={(x) => setComp(i, { frequency: x })} />
+                <CF label="Conteúdo" v={c.contentType ?? ""} on={(x) => setComp(i, { contentType: x })} />
+              </div>
+            </div>
+          ))}
+          <button onClick={() => setForm({ ...form, competitors: [...comps, {}] })} className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border-[1.5px] border-dashed border-primary/25 bg-primary/5 text-primary font-semibold text-sm hover:bg-primary/10 transition-colors">
+            <Plus className="h-4 w-4" /> Adicionar concorrente
+          </button>
         </TabsContent>
       </Tabs>
     </div>
   );
 }
 
+function Stat({ k, v, s, accent, cls }: { k: string; v: string; s?: string; accent?: boolean; cls?: string }) {
+  return (
+    <div>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">{k}</p>
+      <p className={cn("font-display font-bold text-xl mt-1 tracking-tight", accent ? "text-primary" : "text-foreground", cls)}>{v}</p>
+      {s && <p className="text-xs text-muted-foreground">{s}</p>}
+    </div>
+  );
+}
+function Card({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm">
+      <h3 className="font-display font-bold text-base text-foreground flex items-center gap-2.5 mb-4">
+        <span className="text-primary [&>svg]:h-[18px] [&>svg]:w-[18px]">{icon}</span>{title}
+      </h3>
+      {children}
+    </div>
+  );
+}
+function F({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+  return <div className={cn("space-y-1.5", className)}><Label className="text-xs text-muted-foreground">{label}</Label>{children}</div>;
+}
+function CF({ label, v, on }: { label: string; v: string; on: (x: string) => void }) {
+  return <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">{label}</Label><Input value={v} onChange={(e) => on(e.target.value)} className="rounded-lg h-9 text-sm" /></div>;
+}
+function Rating({ label, value, on, bold }: { label: string; value: string; on: (x: string) => void; bold?: boolean }) {
+  const opts: [string, string, string][] = [["baixo", "Baixo", "bg-red-100 text-red-700 border-red-200"], ["medio", "Médio", "bg-amber-100 text-amber-700 border-amber-200"], ["alto", "Alto", "bg-green-100 text-green-700 border-green-200"]];
+  return (
+    <div className="flex items-center justify-between gap-3 py-3.5 border-b border-border last:border-0">
+      <span className={cn("text-foreground", bold ? "font-display font-bold text-base" : "text-sm font-medium")}>{label}</span>
+      <div className="flex gap-1.5">
+        {opts.map(([val, lbl, on_cls]) => (
+          <button key={val} onClick={() => on(val)} className={cn("px-3.5 py-1.5 rounded-lg text-xs font-bold border transition-colors", value === val ? on_cls : "bg-card border-border text-muted-foreground/60 hover:text-foreground")}>{lbl}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+function CriaHint() {
+  return <div className="rounded-2xl border border-primary/15 bg-primary/5 px-4 py-3 text-xs text-foreground/80 flex items-center gap-2.5"><Pencil className="h-4 w-4 text-primary shrink-0" /> Esse cliente tem brandbook no cria — o conteúdo "oficial" vive lá. Use "Abrir no cria".</div>;
+}
 function Moodboard({ clientId }: { clientId: string }) {
   const { data: refs = [] } = useCrmClientRefs(clientId);
   const addRef = useAddCrmRef(); const delRef = useDeleteCrmRef();
   const fileRef = useRef<HTMLInputElement>(null);
   return (
-    <div className="mt-5 space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Referências (moodboard)</h3>
-        <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={addRef.isPending}><ImagePlus className="h-3.5 w-3.5 mr-1.5" /> Adicionar</Button>
+    <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-display font-bold text-base text-foreground flex items-center gap-2.5"><ImageIcon className="h-[18px] w-[18px] text-primary" /> Moodboard</h3>
+        <Button variant="outline" size="sm" className="rounded-xl" onClick={() => fileRef.current?.click()} disabled={addRef.isPending}><ImagePlus className="h-3.5 w-3.5 mr-1.5" /> Adicionar</Button>
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) await addRef.mutateAsync({ crmClientId: clientId, file: f }); }} />
       </div>
-      {refs.length === 0 ? <p className="text-xs text-muted-foreground font-body">Nenhuma referência ainda.</p> : (
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+      {refs.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma referência ainda.</p> : (
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2.5">
           {refs.map((r) => (
             <div key={r.id} className="relative group aspect-square rounded-xl overflow-hidden border border-border">
               <img src={r.image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
-              <button onClick={() => delRef.mutate(r)} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100"><X className="h-3.5 w-3.5" /></button>
+              <button onClick={() => delRef.mutate(r)} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><X className="h-3.5 w-3.5" /></button>
             </div>
           ))}
         </div>
       )}
     </div>
   );
-}
-
-function Txt({ label, v, on, type, full }: { label: string; v: string; on: (x: string) => void; type?: string; full?: boolean }) {
-  return <div className={cn("space-y-1.5", full && "sm:col-span-2")}><Label className="text-xs">{label}</Label><Input type={type} value={v} onChange={(e) => on(e.target.value)} className="rounded-xl" /></div>;
-}
-function Area({ label, v, on, full }: { label: string; v: string; on: (x: string) => void; full?: boolean }) {
-  return <div className={cn("space-y-1.5", full && "sm:col-span-2")}><Label className="text-xs">{label}</Label><Textarea rows={3} value={v} onChange={(e) => on(e.target.value)} className="rounded-xl text-sm" /></div>;
-}
-function Sec({ title, children }: { title: string; children: React.ReactNode }) {
-  return <div className="space-y-3"><h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{title}</h3>{children}</div>;
-}
-function Rating({ label, value, on, bold }: { label: string; value: string; on: (x: string) => void; bold?: boolean }) {
-  return (
-    <div className="flex items-center justify-between gap-3 py-2.5 border-b border-border last:border-0">
-      <span className={cn("text-sm font-body text-foreground", bold && "font-display font-bold")}>{label}</span>
-      <div className="flex gap-1.5">
-        {RATINGS.map(([val, lbl]) => (
-          <button key={val} onClick={() => on(val)} className={cn("px-3 py-1 rounded-full text-xs font-body font-bold border transition-colors", value === val ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground")}>{lbl}</button>
-        ))}
-      </div>
-    </div>
-  );
-}
-function CompField({ label, v, on }: { label: string; v: string; on: (x: string) => void }) {
-  return <div className="space-y-1 flex-1 min-w-0"><Label className="text-[10px] text-muted-foreground">{label}</Label><Input value={v} onChange={(e) => on(e.target.value)} className="rounded-lg h-9 text-sm" /></div>;
-}
-function CriaHint() {
-  return <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 mb-4 text-xs font-body text-foreground flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary shrink-0" /> Esse cliente também tem brandbook no cria — o conteúdo "oficial" vive lá. Use "Abrir no cria".</div>;
 }
