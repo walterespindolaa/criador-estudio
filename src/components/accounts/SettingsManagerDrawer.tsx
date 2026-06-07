@@ -10,7 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Camera, ExternalLink, HardDrive, Loader2, Lock, Unplug, Users } from "lucide-react";
+import { Camera, ExternalLink, FileText, HardDrive, Loader2, Lock, Unplug, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useProfile } from "@/hooks/useProfile";
 import { useGoogleDriveConnection } from "@/hooks/useGoogleDriveConnection";
@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { validateUpload } from "@/lib/upload-validation";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { sanitizeText } from "@/lib/sanitize";
+import { ManagerCompanyDialog } from "@/components/accounts/ManagerCompanyDialog";
 
 type Props = {
   open: boolean;
@@ -34,6 +35,7 @@ export function SettingsManagerDrawer({ open, onOpenChange }: Props) {
   const { connection: drive, connect: driveConnect, disconnect: driveDisconnect } = useGoogleDriveConnection();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [companyOpen, setCompanyOpen] = useState(false);
   const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
   const [cropOpen, setCropOpen] = useState(false);
 
@@ -217,6 +219,17 @@ export function SettingsManagerDrawer({ open, onOpenChange }: Props) {
               </Button>
             </section>
 
+            {/* Dados da empresa (contratos) */}
+            <section className="space-y-2">
+              <h3 className="font-display font-semibold text-sm text-foreground flex items-center gap-2">
+                <FileText className="h-4 w-4" /> Dados da minha empresa
+              </h3>
+              <p className="text-xs text-muted-foreground font-body">Usados como CONTRATADA nos contratos. Configure CPF ou CNPJ e seus dados uma vez.</p>
+              <Button variant="outline" onClick={() => setCompanyOpen(true)} className="w-full justify-start">
+                Editar dados da empresa
+              </Button>
+            </section>
+
             {/* Google Drive */}
             <section className="space-y-2">
               <h3 className="font-display font-semibold text-sm text-foreground flex items-center gap-2">
@@ -256,6 +269,8 @@ export function SettingsManagerDrawer({ open, onOpenChange }: Props) {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ManagerCompanyDialog open={companyOpen} onOpenChange={setCompanyOpen} />
 
       {rawImageSrc && (
         <ImageCropModal

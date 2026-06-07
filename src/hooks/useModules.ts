@@ -20,6 +20,21 @@ export type ModuleWithStatus = ModuleCatalogItem & {
   current_period_end: string | null;
 };
 
+export type ContractCompany = {
+  personType?: "pj" | "pf";
+  legalName?: string;
+  document?: string;       // CNPJ (pj) ou CPF (pf)
+  address?: string;
+  cep?: string;
+  city?: string;
+  uf?: string;
+  repName?: string;
+  repNationality?: string;
+  repProfession?: string;
+  repRg?: string;
+  repCpf?: string;
+};
+
 export type ManagerProfile = {
   id: string;
   user_id: string;
@@ -31,6 +46,7 @@ export type ManagerProfile = {
   instagram_handle: string | null;
   niche: string | null;
   client_range: string | null;
+  contract_company?: ContractCompany | null;
 };
 
 export type ManagerProfileInput = Omit<ManagerProfile, "id" | "user_id">;
