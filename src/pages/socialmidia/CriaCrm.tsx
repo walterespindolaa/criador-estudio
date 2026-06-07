@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 
 const brl = (v?: number | null) => `R$ ${Number(v ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 function initial(name?: string | null) { return name ? name.trim().charAt(0).toUpperCase() : "?"; }
+const splitSeg = (s?: string | null) => (s ?? "").split(/[,;]+/).map((x) => x.trim()).filter(Boolean);
 
 export default function CriaCrm() {
   return <ModuleGate code="crm"><CrmInner /></ModuleGate>;
@@ -60,11 +61,11 @@ function ClientsTab() {
     return m;
   }, [managedAccounts]);
 
-  const segments = useMemo(() => Array.from(new Set(clients.map((c) => c.segment).filter(Boolean))) as string[], [clients]);
+  const segments = useMemo(() => Array.from(new Set(clients.flatMap((c) => splitSeg(c.segment)))).sort(), [clients]);
   const filtered = clients.filter((c) => {
     const q = search.trim().toLowerCase();
     const okQ = !q || c.name.toLowerCase().includes(q) || (c.instagram ?? "").toLowerCase().includes(q);
-    const okS = !segFilter || c.segment === segFilter;
+    const okS = !segFilter || splitSeg(c.segment).includes(segFilter);
     return okQ && okS;
   });
 
@@ -88,7 +89,7 @@ function ClientsTab() {
           <div className="flex items-center gap-1.5 flex-wrap">
             <button onClick={() => setSegFilter(null)} className={cn("px-3 py-1.5 rounded-full text-xs font-body font-bold border", !segFilter ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground")}>Todos</button>
             {segments.map((s) => (
-              <button key={s} onClick={() => setSegFilter(s)} className={cn("px-3 py-1.5 rounded-full text-xs font-body font-bold border", segFilter === s ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground")}>{s}</button>
+              <button key={s} onClick={() => setSegFilter(s)} className={cn("px-3 py-1.5 rounded-full text-xs font-body font-bold border max-w-[160px] truncate", segFilter === s ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground")}>{s}</button>
             ))}
           </div>
         )}

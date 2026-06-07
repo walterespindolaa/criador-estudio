@@ -123,7 +123,6 @@ export function useImportCriaClients() {
           cria_owner_id: a.owner_id,
           name: a.name || "Sem nome",
           instagram: a.instagram_handle ?? null,
-          segment: a.niche ?? null,
         }));
       if (toInsert.length === 0) return { imported: 0 };
       const { error } = await sbFrom("crm_clients").insert(toInsert as never);
