@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Save, Plus, Trash2, ImagePlus, X, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useActiveAccount } from "@/contexts/AccountContext";
-import { useCrmClient, useUpdateCrmClient, useCrmClientRefs, useAddCrmRef, useDeleteCrmRef, type CrmClient } from "@/hooks/useCrm";
+import { useCrmClient, useUpdateCrmClient, useDeleteCrmClient, useCrmClientRefs, useAddCrmRef, useDeleteCrmRef, type CrmClient } from "@/hooks/useCrm";
 import { ModuleGate } from "@/components/accounts/ModuleGate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ function ClientWorkspace() {
   const { setActiveAccount } = useActiveAccount();
   const { data: client, isLoading } = useCrmClient(id);
   const update = useUpdateCrmClient();
+  const del = useDeleteCrmClient();
 
   const [form, setForm] = useState<CrmClient | null>(null);
   useEffect(() => { if (client) setForm(client); }, [client]);
@@ -70,6 +71,10 @@ function ClientWorkspace() {
         </div>
         <div className="flex items-center gap-2">
           {isCria && <Button variant="outline" size="sm" onClick={() => { setActiveAccount(form.cria_owner_id!); navigate("/app"); }}>Abrir no cria <ArrowRight className="h-3.5 w-3.5 ml-1" /></Button>}
+          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive"
+            onClick={async () => { if (confirm("Excluir este cliente? Essa ação não pode ser desfeita.")) { await del.mutateAsync(form.id); navigate("/socialmidia/criacrm"); } }}>
+            <Trash2 className="h-4 w-4 mr-1.5" /> Excluir
+          </Button>
           <Button size="sm" onClick={save} disabled={update.isPending}><Save className="h-3.5 w-3.5 mr-1.5" /> Salvar</Button>
         </div>
       </div>
