@@ -276,3 +276,22 @@ export function useCreateCrmContract() {
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao criar contrato."),
   });
 }
+
+export function useUploadCrmAsset() {
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async ({ clientId, file, kind }: { clientId: string; file: File; kind: "avatar" | "font" }): Promise<string> => {
+      if (!user?.id) throw new Error("Sem sessão");
+      if (file.size > 5 * 1024 * 1024) throw new Error("Arquivo máx. 5MB.");
+      if (kind === "avatar" && !file.type.startsWith("image/")) throw new Error("Selecione uma imagem.");
+      if (kind === "font" && !/\.(ttf|otf|woff2?)$/i.test(file.name)) throw new Error("Use .ttf, .otf ou .woff.");
+      const ext = file.name.split(".").pop()?.toLowerCase() || "bin";
+      const path = `${user.id}/${clientId}/${kind}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("crm").upload(path, file, { upsert: true, contentType: file.type || undefined });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from("crm").getPublicUrl(path);
+      return data.publicUrl;
+    },
+    onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao enviar arquivo."),
+  });
+}

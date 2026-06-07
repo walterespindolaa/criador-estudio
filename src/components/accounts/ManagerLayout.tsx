@@ -128,7 +128,7 @@ export default function ManagerLayout() {
         </div>
 
         <main className="flex-1 px-4 sm:px-8 py-7 sm:py-10">
-          <div className="w-full max-w-3xl mx-auto">
+          <div className="w-full max-w-6xl mx-auto">
             <Outlet context={ctx} />
           </div>
         </main>

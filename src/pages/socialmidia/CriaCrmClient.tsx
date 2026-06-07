@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  ArrowLeft, ArrowRight, Save, Trash2, Plus, X, ImagePlus, Pencil,
+  ArrowLeft, ArrowRight, Save, Trash2, Plus, X, ImagePlus, Pencil, Camera, Upload, Download,
   Instagram, Mail, Phone, Palette, Type, MessageSquare, Image as ImageIcon,
   Brain, HeartCrack, Heart, Lightbulb, Activity, NotebookPen, Target, Building2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useActiveAccount } from "@/contexts/AccountContext";
-import { useCrmClient, useUpdateCrmClient, useDeleteCrmClient, useCrmClientRefs, useAddCrmRef, useDeleteCrmRef, type CrmClient } from "@/hooks/useCrm";
+import { useCrmClient, useUpdateCrmClient, useDeleteCrmClient, useCrmClientRefs, useAddCrmRef, useDeleteCrmRef, useUploadCrmAsset, type CrmClient } from "@/hooks/useCrm";
 import { ModuleGate } from "@/components/accounts/ModuleGate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,10 +30,13 @@ export default function CriaCrmClient() {
 function ClientWorkspace() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { setActiveAccount } = useActiveAccount();
+  const { setActiveAccount, managedAccounts } = useActiveAccount();
   const { data: client, isLoading } = useCrmClient(id);
   const update = useUpdateCrmClient();
   const del = useDeleteCrmClient();
+  const uploadAsset = useUploadCrmAsset();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const fontInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState<CrmClient | null>(null);
   useEffect(() => { if (client) setForm(client); }, [client]);
@@ -47,6 +50,8 @@ function ClientWorkspace() {
   const pe = form.persona ?? {};
   const dg = form.diagnosis ?? {};
   const comps = form.competitors ?? [];
+  const criaAvatar = form.cria_owner_id ? (managedAccounts.find((a) => a.owner_id === form.cria_owner_id)?.avatar_url ?? null) : null;
+  const shownAvatar = form.logo && /^https?:\/\//.test(form.logo) ? form.logo : criaAvatar;
   const setBc = (k: string, v: string) => setForm({ ...form, brand_core: { ...bc, [k]: v } });
   const setPe = (k: string, v: string) => setForm({ ...form, persona: { ...pe, [k]: v } });
   const setDg = (k: string, v: string) => setForm({ ...form, diagnosis: { ...dg, [k]: v } });
@@ -63,6 +68,28 @@ function ClientWorkspace() {
     toast.success("Cliente salvo!");
   };
 
+  const onPickAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; e.target.value = "";
+    if (!file) return;
+    try {
+      const url = await uploadAsset.mutateAsync({ clientId: form.id, file, kind: "avatar" });
+      await update.mutateAsync({ id: form.id, logo: url });
+      setForm({ ...form, logo: url });
+      toast.success("Foto atualizada!");
+    } catch { /* hook já avisa */ }
+  };
+  const onPickFont = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; e.target.value = "";
+    if (!file) return;
+    try {
+      const url = await uploadAsset.mutateAsync({ clientId: form.id, file, kind: "font" });
+      const nbc = { ...bc, typographyFileUrl: url, typographyFileName: file.name };
+      setForm({ ...form, brand_core: nbc });
+      await update.mutateAsync({ id: form.id, brand_core: nbc });
+      toast.success("Fonte enviada!");
+    } catch { /* hook já avisa */ }
+  };
+
   const swatches = parseHex(bc.colorPalette);
   const diagOverall = dg.overall && DIAG[dg.overall as keyof typeof DIAG];
 
@@ -75,11 +102,15 @@ function ClientWorkspace() {
       {/* HERO */}
       <div className="rounded-3xl border border-border bg-card p-6 sm:p-7 shadow-sm mb-6">
         <div className="flex items-start gap-4 sm:gap-5 flex-wrap">
-          <div className="w-[72px] h-[72px] rounded-3xl p-[3px] bg-gradient-to-br from-primary via-purple-500 to-pink-400 shrink-0">
+          <button type="button" onClick={() => avatarInputRef.current?.click()}
+            className="relative w-[72px] h-[72px] rounded-3xl p-[3px] bg-gradient-to-br from-primary via-purple-500 to-pink-400 shrink-0 hover:scale-[1.02] transition-transform" aria-label="Trocar foto do cliente">
             <div className="w-full h-full rounded-[20px] bg-card flex items-center justify-center overflow-hidden">
-              <span className="font-display font-extrabold text-3xl text-primary">{form.logo && form.logo.length <= 2 ? form.logo : initial(form.name)}</span>
+              {shownAvatar ? <img src={shownAvatar} alt="" className="w-full h-full object-cover" loading="lazy" />
+                : <span className="font-display font-extrabold text-3xl text-primary">{form.logo && form.logo.length <= 2 ? form.logo : initial(form.name)}</span>}
             </div>
-          </div>
+            <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary border-2 border-background flex items-center justify-center shadow-sm"><Camera className="h-3.5 w-3.5 text-primary-foreground" /></div>
+          </button>
+          <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={onPickAvatar} />
           <div className="flex-1 min-w-0 pt-0.5">
             <h1 className="font-display font-bold text-2xl sm:text-3xl tracking-tight text-foreground truncate">{form.name || "Sem nome"}</h1>
             <div className="flex items-center gap-2 mt-2.5 flex-wrap">
@@ -156,6 +187,17 @@ function ClientWorkspace() {
                 <p className="text-xs font-semibold text-muted-foreground mt-2">{bc.typography || "tipografia não definida"}</p>
               </div>
               <F label="Tipografia"><Input value={bc.typography ?? ""} onChange={(e) => setBc("typography", e.target.value)} placeholder="Ex: Fraunces + Inter" className="rounded-xl" /></F>
+              <div className="mt-3 flex items-center gap-2 flex-wrap">
+                <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={() => fontInputRef.current?.click()} disabled={uploadAsset.isPending}>
+                  <Upload className="h-3.5 w-3.5 mr-1.5" /> Subir arquivo da fonte
+                </Button>
+                {bc.typographyFileUrl && (
+                  <a href={bc.typographyFileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline">
+                    <Download className="h-3.5 w-3.5" /> {bc.typographyFileName || "arquivo da fonte"}
+                  </a>
+                )}
+                <input ref={fontInputRef} type="file" accept=".ttf,.otf,.woff,.woff2" className="hidden" onChange={onPickFont} />
+              </div>
               <F label="Expressão visual" className="mt-3"><Textarea rows={2} value={bc.visualExpression ?? ""} onChange={(e) => setBc("visualExpression", e.target.value)} className="rounded-xl text-sm" /></F>
             </Card>
           </div>
@@ -285,11 +327,14 @@ function Moodboard({ clientId }: { clientId: string }) {
   const fileRef = useRef<HTMLInputElement>(null);
   return (
     <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-display font-bold text-base text-foreground flex items-center gap-2.5"><ImageIcon className="h-[18px] w-[18px] text-primary" /> Moodboard</h3>
-        <Button variant="outline" size="sm" className="rounded-xl" onClick={() => fileRef.current?.click()} disabled={addRef.isPending}><ImagePlus className="h-3.5 w-3.5 mr-1.5" /> Adicionar</Button>
-        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) await addRef.mutateAsync({ crmClientId: clientId, file: f }); }} />
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <h3 className="font-display font-bold text-base text-foreground flex items-center gap-2.5"><ImageIcon className="h-[18px] w-[18px] text-primary" /> Moodboard</h3>
+          <p className="text-xs text-muted-foreground mt-1">Imagens de referência do cliente — prints, paleta, inspirações visuais.</p>
+        </div>
+        <Button variant="outline" size="sm" className="rounded-xl shrink-0" onClick={() => fileRef.current?.click()} disabled={addRef.isPending}><ImagePlus className="h-3.5 w-3.5 mr-1.5" /> Adicionar imagem</Button>
       </div>
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) await addRef.mutateAsync({ crmClientId: clientId, file: f }); }} />
       {refs.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma referência ainda.</p> : (
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-2.5">
           {refs.map((r) => (
