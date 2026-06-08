@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
-import { Plus, DollarSign, Trash2, Target, ListTodo, CheckCircle2, Circle } from "lucide-react";
+import { Plus, DollarSign, Trash2, Target, ListTodo, CheckCircle2, Circle, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import {
   useCrmLeads, useCreateCrmLead, useUpdateCrmLead, useDeleteCrmLead,
   useCrmClients, useCreateCrmClient, useCreateCrmContract,
   useCrmTasks, useCreateCrmTask, useUpdateCrmTask, useDeleteCrmTask,
-  CRM_STAGES, CRM_STAGE_LABELS, type CrmLead, type CrmStage, type CrmLeadInput,
+  CRM_STAGES, CRM_STAGE_LABELS,
+  type CrmLead, type CrmStage, type CrmLeadInput, type CrmTask, type CrmTaskStatus, type CrmTaskPriority,
 } from "@/hooks/useCrm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,7 @@ export function PipelineBoard() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editLead, setEditLead] = useState<CrmLead | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
+  const [panelEdit, setPanelEdit] = useState<CrmTask | null>(null);
 
   const metrics = useMemo(() => {
     const open = leads.filter((l) => l.stage !== "fechado" && l.stage !== "perdido");
@@ -155,14 +157,15 @@ export function PipelineBoard() {
               return (
                 <div key={leadId} className="rounded-2xl border border-border bg-card p-4">
                   <button onClick={() => { setEditLead(lead); setDialogOpen(true); }} className="text-sm font-display font-bold text-foreground hover:text-primary transition-colors">{lead.name}</button>
-                  <div className="mt-2 space-y-1.5">
+                  <div className="mt-2 space-y-1">
                     {ts.map((t) => {
                       const overdue = !!t.due_date && t.due_date < today;
                       return (
-                        <div key={t.id} className="flex items-center gap-2 text-xs">
+                        <div key={t.id} className="flex items-center gap-2 text-xs rounded-lg hover:bg-muted/40 px-1.5 py-1 -mx-1.5 transition-colors">
                           <button onClick={() => updateTask.mutate({ id: t.id, status: "concluida" })} className="shrink-0 text-muted-foreground hover:text-primary" title="Concluir"><Circle className="h-3.5 w-3.5" /></button>
-                          <span className="flex-1 truncate text-foreground">{t.title}</span>
+                          <button onClick={() => setPanelEdit(t)} className="flex-1 truncate text-left text-foreground hover:text-primary">{t.title}</button>
                           {t.due_date && <span className={cn("text-[10px] shrink-0", overdue ? "text-destructive font-semibold" : "text-muted-foreground")}>{shortDate(t.due_date)}</span>}
+                          <button onClick={() => setPanelEdit(t)} className="shrink-0 text-muted-foreground hover:text-primary" title="Editar"><Pencil className="h-3 w-3" /></button>
                         </div>
                       );
                     })}
@@ -185,6 +188,8 @@ export function PipelineBoard() {
           saving={createLead.isPending || updateLead.isPending}
         />
       )}
+
+      {panelEdit && <TaskEditDialog task={panelEdit} onClose={() => setPanelEdit(null)} />}
     </div>
   );
 }
@@ -240,6 +245,7 @@ function LeadTasks({ leadId }: { leadId: string }) {
   const deleteTask = useDeleteCrmTask();
   const [title, setTitle] = useState("");
   const [due, setDue] = useState("");
+  const [editing, setEditing] = useState<CrmTask | null>(null);
   const add = async () => {
     if (!title.trim()) return;
     await createTask.mutateAsync({ title: title.trim(), crm_lead_id: leadId, due_date: due || null });
@@ -255,9 +261,10 @@ function LeadTasks({ leadId }: { leadId: string }) {
               <button type="button" onClick={() => updateTask.mutate({ id: t.id, status: t.status === "concluida" ? "pendente" : "concluida" })} className="shrink-0 text-muted-foreground hover:text-primary">
                 {t.status === "concluida" ? <CheckCircle2 className="h-4 w-4 text-primary" /> : <Circle className="h-4 w-4" />}
               </button>
-              <span className={cn("flex-1 truncate", t.status === "concluida" && "line-through text-muted-foreground")}>{t.title}</span>
+              <button type="button" onClick={() => setEditing(t)} className={cn("flex-1 truncate text-left hover:text-primary", t.status === "concluida" && "line-through text-muted-foreground")}>{t.title}</button>
               {t.due_date && <span className="text-[10px] text-muted-foreground shrink-0">{new Date(t.due_date + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}</span>}
-              <button type="button" onClick={() => deleteTask.mutate(t.id)} className="shrink-0 text-muted-foreground hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
+              <button type="button" onClick={() => setEditing(t)} className="shrink-0 text-muted-foreground hover:text-primary" title="Editar"><Pencil className="h-3.5 w-3.5" /></button>
+              <button type="button" onClick={() => deleteTask.mutate(t.id)} className="shrink-0 text-muted-foreground hover:text-destructive" title="Excluir"><Trash2 className="h-3.5 w-3.5" /></button>
             </div>
           ))}
         </div>
@@ -267,7 +274,53 @@ function LeadTasks({ leadId }: { leadId: string }) {
         <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="rounded-lg h-9 text-sm w-36" />
         <Button type="button" size="sm" onClick={add} disabled={!title.trim() || createTask.isPending}><Plus className="h-3.5 w-3.5" /></Button>
       </div>
+      {editing && <TaskEditDialog task={editing} onClose={() => setEditing(null)} />}
     </div>
+  );
+}
+
+function TaskEditDialog({ task, onClose }: { task: CrmTask; onClose: () => void }) {
+  const update = useUpdateCrmTask();
+  const del = useDeleteCrmTask();
+  const [title, setTitle] = useState(task.title);
+  const [priority, setPriority] = useState<CrmTaskPriority>(task.priority);
+  const [status, setStatus] = useState<CrmTaskStatus>(task.status);
+  const [due, setDue] = useState(task.due_date ?? "");
+  const [desc, setDesc] = useState(task.description ?? "");
+  const save = async () => {
+    if (!title.trim()) { toast.error("Título é obrigatório."); return; }
+    await update.mutateAsync({ id: task.id, title: title.trim(), priority, status, due_date: due || null, description: desc.trim() || null });
+    toast.success("Tarefa atualizada!");
+    onClose();
+  };
+  const remove = async () => { if (confirm("Excluir esta tarefa?")) { await del.mutateAsync(task.id); onClose(); } };
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-md rounded-2xl">
+        <DialogHeader><DialogTitle className="font-display">Editar tarefa</DialogTitle></DialogHeader>
+        <div className="space-y-3 mt-2">
+          <div className="space-y-1.5"><Label className="text-xs">Título *</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} className="rounded-xl" /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5"><Label className="text-xs">Prioridade</Label>
+              <select value={priority} onChange={(e) => setPriority(e.target.value as CrmTaskPriority)} className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
+                <option value="baixa">Baixa</option><option value="media">Média</option><option value="alta">Alta</option><option value="urgente">Urgente</option>
+              </select>
+            </div>
+            <div className="space-y-1.5"><Label className="text-xs">Status</Label>
+              <select value={status} onChange={(e) => setStatus(e.target.value as CrmTaskStatus)} className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
+                <option value="pendente">Pendente</option><option value="em_andamento">Em andamento</option><option value="concluida">Concluída</option>
+              </select>
+            </div>
+          </div>
+          <div className="space-y-1.5"><Label className="text-xs">Prazo</Label><Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="rounded-xl" /></div>
+          <div className="space-y-1.5"><Label className="text-xs">Descrição</Label><Textarea rows={2} value={desc} onChange={(e) => setDesc(e.target.value)} className="rounded-xl text-sm" /></div>
+        </div>
+        <div className="flex items-center justify-between gap-2 mt-5">
+          <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={remove}><Trash2 className="h-4 w-4 mr-1.5" /> Excluir</Button>
+          <div className="flex gap-2"><Button variant="outline" onClick={onClose}>Cancelar</Button><Button onClick={save} disabled={!title.trim() || update.isPending}>Salvar</Button></div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
