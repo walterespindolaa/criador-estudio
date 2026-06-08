@@ -42,7 +42,7 @@ export type FinSettings = {
   taxPct?: number;       // % (Simples)
   reinvestPct?: number;
   proLaborePct?: number;
-  categories?: { pj?: string[]; pf?: string[] };
+  categories?: { pj?: { entrada?: string[]; despesa?: string[] }; pf?: { entrada?: string[]; despesa?: string[] } };
 };
 
 export type ManagerProfile = {

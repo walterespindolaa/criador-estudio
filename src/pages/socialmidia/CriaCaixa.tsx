@@ -24,9 +24,15 @@ const STATUS_STYLE: Record<FinStatus, string> = {
   pago: "bg-green-100 text-green-700", pendente: "bg-amber-100 text-amber-700", atrasado: "bg-destructive/10 text-destructive",
 };
 const STATUS_LABEL: Record<FinStatus, string> = { pago: "Pago", pendente: "Pendente", atrasado: "Atrasado" };
-const DEFAULT_CATS: Record<FinContext, string[]> = {
-  pj: ["Mensalidade", "Ferramentas", "Tráfego pago", "Edição / Freelancer", "Equipamento", "Impostos", "Pró-labore", "Distribuição"],
-  pf: ["Moradia", "Alimentação", "Transporte", "Lazer", "Saúde", "Pró-labore recebido", "Distribuição recebida", "Outros"],
+const DEFAULT_CATS: Record<FinContext, Record<FinType, string[]>> = {
+  pj: {
+    entrada: ["Mensalidade", "Projeto avulso", "Tráfego reembolsado", "Outras receitas"],
+    despesa: ["Ferramentas", "Tráfego pago", "Edição / Freelancer", "Equipamento", "Impostos", "Pró-labore", "Distribuição", "Outras despesas"],
+  },
+  pf: {
+    entrada: ["Pró-labore", "Distribuição de lucros", "Renda extra", "Outras receitas"],
+    despesa: ["Moradia", "Alimentação", "Transporte", "Lazer", "Saúde", "Educação", "Outras despesas"],
+  },
 };
 
 export default function CriaCaixa() {
@@ -85,20 +91,18 @@ function CaixaInner() {
 
   const isPj = ctx === "pj";
 
-  const effectiveCats = useMemo(
-    () => Array.from(new Set([...DEFAULT_CATS[ctx], ...((profile?.fin_settings?.categories?.[ctx]) ?? [])])),
-    [profile, ctx],
-  );
-  const addCategory = async (name: string) => {
+  const customCats = profile?.fin_settings?.categories?.[ctx];
+  const addCategory = async (type: FinType, name: string) => {
     const p = profile;
     const fin = p?.fin_settings ?? {};
     const cur = fin.categories ?? {};
-    const list = Array.from(new Set([...(cur[ctx] ?? []), name]));
+    const ctxCats = cur[ctx] ?? {};
+    const list = Array.from(new Set([...(ctxCats[type] ?? []), name]));
     await save.mutateAsync({
       full_name: p?.full_name ?? null, business_name: p?.business_name ?? null, tax_id: p?.tax_id ?? null,
       whatsapp: p?.whatsapp ?? null, billing_email: p?.billing_email ?? null,
       instagram_handle: p?.instagram_handle ?? null, niche: p?.niche ?? null, client_range: p?.client_range ?? null,
-      fin_settings: { ...fin, categories: { ...cur, [ctx]: list } },
+      fin_settings: { ...fin, categories: { ...cur, [ctx]: { ...ctxCats, [type]: list } } },
     });
   };
 
@@ -225,7 +229,7 @@ function CaixaInner() {
       )}
 
       {dialog && (
-        <RecordDialog key={editing?.id ?? "new"} record={editing} context={ctx} clients={clients} defaultDate={monthDate} categories={effectiveCats} onAddCategory={addCategory} onClose={() => { setDialog(false); setEditing(null); }} />
+        <RecordDialog key={editing?.id ?? "new"} record={editing} context={ctx} clients={clients} defaultDate={monthDate} defaultCats={DEFAULT_CATS[ctx]} customCats={customCats} onAddCategory={addCategory} onClose={() => { setDialog(false); setEditing(null); }} />
       )}
       <FinCompanyDialog open={companyOpen} onOpenChange={setCompanyOpen} />
     </div>
@@ -292,19 +296,21 @@ function CashflowChart({ records, ctx, ym }: { records: FinRecord[]; ctx: FinCon
   );
 }
 
-function RecordDialog({ record, context, clients, defaultDate, categories, onAddCategory, onClose }: {
+function RecordDialog({ record, context, clients, defaultDate, defaultCats, customCats, onAddCategory, onClose }: {
   record: FinRecord | null; context: FinContext; clients: { id: string; name: string }[]; defaultDate: string;
-  categories: string[]; onAddCategory: (name: string) => Promise<void>; onClose: () => void;
+  defaultCats: Record<FinType, string[]>; customCats?: { entrada?: string[]; despesa?: string[] };
+  onAddCategory: (type: FinType, name: string) => Promise<void>; onClose: () => void;
 }) {
   const create = useCreateFinRecord(); const update = useUpdateFinRecord();
   const [f, setF] = useState<FinRecordInput>(() => record ? { ...record } : { type: "entrada", description: "", amount: 0, status: "pendente", date: defaultDate, context });
   const set = (patch: Partial<FinRecordInput>) => setF((p) => ({ ...p, ...patch }));
   const [addingCat, setAddingCat] = useState(false);
   const [newCat, setNewCat] = useState("");
+  const cats = Array.from(new Set([...(defaultCats[f.type] ?? []), ...((customCats?.[f.type]) ?? [])]));
   const confirmNewCat = async () => {
     const name = newCat.trim();
     if (!name) return;
-    await onAddCategory(name);
+    await onAddCategory(f.type, name);
     set({ category: name });
     setNewCat(""); setAddingCat(false);
   };
@@ -321,7 +327,7 @@ function RecordDialog({ record, context, clients, defaultDate, categories, onAdd
         <div className="space-y-3 mt-2">
           <div className="grid grid-cols-2 gap-2">
             {(["entrada", "despesa"] as const).map((t) => (
-              <button key={t} onClick={() => set({ type: t })} className={cn("py-2 rounded-xl text-sm font-body font-bold border", f.type === t ? (t === "entrada" ? "bg-green-600 text-white border-green-600" : "bg-destructive text-white border-destructive") : "bg-card border-border text-muted-foreground")}>{t === "entrada" ? "Entrada" : "Despesa"}</button>
+              <button key={t} onClick={() => set({ type: t, category: "" })} className={cn("py-2 rounded-xl text-sm font-body font-bold border", f.type === t ? (t === "entrada" ? "bg-green-600 text-white border-green-600" : "bg-destructive text-white border-destructive") : "bg-card border-border text-muted-foreground")}>{t === "entrada" ? "Entrada" : "Despesa"}</button>
             ))}
           </div>
           <div className="space-y-1.5"><Label className="text-xs">Descrição *</Label><Input value={f.description ?? ""} onChange={(e) => set({ description: e.target.value })} className="rounded-xl" /></div>
@@ -340,7 +346,7 @@ function RecordDialog({ record, context, clients, defaultDate, categories, onAdd
                 <select value={f.category ?? ""} onChange={(e) => { if (e.target.value === "__add__") { setAddingCat(true); return; } set({ category: e.target.value }); }}
                   className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
                   <option value="">— sem categoria —</option>
-                  {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                  {cats.map((c) => <option key={c} value={c}>{c}</option>)}
                   <option value="__add__">＋ Adicionar categoria…</option>
                 </select>
               )}
