@@ -8,7 +8,7 @@ export type FinStatus = "pago" | "pendente" | "atrasado";
 export type FinContext = "pj" | "pf";
 export type FinRecord = {
   id: string; manager_id: string; crm_client_id: string | null; context: FinContext;
-  type: FinType; description: string; category: string | null; amount: number;
+  type: FinType; description: string; category: string | null; subcategory: string | null; amount: number;
   status: FinStatus; payment_method: string | null; date: string; recurring: boolean;
   created_at: string; updated_at: string;
 };

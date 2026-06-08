@@ -43,6 +43,7 @@ export type FinSettings = {
   reinvestPct?: number;
   proLaborePct?: number;
   categories?: { pj?: { entrada?: string[]; despesa?: string[] }; pf?: { entrada?: string[]; despesa?: string[] } };
+  subcats?: { pj?: { entrada?: Record<string, string[]>; despesa?: Record<string, string[]> }; pf?: { entrada?: Record<string, string[]>; despesa?: Record<string, string[]> } };
 };
 
 export type ManagerProfile = {

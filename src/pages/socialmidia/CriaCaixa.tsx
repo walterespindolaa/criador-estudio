@@ -34,6 +34,25 @@ const DEFAULT_CATS: Record<FinContext, Record<FinType, string[]>> = {
     despesa: ["Moradia", "Alimentação", "Transporte", "Lazer", "Saúde", "Educação", "Outras despesas"],
   },
 };
+const DEFAULT_SUBCATS: Record<FinContext, Record<FinType, Record<string, string[]>>> = {
+  pj: {
+    entrada: { "Projeto avulso": ["Identidade visual", "Campanha", "Ensaio"] },
+    despesa: {
+      "Ferramentas": ["Canva", "CapCut", "Agendador", "Hospedagem / Bunny", "IA"],
+      "Tráfego pago": ["Meta Ads", "Google Ads", "TikTok Ads"],
+      "Edição / Freelancer": ["Editor", "Designer", "Redator"],
+      "Equipamento": ["Câmera", "Iluminação", "Áudio"],
+    },
+  },
+  pf: {
+    entrada: {},
+    despesa: {
+      "Moradia": ["Aluguel", "Contas", "Internet"],
+      "Transporte": ["Combustível", "App / transporte", "Manutenção"],
+      "Saúde": ["Plano", "Academia", "Terapia"],
+    },
+  },
+};
 
 export default function CriaCaixa() {
   return <ModuleGate code="financeiro"><CaixaInner /></ModuleGate>;
@@ -103,6 +122,22 @@ function CaixaInner() {
       whatsapp: p?.whatsapp ?? null, billing_email: p?.billing_email ?? null,
       instagram_handle: p?.instagram_handle ?? null, niche: p?.niche ?? null, client_range: p?.client_range ?? null,
       fin_settings: { ...fin, categories: { ...cur, [ctx]: { ...ctxCats, [type]: list } } },
+    });
+  };
+
+  const customSubs = profile?.fin_settings?.subcats?.[ctx];
+  const addSubcategory = async (type: FinType, category: string, name: string) => {
+    const p = profile;
+    const fin = p?.fin_settings ?? {};
+    const cur = fin.subcats ?? {};
+    const ctxSubs = cur[ctx] ?? {};
+    const typeSubs = ctxSubs[type] ?? {};
+    const list = Array.from(new Set([...(typeSubs[category] ?? []), name]));
+    await save.mutateAsync({
+      full_name: p?.full_name ?? null, business_name: p?.business_name ?? null, tax_id: p?.tax_id ?? null,
+      whatsapp: p?.whatsapp ?? null, billing_email: p?.billing_email ?? null,
+      instagram_handle: p?.instagram_handle ?? null, niche: p?.niche ?? null, client_range: p?.client_range ?? null,
+      fin_settings: { ...fin, subcats: { ...cur, [ctx]: { ...ctxSubs, [type]: { ...typeSubs, [category]: list } } } },
     });
   };
 
@@ -213,7 +248,7 @@ function CaixaInner() {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-display font-bold text-foreground truncate">{r.description}</p>
                   <p className="text-[11px] text-muted-foreground font-body truncate">
-                    {new Date(r.date + "T00:00:00").toLocaleDateString("pt-BR")}{r.category ? ` · ${r.category}` : ""}{clientName(r.crm_client_id) ? ` · ${clientName(r.crm_client_id)}` : ""}
+                    {new Date(r.date + "T00:00:00").toLocaleDateString("pt-BR")}{r.category ? ` · ${r.category}${r.subcategory ? ` › ${r.subcategory}` : ""}` : ""}{clientName(r.crm_client_id) ? ` · ${clientName(r.crm_client_id)}` : ""}
                   </p>
                 </div>
                 <Badge className={cn("text-[10px] shrink-0", STATUS_STYLE[r.status])}>{STATUS_LABEL[r.status]}</Badge>
@@ -229,7 +264,7 @@ function CaixaInner() {
       )}
 
       {dialog && (
-        <RecordDialog key={editing?.id ?? "new"} record={editing} context={ctx} clients={clients} defaultDate={monthDate} defaultCats={DEFAULT_CATS[ctx]} customCats={customCats} onAddCategory={addCategory} onClose={() => { setDialog(false); setEditing(null); }} />
+        <RecordDialog key={editing?.id ?? "new"} record={editing} context={ctx} clients={clients} defaultDate={monthDate} defaultCats={DEFAULT_CATS[ctx]} customCats={customCats} defaultSubs={DEFAULT_SUBCATS[ctx]} customSubs={customSubs} onAddCategory={addCategory} onAddSubcategory={addSubcategory} onClose={() => { setDialog(false); setEditing(null); }} />
       )}
       <FinCompanyDialog open={companyOpen} onOpenChange={setCompanyOpen} />
     </div>
@@ -296,23 +331,35 @@ function CashflowChart({ records, ctx, ym }: { records: FinRecord[]; ctx: FinCon
   );
 }
 
-function RecordDialog({ record, context, clients, defaultDate, defaultCats, customCats, onAddCategory, onClose }: {
+function RecordDialog({ record, context, clients, defaultDate, defaultCats, customCats, defaultSubs, customSubs, onAddCategory, onAddSubcategory, onClose }: {
   record: FinRecord | null; context: FinContext; clients: { id: string; name: string }[]; defaultDate: string;
   defaultCats: Record<FinType, string[]>; customCats?: { entrada?: string[]; despesa?: string[] };
-  onAddCategory: (type: FinType, name: string) => Promise<void>; onClose: () => void;
+  defaultSubs: Record<FinType, Record<string, string[]>>; customSubs?: { entrada?: Record<string, string[]>; despesa?: Record<string, string[]> };
+  onAddCategory: (type: FinType, name: string) => Promise<void>; onAddSubcategory: (type: FinType, category: string, name: string) => Promise<void>; onClose: () => void;
 }) {
   const create = useCreateFinRecord(); const update = useUpdateFinRecord();
   const [f, setF] = useState<FinRecordInput>(() => record ? { ...record } : { type: "entrada", description: "", amount: 0, status: "pendente", date: defaultDate, context });
   const set = (patch: Partial<FinRecordInput>) => setF((p) => ({ ...p, ...patch }));
   const [addingCat, setAddingCat] = useState(false);
   const [newCat, setNewCat] = useState("");
+  const [addingSub, setAddingSub] = useState(false);
+  const [newSub, setNewSub] = useState("");
   const cats = Array.from(new Set([...(defaultCats[f.type] ?? []), ...((customCats?.[f.type]) ?? [])]));
+  const cat = f.category ?? "";
+  const subs = cat ? Array.from(new Set([...((defaultSubs[f.type]?.[cat]) ?? []), ...((customSubs?.[f.type]?.[cat]) ?? [])])) : [];
   const confirmNewCat = async () => {
     const name = newCat.trim();
     if (!name) return;
     await onAddCategory(f.type, name);
-    set({ category: name });
+    set({ category: name, subcategory: "" });
     setNewCat(""); setAddingCat(false);
+  };
+  const confirmNewSub = async () => {
+    const name = newSub.trim();
+    if (!name || !f.category) return;
+    await onAddSubcategory(f.type, f.category, name);
+    set({ subcategory: name });
+    setNewSub(""); setAddingSub(false);
   };
   const submit = async () => {
     if (!f.description?.trim()) return;
@@ -327,7 +374,7 @@ function RecordDialog({ record, context, clients, defaultDate, defaultCats, cust
         <div className="space-y-3 mt-2">
           <div className="grid grid-cols-2 gap-2">
             {(["entrada", "despesa"] as const).map((t) => (
-              <button key={t} onClick={() => set({ type: t, category: "" })} className={cn("py-2 rounded-xl text-sm font-body font-bold border", f.type === t ? (t === "entrada" ? "bg-green-600 text-white border-green-600" : "bg-destructive text-white border-destructive") : "bg-card border-border text-muted-foreground")}>{t === "entrada" ? "Entrada" : "Despesa"}</button>
+              <button key={t} onClick={() => set({ type: t, category: "", subcategory: "" })} className={cn("py-2 rounded-xl text-sm font-body font-bold border", f.type === t ? (t === "entrada" ? "bg-green-600 text-white border-green-600" : "bg-destructive text-white border-destructive") : "bg-card border-border text-muted-foreground")}>{t === "entrada" ? "Entrada" : "Despesa"}</button>
             ))}
           </div>
           <div className="space-y-1.5"><Label className="text-xs">Descrição *</Label><Input value={f.description ?? ""} onChange={(e) => set({ description: e.target.value })} className="rounded-xl" /></div>
@@ -343,7 +390,7 @@ function RecordDialog({ record, context, clients, defaultDate, defaultCats, cust
                   <Button type="button" size="sm" onClick={confirmNewCat} disabled={!newCat.trim()}>OK</Button>
                 </div>
               ) : (
-                <select value={f.category ?? ""} onChange={(e) => { if (e.target.value === "__add__") { setAddingCat(true); return; } set({ category: e.target.value }); }}
+                <select value={f.category ?? ""} onChange={(e) => { if (e.target.value === "__add__") { setAddingCat(true); return; } set({ category: e.target.value, subcategory: "" }); }}
                   className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
                   <option value="">— sem categoria —</option>
                   {cats.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -357,6 +404,24 @@ function RecordDialog({ record, context, clients, defaultDate, defaultCats, cust
               </select>
             </div>
           </div>
+
+          {f.category && (
+            <div className="space-y-1.5"><Label className="text-xs">Subcategoria</Label>
+              {addingSub ? (
+                <div className="flex gap-2">
+                  <Input autoFocus value={newSub} onChange={(e) => setNewSub(e.target.value)} placeholder="Nova subcategoria" className="rounded-xl" onKeyDown={(e) => { if (e.key === "Enter") confirmNewSub(); }} />
+                  <Button type="button" size="sm" onClick={confirmNewSub} disabled={!newSub.trim()}>OK</Button>
+                </div>
+              ) : (
+                <select value={f.subcategory ?? ""} onChange={(e) => { if (e.target.value === "__add__") { setAddingSub(true); return; } set({ subcategory: e.target.value }); }}
+                  className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
+                  <option value="">— sem subcategoria —</option>
+                  {subs.map((s) => <option key={s} value={s}>{s}</option>)}
+                  <option value="__add__">＋ Adicionar subcategoria…</option>
+                </select>
+              )}
+            </div>
+          )}
           {context === "pj" && (
             <div className="space-y-1.5"><Label className="text-xs">Cliente (opcional)</Label>
               <select value={f.crm_client_id ?? ""} onChange={(e) => set({ crm_client_id: e.target.value || null })} className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
