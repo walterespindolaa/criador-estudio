@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 const brl = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -88,19 +89,21 @@ function CaixaInner() {
     <div>
       <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
         <ManagerSectionTitle t="Cria Caixa" s="O financeiro da sua operação — empresa e pessoal, separados." />
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setCompanyOpen(true)}><Building2 className="h-3.5 w-3.5 mr-1.5" /> Minha empresa</Button>
-          <Button size="sm" onClick={() => { setEditing(null); setDialog(true); }}><Plus className="h-3.5 w-3.5 mr-1.5" /> Novo lançamento</Button>
-        </div>
+        <Button variant="outline" size="sm" onClick={() => setCompanyOpen(true)}><Building2 className="h-3.5 w-3.5 mr-1.5" /> Minha empresa</Button>
       </div>
 
-      <div className="inline-flex items-center gap-1 rounded-2xl border border-border bg-card p-1 mb-5">
-        {([["pj", "Empresa", Building2], ["pf", "Pessoa Física", User]] as const).map(([v, l, Icon]) => (
-          <button key={v} onClick={() => setCtx(v)}
-            className={cn("flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-body font-bold transition-colors", ctx === v ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground")}>
-            <Icon className="h-4 w-4" /> {l}
-          </button>
-        ))}
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-5">
+        <div className="inline-flex items-center gap-1 rounded-2xl border border-border bg-card p-1">
+          {([["pj", "Empresa", Building2], ["pf", "Pessoa Física", User]] as const).map(([v, l, Icon]) => (
+            <button key={v} onClick={() => setCtx(v)}
+              className={cn("flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-body font-bold transition-colors", ctx === v ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground")}>
+              <Icon className="h-4 w-4" /> {l}
+            </button>
+          ))}
+        </div>
+        <Button size="sm" onClick={() => { setEditing(null); setDialog(true); }}>
+          <Plus className="h-3.5 w-3.5 mr-1.5" /> Novo lançamento {ctx === "pj" ? "(Empresa)" : "(Pessoal)"}
+        </Button>
       </div>
 
       <div className="flex items-center gap-2 mb-4">
@@ -123,6 +126,8 @@ function CaixaInner() {
           <Metric label="Sobra" value={brl(recebido - despesas)} tone={recebido - despesas >= 0 ? "green" : "red"} />
         </div>
       )}
+
+      <CashflowChart records={records} ctx={ctx} ym={ym} />
 
       {isPj && activeClients.length > 0 && (
         <div className="rounded-2xl border border-border bg-card p-4 mb-5">
@@ -225,6 +230,47 @@ function Alloc({ label, value }: { label: string; value: string }) {
     <div>
       <p className="text-[11px] text-muted-foreground font-body font-semibold">{label}</p>
       <p className="text-base font-display font-extrabold text-foreground mt-0.5">{value}</p>
+    </div>
+  );
+}
+
+function CashflowChart({ records, ctx, ym }: { records: FinRecord[]; ctx: FinContext; ym: { y: number; m: number } }) {
+  const data = useMemo(() => {
+    const arr: { label: string; receitas: number; despesas: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(ym.y, ym.m - i, 1);
+      const recs = records.filter((r) => {
+        if ((r.context ?? "pj") !== ctx) return false;
+        const dt = new Date(r.date + "T00:00:00");
+        return dt.getFullYear() === d.getFullYear() && dt.getMonth() === d.getMonth();
+      });
+      arr.push({
+        label: MONTHS[d.getMonth()],
+        receitas: recs.filter((r) => r.type === "entrada").reduce((s, r) => s + Number(r.amount), 0),
+        despesas: recs.filter((r) => r.type === "despesa").reduce((s, r) => s + Number(r.amount), 0),
+      });
+    }
+    return arr;
+  }, [records, ctx, ym]);
+
+  if (!data.some((d) => d.receitas > 0 || d.despesas > 0)) return null;
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4 mb-5">
+      <h3 className="text-sm font-display font-bold text-foreground mb-3">Receitas × Despesas (últimos 6 meses)</h3>
+      <div className="h-56">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 4, right: 8, left: -10, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+            <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="#9ca3af" />
+            <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" tickFormatter={(v: number) => (v >= 1000 ? `${Math.round(v / 1000)}k` : `${v}`)} />
+            <Tooltip formatter={(v: number) => brl(Number(v))} contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 12 }} />
+            <Legend wrapperStyle={{ fontSize: 12 }} />
+            <Bar dataKey="receitas" name="Receitas" fill="#16a34a" radius={[6, 6, 0, 0]} />
+            <Bar dataKey="despesas" name="Despesas" fill="#dc2626" radius={[6, 6, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
