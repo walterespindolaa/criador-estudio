@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Plus, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, Pencil, Building2, User, Check, Repeat, ArrowLeftRight } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -72,7 +73,11 @@ function CaixaInner() {
 
   const fin = profile?.fin_settings ?? {};
   const now = new Date();
-  const [ctx, setCtx] = useState<FinContext>("pj");
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const caixaSeg = pathname.split("/").filter(Boolean).pop() || "";
+  const ctx: FinContext = caixaSeg === "pessoafisica" ? "pf" : "pj";
+  useEffect(() => { if (caixaSeg === "criacaixa") navigate("/socialmidia/criacaixa/empresa", { replace: true }); }, [caixaSeg, navigate]);
   const [ym, setYm] = useState({ y: now.getFullYear(), m: now.getMonth() });
   const [typeF, setTypeF] = useState<FinType | "todos">("todos");
   const [statusF, setStatusF] = useState<FinStatus | "todos">("todos");
@@ -195,7 +200,7 @@ function CaixaInner() {
       <div className="flex items-center justify-between gap-3 flex-wrap mb-5">
         <div className="inline-flex items-center gap-1 rounded-2xl border border-border bg-card p-1">
           {([["pj", "Empresa", Building2], ["pf", "Pessoa Física", User]] as const).map(([v, l, Icon]) => (
-            <button key={v} onClick={() => setCtx(v)}
+            <button key={v} onClick={() => navigate(`/socialmidia/criacaixa/${v === "pj" ? "empresa" : "pessoafisica"}`)}
               className={cn("flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-body font-bold transition-colors", ctx === v ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground")}>
               <Icon className="h-4 w-4" /> {l}
             </button>

@@ -124,6 +124,8 @@ const App = () => (
                 <Route path="criacrm/contratos" element={<ErrorBoundary><CriaCrm /></ErrorBoundary>} />
                 <Route path="criacrm/:id" element={<ErrorBoundary><CriaCrmClient /></ErrorBoundary>} />
                 <Route path="criacaixa" element={<ErrorBoundary><CriaCaixa /></ErrorBoundary>} />
+                <Route path="criacaixa/empresa" element={<ErrorBoundary><CriaCaixa /></ErrorBoundary>} />
+                <Route path="criacaixa/pessoafisica" element={<ErrorBoundary><CriaCaixa /></ErrorBoundary>} />
                 <Route path="parceria" element={<ErrorBoundary><Parceria /></ErrorBoundary>} />
                 <Route path="comissoes" element={<ErrorBoundary><Comissoes /></ErrorBoundary>} />
                 <Route path="contas" element={<ErrorBoundary><Contas /></ErrorBoundary>} />
