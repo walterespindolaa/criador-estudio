@@ -294,3 +294,98 @@ export function useUploadCrmAsset() {
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao enviar arquivo."),
   });
 }
+
+// ===================== CONTRATOS: editar + apagar =====================
+export function useUpdateCrmContract() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string } & Partial<CrmContractInput>) => {
+      const { error } = await sbFrom("crm_contracts").update(updates as never).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-contracts"] }),
+    onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao atualizar contrato."),
+  });
+}
+export function useDeleteCrmContract() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await sbFrom("crm_contracts").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-contracts"] }),
+    onError: () => toast.error("Erro ao excluir contrato."),
+  });
+}
+
+// ===================== TAREFAS DO CRM (crm_tasks) =====================
+export const CRM_TASK_STATUSES = ["pendente", "em_andamento", "concluida"] as const;
+export type CrmTaskStatus = typeof CRM_TASK_STATUSES[number];
+export const CRM_TASK_PRIORITIES = ["baixa", "media", "alta", "urgente"] as const;
+export type CrmTaskPriority = typeof CRM_TASK_PRIORITIES[number];
+export const CRM_TASK_STATUS_LABELS: Record<CrmTaskStatus, string> = {
+  pendente: "Pendentes", em_andamento: "Em andamento", concluida: "Concluídas",
+};
+export const CRM_TASK_PRIORITY_LABELS: Record<CrmTaskPriority, string> = {
+  baixa: "Baixa", media: "Média", alta: "Alta", urgente: "Urgente",
+};
+
+export type CrmTask = {
+  id: string; manager_id: string;
+  crm_client_id: string | null; crm_lead_id: string | null;
+  title: string; description: string | null;
+  status: CrmTaskStatus; priority: CrmTaskPriority;
+  due_date: string | null; created_at: string; updated_at: string;
+};
+export type CrmTaskInput = Partial<Omit<CrmTask, "id" | "manager_id" | "created_at" | "updated_at">> & { title: string };
+
+export function useCrmTasks() {
+  const { user } = useAuth();
+  return useQuery<CrmTask[]>({
+    queryKey: ["crm-tasks", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("crm_tasks")
+        .select("*").eq("manager_id", user!.id)
+        .order("due_date", { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as CrmTask[];
+    },
+  });
+}
+export function useCreateCrmTask() {
+  const { user } = useAuth(); const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: CrmTaskInput) => {
+      if (!user?.id) throw new Error("Sem sessão");
+      const { error } = await sbFrom("crm_tasks").insert({ ...input, manager_id: user.id } as never);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-tasks"] }),
+    onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao criar tarefa."),
+  });
+}
+export function useUpdateCrmTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string } & Partial<CrmTaskInput>) => {
+      const { error } = await sbFrom("crm_tasks").update(updates as never).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-tasks"] }),
+    onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao atualizar tarefa."),
+  });
+}
+export function useDeleteCrmTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await sbFrom("crm_tasks").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-tasks"] }),
+    onError: () => toast.error("Erro ao excluir tarefa."),
+  });
+}
