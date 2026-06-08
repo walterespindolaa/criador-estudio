@@ -9,7 +9,7 @@ export type FinContext = "pj" | "pf";
 export type FinRecord = {
   id: string; manager_id: string; crm_client_id: string | null; context: FinContext;
   type: FinType; description: string; category: string | null; subcategory: string | null; amount: number;
-  status: FinStatus; payment_method: string | null; date: string; recurring: boolean; recurring_id: string | null;
+  status: FinStatus; payment_method: string | null; date: string; recurring: boolean; recurring_id: string | null; transfer_group: string | null;
   created_at: string; updated_at: string;
 };
 export type FinRecordInput = Partial<Omit<FinRecord, "id" | "manager_id" | "created_at" | "updated_at">> & { type: FinType; description: string; amount: number };
@@ -125,5 +125,34 @@ export function useGenerateRecurring() {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records"] }),
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao lançar recorrentes."),
+  });
+}
+
+// ===================== TRANSFERÊNCIA PJ→PF =====================
+export type TransferKind = "Pró-labore" | "Distribuição de lucros";
+export function useCreateFinTransfer() {
+  const { user } = useAuth(); const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { kind: TransferKind; amount: number; date: string; description: string }) => {
+      if (!user?.id) throw new Error("Sem sessão");
+      const group = crypto.randomUUID();
+      const base = { manager_id: user.id, amount: input.amount, status: "pago", date: input.date, transfer_group: group };
+      const rows = [
+        { ...base, context: "pj", type: "despesa", category: input.kind === "Pró-labore" ? "Pró-labore" : "Distribuição", description: input.description || `${input.kind} (saída)` },
+        { ...base, context: "pf", type: "entrada", category: input.kind === "Pró-labore" ? "Pró-labore" : "Distribuição de lucros", description: input.description || input.kind },
+      ];
+      const { error } = await sbFrom("fin_records").insert(rows as never);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records"] }),
+    onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro na transferência."),
+  });
+}
+export function useDeleteFinByGroup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (group: string) => { const { error } = await sbFrom("fin_records").delete().eq("transfer_group", group); if (error) throw error; },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records"] }),
+    onError: () => toast.error("Erro ao excluir transferência."),
   });
 }

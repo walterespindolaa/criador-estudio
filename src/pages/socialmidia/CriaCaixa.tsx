@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
-import { Plus, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, Pencil, Building2, User, Check, Repeat } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, Pencil, Building2, User, Check, Repeat, ArrowLeftRight } from "lucide-react";
 import { toast } from "sonner";
 import {
-  useFinRecords, useCreateFinRecord, useUpdateFinRecord, useDeleteFinRecord, useFinRecurring, useGenerateRecurring,
+  useFinRecords, useCreateFinRecord, useUpdateFinRecord, useDeleteFinRecord, useFinRecurring, useGenerateRecurring, useDeleteFinByGroup,
   type FinRecord, type FinType, type FinStatus, type FinContext, type FinRecordInput,
 } from "@/hooks/useFinance";
 import { useCrmClients } from "@/hooks/useCrm";
@@ -11,6 +11,7 @@ import { ModuleGate } from "@/components/accounts/ModuleGate";
 import { ManagerSectionTitle } from "@/components/accounts/ManagerSectionTitle";
 import { FinCompanyDialog } from "@/components/accounts/FinCompanyDialog";
 import { FinRecurringDialog } from "@/components/accounts/FinRecurringDialog";
+import { FinTransferDialog } from "@/components/accounts/FinTransferDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -67,6 +68,7 @@ function CaixaInner() {
   const createRec = useCreateFinRecord();
   const { data: recurring = [] } = useFinRecurring();
   const generate = useGenerateRecurring();
+  const delGroup = useDeleteFinByGroup();
 
   const fin = profile?.fin_settings ?? {};
   const now = new Date();
@@ -78,6 +80,7 @@ function CaixaInner() {
   const [editing, setEditing] = useState<FinRecord | null>(null);
   const [companyOpen, setCompanyOpen] = useState(false);
   const [recurringOpen, setRecurringOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
 
   const clientName = (id: string | null) => clients.find((c) => c.id === id)?.name ?? null;
   const inMonth = (d: string) => { const dt = new Date(d + "T00:00:00"); return dt.getFullYear() === ym.y && dt.getMonth() === ym.m; };
@@ -168,7 +171,8 @@ function CaixaInner() {
     <div>
       <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
         <ManagerSectionTitle t="Cria Caixa" s="O financeiro da sua operação — empresa e pessoal, separados." />
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {isPj && <Button variant="outline" size="sm" onClick={() => setTransferOpen(true)}><ArrowLeftRight className="h-3.5 w-3.5 mr-1.5" /> Transferir p/ PF</Button>}
           <Button variant="outline" size="sm" onClick={() => setRecurringOpen(true)}><Repeat className="h-3.5 w-3.5 mr-1.5" /> Recorrentes</Button>
           <Button variant="outline" size="sm" onClick={() => setCompanyOpen(true)}><Building2 className="h-3.5 w-3.5 mr-1.5" /> Minha empresa</Button>
         </div>
@@ -282,14 +286,14 @@ function CaixaInner() {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-display font-bold text-foreground truncate">{r.description}</p>
                   <p className="text-[11px] text-muted-foreground font-body truncate">
-                    {new Date(r.date + "T00:00:00").toLocaleDateString("pt-BR")}{r.category ? ` · ${r.category}${r.subcategory ? ` › ${r.subcategory}` : ""}` : ""}{clientName(r.crm_client_id) ? ` · ${clientName(r.crm_client_id)}` : ""}
+                    {new Date(r.date + "T00:00:00").toLocaleDateString("pt-BR")}{r.category ? ` · ${r.category}${r.subcategory ? ` › ${r.subcategory}` : ""}` : ""}{clientName(r.crm_client_id) ? ` · ${clientName(r.crm_client_id)}` : ""}{r.transfer_group ? " · ↔ transferência" : ""}
                   </p>
                 </div>
                 <Badge className={cn("text-[10px] shrink-0", STATUS_STYLE[r.status])}>{STATUS_LABEL[r.status]}</Badge>
                 <span className={cn("text-sm font-display font-extrabold shrink-0", isIn ? "text-green-700" : "text-destructive")}>{isIn ? "+" : "−"}{brl(Number(r.amount))}</span>
                 <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditing(r); setDialog(true); }}><Pencil className="h-3.5 w-3.5" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => { if (confirm("Excluir lançamento?")) del.mutate(r.id); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => { if (r.transfer_group) { if (confirm("Excluir esta transferência (Empresa e Pessoal)?")) delGroup.mutate(r.transfer_group); } else if (confirm("Excluir lançamento?")) del.mutate(r.id); }}><Trash2 className="h-3.5 w-3.5" /></Button>
                 </div>
               </div>
             );
@@ -302,6 +306,7 @@ function CaixaInner() {
       )}
       <FinCompanyDialog open={companyOpen} onOpenChange={setCompanyOpen} />
       <FinRecurringDialog open={recurringOpen} onOpenChange={setRecurringOpen} ctx={ctx} defaultCats={DEFAULT_CATS[ctx]} customCats={customCats} defaultSubs={DEFAULT_SUBCATS[ctx]} customSubs={customSubs} />
+      <FinTransferDialog open={transferOpen} onOpenChange={setTransferOpen} />
     </div>
   );
 }
