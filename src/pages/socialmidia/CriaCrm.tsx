@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation, Navigate } from "react-router-dom";
 import { Plus, Download, Search, Building2, Instagram, DollarSign, ArrowRight } from "lucide-react";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import {
@@ -27,11 +27,20 @@ export default function CriaCrm() {
   return <ModuleGate code="crm"><CrmInner /></ModuleGate>;
 }
 
+const CRM_TABS = ["clientes", "tarefas", "calendario", "pipeline", "contratos"] as const;
+type CrmTab = typeof CRM_TABS[number];
+
 function CrmInner() {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const seg = pathname.split("/").filter(Boolean).pop() || "";
+  if (seg === "criacrm") return <Navigate to="/socialmidia/criacrm/clientes" replace />;
+  const tab: CrmTab = (CRM_TABS as readonly string[]).includes(seg) ? (seg as CrmTab) : "clientes";
+
   return (
     <div>
       <ManagerSectionTitle t="Cria Gestão" s="Carteira, tarefas, calendário, pipeline e contratos da sua operação." />
-      <Tabs defaultValue="clientes" className="w-full">
+      <Tabs value={tab} onValueChange={(v) => navigate(`/socialmidia/criacrm/${v}`)} className="w-full">
         <TabsList className="bg-card border border-border rounded-2xl p-1.5 mb-5 flex-wrap h-auto">
           <TabsTrigger value="clientes" className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Clientes</TabsTrigger>
           <TabsTrigger value="tarefas" className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Tarefas</TabsTrigger>

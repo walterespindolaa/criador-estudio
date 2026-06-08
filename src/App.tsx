@@ -117,6 +117,11 @@ const App = () => (
                 <Route path="dashboard" element={<ErrorBoundary><ManagerHome /></ErrorBoundary>} />
                 <Route path="criapost" element={<ErrorBoundary><CriaPost /></ErrorBoundary>} />
                 <Route path="criacrm" element={<ErrorBoundary><CriaCrm /></ErrorBoundary>} />
+                <Route path="criacrm/clientes" element={<ErrorBoundary><CriaCrm /></ErrorBoundary>} />
+                <Route path="criacrm/tarefas" element={<ErrorBoundary><CriaCrm /></ErrorBoundary>} />
+                <Route path="criacrm/calendario" element={<ErrorBoundary><CriaCrm /></ErrorBoundary>} />
+                <Route path="criacrm/pipeline" element={<ErrorBoundary><CriaCrm /></ErrorBoundary>} />
+                <Route path="criacrm/contratos" element={<ErrorBoundary><CriaCrm /></ErrorBoundary>} />
                 <Route path="criacrm/:id" element={<ErrorBoundary><CriaCrmClient /></ErrorBoundary>} />
                 <Route path="criacaixa" element={<ErrorBoundary><CriaCaixa /></ErrorBoundary>} />
                 <Route path="parceria" element={<ErrorBoundary><Parceria /></ErrorBoundary>} />
