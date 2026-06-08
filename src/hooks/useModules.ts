@@ -42,6 +42,7 @@ export type FinSettings = {
   taxPct?: number;       // % (Simples)
   reinvestPct?: number;
   proLaborePct?: number;
+  categories?: { pj?: string[]; pf?: string[] };
 };
 
 export type ManagerProfile = {

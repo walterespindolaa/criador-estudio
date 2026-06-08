@@ -24,7 +24,7 @@ const STATUS_STYLE: Record<FinStatus, string> = {
   pago: "bg-green-100 text-green-700", pendente: "bg-amber-100 text-amber-700", atrasado: "bg-destructive/10 text-destructive",
 };
 const STATUS_LABEL: Record<FinStatus, string> = { pago: "Pago", pendente: "Pendente", atrasado: "Atrasado" };
-const CATS: Record<FinContext, string[]> = {
+const DEFAULT_CATS: Record<FinContext, string[]> = {
   pj: ["Mensalidade", "Ferramentas", "Tráfego pago", "Edição / Freelancer", "Equipamento", "Impostos", "Pró-labore", "Distribuição"],
   pf: ["Moradia", "Alimentação", "Transporte", "Lazer", "Saúde", "Pró-labore recebido", "Distribuição recebida", "Outros"],
 };
@@ -36,7 +36,7 @@ export default function CriaCaixa() {
 function CaixaInner() {
   const { data: records = [], isLoading } = useFinRecords();
   const { data: clients = [] } = useCrmClients();
-  const { profile } = useManagerProfile();
+  const { profile, save } = useManagerProfile();
   const del = useDeleteFinRecord();
   const createRec = useCreateFinRecord();
 
@@ -84,6 +84,23 @@ function CaixaInner() {
   };
 
   const isPj = ctx === "pj";
+
+  const effectiveCats = useMemo(
+    () => Array.from(new Set([...DEFAULT_CATS[ctx], ...((profile?.fin_settings?.categories?.[ctx]) ?? [])])),
+    [profile, ctx],
+  );
+  const addCategory = async (name: string) => {
+    const p = profile;
+    const fin = p?.fin_settings ?? {};
+    const cur = fin.categories ?? {};
+    const list = Array.from(new Set([...(cur[ctx] ?? []), name]));
+    await save.mutateAsync({
+      full_name: p?.full_name ?? null, business_name: p?.business_name ?? null, tax_id: p?.tax_id ?? null,
+      whatsapp: p?.whatsapp ?? null, billing_email: p?.billing_email ?? null,
+      instagram_handle: p?.instagram_handle ?? null, niche: p?.niche ?? null, client_range: p?.client_range ?? null,
+      fin_settings: { ...fin, categories: { ...cur, [ctx]: list } },
+    });
+  };
 
   return (
     <div>
@@ -208,7 +225,7 @@ function CaixaInner() {
       )}
 
       {dialog && (
-        <RecordDialog key={editing?.id ?? "new"} record={editing} context={ctx} clients={clients} defaultDate={monthDate} onClose={() => { setDialog(false); setEditing(null); }} />
+        <RecordDialog key={editing?.id ?? "new"} record={editing} context={ctx} clients={clients} defaultDate={monthDate} categories={effectiveCats} onAddCategory={addCategory} onClose={() => { setDialog(false); setEditing(null); }} />
       )}
       <FinCompanyDialog open={companyOpen} onOpenChange={setCompanyOpen} />
     </div>
@@ -275,19 +292,28 @@ function CashflowChart({ records, ctx, ym }: { records: FinRecord[]; ctx: FinCon
   );
 }
 
-function RecordDialog({ record, context, clients, defaultDate, onClose }: {
-  record: FinRecord | null; context: FinContext; clients: { id: string; name: string }[]; defaultDate: string; onClose: () => void;
+function RecordDialog({ record, context, clients, defaultDate, categories, onAddCategory, onClose }: {
+  record: FinRecord | null; context: FinContext; clients: { id: string; name: string }[]; defaultDate: string;
+  categories: string[]; onAddCategory: (name: string) => Promise<void>; onClose: () => void;
 }) {
   const create = useCreateFinRecord(); const update = useUpdateFinRecord();
   const [f, setF] = useState<FinRecordInput>(() => record ? { ...record } : { type: "entrada", description: "", amount: 0, status: "pendente", date: defaultDate, context });
   const set = (patch: Partial<FinRecordInput>) => setF((p) => ({ ...p, ...patch }));
+  const [addingCat, setAddingCat] = useState(false);
+  const [newCat, setNewCat] = useState("");
+  const confirmNewCat = async () => {
+    const name = newCat.trim();
+    if (!name) return;
+    await onAddCategory(name);
+    set({ category: name });
+    setNewCat(""); setAddingCat(false);
+  };
   const submit = async () => {
     if (!f.description?.trim()) return;
     if (record) await update.mutateAsync({ id: record.id, ...f });
     else await create.mutateAsync(f as FinRecordInput);
     onClose();
   };
-  const cats = CATS[context];
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="sm:max-w-md rounded-2xl">
@@ -305,8 +331,19 @@ function RecordDialog({ record, context, clients, defaultDate, onClose }: {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5"><Label className="text-xs">Categoria</Label>
-              <Input list="fin-cats" value={f.category ?? ""} onChange={(e) => set({ category: e.target.value })} placeholder="Ex: Ferramentas" className="rounded-xl" />
-              <datalist id="fin-cats">{cats.map((c) => <option key={c} value={c} />)}</datalist>
+              {addingCat ? (
+                <div className="flex gap-2">
+                  <Input autoFocus value={newCat} onChange={(e) => setNewCat(e.target.value)} placeholder="Nova categoria" className="rounded-xl" onKeyDown={(e) => { if (e.key === "Enter") confirmNewCat(); }} />
+                  <Button type="button" size="sm" onClick={confirmNewCat} disabled={!newCat.trim()}>OK</Button>
+                </div>
+              ) : (
+                <select value={f.category ?? ""} onChange={(e) => { if (e.target.value === "__add__") { setAddingCat(true); return; } set({ category: e.target.value }); }}
+                  className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
+                  <option value="">— sem categoria —</option>
+                  {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                  <option value="__add__">＋ Adicionar categoria…</option>
+                </select>
+              )}
             </div>
             <div className="space-y-1.5"><Label className="text-xs">Status</Label>
               <select value={f.status ?? "pendente"} onChange={(e) => set({ status: e.target.value as FinStatus })} className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
