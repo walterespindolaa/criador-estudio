@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
-import { Plus, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, Pencil, Building2, User, Check } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, Pencil, Building2, User, Check, Repeat } from "lucide-react";
 import { toast } from "sonner";
 import {
-  useFinRecords, useCreateFinRecord, useUpdateFinRecord, useDeleteFinRecord,
+  useFinRecords, useCreateFinRecord, useUpdateFinRecord, useDeleteFinRecord, useFinRecurring, useGenerateRecurring,
   type FinRecord, type FinType, type FinStatus, type FinContext, type FinRecordInput,
 } from "@/hooks/useFinance";
 import { useCrmClients } from "@/hooks/useCrm";
@@ -10,6 +10,7 @@ import { useManagerProfile } from "@/hooks/useModules";
 import { ModuleGate } from "@/components/accounts/ModuleGate";
 import { ManagerSectionTitle } from "@/components/accounts/ManagerSectionTitle";
 import { FinCompanyDialog } from "@/components/accounts/FinCompanyDialog";
+import { FinRecurringDialog } from "@/components/accounts/FinRecurringDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -64,6 +65,8 @@ function CaixaInner() {
   const { profile, save } = useManagerProfile();
   const del = useDeleteFinRecord();
   const createRec = useCreateFinRecord();
+  const { data: recurring = [] } = useFinRecurring();
+  const generate = useGenerateRecurring();
 
   const fin = profile?.fin_settings ?? {};
   const now = new Date();
@@ -74,6 +77,7 @@ function CaixaInner() {
   const [dialog, setDialog] = useState(false);
   const [editing, setEditing] = useState<FinRecord | null>(null);
   const [companyOpen, setCompanyOpen] = useState(false);
+  const [recurringOpen, setRecurringOpen] = useState(false);
 
   const clientName = (id: string | null) => clients.find((c) => c.id === id)?.name ?? null;
   const inMonth = (d: string) => { const dt = new Date(d + "T00:00:00"); return dt.getFullYear() === ym.y && dt.getMonth() === ym.m; };
@@ -110,6 +114,25 @@ function CaixaInner() {
 
   const isPj = ctx === "pj";
 
+  const monthStart = new Date(ym.y, ym.m, 1);
+  const monthEnd = new Date(ym.y, ym.m + 1, 0);
+  const pendingRecurring = recurring.filter((t) => {
+    if (!t.active || (t.context ?? "pj") !== ctx) return false;
+    const st = new Date(t.start_date + "T00:00:00");
+    if (st > monthEnd) return false;
+    if (t.end_date) { const en = new Date(t.end_date + "T00:00:00"); if (en < monthStart) return false; }
+    return !monthCtx.some((r) => r.recurring_id === t.id);
+  });
+  const lancarRecorrentes = async () => {
+    const rows: FinRecordInput[] = pendingRecurring.map((t) => ({
+      context: ctx, type: t.type, description: t.description, category: t.category, subcategory: t.subcategory,
+      amount: Number(t.amount), status: "pendente" as FinStatus, crm_client_id: t.crm_client_id, recurring_id: t.id,
+      date: `${ym.y}-${pad(ym.m + 1)}-${pad(Math.min(t.due_day, 28))}`,
+    }));
+    const n = await generate.mutateAsync(rows);
+    if (n) toast.success(`${n} lançamento(s) recorrente(s) criado(s).`);
+  };
+
   const customCats = profile?.fin_settings?.categories?.[ctx];
   const addCategory = async (type: FinType, name: string) => {
     const p = profile;
@@ -145,7 +168,10 @@ function CaixaInner() {
     <div>
       <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
         <ManagerSectionTitle t="Cria Caixa" s="O financeiro da sua operação — empresa e pessoal, separados." />
-        <Button variant="outline" size="sm" onClick={() => setCompanyOpen(true)}><Building2 className="h-3.5 w-3.5 mr-1.5" /> Minha empresa</Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setRecurringOpen(true)}><Repeat className="h-3.5 w-3.5 mr-1.5" /> Recorrentes</Button>
+          <Button variant="outline" size="sm" onClick={() => setCompanyOpen(true)}><Building2 className="h-3.5 w-3.5 mr-1.5" /> Minha empresa</Button>
+        </div>
       </div>
 
       <div className="flex items-center justify-between gap-3 flex-wrap mb-5">
@@ -167,6 +193,14 @@ function CaixaInner() {
         <span className="text-sm font-display font-bold text-foreground min-w-[110px] text-center">{MONTHS[ym.m]} {ym.y}</span>
         <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => shift(1)}><ChevronRight className="h-4 w-4" /></Button>
       </div>
+
+      {pendingRecurring.length > 0 && (
+        <button onClick={lancarRecorrentes} disabled={generate.isPending}
+          className="w-full mb-5 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-primary/10 transition-colors">
+          <span className="text-sm font-body text-foreground"><span className="font-bold">{pendingRecurring.length}</span> recorrente(s) de {MONTHS[ym.m]} ainda não lançado(s).</span>
+          <span className="text-sm font-display font-bold text-primary shrink-0 flex items-center gap-1.5"><Repeat className="h-3.5 w-3.5" /> Lançar do mês</span>
+        </button>
+      )}
 
       {isPj ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
@@ -267,6 +301,7 @@ function CaixaInner() {
         <RecordDialog key={editing?.id ?? "new"} record={editing} context={ctx} clients={clients} defaultDate={monthDate} defaultCats={DEFAULT_CATS[ctx]} customCats={customCats} defaultSubs={DEFAULT_SUBCATS[ctx]} customSubs={customSubs} onAddCategory={addCategory} onAddSubcategory={addSubcategory} onClose={() => { setDialog(false); setEditing(null); }} />
       )}
       <FinCompanyDialog open={companyOpen} onOpenChange={setCompanyOpen} />
+      <FinRecurringDialog open={recurringOpen} onOpenChange={setRecurringOpen} ctx={ctx} defaultCats={DEFAULT_CATS[ctx]} customCats={customCats} defaultSubs={DEFAULT_SUBCATS[ctx]} customSubs={customSubs} />
     </div>
   );
 }
