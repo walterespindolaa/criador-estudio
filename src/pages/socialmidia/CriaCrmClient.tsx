@@ -8,6 +8,7 @@ import {
 import { toast } from "sonner";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useCrmClient, useUpdateCrmClient, useDeleteCrmClient, useCrmClientRefs, useAddCrmRef, useDeleteCrmRef, useUploadCrmAsset, type CrmClient } from "@/hooks/useCrm";
+import { ClientTasks } from "@/components/accounts/crm/ClientTasks";
 import { ModuleGate } from "@/components/accounts/ModuleGate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -136,7 +137,7 @@ function ClientWorkspace() {
       {/* TABS */}
       <Tabs defaultValue="resumo" className="w-full">
         <TabsList className="bg-card border border-border rounded-2xl p-1.5 mb-6 flex-wrap h-auto shadow-sm">
-          {[["resumo", "Resumo"], ["brand", "Brand Core"], ["persona", "Persona"], ["diag", "Diagnóstico"], ["conc", "Concorrência"]].map(([v, l]) => (
+          {[["resumo", "Resumo"], ["tarefas", "Tarefas"], ["brand", "Brand Core"], ["persona", "Persona"], ["diag", "Diagnóstico"], ["conc", "Concorrência"]].map(([v, l]) => (
             <TabsTrigger key={v} value={v} className="rounded-xl px-4 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none font-display">{l}</TabsTrigger>
           ))}
         </TabsList>
@@ -163,6 +164,11 @@ function ClientWorkspace() {
               </div>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* TAREFAS */}
+        <TabsContent value="tarefas" className="mt-0 space-y-4">
+          <ClientTasks clientId={form.id} />
         </TabsContent>
 
         {/* BRAND CORE */}
