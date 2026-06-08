@@ -35,6 +35,15 @@ export type ContractCompany = {
   repCpf?: string;
 };
 
+export type FinSettings = {
+  companyName?: string;
+  regime?: "mei" | "simples";
+  dasMonthly?: number;   // R$ fixo (MEI)
+  taxPct?: number;       // % (Simples)
+  reinvestPct?: number;
+  proLaborePct?: number;
+};
+
 export type ManagerProfile = {
   id: string;
   user_id: string;
@@ -47,6 +56,7 @@ export type ManagerProfile = {
   niche: string | null;
   client_range: string | null;
   contract_company?: ContractCompany | null;
+  fin_settings?: FinSettings | null;
 };
 
 export type ManagerProfileInput = Omit<ManagerProfile, "id" | "user_id">;

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Plus, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, Pencil } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, Pencil, Building2 } from "lucide-react";
 import {
   useFinRecords, useCreateFinRecord, useUpdateFinRecord, useDeleteFinRecord,
   type FinRecord, type FinType, type FinStatus, type FinRecordInput,
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FinCompanyDialog } from "@/components/accounts/FinCompanyDialog";
 import { cn } from "@/lib/utils";
 
 const brl = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
@@ -35,6 +36,7 @@ function CaixaInner() {
   const [typeF, setTypeF] = useState<FinType | "todos">("todos");
   const [statusF, setStatusF] = useState<FinStatus | "todos">("todos");
   const [dialog, setDialog] = useState(false);
+  const [companyOpen, setCompanyOpen] = useState(false);
   const [editing, setEditing] = useState<FinRecord | null>(null);
 
   const clientName = (id: string | null) => clients.find((c) => c.id === id)?.name ?? null;
@@ -54,7 +56,10 @@ function CaixaInner() {
     <div>
       <div className="flex items-start justify-between gap-3 flex-wrap mb-5">
         <ManagerSectionTitle t="Cria Caixa" s="O financeiro da sua operação — entradas, despesas e saldo." />
-        <Button size="sm" onClick={() => { setEditing(null); setDialog(true); }}><Plus className="h-3.5 w-3.5 mr-1.5" /> Novo lançamento</Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setCompanyOpen(true)}><Building2 className="h-3.5 w-3.5 mr-1.5" /> Minha empresa</Button>
+          <Button size="sm" onClick={() => { setEditing(null); setDialog(true); }}><Plus className="h-3.5 w-3.5 mr-1.5" /> Novo lançamento</Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-2 mb-4">
@@ -123,6 +128,7 @@ function CaixaInner() {
           onClose={() => { setDialog(false); setEditing(null); }}
         />
       )}
+      <FinCompanyDialog open={companyOpen} onOpenChange={setCompanyOpen} />
     </div>
   );
 }
