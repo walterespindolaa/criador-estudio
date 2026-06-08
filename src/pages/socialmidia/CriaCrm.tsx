@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PipelineBoard } from "@/components/accounts/crm/PipelineBoard";
 import { ContractsTab } from "@/components/accounts/crm/ContractsTab";
+import { TasksTab } from "@/components/accounts/crm/TasksTab";
 import { cn } from "@/lib/utils";
 
 const brl = (v?: number | null) => `R$ ${Number(v ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
@@ -28,14 +29,16 @@ export default function CriaCrm() {
 function CrmInner() {
   return (
     <div>
-      <ManagerSectionTitle t="Cria Gestão" s="Carteira, pipeline e contratos da sua operação." />
+      <ManagerSectionTitle t="Cria Gestão" s="Carteira, tarefas, pipeline e contratos da sua operação." />
       <Tabs defaultValue="clientes" className="w-full">
-        <TabsList className="bg-card border border-border rounded-2xl p-1.5 mb-5">
+        <TabsList className="bg-card border border-border rounded-2xl p-1.5 mb-5 flex-wrap h-auto">
           <TabsTrigger value="clientes" className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Clientes</TabsTrigger>
+          <TabsTrigger value="tarefas" className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Tarefas</TabsTrigger>
           <TabsTrigger value="pipeline" className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Pipeline</TabsTrigger>
           <TabsTrigger value="contratos" className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Contratos</TabsTrigger>
         </TabsList>
         <TabsContent value="clientes"><ClientsTab /></TabsContent>
+        <TabsContent value="tarefas"><TasksTab /></TabsContent>
         <TabsContent value="pipeline"><PipelineBoard /></TabsContent>
         <TabsContent value="contratos"><ContractsTab /></TabsContent>
       </Tabs>
