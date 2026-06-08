@@ -95,6 +95,20 @@ function CaixaInner() {
   const paidFor = (cid: string) => monthCtx.some((r) => r.type === "entrada" && r.status === "pago" && r.crm_client_id === cid);
   const mrr = activeClients.reduce((s, c) => s + Number(c.monthly_value), 0);
   const aReceber = activeClients.filter((c) => !paidFor(c.id)).reduce((s, c) => s + Number(c.monthly_value), 0);
+  const clientProfit = useMemo(() => {
+    const byClient = new Map<string, { receita: number; custo: number }>();
+    monthCtx.forEach((r) => {
+      if (!r.crm_client_id) return;
+      const cur = byClient.get(r.crm_client_id) ?? { receita: 0, custo: 0 };
+      if (r.type === "entrada" && r.status === "pago") cur.receita += Number(r.amount);
+      else if (r.type === "despesa") cur.custo += Number(r.amount);
+      byClient.set(r.crm_client_id, cur);
+    });
+    return Array.from(byClient.entries())
+      .map(([id, v]) => ({ id, name: clients.find((c) => c.id === id)?.name ?? "Cliente", receita: v.receita, custo: v.custo, margem: v.receita - v.custo }))
+      .filter((x) => x.receita > 0 || x.custo > 0)
+      .sort((a, b) => b.margem - a.margem);
+  }, [monthCtx, clients]);
 
   const imposto = fin.regime === "simples" ? recebido * (Number(fin.taxPct) || 0) / 100 : (Number(fin.dasMonthly) || 0);
   const reinvest = recebido * (Number(fin.reinvestPct) || 0) / 100;
@@ -253,6 +267,23 @@ function CaixaInner() {
             <Alloc label={fin.regime === "simples" ? "Imposto" : "DAS"} value={brl(imposto)} />
             <Alloc label="Reinvestir" value={brl(reinvest)} />
             <Alloc label="Pró-labore" value={brl(proLabore)} />
+          </div>
+        </div>
+      )}
+
+      {isPj && clientProfit.length > 0 && (
+        <div className="rounded-2xl border border-border bg-card p-4 mb-5">
+          <h3 className="text-sm font-display font-bold text-foreground mb-3">Rentabilidade por cliente ({MONTHS[ym.m]})</h3>
+          <div className="space-y-2">
+            {clientProfit.map((c) => (
+              <div key={c.id} className="flex items-center gap-3 py-1.5">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-body font-medium text-foreground truncate">{c.name}</p>
+                  <p className="text-[11px] text-muted-foreground font-body">recebido {brl(c.receita)} · custo {brl(c.custo)}</p>
+                </div>
+                <span className={cn("text-sm font-display font-bold shrink-0", c.margem >= 0 ? "text-green-700" : "text-destructive")}>{brl(c.margem)}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}
