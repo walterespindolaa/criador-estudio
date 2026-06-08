@@ -33,7 +33,7 @@ const NAV = [
   { to: "/socialmidia/aprovacoes", label: "Acompanhamento de Aprovações", icon: ListChecks },
 ] as const;
 
-export type ManagerOutletContext = { openModule: (m: ModuleWithStatus) => void };
+export type ManagerOutletContext = { openModule: (m: ModuleWithStatus) => void; openSettings: () => void };
 export function useManagerOutlet() { return useOutletContext<ManagerOutletContext>(); }
 
 export default function ManagerLayout() {
@@ -83,7 +83,7 @@ export default function ManagerLayout() {
   // criadores (não-manager) não entram no hub
   if (profile && profile.account_type !== "manager" && !hasManagedAccounts) return <Navigate to="/app" replace />;
 
-  const ctx: ManagerOutletContext = { openModule };
+  const ctx: ManagerOutletContext = { openModule, openSettings: () => setSettingsOpen(true) };
 
   return (
     <div className="min-h-screen bg-background flex" style={{ ["--active-font-display" as string]: "'Bricolage Grotesque', 'Plus Jakarta Sans', sans-serif" }}>

@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Camera, ArrowRight, Ticket } from "lucide-react";
+import { Camera, ArrowRight, Ticket, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -28,7 +28,7 @@ export default function ManagerHome() {
   const { profile, updateProfile } = useProfile();
   const { partner, isPartner } = usePartner();
   const { modules } = useModules();
-  const { openModule } = useManagerOutlet();
+  const { openModule, openSettings } = useManagerOutlet();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
@@ -72,6 +72,9 @@ export default function ManagerHome() {
           <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">{greeting(profile?.name)}</h1>
           <p className="text-sm text-muted-foreground font-body mt-1">Aqui está o resumo do seu dia.</p>
         </div>
+        <button type="button" onClick={openSettings} aria-label="Configurações" className="md:hidden p-2.5 rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors shrink-0">
+          <Settings className="h-5 w-5" />
+        </button>
       </div>
 
       <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">Seus módulos</h2>

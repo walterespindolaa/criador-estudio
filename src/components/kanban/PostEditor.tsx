@@ -1322,6 +1322,90 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                   </div>
                 </section>
 
+                {/* Schedule */}
+                <section className="rounded-2xl bg-card border border-border p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-display font-semibold">Agendamento</span>
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <Label className="text-[11px] text-muted-foreground flex items-center h-4">Data</Label>
+                      <Input
+                        type="date"
+                        value={scheduledDate}
+                        onChange={(e) => setScheduledDate(e.target.value)}
+                        className="rounded-xl h-10 text-sm w-full min-w-0 px-3 text-left [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:text-left"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <Label className="text-[11px] text-muted-foreground flex items-center gap-1 h-4">
+                        <Clock className="h-3 w-3" /> Hora
+                      </Label>
+                      <Input
+                        type="time"
+                        value={scheduledTime}
+                        onChange={(e) => setScheduledTime(e.target.value)}
+                        className="rounded-xl h-10 text-sm w-full min-w-0 px-3 text-left [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:text-left"
+                      />
+                    </div>
+                  </div>
+
+                  {!isNew && post && scheduledDate && (
+                    <div className="space-y-2 pt-1">
+                      <Button
+                        variant={googleEventId ? "outline" : "secondary"}
+                        size="sm"
+                        disabled={calendarSyncing}
+                        onClick={async () => {
+                          const newId = await syncCalendarPost({
+                            id: post.id,
+                            title: title || post.title,
+                            scheduled_date: scheduledDate,
+                            scheduled_time: scheduledTime || null,
+                            caption: caption || null,
+                            notes: notes || null,
+                            platform,
+                            format,
+                            google_event_id: googleEventId,
+                          });
+                          if (newId) setGoogleEventId(newId);
+                        }}
+                        className="w-full rounded-xl"
+                      >
+                        {calendarSyncing ? (
+                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sincronizando…</>
+                        ) : googleEventId ? (
+                          <><CalendarCheck className="h-4 w-4 mr-2" /> Atualizar na Agenda</>
+                        ) : (
+                          <><CalendarPlus className="h-4 w-4 mr-2" /> Adicionar à Google Agenda</>
+                        )}
+                      </Button>
+
+                      {googleEventId && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={calendarSyncing}
+                          onClick={async () => {
+                            await removeFromCalendar({
+                              id: post.id,
+                              title: title || post.title,
+                              scheduled_date: scheduledDate,
+                              scheduled_time: scheduledTime || null,
+                              google_event_id: googleEventId,
+                            });
+                            setGoogleEventId(null);
+                          }}
+                          className="w-full rounded-xl text-muted-foreground hover:text-destructive"
+                        >
+                          <CalendarX className="h-4 w-4 mr-2" /> Remover da Agenda
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </section>
+
                 {/* Content Assistant */}
                 <section className="rounded-2xl bg-card border border-border p-4 space-y-3">
                   <div className="flex items-center gap-2">
@@ -1409,90 +1493,6 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                           Gerar outra
                         </Button>
                       </div>
-                    </div>
-                  )}
-                </section>
-
-                {/* Schedule */}
-                <section className="rounded-2xl bg-card border border-border p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-display font-semibold">Agendamento</span>
-                  </div>
-                  <div className="flex items-end gap-2">
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <Label className="text-[11px] text-muted-foreground flex items-center h-4">Data</Label>
-                      <Input
-                        type="date"
-                        value={scheduledDate}
-                        onChange={(e) => setScheduledDate(e.target.value)}
-                        className="rounded-xl h-10 text-sm w-full min-w-0 px-3 text-left [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:text-left"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <Label className="text-[11px] text-muted-foreground flex items-center gap-1 h-4">
-                        <Clock className="h-3 w-3" /> Hora
-                      </Label>
-                      <Input
-                        type="time"
-                        value={scheduledTime}
-                        onChange={(e) => setScheduledTime(e.target.value)}
-                        className="rounded-xl h-10 text-sm w-full min-w-0 px-3 text-left [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:text-left"
-                      />
-                    </div>
-                  </div>
-
-                  {!isNew && post && scheduledDate && (
-                    <div className="space-y-2 pt-1">
-                      <Button
-                        variant={googleEventId ? "outline" : "secondary"}
-                        size="sm"
-                        disabled={calendarSyncing}
-                        onClick={async () => {
-                          const newId = await syncCalendarPost({
-                            id: post.id,
-                            title: title || post.title,
-                            scheduled_date: scheduledDate,
-                            scheduled_time: scheduledTime || null,
-                            caption: caption || null,
-                            notes: notes || null,
-                            platform,
-                            format,
-                            google_event_id: googleEventId,
-                          });
-                          if (newId) setGoogleEventId(newId);
-                        }}
-                        className="w-full rounded-xl"
-                      >
-                        {calendarSyncing ? (
-                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sincronizando…</>
-                        ) : googleEventId ? (
-                          <><CalendarCheck className="h-4 w-4 mr-2" /> Atualizar na Agenda</>
-                        ) : (
-                          <><CalendarPlus className="h-4 w-4 mr-2" /> Adicionar à Google Agenda</>
-                        )}
-                      </Button>
-
-                      {googleEventId && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={calendarSyncing}
-                          onClick={async () => {
-                            await removeFromCalendar({
-                              id: post.id,
-                              title: title || post.title,
-                              scheduled_date: scheduledDate,
-                              scheduled_time: scheduledTime || null,
-                              google_event_id: googleEventId,
-                            });
-                            setGoogleEventId(null);
-                          }}
-                          className="w-full rounded-xl text-muted-foreground hover:text-destructive"
-                        >
-                          <CalendarX className="h-4 w-4 mr-2" /> Remover da Agenda
-                        </Button>
-                      )}
                     </div>
                   )}
                 </section>
