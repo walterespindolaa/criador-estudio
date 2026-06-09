@@ -37,7 +37,7 @@ export default function ManagerHome() {
   const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; e.target.value = "";
     if (!file) return;
-    const v = validateUpload(file, "avatar");
+    const v = validateUpload(file, "managerAvatar");
     if (!v.ok) { toast.error(v.reason); return; }
     const reader = new FileReader();
     reader.onload = () => { setRawImageSrc(reader.result as string); setCropOpen(true); };

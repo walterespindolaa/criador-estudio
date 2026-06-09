@@ -4,6 +4,11 @@ export const UPLOAD_LIMITS = {
     allowedMimes: ["image/jpeg", "image/png", "image/webp"],
     label: "avatar",
   },
+  managerAvatar: {
+    maxBytes: 20 * 1024 * 1024, // 20 MB
+    allowedMimes: ["image/jpeg", "image/png", "image/webp"],
+    label: "foto",
+  },
   bioMedia: {
     maxBytes: 5 * 1024 * 1024, // 5 MB
     allowedMimes: ["image/jpeg", "image/png", "image/webp", "image/gif"],
