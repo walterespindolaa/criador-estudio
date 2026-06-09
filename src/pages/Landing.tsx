@@ -30,6 +30,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Logo } from "@/components/shared/Logo";
+import { PLANS } from "@/lib/plans";
 
 // --- Components ---
 
@@ -585,62 +586,65 @@ export default function Landing() {
 
         {/* ─── 9. PREÇO ─── */}
         <section id="pricing" className="scroll-mt-20 py-16 sm:py-20 lg:py-28 bg-muted/30 border-y border-border">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <motion.div {...fadeUp} className="text-center mb-16">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6">
+            <motion.div {...fadeUp} className="text-center mb-12 sm:mb-16">
               <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight mb-4">
-                Um plano. Tudo incluso.
+                Escolha seu plano
               </h2>
               <p className="text-lg text-muted-foreground">
-                Sem surpresa, sem plano básico que não serve.
+                Sem fidelidade, sem plano básico que não serve. Cancele quando quiser.
               </p>
             </motion.div>
 
-            <motion.div 
-              {...fadeUp}
-              className="max-w-lg mx-auto bg-card border-2 border-primary/20 rounded-3xl p-8 sm:p-10 shadow-glow relative"
-            >
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-primary text-white px-4 py-1 rounded-full text-sm font-semibold flex items-center gap-1.5 shadow-md">
-                <Sparkles className="w-4 h-4" /> ✦ Mais popular
-              </div>
-              
-              <div className="text-center mb-8 pt-4">
-                <h3 className="text-2xl font-display font-bold mb-2">Criador Pro</h3>
-                <div className="flex items-center justify-center gap-3 mb-2">
-                  <span className="text-2xl text-muted-foreground line-through font-display font-semibold opacity-60">R$ 47</span>
-                  <span className="text-5xl font-display font-extrabold text-foreground tracking-tight">R$ 29<span className="text-xl font-body font-normal text-muted-foreground">/mês</span></span>
-                </div>
-                <p className="text-sm text-primary font-semibold">ou R$ 297/ano — 2 meses grátis</p>
-              </div>
-
-              <div className="space-y-4 mb-8">
-                {[
-                  "Banco de ideias ilimitado",
-                  "Pipeline kanban completo",
-                  "Calendário + metas mensais",
-                  "Acompanhamento de hábitos",
-                  "cria (legendas, hashtags, ideias, roteiros)",
-                  "Agendamento Instagram, TikTok e YouTube",
-                  "Preview de feed do Instagram",
-                  "Link in Bio profissional",
-                  "Brandbook + Biblioteca pessoal",
-                  "Relatórios e analytics das redes",
-                ].map((item, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <div className="mt-1 rounded-full bg-primary/10 p-0.5">
-                      <Check className="w-4 h-4 text-primary" />
+            <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto items-start">
+              {PLANS.map((plan, i) => (
+                <motion.div
+                  key={plan.id}
+                  {...fadeUp}
+                  transition={{ duration: 0.5, delay: i * 0.08 }}
+                  className={cn(
+                    "relative bg-card rounded-3xl p-8 shadow-warm flex flex-col",
+                    plan.highlighted ? "border-2 border-primary shadow-glow" : "border border-border"
+                  )}
+                >
+                  {plan.highlighted && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white px-4 py-1 rounded-full text-sm font-semibold flex items-center gap-1.5 shadow-md whitespace-nowrap">
+                      <Sparkles className="w-4 h-4" /> Mais completo
                     </div>
-                    <span className="text-foreground/90 font-medium">{item}</span>
+                  )}
+                  <div className="text-center mb-6 pt-2">
+                    <h3 className="text-2xl font-display font-bold mb-1">{plan.name}</h3>
+                    <p className="text-sm text-muted-foreground">{plan.tagline}</p>
                   </div>
-                ))}
-              </div>
+                  <div className="text-center mb-8">
+                    <span className="text-4xl font-display font-extrabold text-foreground tracking-tight">{plan.price}</span>
+                    <span className="text-lg font-body text-muted-foreground">/mês</span>
+                  </div>
+                  <div className="space-y-3 mb-8 flex-1">
+                    {plan.features.map((feat) => (
+                      <div key={feat} className="flex items-start gap-3">
+                        <div className="mt-0.5 rounded-full bg-primary/10 p-0.5 shrink-0">
+                          <Check className="w-4 h-4 text-primary" />
+                        </div>
+                        <span className="text-foreground/90 font-medium text-sm">{feat}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <Button
+                    variant={plan.highlighted ? "hero" : "outline"}
+                    size="lg"
+                    className="w-full text-base h-12"
+                    onClick={() => navigate("/signup")}
+                  >
+                    Começar 14 dias grátis &rarr;
+                  </Button>
+                </motion.div>
+              ))}
+            </div>
 
-              <Button variant="hero" size="xl" className="w-full text-lg h-14" onClick={() => navigate("/signup")}>
-                Começar 14 dias grátis &rarr;
-              </Button>
-              <p className="text-center text-sm text-muted-foreground mt-4 font-medium">
-                Sem cartão de crédito. Cancele quando quiser.
-              </p>
-            </motion.div>
+            <p className="text-center text-sm text-muted-foreground mt-6 font-medium">
+              14 dias grátis · Sem cartão de crédito · Cancele quando quiser
+            </p>
           </div>
         </section>
 
