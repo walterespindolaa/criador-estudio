@@ -248,7 +248,7 @@ export default function Landing() {
           </nav>
 
           <div className="flex items-center gap-3">
-            <Button variant="ghost" className="hidden sm:flex font-semibold" onClick={() => navigate("/login")}>
+            <Button variant="ghost" className="font-semibold px-3 sm:px-4" onClick={() => navigate("/login")}>
               Entrar
             </Button>
             <Button variant="hero" className="font-semibold shadow-md" onClick={() => navigate("/signup")}>
