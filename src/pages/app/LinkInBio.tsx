@@ -51,6 +51,34 @@ type SocialLinks = {
   twitter: string;
 };
 
+type BioSectionId = "banner" | "about" | "links" | "lead";
+type BioSection = { id: BioSectionId; on: boolean };
+type LeadFields = "email" | "phone" | "both";
+type BioAbout = { image: string | null; title: string; text: string };
+type BioLeadForm = { title: string; subtitle: string; fields: LeadFields; buttonText: string; consentText: string };
+
+const BIO_SECTION_IDS: BioSectionId[] = ["banner", "about", "links", "lead"];
+const DEFAULT_SECTIONS: BioSection[] = [
+  { id: "banner", on: false },
+  { id: "about", on: false },
+  { id: "links", on: true },
+  { id: "lead", on: false },
+];
+function normalizeSections(raw: unknown): BioSection[] {
+  const arr = Array.isArray(raw) ? raw : [];
+  const seen = new Set<BioSectionId>();
+  const out: BioSection[] = [];
+  for (const item of arr) {
+    const id = (item as { id?: unknown })?.id;
+    if (typeof id === "string" && (BIO_SECTION_IDS as string[]).includes(id) && !seen.has(id as BioSectionId)) {
+      seen.add(id as BioSectionId);
+      out.push({ id: id as BioSectionId, on: Boolean((item as { on?: unknown })?.on) });
+    }
+  }
+  for (const def of DEFAULT_SECTIONS) { if (!seen.has(def.id)) out.push({ ...def }); }
+  return out;
+}
+
 export type BioSettings = {
   bgType: BgType;
   bgColor: string;
@@ -60,6 +88,10 @@ export type BioSettings = {
   buttonColor: string;
   buttonTextColor: string;
   socialLinks: SocialLinks;
+  bannerImage: string | null;
+  about: BioAbout;
+  lead: BioLeadForm;
+  sections: BioSection[];
 };
 
 const DEFAULT_SETTINGS: BioSettings = {
@@ -71,6 +103,16 @@ const DEFAULT_SETTINGS: BioSettings = {
   buttonColor: "#FFFFFF",
   buttonTextColor: "#1F2937",
   socialLinks: { instagram: "", tiktok: "", youtube: "", twitter: "" },
+  bannerImage: null,
+  about: { image: null, title: "Sobre mim", text: "" },
+  lead: {
+    title: "Receba novidades",
+    subtitle: "Deixe seu contato e eu te chamo.",
+    fields: "email",
+    buttonText: "Enviar",
+    consentText: "Ao enviar, você autoriza o uso dos seus dados para contato.",
+  },
+  sections: DEFAULT_SECTIONS,
 };
 
 type BioThemePreset = {
@@ -180,6 +222,8 @@ function parseSettings(raw: unknown): BioSettings {
       ? t.buttonStyle
       : "rounded";
   const socialRaw = (t.socialLinks ?? {}) as Partial<SocialLinks>;
+  const ta = (t.about ?? {}) as Partial<BioAbout>;
+  const tl = (t.lead ?? {}) as Partial<BioLeadForm>;
   return {
     bgType,
     bgColor: typeof t.bgColor === "string" ? t.bgColor : DEFAULT_SETTINGS.bgColor,
@@ -195,6 +239,20 @@ function parseSettings(raw: unknown): BioSettings {
       youtube: typeof socialRaw.youtube === "string" ? socialRaw.youtube : "",
       twitter: typeof socialRaw.twitter === "string" ? socialRaw.twitter : "",
     },
+    bannerImage: typeof t.bannerImage === "string" && t.bannerImage ? t.bannerImage : null,
+    about: {
+      image: typeof ta.image === "string" && ta.image ? ta.image : null,
+      title: typeof ta.title === "string" ? ta.title : DEFAULT_SETTINGS.about.title,
+      text: typeof ta.text === "string" ? ta.text : "",
+    },
+    lead: {
+      title: typeof tl.title === "string" ? tl.title : DEFAULT_SETTINGS.lead.title,
+      subtitle: typeof tl.subtitle === "string" ? tl.subtitle : DEFAULT_SETTINGS.lead.subtitle,
+      fields: tl.fields === "phone" || tl.fields === "both" ? tl.fields : "email",
+      buttonText: typeof tl.buttonText === "string" ? tl.buttonText : DEFAULT_SETTINGS.lead.buttonText,
+      consentText: typeof tl.consentText === "string" ? tl.consentText : DEFAULT_SETTINGS.lead.consentText,
+    },
+    sections: normalizeSections(t.sections),
   };
 }
 
