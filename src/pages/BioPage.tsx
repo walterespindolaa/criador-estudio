@@ -364,81 +364,114 @@ const BioPage = () => {
           )}
         </motion.div>
 
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={{
-            hidden: {},
-            visible: { transition: { staggerChildren: 0.06, delayChildren: 0.15 } },
-          }}
-          className="w-full mt-7 space-y-3"
-        >
-          {links.length === 0 ? (
-            <p className="text-sm text-center text-gray-700 font-body py-8">
-              Sem links no momento.
-            </p>
-          ) : (
-            links.map((link) => {
-              if (link.link_type === "header") {
-                return (
-                  <motion.p
-                    key={link.id}
-                    variants={{
-                      hidden: { opacity: 0, y: 8 },
-                      visible: { opacity: 1, y: 0 },
-                    }}
-                    className="text-center font-display font-bold text-base text-gray-900 drop-shadow-sm pt-3 pb-1"
-                  >
-                    {link.title}
-                  </motion.p>
-                );
-              }
-              const safeUrl = sanitizeUrl(link.url);
-              if (!safeUrl) return null;
-              return (
-                <motion.a
-                  key={link.id}
-                  variants={{
-                    hidden: { opacity: 0, y: 12 },
-                    visible: { opacity: 1, y: 0 },
-                  }}
-                  href={safeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => trackClick(link.id)}
-                  className={cn(
-                    "block w-full overflow-hidden font-body font-semibold shadow-md",
-                    "hover:scale-[1.02] hover:shadow-lg active:scale-[0.98] transition-all duration-200",
-                    radius,
-                    isOutline && "border-2 bg-transparent"
-                  )}
-                  style={{
-                    backgroundColor: isOutline ? "transparent" : settings.buttonColor,
-                    color: settings.buttonTextColor,
-                    borderColor: isOutline ? settings.buttonTextColor : undefined,
-                  }}
-                >
-                  {link.thumbnail_url && (
-                    <div className="w-full aspect-video overflow-hidden">
-                      <img
-                        src={link.thumbnail_url}
-                        alt=""
-                        loading="lazy"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  )}
-                  <div className="px-5 py-4 text-center truncate">
-                    {!link.thumbnail_url && link.icon && (
-                      <span className="mr-2">{link.icon}</span>
-                    )}
-                    {link.title}
-                  </div>
-                </motion.a>
-              );
-            })
-          )}
-        </motion.div>
+        {settings.sections.filter((s) => s.on).map((sec) => {
+          if (sec.id === "banner") {
+            return settings.bannerImage ? (
+              <div key="banner" className="w-full mt-7">
+                <img src={settings.bannerImage} alt="" loading="lazy" className="w-full rounded-2xl object-cover max-h-48 shadow-md" />
+              </div>
+            ) : null;
+          }
+          if (sec.id === "about") {
+            if (!settings.about.text && !settings.about.image) return null;
+            return (
+              <div key="about" className="w-full mt-7 rounded-2xl bg-white/90 backdrop-blur-sm shadow-md overflow-hidden text-left">
+                {settings.about.image && (
+                  <img src={settings.about.image} alt="" loading="lazy" className="w-full max-h-56 object-cover" />
+                )}
+                <div className="p-5">
+                  {settings.about.title && <h2 className="font-display font-bold text-gray-900 mb-2">{settings.about.title}</h2>}
+                  {settings.about.text && <p className="text-sm text-gray-700 whitespace-pre-line font-body leading-relaxed">{settings.about.text}</p>}
+                </div>
+              </div>
+            );
+          }
+          if (sec.id === "lead") {
+            return (
+              <div key="lead" className="w-full mt-7">
+                <LeadForm slug={slug ?? ""} config={settings.lead} buttonColor={settings.buttonColor} buttonTextColor={settings.buttonTextColor} radius={radius} />
+              </div>
+            );
+          }
+          return (
+            <motion.div
+              key="links"
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: {},
+                visible: { transition: { staggerChildren: 0.06, delayChildren: 0.15 } },
+              }}
+              className="w-full mt-7 space-y-3"
+            >
+              {links.length === 0 ? (
+                <p className="text-sm text-center text-gray-700 font-body py-8">
+                  Sem links no momento.
+                </p>
+              ) : (
+                links.map((link) => {
+                  if (link.link_type === "header") {
+                    return (
+                      <motion.p
+                        key={link.id}
+                        variants={{
+                          hidden: { opacity: 0, y: 8 },
+                          visible: { opacity: 1, y: 0 },
+                        }}
+                        className="text-center font-display font-bold text-base text-gray-900 drop-shadow-sm pt-3 pb-1"
+                      >
+                        {link.title}
+                      </motion.p>
+                    );
+                  }
+                  const safeUrl = sanitizeUrl(link.url);
+                  if (!safeUrl) return null;
+                  return (
+                    <motion.a
+                      key={link.id}
+                      variants={{
+                        hidden: { opacity: 0, y: 12 },
+                        visible: { opacity: 1, y: 0 },
+                      }}
+                      href={safeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => trackClick(link.id)}
+                      className={cn(
+                        "block w-full overflow-hidden font-body font-semibold shadow-md",
+                        "hover:scale-[1.02] hover:shadow-lg active:scale-[0.98] transition-all duration-200",
+                        radius,
+                        isOutline && "border-2 bg-transparent"
+                      )}
+                      style={{
+                        backgroundColor: isOutline ? "transparent" : settings.buttonColor,
+                        color: settings.buttonTextColor,
+                        borderColor: isOutline ? settings.buttonTextColor : undefined,
+                      }}
+                    >
+                      {link.thumbnail_url && (
+                        <div className="w-full aspect-video overflow-hidden">
+                          <img
+                            src={link.thumbnail_url}
+                            alt=""
+                            loading="lazy"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <div className="px-5 py-4 text-center truncate">
+                        {!link.thumbnail_url && link.icon && (
+                          <span className="mr-2">{link.icon}</span>
+                        )}
+                        {link.title}
+                      </div>
+                    </motion.a>
+                  );
+                })
+              )}
+            </motion.div>
+          );
+        })}
 
         <p className="text-center text-[10px] text-gray-900/50 mt-8 font-body drop-shadow-sm">
           Feito com 💜{" "}
@@ -450,5 +483,75 @@ const BioPage = () => {
     </div>
   );
 };
+
+function LeadForm({
+  slug, config, buttonColor, buttonTextColor, radius,
+}: {
+  slug: string;
+  config: BioLeadForm;
+  buttonColor: string;
+  buttonTextColor: string;
+  radius: string;
+}) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [consent, setConsent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [done, setDone] = useState(false);
+  const showEmail = config.fields === "email" || config.fields === "both";
+  const showPhone = config.fields === "phone" || config.fields === "both";
+
+  const submit = async () => {
+    if (!consent) return;
+    if (showEmail && !email.trim() && !(showPhone && phone.trim())) return;
+    if (!showEmail && showPhone && !phone.trim()) return;
+    setSending(true);
+    try {
+      const { error } = await (supabase.rpc as unknown as (
+        fn: string, args: Record<string, unknown>
+      ) => Promise<{ error: { message: string } | null }>)("submit_bio_lead", {
+        _slug: slug,
+        _name: name.trim() || null,
+        _email: email.trim() || null,
+        _phone: phone.trim() || null,
+      });
+      if (error) throw error;
+      setDone(true);
+    } catch {
+      alert("Não foi possível enviar. Tente novamente.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (done) {
+    return (
+      <div className="w-full rounded-2xl bg-white/90 backdrop-blur-sm shadow-md p-6 text-center">
+        <p className="font-display font-bold text-gray-900">Recebido! 💜</p>
+        <p className="text-sm text-gray-700 mt-1">Logo entro em contato.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full rounded-2xl bg-white/90 backdrop-blur-sm shadow-md p-6">
+      <h2 className="font-display font-bold text-gray-900 text-center">{config.title}</h2>
+      {config.subtitle && <p className="text-sm text-gray-600 text-center mt-1 mb-4">{config.subtitle}</p>}
+      <div className="space-y-3">
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm" />
+        {showEmail && <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Seu email" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm" />}
+        {showPhone && <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Seu telefone" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm" />}
+        <label className="flex items-start gap-2 text-[11px] text-gray-600 leading-snug">
+          <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" />
+          {config.consentText}
+        </label>
+        <button type="button" onClick={submit} disabled={sending || !consent} className={cn("w-full font-body font-semibold py-3 shadow-md disabled:opacity-50 transition", radius)} style={{ backgroundColor: buttonColor, color: buttonTextColor }}>
+          {sending ? "Enviando..." : config.buttonText}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default BioPage;
