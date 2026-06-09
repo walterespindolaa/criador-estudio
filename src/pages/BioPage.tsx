@@ -20,6 +20,7 @@ type BioSectionId = "banner" | "about" | "links" | "lead";
 type BioSection = { id: BioSectionId; on: boolean };
 type LeadFields = "email" | "phone" | "both";
 type BioAbout = { image: string | null; title: string; text: string };
+type BioHeader = { name: string; avatar: string; bio: string };
 type BioLeadForm = { title: string; subtitle: string; fields: LeadFields; buttonText: string; consentText: string };
 
 const BIO_SECTION_IDS: BioSectionId[] = ["banner", "about", "links", "lead"];
@@ -55,6 +56,7 @@ type BioSettings = {
   socialLinks: SocialLinks;
   bannerImage: string | null;
   about: BioAbout;
+  header: BioHeader;
   lead: BioLeadForm;
   sections: BioSection[];
 };
@@ -70,6 +72,7 @@ const DEFAULT_SETTINGS: BioSettings = {
   socialLinks: { instagram: "", tiktok: "", youtube: "", twitter: "" },
   bannerImage: null,
   about: { image: null, title: "Sobre mim", text: "" },
+  header: { name: "", avatar: "", bio: "" },
   lead: {
     title: "Receba novidades",
     subtitle: "Deixe seu contato e eu te chamo.",
@@ -178,6 +181,11 @@ function parseSettings(raw: unknown): BioSettings {
       title: typeof ta.title === "string" ? ta.title : DEFAULT_SETTINGS.about.title,
       text: typeof ta.text === "string" ? ta.text : "",
     },
+    header: {
+      name: typeof (t.header as Partial<BioHeader> | undefined)?.name === "string" ? (t.header as BioHeader).name : "",
+      avatar: typeof (t.header as Partial<BioHeader> | undefined)?.avatar === "string" ? (t.header as BioHeader).avatar : "",
+      bio: typeof (t.header as Partial<BioHeader> | undefined)?.bio === "string" ? (t.header as BioHeader).bio : "",
+    },
     lead: {
       title: typeof tl.title === "string" ? tl.title : DEFAULT_SETTINGS.lead.title,
       subtitle: typeof tl.subtitle === "string" ? tl.subtitle : DEFAULT_SETTINGS.lead.subtitle,
@@ -272,7 +280,10 @@ const BioPage = () => {
     );
   }
 
-  const initial = profile.name?.charAt(0)?.toUpperCase() || "C";
+  const headerName = (settings.header?.name ?? "").trim() || profile.name;
+  const headerAvatar = (settings.header?.avatar ?? "").trim() || profile.avatar_url;
+  const headerBio = (settings.header?.bio ?? "").trim() || profile.bio;
+  const initial = headerName?.charAt(0)?.toUpperCase() || "C";
   const activeSocials = SOCIAL_FIELDS.filter((f) => settings.socialLinks[f.key].trim());
 
   return (
@@ -343,10 +354,10 @@ const BioPage = () => {
         >
           <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary via-purple-500 to-pink-500 p-[3px] mb-4 shadow-xl">
             <div className="w-full h-full rounded-full bg-white overflow-hidden flex items-center justify-center">
-              {profile.avatar_url ? (
+              {headerAvatar ? (
                 <img
-                  src={profile.avatar_url}
-                  alt={profile.name}
+                  src={headerAvatar}
+                  alt={headerName}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -355,11 +366,11 @@ const BioPage = () => {
             </div>
           </div>
           <h1 className="font-display font-extrabold text-xl text-gray-900 text-center drop-shadow-sm">
-            {profile.name}
+            {headerName}
           </h1>
-          {profile.bio && (
+          {headerBio && (
             <p className="text-sm text-gray-800 text-center mt-2 max-w-xs font-body whitespace-pre-line drop-shadow-sm">
-              {profile.bio}
+              {headerBio}
             </p>
           )}
         </motion.div>

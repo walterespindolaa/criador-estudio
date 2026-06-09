@@ -60,6 +60,7 @@ type BioSectionId = "banner" | "about" | "links" | "lead";
 type BioSection = { id: BioSectionId; on: boolean };
 type LeadFields = "email" | "phone" | "both";
 type BioAbout = { image: string | null; title: string; text: string };
+type BioHeader = { name: string; avatar: string; bio: string };
 type BioLeadForm = { title: string; subtitle: string; fields: LeadFields; buttonText: string; consentText: string };
 
 const BIO_SECTION_IDS: BioSectionId[] = ["banner", "about", "links", "lead"];
@@ -101,6 +102,7 @@ export type BioSettings = {
   socialLinks: SocialLinks;
   bannerImage: string | null;
   about: BioAbout;
+  header: BioHeader;
   lead: BioLeadForm;
   sections: BioSection[];
 };
@@ -116,6 +118,7 @@ const DEFAULT_SETTINGS: BioSettings = {
   socialLinks: { instagram: "", tiktok: "", youtube: "", twitter: "" },
   bannerImage: null,
   about: { image: null, title: "Sobre mim", text: "" },
+  header: { name: "", avatar: "", bio: "" },
   lead: {
     title: "Receba novidades",
     subtitle: "Deixe seu contato e eu te chamo.",
@@ -256,6 +259,11 @@ function parseSettings(raw: unknown): BioSettings {
       title: typeof ta.title === "string" ? ta.title : DEFAULT_SETTINGS.about.title,
       text: typeof ta.text === "string" ? ta.text : "",
     },
+    header: {
+      name: typeof (t.header as Partial<BioHeader> | undefined)?.name === "string" ? (t.header as BioHeader).name : "",
+      avatar: typeof (t.header as Partial<BioHeader> | undefined)?.avatar === "string" ? (t.header as BioHeader).avatar : "",
+      bio: typeof (t.header as Partial<BioHeader> | undefined)?.bio === "string" ? (t.header as BioHeader).bio : "",
+    },
     lead: {
       title: typeof tl.title === "string" ? tl.title : DEFAULT_SETTINGS.lead.title,
       subtitle: typeof tl.subtitle === "string" ? tl.subtitle : DEFAULT_SETTINGS.lead.subtitle,
@@ -349,9 +357,11 @@ const LinkInBio = () => {
   const [uploadingBg, setUploadingBg] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [uploadingAbout, setUploadingAbout] = useState(false);
+  const [uploadingHeader, setUploadingHeader] = useState(false);
   const bgInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const aboutInputRef = useRef<HTMLInputElement>(null);
+  const headerInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!profile) return;
@@ -485,6 +495,20 @@ const LinkInBio = () => {
     const url = await uploadBioImage(file, "about");
     if (url) { setSettings((s) => ({ ...s, about: { ...s.about, image: url } })); setAppearanceDirty(true); }
     setUploadingAbout(false);
+  };
+
+  const handleHeaderAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; e.target.value = "";
+    if (!file || !user) return;
+    setUploadingHeader(true);
+    const url = await uploadBioImage(file, "header");
+    if (url) { setSettings((s) => ({ ...s, header: { ...s.header, avatar: url } })); setAppearanceDirty(true); }
+    setUploadingHeader(false);
+  };
+
+  const patchHeader = (patch: Partial<BioSettings["header"]>) => {
+    setSettings((s) => ({ ...s, header: { ...s.header, ...patch } }));
+    setAppearanceDirty(true);
   };
 
   const patchAbout = (patch: Partial<BioAbout>) => {
@@ -702,6 +726,37 @@ const LinkInBio = () => {
                   </div>
                 ))}
               </div>
+            </Card>
+
+            {/* ── Perfil (topo) ──────────────────────── */}
+            <Card className="p-4 md:p-5 rounded-2xl border-border space-y-3">
+              <div>
+                <h2 className="font-display font-semibold text-foreground mb-1">Perfil (topo)</h2>
+                <p className="text-xs text-muted-foreground">Foto, nome e bio do topo. Deixe em branco para usar os dados do seu perfil.</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-16 h-16 rounded-full overflow-hidden border border-border bg-muted shrink-0 flex items-center justify-center">
+                  {(settings.header.avatar || profile?.avatar_url) ? (
+                    <img src={settings.header.avatar || profile?.avatar_url || ""} alt="" loading="lazy" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-muted-foreground font-display font-bold text-xl">{(settings.header.name || profile?.name || "C").charAt(0).toUpperCase()}</span>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <input ref={headerInputRef} type="file" accept="image/*" className="hidden" onChange={handleHeaderAvatarUpload} />
+                  <Button type="button" variant="outline" size="sm" disabled={uploadingHeader} onClick={() => headerInputRef.current?.click()}>
+                    <ImagePlus className="h-4 w-4 mr-2" />
+                    {uploadingHeader ? "Enviando..." : "Trocar foto"}
+                  </Button>
+                  {settings.header.avatar && (
+                    <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => patchHeader({ avatar: "" })}>
+                      <Trash2 className="h-4 w-4 mr-2" /> Remover
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <input value={settings.header.name} onChange={(e) => patchHeader({ name: e.target.value })} placeholder={profile?.name || "Seu nome"} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+              <textarea value={settings.header.bio} onChange={(e) => patchHeader({ bio: e.target.value })} placeholder={profile?.bio || "Escreva uma bio curta"} rows={3} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm resize-y" />
             </Card>
 
             {/* ── Appearance ─────────────────────────── */}
@@ -1349,21 +1404,21 @@ const BioPreview = memo(function BioPreview({ profile, links, settings }: Previe
           <>
             <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary via-purple-500 to-pink-500 p-[2px] mb-3">
               <div className="w-full h-full rounded-full bg-card overflow-hidden flex items-center justify-center">
-                {profile.avatar_url ? (
-                  <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                {(settings.header?.avatar || profile.avatar_url) ? (
+                  <img src={settings.header?.avatar || profile.avatar_url} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-primary font-display font-bold text-2xl">
-                    {getInitial(profile.name)}
+                    {getInitial(settings.header?.name || profile.name)}
                   </span>
                 )}
               </div>
             </div>
             <h3 className="font-display font-bold text-base text-gray-900 text-center drop-shadow-sm">
-              {profile.name || "Seu nome"}
+              {settings.header?.name || profile.name || "Seu nome"}
             </h3>
-            {profile.bio && (
+            {(settings.header?.bio || profile.bio) && (
               <p className="text-xs text-gray-800 text-center mt-1 line-clamp-3 font-body drop-shadow-sm">
-                {profile.bio}
+                {settings.header?.bio || profile.bio}
               </p>
             )}
           </>
