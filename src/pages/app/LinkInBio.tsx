@@ -25,6 +25,7 @@ import {
   Loader2,
   ChevronUp,
   ChevronDown,
+  ImagePlus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -332,7 +333,11 @@ const LinkInBio = () => {
   const [settings, setSettings] = useState<BioSettings>(DEFAULT_SETTINGS);
   const [appearanceDirty, setAppearanceDirty] = useState(false);
   const [uploadingBg, setUploadingBg] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [uploadingAbout, setUploadingAbout] = useState(false);
   const bgInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+  const aboutInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!profile) return;
@@ -436,6 +441,46 @@ const LinkInBio = () => {
     } finally {
       setUploadingBg(false);
     }
+  };
+
+  const uploadBioImage = async (file: File, prefix: string): Promise<string | null> => {
+    const validation = validateUpload(file, "bioMedia");
+    if (!validation.ok) { toast.error(validation.reason); return null; }
+    const path = `${ownerId}/${prefix}-${Date.now()}.${file.name.split(".").pop() ?? "jpg"}`;
+    const { error: upErr } = await supabase.storage
+      .from("bio-media")
+      .upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
+    if (upErr) { toast.error("Erro ao enviar imagem."); return null; }
+    const { data: urlData } = supabase.storage.from("bio-media").getPublicUrl(path);
+    return urlData.publicUrl;
+  };
+
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; e.target.value = "";
+    if (!file || !user) return;
+    setUploadingBanner(true);
+    const url = await uploadBioImage(file, "banner");
+    if (url) { setSettings((s) => ({ ...s, bannerImage: url })); setAppearanceDirty(true); }
+    setUploadingBanner(false);
+  };
+
+  const handleAboutImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; e.target.value = "";
+    if (!file || !user) return;
+    setUploadingAbout(true);
+    const url = await uploadBioImage(file, "about");
+    if (url) { setSettings((s) => ({ ...s, about: { ...s.about, image: url } })); setAppearanceDirty(true); }
+    setUploadingAbout(false);
+  };
+
+  const patchAbout = (patch: Partial<BioAbout>) => {
+    setSettings((s) => ({ ...s, about: { ...s.about, ...patch } }));
+    setAppearanceDirty(true);
+  };
+
+  const patchLead = (patch: Partial<BioLeadForm>) => {
+    setSettings((s) => ({ ...s, lead: { ...s.lead, ...patch } }));
+    setAppearanceDirty(true);
   };
 
   const handleSaveAppearance = async () => {
@@ -867,6 +912,65 @@ const LinkInBio = () => {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Banner */}
+              <div className="space-y-3">
+                <Label className="text-sm font-display font-semibold">Banner</Label>
+                <p className="text-xs text-muted-foreground -mt-1">Imagem larga no topo da página (opcional).</p>
+                {settings.bannerImage ? (
+                  <div className="relative rounded-xl overflow-hidden border border-border">
+                    <img src={settings.bannerImage} alt="Banner" loading="lazy" className="w-full h-24 object-cover" />
+                    <button type="button" onClick={() => patchSettings({ bannerImage: null })} className="absolute top-1.5 right-1.5 bg-background/90 rounded-full p-1 shadow">
+                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                    </button>
+                  </div>
+                ) : null}
+                <input ref={bannerInputRef} type="file" accept="image/*" className="hidden" onChange={handleBannerUpload} />
+                <Button type="button" variant="outline" size="sm" disabled={uploadingBanner} onClick={() => bannerInputRef.current?.click()}>
+                  <ImagePlus className="h-4 w-4 mr-2" />
+                  {uploadingBanner ? "Enviando..." : settings.bannerImage ? "Trocar banner" : "Enviar banner"}
+                </Button>
+              </div>
+
+              {/* Sobre mim */}
+              <div className="space-y-3">
+                <Label className="text-sm font-display font-semibold">Sobre mim</Label>
+                {settings.about.image ? (
+                  <div className="relative w-24 h-24 rounded-xl overflow-hidden border border-border">
+                    <img src={settings.about.image} alt="Sobre mim" loading="lazy" className="w-full h-full object-cover" />
+                    <button type="button" onClick={() => patchAbout({ image: null })} className="absolute top-1 right-1 bg-background/90 rounded-full p-1 shadow">
+                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                    </button>
+                  </div>
+                ) : null}
+                <input ref={aboutInputRef} type="file" accept="image/*" className="hidden" onChange={handleAboutImageUpload} />
+                <Button type="button" variant="outline" size="sm" disabled={uploadingAbout} onClick={() => aboutInputRef.current?.click()}>
+                  <ImagePlus className="h-4 w-4 mr-2" />
+                  {uploadingAbout ? "Enviando..." : settings.about.image ? "Trocar foto" : "Enviar foto"}
+                </Button>
+                <input value={settings.about.title} onChange={(e) => patchAbout({ title: e.target.value })} placeholder="Título (ex.: Sobre mim)" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+                <textarea value={settings.about.text} onChange={(e) => patchAbout({ text: e.target.value })} placeholder="Escreva um pouco sobre você..." rows={4} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm resize-y" />
+              </div>
+
+              {/* Captura de lead */}
+              <div className="space-y-3">
+                <Label className="text-sm font-display font-semibold">Captura de lead</Label>
+                <p className="text-xs text-muted-foreground -mt-1">Formulário pra visitantes deixarem o contato. Ative a seção "Captura de lead" em Estrutura da página.</p>
+                <input value={settings.lead.title} onChange={(e) => patchLead({ title: e.target.value })} placeholder="Título" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+                <input value={settings.lead.subtitle} onChange={(e) => patchLead({ subtitle: e.target.value })} placeholder="Subtítulo" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+                <div>
+                  <Label className="text-[11px] text-muted-foreground">Campos</Label>
+                  <div className="flex gap-2 mt-1">
+                    {(["email", "phone", "both"] as const).map((f) => (
+                      <button key={f} type="button" onClick={() => patchLead({ fields: f })} className={cn("flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors", settings.lead.fields === f ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
+                        {f === "email" ? "Email" : f === "phone" ? "Telefone" : "Ambos"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <input value={settings.lead.buttonText} onChange={(e) => patchLead({ buttonText: e.target.value })} placeholder="Texto do botão" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+                <textarea value={settings.lead.consentText} onChange={(e) => patchLead({ consentText: e.target.value })} placeholder="Texto de consentimento" rows={2} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm resize-y" />
               </div>
 
               <Button
