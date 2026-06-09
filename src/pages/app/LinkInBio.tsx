@@ -970,7 +970,7 @@ function LinkCard({
           {uploadingThumb ? (
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           ) : link.thumbnail_url ? (
-            <img src={link.thumbnail_url} alt="" className="w-full h-full object-cover" />
+            <img src={link.thumbnail_url} alt="" loading="lazy" className="w-full h-full object-cover" />
           ) : (
             <LinkIcon className="h-5 w-5 text-muted-foreground" />
           )}
@@ -1142,7 +1142,7 @@ const BioPreview = memo(function BioPreview({ profile, links, settings }: Previe
                 >
                   {link.thumbnail_url && (
                     <div className="w-full aspect-video overflow-hidden">
-                      <img src={link.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                      <img src={link.thumbnail_url} alt="" loading="lazy" className="w-full h-full object-cover" />
                     </div>
                   )}
                   <div className="px-4 py-3 text-center truncate">

@@ -365,6 +365,7 @@ const BioPage = () => {
                       <img
                         src={link.thumbnail_url}
                         alt=""
+                        loading="lazy"
                         className="w-full h-full object-cover"
                       />
                     </div>

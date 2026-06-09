@@ -19,7 +19,7 @@ function Thumb({ m }: { m: CriaMedia }) {
   const src = m.thumbnail_url || m.view_url || "";
   return (
     <div className="relative w-full h-full bg-muted">
-      {src ? <img src={src} alt="" draggable={false} className="w-full h-full object-cover select-none" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+      {src ? <img src={src} alt="" draggable={false} loading="lazy" className="w-full h-full object-cover select-none" onError={(e) => { e.currentTarget.style.display = "none"; }} />
         : <div className="w-full h-full flex items-center justify-center text-muted-foreground"><FileImage className="h-5 w-5" /></div>}
       {video && <span className="absolute inset-0 flex items-center justify-center pointer-events-none"><Play className="h-5 w-5 text-white [filter:drop-shadow(0_1px_2px_rgba(0,0,0,.7))]" /></span>}
     </div>

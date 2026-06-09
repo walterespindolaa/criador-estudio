@@ -189,7 +189,7 @@ function DetailDialog({ post, thumb, isOwner, onClose, onApprove, onRequestAdjus
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="aspect-[4/5] bg-muted rounded-xl overflow-hidden">
                 {thumb ? (
-                  <img src={thumb} alt={post.title} className="w-full h-full object-cover" />
+                  <img src={thumb} alt={post.title} loading="lazy" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-muted-foreground/40"><ImageIcon className="h-10 w-10" /></div>
                 )}
