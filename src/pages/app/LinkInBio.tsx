@@ -1370,48 +1370,72 @@ const BioPreview = memo(function BioPreview({ profile, links, settings }: Previe
         )}
 
         <div className="w-full mt-5 space-y-2.5">
-          {links.length === 0 ? (
-            <p className="text-xs text-center text-gray-500 font-body py-6">
-              Adicione links para ver a prévia.
-            </p>
-          ) : (
-            links.map((link) =>
-              link.link_type === "header" ? (
-                <p
-                  key={link.id}
-                  className="text-center font-display font-bold text-sm text-gray-900 drop-shadow-sm pt-3 pb-1"
-                >
-                  {link.title || "Título"}
-                </p>
-              ) : (
-                <div
-                  key={link.id}
-                  className={cn(
-                    "w-full font-body font-semibold text-sm shadow-sm overflow-hidden",
-                    radius,
-                    isOutline && "border-2 bg-transparent"
-                  )}
-                  style={{
-                    backgroundColor: isOutline ? "transparent" : settings.buttonColor,
-                    color: settings.buttonTextColor,
-                    borderColor: isOutline ? settings.buttonTextColor : undefined,
-                  }}
-                >
-                  {link.thumbnail_url && (
-                    <div className="w-full aspect-video overflow-hidden">
-                      <img src={link.thumbnail_url} alt="" loading="lazy" className="w-full h-full object-cover" />
-                    </div>
-                  )}
-                  <div className="px-4 py-3 text-center truncate">
-                    {!link.thumbnail_url && link.icon && (
-                      <span className="mr-1.5">{link.icon}</span>
-                    )}
-                    {link.title || "Sem título"}
+          {settings.sections.filter((s) => s.on).map((sec) => {
+            if (sec.id === "banner") {
+              return settings.bannerImage ? (
+                <img key="banner" src={settings.bannerImage} alt="" loading="lazy" className="w-full rounded-xl object-cover max-h-24" />
+              ) : null;
+            }
+            if (sec.id === "about") {
+              if (!settings.about.text && !settings.about.image) return null;
+              return (
+                <div key="about" className="w-full rounded-xl bg-white/90 overflow-hidden text-left shadow-sm">
+                  {settings.about.image && <img src={settings.about.image} alt="" loading="lazy" className="w-full max-h-28 object-cover" />}
+                  <div className="p-3">
+                    {settings.about.title && <p className="font-display font-bold text-xs text-gray-900 mb-1">{settings.about.title}</p>}
+                    {settings.about.text && <p className="text-[11px] text-gray-700 whitespace-pre-line line-clamp-4">{settings.about.text}</p>}
                   </div>
                 </div>
-              )
-            )
-          )}
+              );
+            }
+            if (sec.id === "lead") {
+              return (
+                <div key="lead" className="w-full rounded-xl bg-white/90 shadow-sm p-3 text-center">
+                  <p className="font-display font-bold text-xs text-gray-900">{settings.lead.title}</p>
+                  {settings.lead.subtitle && <p className="text-[10px] text-gray-600 mt-0.5 mb-2">{settings.lead.subtitle}</p>}
+                  <div className="h-7 rounded-md bg-gray-100 mb-2" />
+                  <div className="h-7 rounded-md font-semibold text-[11px] flex items-center justify-center" style={{ backgroundColor: settings.buttonColor, color: settings.buttonTextColor }}>
+                    {settings.lead.buttonText}
+                  </div>
+                </div>
+              );
+            }
+            return links.length === 0 ? (
+              <p key="links-empty" className="text-xs text-center text-gray-500 font-body py-6">
+                Adicione links para ver a prévia.
+              </p>
+            ) : (
+              <div key="links" className="space-y-2.5">
+                {links.map((link) =>
+                  link.link_type === "header" ? (
+                    <p key={link.id} className="text-center font-display font-bold text-sm text-gray-900 drop-shadow-sm pt-3 pb-1">
+                      {link.title || "Título"}
+                    </p>
+                  ) : (
+                    <div
+                      key={link.id}
+                      className={cn("w-full font-body font-semibold text-sm shadow-sm overflow-hidden", radius, isOutline && "border-2 bg-transparent")}
+                      style={{
+                        backgroundColor: isOutline ? "transparent" : settings.buttonColor,
+                        color: settings.buttonTextColor,
+                        borderColor: isOutline ? settings.buttonTextColor : undefined,
+                      }}
+                    >
+                      {link.thumbnail_url && (
+                        <div className="w-full aspect-video overflow-hidden">
+                          <img src={link.thumbnail_url} alt="" loading="lazy" className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                      <div className="px-4 py-3 text-center truncate">
+                        {!link.thumbnail_url && link.icon && <span className="mr-1.5">{link.icon}</span>}
+                        {link.title || "Sem título"}
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
