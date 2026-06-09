@@ -26,6 +26,7 @@ import {
   ChevronUp,
   ChevronDown,
   ImagePlus,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,7 @@ import { useBioLinks, type BioLink } from "@/hooks/useBioLinks";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { validateUpload } from "@/lib/upload-validation";
+import { useBioLeads } from "@/hooks/useBioLeads";
 
 type BgType = "color" | "gradient" | "image";
 type ButtonStyle = "rounded" | "pill" | "square" | "outline";
@@ -331,6 +333,18 @@ const LinkInBio = () => {
 
   const [slug, setSlug] = useState("");
   const [settings, setSettings] = useState<BioSettings>(DEFAULT_SETTINGS);
+  const { leads, isLoading: leadsLoading, deleteLead } = useBioLeads();
+  const exportLeadsCsv = () => {
+    const rows = [["Nome", "Email", "Telefone", "Data"], ...leads.map((l) => [l.name ?? "", l.email ?? "", l.phone ?? "", new Date(l.created_at).toLocaleString("pt-BR")])];
+    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "leads.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
   const [appearanceDirty, setAppearanceDirty] = useState(false);
   const [uploadingBg, setUploadingBg] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
@@ -982,6 +996,41 @@ const LinkInBio = () => {
                 <Save className="h-4 w-4 mr-2" />
                 {isSavingAppearance ? "Salvando..." : "Salvar alterações"}
               </Button>
+            </Card>
+
+            {/* ── Leads capturados ──────────────────── */}
+            <Card className="p-4 md:p-5 rounded-2xl border-border">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-display font-semibold text-foreground">
+                  Leads capturados {leads.length > 0 && <span className="text-muted-foreground font-normal">({leads.length})</span>}
+                </h2>
+                {leads.length > 0 && (
+                  <Button type="button" variant="outline" size="sm" onClick={exportLeadsCsv}>
+                    <Download className="h-4 w-4 mr-2" /> CSV
+                  </Button>
+                )}
+              </div>
+              {leadsLoading ? (
+                <p className="text-sm text-muted-foreground">Carregando...</p>
+              ) : leads.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhum lead ainda. Ative a seção "Captura de lead" pra começar a coletar.</p>
+              ) : (
+                <div className="space-y-2 max-h-72 overflow-y-auto">
+                  {leads.map((ld) => (
+                    <div key={ld.id} className="flex items-start justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2">
+                      <div className="min-w-0">
+                        {ld.name && <p className="text-sm font-medium text-foreground truncate">{ld.name}</p>}
+                        {ld.email && <p className="text-xs text-muted-foreground truncate">{ld.email}</p>}
+                        {ld.phone && <p className="text-xs text-muted-foreground truncate">{ld.phone}</p>}
+                        <p className="text-[11px] text-muted-foreground/70 mt-0.5">{new Date(ld.created_at).toLocaleDateString("pt-BR")}</p>
+                      </div>
+                      <button type="button" aria-label="Remover" onClick={() => deleteLead.mutate(ld.id)} className="text-muted-foreground hover:text-destructive shrink-0">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </Card>
           </div>
 
