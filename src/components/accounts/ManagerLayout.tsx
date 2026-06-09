@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
+import { ContentSkeleton } from "@/components/shared/ContentSkeleton";
 import {
   Home, Boxes, Handshake, DollarSign, Users, ListChecks,
   Settings as SettingsIcon, LogOut, Send, Users2, Wallet,
@@ -129,7 +130,9 @@ export default function ManagerLayout() {
 
         <main className="flex-1 px-4 sm:px-8 py-7 sm:py-10">
           <div className="w-full max-w-6xl mx-auto">
-            <Outlet context={ctx} />
+            <Suspense fallback={<ContentSkeleton />}>
+              <Outlet context={ctx} />
+            </Suspense>
           </div>
         </main>
       </div>

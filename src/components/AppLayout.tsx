@@ -1,5 +1,6 @@
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { Outlet, NavLink, Navigate, useLocation } from "react-router-dom";
+import { ContentSkeleton } from "@/components/shared/ContentSkeleton";
 import { BottomBar } from "@/components/BottomBar";
 import { PWAInstallBanner } from "@/components/shared/PWAInstallBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
@@ -111,7 +112,9 @@ const AppLayout = () => {
 
             <main className="flex-1 pb-24 md:pb-0 w-full">
               <div className="max-w-screen-2xl mx-auto px-4 py-4 md:px-8 md:py-6">
-                <Outlet />
+                <Suspense fallback={<ContentSkeleton />}>
+                  <Outlet />
+                </Suspense>
               </div>
               <AppFooter />
             </main>
