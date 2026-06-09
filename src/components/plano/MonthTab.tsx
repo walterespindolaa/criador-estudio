@@ -26,6 +26,7 @@ type Props = {
   onPostClick: (postId: string) => void;
   onReflectionChange: (key: keyof ReflectionFormState, value: string) => void;
   onSaveReflection: () => void;
+  onReschedule?: (postId: string, date: string) => void;
 };
 
 const REFLECTION_FIELDS: ReadonlyArray<{
@@ -48,6 +49,7 @@ export function MonthTab({
   onPostClick,
   onReflectionChange,
   onSaveReflection,
+  onReschedule,
 }: Props) {
   return (
     <div className="space-y-6">
@@ -59,6 +61,7 @@ export function MonthTab({
         onPostClick={(post) => onPostClick(post.id)}
         onDayClick={() => { /* click on post opens drawer */ }}
         today={today}
+        onReschedule={onReschedule}
       />
 
       <Card className="border-border">

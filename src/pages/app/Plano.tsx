@@ -74,7 +74,7 @@ const Plano = () => {
   const { user } = useAuth();
   const { activeAccountId } = useActiveAccount();
   const { profile } = useProfile();
-  const { posts } = usePosts();
+  const { posts, updatePost } = usePosts();
   const { pillars } = usePillars();
 
   const [weekOffset, setWeekOffset] = useState(0);
@@ -277,6 +277,18 @@ const Plano = () => {
     }
   };
 
+  const handleReschedule = async (postId: string, date: string, time?: string | null) => {
+    const updates: { scheduled_date: string; scheduled_time?: string | null } = { scheduled_date: date };
+    if (time !== undefined) updates.scheduled_time = time;
+    try {
+      await updatePost.mutateAsync({ id: postId, updates });
+      const d = new Date(date + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+      toast.success(`Reagendado para ${d}${time ? ` às ${time}` : ""}.`);
+    } catch {
+      toast.error("Erro ao reagendar.");
+    }
+  };
+
   const weekPublished = posts.filter(p =>
     p.status === "publicado" && p.scheduled_date && weekDays.some(d => d.date === p.scheduled_date)
   );
@@ -339,6 +351,7 @@ const Plano = () => {
               onToggleHabit={handleToggleHabit}
               onAddHabit={addHabit}
               onDeleteHabit={handleDeleteHabit}
+              onReschedule={handleReschedule}
             />
           </TabsContent>
 
@@ -357,6 +370,7 @@ const Plano = () => {
               onPostClick={openPost}
               onReflectionChange={(key, value) => setReflectionForm(prev => ({ ...prev, [key]: value }))}
               onSaveReflection={saveReflection}
+              onReschedule={handleReschedule}
             />
           </TabsContent>
 

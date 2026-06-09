@@ -30,6 +30,7 @@ type Props = {
   onToggleHabit: (habitId: string, date: string) => void;
   onAddHabit: () => void;
   onDeleteHabit: (habitId: string) => void;
+  onReschedule?: (postId: string, date: string, time: string | null) => void;
 };
 
 export function WeekTab({
@@ -51,6 +52,7 @@ export function WeekTab({
   onToggleHabit,
   onAddHabit,
   onDeleteHabit,
+  onReschedule,
 }: Props) {
   const isHabitDone = (habitId: string, date: string) =>
     habitLogs.find(l => l.habit_id === habitId && l.date === date)?.done || false;
@@ -90,6 +92,7 @@ export function WeekTab({
         onWeekChange={onWeekChange}
         onPostClick={(post) => onPostClick(post.id)}
         today={today}
+        onReschedule={onReschedule}
       />
 
       <Card className="border-border">
