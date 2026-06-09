@@ -15,6 +15,7 @@ import {
   Sparkles,
   User,
   Youtube,
+  Music2,
   BarChart3,
   X,
   Play
@@ -97,6 +98,19 @@ const bentoList = [
   { icon: CalendarDays, title: "Calendário + Metas", desc: "Planeje no calendário, arraste pra reagendar, defina metas mensais e acompanhe sua consistência.", gradient: "from-teal-500 to-emerald-500" },
   { icon: BarChart3, title: "Relatórios e Analytics", desc: "Alcance e engajamento reais das suas redes, num painel claro.", gradient: "from-orange-500 to-red-500" },
   { icon: BookMarked, title: "Brandbook + Biblioteca", desc: "Identidade visual, tom de voz, hooks e prompts favoritos.", gradient: "from-amber-600 to-orange-500" },
+];
+
+const marqueeItems = [
+  { icon: Instagram, label: "Instagram" },
+  { icon: Music2, label: "TikTok" },
+  { icon: Youtube, label: "YouTube" },
+  { icon: Lightbulb, label: "Banco de Ideias" },
+  { icon: Kanban, label: "Pipeline Kanban" },
+  { icon: CalendarDays, label: "Calendário" },
+  { icon: Sparkles, label: "IA cria" },
+  { icon: Link2, label: "Link in Bio" },
+  { icon: BarChart3, label: "Analytics" },
+  { icon: BookMarked, label: "Brandbook" },
 ];
 
 const stepsList = [
@@ -275,6 +289,8 @@ export default function Landing() {
         {/* ─── 2. HERO ─── */}
         <section id="hero" className="relative pt-28 pb-16 sm:pt-32 sm:pb-20 lg:pt-40 lg:pb-28 overflow-hidden">
           <div className="absolute top-0 inset-x-0 h-screen bg-gradient-to-b from-primary/5 via-transparent to-transparent -z-10 pointer-events-none" />
+          <div className="absolute top-10 right-0 w-72 h-72 rounded-full bg-primary/20 blur-3xl -z-10 pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-72 h-72 rounded-full bg-purple-400/15 blur-3xl -z-10 pointer-events-none" />
           
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
             <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
@@ -314,29 +330,34 @@ export default function Landing() {
                 transition={{ duration: 0.6, delay: 0.1 }}
                 className="mx-auto w-full max-w-md lg:max-w-full"
               >
-                <MockupVisual />
+                <motion.div animate={{ y: [0, -12, 0] }} transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}>
+                  <MockupVisual />
+                </motion.div>
               </motion.div>
             </div>
           </div>
         </section>
 
-        {/* ─── 3. LOGOS DE PLATAFORMAS ─── */}
-        <section className="py-12 bg-muted/30 border-y border-border">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
-            <p className="text-sm font-semibold text-muted-foreground mb-6 uppercase tracking-wider">
-              Funciona com as plataformas que você já usa:
-            </p>
-            <div className="flex flex-wrap justify-center items-center gap-8 sm:gap-16 opacity-70 grayscale hover:grayscale-0 transition-all duration-500">
-              <div className="flex items-center gap-2 font-display font-bold text-xl text-foreground">
-                <Instagram className="w-7 h-7" /> Instagram
-              </div>
-              <div className="flex items-center gap-2 font-display font-bold text-xl text-foreground">
-                <Play className="w-7 h-7" /> TikTok
-              </div>
-              <div className="flex items-center gap-2 font-display font-bold text-xl text-foreground">
-                <Youtube className="w-7 h-7" /> YouTube
-              </div>
-            </div>
+        {/* ─── 3. MARQUEE ─── */}
+        <section className="py-10 sm:py-12 bg-card border-y border-border overflow-hidden">
+          <p className="text-center text-sm font-medium text-muted-foreground mb-6 px-4">
+            Tudo que você precisa pra crescer no Instagram, TikTok e YouTube
+          </p>
+          <div className="relative">
+            <motion.div
+              className="flex gap-4 w-max"
+              animate={{ x: ["0%", "-50%"] }}
+              transition={{ repeat: Infinity, ease: "linear", duration: 24 }}
+            >
+              {[...marqueeItems, ...marqueeItems].map((m, i) => (
+                <div key={i} className="flex items-center gap-2 rounded-full border border-border bg-background px-5 py-2.5 shadow-warm-sm whitespace-nowrap">
+                  <m.icon className="w-4 h-4 text-primary" />
+                  <span className="font-display font-semibold text-sm text-foreground">{m.label}</span>
+                </div>
+              ))}
+            </motion.div>
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-card to-transparent" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-card to-transparent" />
           </div>
         </section>
 
