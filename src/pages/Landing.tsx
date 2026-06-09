@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   BookMarked,
   CalendarDays,
@@ -8,6 +8,7 @@ import {
   Kanban,
   Lightbulb,
   Link2,
+  Menu,
   Sparkles,
   User,
   Youtube,
@@ -209,12 +210,18 @@ const faqs = [
 export default function Landing() {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [menuOpen]);
 
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -233,11 +240,11 @@ export default function Landing() {
       <header
         className={cn(
           "fixed top-0 inset-x-0 z-50 transition-all duration-300",
-          scrolled ? "bg-background/80 backdrop-blur-md border-b border-border shadow-sm" : "bg-transparent"
+          scrolled || menuOpen ? "bg-background/90 backdrop-blur-md border-b border-border shadow-sm" : "bg-transparent"
         )}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center cursor-pointer" onClick={() => scrollTo("hero")}>
+          <div className="flex items-center cursor-pointer" onClick={() => { setMenuOpen(false); scrollTo("hero"); }}>
             <Logo className="h-8 w-auto" />
           </div>
 
@@ -247,15 +254,56 @@ export default function Landing() {
             <button onClick={() => scrollTo("pricing")} className="hover:text-foreground transition-colors">Preço</button>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Button variant="ghost" className="font-semibold px-3 sm:px-4" onClick={() => navigate("/login")}>
               Entrar
             </Button>
-            <Button variant="hero" className="font-semibold shadow-md" onClick={() => navigate("/signup")}>
+            <Button variant="hero" className="hidden sm:flex font-semibold shadow-md" onClick={() => navigate("/signup")}>
               Começar grátis &rarr;
             </Button>
+            <button
+              type="button"
+              aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((o) => !o)}
+              className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg border border-border text-foreground hover:bg-muted/50 transition-colors"
+            >
+              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           </div>
         </div>
+
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.nav
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="md:hidden overflow-hidden bg-background/95 backdrop-blur-md border-t border-border"
+            >
+              <div className="px-4 py-3 flex flex-col">
+                {[
+                  { id: "features", label: "Funcionalidades" },
+                  { id: "how-it-works", label: "Como funciona" },
+                  { id: "pricing", label: "Preço" },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => { setMenuOpen(false); scrollTo(item.id); }}
+                    className="text-left py-3 px-2 rounded-lg font-medium text-foreground hover:bg-muted/50 transition-colors"
+                  >
+                    {item.label}
+                  </button>
+                ))}
+                <div className="h-px bg-border my-2" />
+                <Button variant="hero" className="w-full font-semibold h-12" onClick={() => { setMenuOpen(false); navigate("/signup"); }}>
+                  Começar grátis &rarr;
+                </Button>
+              </div>
+            </motion.nav>
+          )}
+        </AnimatePresence>
       </header>
 
       <main>
