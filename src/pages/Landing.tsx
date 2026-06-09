@@ -113,27 +113,6 @@ const marqueeItems = [
   { icon: BookMarked, label: "Brandbook" },
 ];
 
-const stepsList = [
-  {
-    icon: User,
-    num: "01",
-    title: "Configure seu espaço criativo",
-    description: "Defina seu nicho, plataformas e seus pilares de conteúdo.",
-  },
-  {
-    icon: Kanban,
-    num: "02",
-    title: "Crie com sistema",
-    description: "Use o kanban, a IA e o calendário para produzir sem travar.",
-  },
-  {
-    icon: BarChart3,
-    num: "03",
-    title: "Publique e analise",
-    description: "Agende direto para as redes e veja o que gerou resultado.",
-  },
-];
-
 const aiList = [
   { emoji: "✍️", title: "Gera legendas completas", desc: "— no estilo e tom da sua marca" },
   { emoji: "#️⃣", title: "Sugere hashtags", desc: "— por relevância e nicho" },
@@ -401,38 +380,76 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ─── 5. COMO FUNCIONA ─── */}
+        {/* ─── 5. VEJA POR DENTRO (ZIG-ZAG) ─── */}
         <section id="how-it-works" className="scroll-mt-20 py-16 sm:py-20 lg:py-28 bg-muted/30 border-y border-border">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-16">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+            <motion.div {...fadeUp} className="text-center mb-12 sm:mb-16">
               <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight mb-4">
-                Em 3 passos, você para de improvisar.
+                Veja por dentro
               </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Os recursos que fecham o ciclo de ideia → análise.
+              </p>
             </motion.div>
 
-            <div className="grid md:grid-cols-3 gap-8 relative">
-              <div className="hidden md:block absolute top-1/2 left-0 right-0 h-0.5 bg-border -translate-y-1/2 z-0" />
-              {stepsList.map((s, i) => (
-                <motion.div 
-                  key={i}
-                  initial={{ opacity: 0, y: 16 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: i * 0.1 }}
-                  className="relative z-10 bg-card border border-border rounded-2xl p-8 shadow-warm-sm flex flex-col items-center text-center"
-                >
-                  <div className="w-14 h-14 rounded-full bg-primary text-white flex items-center justify-center font-display font-bold text-xl mb-6 shadow-glow border-4 border-background">
-                    {s.num}
+            <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center mb-16 lg:mb-24">
+              <motion.div initial={{ opacity: 0, x: -32 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-4 border border-primary/20">
+                  <CalendarDays className="w-4 h-4" /> Planejamento
+                </div>
+                <h3 className="text-2xl lg:text-3xl font-display font-bold mb-4">Planeje o mês e arraste pra reagendar</h3>
+                <p className="text-muted-foreground text-base lg:text-lg mb-6 leading-relaxed">
+                  Um calendário visual onde você posiciona cada post no dia certo. Mudou de ideia? Arrasta e solta — o sistema reagenda na hora.
+                </p>
+                <ul className="space-y-3">
+                  {["Visão de mês e semana", "Arrastar e soltar pra reagendar", "Metas mensais e hábitos de consistência"].map((t) => (
+                    <li key={t} className="flex items-center gap-3 font-medium">
+                      <div className="rounded-full bg-primary/10 p-0.5"><Check className="w-4 h-4 text-primary" /></div>{t}
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+              <motion.div initial={{ opacity: 0, x: 32 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>
+                <div className="bg-card border border-border rounded-2xl shadow-warm p-5 sm:p-6">
+                  <p className="text-sm font-display font-bold text-muted-foreground mb-3">Junho 2026</p>
+                  <div className="grid grid-cols-7 gap-2">
+                    {Array.from({ length: 28 }).map((_, i) => (
+                      <div key={i} className={cn("aspect-square rounded-lg", [2, 8, 12, 17, 21, 26].includes(i) ? "bg-gradient-to-br from-primary to-purple-600" : "bg-muted")} />
+                    ))}
                   </div>
-                  <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-4">
-                    <s.icon className="w-5 h-5" />
+                </div>
+              </motion.div>
+            </div>
+
+            <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
+              <motion.div initial={{ opacity: 0, x: 32 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="lg:order-2">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-4 border border-primary/20">
+                  <Sparkles className="w-4 h-4" /> Inteligência
+                </div>
+                <h3 className="text-2xl lg:text-3xl font-display font-bold mb-4">Uma IA que escreve no seu tom</h3>
+                <p className="text-muted-foreground text-base lg:text-lg mb-6 leading-relaxed">
+                  Ela aprende seu nicho, pilares e tom de voz pra gerar legendas, hashtags, ideias e roteiros que parecem escritos por você — não genéricos.
+                </p>
+                <ul className="space-y-3">
+                  {["Legendas e roteiros completos", "Hashtags por relevância e nicho", "Ideias baseadas nos seus pilares"].map((t) => (
+                    <li key={t} className="flex items-center gap-3 font-medium">
+                      <div className="rounded-full bg-primary/10 p-0.5"><Check className="w-4 h-4 text-primary" /></div>{t}
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+              <motion.div initial={{ opacity: 0, x: -32 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="lg:order-1">
+                <div className="bg-card border border-border rounded-2xl shadow-warm p-5 sm:p-6 space-y-3">
+                  <div className="bg-muted rounded-xl p-4">
+                    <p className="text-sm font-semibold mb-2 flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> Legenda gerada</p>
+                    <div className="h-2.5 bg-foreground/10 rounded-full mb-2 w-[90%]" />
+                    <div className="h-2.5 bg-foreground/10 rounded-full w-[70%]" />
                   </div>
-                  <h3 className="text-xl font-display font-bold mb-3">{s.title}</h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {s.description}
-                  </p>
-                </motion.div>
-              ))}
+                  <div className="bg-gradient-to-br from-primary to-purple-600 text-white rounded-xl p-4 text-sm font-medium">
+                    #rotina #produtividade #criador <span className="opacity-70">+12</span>
+                  </div>
+                </div>
+              </motion.div>
             </div>
           </div>
         </section>
