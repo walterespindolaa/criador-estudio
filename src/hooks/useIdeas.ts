@@ -102,7 +102,7 @@ export function useIdeas(options?: { limit?: number }) {
         entity_id: ideaId,
         metadata: { post_id: createdPost.id },
       });
-      if (auditError) throw auditError;
+      if (auditError) console.warn("audit_log (não-crítico) falhou:", auditError);
 
       return createdPost as Post;
     },
