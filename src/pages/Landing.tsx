@@ -313,7 +313,7 @@ export default function Landing() {
 
       <main>
         {/* ─── 2. HERO ─── */}
-        <section id="hero" className="relative pt-32 pb-20 lg:pt-40 lg:pb-28 overflow-hidden">
+        <section id="hero" className="relative pt-28 pb-16 sm:pt-32 sm:pb-20 lg:pt-40 lg:pb-28 overflow-hidden">
           <div className="absolute top-0 inset-x-0 h-screen bg-gradient-to-b from-primary/5 via-transparent to-transparent -z-10 pointer-events-none" />
           
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
@@ -324,7 +324,7 @@ export default function Landing() {
                   ✦ Para criadores brasileiros
                 </div>
                 
-                <h1 className="text-5xl lg:text-6xl font-display font-extrabold tracking-tight leading-[1.1] mb-6">
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-extrabold tracking-tight leading-[1.1] mb-6">
                   Do caos criativo ao <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-purple-600 to-pink-500">conteúdo publicado.</span>
                 </h1>
                 
@@ -381,7 +381,7 @@ export default function Landing() {
         </section>
 
         {/* ─── 4. FUNCIONALIDADES ─── */}
-        <section id="features" className="py-20 lg:py-28">
+        <section id="features" className="scroll-mt-20 py-16 sm:py-20 lg:py-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
             <motion.div {...fadeUp} className="text-center max-w-3xl mx-auto mb-16">
               <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight mb-4">
@@ -416,7 +416,7 @@ export default function Landing() {
         </section>
 
         {/* ─── 5. COMO FUNCIONA ─── */}
-        <section id="how-it-works" className="py-20 lg:py-28 bg-muted/30 border-y border-border">
+        <section id="how-it-works" className="scroll-mt-20 py-16 sm:py-20 lg:py-28 bg-muted/30 border-y border-border">
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
             <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-16">
               <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight mb-4">
@@ -452,7 +452,7 @@ export default function Landing() {
         </section>
 
         {/* ─── 6. DESTAQUE IA ─── */}
-        <section className="py-20 lg:py-28 relative overflow-hidden">
+        <section className="py-16 sm:py-20 lg:py-28 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-purple-600/5 -z-10" />
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
             <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
@@ -488,7 +488,7 @@ export default function Landing() {
         </section>
 
         {/* ─── 7. COMPARATIVO ─── */}
-        <section className="py-20 lg:py-28 bg-muted/30 border-y border-border">
+        <section className="py-16 sm:py-20 lg:py-28 bg-muted/30 border-y border-border">
           <div className="max-w-5xl mx-auto px-4 sm:px-6">
             <motion.div {...fadeUp} className="text-center mb-14">
               <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight mb-4">
@@ -547,7 +547,7 @@ export default function Landing() {
         </section>
 
         {/* ─── 8. DEPOIMENTOS ─── */}
-        <section className="py-20 lg:py-28">
+        <section className="py-16 sm:py-20 lg:py-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
             <motion.div {...fadeUp} className="text-center mb-16">
               <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight">
@@ -584,7 +584,7 @@ export default function Landing() {
         </section>
 
         {/* ─── 9. PREÇO ─── */}
-        <section id="pricing" className="py-20 lg:py-28 bg-muted/30 border-y border-border">
+        <section id="pricing" className="scroll-mt-20 py-16 sm:py-20 lg:py-28 bg-muted/30 border-y border-border">
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
             <motion.div {...fadeUp} className="text-center mb-16">
               <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight mb-4">
@@ -645,7 +645,7 @@ export default function Landing() {
         </section>
 
         {/* ─── 9b. PARA QUEM GERENCIA ─── */}
-        <section id="modulos" className="py-20 lg:py-28">
+        <section id="modulos" className="scroll-mt-20 py-16 sm:py-20 lg:py-28">
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
             <motion.div {...fadeUp} className="text-center mb-14">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-4 border border-primary/20">
@@ -682,7 +682,7 @@ export default function Landing() {
         </section>
 
         {/* ─── 10. FAQ ─── */}
-        <section className="py-20 lg:py-28">
+        <section className="py-16 sm:py-20 lg:py-28">
           <div className="max-w-3xl mx-auto px-4 sm:px-6">
             <motion.div {...fadeUp} className="text-center mb-12">
               <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight">
@@ -712,7 +712,7 @@ export default function Landing() {
           <div className="absolute inset-0 bg-gradient-to-br from-primary/8 to-purple-600/8 -z-10" />
           <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
             <motion.div {...fadeUp}>
-              <h2 className="text-4xl lg:text-5xl font-display font-extrabold tracking-tight mb-6">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display font-extrabold tracking-tight mb-6">
                 Pronto para parar de improvisar?
               </h2>
               <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
