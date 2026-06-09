@@ -89,55 +89,14 @@ const MockupVisual = () => (
   </div>
 );
 
-const featuresList = [
-  {
-    icon: Lightbulb,
-    title: "Banco de Ideias",
-    description: "Capture no celular, organize por pilar e formato. Nunca perca uma ideia no banho.",
-    gradient: "from-amber-500 to-yellow-400",
-  },
-  {
-    icon: Kanban,
-    title: "Pipeline Kanban",
-    description: "Do rascunho ao publicado em colunas visuais. Veja seu conteúdo fluir.",
-    gradient: "from-blue-500 to-cyan-500",
-  },
-  {
-    icon: CalendarDays,
-    title: "Calendário + Metas",
-    description: "Planeje no calendário (arraste pra reagendar dia e horário), defina metas mensais e acompanhe sua consistência.",
-    gradient: "from-teal-500 to-emerald-500",
-  },
-  {
-    icon: Sparkles,
-    title: "cria",
-    description: "IA que conhece seu nicho: gera legendas, hashtags, ideias e roteiros no seu tom.",
-    gradient: "from-primary to-purple-600",
-  },
-  {
-    icon: Grid3X3,
-    title: "Feed + Agendamento",
-    description: "Veja como seu grid vai ficar e agende posts direto para Instagram, TikTok e YouTube.",
-    gradient: "from-violet-500 to-purple-500",
-  },
-  {
-    icon: Link2,
-    title: "Link in Bio",
-    description: "Sua mini landing page profissional com todos os links que importam. Incluso no plano.",
-    gradient: "from-rose-500 to-pink-500",
-  },
-  {
-    icon: BarChart3,
-    title: "Relatórios e Analytics",
-    description: "Alcance, impressões e engajamento reais das suas redes. Entenda o que está funcionando.",
-    gradient: "from-orange-500 to-red-500",
-  },
-  {
-    icon: BookMarked,
-    title: "Brandbook + Biblioteca",
-    description: "Defina sua identidade visual, tom de voz, hooks e prompts favoritos em um só lugar.",
-    gradient: "from-amber-600 to-orange-500",
-  },
+const bentoList = [
+  { icon: Kanban, title: "Pipeline Kanban", desc: "Do rascunho ao publicado em colunas visuais: Ideia → Roteiro → Gravando → Editando → Agendado → Publicado.", gradient: "from-primary to-purple-600", span: "col", feature: true },
+  { icon: Lightbulb, title: "Banco de Ideias", desc: "Capture no celular, organize por pilar e formato. Nunca perca uma ideia.", gradient: "from-amber-500 to-yellow-400" },
+  { icon: Link2, title: "Link in Bio", desc: "Sua mini landing page profissional, inclusa no plano.", gradient: "from-rose-500 to-pink-500" },
+  { icon: Sparkles, title: "cria — sua IA", desc: "Gera legendas, hashtags, ideias e roteiros no seu tom de voz, de 150 a 500 vezes por mês.", gradient: "from-violet-600 to-fuchsia-600", span: "col", feature: true },
+  { icon: CalendarDays, title: "Calendário + Metas", desc: "Planeje no calendário, arraste pra reagendar, defina metas mensais e acompanhe sua consistência.", gradient: "from-teal-500 to-emerald-500" },
+  { icon: BarChart3, title: "Relatórios e Analytics", desc: "Alcance e engajamento reais das suas redes, num painel claro.", gradient: "from-orange-500 to-red-500" },
+  { icon: BookMarked, title: "Brandbook + Biblioteca", desc: "Identidade visual, tom de voz, hooks e prompts favoritos.", gradient: "from-amber-600 to-orange-500" },
 ];
 
 const stepsList = [
@@ -381,35 +340,40 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ─── 4. FUNCIONALIDADES ─── */}
+        {/* ─── 4. FUNCIONALIDADES (BENTO) ─── */}
         <section id="features" className="scroll-mt-20 py-16 sm:py-20 lg:py-28">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <motion.div {...fadeUp} className="text-center max-w-3xl mx-auto mb-16">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+            <motion.div {...fadeUp} className="text-center mb-12 sm:mb-16">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-4 border border-primary/20">
+                <Sparkles className="w-4 h-4" /> Tudo num lugar só
+              </div>
               <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight mb-4">
-                Tudo que você precisa. <span className="text-muted-foreground">Nada que você não precisa.</span>
+                Do primeiro insight ao post no ar
               </h2>
-              <p className="text-lg text-muted-foreground">
-                Cada módulo foi pensado para o criador que trabalha sozinho.
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Cada etapa do seu conteúdo num fluxo visual — pensado pra quem não sabe por onde começar.
               </p>
             </motion.div>
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-              {featuresList.map((f, i) => (
-                <motion.div 
-                  key={i}
-                  initial={{ opacity: 0, y: 16 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: i * 0.05 }}
-                  className="bg-card border border-border rounded-2xl p-6 sm:p-8 shadow-warm-sm hover:shadow-warm-md hover:border-primary/20 transition-all duration-300"
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:auto-rows-[200px]">
+              {bentoList.map((b, i) => (
+                <motion.div
+                  key={b.title}
+                  {...fadeUp}
+                  transition={{ duration: 0.5, delay: i * 0.05 }}
+                  className={cn(
+                    "rounded-2xl p-6 shadow-warm transition-all duration-300 flex flex-col hover:-translate-y-1.5",
+                    b.feature
+                      ? cn("text-white hover:shadow-glow bg-gradient-to-br", b.gradient)
+                      : "bg-card border border-border hover:shadow-warm-lg",
+                    b.span === "col" && "sm:col-span-2",
+                  )}
                 >
-                  <div className={cn("w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center mb-6 shadow-inner", f.gradient)}>
-                    <f.icon className="w-6 h-6 text-white" />
+                  <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center mb-3", b.feature ? "bg-white/20" : cn("bg-gradient-to-br", b.gradient))}>
+                    <b.icon className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className="text-xl font-display font-bold mb-3">{f.title}</h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {f.description}
-                  </p>
+                  <h3 className={cn("text-xl font-display font-bold mb-2", b.feature ? "text-white" : "text-foreground")}>{b.title}</h3>
+                  <p className={cn("text-sm leading-relaxed", b.feature ? "text-white/85" : "text-muted-foreground")}>{b.desc}</p>
                 </motion.div>
               ))}
             </div>
@@ -626,7 +590,7 @@ export default function Landing() {
                         <div className="mt-0.5 rounded-full bg-primary/10 p-0.5 shrink-0">
                           <Check className="w-4 h-4 text-primary" />
                         </div>
-                        <span className="text-foreground/90 font-medium text-sm">{feat}</span>
+                        <span className="text-foreground/90 font-medium text-sm">{feat.replace(/^[^\p{L}]+/u, "")}</span>
                       </div>
                     ))}
                   </div>
