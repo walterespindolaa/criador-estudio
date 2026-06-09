@@ -9,6 +9,9 @@ import {
   Lightbulb,
   Link2,
   Menu,
+  Users,
+  Wallet,
+  ClipboardCheck,
   Sparkles,
   User,
   Youtube,
@@ -101,7 +104,7 @@ const featuresList = [
   {
     icon: CalendarDays,
     title: "Calendário + Metas",
-    description: "Planeje semanas, defina metas mensais e acompanhe sua consistência com hábitos.",
+    description: "Planeje no calendário (arraste pra reagendar dia e horário), defina metas mensais e acompanhe sua consistência.",
     gradient: "from-teal-500 to-emerald-500",
   },
   {
@@ -251,6 +254,7 @@ export default function Landing() {
           <nav className="hidden md:flex items-center gap-8 font-medium text-sm text-muted-foreground">
             <button onClick={() => scrollTo("features")} className="hover:text-foreground transition-colors">Funcionalidades</button>
             <button onClick={() => scrollTo("how-it-works")} className="hover:text-foreground transition-colors">Como funciona</button>
+            <button onClick={() => scrollTo("modulos")} className="hover:text-foreground transition-colors">Para quem gerencia</button>
             <button onClick={() => scrollTo("pricing")} className="hover:text-foreground transition-colors">Preço</button>
           </nav>
 
@@ -286,6 +290,7 @@ export default function Landing() {
                 {[
                   { id: "features", label: "Funcionalidades" },
                   { id: "how-it-works", label: "Como funciona" },
+                  { id: "modulos", label: "Para quem gerencia" },
                   { id: "pricing", label: "Preço" },
                 ].map((item) => (
                   <button
@@ -324,7 +329,7 @@ export default function Landing() {
                 </h1>
                 
                 <p className="text-lg lg:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-                  Um sistema operacional completo para criadores de conteúdo. Ideias, roteiros, agendamento e análise — tudo em um só lugar.
+                  O sistema operacional completo do criador: capture ideias, planeje no calendário, produza, agende e analise os resultados — sem pular de app em app.
                 </p>
 
                 <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-8">
@@ -636,6 +641,43 @@ export default function Landing() {
                 Sem cartão de crédito. Cancele quando quiser.
               </p>
             </motion.div>
+          </div>
+        </section>
+
+        {/* ─── 9b. PARA QUEM GERENCIA ─── */}
+        <section id="modulos" className="py-20 lg:py-28">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+            <motion.div {...fadeUp} className="text-center mb-14">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-4 border border-primary/20">
+                <Users className="w-4 h-4" /> Para social media e agências
+              </div>
+              <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight mb-4">
+                Gerencia criadores? O cria também é seu.
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Módulos extras transformam o cria num painel de operação pra quem cuida de vários perfis — sem trocar de ferramenta.
+              </p>
+            </motion.div>
+
+            <motion.div {...fadeUp} className="grid md:grid-cols-3 gap-6">
+              {[
+                { icon: Kanban, title: "Cria Gestão", desc: "CRM completo: carteira de clientes, pipeline de prospecção, contratos, tarefas e calendário da sua operação.", gradient: "from-violet-500 to-purple-600" },
+                { icon: Wallet, title: "Cria Caixa", desc: "Controle financeiro de empresa e pessoa física: entradas, saídas, recorrências e visão clara por mês.", gradient: "from-emerald-500 to-teal-500" },
+                { icon: ClipboardCheck, title: "Aprovação por link", desc: "Seu cliente aprova os posts por um link — sem precisar criar conta nem instalar nada.", gradient: "from-blue-500 to-cyan-500" },
+              ].map((m) => (
+                <div key={m.title} className="rounded-2xl border border-border bg-card p-6 shadow-warm-sm hover:shadow-warm-md transition-shadow">
+                  <div className={cn("w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center mb-4", m.gradient)}>
+                    <m.icon className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-xl font-display font-bold mb-2">{m.title}</h3>
+                  <p className="text-muted-foreground leading-relaxed">{m.desc}</p>
+                </div>
+              ))}
+            </motion.div>
+
+            <motion.p {...fadeUp} className="text-center text-sm text-muted-foreground mt-8">
+              Módulos opcionais, contratados à parte dentro do app.
+            </motion.p>
           </div>
         </section>
 
