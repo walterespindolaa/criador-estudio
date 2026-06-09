@@ -38,6 +38,16 @@ const AppLayout = () => {
   }, []);
 
   useEffect(() => {
+    const id = window.setTimeout(() => {
+      void import("@/pages/app/Ideias");
+      void import("@/pages/app/Criando");
+      void import("@/pages/app/Plano");
+      void import("@/pages/app/Tarefas");
+    }, 1200);
+    return () => window.clearTimeout(id);
+  }, []);
+
+  useEffect(() => {
     if (profile?.theme_preset) {
       // Managers nunca usam accent personalizado — fica travado no roxo da marca.
       const accent = profile.account_type === "manager" ? '#8B5CF6' : (profile.theme_accent || '#8B5CF6');
