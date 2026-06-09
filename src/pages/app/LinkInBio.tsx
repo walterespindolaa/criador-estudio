@@ -23,6 +23,8 @@ import {
   Twitter,
   Music2,
   Loader2,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -58,6 +60,12 @@ type BioAbout = { image: string | null; title: string; text: string };
 type BioLeadForm = { title: string; subtitle: string; fields: LeadFields; buttonText: string; consentText: string };
 
 const BIO_SECTION_IDS: BioSectionId[] = ["banner", "about", "links", "lead"];
+const SECTION_LABELS: Record<BioSectionId, string> = {
+  banner: "Banner",
+  about: "Sobre mim",
+  links: "Links",
+  lead: "Captura de lead",
+};
 const DEFAULT_SECTIONS: BioSection[] = [
   { id: "banner", on: false },
   { id: "about", on: false },
@@ -500,6 +508,22 @@ const LinkInBio = () => {
     setAppearanceDirty(true);
   };
 
+  const toggleSection = (id: BioSectionId) => {
+    setSettings((s) => ({ ...s, sections: s.sections.map((sec) => (sec.id === id ? { ...sec, on: !sec.on } : sec)) }));
+    setAppearanceDirty(true);
+  };
+
+  const moveSection = (index: number, dir: -1 | 1) => {
+    setSettings((s) => {
+      const next = [...s.sections];
+      const j = index + dir;
+      if (j < 0 || j >= next.length) return s;
+      [next[index], next[j]] = [next[j], next[index]];
+      return { ...s, sections: next };
+    });
+    setAppearanceDirty(true);
+  };
+
   if (profileLoading || isLoading) return <PageSkeleton />;
 
   return (
@@ -597,6 +621,28 @@ const LinkInBio = () => {
                   </Droppable>
                 </DragDropContext>
               )}
+            </Card>
+
+            {/* ── Estrutura / Seções ─────────────────── */}
+            <Card className="p-4 md:p-5 rounded-2xl border-border">
+              <h2 className="font-display font-semibold text-foreground mb-1">Estrutura da página</h2>
+              <p className="text-xs text-muted-foreground mb-4">Ligue/desligue e ordene as seções da sua página pública.</p>
+              <div className="space-y-2">
+                {settings.sections.map((sec, i) => (
+                  <div key={sec.id} className="flex items-center gap-3 rounded-xl border border-border bg-background px-3 py-2">
+                    <div className="flex flex-col -my-1">
+                      <button type="button" aria-label="Subir" onClick={() => moveSection(i, -1)} disabled={i === 0} className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors">
+                        <ChevronUp className="w-4 h-4" />
+                      </button>
+                      <button type="button" aria-label="Descer" onClick={() => moveSection(i, 1)} disabled={i === settings.sections.length - 1} className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors">
+                        <ChevronDown className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <span className="flex-1 text-sm font-medium text-foreground">{SECTION_LABELS[sec.id]}</span>
+                    <Switch checked={sec.on} onCheckedChange={() => toggleSection(sec.id)} />
+                  </div>
+                ))}
+              </div>
             </Card>
 
             {/* ── Appearance ─────────────────────────── */}
