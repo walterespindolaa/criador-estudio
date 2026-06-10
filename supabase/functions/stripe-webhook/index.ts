@@ -9,6 +9,9 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
 
 const DEDUCTION_PCT_FALLBACK = 10; // fallback se partner_program_config não tiver linha
 
+// Mantém em sincronia com STORAGE_BYTES do src/lib/plans.ts (runtime Deno não importa o frontend)
+const STORAGE_BY_PLAN: Record<string, number> = { pro: 5368709120, studio: 16106127360 };
+
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -75,6 +78,7 @@ serve(async (req) => {
           stripe_customer_id: s.customer as string,
           stripe_subscription_id: s.subscription as string,
           plan,
+          storage_quota_bytes: STORAGE_BY_PLAN[plan] ?? 524288000,
         }).eq("id", userId);
 
         // Self-subscribe: ativa vínculo pendente manager→PF.
@@ -128,8 +132,9 @@ serve(async (req) => {
           sub.status;
 
         if (userId) {
-          const update: Record<string, string> = { subscription_status: status };
+          const update: Record<string, string | number> = { subscription_status: status };
           if (plan) update.plan = plan;
+          if (plan && status === "active") update.storage_quota_bytes = STORAGE_BY_PLAN[plan] ?? 524288000;
           await supabase.from("profiles").update(update).eq("id", userId);
         } else {
           // fallback: casa pelo stripe_subscription_id
