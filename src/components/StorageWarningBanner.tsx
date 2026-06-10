@@ -4,6 +4,7 @@ import { HardDrive, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/hooks/useProfile";
 import { cn } from "@/lib/utils";
+import { storageBytesForPlan } from "@/lib/plans";
 
 export function StorageWarningBanner() {
   const { profile } = useProfile();
@@ -18,7 +19,7 @@ export function StorageWarningBanner() {
   if (!profile || dismissed) return null;
 
   const used = profile.storage_used_bytes ?? 0;
-  const quota = profile.storage_quota_bytes ?? 524288000;
+  const quota = profile.storage_quota_bytes ?? storageBytesForPlan(profile.plan, profile.subscription_status === "active");
   const pct = Math.round((used / quota) * 100);
 
   if (pct < 80) return null;

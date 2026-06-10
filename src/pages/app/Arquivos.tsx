@@ -17,13 +17,13 @@ import { FilePreviewModal } from "@/components/files/FilePreviewModal";
 import { DriveMediaPreview } from "@/components/drive/DriveMediaPreview";
 import { useFiles } from "@/hooks/useFiles";
 import { cn } from "@/lib/utils";
+import { storageBytesForPlan, formatStorage } from "@/lib/plans";
 import type { Database } from "@/integrations/supabase/types";
 
 type DriveRef = Database["public"]["Tables"]["external_media_refs"]["Row"];
 
 const CATEGORIES = ["geral", "referência", "marca", "inspiração", "roteiro"];
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-const DEFAULT_QUOTA = 524_288_000; // 500MB
 const DEFAULT_RETENTION_DAYS = 30;
 const MAX_IMAGE_DIM = 1920;
 const JPEG_QUALITY = 0.8;
@@ -101,7 +101,7 @@ const Arquivos = () => {
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
 
   const storageUsed = activeProfile?.storage_used_bytes ?? 0;
-  const storageQuota = activeProfile?.storage_quota_bytes ?? DEFAULT_QUOTA;
+  const storageQuota = activeProfile?.storage_quota_bytes ?? storageBytesForPlan(activeProfile?.plan, activeProfile?.subscription_status === "active");
   const retentionDays = activeProfile?.storage_retention_days ?? DEFAULT_RETENTION_DAYS;
   const usagePct = Math.min(100, storageQuota > 0 ? (storageUsed / storageQuota) * 100 : 0);
   const isStorageFull = storageUsed >= storageQuota;
@@ -236,7 +236,6 @@ const Arquivos = () => {
     return `${(bytes / 1048576).toFixed(1)}MB`;
   };
 
-  const formatMB = (bytes: number) => (bytes / 1048576).toFixed(1);
 
   const daysUntilExpiry = (expiresAt: string | null | undefined) => {
     if (!expiresAt) return null;
@@ -286,7 +285,7 @@ const Arquivos = () => {
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between text-xs font-body mb-1.5">
               <span className="text-muted-foreground">
-                <span className="font-medium text-foreground">{formatMB(storageUsed)}MB</span> de {formatMB(storageQuota)}MB usados
+                <span className="font-medium text-foreground">{formatStorage(storageUsed)}</span> de {formatStorage(storageQuota)} usados
               </span>
               <span className="text-muted-foreground tabular-nums">{Math.round(usagePct)}%</span>
             </div>

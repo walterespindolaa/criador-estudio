@@ -17,6 +17,7 @@ import { useHabits } from "@/hooks/useHabits";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { validateUpload } from "@/lib/upload-validation";
+import { storageBytesForPlan, formatStorage } from "@/lib/plans";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
@@ -687,10 +688,8 @@ const Configuracoes = () => {
 
                 {(() => {
                   const storageUsed = profile?.storage_used_bytes ?? 0;
-                  const storageQuota = profile?.storage_quota_bytes ?? 524288000;
+                  const storageQuota = profile?.storage_quota_bytes ?? storageBytesForPlan(profile?.plan, profile?.subscription_status === "active");
                   const retentionDays = profile?.storage_retention_days ?? 30;
-                  const usedMB = (storageUsed / 1048576).toFixed(1);
-                  const quotaMB = (storageQuota / 1048576).toFixed(0);
                   const pct = storageQuota > 0 ? (storageUsed / storageQuota) * 100 : 0;
 
                   const handleUpdateRetention = async (days: number) => {
@@ -711,7 +710,7 @@ const Configuracoes = () => {
                         <div className="bg-muted/30 rounded-xl p-4 space-y-3">
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-muted-foreground font-body">Espaço usado</span>
-                            <span className="font-semibold font-body">{usedMB}MB de {quotaMB}MB</span>
+                            <span className="font-semibold font-body">{formatStorage(storageUsed)} de {formatStorage(storageQuota)}</span>
                           </div>
                           <div className="h-2 bg-muted rounded-full overflow-hidden">
                             <div
@@ -759,12 +758,16 @@ const Configuracoes = () => {
 
                         <div className="flex items-center justify-between bg-primary/5 border border-primary/15 rounded-xl px-4 py-3">
                           <div>
-                            <p className="text-sm font-body font-semibold text-foreground">Plano Pro</p>
-                            <p className="text-xs text-muted-foreground font-body">+250MB de armazenamento</p>
+                            <p className="text-sm font-body font-semibold text-foreground">Seu armazenamento: {formatStorage(storageQuota)}</p>
+                            <p className="text-xs text-muted-foreground font-body">
+                              {profile?.plan === "studio" ? "Plano Studio" : profile?.plan === "pro" ? "Faça upgrade para o Studio e tenha mais espaço" : "Assine para liberar mais armazenamento"}
+                            </p>
                           </div>
-                          <Button variant="outline" size="sm" onClick={() => navigate("/app/assinar")}>
-                            Ver plano →
-                          </Button>
+                          {profile?.plan !== "studio" && (
+                            <Button variant="outline" size="sm" onClick={() => navigate("/app/assinar")}>
+                              {profile?.plan === "pro" ? "Upgrade →" : "Ver planos →"}
+                            </Button>
+                          )}
                         </div>
                       </section>
                     </div>
