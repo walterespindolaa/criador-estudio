@@ -101,7 +101,7 @@ const Arquivos = () => {
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
 
   const storageUsed = activeProfile?.storage_used_bytes ?? 0;
-  const storageQuota = activeProfile?.storage_quota_bytes ?? storageBytesForPlan(activeProfile?.plan, activeProfile?.subscription_status === "active");
+  const storageQuota = activeProfile?.storage_quota_bytes ?? storageBytesForPlan(null, false);
   const retentionDays = activeProfile?.storage_retention_days ?? DEFAULT_RETENTION_DAYS;
   const usagePct = Math.min(100, storageQuota > 0 ? (storageUsed / storageQuota) * 100 : 0);
   const isStorageFull = storageUsed >= storageQuota;
