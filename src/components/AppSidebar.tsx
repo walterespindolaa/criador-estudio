@@ -20,7 +20,6 @@ import {
   ClipboardCheck,
   Package,
 } from "lucide-react";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
 import { useNavigate, Link } from "react-router-dom";
@@ -75,7 +74,7 @@ const groups = [
     label: "Monetização",
     studioOnly: true,
     items: [
-      { title: "Collabs", url: "/app/collabs", icon: Handshake, comingSoon: true },
+      { title: "Collabs", url: "/app/collabs", icon: Handshake, studioLock: true },
     ],
   },
   {
@@ -178,26 +177,20 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {group.items.map((item) => {
-                  const comingSoon = (item as { comingSoon?: boolean }).comingSoon;
-                  if (comingSoon) {
-                    const locked = tier !== "studio";
+                  const studioLock = (item as { studioLock?: boolean }).studioLock;
+                  if (studioLock && tier !== "studio") {
                     return (
                       <SidebarMenuItem key={item.url}>
                         <SidebarMenuButton
                           tooltip={item.title}
-                          onClick={() => {
-                            if (locked) navigate("/app/assinar");
-                            else toast("Collabs chega em breve! 🚀");
-                          }}
+                          onClick={() => navigate("/app/assinar")}
                           className="group relative rounded-xl px-3 py-2.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-all duration-150"
                         >
                           <item.icon className="h-5 w-5 flex-shrink-0" strokeWidth={1.5} />
                           {!collapsed && (
                             <>
                               <span className="font-body text-sm">{item.title}</span>
-                              <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                                {locked ? "Studio" : "Em breve"}
-                              </span>
+                              <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">Studio</span>
                             </>
                           )}
                         </SidebarMenuButton>
