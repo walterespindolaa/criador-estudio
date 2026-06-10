@@ -80,6 +80,7 @@ const groups = [
   },
   {
     label: "Agência",
+    managerOnly: true,
     items: [
       { title: "Módulos", url: "/app/modulos", icon: Package },
     ],
@@ -165,7 +166,9 @@ export function AppSidebar() {
       </button>
 
       <SidebarContent className="px-2">
-        {groups.map((group) => (
+        {groups
+          .filter((group) => !(group as { managerOnly?: boolean }).managerOnly || profile?.account_type === "manager")
+          .map((group) => (
           <SidebarGroup key={group.label}>
             {!collapsed && (
               <SidebarGroupLabel className="text-[11px] font-display font-semibold uppercase tracking-wider text-muted-foreground/60 px-3 mt-4 mb-1.5">
