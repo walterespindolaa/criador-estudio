@@ -760,7 +760,7 @@ export default function Landing() {
           </div>
         </div>
         <div className="mt-8 text-center text-sm text-muted-foreground">
-          © 2025 cria. Feito com ♥ para criadores brasileiros.
+          © {new Date().getFullYear()} Cria Social Club. Feito com ♥ para criadores brasileiros.
         </div>
       </footer>
     </div>
