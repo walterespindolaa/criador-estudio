@@ -67,7 +67,6 @@ export const ContractPdfTemplate = forwardRef<HTMLDivElement, { data: ContractDa
       <p style={sLi}>c) A CONTRATADA enviará as publicações até três dias antes da data de postagem, para aprovação da CONTRATANTE.</p>
       <p style={sLi}>d) Alterações poderão ser solicitadas via WhatsApp; o prazo de conclusão será ajustado de comum acordo conforme a complexidade da demanda.</p>
       <p style={sLi}>e) O prazo para início das postagens é de 15 dias úteis a contar da reunião de briefing, período em que serão entregues a estratégia, o posicionamento e o cronograma para aprovação.</p>
-      <p style={sP}>4.1. A CONTRATANTE deverá fornecer acessos das contas gerenciadas, materiais (fotos e vídeos), aprovar o calendário em até 5 dias e adotar as estratégias formuladas. Parágrafo único: eventuais metas são estimadas, podendo variar conforme a estratégia adotada de comum acordo.</p>
 
       <p style={sH}>5. Preços e Pagamentos</p>
       <p style={sP}>Pelos serviços prestados, a CONTRATANTE pagará à CONTRATADA a importância de {valor}, com vencimento no dia {d.dueDay} de cada mês.</p>

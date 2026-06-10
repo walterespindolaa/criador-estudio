@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -148,17 +148,22 @@ export function ContractGeneratorDialog({ open, onOpenChange }: Props) {
             </Sec>
           </div>
 
+          {/* Pré-visualização — também é a FONTE do PDF (precisa ficar em fluxo e visível) */}
+          <div className="mt-6">
+            <p className="text-xs font-medium text-muted-foreground mb-2">Pré-visualização do contrato</p>
+            <div className="rounded-xl border border-border bg-muted/30 overflow-auto" style={{ maxHeight: "55vh" }}>
+              <div style={{ zoom: 0.72 } as CSSProperties}>
+                <ContractPdfTemplate ref={pdfRef} data={{ ...d, company }} />
+              </div>
+            </div>
+          </div>
+
           <div className="flex justify-end gap-2 mt-6">
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>Cancelar</Button>
             <Button onClick={generate} disabled={busy || !d.ctName.trim()}>{busy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1.5" />}Baixar contrato (PDF)</Button>
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* template off-screen pro html2canvas */}
-      <div style={{ position: "fixed", left: "-9999px", top: 0, zIndex: -1 }} aria-hidden="true">
-        <ContractPdfTemplate ref={pdfRef} data={{ ...d, company }} />
-      </div>
     </>
   );
 }
