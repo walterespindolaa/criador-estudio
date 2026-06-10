@@ -133,6 +133,46 @@ export default function Privacidade() {
               Não vendemos, alugamos ou comercializamos seus dados pessoais a
               terceiros pra fins de marketing.
             </p>
+
+            <h3 className="text-base font-display font-semibold text-foreground mt-5 mb-2">
+              Acesso aos seus dados do Google (Drive e Agenda)
+            </h3>
+            <p className="text-muted-foreground leading-relaxed mb-3">
+              Ao conectar sua conta Google, o CRIA solicita acesso estritamente
+              aos escopos abaixo, sempre mediante seu consentimento explícito na
+              tela do Google. Você pode revogar esse acesso a qualquer momento em{" "}
+              <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                myaccount.google.com/permissions
+              </a>.
+            </p>
+            <ul className="text-muted-foreground leading-relaxed space-y-1 list-disc list-inside">
+              <li>
+                <strong className="text-foreground">Google Drive (drive.file):</strong>{" "}
+                acessamos apenas os arquivos que você seleciona ou cria através do
+                app (via Google Picker), para anexar e pré-visualizar mídias nos
+                seus posts. Não acessamos nem listamos os demais arquivos do seu Drive.
+              </li>
+              <li>
+                <strong className="text-foreground">Google Agenda (calendar.events):</strong>{" "}
+                criamos e atualizamos eventos do seu calendário de conteúdo, para
+                sincronizar suas publicações planejadas.
+              </li>
+              <li>
+                <strong className="text-foreground">Perfil básico (email, profile):</strong>{" "}
+                identificar a conta Google conectada.
+              </li>
+            </ul>
+            <p className="text-muted-foreground leading-relaxed mt-3">
+              <strong className="text-foreground">Uso limitado:</strong> o uso que o
+              CRIA faz das informações recebidas das APIs do Google adere à{" "}
+              <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                Política de Dados do Usuário dos Serviços de API do Google
+              </a>
+              , incluindo os requisitos de Uso Limitado. Os dados obtidos do Google
+              não são usados para publicidade, não são vendidos a terceiros e não
+              são usados para treinar modelos de IA; o acesso se restringe às
+              funcionalidades descritas acima.
+            </p>
           </div>
 
           <div>
