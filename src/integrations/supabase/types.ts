@@ -266,6 +266,36 @@ export type Database = {
         }
         Relationships: []
       }
+      bio_leads: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          name: string | null
+          phone: string | null
+          source: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string | null
+          phone?: string | null
+          source?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string | null
+          phone?: string | null
+          source?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       bio_links: {
         Row: {
           clicks: number | null
@@ -425,6 +455,326 @@ export type Database = {
           title?: string
         }
         Relationships: []
+      }
+      crm_client_refs: {
+        Row: {
+          created_at: string
+          crm_client_id: string
+          id: string
+          image_url: string
+          manager_id: string
+          note: string | null
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          crm_client_id: string
+          id?: string
+          image_url: string
+          manager_id: string
+          note?: string | null
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          crm_client_id?: string
+          id?: string
+          image_url?: string
+          manager_id?: string
+          note?: string | null
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_client_refs_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_clients: {
+        Row: {
+          active: boolean
+          brand_core: Json
+          competitors: Json
+          contract_date: string | null
+          created_at: string
+          cria_owner_id: string | null
+          crm_lead_id: string | null
+          diagnosis: Json
+          email: string | null
+          id: string
+          instagram: string | null
+          logo: string | null
+          manager_id: string
+          monthly_value: number | null
+          name: string
+          notes: string | null
+          persona: Json
+          phone: string | null
+          renewal_date: string | null
+          segment: string | null
+          services: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          brand_core?: Json
+          competitors?: Json
+          contract_date?: string | null
+          created_at?: string
+          cria_owner_id?: string | null
+          crm_lead_id?: string | null
+          diagnosis?: Json
+          email?: string | null
+          id?: string
+          instagram?: string | null
+          logo?: string | null
+          manager_id: string
+          monthly_value?: number | null
+          name: string
+          notes?: string | null
+          persona?: Json
+          phone?: string | null
+          renewal_date?: string | null
+          segment?: string | null
+          services?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          brand_core?: Json
+          competitors?: Json
+          contract_date?: string | null
+          created_at?: string
+          cria_owner_id?: string | null
+          crm_lead_id?: string | null
+          diagnosis?: Json
+          email?: string | null
+          id?: string
+          instagram?: string | null
+          logo?: string | null
+          manager_id?: string
+          monthly_value?: number | null
+          name?: string
+          notes?: string | null
+          persona?: Json
+          phone?: string | null
+          renewal_date?: string | null
+          segment?: string | null
+          services?: string[] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_clients_cria_owner_id_fkey"
+            columns: ["cria_owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_clients_crm_lead_id_fkey"
+            columns: ["crm_lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_contracts: {
+        Row: {
+          closed_date: string | null
+          contract_value: number | null
+          created_at: string
+          crm_client_id: string | null
+          crm_lead_id: string | null
+          ended_date: string | null
+          id: string
+          manager_id: string
+          monthly_value: number | null
+          notes: string | null
+          sent_date: string | null
+          status: string
+          title: string
+        }
+        Insert: {
+          closed_date?: string | null
+          contract_value?: number | null
+          created_at?: string
+          crm_client_id?: string | null
+          crm_lead_id?: string | null
+          ended_date?: string | null
+          id?: string
+          manager_id: string
+          monthly_value?: number | null
+          notes?: string | null
+          sent_date?: string | null
+          status?: string
+          title: string
+        }
+        Update: {
+          closed_date?: string | null
+          contract_value?: number | null
+          created_at?: string
+          crm_client_id?: string | null
+          crm_lead_id?: string | null
+          ended_date?: string | null
+          id?: string
+          manager_id?: string
+          monthly_value?: number | null
+          notes?: string | null
+          sent_date?: string | null
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_contracts_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_contracts_crm_lead_id_fkey"
+            columns: ["crm_lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_leads: {
+        Row: {
+          closing_potential: string | null
+          company: string | null
+          created_at: string
+          email: string | null
+          id: string
+          instagram: string | null
+          is_referral: boolean | null
+          lead_origin: string | null
+          main_objection: string | null
+          main_pain: string | null
+          manager_id: string
+          monthly_value: number | null
+          name: string
+          next_interaction_date: string | null
+          next_steps: string | null
+          notes: string | null
+          phone: string | null
+          referred_by: string | null
+          segment: string | null
+          stage: string
+          updated_at: string
+        }
+        Insert: {
+          closing_potential?: string | null
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          instagram?: string | null
+          is_referral?: boolean | null
+          lead_origin?: string | null
+          main_objection?: string | null
+          main_pain?: string | null
+          manager_id: string
+          monthly_value?: number | null
+          name: string
+          next_interaction_date?: string | null
+          next_steps?: string | null
+          notes?: string | null
+          phone?: string | null
+          referred_by?: string | null
+          segment?: string | null
+          stage?: string
+          updated_at?: string
+        }
+        Update: {
+          closing_potential?: string | null
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          instagram?: string | null
+          is_referral?: boolean | null
+          lead_origin?: string | null
+          main_objection?: string | null
+          main_pain?: string | null
+          manager_id?: string
+          monthly_value?: number | null
+          name?: string
+          next_interaction_date?: string | null
+          next_steps?: string | null
+          notes?: string | null
+          phone?: string | null
+          referred_by?: string | null
+          segment?: string | null
+          stage?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      crm_tasks: {
+        Row: {
+          created_at: string
+          crm_client_id: string | null
+          crm_lead_id: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          manager_id: string
+          priority: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          crm_client_id?: string | null
+          crm_lead_id?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          manager_id?: string
+          priority?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          crm_client_id?: string | null
+          crm_lead_id?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          manager_id?: string
+          priority?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_tasks_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_tasks_crm_lead_id_fkey"
+            columns: ["crm_lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_send_log: {
         Row: {
@@ -678,6 +1028,143 @@ export type Database = {
           },
         ]
       }
+      fin_records: {
+        Row: {
+          amount: number
+          category: string | null
+          context: string
+          created_at: string
+          crm_client_id: string | null
+          date: string
+          description: string
+          id: string
+          manager_id: string
+          payment_method: string | null
+          recurring: boolean
+          recurring_id: string | null
+          status: string
+          subcategory: string | null
+          transfer_group: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category?: string | null
+          context?: string
+          created_at?: string
+          crm_client_id?: string | null
+          date?: string
+          description: string
+          id?: string
+          manager_id: string
+          payment_method?: string | null
+          recurring?: boolean
+          recurring_id?: string | null
+          status?: string
+          subcategory?: string | null
+          transfer_group?: string | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: string | null
+          context?: string
+          created_at?: string
+          crm_client_id?: string | null
+          date?: string
+          description?: string
+          id?: string
+          manager_id?: string
+          payment_method?: string | null
+          recurring?: boolean
+          recurring_id?: string | null
+          status?: string
+          subcategory?: string | null
+          transfer_group?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_records_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_records_recurring_id_fkey"
+            columns: ["recurring_id"]
+            isOneToOne: false
+            referencedRelation: "fin_recurring"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_recurring: {
+        Row: {
+          active: boolean
+          amount: number
+          category: string | null
+          context: string
+          created_at: string
+          crm_client_id: string | null
+          description: string
+          due_day: number
+          end_date: string | null
+          id: string
+          manager_id: string
+          start_date: string
+          subcategory: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          amount?: number
+          category?: string | null
+          context?: string
+          created_at?: string
+          crm_client_id?: string | null
+          description: string
+          due_day?: number
+          end_date?: string | null
+          id?: string
+          manager_id: string
+          start_date?: string
+          subcategory?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          amount?: number
+          category?: string | null
+          context?: string
+          created_at?: string
+          crm_client_id?: string | null
+          description?: string
+          due_day?: number
+          end_date?: string | null
+          id?: string
+          manager_id?: string
+          start_date?: string
+          subcategory?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_recurring_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       google_drive_connections: {
         Row: {
           connected_at: string | null
@@ -856,7 +1343,9 @@ export type Database = {
           billing_email: string | null
           business_name: string | null
           client_range: string | null
+          contract_company: Json
           created_at: string
+          fin_settings: Json
           full_name: string | null
           id: string
           instagram_handle: string | null
@@ -870,7 +1359,9 @@ export type Database = {
           billing_email?: string | null
           business_name?: string | null
           client_range?: string | null
+          contract_company?: Json
           created_at?: string
+          fin_settings?: Json
           full_name?: string | null
           id?: string
           instagram_handle?: string | null
@@ -884,7 +1375,9 @@ export type Database = {
           billing_email?: string | null
           business_name?: string | null
           client_range?: string | null
+          contract_company?: Json
           created_at?: string
+          fin_settings?: Json
           full_name?: string | null
           id?: string
           instagram_handle?: string | null
@@ -2562,6 +3055,15 @@ export type Database = {
       }
       set_manager_notes: {
         Args: { _notes: string; _owner_id: string }
+        Returns: undefined
+      }
+      submit_bio_lead: {
+        Args: {
+          _email?: string
+          _name?: string
+          _phone?: string
+          _slug: string
+        }
         Returns: undefined
       }
       touch_last_seen: { Args: never; Returns: undefined }
