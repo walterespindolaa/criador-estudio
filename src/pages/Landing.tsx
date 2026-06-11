@@ -747,8 +747,8 @@ export default function Landing() {
           </div>
           
           <div className="flex flex-wrap justify-center items-center gap-6 text-sm font-medium text-muted-foreground">
-            <a href="#" className="hover:text-primary transition-colors">Termos de Uso</a>
-            <a href="#" className="hover:text-primary transition-colors">Privacidade</a>
+            <a href="/termos" className="hover:text-primary transition-colors">Termos de Uso</a>
+            <a href="/privacidade" className="hover:text-primary transition-colors">Política de Privacidade</a>
             <a href="#" className="hover:text-primary transition-colors">Contato</a>
           </div>
 

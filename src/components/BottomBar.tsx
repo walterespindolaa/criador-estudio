@@ -2,13 +2,12 @@ import { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Home, Lightbulb, Kanban, CalendarDays,
-  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, ChevronUp, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck, Handshake
+  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, ChevronUp, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useCriaAI } from "@/contexts/CriaAIContext";
-import { useTier } from "@/hooks/useTier";
 
 const leftItems = [
   { title: "Início", url: "/app", icon: Home, exact: true },
@@ -39,7 +38,6 @@ export function BottomBar() {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { openCria } = useCriaAI();
-  const { tier } = useTier();
 
   const handleSignOut = async () => {
     setMoreOpen(false);
@@ -52,10 +50,7 @@ export function BottomBar() {
     return location.pathname.startsWith(url);
   };
 
-  const more = tier === "studio"
-    ? [...moreItems, { title: "Collabs", url: "/app/collabs", icon: Handshake }]
-    : moreItems;
-  const isMoreActive = more.some(item => location.pathname.startsWith(item.url));
+  const isMoreActive = moreItems.some(item => location.pathname.startsWith(item.url));
 
   const renderNavItem = (item: { title: string; url: string; icon: typeof Home; exact?: boolean }) => {
     const active = isActive(item.url, item.exact);
@@ -95,7 +90,7 @@ export function BottomBar() {
         >
           <div className="w-8 h-1 bg-border rounded-full mx-auto mb-4" />
           <div className="grid grid-cols-4 gap-3">
-            {more.map((item) => {
+            {moreItems.map((item) => {
               const active = isActive(item.url);
               return (
                 <NavLink

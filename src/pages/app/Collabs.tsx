@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
-import { Plus, Pencil, Trash2, Check, Bell, Clock, AlertTriangle, Archive, ArchiveRestore, Handshake, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, Bell, Clock, AlertTriangle, Archive, ArchiveRestore, Handshake } from "lucide-react";
 import { useTier } from "@/hooks/useTier";
 import {
   useCollabs, collabReminders, COLLAB_STATUSES, COLLAB_STATUS_LABEL,
@@ -45,12 +45,6 @@ export default function Collabs() {
   const openNew = () => { setEditingId(null); setDialogOpen(true); };
   const openEdit = (c: CollabWithDeliverables) => { setEditingId(c.id); setDialogOpen(true); };
 
-  const moveCollab = (c: CollabWithDeliverables, dir: -1 | 1) => {
-    const i = COLLAB_STATUSES.indexOf(c.status);
-    const next = COLLAB_STATUSES[i + dir];
-    if (next) updateCollab.mutate({ id: c.id, status: next });
-  };
-
   return (
     <div>
       <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
@@ -85,7 +79,7 @@ export default function Collabs() {
         </TabsList>
 
         <TabsContent value="pipeline">
-          <Pipeline active={active} isLoading={isLoading} onOpen={openEdit} onNew={openNew} onMove={moveCollab} />
+          <Pipeline active={active} isLoading={isLoading} onOpen={openEdit} onNew={openNew} />
         </TabsContent>
         <TabsContent value="lista">
           <ListView rows={active} isLoading={isLoading} onOpen={openEdit}
@@ -147,10 +141,8 @@ function ReminderRow({ r, onOpen }: { r: CollabReminder; onOpen: () => void }) {
   );
 }
 
-function Pipeline({ active, isLoading, onOpen, onNew, onMove }: {
-  active: CollabWithDeliverables[]; isLoading: boolean;
-  onOpen: (c: CollabWithDeliverables) => void; onNew: () => void;
-  onMove: (c: CollabWithDeliverables, dir: -1 | 1) => void;
+function Pipeline({ active, isLoading, onOpen, onNew }: {
+  active: CollabWithDeliverables[]; isLoading: boolean; onOpen: (c: CollabWithDeliverables) => void; onNew: () => void;
 }) {
   if (isLoading) return <div className="text-sm text-muted-foreground py-8 text-center">Carregando…</div>;
   if (active.length === 0) return <EmptyState onNew={onNew} />;
@@ -166,7 +158,7 @@ function Pipeline({ active, isLoading, onOpen, onNew, onMove }: {
               <span className="text-[11px] text-muted-foreground bg-card border border-border rounded-full px-2 font-semibold">{items.length}</span>
             </div>
             <div className="space-y-2.5">
-              {items.map((c) => <CollabCard key={c.id} c={c} onOpen={() => onOpen(c)} onMove={(dir) => onMove(c, dir)} />)}
+              {items.map((c) => <CollabCard key={c.id} c={c} onOpen={() => onOpen(c)} />)}
             </div>
           </div>
         );
@@ -175,19 +167,13 @@ function Pipeline({ active, isLoading, onOpen, onNew, onMove }: {
   );
 }
 
-function CollabCard({ c, onOpen, onMove }: {
-  c: CollabWithDeliverables; onOpen: () => void; onMove: (dir: -1 | 1) => void;
-}) {
+function CollabCard({ c, onOpen }: { c: CollabWithDeliverables; onOpen: () => void }) {
   const pct = c.total > 0 ? Math.round((c.done / c.total) * 100) : 0;
   const full = c.total > 0 && c.done === c.total;
   const overdue = !!c.deadline && c.status !== "pago" && c.done < c.total &&
     new Date(c.deadline + "T00:00:00") < new Date(new Date().toDateString());
-  const idx = COLLAB_STATUSES.indexOf(c.status);
-  const canPrev = idx > 0;
-  const canNext = idx < COLLAB_STATUSES.length - 1;
   return (
-    <div onClick={onOpen} role="button" tabIndex={0}
-      className="w-full text-left bg-card border border-border rounded-2xl p-3 hover:shadow-md transition-all border-l-[3px] cursor-pointer"
+    <button onClick={onOpen} className="w-full text-left bg-card border border-border rounded-2xl p-3 hover:shadow-md transition-all border-l-[3px]"
       style={{ borderLeftColor: STATUS_DOT[c.status] }}>
       <div className="flex items-center gap-2.5 mb-2">
         <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary grid place-items-center font-display font-extrabold text-xs flex-shrink-0">{c.brand.charAt(0).toUpperCase()}</div>
@@ -202,24 +188,12 @@ function CollabCard({ c, onOpen, onMove }: {
           <div className="h-1.5 rounded-full bg-muted overflow-hidden"><div className={cn("h-full rounded-full", full ? "bg-green-600" : "bg-primary")} style={{ width: `${pct}%` }} /></div>
         </div>
       )}
-      <div className="flex items-center gap-1.5">
-        <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
-          {full && <Chip tone="green">Objetivo atingido</Chip>}
-          {overdue && <Chip tone="red">Atrasado</Chip>}
-          {!full && !overdue && c.deadline && <Chip tone="gray">{fmtDate(c.deadline)}</Chip>}
-        </div>
-        <div className="flex items-center gap-0.5 flex-shrink-0">
-          <button type="button" disabled={!canPrev} onClick={(e) => { e.stopPropagation(); onMove(-1); }}
-            className="h-6 w-6 grid place-items-center rounded-lg text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:hover:bg-transparent" title="Voltar etapa">
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <button type="button" disabled={!canNext} onClick={(e) => { e.stopPropagation(); onMove(1); }}
-            className="h-6 w-6 grid place-items-center rounded-lg text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:hover:bg-transparent" title="Avançar etapa">
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
+      <div className="flex flex-wrap gap-1.5">
+        {full && <Chip tone="green">Objetivo atingido</Chip>}
+        {overdue && <Chip tone="red">Atrasado</Chip>}
+        {!full && !overdue && c.deadline && <Chip tone="gray">{fmtDate(c.deadline)}</Chip>}
       </div>
-    </div>
+    </button>
   );
 }
 
