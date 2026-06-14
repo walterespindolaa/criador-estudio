@@ -384,6 +384,101 @@ export type Database = {
           },
         ]
       }
+      collab_deliverables: {
+        Row: {
+          collab_id: string
+          created_at: string
+          format: string | null
+          id: string
+          label: string
+          post_id: string | null
+          published: boolean
+          published_at: string | null
+          sort_order: number
+          user_id: string
+        }
+        Insert: {
+          collab_id: string
+          created_at?: string
+          format?: string | null
+          id?: string
+          label: string
+          post_id?: string | null
+          published?: boolean
+          published_at?: string | null
+          sort_order?: number
+          user_id?: string
+        }
+        Update: {
+          collab_id?: string
+          created_at?: string
+          format?: string | null
+          id?: string
+          label?: string
+          post_id?: string | null
+          published?: boolean
+          published_at?: string | null
+          sort_order?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collab_deliverables_collab_id_fkey"
+            columns: ["collab_id"]
+            isOneToOne: false
+            referencedRelation: "collabs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      collabs: {
+        Row: {
+          archived: boolean
+          brand: string
+          briefing_url: string | null
+          contact: string | null
+          created_at: string
+          deadline: string | null
+          id: string
+          notes: string | null
+          objective: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          value: number | null
+        }
+        Insert: {
+          archived?: boolean
+          brand: string
+          briefing_url?: string | null
+          contact?: string | null
+          created_at?: string
+          deadline?: string | null
+          id?: string
+          notes?: string | null
+          objective?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          value?: number | null
+        }
+        Update: {
+          archived?: boolean
+          brand?: string
+          briefing_url?: string | null
+          contact?: string | null
+          created_at?: string
+          deadline?: string | null
+          id?: string
+          notes?: string | null
+          objective?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          value?: number | null
+        }
+        Relationships: []
+      }
       course_purchases: {
         Row: {
           course_id: string
