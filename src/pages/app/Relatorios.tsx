@@ -3,12 +3,15 @@ import { motion } from "framer-motion";
 import {
   ArrowRight,
   BarChart3,
+  Bookmark,
+  CalendarDays,
   Flame,
   Lightbulb,
   Loader2,
   Sparkles,
   TrendingDown,
   TrendingUp,
+  Trophy,
 } from "lucide-react";
 import {
   Bar,
@@ -88,6 +91,27 @@ function formatPercent(n: number) {
   if (!Number.isFinite(n)) return "—";
   const rounded = Math.round(n);
   return `${rounded > 0 ? "+" : ""}${rounded}%`;
+}
+
+const WEEKDAY_LABELS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+
+function mean(nums: number[]) {
+  if (nums.length === 0) return 0;
+  return nums.reduce((acc, n) => acc + n, 0) / nums.length;
+}
+
+// 1.2k / 980 — número compacto para views/alcance
+function formatCompact(n: number) {
+  if (!Number.isFinite(n)) return "—";
+  if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k`;
+  return Math.round(n).toString();
+}
+
+// eng% já vem em pontos percentuais (ex.: 3.4 -> "3,4%")
+function formatEngagement(n: number) {
+  if (!Number.isFinite(n)) return "—";
+  const rounded = n >= 10 ? Math.round(n).toString() : n.toFixed(1);
+  return `${rounded.replace(".", ",")}%`;
 }
 
 const Relatorios = () => {
@@ -275,6 +299,124 @@ const Relatorios = () => {
     return { current, longest };
   }, [posts, now]);
 
+  // ── DESEMPENHO: lê as métricas reais já gravadas em posts.result_* ──
+  // Só posts publicados que tenham pelo menos result_views preenchido.
+  const performancePosts = useMemo(
+    () => periodPosts.filter((p) => p.status === "publicado" && p.result_views != null),
+    [periodPosts]
+  );
+  const prevPerformancePosts = useMemo(
+    () => previousPosts.filter((p) => p.status === "publicado" && p.result_views != null),
+    [previousPosts]
+  );
+
+  const avgViews = useMemo(
+    () => mean(performancePosts.map((p) => p.result_views ?? 0)),
+    [performancePosts]
+  );
+  const prevAvgViews = useMemo(
+    () => mean(prevPerformancePosts.map((p) => p.result_views ?? 0)),
+    [prevPerformancePosts]
+  );
+  const avgViewsDelta =
+    prevAvgViews === 0 ? (avgViews > 0 ? 100 : 0) : ((avgViews - prevAvgViews) / prevAvgViews) * 100;
+
+  // Média de views por formato (desc) — topo = "Formato que mais rende"
+  const byFormat = useMemo(() => {
+    const groups = new Map<string, number[]>();
+    performancePosts.forEach((p) => {
+      const arr = groups.get(p.format) ?? [];
+      arr.push(p.result_views ?? 0);
+      groups.set(p.format, arr);
+    });
+    return Array.from(groups.entries())
+      .map(([format, vals]) => ({
+        format,
+        label: FORMAT_LABELS[format] || format,
+        color: FORMAT_COLORS[format] ?? "#94A3B8",
+        avg: mean(vals),
+        count: vals.length,
+      }))
+      .sort((a, b) => b.avg - a.avg);
+  }, [performancePosts]);
+
+  const topFormatDelta =
+    byFormat.length > 0 && avgViews > 0 ? ((byFormat[0].avg - avgViews) / avgViews) * 100 : 0;
+
+  // Média de saves por pilar (desc) — topo = "Pilar que gera saves"
+  const byPillar = useMemo(() => {
+    const groups = new Map<string, number[]>();
+    performancePosts.forEach((p) => {
+      const key = p.pillar_id ?? "sem-pilar";
+      const arr = groups.get(key) ?? [];
+      arr.push(p.result_saves ?? 0);
+      groups.set(key, arr);
+    });
+    return Array.from(groups.entries())
+      .map(([id, vals]) => {
+        const pillar = pillars.find((pl) => pl.id === id);
+        return {
+          id,
+          name: pillar?.name ?? "Sem pilar",
+          color: pillar?.color ?? "#94A3B8",
+          avg: mean(vals),
+          count: vals.length,
+        };
+      })
+      .sort((a, b) => b.avg - a.avg);
+  }, [performancePosts, pillars]);
+
+  // Média de views por dia da semana (desc) — topo = "Melhor dia (por resultado)"
+  const byWeekday = useMemo(() => {
+    const groups = new Map<number, number[]>();
+    performancePosts.forEach((p) => {
+      if (!p.published_at) return;
+      const day = new Date(p.published_at).getDay();
+      const arr = groups.get(day) ?? [];
+      arr.push(p.result_views ?? 0);
+      groups.set(day, arr);
+    });
+    return Array.from(groups.entries())
+      .map(([day, vals]) => ({ day, label: WEEKDAY_LABELS[day], avg: mean(vals), count: vals.length }))
+      .sort((a, b) => b.avg - a.avg);
+  }, [performancePosts]);
+
+  // eng% por post = (saves + comments) / (reach ?? views)
+  const postEngagement = (p: (typeof performancePosts)[number]) => {
+    const views = p.result_views ?? 0;
+    const denom = p.result_reach ?? views;
+    if (denom <= 0) return 0;
+    return (((p.result_saves ?? 0) + (p.result_comments ?? 0)) / denom) * 100;
+  };
+
+  // Top 3 por views
+  const topPosts = useMemo(() => {
+    return [...performancePosts]
+      .sort((a, b) => (b.result_views ?? 0) - (a.result_views ?? 0))
+      .slice(0, 3)
+      .map((p) => {
+        const pillar = pillars.find((pl) => pl.id === p.pillar_id);
+        return {
+          id: p.id,
+          title: p.title,
+          formatLabel: FORMAT_LABELS[p.format] || p.format,
+          formatColor: FORMAT_COLORS[p.format] ?? "#94A3B8",
+          pillarName: pillar?.name ?? null,
+          pillarColor: pillar?.color ?? "#94A3B8",
+          views: p.result_views ?? 0,
+          saves: p.result_saves ?? 0,
+          eng: postEngagement(p),
+        };
+      });
+  }, [performancePosts, pillars]);
+
+  const avgEngagement = useMemo(
+    () => mean(performancePosts.map(postEngagement)),
+    [performancePosts]
+  );
+
+  const hasPerformance = performancePosts.length >= 3;
+
   const handleGenerateInsight = async () => {
     if (insightLoading) return;
     setInsightLoading(true);
@@ -295,6 +437,23 @@ const Relatorios = () => {
         streak_semanas: streak.current,
         streak_maior: streak.longest,
         nicho: activeProfile?.niche,
+        desempenho: hasPerformance
+          ? {
+              posts_com_resultados: performancePosts.length,
+              views_medios: Math.round(avgViews),
+              views_medios_delta_pct: Math.round(avgViewsDelta),
+              formato_que_mais_rende: byFormat[0]
+                ? { formato: byFormat[0].label, views_medios: Math.round(byFormat[0].avg) }
+                : null,
+              pilar_que_gera_saves: byPillar[0]
+                ? { pilar: byPillar[0].name, saves_medios: Math.round(byPillar[0].avg) }
+                : null,
+              melhor_dia: byWeekday[0]
+                ? { dia: byWeekday[0].label, views_medios: Math.round(byWeekday[0].avg) }
+                : null,
+              engajamento_medio_pct: Number(avgEngagement.toFixed(1)),
+            }
+          : null,
       };
 
       const raw = await callAIContextBuilder({
@@ -302,7 +461,7 @@ const Relatorios = () => {
         operation: "cria-chat",
         data: {
           mensagem:
-            "Você é a Cria, analista de conteúdo. Olhe os dados abaixo e me dê 2-3 insights curtos e acionáveis sobre minha consistência, distribuição e o que eu deveria testar essa semana. Linguagem natural, em português brasileiro, sem markdown.",
+            "Você é a Cria, analista de conteúdo. Olhe os dados abaixo e me dê 2-3 insights curtos e acionáveis. Comente não só a consistência e a distribuição, mas também o que está PERFORMANDO: use o bloco 'desempenho' (formato que mais rende, pilar que gera saves, melhor dia, engajamento médio e a variação de views médios vs período anterior) pra recomendar o que eu deveria priorizar e testar essa semana. Se 'desempenho' vier null, foque em consistência e peça pra eu preencher os resultados dos posts. Linguagem natural, em português brasileiro, sem markdown.",
           nicho: activeProfile?.niche,
           analise: summary,
         },
@@ -442,6 +601,166 @@ const Relatorios = () => {
             iconBg="bg-amber-500"
           />
         </div>
+
+        {/* ─── DESEMPENHO (lê posts.result_*) ─────────── */}
+        <section className="mb-8">
+          {/* Header da seção */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-lg sm:text-xl font-display font-extrabold text-foreground tracking-tight">
+                Desempenho
+              </h2>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-body font-bold uppercase tracking-wider">
+                Novo
+              </span>
+              {hasPerformance && (
+                <span className="text-xs font-body text-muted-foreground">
+                  {performancePosts.length} posts com resultados
+                </span>
+              )}
+            </div>
+            {hasPerformance && (
+              <p className="text-xs font-body text-muted-foreground">
+                views médios: <span className="font-semibold text-foreground">{formatCompact(avgViews)}</span>
+                {" · "}
+                <span
+                  className={cn(
+                    "font-semibold",
+                    avgViewsDelta > 0
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : avgViewsDelta < 0
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-muted-foreground"
+                  )}
+                >
+                  {formatPercent(avgViewsDelta)}
+                </span>{" "}
+                vs período anterior
+              </p>
+            )}
+          </div>
+
+          {!hasPerformance ? (
+            /* Estado vazio — menos de 3 posts com result_views */
+            <div className="rounded-2xl bg-card border border-border shadow-warm-sm p-8 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-muted/60 flex items-center justify-center mx-auto mb-4">
+                <Trophy className="h-6 w-6 text-foreground/70" strokeWidth={1.75} />
+              </div>
+              <h3 className="text-base font-display font-semibold text-foreground mb-1.5">
+                Desbloqueie o Desempenho
+              </h3>
+              <p className="text-sm font-body text-muted-foreground leading-relaxed max-w-md mx-auto mb-5">
+                Preencha os resultados dos seus posts publicados (views, salvos, alcance…) pra
+                desbloquear o Desempenho e ver o que mais rende.
+              </p>
+              <Button variant="secondary" size="sm" onClick={() => navigate("/app/historico")}>
+                <ArrowRight className="h-3.5 w-3.5 mr-1.5" /> Ir pro Histórico
+              </Button>
+            </div>
+          ) : (
+            <>
+              {/* Winner cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mb-4">
+                <WinnerCard
+                  icon={<Flame className="h-4 w-4 text-white" strokeWidth={1.75} />}
+                  iconBg="bg-gradient-to-br from-rose-500 to-red-500"
+                  label="Formato que mais rende"
+                  value={byFormat[0]?.label ?? "—"}
+                  sub={`${formatCompact(byFormat[0]?.avg ?? 0)} views médios`}
+                  delta={topFormatDelta}
+                  deltaLabel="vs média geral"
+                />
+                <WinnerCard
+                  icon={<Bookmark className="h-4 w-4 text-white" strokeWidth={1.75} />}
+                  iconBg="bg-gradient-to-br from-violet-500 to-purple-600"
+                  label="Pilar que gera saves"
+                  value={byPillar[0]?.name ?? "—"}
+                  valueColor={byPillar[0]?.color}
+                  sub={`${formatCompact(byPillar[0]?.avg ?? 0)} salvos médios`}
+                />
+                <WinnerCard
+                  icon={<CalendarDays className="h-4 w-4 text-white" strokeWidth={1.75} />}
+                  iconBg="bg-gradient-to-br from-sky-500 to-blue-600"
+                  label="Melhor dia (por resultado)"
+                  value={byWeekday[0]?.label ?? "—"}
+                  sub={`${formatCompact(byWeekday[0]?.avg ?? 0)} views médios`}
+                />
+              </div>
+
+              {/* Views por formato + Top posts */}
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.25fr] gap-4">
+                <ChartCard title="Média de views por formato" subtitle="O que mais entrega resultado">
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={byFormat} layout="vertical" margin={{ top: 8, right: 16, left: 16, bottom: 0 }}>
+                      <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
+                      <YAxis dataKey="label" type="category" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} width={70} />
+                      <Tooltip
+                        cursor={{ fill: "hsl(var(--muted) / 0.4)" }}
+                        contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
+                        formatter={(value: number) => [`${Math.round(value)} views médios`, "Média"]}
+                      />
+                      <Bar dataKey="avg" radius={[0, 6, 6, 0]}>
+                        {byFormat.map((row) => (
+                          <Cell key={row.format} fill={row.color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartCard>
+
+                <ChartCard title="Seus posts que mais performaram" subtitle="Top 3 por visualizações">
+                  <div className="space-y-2">
+                    {topPosts.map((p, i) => (
+                      <div
+                        key={p.id}
+                        className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 p-3"
+                      >
+                        <span className="shrink-0 w-7 h-7 rounded-lg bg-card border border-border flex items-center justify-center text-sm font-display font-extrabold text-foreground/70">
+                          {i + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-body font-semibold text-foreground truncate">
+                            {p.title || "Sem título"}
+                          </p>
+                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                            <span
+                              className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-body font-medium text-white"
+                              style={{ backgroundColor: p.formatColor }}
+                            >
+                              {p.formatLabel}
+                            </span>
+                            {p.pillarName && (
+                              <span
+                                className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-body font-medium text-white"
+                                style={{ backgroundColor: p.pillarColor }}
+                              >
+                                {p.pillarName}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="shrink-0 flex items-center gap-3 text-right">
+                          <div>
+                            <p className="text-sm font-display font-bold text-foreground leading-none">{formatCompact(p.views)}</p>
+                            <p className="text-[9px] uppercase tracking-wider font-body text-muted-foreground mt-0.5">views</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-display font-bold text-foreground leading-none">{formatCompact(p.saves)}</p>
+                            <p className="text-[9px] uppercase tracking-wider font-body text-muted-foreground mt-0.5">salvos</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-display font-bold text-primary leading-none">{formatEngagement(p.eng)}</p>
+                            <p className="text-[9px] uppercase tracking-wider font-body text-muted-foreground mt-0.5">eng.</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ChartCard>
+              </div>
+            </>
+          )}
+        </section>
 
         {/* Posts por semana */}
         <ChartCard title="Posts por semana" subtitle="Distribuição por pilar de conteúdo">
@@ -658,6 +977,53 @@ function MetricCard({ label, value, delta, subLabel, gradient, iconBg }: MetricC
         )}
       </div>
       {subLabel && <p className="text-[10px] text-muted-foreground font-body mt-0.5">{subLabel}</p>}
+    </div>
+  );
+}
+
+type WinnerCardProps = {
+  icon: React.ReactNode;
+  iconBg: string;
+  label: string;
+  value: string;
+  valueColor?: string;
+  sub: string;
+  delta?: number;
+  deltaLabel?: string;
+};
+
+function WinnerCard({ icon, iconBg, label, value, valueColor, sub, delta, deltaLabel }: WinnerCardProps) {
+  return (
+    <div className="rounded-2xl bg-card border border-border shadow-warm-sm p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", iconBg)}>
+          {icon}
+        </div>
+        <p className="text-[10px] uppercase tracking-wider font-body font-semibold text-muted-foreground">
+          {label}
+        </p>
+      </div>
+      <p
+        className="text-xl font-display font-extrabold text-foreground tracking-tight truncate"
+        style={valueColor ? { color: valueColor } : undefined}
+      >
+        {value}
+      </p>
+      <div className="flex items-center justify-between gap-2 mt-1">
+        <p className="text-[11px] font-body text-muted-foreground">{sub}</p>
+        {typeof delta === "number" && (
+          <span
+            className={cn(
+              "inline-flex items-center gap-0.5 text-[10px] font-body font-semibold px-1.5 py-0.5 rounded-full shrink-0",
+              delta > 0 ? "bg-emerald-100 text-emerald-700" : delta < 0 ? "bg-red-100 text-red-700" : "bg-muted text-muted-foreground"
+            )}
+            title={deltaLabel}
+          >
+            {delta > 0 ? <TrendingUp className="h-3 w-3" /> : delta < 0 ? <TrendingDown className="h-3 w-3" /> : <ArrowRight className="h-3 w-3" />}
+            {formatPercent(delta)}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

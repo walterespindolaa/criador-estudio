@@ -122,6 +122,8 @@ interface Post {
   result_views: number | null;
   result_saves: number | null;
   result_comments: number | null;
+  result_reach: number | null;
+  result_shares: number | null;
   archive_summary: string | null;
   content_blocks: unknown | null;
   user_id: string;
@@ -217,6 +219,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
   const [views, setViews] = useState("");
   const [saves, setSaves] = useState("");
   const [comments, setComments] = useState("");
+  const [reach, setReach] = useState("");
+  const [shares, setShares] = useState("");
   const [showResults, setShowResults] = useState(false);
   const [sections, setSections] = useState<Section[]>(Array(5).fill(null).map(emptySection));
   const [referenceLink, setReferenceLink] = useState("");
@@ -380,6 +384,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
       setViews(post.result_views?.toString() || "");
       setSaves(post.result_saves?.toString() || "");
       setComments(post.result_comments?.toString() || "");
+      setReach(post.result_reach?.toString() || "");
+      setShares(post.result_shares?.toString() || "");
       setShowResults(post.status === "publicado");
       setReferenceLink((post as unknown as { reference_link?: string }).reference_link || "");
       try {
@@ -400,7 +406,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
       setCaption(""); setCta(""); setScheduledDate(""); setScheduledTime(""); setNotes("");
       setWeekNumber(null);
       setGoogleEventId(null);
-      setViews(""); setSaves(""); setComments(""); setShowResults(false); setReferenceLink("");
+      setViews(""); setSaves(""); setComments(""); setReach(""); setShares(""); setShowResults(false); setReferenceLink("");
       setSections(Array(5).fill(null).map(emptySection));
       setDriveMedia([]);
       setPendingDriveFiles([]);
@@ -447,13 +453,15 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
     result_views: views ? parseInt(views) : null,
     result_saves: saves ? parseInt(saves) : null,
     result_comments: comments ? parseInt(comments) : null,
+    result_reach: reach ? parseInt(reach) : null,
+    result_shares: shares ? parseInt(shares) : null,
     sections: JSON.stringify(
       sections.map((s) => ({ ...s, text: sanitizeText(s.text), captacao: sanitizeText(s.captacao) }))
     ),
     reference_link: referenceLink || null,
     user_id: userId,
   }), [title, platform, format, pillarId, status, hook, script, caption, cta,
-       scheduledDate, scheduledTime, notes, weekNumber, views, saves, comments, sections, referenceLink, userId]);
+       scheduledDate, scheduledTime, notes, weekNumber, views, saves, comments, reach, shares, sections, referenceLink, userId]);
 
   // Debounced auto-save for existing posts.
   // Skipped for new posts (would create empty drafts) and during initial load.
@@ -1540,6 +1548,18 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
                           <MessageSquare className="h-3 w-3" /> Coment.
                         </Label>
                         <Input type="number" placeholder="0" value={comments} onChange={(e) => setComments(e.target.value)} className="rounded-lg h-9 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="font-body text-[10px] flex items-center gap-1">
+                          <Radio className="h-3 w-3" /> Alcance
+                        </Label>
+                        <Input type="number" placeholder="0" value={reach} onChange={(e) => setReach(e.target.value)} className="rounded-lg h-9 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="font-body text-[10px] flex items-center gap-1">
+                          <Repeat2 className="h-3 w-3" /> Compart.
+                        </Label>
+                        <Input type="number" placeholder="0" value={shares} onChange={(e) => setShares(e.target.value)} className="rounded-lg h-9 text-sm" />
                       </div>
                     </div>
                   </section>
