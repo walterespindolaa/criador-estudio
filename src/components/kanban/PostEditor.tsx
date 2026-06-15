@@ -142,6 +142,7 @@ interface PostEditorProps {
   pillars: Pillar[];
   userId: string;
   onSaved: () => void;
+  initialFormat?: string;
 }
 
 interface DriveRef {
@@ -200,7 +201,7 @@ const FALLBACK_PROMPTS = [
   { title: "Carrossel", text: "Monte carrossel de 8 slides sobre [TEMA]. Slide 1 = hook. Último = CTA.", category: "roteiro" },
 ];
 
-export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved }: PostEditorProps) {
+export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved, initialFormat }: PostEditorProps) {
   const isNew = !post;
   const [title, setTitle] = useState("");
   const [platform, setPlatform] = useState("instagram");
@@ -401,7 +402,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved 
         setSections(Array(5).fill(null).map(emptySection));
       }
     } else {
-      setTitle(""); setPlatform("instagram"); setFormat("reels");
+      setTitle(""); setPlatform("instagram"); setFormat(initialFormat || "reels");
       setPillarId(""); setStatus("ideia"); setHook(""); setScript("");
       setCaption(""); setCta(""); setScheduledDate(""); setScheduledTime(""); setNotes("");
       setWeekNumber(null);

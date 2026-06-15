@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { CoverHeader } from "@/components/shared/CoverHeader";
 import { useStatusCovers } from "@/hooks/useStatusCovers";
+import { FormatPicker } from "@/components/kanban/FormatPicker";
 import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, ChevronRight, X, Kanban, Pencil } from "lucide-react";
 import {
   AlertDialog,
@@ -176,7 +177,12 @@ const Criando = () => {
     });
   }, [posts, filterPlatform, filterPillar, filterWeek, dateRange, period]);
 
-  const openNew = () => { setSelectedPost(null); setDrawerOpen(true); };
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pendingFormat, setPendingFormat] = useState<string | null>(null);
+
+  const openNew = () => setPickerOpen(true);
+  const startFromFormat = (fmt: string) => { setPendingFormat(fmt); setPickerOpen(false); setSelectedPost(null); setDrawerOpen(true); };
+  const startBlank = () => { setPendingFormat(null); setPickerOpen(false); setSelectedPost(null); setDrawerOpen(true); };
   const openEdit = (post: Post) => { setSelectedPost(post); setDrawerOpen(true); };
 
   const movePostStatus = async (postId: string, newStatus: string) => {
@@ -542,7 +548,9 @@ const Criando = () => {
           </div>
         </div>
       </motion.div>
-      <PostEditor open={drawerOpen} onOpenChange={setDrawerOpen} post={selectedPost} pillars={pillars} userId={activeAccountId || user?.id || ""} onSaved={() => { /* invalidations */ }} />
+      <PostEditor open={drawerOpen} onOpenChange={setDrawerOpen} post={selectedPost} pillars={pillars} userId={activeAccountId || user?.id || ""} onSaved={() => { /* invalidations */ }} initialFormat={pendingFormat ?? undefined} />
+
+      <FormatPicker open={pickerOpen} onPick={startFromFormat} onBlank={startBlank} onOpenChange={setPickerOpen} />
 
       <Sheet open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
         <SheetContent side="bottom" className="rounded-t-2xl">
