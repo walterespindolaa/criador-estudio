@@ -68,6 +68,14 @@ const COLUMNS = [
   { key: "agendado", label: "Agendado", icon: Calendar, bg: "bg-primary/10" },
   { key: "publicado", label: "Publicado", icon: CheckCircle2, bg: "bg-secondary/20" },
 ];
+const COLUMN_TOOLTIPS: Record<string, string> = {
+  ideia: "Posts que você quer criar mas ainda não começou a produzir.",
+  roteiro: "Escreva o roteiro, hook e legenda antes de gravar.",
+  gravando: "Em processo de gravação ou criação da mídia.",
+  editando: "Arquivo gravado, agora em edição ou finalização.",
+  agendado: "Pronto para publicar — com data e hora definidos.",
+  publicado: "Já publicado! Use o Histórico para acompanhar resultados.",
+};
 type ContentBlocks = { tema?: string; roteiro?: string; midia?: string; legenda?: string };
 
 const Criando = () => {
@@ -346,7 +354,7 @@ const Criando = () => {
               <div key={col.key} className={`w-[85vw] max-w-[320px] sm:w-auto sm:max-w-none sm:min-w-[200px] flex-shrink-0 sm:flex-1 snap-start ${showDividerBefore ? "border-l-2 border-dashed border-border pl-4" : ""}`}
                 onDragOver={(e) => { e.preventDefault(); setDragOverCol(col.key); }} onDragLeave={() => setDragOverCol(null)} onDrop={() => handleDrop(col.key)}>
                 <div className="mb-3">
-                  <CoverHeader label="Status" title={col.label} count={colPosts.length} from={step.from} to={step.to} ink={step.ink} sub={step.sub} />
+                  <CoverHeader label="Status" title={col.label} count={colPosts.length} from={step.from} to={step.to} ink={step.ink} sub={step.sub} hint={COLUMN_TOOLTIPS[col.key]} />
                 </div>
                 <div className={`space-y-3 min-h-[200px] rounded-xl transition-all ${isDragOver ? "ring-2 ring-primary bg-primary/5" : ""}`}>
                   {colPosts.map(post => {
@@ -482,7 +490,7 @@ const Criando = () => {
                 return (
                   <div key={col.key} className="min-w-full pr-1">
                     <div className="relative">
-                      <CoverHeader label="Status" title={title} count={colPosts.length} from={from} to={to} ink={ink} sub={sub} />
+                      <CoverHeader label="Status" title={title} count={colPosts.length} from={from} to={to} ink={ink} sub={sub} hint={COLUMN_TOOLTIPS[col.key]} />
                       <button onClick={() => openEditCover(col.key)} className="absolute top-2.5 right-12 z-10 h-7 w-7 rounded-full bg-white/15 backdrop-blur flex items-center justify-center" aria-label="Editar capa">
                         <Pencil className="h-3.5 w-3.5 text-white/90" />
                       </button>
