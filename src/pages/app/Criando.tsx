@@ -6,7 +6,7 @@ import { CoverHeader } from "@/components/shared/CoverHeader";
 import { useStatusCovers } from "@/hooks/useStatusCovers";
 import { FormatPicker } from "@/components/kanban/FormatPicker";
 import { statusRamp } from "@/lib/statusRamp";
-import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, ChevronRight, X, Kanban, Pencil } from "lucide-react";
+import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, X, Kanban, Pencil } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -422,7 +422,7 @@ const Criando = () => {
                         )}
                         <div className="mt-2 md:hidden" onClick={(e) => e.stopPropagation()}>
                           <Select value={post.status ?? "ideia"} onValueChange={(val) => movePostStatus(post.id, val)}>
-                            <SelectTrigger className="h-7 text-xs rounded-lg"><span className="flex items-center gap-1"><ChevronRight className="h-3 w-3" /> Mover</span></SelectTrigger>
+                            <SelectTrigger className="h-7 w-auto gap-1.5 px-3 rounded-full border-border bg-muted/40 text-xs font-body text-muted-foreground">Mover</SelectTrigger>
                             <SelectContent>{STATUS_OPTIONS.map(s => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}</SelectContent>
                           </Select>
                         </div>
@@ -561,7 +561,7 @@ const Criando = () => {
                             )}
                             <div className="mt-2" onClick={(e) => e.stopPropagation()}>
                               <Select value={post.status ?? "ideia"} onValueChange={(val) => movePostStatus(post.id, val)}>
-                                <SelectTrigger className="h-7 text-xs rounded-lg"><span className="flex items-center gap-1"><ChevronRight className="h-3 w-3" /> Mover</span></SelectTrigger>
+                                <SelectTrigger className="h-7 w-auto gap-1.5 px-3 rounded-full border-border bg-muted/40 text-xs font-body text-muted-foreground">Mover</SelectTrigger>
                                 <SelectContent>{STATUS_OPTIONS.map(s => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}</SelectContent>
                               </Select>
                             </div>

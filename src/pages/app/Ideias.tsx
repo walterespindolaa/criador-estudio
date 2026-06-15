@@ -272,7 +272,7 @@ const Ideias = () => {
             </div>
             <div>
               <h1 className="text-3xl font-display font-extrabold text-foreground tracking-tight">Minhas Ideias</h1>
-              <p className="text-muted-foreground font-body mt-0.5 text-sm">Seu banco de inspirações.</p>
+              <p className="text-muted-foreground font-body mt-0.5 text-sm whitespace-nowrap">Seu banco de inspirações.</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -354,7 +354,7 @@ const Ideias = () => {
                       style={{ backgroundColor: pillar.color }}
                     />
                   )}
-                  <h3 className="font-display font-semibold text-sm text-foreground line-clamp-2 mb-2">
+                  <h3 className={cn("font-display font-semibold text-sm text-foreground line-clamp-2 mb-2", !pillar && "pr-16")}>
                     {idea.title}
                   </h3>
                   {idea.notes && (
