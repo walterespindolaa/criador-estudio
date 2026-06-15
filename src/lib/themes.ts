@@ -182,6 +182,33 @@ export const THEME_PRESETS: ThemePreset[] = [
   },
 ];
 
+export const ACCENT_GROUPS = [
+  { group: "Pastéis", colors: [
+    { key: "rosa-claro", label: "Rosa claro", value: "#F4A6C0" },
+    { key: "lavanda", label: "Lavanda", value: "#C3B2EF" },
+    { key: "pessego", label: "Pêssego", value: "#F3B99B" },
+    { key: "menta", label: "Menta", value: "#A6D9C4" },
+    { key: "ceu", label: "Céu", value: "#A7C7EC" },
+    { key: "lilas", label: "Lilás", value: "#D7B8E8" },
+  ]},
+  { group: "Vibrantes", colors: [
+    { key: "rosa", label: "Rosa", value: "#EC4899" },
+    { key: "roxo", label: "Roxo", value: "#8B5CF6" },
+    { key: "coral", label: "Coral", value: "#F2683C" },
+    { key: "azul", label: "Azul", value: "#3B82F6" },
+    { key: "verde", label: "Verde", value: "#22C55E" },
+    { key: "ambar", label: "Âmbar", value: "#F59E0B" },
+  ]},
+  { group: "Profundos", colors: [
+    { key: "vinho", label: "Vinho", value: "#9D2B53" },
+    { key: "ameixa", label: "Ameixa", value: "#6D3E8E" },
+    { key: "petroleo", label: "Petróleo", value: "#1F6F78" },
+    { key: "indigo", label: "Índigo", value: "#3D3F8F" },
+    { key: "esmeralda", label: "Esmeralda", value: "#0E7C57" },
+    { key: "terracota", label: "Terracota", value: "#B4502A" },
+  ]},
+];
+
 export const ACCENT_COLORS = [
   { key: 'roxo', label: 'Roxo', value: '#7C5CFC' },
   { key: 'coral', label: 'Coral', value: '#FF6B6B' },

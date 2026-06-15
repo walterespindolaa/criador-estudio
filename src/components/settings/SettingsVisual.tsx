@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Check, Monitor, Type, Palette, PanelLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/hooks/useProfile";
-import { THEME_PRESETS, ACCENT_COLORS, type ThemePreset } from "@/lib/themes";
+import { THEME_PRESETS, ACCENT_GROUPS, type ThemePreset } from "@/lib/themes";
 import { applyTheme, applyAccent } from "@/lib/applyTheme";
 import { applySidebarColor } from "@/lib/sidebarTheme";
 import { toast } from "sonner";
@@ -164,27 +164,27 @@ export function SettingsVisual() {
               </div>
               <p className="text-sm text-muted-foreground font-body">Botões, links e elementos ativos</p>
             </div>
-            <div className="flex flex-wrap gap-[10px]">
-              {ACCENT_COLORS.map(accent => (
-                <button
-                  key={accent.key}
-                  onClick={() => handleAccentSelect(accent.value)}
-                  title={accent.label}
-                  className={cn(
-                    "w-10 h-10 rounded-full border-2 transition-all flex items-center justify-center relative",
-                    selectedAccent === accent.value
-                      ? "border-[#1A2F21] scale-105 shadow-md"
-                      : "border-transparent hover:scale-105"
-                  )}
-                  style={{ backgroundColor: accent.value }}
-                >
-                  {selectedAccent === accent.value && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Check className="h-5 w-5 text-white drop-shadow-sm" />
-                    </div>
-                  )}
-                </button>
-              ))}
+            {ACCENT_GROUPS.map((grp) => (
+              <div key={grp.group} className="mb-4">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">{grp.group}</p>
+                <div className="flex flex-wrap gap-2.5">
+                  {grp.colors.map((accent) => (
+                    <button key={accent.key} onClick={() => handleAccentSelect(accent.value)} title={accent.label}
+                      className={cn("h-9 w-9 rounded-full transition-transform active:scale-90 ring-offset-2 ring-offset-background flex items-center justify-center",
+                        selectedAccent.toLowerCase() === accent.value.toLowerCase() ? "ring-2 ring-foreground" : "ring-1 ring-border")}
+                      style={{ backgroundColor: accent.value }}>
+                      {selectedAccent.toLowerCase() === accent.value.toLowerCase() && (
+                        <Check className="h-4 w-4 text-white drop-shadow-sm" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+            <div className="flex items-center gap-3 mt-1">
+              <label className="text-xs font-body font-medium text-muted-foreground">Tom personalizado</label>
+              <input type="color" value={selectedAccent} onChange={(e) => handleAccentSelect(e.target.value)}
+                className="h-9 w-12 rounded-lg border border-border bg-transparent cursor-pointer p-0.5" />
             </div>
           </section>
 

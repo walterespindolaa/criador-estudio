@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { CoverHeader } from "@/components/shared/CoverHeader";
 import { useStatusCovers } from "@/hooks/useStatusCovers";
 import { FormatPicker } from "@/components/kanban/FormatPicker";
+import { statusRamp } from "@/lib/statusRamp";
 import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, ChevronRight, X, Kanban, Pencil } from "lucide-react";
 import {
   AlertDialog,
@@ -60,20 +61,6 @@ function getDateRange(period: PeriodKey, customRange?: { from: Date; to: Date })
   }
 }
 
-const STATUS_HEX: Record<string, string> = {
-  ideia: "#4DABF7",
-  roteiro: "#FFBE0B",
-  gravando: "#FF6B6B",
-  editando: "#FF69B4",
-  agendado: "#7C5CFC",
-  publicado: "#20B2AA",
-};
-
-const STATUS_COVER: Record<string, [string, string]> = {
-  ideia: ["#8B5CF6", "#6D3FD6"], roteiro: ["#3B82F6", "#2563EB"], gravando: ["#7C3AED", "#5B21B6"],
-  editando: ["#14B8A6", "#0F766E"], agendado: ["#F59E0B", "#D97706"], publicado: ["#22C55E", "#16A34A"],
-};
-
 const COLUMNS = [
   { key: "ideia", label: "Ideia", icon: LayoutDashboard, bg: "bg-muted" },
   { key: "roteiro", label: "Planejamento", icon: PenLine, bg: "bg-primary/5" },
@@ -107,6 +94,7 @@ const Criando = () => {
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
 
   const { byStatus, saveCover, resetCover, isSaving } = useStatusCovers();
+  const ramp = statusRamp();
   const [editing, setEditing] = useState<string | null>(null);
   const [editType, setEditType] = useState<"gradient" | "solid">("gradient");
   const [editFrom, setEditFrom] = useState("#8B5CF6");
@@ -115,7 +103,7 @@ const Criando = () => {
 
   const openEditCover = (statusKey: string) => {
     const saved = byStatus[statusKey];
-    const [defFrom, defTo] = STATUS_COVER[statusKey];
+    const defFrom = ramp[statusKey].from, defTo = ramp[statusKey].to;
     setEditType(saved?.cover_type === "solid" ? "solid" : "gradient");
     setEditFrom(saved?.cover_from || defFrom);
     setEditTo(saved?.cover_to || defTo);
@@ -385,7 +373,7 @@ const Criando = () => {
                     const blocks = (post.content_blocks ?? null) as ContentBlocks | null;
                     return (
                       <motion.div key={post.id} layout draggable onDragStart={() => setDraggedPost(post.id)} onClick={() => openEdit(post)}
-                        style={{ borderLeftColor: STATUS_HEX[post.status ?? "ideia"] ?? "transparent", borderLeftWidth: 4 }}
+                        style={{ borderLeftColor: ramp[post.status ?? "ideia"]?.line ?? "transparent", borderLeftWidth: 4 }}
                         className={`group relative bg-card rounded-xl p-4 shadow-warm-sm border border-border cursor-grab active:cursor-grabbing hover:shadow-warm-md hover:scale-[1.01] transition-all duration-200 ${isPublished ? "opacity-70" : ""}`}>
                         <button
                           type="button"
@@ -457,12 +445,12 @@ const Criando = () => {
             <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 kanban-scroll">
               {COLUMNS.map((col, i) => {
                 const colPosts = filteredPosts.filter(p => (p.status ?? "ideia") === col.key);
-                const [from, to] = STATUS_COVER[col.key];
+                const step = ramp[col.key];
                 return (
                   <div key={col.key} className="min-w-[150px] w-[150px] flex-none flex flex-col gap-2">
                     <button onClick={() => goToColumn(i)}
-                      className="relative rounded-[13px] px-3 py-2.5 text-left text-white shadow-warm-sm"
-                      style={{ background: `linear-gradient(140deg, ${from}, ${to})` }}>
+                      className="relative rounded-[13px] px-3 py-2.5 text-left shadow-warm-sm"
+                      style={{ background: `linear-gradient(140deg, ${step.from}, ${step.to})`, color: step.ink }}>
                       <span className="absolute top-2 right-2 text-[10px] font-bold bg-white/20 px-1.5 py-0.5 rounded-full">{colPosts.length}</span>
                       <span className="font-display italic font-light text-lg leading-none">{col.label}</span>
                     </button>
@@ -471,7 +459,7 @@ const Criando = () => {
                       return (
                         <button key={post.id} onClick={() => openEdit(post)}
                           className="relative bg-card rounded-[10px] pl-3 pr-2.5 py-2 text-left shadow-warm-sm border border-border"
-                          style={{ borderLeftColor: STATUS_HEX[post.status ?? "ideia"] ?? "transparent", borderLeftWidth: 3 }}>
+                          style={{ borderLeftColor: ramp[post.status ?? "ideia"]?.line ?? "transparent", borderLeftWidth: 3 }}>
                           <span className="block text-[11.5px] font-body font-semibold leading-tight line-clamp-2">{post.title}</span>
                           <span className="block text-[9.5px] text-muted-foreground mt-1 truncate">{FORMAT_LABELS[post.format] || post.format}{pil ? ` · ${pil.name}` : ""}</span>
                         </button>
@@ -494,14 +482,16 @@ const Criando = () => {
                 const colPosts = filteredPosts.filter(p => p.status === col.key);
                 const isPublished = col.key === "publicado";
                 const saved = byStatus[col.key];
-                const [defFrom, defTo] = STATUS_COVER[col.key];
-                const from = saved?.cover_from || defFrom;
-                const to = saved?.cover_type === "solid" ? (saved?.cover_from || defFrom) : (saved?.cover_to || defTo);
+                const step = ramp[col.key];
+                const from = saved?.cover_from || step.from;
+                const to = saved?.cover_type === "solid" ? (saved?.cover_from || step.from) : (saved?.cover_to || step.to);
+                const ink = saved ? "#fff" : step.ink;
+                const sub = saved ? "rgba(255,255,255,.78)" : step.sub;
                 const title = saved?.label || col.label;
                 return (
                   <div key={col.key} className="min-w-full pr-1">
                     <div className="relative">
-                      <CoverHeader label="Status" title={title} count={colPosts.length} from={from} to={to} />
+                      <CoverHeader label="Status" title={title} count={colPosts.length} from={from} to={to} ink={ink} sub={sub} />
                       <button onClick={() => openEditCover(col.key)} className="absolute top-2.5 right-12 z-10 h-7 w-7 rounded-full bg-white/15 backdrop-blur flex items-center justify-center" aria-label="Editar capa">
                         <Pencil className="h-3.5 w-3.5 text-white/90" />
                       </button>
@@ -517,7 +507,7 @@ const Criando = () => {
                         const blocks = (post.content_blocks ?? null) as ContentBlocks | null;
                         return (
                           <motion.div key={post.id} layout onClick={() => openEdit(post)}
-                            style={{ borderLeftColor: STATUS_HEX[post.status ?? "ideia"] ?? "transparent", borderLeftWidth: 4 }}
+                            style={{ borderLeftColor: ramp[post.status ?? "ideia"]?.line ?? "transparent", borderLeftWidth: 4 }}
                             className={`group relative bg-card rounded-xl p-4 shadow-warm-sm border border-border cursor-pointer hover:shadow-warm-md transition-all duration-200 ${isPublished ? "opacity-70" : ""}`}>
                             <button
                               type="button"
