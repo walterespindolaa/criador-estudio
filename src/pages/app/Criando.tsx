@@ -24,7 +24,6 @@ import { useActiveAccount } from "@/contexts/AccountContext";
 import { supabase } from "@/integrations/supabase/client";
 import { PostEditor } from "@/components/kanban/PostEditor";
 import { FORMAT_LABELS, STATUS_OPTIONS } from "@/lib/constants";
-import { InfoTooltip } from "@/components/shared/InfoTooltip";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -69,15 +68,6 @@ const COLUMNS = [
   { key: "agendado", label: "Agendado", icon: Calendar, bg: "bg-primary/10" },
   { key: "publicado", label: "Publicado", icon: CheckCircle2, bg: "bg-secondary/20" },
 ];
-const COLUMN_TOOLTIPS: Record<string, string> = {
-  ideia: "Posts que você quer criar mas ainda não começou a produzir.",
-  roteiro: "Escreva o roteiro, hook e legenda antes de gravar.",
-  gravando: "Em processo de gravação ou criação da mídia.",
-  editando: "Arquivo gravado, agora em edição ou finalização.",
-  agendado: "Pronto para publicar — com data e hora definidos.",
-  publicado: "Já publicado! Use o Histórico para acompanhar resultados.",
-};
-
 type ContentBlocks = { tema?: string; roteiro?: string; midia?: string; legenda?: string };
 
 const Criando = () => {
@@ -351,16 +341,12 @@ const Criando = () => {
             const isAfterIdeia = col.key === "roteiro";
             const showDividerBefore = isPublished || isAfterIdeia;
             const isDragOver = dragOverCol === col.key;
+            const step = ramp[col.key];
             return (
               <div key={col.key} className={`w-[85vw] max-w-[320px] sm:w-auto sm:max-w-none sm:min-w-[200px] flex-shrink-0 sm:flex-1 snap-start ${showDividerBefore ? "border-l-2 border-dashed border-border pl-4" : ""}`}
                 onDragOver={(e) => { e.preventDefault(); setDragOverCol(col.key); }} onDragLeave={() => setDragOverCol(null)} onDrop={() => handleDrop(col.key)}>
-                <div className={`${col.bg} rounded-xl px-3 py-2 mb-3 flex items-center justify-between`}>
-                <div className="flex items-center gap-1.5">
-                    <col.icon className="h-3.5 w-3.5 text-foreground/70" />
-                    <h3 className="font-body font-semibold text-xs text-foreground">{col.label}</h3>
-                    {COLUMN_TOOLTIPS[col.key] && <InfoTooltip text={COLUMN_TOOLTIPS[col.key]} side="bottom" />}
-                  </div>
-                  <span className="text-xs text-muted-foreground font-body bg-background/60 px-1.5 py-0.5 rounded-full">{colPosts.length}</span>
+                <div className="mb-3">
+                  <CoverHeader label="Status" title={col.label} count={colPosts.length} from={step.from} to={step.to} ink={step.ink} sub={step.sub} />
                 </div>
                 <div className={`space-y-3 min-h-[200px] rounded-xl transition-all ${isDragOver ? "ring-2 ring-primary bg-primary/5" : ""}`}>
                   {colPosts.map(post => {
