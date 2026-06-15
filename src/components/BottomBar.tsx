@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Home, Lightbulb, Kanban, CalendarDays,
-  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, ChevronUp, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck, Handshake
+  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, ChevronUp, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck, Handshake, Maximize2, Minimize2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -39,6 +39,14 @@ export function BottomBar() {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { openCria } = useCriaAI();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const onCriando = location.pathname === "/app/criando";
+  const overview = searchParams.get("view") === "overview";
+  const toggleOverview = () => {
+    const next = new URLSearchParams(searchParams);
+    overview ? next.delete("view") : next.set("view", "overview");
+    setSearchParams(next, { replace: true });
+  };
 
   const handleSignOut = async () => {
     setMoreOpen(false);
@@ -120,6 +128,14 @@ export function BottomBar() {
             </button>
             {rightItems.map(renderNavItem)}
           </div>
+          {onCriando && (
+            <button type="button" onClick={toggleOverview} aria-label={overview ? "Sair da visão geral" : "Visão geral"}
+              className={cn("h-[52px] w-[52px] rounded-full flex items-center justify-center active:scale-95 transition-transform",
+                overview ? "bg-gradient-to-br from-primary to-purple-600 shadow-lg shadow-primary/30" : "dock-pill")}>
+              {overview ? <Minimize2 className="h-5 w-5 text-white" strokeWidth={2} />
+                        : <Maximize2 className="h-5 w-5 text-muted-foreground" strokeWidth={1.9} />}
+            </button>
+          )}
           <button type="button" onClick={() => setMoreOpen(!moreOpen)} aria-label="Mais"
             className="dock-pill h-[52px] w-[52px] rounded-full flex items-center justify-center active:scale-95 transition-transform">
             <ChevronUp className={cn("h-6 w-6 transition-transform", moreOpen ? "rotate-180 text-primary" : isMoreActive ? "text-primary" : "text-muted-foreground")} strokeWidth={1.8}/>

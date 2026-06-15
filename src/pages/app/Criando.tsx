@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { CoverHeader } from "@/components/shared/CoverHeader";
@@ -131,6 +132,15 @@ const Criando = () => {
   const onTouchEnd = (e: React.TouchEvent) => {
     if (!sw.current) return; const dx = e.changedTouches[0].clientX - sx.current;
     if (dx < -40) setActiveCol(c => Math.min(COLUMNS.length - 1, c + 1)); else if (dx > 40) setActiveCol(c => Math.max(0, c - 1));
+  };
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const overview = searchParams.get("view") === "overview";
+  const goToColumn = (i: number) => {
+    setActiveCol(i);
+    const next = new URLSearchParams(searchParams);
+    next.delete("view");
+    setSearchParams(next, { replace: true });
   };
 
   const [period, setPeriod] = useState<PeriodKey>(() => {
@@ -442,6 +452,39 @@ const Criando = () => {
           })}
         </div>
 
+        {overview ? (
+          <div className="md:hidden">
+            <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 kanban-scroll">
+              {COLUMNS.map((col, i) => {
+                const colPosts = filteredPosts.filter(p => (p.status ?? "ideia") === col.key);
+                const [from, to] = STATUS_COVER[col.key];
+                return (
+                  <div key={col.key} className="min-w-[150px] w-[150px] flex-none flex flex-col gap-2">
+                    <button onClick={() => goToColumn(i)}
+                      className="relative rounded-[13px] px-3 py-2.5 text-left text-white shadow-warm-sm"
+                      style={{ background: `linear-gradient(140deg, ${from}, ${to})` }}>
+                      <span className="absolute top-2 right-2 text-[10px] font-bold bg-white/20 px-1.5 py-0.5 rounded-full">{colPosts.length}</span>
+                      <span className="font-display italic font-light text-lg leading-none">{col.label}</span>
+                    </button>
+                    {colPosts.slice(0, 3).map(post => {
+                      const pil = getPillar(post.pillar_id);
+                      return (
+                        <button key={post.id} onClick={() => openEdit(post)}
+                          className="relative bg-card rounded-[10px] pl-3 pr-2.5 py-2 text-left shadow-warm-sm border border-border"
+                          style={{ borderLeftColor: STATUS_HEX[post.status ?? "ideia"] ?? "transparent", borderLeftWidth: 3 }}>
+                          <span className="block text-[11.5px] font-body font-semibold leading-tight line-clamp-2">{post.title}</span>
+                          <span className="block text-[9.5px] text-muted-foreground mt-1 truncate">{FORMAT_LABELS[post.format] || post.format}{pil ? ` · ${pil.name}` : ""}</span>
+                        </button>
+                      );
+                    })}
+                    {colPosts.length > 3 && <span className="text-[10.5px] text-muted-foreground font-medium text-center py-0.5">+{colPosts.length - 3} cards</span>}
+                    {colPosts.length === 0 && <span className="text-[10.5px] text-muted-foreground/60 text-center py-2">vazio</span>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
         <div className="md:hidden">
           <div className="overflow-hidden -mx-4 px-4">
             <div className="flex transition-transform duration-[420ms]"
@@ -547,6 +590,7 @@ const Criando = () => {
             ))}
           </div>
         </div>
+        )}
       </motion.div>
       <PostEditor open={drawerOpen} onOpenChange={setDrawerOpen} post={selectedPost} pillars={pillars} userId={activeAccountId || user?.id || ""} onSaved={() => { /* invalidations */ }} initialFormat={pendingFormat ?? undefined} />
 
