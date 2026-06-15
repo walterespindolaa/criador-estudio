@@ -119,6 +119,7 @@ const Criando = () => {
     setView(v);
     localStorage.setItem("criando-view", v);
   };
+  const [calMonth, setCalMonth] = useState<Date>(() => startOfMonth(new Date()));
   const sx = useRef(0), sy = useRef(0), sw = useRef(false);
   const onTouchStart = (e: React.TouchEvent) => { sx.current = e.touches[0].clientX; sy.current = e.touches[0].clientY; sw.current = false; };
   const onTouchMove = (e: React.TouchEvent) => { if (Math.abs(e.touches[0].clientX - sx.current) > Math.abs(e.touches[0].clientY - sy.current) + 6) sw.current = true; };
@@ -526,8 +527,70 @@ const Criando = () => {
           </div>
         )}
         {view === "calendario" && (
-          <div className="hidden md:block rounded-2xl border border-dashed border-border p-12 text-center">
-            <p className="font-body text-sm text-muted-foreground">Visão de calendário chega aqui em breve.</p>
+          <div className="hidden md:block">
+            {(() => {
+              const monthStart = startOfMonth(calMonth);
+              const monthEnd = endOfMonth(calMonth);
+              const startWeekday = monthStart.getDay();
+              const daysInMonth = monthEnd.getDate();
+              const y = calMonth.getFullYear();
+              const m = calMonth.getMonth();
+              const pad = (n: number) => String(n).padStart(2, "0");
+              const t = new Date();
+              const todayKey = `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`;
+              const cells: ({ day: number; key: string } | null)[] = [];
+              for (let i = 0; i < startWeekday; i++) cells.push(null);
+              for (let d = 1; d <= daysInMonth; d++) cells.push({ day: d, key: `${y}-${pad(m + 1)}-${pad(d)}` });
+              const weekdays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+              const noDate = filteredPosts.filter(p => !p.scheduled_date).length;
+              return (
+                <div className="rounded-2xl border border-border bg-card p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-display font-bold text-lg capitalize">
+                      {calMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+                    </h3>
+                    <div className="flex items-center gap-1">
+                      <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setCalMonth(new Date(y, m - 1, 1))}>‹</Button>
+                      <Button variant="outline" size="sm" className="h-8 px-3 text-xs" onClick={() => setCalMonth(startOfMonth(new Date()))}>Hoje</Button>
+                      <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setCalMonth(new Date(y, m + 1, 1))}>›</Button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-7 gap-1.5 mb-1.5">
+                    {weekdays.map(w => (
+                      <div key={w} className="text-center text-[11px] font-body font-medium text-muted-foreground py-1">{w}</div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-7 gap-1.5">
+                    {cells.map((cell, i) => {
+                      if (!cell) return <div key={`e${i}`} className="min-h-[104px]" />;
+                      const dayPosts = filteredPosts.filter(p => (p.scheduled_date ?? "").slice(0, 10) === cell.key);
+                      const isToday = cell.key === todayKey;
+                      return (
+                        <div key={cell.key} className={cn("min-h-[104px] border rounded-lg p-1.5 bg-background flex flex-col gap-1 overflow-hidden", isToday ? "border-primary" : "border-border")}>
+                          <span className={cn("text-[11px] font-body font-semibold w-5 h-5 flex items-center justify-center rounded-full", isToday ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>{cell.day}</span>
+                          {dayPosts.slice(0, 3).map(post => {
+                            const st = ramp[post.status ?? "ideia"];
+                            return (
+                              <button key={post.id} onClick={() => openEdit(post)}
+                                className="w-full text-left truncate rounded px-1.5 py-0.5 text-[10.5px] font-body leading-tight"
+                                style={{ background: st.from, color: st.ink }}>
+                                {post.title}
+                              </button>
+                            );
+                          })}
+                          {dayPosts.length > 3 && (
+                            <span className="text-[10px] text-muted-foreground font-body px-1">+{dayPosts.length - 3}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {noDate > 0 && (
+                    <p className="mt-3 text-xs text-muted-foreground font-body">{noDate} post{noDate > 1 ? "s" : ""} sem data agendada.</p>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
 
