@@ -78,7 +78,7 @@ const AppLayout = () => {
     <VideoPublicConfirmProvider>
     <UploadProgressProvider>
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="min-h-screen flex w-full app-canvas">
         <div className="flex flex-1 w-full min-h-0">
           <PWAInstallBanner />
           <CriaAIPanel />
@@ -120,7 +120,7 @@ const AppLayout = () => {
               </div>
             </header>
 
-            <main className="flex-1 pb-24 md:pb-0 w-full">
+            <main className="flex-1 pb-[96px] md:pb-0 w-full">
               <div className="max-w-screen-2xl mx-auto px-4 py-4 md:px-8 md:py-6">
                 <Suspense fallback={<ContentSkeleton />}>
                   <Outlet />

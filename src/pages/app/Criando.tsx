@@ -1,5 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
+import { CoverHeader } from "@/components/shared/CoverHeader";
 import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, ChevronRight, X, Kanban } from "lucide-react";
 import {
   AlertDialog,
@@ -63,6 +65,11 @@ const STATUS_HEX: Record<string, string> = {
   publicado: "#20B2AA",
 };
 
+const STATUS_COVER: Record<string, [string, string]> = {
+  ideia: ["#8B5CF6", "#6D3FD6"], roteiro: ["#3B82F6", "#2563EB"], gravando: ["#7C3AED", "#5B21B6"],
+  editando: ["#14B8A6", "#0F766E"], agendado: ["#F59E0B", "#D97706"], publicado: ["#22C55E", "#16A34A"],
+};
+
 const COLUMNS = [
   { key: "ideia", label: "Ideia", icon: LayoutDashboard, bg: "bg-muted" },
   { key: "roteiro", label: "Planejamento", icon: PenLine, bg: "bg-primary/5" },
@@ -94,6 +101,15 @@ const Criando = () => {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
   const [draggedPost, setDraggedPost] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+
+  const [activeCol, setActiveCol] = useState(0);
+  const sx = useRef(0), sy = useRef(0), sw = useRef(false);
+  const onTouchStart = (e: React.TouchEvent) => { sx.current = e.touches[0].clientX; sy.current = e.touches[0].clientY; sw.current = false; };
+  const onTouchMove = (e: React.TouchEvent) => { if (Math.abs(e.touches[0].clientX - sx.current) > Math.abs(e.touches[0].clientY - sy.current) + 6) sw.current = true; };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (!sw.current) return; const dx = e.changedTouches[0].clientX - sx.current;
+    if (dx < -40) setActiveCol(c => Math.min(COLUMNS.length - 1, c + 1)); else if (dx > 40) setActiveCol(c => Math.max(0, c - 1));
+  };
 
   const [period, setPeriod] = useState<PeriodKey>(() => {
     return (localStorage.getItem("criando-period") as PeriodKey) || "tudo";
@@ -303,7 +319,7 @@ const Criando = () => {
           )}
         </div>
 
-        <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-proximity kanban-scroll">
+        <div className="hidden md:flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-proximity kanban-scroll">
           {COLUMNS.map(col => {
             const colPosts = filteredPosts.filter(p => p.status === col.key);
             const isPublished = col.key === "publicado";
@@ -397,6 +413,103 @@ const Criando = () => {
               </div>
             );
           })}
+        </div>
+
+        <div className="md:hidden">
+          <div className="overflow-hidden -mx-4 px-4">
+            <div className="flex transition-transform duration-[420ms]"
+                 style={{ transform: `translateX(-${activeCol * 100}%)`, transitionTimingFunction: 'cubic-bezier(.22,.61,.36,1)' }}
+                 onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+              {COLUMNS.map(col => {
+                const colPosts = filteredPosts.filter(p => p.status === col.key);
+                const isPublished = col.key === "publicado";
+                const [from, to] = STATUS_COVER[col.key];
+                return (
+                  <div key={col.key} className="min-w-full pr-1">
+                    <CoverHeader label="Status" title={col.label} count={colPosts.length} from={from} to={to} />
+                    <div className="flex flex-col gap-2.5 mt-3">
+                      {colPosts.map(post => {
+                        const pillar = getPillar(post.pillar_id);
+                        const tc = taskCounts.get(post.id);
+                        const approvalStatus = (post as unknown as { approval_status?: string | null }).approval_status ?? null;
+                        const showApprovalBadge = post.status === "editando" && approvalStatus !== "aprovado";
+                        const allDone = tc && tc.count > 0 && tc.done === tc.count;
+                        const pendingTasks = tc ? tc.count - tc.done : 0;
+                        const blocks = (post.content_blocks ?? null) as ContentBlocks | null;
+                        return (
+                          <motion.div key={post.id} layout onClick={() => openEdit(post)}
+                            style={{ borderLeftColor: STATUS_HEX[post.status ?? "ideia"] ?? "transparent", borderLeftWidth: 4 }}
+                            className={`group relative bg-card rounded-xl p-4 shadow-warm-sm border border-border cursor-pointer hover:shadow-warm-md transition-all duration-200 ${isPublished ? "opacity-70" : ""}`}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteTarget({ id: post.id, title: post.title });
+                              }}
+                              className="absolute top-2 right-2 h-6 w-6 rounded-full bg-destructive/80 hover:bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity z-10"
+                              aria-label="Excluir post"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                            <p className="font-body font-medium text-sm text-foreground mb-2 leading-snug line-clamp-2 pr-7">
+                              {showApprovalBadge && (
+                                <span
+                                  className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-yellow-400 text-yellow-950 text-[10px] font-bold mr-1 align-middle"
+                                  title="Aguardando aprovação do cliente"
+                                  aria-label="Aguardando aprovação do cliente"
+                                >!</span>
+                              )}
+                              {post.title}
+                            </p>
+                            {blocks && (
+                              <div className="flex gap-1 mb-2">
+                                {(["tema", "roteiro", "midia", "legenda"] as const).map(k => (
+                                  <span key={k} className={`w-2 h-2 rounded-full ${blocks[k] === "feito" ? "bg-secondary" : "bg-muted-foreground/30"}`} />
+                                ))}
+                              </div>
+                            )}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <PlatformIcon platform={post.platform} size="sm" />
+                              <span className="text-xs bg-muted px-1.5 py-0.5 rounded font-body">{FORMAT_LABELS[post.format] || post.format}</span>
+                              {pillar && <span className="px-1.5 py-0.5 rounded text-xs font-body text-primary-foreground" style={{ backgroundColor: pillar.color }}>{pillar.name}</span>}
+                              {post.week_number != null && (
+                                <span className="px-1.5 py-0.5 rounded text-xs font-body bg-muted text-muted-foreground border border-border">
+                                  S{post.week_number}
+                                </span>
+                              )}
+                              {isPublished && <span className="px-1.5 py-0.5 rounded text-xs font-body bg-secondary text-secondary-foreground">Publicado</span>}
+                            </div>
+                            {post.scheduled_date && <p className="text-xs text-muted-foreground font-body mt-2 flex items-center gap-1"><Calendar className="h-3 w-3" /> {post.scheduled_date}{post.scheduled_time ? ` às ${post.scheduled_time}` : ""}</p>}
+                            {tc && tc.count > 0 && (
+                              <span className={`inline-flex items-center gap-1 mt-1.5 text-[10px] font-body font-semibold px-1.5 py-0.5 rounded ${allDone ? "bg-secondary/20 text-secondary" : "bg-muted text-muted-foreground"}`}>
+                                {allDone ? "✓" : `${pendingTasks} tarefa${pendingTasks !== 1 ? "s" : ""}`}
+                              </span>
+                            )}
+                            <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                              <Select value={post.status ?? "ideia"} onValueChange={(val) => movePostStatus(post.id, val)}>
+                                <SelectTrigger className="h-7 text-xs rounded-lg"><span className="flex items-center gap-1"><ChevronRight className="h-3 w-3" /> Mover</span></SelectTrigger>
+                                <SelectContent>{STATUS_OPTIONS.map(s => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}</SelectContent>
+                              </Select>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                      <button onClick={openNew}
+                        className="border-[1.5px] border-dashed border-border rounded-2xl py-3 text-sm font-body text-muted-foreground">
+                        + Adicionar card
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="flex justify-center gap-1.5 mt-3">
+            {COLUMNS.map((c, i) => (
+              <button key={c.key} onClick={() => setActiveCol(i)} aria-label={c.label}
+                className={cn("h-1.5 rounded-full transition-all", i === activeCol ? "w-5 bg-primary" : "w-1.5 bg-muted-foreground/25")} />
+            ))}
+          </div>
         </div>
       </motion.div>
       <PostEditor open={drawerOpen} onOpenChange={setDrawerOpen} post={selectedPost} pillars={pillars} userId={activeAccountId || user?.id || ""} onSaved={() => { /* invalidations */ }} />
