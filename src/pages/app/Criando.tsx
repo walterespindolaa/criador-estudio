@@ -2,7 +2,8 @@ import { useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { CoverHeader } from "@/components/shared/CoverHeader";
-import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, ChevronRight, X, Kanban } from "lucide-react";
+import { useStatusCovers } from "@/hooks/useStatusCovers";
+import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, ChevronRight, X, Kanban, Pencil } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +24,7 @@ import { FORMAT_LABELS, STATUS_OPTIONS } from "@/lib/constants";
 import { InfoTooltip } from "@/components/shared/InfoTooltip";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, parseISO, isWithinInterval } from "date-fns";
 import { usePosts, type Post } from "@/hooks/usePosts";
 import { toast } from "sonner";
@@ -101,6 +103,25 @@ const Criando = () => {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
   const [draggedPost, setDraggedPost] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+
+  const { byStatus, saveCover, resetCover, isSaving } = useStatusCovers();
+  const [editing, setEditing] = useState<string | null>(null);
+  const [editType, setEditType] = useState<"gradient" | "solid">("gradient");
+  const [editFrom, setEditFrom] = useState("#8B5CF6");
+  const [editTo, setEditTo] = useState("#6D3FD6");
+  const [editLabel, setEditLabel] = useState("");
+
+  const openEditCover = (statusKey: string) => {
+    const saved = byStatus[statusKey];
+    const [defFrom, defTo] = STATUS_COVER[statusKey];
+    setEditType(saved?.cover_type === "solid" ? "solid" : "gradient");
+    setEditFrom(saved?.cover_from || defFrom);
+    setEditTo(saved?.cover_to || defTo);
+    setEditLabel(saved?.label || "");
+    setEditing(statusKey);
+  };
+
+  const editColumn = editing ? COLUMNS.find(c => c.key === editing) : null;
 
   const [activeCol, setActiveCol] = useState(0);
   const sx = useRef(0), sy = useRef(0), sw = useRef(false);
@@ -423,10 +444,19 @@ const Criando = () => {
               {COLUMNS.map(col => {
                 const colPosts = filteredPosts.filter(p => p.status === col.key);
                 const isPublished = col.key === "publicado";
-                const [from, to] = STATUS_COVER[col.key];
+                const saved = byStatus[col.key];
+                const [defFrom, defTo] = STATUS_COVER[col.key];
+                const from = saved?.cover_from || defFrom;
+                const to = saved?.cover_type === "solid" ? (saved?.cover_from || defFrom) : (saved?.cover_to || defTo);
+                const title = saved?.label || col.label;
                 return (
                   <div key={col.key} className="min-w-full pr-1">
-                    <CoverHeader label="Status" title={col.label} count={colPosts.length} from={from} to={to} />
+                    <div className="relative">
+                      <CoverHeader label="Status" title={title} count={colPosts.length} from={from} to={to} />
+                      <button onClick={() => openEditCover(col.key)} className="absolute top-2.5 right-12 z-10 h-7 w-7 rounded-full bg-white/15 backdrop-blur flex items-center justify-center" aria-label="Editar capa">
+                        <Pencil className="h-3.5 w-3.5 text-white/90" />
+                      </button>
+                    </div>
                     <div className="flex flex-col gap-2.5 mt-3">
                       {colPosts.map(post => {
                         const pillar = getPillar(post.pillar_id);
@@ -513,6 +543,68 @@ const Criando = () => {
         </div>
       </motion.div>
       <PostEditor open={drawerOpen} onOpenChange={setDrawerOpen} post={selectedPost} pillars={pillars} userId={activeAccountId || user?.id || ""} onSaved={() => { /* invalidations */ }} />
+
+      <Sheet open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
+        <SheetContent side="bottom" className="rounded-t-2xl">
+          <SheetHeader className="text-left">
+            <SheetTitle className="font-display">Editar capa{editColumn ? ` — ${editColumn.label}` : ""}</SheetTitle>
+          </SheetHeader>
+
+          <div className="mt-4 space-y-4">
+            <CoverHeader
+              label="Status"
+              title={editLabel || editColumn?.label || ""}
+              from={editFrom}
+              to={editType === "gradient" ? editTo : editFrom}
+            />
+
+            <div className="flex items-center gap-1 bg-muted rounded-xl p-1">
+              {([["gradient", "Gradiente"], ["solid", "Cor única"]] as const).map(([t, lbl]) => (
+                <button key={t} onClick={() => setEditType(t)}
+                  className={cn("flex-1 py-1.5 rounded-lg text-xs font-body transition-colors", editType === t ? "bg-card text-foreground shadow-warm-sm font-semibold" : "text-muted-foreground")}>
+                  {lbl}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 text-sm font-body text-muted-foreground">
+                <input type="color" value={editFrom} onChange={(e) => setEditFrom(e.target.value)} className="h-9 w-12 rounded-lg border border-border bg-transparent cursor-pointer" />
+                {editType === "gradient" ? "Cor inicial" : "Cor"}
+              </label>
+              {editType === "gradient" && (
+                <label className="flex items-center gap-2 text-sm font-body text-muted-foreground">
+                  <input type="color" value={editTo} onChange={(e) => setEditTo(e.target.value)} className="h-9 w-12 rounded-lg border border-border bg-transparent cursor-pointer" />
+                  Cor final
+                </label>
+              )}
+            </div>
+
+            <Input value={editLabel} onChange={(e) => setEditLabel(e.target.value)}
+              placeholder={editColumn?.label || "Nome do status"} className="rounded-xl font-body" />
+
+            <div className="flex items-center gap-2 pt-1">
+              <Button variant="outline" className="flex-1 font-body" onClick={() => { if (editing) resetCover(editing); setEditing(null); }}>
+                Restaurar padrão
+              </Button>
+              <Button variant="hero" className="flex-1 font-body" disabled={isSaving}
+                onClick={() => {
+                  if (!editing) return;
+                  saveCover({
+                    status_key: editing,
+                    cover_type: editType,
+                    cover_from: editFrom,
+                    cover_to: editType === "gradient" ? editTo : null,
+                    label: editLabel || null,
+                  });
+                  setEditing(null);
+                }}>
+                Salvar
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Home, Lightbulb, Kanban, CalendarDays,
-  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, ChevronUp, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck
+  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, ChevronUp, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck, Handshake
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,6 +25,7 @@ const moreItems = [
   { title: "Biblioteca", url: "/app/biblioteca", icon: BookOpen },
   { title: "Tarefas", url: "/app/tarefas", icon: ListTodo },
   { title: "Brandbook", url: "/app/brandbook", icon: BookMarked },
+  { title: "Collabs", url: "/app/collabs", icon: Handshake },
   { title: "Link in Bio", url: "/app/linkinbio", icon: Link2 },
   { title: "Arquivos", url: "/app/arquivos", icon: FolderOpen },
   { title: "Histórico", url: "/app/historico", icon: Archive },
@@ -81,37 +82,28 @@ export function BottomBar() {
       {moreOpen && (
         <div className="fixed inset-0 z-40 md:hidden bg-foreground/20 backdrop-blur-sm" onClick={() => setMoreOpen(false)} />
       )}
-
       {moreOpen && (
         <div
-          className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card border-t border-border rounded-t-2xl shadow-warm-lg p-4 bottom-bar-safe"
-          style={{ paddingBottom: 'calc(68px + env(safe-area-inset-bottom, 0px))' }}
+          className="fixed left-3 right-3 z-40 md:hidden bg-card/95 backdrop-blur-lg border border-border rounded-3xl shadow-warm-lg p-4"
+          style={{ bottom: 'calc(84px + env(safe-area-inset-bottom, 0px))' }}
         >
-          <div className="w-8 h-1 bg-border rounded-full mx-auto mb-4" />
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-4 gap-2.5">
             {moreItems.map((item) => {
               const active = isActive(item.url);
               return (
-                <NavLink
-                  key={item.url}
-                  to={item.url}
-                  onClick={() => setMoreOpen(false)}
+                <NavLink key={item.url} to={item.url} onClick={() => setMoreOpen(false)}
                   className={cn(
-                    "flex flex-col items-center gap-1.5 p-3 rounded-xl transition-colors",
+                    "flex flex-col items-center gap-1.5 p-3 rounded-2xl transition-colors",
                     active ? "bg-primary/10 text-primary" : "bg-muted/50 text-muted-foreground hover:text-foreground"
-                  )}
-                >
+                  )}>
                   <item.icon className="h-5 w-5" strokeWidth={1.5} />
                   <span className="text-[10px] font-body font-medium leading-tight text-center">{item.title}</span>
                 </NavLink>
               );
             })}
           </div>
-          <button
-            type="button"
-            onClick={handleSignOut}
-            className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive/15 transition-colors text-sm font-body font-medium"
-          >
+          <button type="button" onClick={handleSignOut}
+            className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-destructive/10 text-destructive hover:bg-destructive/15 transition-colors text-sm font-body font-medium">
             <LogOut className="h-4 w-4" strokeWidth={1.5} /> Sair
           </button>
         </div>
