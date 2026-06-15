@@ -442,31 +442,36 @@ const Criando = () => {
 
         {overview ? (
           <div className="md:hidden">
-            <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 kanban-scroll">
+            <div className="flex gap-2.5 overflow-x-auto -mx-4 px-4 kanban-scroll h-[calc(100svh-230px)] min-h-[340px]">
               {COLUMNS.map((col, i) => {
                 const colPosts = filteredPosts.filter(p => (p.status ?? "ideia") === col.key);
                 const step = ramp[col.key];
                 return (
-                  <div key={col.key} className="min-w-[150px] w-[150px] flex-none flex flex-col gap-2">
+                  <div key={col.key} className="min-w-[172px] w-[172px] flex-none flex flex-col gap-2 h-full">
                     <button onClick={() => goToColumn(i)}
-                      className="relative rounded-[13px] px-3 py-2.5 text-left shadow-warm-sm"
-                      style={{ background: `linear-gradient(140deg, ${step.from}, ${step.to})`, color: step.ink }}>
-                      <span className="absolute top-2 right-2 text-[10px] font-bold bg-white/20 px-1.5 py-0.5 rounded-full">{colPosts.length}</span>
-                      <span className="font-display italic font-light text-lg leading-none">{col.label}</span>
+                      className="relative rounded-[13px] px-3 py-2.5 text-left shrink-0 shadow-warm-sm"
+                      style={{ background: `linear-gradient(140deg, ${step.from}, ${step.to})` }}>
+                      <span className="absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                        style={{ color: step.ink, background: "rgba(255,255,255,.2)" }}>{colPosts.length}</span>
+                      <span className="font-display italic font-light text-lg leading-none" style={{ color: step.ink }}>{col.label}</span>
                     </button>
-                    {colPosts.slice(0, 3).map(post => {
-                      const pil = getPillar(post.pillar_id);
-                      return (
-                        <button key={post.id} onClick={() => openEdit(post)}
-                          className="relative bg-card rounded-[10px] pl-3 pr-2.5 py-2 text-left shadow-warm-sm border border-border"
-                          style={{ borderLeftColor: ramp[post.status ?? "ideia"]?.line ?? "transparent", borderLeftWidth: 3 }}>
-                          <span className="block text-[11.5px] font-body font-semibold leading-tight line-clamp-2">{post.title}</span>
-                          <span className="block text-[9.5px] text-muted-foreground mt-1 truncate">{FORMAT_LABELS[post.format] || post.format}{pil ? ` · ${pil.name}` : ""}</span>
-                        </button>
-                      );
-                    })}
-                    {colPosts.length > 3 && <span className="text-[10.5px] text-muted-foreground font-medium text-center py-0.5">+{colPosts.length - 3} cards</span>}
-                    {colPosts.length === 0 && <span className="text-[10.5px] text-muted-foreground/60 text-center py-2">vazio</span>}
+
+                    <div className="flex-1 overflow-y-auto flex flex-col gap-2 pr-0.5 kanban-scroll">
+                      {colPosts.map(post => {
+                        const pil = getPillar(post.pillar_id);
+                        return (
+                          <button key={post.id} onClick={() => openEdit(post)}
+                            className="relative bg-card rounded-[10px] pl-3 pr-2.5 py-2 text-left shadow-warm-sm border border-border"
+                            style={{ borderLeftColor: step.line, borderLeftWidth: 3 }}>
+                            <span className="block text-[11.5px] font-body font-semibold leading-tight line-clamp-2">{post.title}</span>
+                            <span className="block text-[9.5px] text-muted-foreground mt-1 truncate">{FORMAT_LABELS[post.format] || post.format}{pil ? ` · ${pil.name}` : ""}</span>
+                          </button>
+                        );
+                      })}
+                      {colPosts.length === 0 && (
+                        <div className="text-[10.5px] text-muted-foreground/60 text-center py-6 border border-dashed border-border rounded-xl">vazio</div>
+                      )}
+                    </div>
                   </div>
                 );
               })}
