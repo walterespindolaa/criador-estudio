@@ -215,6 +215,11 @@ const Criando = () => {
 
   const getPillar = (id: string | null) => pillars.find(p => p.id === id);
 
+  const statusRank = (s: string | null) => {
+    const i = COLUMNS.findIndex(c => c.key === (s ?? "ideia"));
+    return i < 0 ? 99 : i;
+  };
+
   const hasActiveFilters = filterPlatform || filterPillar || filterWeek != null || period !== "tudo";
 
   if (postsLoading && posts.length === 0) {
@@ -460,8 +465,64 @@ const Criando = () => {
         )}
 
         {view === "tabela" && (
-          <div className="hidden md:block rounded-2xl border border-dashed border-border p-12 text-center">
-            <p className="font-body text-sm text-muted-foreground">Visão de tabela chega aqui em breve.</p>
+          <div className="hidden md:block">
+            {filteredPosts.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border p-12 text-center">
+                <p className="font-body text-sm text-muted-foreground">Nenhum post nos filtros atuais.</p>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-border overflow-hidden bg-card">
+                <table className="w-full text-sm font-body">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground">
+                      <th className="px-4 py-2.5 font-medium">Título</th>
+                      <th className="px-4 py-2.5 font-medium">Status</th>
+                      <th className="px-4 py-2.5 font-medium">Formato</th>
+                      <th className="px-4 py-2.5 font-medium">Plataforma</th>
+                      <th className="px-4 py-2.5 font-medium">Pilar</th>
+                      <th className="px-4 py-2.5 font-medium">Data</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...filteredPosts]
+                      .sort((a, b) =>
+                        statusRank(a.status) - statusRank(b.status) ||
+                        (a.scheduled_date ?? "").localeCompare(b.scheduled_date ?? "")
+                      )
+                      .map(post => {
+                        const st = ramp[post.status ?? "ideia"];
+                        const stLabel = COLUMNS.find(c => c.key === (post.status ?? "ideia"))?.label ?? (post.status ?? "—");
+                        const pil = getPillar(post.pillar_id);
+                        return (
+                          <tr key={post.id} onClick={() => openEdit(post)}
+                            className="border-b border-border last:border-0 hover:bg-muted/40 cursor-pointer transition-colors">
+                            <td className="px-4 py-2.5 max-w-[340px]">
+                              <span className="font-medium text-foreground line-clamp-1">{post.title}</span>
+                            </td>
+                            <td className="px-4 py-2.5">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium"
+                                style={{ background: st.from, color: st.ink }}>{stLabel}</span>
+                            </td>
+                            <td className="px-4 py-2.5 text-muted-foreground whitespace-nowrap">{FORMAT_LABELS[post.format] || post.format}</td>
+                            <td className="px-4 py-2.5"><PlatformIcon platform={post.platform} size="sm" /></td>
+                            <td className="px-4 py-2.5">
+                              {pil ? (
+                                <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: pil.color }} />
+                                  {pil.name}
+                                </span>
+                              ) : <span className="text-muted-foreground/50">—</span>}
+                            </td>
+                            <td className="px-4 py-2.5 text-muted-foreground whitespace-nowrap">
+                              {post.scheduled_date ? parseISO(post.scheduled_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
         {view === "calendario" && (
