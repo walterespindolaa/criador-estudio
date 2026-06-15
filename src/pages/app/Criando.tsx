@@ -6,7 +6,7 @@ import { CoverHeader } from "@/components/shared/CoverHeader";
 import { useStatusCovers } from "@/hooks/useStatusCovers";
 import { FormatPicker } from "@/components/kanban/FormatPicker";
 import { statusRamp } from "@/lib/statusRamp";
-import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, X, Kanban, Pencil, Table } from "lucide-react";
+import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, X, Kanban, Pencil, Table, Search } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,7 +23,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { supabase } from "@/integrations/supabase/client";
 import { PostEditor } from "@/components/kanban/PostEditor";
-import { FORMAT_LABELS, STATUS_OPTIONS } from "@/lib/constants";
+import { FORMAT_LABELS, STATUS_OPTIONS, FORMATS } from "@/lib/constants";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -144,6 +144,8 @@ const Criando = () => {
   const [filterPlatform, setFilterPlatform] = useState<string | null>(null);
   const [filterPillar, setFilterPillar] = useState<string | null>(null);
   const [filterWeek, setFilterWeek] = useState<number | null>(null);
+  const [filterFormat, setFilterFormat] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const handlePeriodChange = (p: PeriodKey) => {
     setPeriod(p);
@@ -169,6 +171,8 @@ const Criando = () => {
       if (filterPlatform && post.platform !== filterPlatform) return false;
       if (filterPillar && post.pillar_id !== filterPillar) return false;
       if (filterWeek != null && post.week_number !== filterWeek) return false;
+      if (filterFormat && post.format !== filterFormat) return false;
+      if (search.trim() && !(post.title ?? "").toLowerCase().includes(search.trim().toLowerCase())) return false;
       if (dateRange) {
         const postDate = post.scheduled_date || post.created_at?.split("T")[0];
         if (!postDate) return period === "tudo";
@@ -179,7 +183,7 @@ const Criando = () => {
       }
       return true;
     });
-  }, [posts, filterPlatform, filterPillar, filterWeek, dateRange, period]);
+  }, [posts, filterPlatform, filterPillar, filterWeek, filterFormat, search, dateRange, period]);
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pendingFormat, setPendingFormat] = useState<string | null>(null);
@@ -221,7 +225,7 @@ const Criando = () => {
     return i < 0 ? 99 : i;
   };
 
-  const hasActiveFilters = filterPlatform || filterPillar || filterWeek != null || period !== "tudo";
+  const hasActiveFilters = filterPlatform || filterPillar || filterWeek != null || period !== "tudo" || filterFormat || search.trim();
 
   if (postsLoading && posts.length === 0) {
     return (
@@ -249,6 +253,11 @@ const Criando = () => {
 
         <div className="overflow-x-auto scrollbar-none -mx-4 px-4 mb-4">
           <div className="flex items-center gap-3 min-w-max">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar título..."
+                className="h-9 w-[180px] rounded-xl text-xs font-body bg-card pl-8" />
+            </div>
             <div className="flex items-center gap-1 bg-card rounded-xl border border-border p-1">
               {PERIOD_OPTIONS.map(opt => (
                 <button key={opt.key} onClick={() => handlePeriodChange(opt.key)}
@@ -325,6 +334,18 @@ const Criando = () => {
                   </SelectContent>
                 </Select>
               )}
+
+              <Select value={filterFormat ?? "all"} onValueChange={(v) => setFilterFormat(v === "all" ? null : v)}>
+                <SelectTrigger className="w-[150px] h-9 rounded-xl text-xs font-body bg-card">
+                  <SelectValue placeholder="Todos os formatos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all"><span className="font-body">Todos os formatos</span></SelectItem>
+                  {FORMATS.map((f) => (
+                    <SelectItem key={f} value={f}><span className="font-body">{FORMAT_LABELS[f] || f}</span></SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
@@ -348,7 +369,7 @@ const Criando = () => {
           <span>·</span>
           <span>{filteredPosts.filter(p => p.scheduled_date).length} agendados</span>
           {hasActiveFilters && (
-            <button onClick={() => { setFilterPlatform(null); setFilterPillar(null); setFilterWeek(null); handlePeriodChange("tudo"); }}
+            <button onClick={() => { setFilterPlatform(null); setFilterPillar(null); setFilterWeek(null); setFilterFormat(null); setSearch(""); handlePeriodChange("tudo"); }}
               className="ml-2 text-primary hover:underline flex items-center gap-1">
               <X className="h-3 w-3" /> Limpar filtros
             </button>
