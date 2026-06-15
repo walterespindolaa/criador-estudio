@@ -6,7 +6,7 @@ import { CoverHeader } from "@/components/shared/CoverHeader";
 import { useStatusCovers } from "@/hooks/useStatusCovers";
 import { FormatPicker } from "@/components/kanban/FormatPicker";
 import { statusRamp } from "@/lib/statusRamp";
-import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, X, Kanban, Pencil } from "lucide-react";
+import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, X, Kanban, Pencil, Table } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -112,6 +112,13 @@ const Criando = () => {
   const editColumn = editing ? COLUMNS.find(c => c.key === editing) : null;
 
   const [activeCol, setActiveCol] = useState(0);
+  const [view, setView] = useState<"board" | "tabela" | "calendario">(
+    () => (localStorage.getItem("criando-view") as "board" | "tabela" | "calendario") || "board"
+  );
+  const changeView = (v: "board" | "tabela" | "calendario") => {
+    setView(v);
+    localStorage.setItem("criando-view", v);
+  };
   const sx = useRef(0), sy = useRef(0), sw = useRef(false);
   const onTouchStart = (e: React.TouchEvent) => { sx.current = e.touches[0].clientX; sy.current = e.touches[0].clientY; sw.current = false; };
   const onTouchMove = (e: React.TouchEvent) => { if (Math.abs(e.touches[0].clientX - sx.current) > Math.abs(e.touches[0].clientY - sy.current) + 6) sw.current = true; };
@@ -342,6 +349,23 @@ const Criando = () => {
           )}
         </div>
 
+        <div className="hidden md:flex items-center gap-1 bg-card rounded-xl border border-border p-1 w-max mb-4">
+          {([
+            { key: "board", label: "Board", icon: Kanban },
+            { key: "tabela", label: "Tabela", icon: Table },
+            { key: "calendario", label: "Calendário", icon: Calendar },
+          ] as const).map(t => (
+            <button key={t.key} onClick={() => changeView(t.key)}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-body transition-colors flex items-center gap-1.5",
+                view === t.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              )}>
+              <t.icon className="h-3.5 w-3.5" /> {t.label}
+            </button>
+          ))}
+        </div>
+
+        {view === "board" && (
         <div className="hidden md:flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-proximity kanban-scroll">
           {COLUMNS.map(col => {
             const colPosts = filteredPosts.filter(p => p.status === col.key);
@@ -433,6 +457,18 @@ const Criando = () => {
             );
           })}
         </div>
+        )}
+
+        {view === "tabela" && (
+          <div className="hidden md:block rounded-2xl border border-dashed border-border p-12 text-center">
+            <p className="font-body text-sm text-muted-foreground">Visão de tabela chega aqui em breve.</p>
+          </div>
+        )}
+        {view === "calendario" && (
+          <div className="hidden md:block rounded-2xl border border-dashed border-border p-12 text-center">
+            <p className="font-body text-sm text-muted-foreground">Visão de calendário chega aqui em breve.</p>
+          </div>
+        )}
 
         {overview ? (
           <div className="md:hidden">
