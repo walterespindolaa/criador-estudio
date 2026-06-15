@@ -382,7 +382,7 @@ const Dashboard = () => {
                       <div
                         key={day}
                         className={cn(
-                          "flex flex-col items-center gap-1.5 rounded-xl p-2 transition-colors",
+                          "flex flex-col items-center gap-1.5 rounded-xl p-2 transition-colors min-w-0",
                           isToday
                             ? "bg-primary/10 border border-primary/20"
                             : "bg-muted/20 border border-transparent"
@@ -402,7 +402,7 @@ const Dashboard = () => {
                         />
                         <span
                           className={cn(
-                            "text-[9px] font-body text-center leading-tight line-clamp-2",
+                            "text-[9px] font-body text-center leading-tight line-clamp-2 w-full break-words",
                             isToday ? "text-foreground font-medium" : "text-muted-foreground"
                           )}
                         >
