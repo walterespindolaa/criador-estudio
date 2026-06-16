@@ -409,11 +409,21 @@ const Criando = () => {
             const showDividerBefore = isPublished || isAfterIdeia;
             const isDragOver = dragOverCol === col.key;
             const step = ramp[col.key];
+            const savedC = byStatus[col.key];
+            const cFrom = savedC?.cover_from || step.from;
+            const cTo = savedC?.cover_type === "solid" ? (savedC?.cover_from || step.from) : (savedC?.cover_to || step.to);
+            const cInk = savedC ? "#fff" : step.ink;
+            const cSub = savedC ? "rgba(255,255,255,.78)" : step.sub;
+            const cTitle = savedC?.label || col.label;
             return (
               <div key={col.key} className={`w-[85vw] max-w-[320px] sm:w-auto sm:max-w-none sm:min-w-[200px] flex-shrink-0 sm:flex-1 snap-start ${showDividerBefore ? "border-l-2 border-dashed border-border pl-4" : ""}`}
                 onDragOver={(e) => { e.preventDefault(); setDragOverCol(col.key); }} onDragLeave={() => setDragOverCol(null)} onDrop={() => handleDrop(col.key)}>
-                <div className="mb-3">
-                  <CoverHeader label="Status" title={col.label} count={colPosts.length} from={step.from} to={step.to} ink={step.ink} sub={step.sub} hint={COLUMN_TOOLTIPS[col.key]} compact />
+                <div className="relative mb-3 group/cover">
+                  <CoverHeader label="Status" title={cTitle} count={colPosts.length} from={cFrom} to={cTo} ink={cInk} sub={cSub} hint={COLUMN_TOOLTIPS[col.key]} compact />
+                  <button onClick={() => openEditCover(col.key)} aria-label="Editar capa"
+                    className="absolute top-2.5 right-12 z-10 h-7 w-7 rounded-full bg-white/15 backdrop-blur flex items-center justify-center opacity-0 group-hover/cover:opacity-100 transition-opacity">
+                    <Pencil className="h-3.5 w-3.5 text-white/90" />
+                  </button>
                 </div>
                 <div className={`space-y-3 min-h-[200px] rounded-xl transition-all ${isDragOver ? "ring-2 ring-primary bg-primary/5" : ""}`}>
                   {colPosts.map(post => {
