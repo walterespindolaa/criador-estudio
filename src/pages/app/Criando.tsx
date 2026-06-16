@@ -120,6 +120,8 @@ const Criando = () => {
     localStorage.setItem("criando-view", v);
   };
   const [calMonth, setCalMonth] = useState<Date>(() => startOfMonth(new Date()));
+  const [calMode, setCalMode] = useState<"mes" | "semana">("mes");
+  const [calWeekStart, setCalWeekStart] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 0 }));
   const [calDragId, setCalDragId] = useState<string | null>(null);
   const [calDragOverKey, setCalDragOverKey] = useState<string | null>(null);
   const sx = useRef(0), sy = useRef(0), sw = useRef(false);
@@ -555,7 +557,18 @@ const Criando = () => {
         )}
         {view === "calendario" && (
           <div className="hidden md:block">
-            {(() => {
+            <div className="flex items-center gap-1 bg-card rounded-xl border border-border p-1 w-max mb-4">
+              {([{ key: "mes", label: "Mês" }, { key: "semana", label: "Semana" }] as const).map(o => (
+                <button key={o.key} onClick={() => setCalMode(o.key)}
+                  className={cn("px-3 py-1.5 rounded-lg text-xs font-body transition-colors",
+                    calMode === o.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
+                  {o.label}
+                </button>
+              ))}
+            </div>
+
+            {calMode === "mes" && (
+            (() => {
               const monthStart = startOfMonth(calMonth);
               const monthEnd = endOfMonth(calMonth);
               const startWeekday = monthStart.getDay();
@@ -628,7 +641,68 @@ const Criando = () => {
                   )}
                 </div>
               );
-            })()}
+            })()
+            )}
+
+            {calMode === "semana" && (
+              <div>
+                {(() => {
+                  const pad = (n: number) => String(n).padStart(2, "0");
+                  const keyOf = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+                  const todayKey = keyOf(new Date());
+                  const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(calWeekStart); d.setDate(d.getDate() + i); return d; });
+                  const fmt = (d: Date) => d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+                  const weekdays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+                  const shiftWeek = (delta: number) => { const d = new Date(calWeekStart); d.setDate(d.getDate() + delta); setCalWeekStart(d); };
+                  return (
+                    <div className="rounded-2xl border border-border bg-card p-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-display font-bold text-lg">{fmt(calWeekStart)} – {fmt(days[6])}</h3>
+                        <div className="flex items-center gap-1">
+                          <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => shiftWeek(-7)}>‹</Button>
+                          <Button variant="outline" size="sm" className="h-8 px-3 text-xs" onClick={() => setCalWeekStart(startOfWeek(new Date(), { weekStartsOn: 0 }))}>Hoje</Button>
+                          <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => shiftWeek(7)}>›</Button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-7 gap-1.5">
+                        {days.map((d, i) => {
+                          const key = keyOf(d);
+                          const dayPosts = filteredPosts.filter(p => (p.scheduled_date ?? "").slice(0, 10) === key);
+                          const isToday = key === todayKey;
+                          return (
+                            <div key={key}
+                              onDragOver={(e) => { e.preventDefault(); setCalDragOverKey(key); }}
+                              onDragLeave={() => setCalDragOverKey(prev => (prev === key ? null : prev))}
+                              onDrop={() => { if (calDragId) reschedulePost(calDragId, key); setCalDragId(null); setCalDragOverKey(null); }}
+                              className={cn("min-h-[320px] border rounded-lg p-1.5 bg-background flex flex-col gap-1 overflow-y-auto transition-all",
+                                calDragOverKey === key ? "ring-2 ring-primary border-primary" : (isToday ? "border-primary" : "border-border"))}>
+                              <div className="flex items-center justify-between px-0.5 mb-0.5">
+                                <span className="text-[10px] font-body text-muted-foreground">{weekdays[i]}</span>
+                                <span className={cn("text-[11px] font-body font-semibold w-5 h-5 flex items-center justify-center rounded-full", isToday ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>{d.getDate()}</span>
+                              </div>
+                              {dayPosts.map(post => {
+                                const st = ramp[post.status ?? "ideia"];
+                                return (
+                                  <button key={post.id} draggable
+                                    onDragStart={(e) => { e.stopPropagation(); setCalDragId(post.id); }}
+                                    onDragEnd={() => setCalDragId(null)}
+                                    onClick={() => openEdit(post)}
+                                    className="w-full text-left truncate rounded px-1.5 py-0.5 text-[10.5px] font-body leading-tight cursor-grab active:cursor-grabbing"
+                                    style={{ background: st.from, color: st.ink }}>
+                                    {post.title}
+                                  </button>
+                                );
+                              })}
+                              {dayPosts.length === 0 && <div className="text-[10px] text-muted-foreground/50 text-center py-4">—</div>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
           </div>
         )}
 
