@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { statusRamp } from "@/lib/statusRamp";
 import {
@@ -276,6 +277,36 @@ const Dashboard = () => {
     { label: "Hábitos hoje", value: `${habitsToday}/${habits.length}`, icon: Flame, link: "/app" },
   ].map((s, i) => ({ ...s, accent: ramp[RAMP_ORDER[i]] }));
 
+  const [heroSlot, setHeroSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => { setHeroSlot(document.getElementById("cria-hero-slot")); }, []);
+
+  const renderPeriodFilter = (onBand: boolean) =>
+    PERIOD_OPTIONS.map((opt) => {
+      const active = period === opt.key;
+      return (
+        <button
+          key={opt.key}
+          onClick={() => {
+            setPeriod(opt.key);
+            if (opt.key === "personalizado") setCustomOpen(true);
+          }}
+          className={cn(
+            "rounded-full px-3 py-1 text-xs font-body transition-all duration-200",
+            !opt.primary && "hidden sm:inline-flex",
+            onBand
+              ? (active
+                  ? "bg-white text-foreground font-semibold shadow-sm"
+                  : "text-white/75 font-medium hover:bg-white/10 hover:text-white")
+              : (active
+                  ? "bg-primary text-primary-foreground font-semibold"
+                  : "text-muted-foreground font-medium hover:bg-muted"),
+          )}
+        >
+          {opt.label}
+        </button>
+      );
+    });
+
   if (profileLoading) {
     return (
       <div className="pb-20 md:pb-0">
@@ -288,28 +319,12 @@ const Dashboard = () => {
     <div className="pb-20 md:pb-0">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
 
-        <div className="flex sm:justify-end gap-3 mb-6">
+        <div className="flex sm:justify-end gap-3 mb-6 md:hidden">
           <div className="flex items-center gap-0.5 bg-muted/50 rounded-full p-1 flex-wrap">
-            {PERIOD_OPTIONS.map(opt => (
-              <button
-                key={opt.key}
-                onClick={() => {
-                  setPeriod(opt.key);
-                  if (opt.key === "personalizado") setCustomOpen(true);
-                }}
-                className={cn(
-                  "px-3 py-1.5 rounded-full text-xs font-body font-medium transition-all duration-200",
-                  !opt.primary && "hidden sm:inline-flex",
-                  period === opt.key
-                    ? "bg-card text-foreground shadow-warm-sm font-semibold"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {opt.label}
-              </button>
-            ))}
+            {renderPeriodFilter(false)}
           </div>
         </div>
+        {heroSlot && createPortal(renderPeriodFilter(true), heroSlot)}
 
         <div className="mb-4">
           <NextBestAction />

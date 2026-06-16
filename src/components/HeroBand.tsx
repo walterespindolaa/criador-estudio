@@ -34,6 +34,7 @@ export function HeroBand({
           {subtitle && <p className="mt-1 text-sm font-body text-white/80">{subtitle}</p>}
         </div>
       </div>
+      <div id="cria-hero-slot" className="relative mt-4 flex flex-wrap justify-end gap-1 empty:hidden" />
     </header>
   );
 }
