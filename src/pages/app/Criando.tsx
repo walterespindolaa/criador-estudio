@@ -120,6 +120,8 @@ const Criando = () => {
     localStorage.setItem("criando-view", v);
   };
   const [calMonth, setCalMonth] = useState<Date>(() => startOfMonth(new Date()));
+  const [calDragId, setCalDragId] = useState<string | null>(null);
+  const [calDragOverKey, setCalDragOverKey] = useState<string | null>(null);
   const sx = useRef(0), sy = useRef(0), sw = useRef(false);
   const onTouchStart = (e: React.TouchEvent) => { sx.current = e.touches[0].clientX; sy.current = e.touches[0].clientY; sw.current = false; };
   const onTouchMove = (e: React.TouchEvent) => { if (Math.abs(e.touches[0].clientX - sx.current) > Math.abs(e.touches[0].clientY - sy.current) + 6) sw.current = true; };
@@ -208,6 +210,10 @@ const Criando = () => {
       });
     }
     await updatePost.mutateAsync({ id: postId, updates });
+  };
+
+  const reschedulePost = async (postId: string, dateKey: string) => {
+    await updatePost.mutateAsync({ id: postId, updates: { scheduled_date: dateKey } });
   };
 
   const handleDrop = async (newStatus: string) => {
@@ -587,13 +593,24 @@ const Criando = () => {
                       const dayPosts = filteredPosts.filter(p => (p.scheduled_date ?? "").slice(0, 10) === cell.key);
                       const isToday = cell.key === todayKey;
                       return (
-                        <div key={cell.key} className={cn("min-h-[104px] border rounded-lg p-1.5 bg-background flex flex-col gap-1 overflow-hidden", isToday ? "border-primary" : "border-border")}>
+                        <div key={cell.key}
+                          onDragOver={(e) => { e.preventDefault(); setCalDragOverKey(cell.key); }}
+                          onDragLeave={() => setCalDragOverKey(prev => (prev === cell.key ? null : prev))}
+                          onDrop={() => { if (calDragId) reschedulePost(calDragId, cell.key); setCalDragId(null); setCalDragOverKey(null); }}
+                          className={cn(
+                            "min-h-[104px] border rounded-lg p-1.5 bg-background flex flex-col gap-1 overflow-hidden transition-all",
+                            calDragOverKey === cell.key ? "ring-2 ring-primary border-primary" : (isToday ? "border-primary" : "border-border")
+                          )}>
                           <span className={cn("text-[11px] font-body font-semibold w-5 h-5 flex items-center justify-center rounded-full", isToday ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>{cell.day}</span>
                           {dayPosts.slice(0, 3).map(post => {
                             const st = ramp[post.status ?? "ideia"];
                             return (
-                              <button key={post.id} onClick={() => openEdit(post)}
-                                className="w-full text-left truncate rounded px-1.5 py-0.5 text-[10.5px] font-body leading-tight"
+                              <button key={post.id}
+                                draggable
+                                onDragStart={(e) => { e.stopPropagation(); setCalDragId(post.id); }}
+                                onDragEnd={() => setCalDragId(null)}
+                                onClick={() => openEdit(post)}
+                                className="w-full text-left truncate rounded px-1.5 py-0.5 text-[10.5px] font-body leading-tight cursor-grab active:cursor-grabbing"
                                 style={{ background: st.from, color: st.ink }}>
                                 {post.title}
                               </button>
