@@ -80,10 +80,10 @@ const AppLayout = () => {
   const firstName = (profile?.name ?? "").trim().split(" ")[0] || "criador";
   const PAGE_TITLES: Record<string, string> = {
     "/app/ideias": "Ideias", "/app/aprovacao": "Aprovações", "/app/feed": "Meu Feed", "/app/tarefas": "Tarefas",
-    "/app/criando": "Estou Criando", "/app/metas": "Metas", "/app/arquivos": "Arquivos",
+    "/app/criando": "Criando", "/app/metas": "Metas", "/app/arquivos": "Arquivos",
     "/app/biblioteca": "Biblioteca", "/app/brandbook": "Brandbook", "/app/linkinbio": "Link in Bio",
     "/app/collabs": "Collabs", "/app/relatorios": "Relatórios", "/app/historico": "Histórico",
-    "/app/aprender": "Educacional", "/app/configuracoes": "Configurações",
+    "/app/aprender": "Aprender", "/app/configuracoes": "Configurações",
   };
   const isDash = location.pathname === "/app";
   const heroTitle = isDash ? `${firstName} 👋` : (PAGE_TITLES[location.pathname] ?? "CRIA");
