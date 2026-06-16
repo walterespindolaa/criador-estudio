@@ -13,6 +13,7 @@ import { applySidebarColor } from "@/lib/sidebarTheme";
 import { applyThemeFont } from "@/components/settings/SettingsVisual";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AppRail } from "@/components/AppRail";
+import { HeroBand } from "@/components/HeroBand";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { CriaAIProvider } from "@/contexts/CriaAIContext";
 import { VideoPublicConfirmProvider } from "@/contexts/VideoPublicConfirmContext";
@@ -74,6 +75,20 @@ const AppLayout = () => {
     }
   }
 
+  const hour = new Date().getHours();
+  const greetWord = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
+  const firstName = (profile?.name ?? "").trim().split(" ")[0] || "criador";
+  const PAGE_TITLES: Record<string, string> = {
+    "/app/ideias": "Ideias", "/app/aprovacao": "Aprovações", "/app/feed": "Meu Feed", "/app/tarefas": "Tarefas",
+    "/app/criando": "Estou Criando", "/app/metas": "Metas", "/app/arquivos": "Arquivos",
+    "/app/biblioteca": "Biblioteca", "/app/brandbook": "Brandbook", "/app/linkinbio": "Link in Bio",
+    "/app/collabs": "Collabs", "/app/relatorios": "Relatórios", "/app/historico": "Histórico",
+    "/app/aprender": "Educacional", "/app/configuracoes": "Configurações",
+  };
+  const isDash = location.pathname === "/app";
+  const heroTitle = isDash ? `${firstName} 👋` : (PAGE_TITLES[location.pathname] ?? "CRIA");
+  const heroEyebrow = isDash ? `${greetWord},` : undefined;
+
   return (
     <CriaAIProvider>
     <VideoPublicConfirmProvider>
@@ -93,12 +108,14 @@ const AppLayout = () => {
             <ManagingBanner />
             <TrialBanner />
             <StorageWarningBanner />
-            <div className="hidden md:flex justify-end px-8 pt-4 pb-1 sticky top-0 z-40 pointer-events-none">
-              <div className="flex items-center gap-2 rounded-2xl border border-border bg-card/70 backdrop-blur-xl px-2.5 py-1.5 shadow-[0_16px_40px_-18px_rgba(35,25,70,0.35)] pointer-events-auto">
-                <PlanBadge />
-                <UploadProgressIndicator />
-                <NotificationsBell />
-              </div>
+            <div className="hidden md:block">
+              <HeroBand eyebrow={heroEyebrow} title={heroTitle}>
+                <div className="flex items-center gap-2 rounded-2xl bg-white/15 px-2 py-1 backdrop-blur">
+                  <PlanBadge />
+                  <UploadProgressIndicator />
+                  <NotificationsBell />
+                </div>
+              </HeroBand>
             </div>
 
             <header className="h-14 sticky top-0 z-40 flex items-center justify-between px-4 bg-background border-b border-border md:hidden">
