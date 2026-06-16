@@ -14,6 +14,7 @@ import { applyThemeFont } from "@/components/settings/SettingsVisual";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AppRail } from "@/components/AppRail";
 import { HeroBand } from "@/components/HeroBand";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { CriaAIProvider } from "@/contexts/CriaAIContext";
 import { VideoPublicConfirmProvider } from "@/contexts/VideoPublicConfirmContext";
@@ -88,6 +89,14 @@ const AppLayout = () => {
   const isDash = location.pathname === "/app";
   const heroTitle = isDash ? `${firstName} 👋` : (PAGE_TITLES[location.pathname] ?? "CRIA");
   const heroEyebrow = isDash ? `${greetWord},` : undefined;
+  const avatarNode = isDash ? (
+    <Avatar className="h-12 w-12 shrink-0 border-2 border-white/40 shadow-sm">
+      <AvatarImage src={profile?.avatar_url ?? undefined} alt={firstName} />
+      <AvatarFallback className="bg-white/20 font-display font-bold text-white">
+        {firstName.charAt(0).toUpperCase()}
+      </AvatarFallback>
+    </Avatar>
+  ) : null;
 
   return (
     <CriaAIProvider>
@@ -109,7 +118,7 @@ const AppLayout = () => {
             <TrialBanner />
             <StorageWarningBanner />
             <div className="hidden md:block">
-              <HeroBand eyebrow={heroEyebrow} title={heroTitle}>
+              <HeroBand eyebrow={heroEyebrow} title={heroTitle} avatar={avatarNode}>
                 <div className="flex items-center gap-2 rounded-2xl bg-white/15 px-2 py-1 backdrop-blur">
                   <PlanBadge />
                   <UploadProgressIndicator />

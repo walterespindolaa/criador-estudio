@@ -5,11 +5,13 @@ export function HeroBand({
   eyebrow,
   title,
   subtitle,
+  avatar,
   children,
 }: {
   eyebrow?: string;
   title: string;
   subtitle?: string;
+  avatar?: ReactNode;
   children?: ReactNode;
 }) {
   const ramp = statusRamp();
@@ -24,10 +26,13 @@ export function HeroBand({
         style={{ background: "radial-gradient(60% 120% at 88% -10%, rgba(255,255,255,.18), transparent 60%)" }}
       />
       <div className="relative flex items-center justify-end gap-2">{children}</div>
-      <div className="relative mt-3">
-        {eyebrow && <p className="text-sm font-body text-white/75">{eyebrow}</p>}
-        <h1 className="font-display text-2xl font-extrabold tracking-tight md:text-3xl">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm font-body text-white/80">{subtitle}</p>}
+      <div className="relative mt-3 flex items-center gap-3">
+        {avatar}
+        <div className="min-w-0">
+          {eyebrow && <p className="text-sm font-body text-white/75">{eyebrow}</p>}
+          <h1 className="font-display text-2xl font-extrabold tracking-tight md:text-3xl">{title}</h1>
+          {subtitle && <p className="mt-1 text-sm font-body text-white/80">{subtitle}</p>}
+        </div>
       </div>
     </header>
   );
