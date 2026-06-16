@@ -12,7 +12,8 @@ import { applyTheme } from "@/lib/applyTheme";
 import { applySidebarColor } from "@/lib/sidebarTheme";
 import { applyThemeFont } from "@/components/settings/SettingsVisual";
 import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppRail } from "@/components/AppRail";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { CriaAIProvider } from "@/contexts/CriaAIContext";
 import { VideoPublicConfirmProvider } from "@/contexts/VideoPublicConfirmContext";
 import { CriaAIPanel } from "@/components/ai/CriaAIPanel";
@@ -83,16 +84,16 @@ const AppLayout = () => {
           <PWAInstallBanner />
           <CriaAIPanel />
 
-          <div className="hidden md:block">
+          <div className="hidden">
             <AppSidebar />
           </div>
+          <AppRail />
 
-          <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex-1 flex flex-col min-w-0 md:pl-[104px]">
             <ManagingBanner />
             <TrialBanner />
             <StorageWarningBanner />
-            <header className="h-12 hidden md:flex items-center justify-between px-4 border-b border-border bg-background sticky top-0 z-40">
-              <SidebarTrigger className="mr-3" />
+            <header className="h-12 hidden md:flex items-center justify-end px-4 border-b border-border bg-background sticky top-0 z-40">
               <div className="flex items-center gap-2">
                 <PlanBadge />
                 <UploadProgressIndicator />
