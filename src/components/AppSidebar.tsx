@@ -19,6 +19,7 @@ import {
   Handshake,
   ClipboardCheck,
   Package,
+  Target,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
@@ -59,6 +60,7 @@ const groups = [
     items: [
       { title: "Criando", url: "/app/criando", icon: Kanban },
       { title: "Meu Plano", url: "/app/plano", icon: CalendarDays },
+      { title: "Metas", url: "/app/metas", icon: Target },
       { title: "Arquivos", url: "/app/arquivos", icon: FolderOpen },
     ],
   },
