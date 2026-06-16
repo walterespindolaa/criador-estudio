@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
+import { statusRamp } from "@/lib/statusRamp";
 import {
   Lightbulb, FileText, CheckCircle2, Sparkles, Copy, Check,
   ListChecks, Pencil, Trash2, Clock, Flame, ArrowRight, TrendingUp
@@ -268,14 +269,16 @@ const Dashboard = () => {
   const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000);
   const dailyHook = HOOKS_VIRAL[dayOfYear % HOOKS_VIRAL.length];
 
+  const ramp = statusRamp();
+  const RAMP_ORDER = ["ideia","roteiro","gravando","editando","agendado","publicado"] as const;
   const stats = [
-    { label: "Ideias", value: ideas.length, icon: Lightbulb, bg: "from-violet-500/15 to-purple-500/5", iconBg: "bg-violet-500", iconColor: "text-white", link: "/app/ideias" },
-    { label: "Em criação", value: inCreationFiltered.length, icon: FileText, bg: "from-blue-500/15 to-sky-500/5", iconBg: "bg-blue-500", iconColor: "text-white", link: "/app/criando" },
-    { label: "Publicados", value: publishedFiltered.length, icon: CheckCircle2, bg: "from-emerald-500/15 to-teal-500/5", iconBg: "bg-emerald-500", iconColor: "text-white", link: "/app/historico" },
-    { label: "Agendados", value: scheduledFiltered.length, icon: Clock, bg: "from-amber-500/15 to-yellow-500/5", iconBg: "bg-amber-500", iconColor: "text-white", link: "/app/plano" },
-    { label: "Tarefas abertas", value: pendingTasks.length + inProgressTasks.length, icon: ListChecks, bg: "from-pink-500/15 to-rose-500/5", iconBg: "bg-pink-500", iconColor: "text-white", link: "/app/tarefas" },
-    { label: "Hábitos hoje", value: `${habitsToday}/${habits.length}`, icon: Flame, bg: "from-orange-500/15 to-red-500/5", iconBg: "bg-orange-500", iconColor: "text-white", link: "/app/plano" },
-  ];
+    { label: "Ideias", value: ideas.length, icon: Lightbulb, link: "/app/ideias" },
+    { label: "Em criação", value: inCreationFiltered.length, icon: FileText, link: "/app/criando" },
+    { label: "Publicados", value: publishedFiltered.length, icon: CheckCircle2, link: "/app/historico" },
+    { label: "Agendados", value: scheduledFiltered.length, icon: Clock, link: "/app/criando" },
+    { label: "Tarefas abertas", value: pendingTasks.length + inProgressTasks.length, icon: ListChecks, link: "/app/tarefas" },
+    { label: "Hábitos hoje", value: `${habitsToday}/${habits.length}`, icon: Flame, link: "/app" },
+  ].map((s, i) => ({ ...s, accent: ramp[RAMP_ORDER[i]] }));
 
   if (profileLoading) {
     return (
@@ -342,15 +345,14 @@ const Dashboard = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
                   className={cn(
-                    "relative overflow-hidden bg-gradient-to-br px-3 py-2.5 sm:px-4 sm:py-3 rounded-2xl border border-transparent",
+                    "relative overflow-hidden px-3 py-2.5 sm:px-4 sm:py-3 rounded-2xl border border-primary/10 bg-primary/[0.05]",
                     "hover:shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all duration-200",
-                    "text-left w-full group cursor-pointer",
-                    s.bg
+                    "text-left w-full group cursor-pointer"
                   )}
                 >
                   <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 pr-5">
-                    <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shadow-sm shrink-0", s.iconBg)}>
-                      <s.icon className={cn("h-4 w-4 sm:h-4.5 sm:w-4.5", s.iconColor)} strokeWidth={1.75} />
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-sm shrink-0" style={{ backgroundColor: s.accent.line }}>
+                      <s.icon className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-white" strokeWidth={1.75} />
                     </div>
                     <div className="min-w-0 flex-1 flex items-baseline gap-1.5">
                       <p className="text-xl sm:text-2xl font-display font-extrabold text-foreground tracking-tight leading-none">{s.value}</p>
