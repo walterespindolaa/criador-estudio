@@ -3,12 +3,11 @@ import { motion } from "framer-motion";
 import { statusRamp } from "@/lib/statusRamp";
 import {
   Lightbulb, FileText, CheckCircle2, Sparkles, Copy, Check,
-  ListChecks, Pencil, Trash2, Clock, Flame, ArrowRight, TrendingUp
+  ListChecks, Pencil, Trash2, Clock, Flame, ArrowRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useProfile } from "@/hooks/useProfile";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,6 +24,10 @@ import { useTasks } from "@/hooks/useTasks";
 import { usePillars } from "@/hooks/usePillars";
 import { BestTimeToPost } from "@/components/insights/BestTimeToPost";
 import { SmartNotificationsCard } from "@/components/notifications/SmartNotificationsCard";
+import { NextBestAction } from "@/components/dashboard/NextBestAction";
+import { UpcomingPosts } from "@/components/dashboard/UpcomingPosts";
+import { UpcomingTasks } from "@/components/dashboard/UpcomingTasks";
+import { WhoYouAre } from "@/components/dashboard/WhoYouAre";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
 
 const HOOKS_VIRAL = [
@@ -49,13 +52,6 @@ const HOOKS_VIRAL = [
   { text: "A fórmula que me ajudou a [resultado] em [tempo]", category: "promessa" },
   { text: "Me julga, mas eu faço [hábito controverso] e funciona", category: "polêmica" },
 ];
-
-const getGreeting = (name: string) => {
-  const h = new Date().getHours();
-  if (h >= 5 && h < 12) return `Bom dia, ${name}! ☀️`;
-  if (h >= 12 && h < 18) return `Boa tarde, ${name}! 👋`;
-  return `Boa noite, ${name}! 🌙`;
-};
 
 const getDaysOfWeek = () => {
   const today = new Date();
@@ -292,25 +288,7 @@ const Dashboard = () => {
     <div className="pb-20 md:pb-0">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
 
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
-          <div className="flex items-center gap-3">
-            <Avatar className="w-10 h-10 shrink-0 border border-border shadow-sm">
-              {activeProfile?.avatar_url && <AvatarImage src={activeProfile.avatar_url} alt={activeProfile.name ?? "perfil"} />}
-              <AvatarFallback className="bg-gradient-to-br from-primary to-purple-600 text-white font-display font-bold text-sm">
-                {(activeProfile?.name ?? "C").trim().charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-display font-extrabold text-foreground tracking-tight mb-0.5">
-                {getGreeting(activeProfile?.name || "criador")}
-              </h1>
-              <p className="text-sm text-muted-foreground font-body flex items-center gap-1.5">
-                <TrendingUp className="h-3.5 w-3.5 text-primary" />
-                Sua meta: <span className="font-semibold text-foreground">{weekPublished.length}/{weekGoal}</span> posts esta semana
-              </p>
-            </div>
-          </div>
-
+        <div className="flex sm:justify-end gap-3 mb-6">
           <div className="flex items-center gap-0.5 bg-muted/50 rounded-full p-1 flex-wrap">
             {PERIOD_OPTIONS.map(opt => (
               <button
@@ -331,6 +309,10 @@ const Dashboard = () => {
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="mb-4">
+          <NextBestAction />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -362,6 +344,11 @@ const Dashboard = () => {
                   <ArrowRight className="absolute top-1/2 -translate-y-1/2 right-3 h-4 w-4 text-muted-foreground/30 group-hover:text-foreground/50 group-hover:translate-x-0.5 transition-all" />
                 </motion.button>
               ))}
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <UpcomingPosts />
+              <UpcomingTasks />
             </div>
 
             <section className="bg-card border border-border/30 rounded-2xl p-4 shadow-sm">
@@ -449,6 +436,7 @@ const Dashboard = () => {
           </div>
 
           <div className="lg:col-span-4 space-y-6">
+            <WhoYouAre />
             <SmartNotificationsCard />
              <DCard className="border-border/20">
               <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
