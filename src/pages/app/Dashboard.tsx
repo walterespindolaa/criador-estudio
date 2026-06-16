@@ -433,6 +433,21 @@ const Dashboard = () => {
                 <Button onClick={handleQuickCapture} variant="hero" size="lg" className="w-full sm:w-auto">Capturar</Button>
               </div>
             </DCard>
+
+            <DCard className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200/50 dark:from-amber-500/10 dark:to-orange-500/5 dark:border-amber-500/20">
+              <h3 className="text-sm font-display font-bold text-amber-700 dark:text-amber-400 mb-2 flex items-center gap-1.5">
+                <div className="w-6 h-6 rounded-lg bg-amber-500 flex items-center justify-center">
+                  <Sparkles className="h-3.5 w-3.5 text-white" />
+                </div>
+                Gancho do Dia
+              </h3>
+              <p className="text-sm font-body text-foreground italic mb-4 leading-relaxed">
+                "{dailyHook.text}"
+              </p>
+              <Button variant="outline" size="sm" onClick={handleCopyHook} className="w-full bg-white/60 dark:bg-background/40 border-amber-300/40 hover:bg-white text-amber-700 dark:text-amber-300">
+                {copiedHook ? <><Check className="h-3.5 w-3.5 mr-2" /> Copiado</> : <><Copy className="h-3.5 w-3.5 mr-2" /> Copiar hook</>}
+              </Button>
+            </DCard>
           </div>
 
           <div className="lg:col-span-4 space-y-6">
@@ -482,21 +497,6 @@ const Dashboard = () => {
             </DCard>
 
             <BestTimeToPost posts={posts} />
-
-            <DCard className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200/50 dark:from-amber-500/10 dark:to-orange-500/5 dark:border-amber-500/20">
-              <h3 className="text-sm font-display font-bold text-amber-700 dark:text-amber-400 mb-2 flex items-center gap-1.5">
-                <div className="w-6 h-6 rounded-lg bg-amber-500 flex items-center justify-center">
-                  <Sparkles className="h-3.5 w-3.5 text-white" />
-                </div>
-                Gancho do Dia
-              </h3>
-              <p className="text-sm font-body text-foreground italic mb-4 leading-relaxed">
-                "{dailyHook.text}"
-              </p>
-              <Button variant="outline" size="sm" onClick={handleCopyHook} className="w-full bg-white/60 dark:bg-background/40 border-amber-300/40 hover:bg-white text-amber-700 dark:text-amber-300">
-                {copiedHook ? <><Check className="h-3.5 w-3.5 mr-2" /> Copiado</> : <><Copy className="h-3.5 w-3.5 mr-2" /> Copiar hook</>}
-              </Button>
-            </DCard>
           </div>
 
         </div>
