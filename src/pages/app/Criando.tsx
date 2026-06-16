@@ -405,7 +405,7 @@ const Criando = () => {
               <div key={col.key} className={`w-[85vw] max-w-[320px] sm:w-auto sm:max-w-none sm:min-w-[200px] flex-shrink-0 sm:flex-1 snap-start ${showDividerBefore ? "border-l-2 border-dashed border-border pl-4" : ""}`}
                 onDragOver={(e) => { e.preventDefault(); setDragOverCol(col.key); }} onDragLeave={() => setDragOverCol(null)} onDrop={() => handleDrop(col.key)}>
                 <div className="mb-3">
-                  <CoverHeader label="Status" title={col.label} count={colPosts.length} from={step.from} to={step.to} ink={step.ink} sub={step.sub} hint={COLUMN_TOOLTIPS[col.key]} />
+                  <CoverHeader label="Status" title={col.label} count={colPosts.length} from={step.from} to={step.to} ink={step.ink} sub={step.sub} hint={COLUMN_TOOLTIPS[col.key]} compact />
                 </div>
                 <div className={`space-y-3 min-h-[200px] rounded-xl transition-all ${isDragOver ? "ring-2 ring-primary bg-primary/5" : ""}`}>
                   {colPosts.map(post => {
