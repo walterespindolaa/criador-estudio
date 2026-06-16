@@ -93,13 +93,13 @@ const AppLayout = () => {
             <ManagingBanner />
             <TrialBanner />
             <StorageWarningBanner />
-            <header className="h-12 hidden md:flex items-center justify-end px-4 border-b border-border bg-background sticky top-0 z-40">
-              <div className="flex items-center gap-2">
+            <div className="hidden md:flex justify-end px-8 pt-4 pb-1 sticky top-0 z-40 pointer-events-none">
+              <div className="flex items-center gap-2 rounded-2xl border border-border bg-card/70 backdrop-blur-xl px-2.5 py-1.5 shadow-[0_16px_40px_-18px_rgba(35,25,70,0.35)] pointer-events-auto">
                 <PlanBadge />
                 <UploadProgressIndicator />
                 <NotificationsBell />
               </div>
-            </header>
+            </div>
 
             <header className="h-14 sticky top-0 z-40 flex items-center justify-between px-4 bg-background border-b border-border md:hidden">
               <NavLink to="/app" className="flex items-center">
