@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, RotateCcw, X, Loader2, Lock } from "lucide-react";
+import { Check, RotateCcw, X, Loader2, Lock, Download } from "lucide-react";
+import { applyAccent } from "@/lib/applyTheme";
 
 type AnyRpc = (fn: string, args?: Record<string, unknown>) => ReturnType<typeof supabase.rpc>;
 const sbRpc = supabase.rpc.bind(supabase) as unknown as AnyRpc;
@@ -16,7 +17,7 @@ type Proposal = {
   terms: string | null; valid_until: string | null;
   status: "enviada" | "vista" | "aceita" | "recusada" | "ajuste";
   client_comment: string | null; deliverables: Deliverable[];
-  creator: { name: string | null; handle: string | null; avatar: string | null } | null;
+  creator: { name: string | null; handle: string | null; avatar: string | null; theme_accent: string | null; media_kit: string | null } | null;
 };
 
 const brl = (v: number | null) =>
@@ -55,6 +56,10 @@ export default function PropostaPublica() {
     onError: () => toast.error("Não foi possível enviar."),
   });
 
+  const accent = q.data?.creator?.theme_accent;
+  // aplica a cor escolhida pela criadora (rota pública não carrega o tema dela sozinha)
+  useEffect(() => { applyAccent(accent || "#8B5CF6"); }, [accent]);
+
   if (q.isLoading) return <Center><Loader2 className="h-6 w-6 animate-spin text-primary" /></Center>;
   const p = q.data;
   if (!p) return <Center><p className="text-muted-foreground">Proposta não encontrada ou expirada.</p></Center>;
@@ -67,7 +72,7 @@ export default function PropostaPublica() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#F6F4FC] to-background flex flex-col items-center px-4 py-8">
       <div className="w-full max-w-md bg-card border border-border rounded-3xl overflow-hidden shadow-[0_8px_30px_rgba(27,26,24,0.08)]">
-        <div className="bg-gradient-to-br from-primary to-purple-700 text-white px-6 pt-6 pb-5 text-center">
+        <div className="bg-gradient-to-br from-primary to-primary/70 text-white px-6 pt-6 pb-5 text-center">
           <div className="w-12 h-12 rounded-2xl mx-auto mb-3 bg-white/20 grid place-items-center overflow-hidden">
             {p.creator?.avatar ? <img src={p.creator.avatar} alt="" className="w-full h-full object-cover" /> : <span className="text-lg font-extrabold">{initials}</span>}
           </div>
@@ -99,6 +104,17 @@ export default function PropostaPublica() {
             <span className="text-2xl font-display font-extrabold text-primary">{brl(p.value)}</span>
           </div>
           {fmtDate(p.valid_until) && <p className="text-xs text-muted-foreground text-center mt-3">Válida até {fmtDate(p.valid_until)}</p>}
+          {p.creator?.media_kit && (
+            <a href={p.creator.media_kit} target="_blank" rel="noopener noreferrer"
+               className="flex items-center gap-3 w-full mt-4 px-3.5 py-3 rounded-2xl border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors">
+              <span className="w-9 h-9 rounded-xl bg-card border border-primary/20 grid place-items-center text-primary flex-shrink-0">📄</span>
+              <span className="min-w-0">
+                <span className="block text-sm font-bold text-primary leading-tight">Baixar mídia kit</span>
+                <span className="block text-xs text-muted-foreground">Conheça os trabalhos de {p.creator?.name ?? "quem te enviou"} (PDF)</span>
+              </span>
+              <Download className="h-4 w-4 text-primary ml-auto flex-shrink-0" />
+            </a>
+          )}
           {p.status === "ajuste" && <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 mt-3 text-center">Alteração solicitada — aguardando o criador.</p>}
         </div>
 
