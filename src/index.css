@@ -191,3 +191,11 @@
   backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
   box-shadow: 0 10px 28px -10px rgba(28,28,26,.40), 0 0 0 1px hsl(var(--border));
 }
+
+html[data-bar="glass"] .cria-rail-capsule {
+  background-color: hsl(var(--card) / 0.6) !important;
+  border-color: hsl(var(--border)) !important;
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  --sidebar-foreground: var(--foreground);
+}

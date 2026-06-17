@@ -43,6 +43,19 @@ export function isDarkColor(hex: string): boolean {
 export function applySidebarColor(hex: string | null | undefined) {
   const root = document.documentElement;
 
+  root.removeAttribute("data-bar");
+  if (hex === "glass") {
+    root.setAttribute("data-bar", "glass");
+    // limpa overrides sólidos pra não brigar com o CSS de vidro
+    root.style.removeProperty('--sidebar-background');
+    root.style.removeProperty('--sidebar-foreground');
+    root.style.removeProperty('--sidebar-accent');
+    root.style.removeProperty('--sidebar-accent-foreground');
+    root.style.removeProperty('--sidebar-border');
+    root.style.removeProperty('--sidebar-primary-foreground');
+    return;
+  }
+
   if (!hex) {
     // Reset — let the theme preset handle sidebar vars
     root.style.removeProperty('--sidebar-background');

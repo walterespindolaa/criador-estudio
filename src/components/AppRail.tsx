@@ -135,7 +135,7 @@ export function AppRail() {
   return (
     <nav
       ref={railRef}
-      className="fixed left-5 top-1/2 z-40 hidden w-[72px] -translate-y-1/2 flex-col items-center rounded-[26px] border border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar-background))] py-3 shadow-[0_22px_60px_-22px_rgba(35,25,70,0.3)] backdrop-blur-xl md:flex"
+      className="cria-rail-capsule fixed left-5 top-1/2 z-40 hidden w-[72px] -translate-y-1/2 flex-col items-center rounded-[26px] border border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar-background))] py-3 shadow-[0_22px_60px_-22px_rgba(35,25,70,0.3)] backdrop-blur-xl md:flex"
     >
       <div className="mb-2 grid h-[42px] w-[42px] place-items-center rounded-[13px] bg-primary font-display text-[19px] font-extrabold text-primary-foreground">
         c
