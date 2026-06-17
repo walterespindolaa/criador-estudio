@@ -193,9 +193,9 @@ export function SettingsVisual() {
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-1">
                 <PanelLeft className="h-5 w-5 text-primary" />
-                <h3 className="text-base font-body font-bold text-foreground">Cor da sidebar</h3>
+                <h3 className="text-base font-body font-bold text-foreground">Cor da barra</h3>
               </div>
-              <p className="text-sm text-muted-foreground font-body">Personalize o fundo da barra lateral</p>
+              <p className="text-sm text-muted-foreground font-body">Personalize o fundo da barra de navegação</p>
             </div>
             <div className="flex flex-wrap gap-2.5">
               {SIDEBAR_COLORS.map(c => (
@@ -274,60 +274,49 @@ export function SettingsVisual() {
 
           {previewTheme && (
             <div className="flex flex-col gap-6">
-              <div className="rounded-2xl overflow-hidden border border-border shadow-2xl flex flex-col" style={{ backgroundColor: previewTheme.vars.background, height: '420px' }}>
-                <div className="flex flex-1 min-h-0">
-                  {/* Sidebar */}
-                  <div className="w-20 h-full flex flex-col items-center py-6 gap-6 shrink-0 border-r" style={{ backgroundColor: previewSidebar, borderColor: previewTheme.vars.border }}>
-                    <div className="w-10 h-10 rounded-2xl shadow-sm flex items-center justify-center" style={{ backgroundColor: selectedAccent }}>
-                      <div className="w-5 h-5 rounded-full bg-white/20" />
-                    </div>
-                    {[1, 2, 3, 4].map(i => (
-                      <div key={i} className="w-6 h-6 rounded-lg" style={{ backgroundColor: i === 1 ? selectedAccent : previewTheme.vars.muted, opacity: i === 1 ? 1 : 0.4 }} />
-                    ))}
+              <div className="relative flex flex-col overflow-hidden rounded-2xl border border-border shadow-2xl" style={{ backgroundColor: previewTheme.vars.background, height: '420px' }}>
+                {/* Faixa (hero) */}
+                <div className="relative flex items-center gap-3 rounded-b-2xl px-5" style={{ height: '88px', background: `linear-gradient(120deg, ${selectedAccent}, ${selectedAccent}cc)` }}>
+                  <div className="absolute inset-0 rounded-b-2xl" style={{ background: "radial-gradient(60% 130% at 90% -20%, rgba(255,255,255,.18), transparent 60%)" }} />
+                  <div className="relative h-9 w-9 rounded-xl border-2 border-white/50 bg-white/25" />
+                  <div className="relative flex flex-col gap-1.5">
+                    <div className="h-1.5 w-10 rounded-full bg-white/45" />
+                    <div className="h-2 w-20 rounded-full bg-white" />
                   </div>
-                  {/* Main content */}
-                  <div className="flex-1 p-6 flex flex-col gap-6 overflow-hidden">
-                    {/* Header */}
-                    <div className="flex items-center justify-between">
-                      <div className="h-6 w-40 rounded-full" style={{ backgroundColor: previewTheme.vars.foreground, opacity: 0.15 }} />
-                      <div className="flex gap-2">
-                        <div className="h-8 w-8 rounded-full" style={{ backgroundColor: previewTheme.vars.muted }} />
-                        <div className="h-8 w-8 rounded-full" style={{ backgroundColor: previewTheme.vars.muted }} />
-                      </div>
-                    </div>
-                    
-                    {/* Stats cards */}
-                    <div className="grid grid-cols-3 gap-4">
-                      {[1, 2, 3].map(i => (
-                        <div key={i} className="rounded-2xl p-4 shadow-sm border" style={{ backgroundColor: previewTheme.vars.card, borderColor: previewTheme.vars.border }}>
-                          <div className="h-2 w-12 rounded-full mb-3" style={{ backgroundColor: previewTheme.vars.muted }} />
-                          <div className="h-5 w-8 rounded-lg" style={{ backgroundColor: i === 1 ? selectedAccent : previewTheme.vars.muted, opacity: i === 1 ? 1 : 0.4 }} />
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Content area - List of posts */}
-                    <div className="flex-1 flex flex-col gap-3 overflow-hidden">
-                      {[1, 2].map(i => (
-                        <div key={i} className="rounded-xl p-4 border" style={{ backgroundColor: previewTheme.vars.card, borderColor: previewTheme.vars.border }}>
-                          <div className="flex gap-3 items-center mb-2">
-                            <div className="h-8 w-8 rounded-full" style={{ backgroundColor: previewTheme.vars.muted }} />
-                            <div className="flex-1 flex flex-col gap-1">
-                              <div className="h-2 w-24 rounded-full" style={{ backgroundColor: previewTheme.vars.foreground, opacity: 0.2 }} />
-                              <div className="h-1.5 w-16 rounded-full" style={{ backgroundColor: previewTheme.vars.muted }} />
-                            </div>
-                          </div>
-                          <div className="h-2 w-full rounded-full" style={{ backgroundColor: previewTheme.vars.muted, opacity: 0.5 }} />
-                        </div>
-                      ))}
-                    </div>
+                  <div className="relative ml-auto flex gap-1.5">
+                    <div className="h-3 w-6 rounded-full bg-white/30" />
+                    <div className="h-3 w-9 rounded-full bg-white" />
+                    <div className="h-3 w-6 rounded-full bg-white/30" />
+                    <div className="h-3 w-6 rounded-full bg-white/30" />
                   </div>
                 </div>
-                {/* Bottom bar */}
-                <div className="h-14 flex items-center justify-around px-8 border-t" style={{ backgroundColor: previewTheme.vars.card, borderColor: previewTheme.vars.border }}>
-                  {[1, 2, 3, 4, 5].map(i => (
-                    <div key={i} className="w-6 h-6 rounded-lg" style={{ backgroundColor: i === 1 ? selectedAccent : previewTheme.vars.muted, opacity: i === 1 ? 1 : 0.4 }} />
-                  ))}
+                {/* Corpo com barra flutuante */}
+                <div className="relative flex-1 overflow-hidden p-5 pl-[78px]">
+                  <div className="absolute left-4 top-1/2 flex -translate-y-1/2 flex-col items-center gap-3 rounded-2xl border px-2 py-3 shadow-lg" style={{ backgroundColor: previewSidebar, borderColor: previewTheme.vars.border }}>
+                    <div className="h-6 w-6 rounded-lg" style={{ background: selectedAccent }} />
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="h-4 w-4 rounded-md" style={{ backgroundColor: i === 1 ? selectedAccent : previewTheme.vars.muted, opacity: i === 1 ? 1 : 0.4 }} />
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="rounded-2xl border p-3 shadow-sm" style={{ backgroundColor: previewTheme.vars.card, borderColor: previewTheme.vars.border }}>
+                        <div className="mb-2.5 h-1.5 w-3/5 rounded-full" style={{ backgroundColor: previewTheme.vars.muted, opacity: 0.5 }} />
+                        <div className="h-4 w-6 rounded-md" style={{ backgroundColor: i === 1 ? selectedAccent : previewTheme.vars.muted, opacity: i === 1 ? 1 : 0.4 }} />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 flex flex-col gap-2.5">
+                    {[1, 2].map((i) => (
+                      <div key={i} className="flex items-center gap-3 rounded-xl border p-3" style={{ backgroundColor: previewTheme.vars.card, borderColor: previewTheme.vars.border }}>
+                        <div className="h-7 w-7 shrink-0 rounded-lg" style={{ backgroundColor: previewTheme.vars.muted, opacity: 0.5 }} />
+                        <div className="flex flex-1 flex-col gap-1.5">
+                          <div className="h-1.5 w-1/2 rounded-full" style={{ backgroundColor: previewTheme.vars.foreground, opacity: 0.25 }} />
+                          <div className="h-1.5 w-4/5 rounded-full" style={{ backgroundColor: previewTheme.vars.muted, opacity: 0.45 }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -350,38 +339,49 @@ export function SettingsVisual() {
         </div>
         {previewTheme && (
            <div className="flex flex-col gap-6">
-           <div className="rounded-2xl overflow-hidden border border-border shadow-2xl flex flex-col" style={{ backgroundColor: previewTheme.vars.background, height: '420px' }}>
-             <div className="flex flex-1 min-h-0">
-               <div className="w-16 h-full flex flex-col items-center py-6 gap-6 shrink-0 border-r" style={{ backgroundColor: previewSidebar, borderColor: previewTheme.vars.border }}>
-                 <div className="w-8 h-8 rounded-xl shadow-sm flex items-center justify-center" style={{ backgroundColor: selectedAccent }}>
-                   <div className="w-4 h-4 rounded-full bg-white/20" />
-                 </div>
-                 {[1, 2, 3, 4].map(i => (
-                   <div key={i} className="w-5 h-5 rounded-lg" style={{ backgroundColor: i === 1 ? selectedAccent : previewTheme.vars.muted, opacity: i === 1 ? 1 : 0.4 }} />
-                 ))}
+           <div className="relative flex flex-col overflow-hidden rounded-2xl border border-border shadow-2xl" style={{ backgroundColor: previewTheme.vars.background, height: '420px' }}>
+             {/* Faixa (hero) */}
+             <div className="relative flex items-center gap-3 rounded-b-2xl px-5" style={{ height: '88px', background: `linear-gradient(120deg, ${selectedAccent}, ${selectedAccent}cc)` }}>
+               <div className="absolute inset-0 rounded-b-2xl" style={{ background: "radial-gradient(60% 130% at 90% -20%, rgba(255,255,255,.18), transparent 60%)" }} />
+               <div className="relative h-9 w-9 rounded-xl border-2 border-white/50 bg-white/25" />
+               <div className="relative flex flex-col gap-1.5">
+                 <div className="h-1.5 w-10 rounded-full bg-white/45" />
+                 <div className="h-2 w-20 rounded-full bg-white" />
                </div>
-               <div className="flex-1 p-4 flex flex-col gap-4 overflow-hidden">
-                 <div className="h-4 w-32 rounded-full" style={{ backgroundColor: previewTheme.vars.foreground, opacity: 0.15 }} />
-                 <div className="grid grid-cols-3 gap-2">
-                   {[1, 2, 3].map(i => (
-                     <div key={i} className="rounded-xl p-2 shadow-sm border" style={{ backgroundColor: previewTheme.vars.card, borderColor: previewTheme.vars.border }}>
-                       <div className="h-4 w-6 rounded-lg" style={{ backgroundColor: i === 1 ? selectedAccent : previewTheme.vars.muted, opacity: i === 1 ? 1 : 0.4 }} />
-                     </div>
-                   ))}
-                 </div>
-                 <div className="flex-1 flex flex-col gap-2 overflow-hidden">
-                   {[1, 2, 3].map(i => (
-                     <div key={i} className="rounded-lg p-3 border" style={{ backgroundColor: previewTheme.vars.card, borderColor: previewTheme.vars.border }}>
-                       <div className="h-2 w-full rounded-full" style={{ backgroundColor: previewTheme.vars.muted, opacity: 0.5 }} />
-                     </div>
-                   ))}
-                 </div>
+               <div className="relative ml-auto flex gap-1.5">
+                 <div className="h-3 w-6 rounded-full bg-white/30" />
+                 <div className="h-3 w-9 rounded-full bg-white" />
+                 <div className="h-3 w-6 rounded-full bg-white/30" />
+                 <div className="h-3 w-6 rounded-full bg-white/30" />
                </div>
              </div>
-             <div className="h-12 flex items-center justify-around px-6 border-t" style={{ backgroundColor: previewTheme.vars.card, borderColor: previewTheme.vars.border }}>
-               {[1, 2, 3, 4, 5].map(i => (
-                 <div key={i} className="w-5 h-5 rounded-lg" style={{ backgroundColor: i === 1 ? selectedAccent : previewTheme.vars.muted, opacity: i === 1 ? 1 : 0.4 }} />
-               ))}
+             {/* Corpo com barra flutuante */}
+             <div className="relative flex-1 overflow-hidden p-5 pl-[78px]">
+               <div className="absolute left-4 top-1/2 flex -translate-y-1/2 flex-col items-center gap-3 rounded-2xl border px-2 py-3 shadow-lg" style={{ backgroundColor: previewSidebar, borderColor: previewTheme.vars.border }}>
+                 <div className="h-6 w-6 rounded-lg" style={{ background: selectedAccent }} />
+                 {[1, 2, 3, 4].map((i) => (
+                   <div key={i} className="h-4 w-4 rounded-md" style={{ backgroundColor: i === 1 ? selectedAccent : previewTheme.vars.muted, opacity: i === 1 ? 1 : 0.4 }} />
+                 ))}
+               </div>
+               <div className="grid grid-cols-3 gap-3">
+                 {[1, 2, 3].map((i) => (
+                   <div key={i} className="rounded-2xl border p-3 shadow-sm" style={{ backgroundColor: previewTheme.vars.card, borderColor: previewTheme.vars.border }}>
+                     <div className="mb-2.5 h-1.5 w-3/5 rounded-full" style={{ backgroundColor: previewTheme.vars.muted, opacity: 0.5 }} />
+                     <div className="h-4 w-6 rounded-md" style={{ backgroundColor: i === 1 ? selectedAccent : previewTheme.vars.muted, opacity: i === 1 ? 1 : 0.4 }} />
+                   </div>
+                 ))}
+               </div>
+               <div className="mt-3 flex flex-col gap-2.5">
+                 {[1, 2].map((i) => (
+                   <div key={i} className="flex items-center gap-3 rounded-xl border p-3" style={{ backgroundColor: previewTheme.vars.card, borderColor: previewTheme.vars.border }}>
+                     <div className="h-7 w-7 shrink-0 rounded-lg" style={{ backgroundColor: previewTheme.vars.muted, opacity: 0.5 }} />
+                     <div className="flex flex-1 flex-col gap-1.5">
+                       <div className="h-1.5 w-1/2 rounded-full" style={{ backgroundColor: previewTheme.vars.foreground, opacity: 0.25 }} />
+                       <div className="h-1.5 w-4/5 rounded-full" style={{ backgroundColor: previewTheme.vars.muted, opacity: 0.45 }} />
+                     </div>
+                   </div>
+                 ))}
+               </div>
              </div>
            </div>
            <div className="self-center flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/50 border border-border text-xs font-medium text-muted-foreground shadow-sm">
