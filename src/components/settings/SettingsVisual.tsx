@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type CSSProperties } from "react";
 import { Check, Monitor, Type, Palette, PanelLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/hooks/useProfile";
@@ -18,6 +18,7 @@ const FONT_OPTIONS = [
 
 const SIDEBAR_COLORS = [
   { label: "Padrão", value: "" },
+  { label: "Liquid Glass", value: "glass" },
   { label: "Bege", value: "#F2EDE6" },
   { label: "Branco", value: "#FAFAFA" },
   { label: "Cinza", value: "#E8E8E8" },
@@ -100,6 +101,10 @@ export function SettingsVisual() {
   const previewTheme = THEME_PRESETS.find(t => t.id === selectedTheme);
   const previewFont = FONT_OPTIONS.find(f => f.key === selectedFont);
   const previewSidebar = sidebarColor || previewTheme?.vars.sidebar || "#F2EDE6";
+  const barIsGlass = sidebarColor === "glass";
+  const previewBarStyle: CSSProperties = barIsGlass
+    ? { background: "hsl(var(--card) / 0.6)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", borderColor: "hsl(var(--border))" }
+    : { backgroundColor: previewSidebar, borderColor: previewTheme?.vars.border };
 
   return (
     <div className="w-full max-w-[1100px] mx-auto">
@@ -209,7 +214,11 @@ export function SettingsVisual() {
                       ? "border-[#1A2F21] scale-105 shadow-md"
                       : "border-border hover:border-[#1A2F21]/30"
                   )}
-                  style={{ backgroundColor: c.value || (previewTheme?.vars.sidebar || '#F2EDE6') }}
+                  style={
+                    c.value === "glass"
+                      ? { background: "linear-gradient(135deg, rgba(255,255,255,.9), rgba(200,200,220,.35))", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)" }
+                      : { backgroundColor: c.value || (previewTheme?.vars.sidebar || '#F2EDE6') }
+                  }
                 >
                   {sidebarColor === c.value && (
                     <Check className="h-4 w-4" style={{ color: c.value && parseInt(c.value.slice(1), 16) < 0x808080 ? '#fff' : '#1C1C1A' }} />
@@ -292,7 +301,7 @@ export function SettingsVisual() {
                 </div>
                 {/* Corpo com barra flutuante */}
                 <div className="relative flex-1 overflow-hidden p-5 pl-[78px]">
-                  <div className="absolute left-4 top-1/2 flex -translate-y-1/2 flex-col items-center gap-3 rounded-2xl border px-2 py-3 shadow-lg" style={{ backgroundColor: previewSidebar, borderColor: previewTheme.vars.border }}>
+                  <div className="absolute left-4 top-1/2 flex -translate-y-1/2 flex-col items-center gap-3 rounded-2xl border px-2 py-3 shadow-lg" style={previewBarStyle}>
                     <div className="h-6 w-6 rounded-lg" style={{ background: selectedAccent }} />
                     {[1, 2, 3, 4].map((i) => (
                       <div key={i} className="h-4 w-4 rounded-md" style={{ backgroundColor: i === 1 ? selectedAccent : previewTheme.vars.muted, opacity: i === 1 ? 1 : 0.4 }} />
