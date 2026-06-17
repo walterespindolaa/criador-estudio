@@ -15,7 +15,7 @@ export const PROPOSAL_LABEL: Record<ProposalStatus, string> = {
   aceita: "Aceita", recusada: "Recusada", ajuste: "Ajuste pedido",
 };
 function slugify(s: string): string {
-  return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+  return s.toLowerCase().normalize("NFD").replace(new RegExp("[\\u0300-\\u036f]", "g"), "")
     .replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 24) || "proposta";
 }
 

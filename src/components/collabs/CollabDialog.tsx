@@ -1,7 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Plus, Trash2, Check } from "lucide-react";
+import { Plus, Trash2, Check, Link2, Copy, RotateCcw } from "lucide-react";
+import { toast } from "sonner";
 import {
-  useCollabs, COLLAB_STATUSES, COLLAB_STATUS_LABEL, type CollabStatus,
+  useCollabs, COLLAB_STATUSES, COLLAB_STATUS_LABEL, PROPOSAL_LABEL, type CollabStatus,
 } from "@/hooks/useCollabs";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -14,7 +15,7 @@ import { cn } from "@/lib/utils";
 export function CollabDialog({ open, onOpenChange, collabId }: {
   open: boolean; onOpenChange: (o: boolean) => void; collabId: string | null;
 }) {
-  const { collabs, createCollab, updateCollab, createDeliverable, togglePublished, deleteDeliverable } = useCollabs();
+  const { collabs, createCollab, updateCollab, createDeliverable, togglePublished, deleteDeliverable, generateProposal, revokeProposal } = useCollabs();
   const editing = collabId ? collabs.find((c) => c.id === collabId) ?? null : null;
 
   const [brand, setBrand] = useState("");
@@ -26,6 +27,8 @@ export function CollabDialog({ open, onOpenChange, collabId }: {
   const [briefing, setBriefing] = useState("");
   const [notes, setNotes] = useState("");
   const [newDeliv, setNewDeliv] = useState("");
+  const [pValid, setPValid] = useState("");
+  const [pTerms, setPTerms] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -38,6 +41,8 @@ export function CollabDialog({ open, onOpenChange, collabId }: {
     setBriefing(editing?.briefing_url ?? "");
     setNotes(editing?.notes ?? "");
     setNewDeliv("");
+    setPValid(editing?.proposal_valid_until ?? "");
+    setPTerms(editing?.proposal_terms ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, collabId]);
 
@@ -65,6 +70,16 @@ export function CollabDialog({ open, onOpenChange, collabId }: {
     createDeliverable.mutate({ collab_id: editing.id, label: newDeliv.trim(), sort_order: editing.deliverables.length });
     setNewDeliv("");
   }
+
+  const proposalUrl = editing?.proposal_token ? `${window.location.origin}/proposta/${editing.proposal_token}` : "";
+  const copyLink = () => { if (proposalUrl) navigator.clipboard?.writeText(proposalUrl).then(() => toast.success("Link copiado.")).catch(() => {}); };
+  const genProposal = () => {
+    if (!editing) return;
+    generateProposal.mutate(
+      { collabId: editing.id, brand: editing.brand, validUntil: pValid || null, terms: pTerms.trim() || null },
+      { onSuccess: (token) => { navigator.clipboard?.writeText(`${window.location.origin}/proposta/${token}`).catch(() => {}); } },
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -121,6 +136,41 @@ export function CollabDialog({ open, onOpenChange, collabId }: {
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">Salve a collab para adicionar os entregáveis (reels, stories…) e acompanhar o progresso.</p>
+          )}
+
+          {editing && (
+            <div className="border-t border-border pt-3.5 space-y-3">
+              <Label className="text-xs font-bold text-foreground">Orçamento / proposta</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Válido até"><Input type="date" value={pValid} onChange={(e) => setPValid(e.target.value)} /></Field>
+                <div className="flex items-end">
+                  {editing.proposal_status !== "none" && (
+                    <span className="text-[11px] font-semibold rounded-lg px-2 py-1 bg-primary/10 text-primary">{PROPOSAL_LABEL[editing.proposal_status]}</span>
+                  )}
+                </div>
+              </div>
+              <Field label="Termos (aparecem na proposta)">
+                <Textarea value={pTerms} onChange={(e) => setPTerms(e.target.value)} rows={2} placeholder="Ex.: 1 rodada de ajustes · direito de uso por 90 dias" />
+              </Field>
+              {editing.proposal_token ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 bg-muted/40 rounded-xl px-3 py-2">
+                    <Link2 className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                    <span className="text-xs text-muted-foreground truncate flex-1">{proposalUrl}</span>
+                    <button type="button" onClick={copyLink} className="text-muted-foreground hover:text-primary flex-shrink-0"><Copy className="h-3.5 w-3.5" /></button>
+                  </div>
+                  {editing.proposal_status === "ajuste" && editing.proposal_client_comment && (
+                    <div className="text-xs text-orange-700 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2">A marca pediu: "{editing.proposal_client_comment}"</div>
+                  )}
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" onClick={genProposal} className="rounded-xl h-9 text-xs gap-1.5 flex-1"><RotateCcw className="h-3.5 w-3.5" /> Gerar novo link</Button>
+                    <Button type="button" variant="ghost" onClick={() => revokeProposal.mutate(editing.id)} className="rounded-xl h-9 text-xs text-muted-foreground">Revogar</Button>
+                  </div>
+                </div>
+              ) : (
+                <Button type="button" onClick={genProposal} disabled={generateProposal.isPending} className="rounded-xl w-full gap-2"><Link2 className="h-4 w-4" /> Gerar orçamento e copiar link</Button>
+              )}
+            </div>
           )}
         </div>
 

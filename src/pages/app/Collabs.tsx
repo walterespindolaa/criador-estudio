@@ -189,6 +189,15 @@ function CollabCard({ c, onOpen }: { c: CollabWithDeliverables; onOpen: () => vo
         </div>
       )}
       <div className="flex flex-wrap gap-1.5">
+        {c.proposal_status !== "none" && (
+          <Chip tone={c.proposal_status === "aceita" ? "green" : c.proposal_status === "recusada" ? "red" : c.proposal_status === "vista" || c.proposal_status === "ajuste" ? "amber" : "gray"}>
+            {c.proposal_status === "enviada" ? "Orçamento enviado"
+              : c.proposal_status === "vista" ? "Orçamento visto"
+              : c.proposal_status === "aceita" ? "Orçamento aceito"
+              : c.proposal_status === "recusada" ? "Orçamento recusado"
+              : "Ajuste pedido"}
+          </Chip>
+        )}
         {full && <Chip tone="green">Objetivo atingido</Chip>}
         {overdue && <Chip tone="red">Atrasado</Chip>}
         {!full && !overdue && c.deadline && <Chip tone="gray">{fmtDate(c.deadline)}</Chip>}
