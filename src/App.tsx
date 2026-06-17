@@ -41,6 +41,7 @@ const TrocarSenha = lazy(() => import("./pages/app/TrocarSenha"));
 const Assinar = lazy(() => import("./pages/app/Assinar"));
 const BioPage = lazy(() => import("./pages/BioPage"));
 const AprovarPortal = lazy(() => import("./pages/AprovarPortal"));
+const PropostaPublica = lazy(() => import("./pages/PropostaPublica"));
 const ManagerLayout = lazy(() => import("./components/accounts/ManagerLayout"));
 const ManagerHome = lazy(() => import("./pages/socialmidia/ManagerHome"));
 const CriaPost = lazy(() => import("./pages/socialmidia/CriaPost"));
@@ -76,6 +77,7 @@ const App = () => (
               <Route path="/" element={<Landing />} />
               <Route path="/bio/:slug" element={<BioPage />} />
               <Route path="/aprovar/:token" element={<AprovarPortal />} />
+              <Route path="/proposta/:token" element={<PropostaPublica />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/reset-password" element={<ResetPassword />} />
