@@ -1,12 +1,12 @@
 import { Suspense, useEffect } from "react";
-import { Outlet, NavLink, Navigate, useLocation } from "react-router-dom";
+import { Outlet, NavLink, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { ContentSkeleton } from "@/components/shared/ContentSkeleton";
 import { BottomBar } from "@/components/BottomBar";
 import { PWAInstallBanner } from "@/components/shared/PWAInstallBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { PlanBadge } from "@/components/shared/PlanBadge";
 import { AppFooter } from "@/components/shared/AppFooter";
-import { Settings } from "lucide-react";
+import { Settings, Lightbulb, Plus } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { applyTheme } from "@/lib/applyTheme";
 import { applySidebarColor } from "@/lib/sidebarTheme";
@@ -33,6 +33,7 @@ const AppLayout = () => {
   const { profile, isLoading } = useProfile();
   const { isManaging } = useActiveAccount();
   const location = useLocation();
+  const navigate = useNavigate();
 
   useLastSeen();
 
@@ -90,12 +91,25 @@ const AppLayout = () => {
   const heroTitle = isDash ? `${firstName} 👋` : (PAGE_TITLES[location.pathname] ?? "CRIA");
   const heroEyebrow = isDash ? `${greetWord},` : undefined;
   const avatarNode = isDash ? (
-    <Avatar className="h-12 w-12 shrink-0 border-2 border-white/40 shadow-sm">
+    <Avatar className="h-11 w-11 shrink-0 border-2 border-white/40 shadow-sm">
       <AvatarImage src={profile?.avatar_url ?? undefined} alt={firstName} />
       <AvatarFallback className="bg-white/20 font-display font-bold text-white">
         {firstName.charAt(0).toUpperCase()}
       </AvatarFallback>
     </Avatar>
+  ) : null;
+
+  const quickActions = isDash ? (
+    <>
+      <button onClick={() => navigate("/app/ideias")}
+        className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs font-bold text-foreground shadow-sm transition hover:opacity-90">
+        <Lightbulb className="h-4 w-4" /> Nova ideia
+      </button>
+      <button onClick={() => navigate("/app/criando")}
+        className="inline-flex items-center gap-1.5 rounded-xl bg-white/15 px-3 py-2 text-xs font-bold text-white ring-1 ring-white/30 transition hover:bg-white/25">
+        <Plus className="h-4 w-4" /> Novo post
+      </button>
+    </>
   ) : null;
 
   return (
@@ -117,8 +131,8 @@ const AppLayout = () => {
             <ManagingBanner />
             <TrialBanner />
             <StorageWarningBanner />
-            <div className="hidden md:block">
-              <HeroBand eyebrow={heroEyebrow} title={heroTitle} avatar={avatarNode}>
+            <div className="hidden md:block md:-ml-[104px] md:w-[calc(100%+104px)]">
+              <HeroBand eyebrow={heroEyebrow} title={heroTitle} avatar={avatarNode} actions={quickActions}>
                 <div className="flex items-center gap-2 rounded-2xl bg-white/15 px-2 py-1 backdrop-blur">
                   <PlanBadge />
                   <UploadProgressIndicator />
