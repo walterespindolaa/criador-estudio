@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
-import { Plus, Pencil, Trash2, Check, Bell, Clock, AlertTriangle, Archive, ArchiveRestore, Handshake } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, Bell, Clock, AlertTriangle, Archive, ArchiveRestore, Handshake, FileText } from "lucide-react";
 import { useTier } from "@/hooks/useTier";
 import {
   useCollabs, collabReminders, COLLAB_STATUSES, COLLAB_STATUS_LABEL,
@@ -9,6 +9,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { CollabDialog } from "@/components/collabs/CollabDialog";
+import { MediaKitDialog } from "@/components/collabs/MediaKitDialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -28,6 +29,7 @@ export default function Collabs() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [confirmDel, setConfirmDel] = useState<CollabWithDeliverables | null>(null);
+  const [kitOpen, setKitOpen] = useState(false);
 
   if (tier !== "studio") return <Navigate to="/app/assinar" replace />;
 
@@ -52,7 +54,10 @@ export default function Collabs() {
           <h1 className="text-2xl font-display font-extrabold text-foreground tracking-tight">Collabs</h1>
           <p className="text-sm text-muted-foreground font-body mt-1">Suas parcerias com marcas — do primeiro contato ao pagamento.</p>
         </div>
-        <Button onClick={openNew} className="rounded-xl gap-2"><Plus className="h-4 w-4" />Nova collab</Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" onClick={() => setKitOpen(true)} className="rounded-xl gap-2"><FileText className="h-4 w-4" />Mídia Kit</Button>
+          <Button onClick={openNew} className="rounded-xl gap-2"><Plus className="h-4 w-4" />Nova collab</Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
@@ -92,6 +97,7 @@ export default function Collabs() {
       </Tabs>
 
       <CollabDialog open={dialogOpen} onOpenChange={setDialogOpen} collabId={editingId} />
+      <MediaKitDialog open={kitOpen} onOpenChange={setKitOpen} />
 
       <AlertDialog open={!!confirmDel} onOpenChange={(o) => !o && setConfirmDel(null)}>
         <AlertDialogContent className="rounded-2xl">
