@@ -88,7 +88,7 @@ export function AppRail() {
         <button
           onClick={() => handleClick(n)}
           className={cn(
-            "relative grid h-11 w-11 place-items-center rounded-2xl transition-colors",
+            "relative grid h-10 w-10 place-items-center rounded-2xl transition-colors",
             n.featured
               ? "bg-primary text-primary-foreground shadow-lg hover:brightness-105"
               : active
@@ -97,7 +97,7 @@ export function AppRail() {
           )}
           aria-label={n.label}
         >
-          <Icon className="h-5 w-5" />
+          <Icon className="h-[18px] w-[18px]" />
           {active && !n.featured && (
             <span className="absolute -left-2 top-1/2 h-4 w-1 -translate-y-1/2 rounded bg-primary" />
           )}
@@ -135,14 +135,14 @@ export function AppRail() {
   return (
     <nav
       ref={railRef}
-      className="cria-rail-capsule fixed left-5 top-1/2 z-40 hidden w-[72px] -translate-y-1/2 flex-col items-center rounded-[26px] border border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar-background))] py-3 shadow-[0_22px_60px_-22px_rgba(35,25,70,0.3)] backdrop-blur-xl md:flex"
+      className="cria-rail-capsule fixed left-5 top-[calc(50%+0.75rem)] z-40 hidden w-[64px] -translate-y-1/2 flex-col items-center rounded-[24px] border border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar-background))] py-2.5 shadow-[0_22px_60px_-22px_rgba(35,25,70,0.3)] backdrop-blur-xl md:flex"
     >
-      <div className="mb-2 grid h-[42px] w-[42px] place-items-center rounded-[13px] bg-primary font-display text-[19px] font-extrabold text-primary-foreground">
+      <div className="mb-2 grid h-[38px] w-[38px] place-items-center rounded-[12px] bg-primary font-display text-[17px] font-extrabold text-primary-foreground">
         c
       </div>
-      <div className="flex w-full flex-col items-center gap-1.5">{TOP.map(renderNode)}</div>
+      <div className="flex w-full flex-col items-center gap-1">{TOP.map(renderNode)}</div>
       <div className="my-2 h-px w-8 bg-border" />
-      <div className="flex w-full flex-col items-center gap-1.5">{BOTTOM.map(renderNode)}</div>
+      <div className="flex w-full flex-col items-center gap-1">{BOTTOM.map(renderNode)}</div>
     </nav>
   );
 }
