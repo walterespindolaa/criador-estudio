@@ -9,6 +9,16 @@ export const COLLAB_STATUS_LABEL: Record<CollabStatus, string> = {
   lead: "Lead", negociando: "Negociando", fechado: "Fechado", entregue: "Entregue", pago: "Pago",
 };
 
+export type ProposalStatus = "none" | "enviada" | "vista" | "aceita" | "recusada" | "ajuste";
+export const PROPOSAL_LABEL: Record<ProposalStatus, string> = {
+  none: "Sem orçamento", enviada: "Enviada", vista: "Vista",
+  aceita: "Aceita", recusada: "Recusada", ajuste: "Ajuste pedido",
+};
+function slugify(s: string): string {
+  return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 24) || "proposta";
+}
+
 export type Collab = {
   id: string;
   user_id: string;
@@ -21,6 +31,14 @@ export type Collab = {
   briefing_url: string | null;
   notes: string | null;
   archived: boolean;
+  proposal_token: string | null;
+  proposal_status: "none" | "enviada" | "vista" | "aceita" | "recusada" | "ajuste";
+  proposal_terms: string | null;
+  proposal_valid_until: string | null;
+  proposal_sent_at: string | null;
+  proposal_viewed_at: string | null;
+  proposal_responded_at: string | null;
+  proposal_client_comment: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -162,12 +180,45 @@ export function useCollabs() {
     onError: () => toast.error("Erro ao remover entregável."),
   });
 
+  const generateProposal = useMutation({
+    mutationFn: async ({ collabId, brand, validUntil, terms }:
+      { collabId: string; brand: string; validUntil?: string | null; terms?: string | null }) => {
+      const token = `${slugify(brand)}-${crypto.randomUUID().slice(0, 8)}`;
+      const { error } = await sbFrom("collabs").update({
+        proposal_token: token,
+        proposal_status: "enviada",
+        proposal_sent_at: new Date().toISOString(),
+        proposal_valid_until: validUntil ?? null,
+        proposal_terms: terms ?? null,
+        proposal_client_comment: null,
+        updated_at: new Date().toISOString(),
+      } as never).eq("id", collabId);
+      if (error) throw error;
+      return token;
+    },
+    onSuccess: () => { invalidate(); toast.success("Orçamento gerado. Link pronto pra enviar."); },
+    onError: () => toast.error("Erro ao gerar orçamento."),
+  });
+
+  const revokeProposal = useMutation({
+    mutationFn: async (collabId: string) => {
+      const { error } = await sbFrom("collabs").update({
+        proposal_token: null, proposal_status: "none",
+        updated_at: new Date().toISOString(),
+      } as never).eq("id", collabId);
+      if (error) throw error;
+    },
+    onSuccess: () => { invalidate(); toast.success("Orçamento revogado."); },
+    onError: () => toast.error("Erro ao revogar."),
+  });
+
   return {
     collabs: query.data ?? [],
     isLoading: query.isLoading,
     error: query.error,
     createCollab, updateCollab, deleteCollab,
     createDeliverable, updateDeliverable, togglePublished, deleteDeliverable,
+    generateProposal, revokeProposal,
   };
 }
 
