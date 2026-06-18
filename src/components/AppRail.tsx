@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Layers, Lightbulb, ClipboardCheck, Grid3X3, ListTodo,
   CalendarRange, Kanban, Target, FolderOpen, Compass, BookOpen, BookMarked,
   Link2, Sparkles, BadgeDollarSign, BarChart3, Archive, GraduationCap,
-  PlayCircle, Settings, LogOut, type LucideIcon,
+  PlayCircle, Settings, LogOut, Instagram, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCriaAI } from "@/contexts/CriaAIContext";
@@ -38,6 +38,7 @@ const TOP: NavNode[] = [
   { id: "ia", label: "Cria IA", icon: Sparkles, action: "cria", featured: true },
   { id: "mon", label: "Monetização", icon: BadgeDollarSign, to: "/app/collabs" },
   { id: "ana", label: "Análise", icon: BarChart3, children: [
+    { label: "Insights", icon: Instagram, to: "/app/insights" },
     { label: "Relatórios", icon: BarChart3, to: "/app/relatorios" },
     { label: "Histórico", icon: Archive, to: "/app/historico" },
   ]},

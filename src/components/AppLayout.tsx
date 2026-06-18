@@ -83,7 +83,7 @@ const AppLayout = () => {
     "/app/ideias": "Ideias", "/app/aprovacao": "Aprovações", "/app/feed": "Meu Feed", "/app/tarefas": "Tarefas",
     "/app/criando": "Criando", "/app/metas": "Metas", "/app/arquivos": "Arquivos",
     "/app/biblioteca": "Biblioteca", "/app/brandbook": "Brandbook", "/app/linkinbio": "Link in Bio",
-    "/app/collabs": "Collabs", "/app/relatorios": "Relatórios", "/app/historico": "Histórico",
+    "/app/collabs": "Collabs", "/app/insights": "Insights", "/app/relatorios": "Relatórios", "/app/historico": "Histórico",
     "/app/aprender": "Aprender", "/app/configuracoes": "Configurações",
   };
   const isDash = location.pathname === "/app";

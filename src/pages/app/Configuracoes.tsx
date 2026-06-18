@@ -3,7 +3,8 @@ import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Trash2, Camera, Lock, AlertTriangle, Shield, Paintbrush, HardDrive, ExternalLink, Unplug, User, Users, LayoutGrid, Plug, Settings, Pencil, CreditCard } from "lucide-react";
+import { Plus, Trash2, Camera, Lock, AlertTriangle, Shield, Paintbrush, HardDrive, ExternalLink, Unplug, User, Users, LayoutGrid, Plug, Settings, Pencil, CreditCard, Instagram } from "lucide-react";
+import { useSocialConnection, connectInstagram, useDisconnectInstagram } from "@/hooks/useSocialInsights";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,6 +103,9 @@ const Configuracoes = () => {
 
   const { connection: driveConnection, connect: driveConnect, disconnect: driveDisconnect } = useGoogleDriveConnection();
   const [connectingDrive, setConnectingDrive] = useState(false);
+
+  const { data: igConnection } = useSocialConnection();
+  const igDisconnect = useDisconnectInstagram();
 
   useEffect(() => {
     if (profile) {
@@ -671,6 +675,25 @@ const Configuracoes = () => {
             {!isManaging && (
             <TabsContent value="integracoes">
               <div className="max-w-2xl space-y-6">
+                <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
+                  <h3 className="font-display font-semibold text-foreground flex items-center gap-2"><Instagram className="h-5 w-5 text-primary" /> Instagram</h3>
+                  <p className="text-sm text-muted-foreground font-body leading-relaxed">Conecte sua conta Business ou Creator pra ver seus insights (alcance, seguidores, desempenho) na página de Insights. Só leitura — o CRIA não publica por você.</p>
+                  {igConnection ? (
+                    <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-primary/5 rounded-xl border border-primary/20">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#515BD4] grid place-items-center text-white font-bold shrink-0"><Instagram className="h-5 w-5" /></div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-body font-semibold text-foreground truncate">{igConnection.username ? `@${igConnection.username}` : "Conta conectada"}</p>
+                          <p className="text-xs font-body text-muted-foreground">Conectado{igConnection.account_type ? ` · ${igConnection.account_type}` : ""}</p>
+                        </div>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => igDisconnect.mutate()} className="shrink-0"><Unplug className="h-4 w-4 mr-2" /> Desconectar</Button>
+                    </div>
+                  ) : (
+                    <Button variant="hero" onClick={connectInstagram} className="w-full sm:w-auto"><Instagram className="h-4 w-4 mr-2" /> Conectar Instagram</Button>
+                  )}
+                </div>
+
                 <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
                   <h3 className="font-display font-semibold text-foreground flex items-center gap-2"><HardDrive className="h-5 w-5 text-primary" /> Google Drive</h3>
                   <p className="text-sm text-muted-foreground font-body leading-relaxed">Conecte seu Google Drive para buscar imagens e vídeos diretamente para o moodboard e brandbook.</p>

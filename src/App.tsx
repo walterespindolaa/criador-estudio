@@ -37,6 +37,7 @@ const Aprender = lazy(() => import("./pages/app/Aprender"));
 const Brandbook = lazy(() => import("./pages/app/Brandbook"));
 const LinkInBio = lazy(() => import("./pages/app/LinkInBio"));
 const Collabs = lazy(() => import("./pages/app/Collabs"));
+const Insights = lazy(() => import("./pages/app/Insights"));
 const TrocarSenha = lazy(() => import("./pages/app/TrocarSenha"));
 const Assinar = lazy(() => import("./pages/app/Assinar"));
 const BioPage = lazy(() => import("./pages/BioPage"));
@@ -113,6 +114,7 @@ const App = () => (
                 <Route path="brandbook" element={<ErrorBoundary><Brandbook /></ErrorBoundary>} />
                 <Route path="linkinbio" element={<ErrorBoundary><LinkInBio /></ErrorBoundary>} />
                 <Route path="collabs" element={<ErrorBoundary><Collabs /></ErrorBoundary>} />
+                <Route path="insights" element={<ErrorBoundary><Insights /></ErrorBoundary>} />
                 <Route path="configuracoes" element={<ErrorBoundary><Configuracoes /></ErrorBoundary>} />
               </Route>
               <Route path="/socialmidia" element={
