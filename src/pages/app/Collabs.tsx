@@ -50,7 +50,7 @@ export default function Collabs() {
   return (
     <div>
       <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
-        <div>
+        <div className="md:hidden">
           <h1 className="text-2xl font-display font-extrabold text-foreground tracking-tight">Collabs</h1>
           <p className="text-sm text-muted-foreground font-body mt-1">Suas parcerias com marcas — do primeiro contato ao pagamento.</p>
         </div>

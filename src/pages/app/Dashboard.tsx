@@ -257,9 +257,6 @@ const Dashboard = () => {
   const pendingTasks = filteredTasks.filter(t => t.status === "pendente");
   const inProgressTasks = filteredTasks.filter(t => t.status === "em_andamento");
 
-  const weekPublished = posts.filter(p => p.status === "publicado" && p.published_at && weekDays.some(d => d.date === p.published_at?.split("T")[0]));
-  const weekGoal = profile?.weekly_goal || 3;
-
   const habitsToday = habitLogs.filter(l => l.done).length;
 
   const now = new Date();

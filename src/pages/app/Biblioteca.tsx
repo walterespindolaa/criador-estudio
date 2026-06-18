@@ -236,7 +236,7 @@ const Biblioteca = () => {
   return (
     <div className="max-w-4xl">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <div className="flex items-center gap-3 mb-8">
+        <div className="flex items-center gap-3 mb-8 md:hidden">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center shadow-sm shrink-0">
             <BookOpen className="h-5 w-5 text-white" strokeWidth={1.75} />
           </div>

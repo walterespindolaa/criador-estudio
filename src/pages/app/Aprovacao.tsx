@@ -76,7 +76,7 @@ export default function Aprovacao() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 pb-24 md:pb-6">
-      <header className="mb-6">
+      <header className="mb-6 md:hidden">
         <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Aprovações</h1>
         <p className="text-sm text-muted-foreground font-body mt-1">
           {isOwner

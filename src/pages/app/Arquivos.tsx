@@ -262,7 +262,7 @@ const Arquivos = () => {
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         {/* Header */}
         <div className="flex items-center justify-between mb-4 gap-3">
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-3 min-w-0 md:hidden">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shadow-sm shrink-0">
               <FolderOpen className="h-5 w-5 text-white" strokeWidth={1.75} />
             </div>
