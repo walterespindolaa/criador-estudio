@@ -10,7 +10,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Camera, ExternalLink, FileText, HardDrive, Loader2, Lock, Palette, Unplug, Users } from "lucide-react";
+import { Camera, ExternalLink, FileText, HardDrive, Loader2, Lock, Palette, Plug, Unplug, User, Users } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useProfile } from "@/hooks/useProfile";
 import { useGoogleDriveConnection } from "@/hooks/useGoogleDriveConnection";
@@ -153,7 +154,15 @@ export function SettingsManagerDrawer({ open, onOpenChange }: Props) {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6 mt-6">
+          <Tabs defaultValue="conta" className="mt-5">
+            <TabsList className="grid w-full grid-cols-4 rounded-xl">
+              <TabsTrigger value="conta" className="gap-1.5 text-xs"><User className="h-3.5 w-3.5" /> Conta</TabsTrigger>
+              <TabsTrigger value="tema" className="gap-1.5 text-xs"><Palette className="h-3.5 w-3.5" /> Tema</TabsTrigger>
+              <TabsTrigger value="integracoes" className="gap-1.5 text-xs"><Plug className="h-3.5 w-3.5" /> Integrações</TabsTrigger>
+              <TabsTrigger value="clientes" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" /> Clientes</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="conta" className="space-y-6 mt-5">
             {/* Foto + Nome */}
             <section className="space-y-4">
               <div className="flex items-center gap-4">
@@ -220,15 +229,6 @@ export function SettingsManagerDrawer({ open, onOpenChange }: Props) {
               </Button>
             </section>
 
-            {/* Aparência / tema */}
-            <section className="space-y-3">
-              <h3 className="font-display font-semibold text-sm text-foreground flex items-center gap-2">
-                <Palette className="h-4 w-4" /> Aparência
-              </h3>
-              <p className="text-xs text-muted-foreground font-body">Escolha o tema, a cor de destaque, a barra e a tipografia do seu espaço.</p>
-              <SettingsVisual />
-            </section>
-
             {/* Dados da empresa (contratos) */}
             <section className="space-y-2">
               <h3 className="font-display font-semibold text-sm text-foreground flex items-center gap-2">
@@ -239,7 +239,13 @@ export function SettingsManagerDrawer({ open, onOpenChange }: Props) {
                 Editar dados da empresa
               </Button>
             </section>
+            </TabsContent>
 
+            <TabsContent value="tema" className="mt-5">
+              <SettingsVisual />
+            </TabsContent>
+
+            <TabsContent value="integracoes" className="space-y-6 mt-5">
             {/* Google Drive */}
             <section className="space-y-2">
               <h3 className="font-display font-semibold text-sm text-foreground flex items-center gap-2">
@@ -266,6 +272,9 @@ export function SettingsManagerDrawer({ open, onOpenChange }: Props) {
               )}
             </section>
 
+            </TabsContent>
+
+            <TabsContent value="clientes" className="mt-5">
             {/* Total de clientes */}
             <section className="space-y-2">
               <h3 className="font-display font-semibold text-sm text-foreground flex items-center gap-2">
@@ -276,7 +285,8 @@ export function SettingsManagerDrawer({ open, onOpenChange }: Props) {
                 <p className="text-2xl font-display font-extrabold text-primary">{managedAccounts.length}</p>
               </div>
             </section>
-          </div>
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 
