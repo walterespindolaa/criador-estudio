@@ -50,6 +50,7 @@ const profileSchema = z.object({
   weekly_goal: z.number().min(1).max(7),
   platforms: z.array(z.string()),
   instagram_handle: z.string().max(100).optional().or(z.literal("")),
+  pix_key: z.string().max(140, "Máximo 140 caracteres").optional().or(z.literal("")),
   tiktok_handle: z.string().max(100).optional().or(z.literal("")),
   youtube_handle: z.string().max(100).optional().or(z.literal("")),
   avatar_url: z.string().optional().or(z.literal("")),
@@ -111,6 +112,7 @@ const Configuracoes = () => {
         weekly_goal: profile.weekly_goal || 3,
         platforms: profile.platforms || [],
         instagram_handle: profile.instagram_handle || "",
+        pix_key: (profile as { pix_key?: string | null }).pix_key || "",
         tiktok_handle: profile.tiktok_handle || "",
         youtube_handle: profile.youtube_handle || "",
         avatar_url: profile.avatar_url || "",
@@ -169,6 +171,7 @@ const Configuracoes = () => {
         weekly_goal: data.weekly_goal,
         platforms: data.platforms,
         instagram_handle: data.instagram_handle ? sanitizeText(data.instagram_handle) : null,
+        pix_key: data.pix_key ? sanitizeText(data.pix_key) : null,
         tiktok_handle: data.tiktok_handle ? sanitizeText(data.tiktok_handle) : null,
         youtube_handle: data.youtube_handle ? sanitizeText(data.youtube_handle) : null,
         avatar_url: data.avatar_url ? sanitizeUrl(data.avatar_url) : null,
@@ -520,6 +523,12 @@ const Configuracoes = () => {
                       <PlatformIcon platform="youtube" size="sm" />
                       <Input placeholder="@seuyoutube" {...register("youtube_handle")} className="rounded-xl" />
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-body text-sm">Chave Pix</Label>
+                    <Input placeholder="CPF, e-mail, telefone ou chave aleatória" {...register("pix_key")} className="rounded-xl" />
+                    <p className="text-[11px] text-muted-foreground font-body">Aparece nas suas propostas pra marca te pagar direto.</p>
+                    {errors.pix_key && <p className="text-xs text-destructive mt-1">{errors.pix_key.message}</p>}
                   </div>
                   <Button type="submit" variant="hero">Salvar perfil</Button>
                 </div>

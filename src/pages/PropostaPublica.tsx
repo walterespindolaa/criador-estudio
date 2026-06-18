@@ -17,7 +17,7 @@ type Proposal = {
   terms: string | null; valid_until: string | null;
   status: "enviada" | "vista" | "aceita" | "recusada" | "ajuste";
   client_comment: string | null; deliverables: Deliverable[];
-  creator: { name: string | null; handle: string | null; avatar: string | null; theme_accent: string | null; media_kit: string | null } | null;
+  creator: { name: string | null; handle: string | null; avatar: string | null; theme_accent: string | null; media_kit: string | null; pix_key: string | null } | null;
 };
 
 const brl = (v: number | null) =>
@@ -68,6 +68,7 @@ export default function PropostaPublica() {
   const decided = p.status === "aceita" || p.status === "recusada";
   const creatorName = p.creator?.name ?? "Criador";
   const initials = creatorName.charAt(0).toUpperCase();
+  const copyPix = () => { if (p?.creator?.pix_key) navigator.clipboard?.writeText(p.creator.pix_key).then(() => toast.success("Chave Pix copiada.")).catch(() => {}); };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#F6F4FC] to-background flex flex-col items-center px-4 py-8">
@@ -83,6 +84,23 @@ export default function PropostaPublica() {
 
         {p.status === "aceita" && (
           <div className="mx-6 mt-4 flex items-center gap-2 text-sm font-bold text-green-700 bg-green-50 border border-green-100 rounded-2xl px-4 py-3"><Check className="h-5 w-5" /> Proposta aceita. Obrigada!</div>
+        )}
+        {p.status === "aceita" && p.creator?.pix_key && (
+          <div className="mx-6 mt-3 border border-border rounded-2xl overflow-hidden">
+            <div className="flex items-center gap-2.5 bg-primary/5 border-b border-border px-4 py-2.5">
+              <span className="w-6 h-6 rounded-md bg-primary text-primary-foreground grid place-items-center text-xs font-extrabold">⚡</span>
+              <span className="text-sm font-bold">Pague via Pix</span>
+              <span className="ml-auto font-display font-extrabold">{brl(p.value)}</span>
+            </div>
+            <div className="p-4">
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Chave Pix de {p.creator?.name ?? "quem te enviou"}</p>
+              <div className="flex items-center gap-2.5 bg-background border border-border rounded-xl px-3 py-2.5">
+                <span className="text-sm font-semibold flex-1 break-all">{p.creator.pix_key}</span>
+                <button type="button" onClick={copyPix} className="text-xs font-bold text-primary-foreground bg-primary hover:opacity-90 rounded-lg px-3 py-2 flex-shrink-0">Copiar</button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2.5">Depois de pagar, avise {p.creator?.name ?? "o criador"} — ele confirma o recebimento.</p>
+            </div>
+          </div>
         )}
         {p.status === "recusada" && (
           <div className="mx-6 mt-4 text-sm font-semibold text-muted-foreground bg-muted rounded-2xl px-4 py-3">Proposta recusada.</div>

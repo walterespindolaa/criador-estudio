@@ -1,9 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Plus, Trash2, Check, Link2, Copy, RotateCcw } from "lucide-react";
+import { Plus, Trash2, Check, Link2, Copy, RotateCcw, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import {
   useCollabs, COLLAB_STATUSES, COLLAB_STATUS_LABEL, PROPOSAL_LABEL, type CollabStatus,
 } from "@/hooks/useCollabs";
+import { useProfile } from "@/hooks/useProfile";
+import { useCreateFinRecord } from "@/hooks/useFinance";
+import { useModules } from "@/hooks/useModules";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +20,11 @@ export function CollabDialog({ open, onOpenChange, collabId }: {
 }) {
   const { collabs, createCollab, updateCollab, createDeliverable, togglePublished, deleteDeliverable, generateProposal, revokeProposal } = useCollabs();
   const editing = collabId ? collabs.find((c) => c.id === collabId) ?? null : null;
+  const { profile } = useProfile();
+  const { modules } = useModules();
+  const createFin = useCreateFinRecord();
+  const hasCaixa = modules.some((m) => m.code === "financeiro" && m.status === "active");
+  const pixKey = (profile as { pix_key?: string | null } | null)?.pix_key ?? null;
 
   const [brand, setBrand] = useState("");
   const [contact, setContact] = useState("");
@@ -79,6 +87,24 @@ export function CollabDialog({ open, onOpenChange, collabId }: {
       { collabId: editing.id, brand: editing.brand, validUntil: pValid || null, terms: pTerms.trim() || null },
       { onSuccess: (token) => { navigator.clipboard?.writeText(`${window.location.origin}/proposta/${token}`).catch(() => {}); } },
     );
+  };
+
+  const markReceived = async () => {
+    if (!editing) return;
+    updateCollab.mutate({ id: editing.id, status: "pago" });
+    if (hasCaixa && (editing.value ?? 0) > 0) {
+      try {
+        await createFin.mutateAsync({
+          type: "entrada", context: "pf", category: "Collabs",
+          description: `Publi · ${editing.brand}`, amount: editing.value ?? 0,
+          status: "pago", payment_method: "Pix",
+          date: new Date().toISOString().slice(0, 10),
+        });
+        toast.success("Recebido! Lançado no Cria Caixa.");
+      } catch { /* fin record falhou, mas o status já foi marcado */ }
+    } else {
+      toast.success("Marcado como recebido.");
+    }
   };
 
   return (
@@ -169,6 +195,27 @@ export function CollabDialog({ open, onOpenChange, collabId }: {
                 </div>
               ) : (
                 <Button type="button" onClick={genProposal} disabled={generateProposal.isPending} className="rounded-xl w-full gap-2"><Link2 className="h-4 w-4" /> Gerar orçamento e copiar link</Button>
+              )}
+
+              {editing?.proposal_status === "aceita" && (
+                <div className="border-t border-border pt-3 space-y-2.5">
+                  <Label className="text-xs font-bold text-foreground flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5" /> Pagamento</Label>
+                  {pixKey ? (
+                    <div className="flex items-center gap-2 bg-muted/40 rounded-xl px-3 py-2 text-xs text-muted-foreground">
+                      <span className="flex-1 truncate">Chave Pix exibida à marca: <b className="text-foreground">{pixKey}</b></span>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">Defina sua chave Pix em Configurações → Perfil pra ela aparecer na proposta.</p>
+                  )}
+                  {editing.status === "pago" ? (
+                    <div className="flex items-center gap-2 text-sm font-semibold text-green-700 bg-green-50 border border-green-100 rounded-xl px-3 py-2.5">✓ Pagamento recebido</div>
+                  ) : (
+                    <Button type="button" onClick={markReceived} className="w-full rounded-xl gap-2 bg-green-600 hover:bg-green-700 text-white">
+                      <Wallet className="h-4 w-4" /> Marcar como recebido
+                    </Button>
+                  )}
+                  {hasCaixa && editing.status !== "pago" && <p className="text-[11px] text-muted-foreground text-center">Vai lançar uma entrada no Cria Caixa.</p>}
+                </div>
               )}
             </div>
           )}
