@@ -10,7 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Camera, ExternalLink, FileText, HardDrive, Loader2, Lock, Unplug, Users } from "lucide-react";
+import { Camera, ExternalLink, FileText, HardDrive, Loader2, Lock, Palette, Unplug, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useProfile } from "@/hooks/useProfile";
 import { useGoogleDriveConnection } from "@/hooks/useGoogleDriveConnection";
@@ -21,6 +21,7 @@ import { validateUpload } from "@/lib/upload-validation";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { sanitizeText } from "@/lib/sanitize";
 import { ManagerCompanyDialog } from "@/components/accounts/ManagerCompanyDialog";
+import { SettingsVisual } from "@/components/settings/SettingsVisual";
 
 type Props = {
   open: boolean;
@@ -144,7 +145,7 @@ export function SettingsManagerDrawer({ open, onOpenChange }: Props) {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-display">Configurações da conta</DialogTitle>
             <DialogDescription className="font-body text-sm">
@@ -217,6 +218,15 @@ export function SettingsManagerDrawer({ open, onOpenChange }: Props) {
               >
                 Trocar senha
               </Button>
+            </section>
+
+            {/* Aparência / tema */}
+            <section className="space-y-3">
+              <h3 className="font-display font-semibold text-sm text-foreground flex items-center gap-2">
+                <Palette className="h-4 w-4" /> Aparência
+              </h3>
+              <p className="text-xs text-muted-foreground font-body">Escolha o tema, a cor de destaque, a barra e a tipografia do seu espaço.</p>
+              <SettingsVisual />
             </section>
 
             {/* Dados da empresa (contratos) */}

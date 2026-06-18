@@ -53,9 +53,8 @@ const AppLayout = () => {
 
   useEffect(() => {
     if (profile?.theme_preset) {
-      // Managers nunca usam accent personalizado — fica travado no roxo da marca.
-      const accent = profile.account_type === "manager" ? '#8B5CF6' : (profile.theme_accent || '#8B5CF6');
-      applyTheme(profile.theme_preset, accent);
+      // Accent personalizado vale pra todos (inclusive managers); fallback no roxo da marca.
+      applyTheme(profile.theme_preset, profile.theme_accent || '#8B5CF6');
     }
     // Apply sidebar color override AFTER theme (so it wins)
     applySidebarColor(profile?.theme_sidebar || null);

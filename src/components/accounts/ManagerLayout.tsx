@@ -1,9 +1,9 @@
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { Navigate, Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { ContentSkeleton } from "@/components/shared/ContentSkeleton";
 import {
   Home, Boxes, Handshake, DollarSign, Users, ListChecks, ChevronUp,
-  Settings as SettingsIcon, LogOut, Send, Users2, Wallet,
+  Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -11,10 +11,11 @@ import { useActiveAccount } from "@/contexts/AccountContext";
 import { usePartner } from "@/hooks/usePartner";
 import { useModules, type ModuleWithStatus } from "@/hooks/useModules";
 import { cn } from "@/lib/utils";
-import { Logo } from "@/components/shared/Logo";
 import { ModulePopup } from "@/components/accounts/ModulePopup";
 import { SettingsManagerDrawer } from "@/components/accounts/SettingsManagerDrawer";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
+import { HeroBand } from "@/components/HeroBand";
+import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { applyTheme } from "@/lib/applyTheme";
 import { applySidebarColor } from "@/lib/sidebarTheme";
 import { applyThemeFont } from "@/components/settings/SettingsVisual";
@@ -34,6 +35,17 @@ const NAV = [
   { to: "/socialmidia/aprovacoes", label: "Acompanhamento de Aprovações", icon: ListChecks },
 ] as const;
 
+// Títulos do HeroBand por rota (gestão)
+const HERO_TITLES: Record<string, string> = {
+  "/socialmidia/criapost": "Cria Post",
+  "/socialmidia/criacrm": "Cria Gestão",
+  "/socialmidia/criacaixa": "Cria Caixa",
+  "/socialmidia/parceria": "Parceria",
+  "/socialmidia/comissoes": "Comissões",
+  "/socialmidia/contas": "Suas contas",
+  "/socialmidia/aprovacoes": "Acompanhamento de Aprovações",
+};
+
 export type ManagerOutletContext = { openModule: (m: ModuleWithStatus) => void; openSettings: () => void };
 export function useManagerOutlet() { return useOutletContext<ManagerOutletContext>(); }
 
@@ -50,11 +62,10 @@ export default function ManagerLayout() {
   const [selectedModule, setSelectedModule] = useState<ModuleWithStatus | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
 
-  // Mesmo tratamento de tema do AppLayout (managers travam no roxo da marca)
+  // Tema: managers agora escolhem o próprio accent (igual usuário normal). Sem trava de roxo.
   useEffect(() => {
     if (profile?.theme_preset) {
-      const accent = profile.account_type === "manager" ? "#8B5CF6" : (profile.theme_accent || "#8B5CF6");
-      applyTheme(profile.theme_preset, accent);
+      applyTheme(profile.theme_preset, profile.theme_accent || "#8B5CF6");
     }
     applySidebarColor(profile?.theme_sidebar || null);
     if (profile?.theme_font) applyThemeFont(profile.theme_font);
@@ -75,9 +86,33 @@ export default function ManagerLayout() {
   const handleSignOut = async () => { await signOut(); navigate("/"); };
   const onNavComissoes = () => navigate(isPartner ? "/socialmidia/comissoes" : "/socialmidia/parceria");
 
-  const navBtn = (active: boolean) =>
-    cn("w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-body text-left transition-colors",
-      active ? "bg-primary/10 text-primary font-bold" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground");
+  // Item do rail flutuante (icon-only, com tooltip e cantinho de status opcional)
+  const railNode = (
+    Icon: LucideIcon,
+    label: string,
+    opts: { active?: boolean; onClick: () => void; corner?: ReactNode; tipBadge?: ReactNode },
+  ) => (
+    <div key={label} className="group relative flex w-full justify-center">
+      <button
+        type="button"
+        onClick={opts.onClick}
+        aria-label={label}
+        className={cn(
+          "relative grid h-10 w-10 place-items-center rounded-2xl transition-colors",
+          opts.active
+            ? "bg-primary/15 text-primary"
+            : "text-[hsl(var(--sidebar-foreground))] hover:bg-primary/10 hover:text-primary",
+        )}
+      >
+        <Icon className="h-[18px] w-[18px]" />
+        {opts.active && <span className="absolute -left-2 top-1/2 h-4 w-1 -translate-y-1/2 rounded bg-primary" />}
+        {opts.corner}
+      </button>
+      <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 flex -translate-y-1/2 items-center gap-2 whitespace-nowrap rounded-lg bg-foreground px-2.5 py-1.5 text-xs font-medium text-background opacity-0 transition-opacity group-hover:opacity-100">
+        {label}{opts.tipBadge}
+      </span>
+    </div>
+  );
 
   // Guards
   if (isLoading) return <LoadingScreen />;
@@ -87,40 +122,70 @@ export default function ManagerLayout() {
 
   const ctx: ManagerOutletContext = { openModule, openSettings: () => setSettingsOpen(true) };
 
+  // HeroBand (desktop)
+  const isDash = location.pathname === "/socialmidia" || location.pathname === "/socialmidia/dashboard";
+  const hour = new Date().getHours();
+  const greet = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
+  const firstName = (profile?.name ?? "").trim().split(" ")[0] || "você";
+  const heroTitle = isDash
+    ? `${firstName} 👋`
+    : (Object.entries(HERO_TITLES).find(([k]) => location.pathname.startsWith(k))?.[1] ?? "Gestão");
+  const avatarNode = isDash ? (
+    <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full border-2 border-white/40 bg-white/20 font-display font-bold text-white shadow-sm">
+      {profile?.avatar_url
+        ? <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+        : firstName.charAt(0).toUpperCase()}
+    </div>
+  ) : null;
+
   return (
-    <div className="min-h-screen app-canvas flex" style={{ ["--active-font-display" as string]: "'Bricolage Grotesque', 'Plus Jakarta Sans', sans-serif" }}>
-      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-border bg-card/40 px-3 py-5 sticky top-0 h-screen overflow-y-auto">
-        <div className="px-2 mb-5"><Logo className="h-8 w-auto" /></div>
-        <button className={navBtn(isActive("/socialmidia/dashboard"))} onClick={() => navigate("/socialmidia/dashboard")}><Home className="h-4 w-4" /> Início</button>
-        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-3 pt-4 pb-1.5">Módulos</p>
-        {modules.map((m) => {
-          const Icon = MODICONS[m.code] ?? Boxes;
-          const active = m.status === "active" || m.status === "past_due";
-          const route = MODULE_ROUTE[m.code];
-          return (
-            <button key={m.code} className={navBtn(!!route && isActive(route))} onClick={() => openModule(m)}>
-              <Icon className="h-4 w-4" /> <span className="flex-1">{m.name}</span>
-              <span className={cn("text-[9.5px] font-bold px-2 py-0.5 rounded-full",
-                active ? "bg-green-100 text-green-700" : m.coming_soon ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary")}>
+    <div className="min-h-screen app-canvas" style={{ ["--active-font-display" as string]: "'Bricolage Grotesque', 'Plus Jakarta Sans', sans-serif" }}>
+      {/* Rail flutuante (desktop) — substitui a sidebar w-64 */}
+      <nav className="fixed left-5 top-[calc(50%+0.75rem)] z-40 hidden w-[64px] -translate-y-1/2 flex-col items-center rounded-[24px] border border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar-background))] py-2.5 shadow-[0_22px_60px_-22px_rgba(35,25,70,0.3)] backdrop-blur-xl md:flex">
+        <div className="mb-2 grid h-[38px] w-[38px] place-items-center rounded-[12px] bg-primary font-display text-[17px] font-extrabold text-primary-foreground">c</div>
+        <div className="flex w-full flex-col items-center gap-1">
+          {railNode(Home, "Início", { active: isActive("/socialmidia/dashboard"), onClick: () => navigate("/socialmidia/dashboard") })}
+          {modules.map((m) => {
+            const Icon = (MODICONS[m.code] ?? Boxes) as LucideIcon;
+            const active = m.status === "active" || m.status === "past_due";
+            const route = MODULE_ROUTE[m.code];
+            const corner = active
+              ? <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-green-500 ring-2 ring-[hsl(var(--sidebar-background))]" />
+              : <Lock className="absolute right-0.5 top-0.5 h-3 w-3 text-muted-foreground" />;
+            const tipBadge = (
+              <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-bold",
+                active ? "bg-green-500/20 text-green-300" : m.coming_soon ? "bg-white/15 text-background/80" : "bg-white/15 text-background/90")}>
                 {active ? "Ativo" : m.coming_soon ? "Em breve" : brl(m.price_cents)}
               </span>
-            </button>
-          );
-        })}
-        <div className="h-px bg-border mx-2 my-3" />
-        {NAV.map((n) => {
-          const Icon = n.icon;
-          const onClick = n.to === "/socialmidia/comissoes" ? onNavComissoes : () => navigate(n.to);
-          return <button key={n.to} className={navBtn(isActive(n.to))} onClick={onClick}><Icon className="h-4 w-4 shrink-0" /> <span className="text-left leading-tight">{n.label}</span></button>;
-        })}
+            );
+            return railNode(Icon, m.name, { active: !!route && isActive(route), onClick: () => openModule(m), corner, tipBadge });
+          })}
+          <div className="my-2 h-px w-8 bg-border" />
+          {NAV.map((n) => {
+            const onClick = n.to === "/socialmidia/comissoes" ? onNavComissoes : () => navigate(n.to);
+            return railNode(n.icon as LucideIcon, n.label, { active: isActive(n.to), onClick });
+          })}
+        </div>
         <div className="flex-1" />
-        <button className={navBtn(false)} onClick={() => setSettingsOpen(true)}><SettingsIcon className="h-4 w-4" /> Configurações</button>
-        <button className={navBtn(false)} onClick={handleSignOut}><LogOut className="h-4 w-4" /> Sair</button>
-      </aside>
+        <div className="my-2 h-px w-8 bg-border" />
+        <div className="flex w-full flex-col items-center gap-1">
+          {railNode(SettingsIcon, "Configurações", { onClick: () => setSettingsOpen(true) })}
+          {railNode(LogOut, "Sair", { onClick: handleSignOut })}
+        </div>
+      </nav>
 
-      <div className="flex-1 min-w-0 flex flex-col">
-        <main className="flex-1 px-4 sm:px-8 py-7 sm:py-10 pb-[96px] md:pb-0">
-          <div className="w-full max-w-6xl mx-auto">
+      <div className="flex min-h-screen flex-col md:pl-[104px]">
+        {/* HeroBand (desktop) — sangra full-width por trás do rail */}
+        <div className="hidden md:block md:-ml-[104px] md:w-[calc(100%+104px)]">
+          <HeroBand eyebrow={isDash ? `${greet},` : undefined} title={heroTitle} avatar={avatarNode}>
+            <div className="flex items-center gap-2 rounded-2xl bg-white/15 px-2 py-1 backdrop-blur">
+              <NotificationsBell />
+            </div>
+          </HeroBand>
+        </div>
+
+        <main className="flex-1 px-4 py-7 pb-[96px] sm:px-8 sm:py-10 md:pb-10">
+          <div className="mx-auto w-full max-w-6xl">
             <Suspense fallback={<ContentSkeleton />}>
               <Outlet context={ctx} />
             </Suspense>
