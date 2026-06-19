@@ -168,6 +168,9 @@ export function useSyncInstagram() {
 // Inicia o OAuth do Instagram: pega o App ID público via edge function e redireciona pro consentimento.
 export async function connectInstagram() {
   try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) { toast.error("Faça login novamente."); return; }
     const { data, error } = await supabase.functions.invoke("get-instagram-config");
     if (error || !(data as { client_id?: string })?.client_id) {
       toast.error("Integração ainda não configurada. Tente novamente em breve.");
@@ -175,7 +178,8 @@ export async function connectInstagram() {
     }
     const cfg = data as { client_id: string; redirect_uri: string; scope?: string };
     const scope = cfg.scope ?? "instagram_business_basic,instagram_business_manage_insights";
-    const url = `https://www.instagram.com/oauth/authorize?client_id=${encodeURIComponent(cfg.client_id)}&redirect_uri=${encodeURIComponent(cfg.redirect_uri)}&response_type=code&scope=${encodeURIComponent(scope)}`;
+    // state carrega o JWT do usuário CRIA pra o callback saber de quem é a conexão
+    const url = `https://www.instagram.com/oauth/authorize?client_id=${encodeURIComponent(cfg.client_id)}&redirect_uri=${encodeURIComponent(cfg.redirect_uri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(token)}`;
     window.location.href = url;
   } catch {
     toast.error("Integração ainda não configurada.");
