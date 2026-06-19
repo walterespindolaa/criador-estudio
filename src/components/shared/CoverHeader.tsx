@@ -13,7 +13,7 @@ export function CoverHeader({ label, title, count, from, to, ink = "#fff", sub =
       )}
       {count!=null && <span className="absolute top-3 right-4 text-[11px] font-bold bg-white/15 px-2 py-0.5 rounded-full" style={{ color: ink }}>{count}</span>}
       <div className="relative mt-3 flex items-end" style={{ ["--ch-ink" as string]: ink }}>
-        <h2 className={`font-display italic font-light leading-[0.96] tracking-tight min-w-0 truncate ${compact ? "text-2xl" : "text-[2.4rem]"}`}
+        <h2 className={`font-display italic font-light leading-[0.96] tracking-tight min-w-0 truncate pr-1 ${compact ? "text-xl" : "text-[2.4rem]"}`}
             style={{ textShadow:'0 2px 18px rgba(0,0,0,.18)', color: ink }}>{title}</h2>
       </div>
     </div>
