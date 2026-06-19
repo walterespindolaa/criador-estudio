@@ -442,6 +442,14 @@ export type Database = {
           id: string
           notes: string | null
           objective: string | null
+          proposal_client_comment: string | null
+          proposal_responded_at: string | null
+          proposal_sent_at: string | null
+          proposal_status: string
+          proposal_terms: string | null
+          proposal_token: string | null
+          proposal_valid_until: string | null
+          proposal_viewed_at: string | null
           status: string
           updated_at: string
           user_id: string
@@ -457,6 +465,14 @@ export type Database = {
           id?: string
           notes?: string | null
           objective?: string | null
+          proposal_client_comment?: string | null
+          proposal_responded_at?: string | null
+          proposal_sent_at?: string | null
+          proposal_status?: string
+          proposal_terms?: string | null
+          proposal_token?: string | null
+          proposal_valid_until?: string | null
+          proposal_viewed_at?: string | null
           status?: string
           updated_at?: string
           user_id?: string
@@ -472,6 +488,14 @@ export type Database = {
           id?: string
           notes?: string | null
           objective?: string | null
+          proposal_client_comment?: string | null
+          proposal_responded_at?: string | null
+          proposal_sent_at?: string | null
+          proposal_status?: string
+          proposal_terms?: string | null
+          proposal_token?: string | null
+          proposal_valid_until?: string | null
+          proposal_viewed_at?: string | null
           status?: string
           updated_at?: string
           user_id?: string
@@ -2305,11 +2329,13 @@ export type Database = {
           id: string
           instagram_handle: string | null
           last_seen_at: string | null
+          media_kit_url: string | null
           must_change_password: boolean
           name: string
           niche: string | null
           onboarding_completed: boolean | null
           phone: string | null
+          pix_key: string | null
           plan: string | null
           platforms: string[] | null
           role: string | null
@@ -2348,11 +2374,13 @@ export type Database = {
           id: string
           instagram_handle?: string | null
           last_seen_at?: string | null
+          media_kit_url?: string | null
           must_change_password?: boolean
           name: string
           niche?: string | null
           onboarding_completed?: boolean | null
           phone?: string | null
+          pix_key?: string | null
           plan?: string | null
           platforms?: string[] | null
           role?: string | null
@@ -2391,11 +2419,13 @@ export type Database = {
           id?: string
           instagram_handle?: string | null
           last_seen_at?: string | null
+          media_kit_url?: string | null
           must_change_password?: boolean
           name?: string
           niche?: string | null
           onboarding_completed?: boolean | null
           phone?: string | null
+          pix_key?: string | null
           plan?: string | null
           platforms?: string[] | null
           role?: string | null
@@ -2514,6 +2544,222 @@ export type Database = {
           title?: string
         }
         Relationships: []
+      }
+      social_connections: {
+        Row: {
+          access_token: string
+          account_type: string | null
+          connected_at: string | null
+          external_account_id: string
+          id: string
+          provider: string
+          scopes: string | null
+          token_expires_at: string | null
+          updated_at: string | null
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          access_token: string
+          account_type?: string | null
+          connected_at?: string | null
+          external_account_id: string
+          id?: string
+          provider?: string
+          scopes?: string | null
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          access_token?: string
+          account_type?: string | null
+          connected_at?: string | null
+          external_account_id?: string
+          id?: string
+          provider?: string
+          scopes?: string | null
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_connections_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_insights: {
+        Row: {
+          caption: string | null
+          captured_at: string | null
+          id: string
+          media_type: string | null
+          metrics: Json
+          object_id: string | null
+          object_type: string
+          permalink: string | null
+          post_id: string | null
+          posted_at: string | null
+          provider: string
+          thumbnail_url: string | null
+          user_id: string
+        }
+        Insert: {
+          caption?: string | null
+          captured_at?: string | null
+          id?: string
+          media_type?: string | null
+          metrics?: Json
+          object_id?: string | null
+          object_type: string
+          permalink?: string | null
+          post_id?: string | null
+          posted_at?: string | null
+          provider?: string
+          thumbnail_url?: string | null
+          user_id: string
+        }
+        Update: {
+          caption?: string | null
+          captured_at?: string | null
+          id?: string
+          media_type?: string | null
+          metrics?: Json
+          object_id?: string | null
+          object_type?: string
+          permalink?: string | null
+          post_id?: string | null
+          posted_at?: string | null
+          provider?: string
+          thumbnail_url?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_insights_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_insights_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_metrics_daily: {
+        Row: {
+          accounts_engaged: number | null
+          captured_at: string | null
+          date: string
+          followers: number | null
+          id: string
+          impressions: number | null
+          metrics: Json
+          profile_views: number | null
+          provider: string
+          reach: number | null
+          total_interactions: number | null
+          user_id: string
+          website_clicks: number | null
+        }
+        Insert: {
+          accounts_engaged?: number | null
+          captured_at?: string | null
+          date: string
+          followers?: number | null
+          id?: string
+          impressions?: number | null
+          metrics?: Json
+          profile_views?: number | null
+          provider?: string
+          reach?: number | null
+          total_interactions?: number | null
+          user_id: string
+          website_clicks?: number | null
+        }
+        Update: {
+          accounts_engaged?: number | null
+          captured_at?: string | null
+          date?: string
+          followers?: number | null
+          id?: string
+          impressions?: number | null
+          metrics?: Json
+          profile_views?: number | null
+          provider?: string
+          reach?: number | null
+          total_interactions?: number | null
+          user_id?: string
+          website_clicks?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_metrics_daily_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      status_covers: {
+        Row: {
+          cover_from: string | null
+          cover_to: string | null
+          cover_type: string
+          created_at: string | null
+          id: string
+          image_url: string | null
+          label: string | null
+          status_key: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          cover_from?: string | null
+          cover_to?: string | null
+          cover_type?: string
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          label?: string | null
+          status_key: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          cover_from?: string | null
+          cover_to?: string | null
+          cover_type?: string
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          label?: string | null
+          status_key?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "status_covers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       structured_goals: {
         Row: {
@@ -2903,6 +3149,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_proposal_by_token: { Args: { _token: string }; Returns: undefined }
       admin_list_referrals: {
         Args: never
         Returns: {
@@ -3018,6 +3265,7 @@ export type Database = {
           unlocked_at: string
         }[]
       }
+      get_proposal_by_token: { Args: { _token: string }; Returns: Json }
       get_public_bio_links_by_slug: {
         Args: { _slug: string }
         Returns: {
@@ -3131,6 +3379,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      reject_proposal_by_token: { Args: { _token: string }; Returns: undefined }
       request_adjustment_by_token: {
         Args: { _comment: string; _post_id: string; _token: string }
         Returns: undefined
@@ -3138,6 +3387,10 @@ export type Database = {
       request_post_adjustment: {
         Args: { _comment: string; _post_id: string }
         Returns: boolean
+      }
+      request_proposal_change_by_token: {
+        Args: { _comment: string; _token: string }
+        Returns: undefined
       }
       request_stage_adjustment_by_token: {
         Args: {
