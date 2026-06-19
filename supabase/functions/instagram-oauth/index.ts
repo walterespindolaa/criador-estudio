@@ -19,8 +19,8 @@ Deno.serve(async (req) => {
     if (err) return redirect('error', err);
     if (!code || !state) return redirect('error', 'missing_code');
 
-    const appId = Deno.env.get('INSTAGRAM_APP_ID')!;
-    const appSecret = Deno.env.get('INSTAGRAM_APP_SECRET')!;
+    const appId = Deno.env.get('INSTAGRAM_APP_ID')!.trim();
+    const appSecret = Deno.env.get('INSTAGRAM_APP_SECRET')!.trim();
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const redirectUri = `${supabaseUrl}/functions/v1/instagram-oauth`;

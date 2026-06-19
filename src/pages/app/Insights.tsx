@@ -32,15 +32,18 @@ export default function Insights() {
   const [linkFor, setLinkFor] = useState<MediaInsight | null>(null);
 
   const kpis = useMemo(() => {
-    if (daily.length === 0) return null;
     const last = daily[daily.length - 1];
     const first = daily[0];
-    const sum = (k: keyof typeof last) => daily.reduce((a, d) => a + (Number(d[k]) || 0), 0);
+    // Alcance e interações somados dos posts (dado confiável da API por mídia)
+    const reach = media.reduce((a, mi) => a + m(mi, "reach"), 0);
+    const interactions = media.reduce((a, mi) => a + m(mi, "likes") + m(mi, "comments") + m(mi, "saved") + m(mi, "shares"), 0);
+    if (!last && media.length === 0) return null;
     return {
-      followers: last.followers, followersDelta: (last.followers ?? 0) - (first.followers ?? 0),
-      reach: sum("reach"), interactions: sum("total_interactions"), profileViews: sum("profile_views"),
+      followers: last?.followers ?? null,
+      followersDelta: (last?.followers ?? 0) - (first?.followers ?? 0),
+      reach, interactions, profileViews: last?.profile_views ?? null,
     };
-  }, [daily]);
+  }, [daily, media]);
 
   if (isLoading) return <div className="p-8 text-sm text-muted-foreground">Carregando…</div>;
 

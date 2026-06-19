@@ -58,14 +58,17 @@ Deno.serve(async (req) => {
     for (const it of items) {
       const id = String(it.id);
       const type = String(it.media_type ?? '');
-      const base = type === 'VIDEO' || type === 'REELS'
-        ? 'reach,saved,shares,total_interactions,plays'
-        : 'reach,saved,shares,total_interactions';
-      const ins = await getJson(`${GRAPH}/${id}/insights?metric=${base}&access_token=${token}`);
+      // alcance numa chamada isolada (quase sempre disponível) — não quebra com métrica inválida
+      const reachIns = await getJson(`${GRAPH}/${id}/insights?metric=reach&access_token=${token}`);
+      // extras best-effort: se alguma métrica não valer pro tipo, ignora sem derrubar o resto
+      const extra = type === 'VIDEO' || type === 'REELS'
+        ? 'saved,shares,total_interactions,plays'
+        : 'saved,shares,total_interactions';
+      const extraIns = await getJson(`${GRAPH}/${id}/insights?metric=${extra}&access_token=${token}`);
       const metrics: Record<string, number> = {
         likes: Number(it.like_count ?? 0), comments: Number(it.comments_count ?? 0),
       };
-      for (const row of (ins.data ?? []) as Array<{ name: string; values?: Array<{ value: number }> }>) {
+      for (const row of ([...(reachIns.data ?? []), ...(extraIns.data ?? [])]) as Array<{ name: string; values?: Array<{ value: number }> }>) {
         metrics[row.name] = Number(row.values?.[0]?.value ?? 0);
       }
       const { error: upErr } = await admin.from('social_insights').upsert({

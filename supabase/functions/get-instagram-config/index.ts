@@ -7,7 +7,7 @@ const corsHeaders = {
 Deno.serve((req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
-  const clientId = Deno.env.get('INSTAGRAM_APP_ID');
+  const clientId = Deno.env.get('INSTAGRAM_APP_ID')?.trim();
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   if (!clientId || !supabaseUrl) {
     return new Response(JSON.stringify({ error: 'INSTAGRAM_APP_ID não configurado' }), {
