@@ -21,6 +21,9 @@ const fmt = (n: number | null | undefined) =>
   n == null ? "—" : n >= 1000 ? `${(n / 1000).toFixed(1).replace(".0", "")}k` : String(n);
 const m = (mi: MediaInsight, k: string) => Number(mi.metrics?.[k] ?? 0);
 const MEDIA_ICON = (t: string | null) => (t === "VIDEO" || t === "REELS" ? Play : t === "CAROUSEL_ALBUM" ? Images : ImageIcon);
+const MEDIA_LABEL: Record<string, string> = { IMAGE: "Imagem", VIDEO: "Vídeo", REELS: "Reels", CAROUSEL_ALBUM: "Carrossel" };
+const fmtType = (t: string | null) => (t ? MEDIA_LABEL[t] ?? t : "—");
+const isVideo = (t: string | null) => t === "VIDEO" || t === "REELS";
 
 export default function Insights() {
   const { data: conn, isLoading } = useSocialConnection();
@@ -80,8 +83,8 @@ export default function Insights() {
 
   // ---- Conectado ----
   const lastSync = conn.updated_at ? new Date(conn.updated_at).toLocaleString("pt-BR") : "—";
-  const followerSeries = daily.map((d) => ({ date: d.date.slice(5), v: d.followers ?? 0 }));
-  const reachSeries = daily.map((d) => ({ date: d.date.slice(5), v: d.reach ?? 0 }));
+  const followerSeries = daily.filter((d) => d.followers != null).map((d) => ({ date: d.date.slice(5), v: d.followers ?? 0 }));
+  const reachSeries = daily.filter((d) => d.reach != null).map((d) => ({ date: d.date.slice(5), v: d.reach ?? 0 }));
 
   // Drivers (proxies honestos a partir do que a API entrega)
   const byReach = [...media].sort((a, b) => m(b, "reach") - m(a, "reach"));
@@ -137,35 +140,39 @@ export default function Insights() {
       </div>
 
       {/* gráficos */}
-      {daily.length > 1 ? (
+      {(reachSeries.length > 1 || followerSeries.length > 1) ? (
         <div className="grid md:grid-cols-2 gap-3 mt-3">
           <div className="bg-card border border-border rounded-2xl p-4">
-            <h4 className="text-sm font-bold">Seguidores · 30 dias</h4>
-            <div className="h-[140px] mt-3">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={followerSeries}>
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="v" stroke="#8B5CF6" strokeWidth={2.5} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+            <h4 className="text-sm font-bold">Alcance · 30 dias</h4>
+            {reachSeries.length > 1 ? (
+              <div className="h-[140px] mt-3">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={reachSeries}>
+                    <XAxis dataKey="date" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
+                    <Tooltip />
+                    <Bar dataKey="v" fill="#C4B5F5" radius={[3, 3, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : <p className="text-xs text-muted-foreground mt-3">Sem série de alcance ainda.</p>}
           </div>
           <div className="bg-card border border-border rounded-2xl p-4">
-            <h4 className="text-sm font-bold">Alcance · 30 dias</h4>
-            <div className="h-[140px] mt-3">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={reachSeries}>
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
-                  <Tooltip />
-                  <Bar dataKey="v" fill="#C4B5F5" radius={[3, 3, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <h4 className="text-sm font-bold">Seguidores · 30 dias</h4>
+            {followerSeries.length > 1 ? (
+              <div className="h-[140px] mt-3">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={followerSeries}>
+                    <XAxis dataKey="date" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="v" stroke="#8B5CF6" strokeWidth={2.5} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ) : <p className="text-xs text-muted-foreground mt-3">Preenche conforme acompanhamos sua conta dia a dia (o Instagram não devolve histórico de total de seguidores).</p>}
           </div>
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground mt-4">Os gráficos aparecem conforme acumulamos métricas diárias da sua conta.</p>
+        <p className="text-xs text-muted-foreground mt-4">Os gráficos aparecem conforme acumulamos métricas diárias. O de alcance preenche assim que o Instagram devolver o histórico.</p>
       )}
 
       {/* drivers */}
@@ -177,7 +184,7 @@ export default function Insights() {
           <div className="grid sm:grid-cols-3 gap-3">
             <Driver icon={Eye} t="Mais alcance" big={byReach[0]?.caption?.slice(0, 40) ?? "—"} s={`${fmt(m(byReach[0], "reach"))} de alcance`} />
             <Driver icon={Bookmark} t="Mais salvos" big={bySaves[0]?.caption?.slice(0, 40) ?? "—"} s={`${fmt(m(bySaves[0], "saved") + m(bySaves[0], "saves"))} salvos`} />
-            <Driver icon={BarChart3} t="Melhor formato" big={bestFormat?.t ?? "—"} s={`média de ${fmt(Math.round(bestFormat?.avg ?? 0))} de alcance`} />
+            <Driver icon={BarChart3} t="Melhor formato" big={fmtType(bestFormat?.t ?? null)} s={`média de ${fmt(Math.round(bestFormat?.avg ?? 0))} de alcance`} />
           </div>
         </>
       )}
@@ -201,6 +208,9 @@ export default function Insights() {
                     <span className="flex items-center gap-1"><Eye className="h-3 w-3" /> {fmt(m(mi, "reach"))}</span>
                     <span className="flex items-center gap-1"><Heart className="h-3 w-3" /> {fmt(m(mi, "likes"))}</span>
                     <span className="flex items-center gap-1"><Bookmark className="h-3 w-3" /> {fmt(m(mi, "saved") + m(mi, "saves"))}</span>
+                    {isVideo(mi.media_type) && (m(mi, "views") + m(mi, "plays")) > 0 && (
+                      <span className="flex items-center gap-1"><Play className="h-3 w-3" /> {fmt(m(mi, "views") + m(mi, "plays"))}</span>
+                    )}
                   </div>
                   <div className="mt-2">
                     {mi.post_id && mi.posts ? (
