@@ -31,3 +31,9 @@ project_id = "exuxlwdnkgmhtnwoyvwo"
     verify_jwt = true
   [functions.criapost-media-cleanup]
     verify_jwt = false
+  [functions.get-instagram-config]
+    verify_jwt = false
+  [functions.instagram-oauth]
+    verify_jwt = false
+  [functions.instagram-sync]
+    verify_jwt = true
