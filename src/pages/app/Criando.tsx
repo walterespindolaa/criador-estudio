@@ -6,7 +6,7 @@ import { CoverHeader } from "@/components/shared/CoverHeader";
 import { useStatusCovers } from "@/hooks/useStatusCovers";
 import { FormatPicker } from "@/components/kanban/FormatPicker";
 import { statusRamp } from "@/lib/statusRamp";
-import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, X, Kanban, Pencil, Table, Search } from "lucide-react";
+import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, X, Kanban, Pencil, Table, Search, SlidersHorizontal } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -150,6 +150,7 @@ const Criando = () => {
   const [filterWeek, setFilterWeek] = useState<number | null>(null);
   const [filterFormat, setFilterFormat] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const handlePeriodChange = (p: PeriodKey) => {
     setPeriod(p);
@@ -234,6 +235,13 @@ const Criando = () => {
   };
 
   const hasActiveFilters = filterPlatform || filterPillar || filterWeek != null || period !== "tudo" || filterFormat || search.trim();
+  const activeFilterCount = (period !== "tudo" ? 1 : 0) + (filterPlatform ? 1 : 0) + (filterPillar ? 1 : 0) + (filterWeek != null ? 1 : 0) + (filterFormat ? 1 : 0);
+  const sheetChip = (on: boolean) => `px-3 py-1.5 rounded-full text-xs font-body border transition-colors inline-flex items-center ${on ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-foreground"}`;
+  const activeChip = (key: string, label: string, onClear: () => void) => (
+    <button key={key} type="button" onClick={onClear} className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary/10 text-primary">
+      {label} <X className="h-3 w-3" />
+    </button>
+  );
 
   if (postsLoading && posts.length === 0) {
     return (
@@ -259,7 +267,106 @@ const Criando = () => {
           <Button variant="hero" size="sm" onClick={openNew} className="shrink-0"><Plus className="h-4 w-4 mr-1" /> Novo Post</Button>
         </div>
 
-        <div className="overflow-x-auto scrollbar-none -mx-4 px-4 mb-4">
+        {/* Filtros — mobile: busca + botão Filtros + chips ativos (gaveta) */}
+        <div className="md:hidden mb-3">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar título..."
+                className="h-9 w-full rounded-xl text-xs font-body bg-card pl-8" />
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={() => setFiltersOpen(true)} className="rounded-xl gap-1.5 shrink-0">
+              <SlidersHorizontal className="h-4 w-4" /> Filtros
+              {activeFilterCount > 0 && <span className="ml-0.5 text-[10px] font-bold bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">{activeFilterCount}</span>}
+            </Button>
+          </div>
+          {activeFilterCount > 0 && (
+            <div className="flex items-center gap-1.5 mt-2 overflow-x-auto scrollbar-none">
+              {period !== "tudo" && activeChip("p", PERIOD_OPTIONS.find(o => o.key === period)?.label ?? "Período", () => handlePeriodChange("tudo"))}
+              {filterPlatform && activeChip("pl", filterPlatform === "instagram" ? "Instagram" : filterPlatform === "tiktok" ? "TikTok" : "YouTube", () => setFilterPlatform(null))}
+              {filterPillar && activeChip("pi", pillars.find(p => p.id === filterPillar)?.name ?? "Pilar", () => setFilterPillar(null))}
+              {filterWeek != null && activeChip("w", `Semana ${filterWeek}`, () => setFilterWeek(null))}
+              {filterFormat && activeChip("f", FORMAT_LABELS[filterFormat] ?? filterFormat, () => setFilterFormat(null))}
+            </div>
+          )}
+        </div>
+
+        <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+          <SheetContent side="bottom" className="rounded-t-2xl max-h-[85vh] overflow-y-auto">
+            <SheetHeader><SheetTitle className="font-display text-left">Filtros</SheetTitle></SheetHeader>
+            <div className="space-y-5 mt-4 pb-2">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Período</p>
+                <div className="flex flex-wrap gap-2">
+                  {PERIOD_OPTIONS.map(opt => (
+                    <button key={opt.key} type="button" onClick={() => handlePeriodChange(opt.key)} className={sheetChip(period === opt.key)}>{opt.label}</button>
+                  ))}
+                </div>
+                {period === "personalizado" && (
+                  <div className="flex items-center gap-2 mt-3">
+                    <Input type="date" value={customRange?.from?.toISOString().split("T")[0] || ""}
+                      onChange={e => setCustomRange(prev => ({ from: new Date(e.target.value), to: prev?.to || new Date() }))}
+                      className="rounded-xl text-xs h-9 flex-1" />
+                    <span className="text-muted-foreground text-xs">até</span>
+                    <Input type="date" value={customRange?.to?.toISOString().split("T")[0] || ""}
+                      onChange={e => setCustomRange(prev => ({ from: prev?.from || new Date(), to: new Date(e.target.value) }))}
+                      className="rounded-xl text-xs h-9 flex-1" />
+                  </div>
+                )}
+              </div>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Rede</p>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => setFilterPlatform(null)} className={sheetChip(!filterPlatform)}>Todas</button>
+                  {(["instagram", "tiktok", "youtube"] as const).map(p => (
+                    <button key={p} type="button" onClick={() => setFilterPlatform(filterPlatform === p ? null : p)} className={sheetChip(filterPlatform === p)}>
+                      <PlatformIcon platform={p} size="sm" /> <span className="ml-1.5">{p === "instagram" ? "Instagram" : p === "tiktok" ? "TikTok" : "YouTube"}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {pillars.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Pilar</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => setFilterPillar(null)} className={sheetChip(!filterPillar)}>Todos</button>
+                    {pillars.map(p => (
+                      <button key={p.id} type="button" onClick={() => setFilterPillar(filterPillar === p.id ? null : p.id)} className={sheetChip(filterPillar === p.id)}>
+                        <span className="w-2 h-2 rounded-full inline-block mr-1.5" style={{ backgroundColor: p.color }} />{p.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {posts.some(p => p.week_number != null) && (
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Semana</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => setFilterWeek(null)} className={sheetChip(filterWeek == null)}>Todas</button>
+                    {Array.from(new Set(posts.map(p => p.week_number).filter((n): n is number => n != null))).sort((a, b) => a - b).map(n => (
+                      <button key={n} type="button" onClick={() => setFilterWeek(filterWeek === n ? null : n)} className={sheetChip(filterWeek === n)}>Semana {n}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Formato</p>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => setFilterFormat(null)} className={sheetChip(!filterFormat)}>Todos</button>
+                  {FORMATS.map(f => (
+                    <button key={f} type="button" onClick={() => setFilterFormat(filterFormat === f ? null : f)} className={sheetChip(filterFormat === f)}>{FORMAT_LABELS[f] || f}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button variant="outline" className="flex-1 rounded-xl" onClick={() => { setFilterPlatform(null); setFilterPillar(null); setFilterWeek(null); setFilterFormat(null); handlePeriodChange("tudo"); }}>Limpar</Button>
+                <Button className="flex-1 rounded-xl" onClick={() => setFiltersOpen(false)}>Aplicar</Button>
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
+
+        <div className="hidden md:block overflow-x-auto scrollbar-none -mx-4 px-4 mb-4">
           <div className="flex items-center gap-3 min-w-max">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
@@ -359,7 +466,7 @@ const Criando = () => {
         </div>
 
         {period === "personalizado" && (
-          <div className="flex items-center gap-2 mb-4">
+          <div className="hidden md:flex items-center gap-2 mb-4">
             <Input type="date" value={customRange?.from?.toISOString().split("T")[0] || ""}
               onChange={e => setCustomRange(prev => ({ from: new Date(e.target.value), to: prev?.to || new Date() }))}
               className="rounded-xl text-xs h-8 w-36" />
