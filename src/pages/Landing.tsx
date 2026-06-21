@@ -32,10 +32,13 @@ import {
 } from "@/components/ui/accordion";
 import { Logo } from "@/components/shared/Logo";
 import { PLANS } from "@/lib/plans";
+import { useT } from "@/lib/i18n";
 
 // --- Components ---
 
-const MockupVisual = () => (
+const MockupVisual = () => {
+  const t = useT();
+  return (
   <div className="bg-[#0f172a] rounded-[24px] p-6 shadow-2xl border border-slate-800/60 transform rotate-1 sm:rotate-2 hover:rotate-0 transition-transform duration-500 relative">
     <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 to-transparent rounded-[24px] pointer-events-none" />
     <div className="flex gap-2 mb-6 relative z-10">
@@ -55,7 +58,7 @@ const MockupVisual = () => (
           </div>
         </div>
         <span className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-sky-500/10 text-sky-400 border border-sky-500/20">
-          Ideia
+          {t("landing.stIdea")}
         </span>
       </div>
       <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700/50 flex items-center justify-between backdrop-blur-sm shadow-sm">
@@ -69,7 +72,7 @@ const MockupVisual = () => (
           </div>
         </div>
         <span className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-red-500/10 text-red-400 border border-red-500/20">
-          Gravando
+          {t("landing.stRecording")}
         </span>
       </div>
       <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700/50 flex items-center justify-between backdrop-blur-sm shadow-sm">
@@ -83,88 +86,60 @@ const MockupVisual = () => (
           </div>
         </div>
         <span className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-teal-500/10 text-teal-400 border border-teal-500/20">
-          Publicado
+          {t("landing.stPublished")}
         </span>
       </div>
     </div>
   </div>
-);
+  );
+};
 
 const bentoList = [
-  { icon: Kanban, title: "Pipeline Kanban", desc: "Do rascunho ao publicado em colunas visuais: Ideia → Roteiro → Gravando → Editando → Agendado → Publicado.", gradient: "from-primary to-purple-600", span: "col", feature: true },
-  { icon: Lightbulb, title: "Banco de Ideias", desc: "Capture no celular, organize por pilar e formato. Nunca perca uma ideia.", gradient: "from-amber-500 to-yellow-400" },
-  { icon: Link2, title: "Link in Bio", desc: "Sua mini landing page profissional, inclusa no plano.", gradient: "from-rose-500 to-pink-500" },
-  { icon: Sparkles, title: "cria — sua IA", desc: "Gera legendas, hashtags, ideias e roteiros no seu tom de voz, de 150 a 500 vezes por mês.", gradient: "from-violet-600 to-fuchsia-600", span: "col", feature: true },
-  { icon: CalendarDays, title: "Calendário + Metas", desc: "Planeje no calendário, arraste pra reagendar, defina metas mensais e acompanhe sua consistência.", gradient: "from-teal-500 to-emerald-500" },
-  { icon: BarChart3, title: "Relatórios e Analytics", desc: "Alcance e engajamento reais das suas redes, num painel claro.", gradient: "from-orange-500 to-red-500" },
-  { icon: BookMarked, title: "Brandbook + Biblioteca", desc: "Identidade visual, tom de voz, hooks e prompts favoritos.", gradient: "from-amber-600 to-orange-500" },
+  { icon: Kanban, tk: "landing.bPipelineT", dk: "landing.bPipelineD", gradient: "from-primary to-purple-600", span: "col", feature: true },
+  { icon: Lightbulb, tk: "landing.bIdeasT", dk: "landing.bIdeasD", gradient: "from-amber-500 to-yellow-400" },
+  { icon: Link2, tk: "landing.bLinkT", dk: "landing.bLinkD", gradient: "from-rose-500 to-pink-500" },
+  { icon: Sparkles, tk: "landing.bAiT", dk: "landing.bAiD", gradient: "from-violet-600 to-fuchsia-600", span: "col", feature: true },
+  { icon: CalendarDays, tk: "landing.bCalT", dk: "landing.bCalD", gradient: "from-teal-500 to-emerald-500" },
+  { icon: BarChart3, tk: "landing.bReportsT", dk: "landing.bReportsD", gradient: "from-orange-500 to-red-500" },
+  { icon: BookMarked, tk: "landing.bBrandT", dk: "landing.bBrandD", gradient: "from-amber-600 to-orange-500" },
 ];
 
 const marqueeItems = [
-  { icon: Instagram, label: "Instagram" },
-  { icon: Music2, label: "TikTok" },
-  { icon: Youtube, label: "YouTube" },
-  { icon: Lightbulb, label: "Banco de Ideias" },
-  { icon: Kanban, label: "Pipeline Kanban" },
-  { icon: CalendarDays, label: "Calendário" },
-  { icon: Sparkles, label: "IA cria" },
-  { icon: Link2, label: "Link in Bio" },
-  { icon: BarChart3, label: "Analytics" },
-  { icon: BookMarked, label: "Brandbook" },
+  { icon: Instagram, lk: "Instagram" },
+  { icon: Music2, lk: "TikTok" },
+  { icon: Youtube, lk: "YouTube" },
+  { icon: Lightbulb, lk: "landing.ideaBank" },
+  { icon: Kanban, lk: "landing.pipeline" },
+  { icon: CalendarDays, lk: "landing.calendar" },
+  { icon: Sparkles, lk: "landing.aiCria" },
+  { icon: Link2, lk: "landing.linkBio" },
+  { icon: BarChart3, lk: "landing.analytics" },
+  { icon: BookMarked, lk: "landing.brandbook" },
 ];
 
 const aiList = [
-  { emoji: "✍️", title: "Gera legendas completas", desc: "— no estilo e tom da sua marca" },
-  { emoji: "#️⃣", title: "Sugere hashtags", desc: "— por relevância e nicho" },
-  { emoji: "💡", title: "Dá ideias de conteúdo", desc: "— baseado nos seus pilares" },
-  { emoji: "📊", title: "Analisa seus resultados", desc: "— e sugere o que fazer diferente" },
+  { emoji: "✍️", tk: "landing.aiCapT", dk: "landing.aiCapD" },
+  { emoji: "#️⃣", tk: "landing.aiHashT", dk: "landing.aiHashD" },
+  { emoji: "💡", tk: "landing.aiIdeaT", dk: "landing.aiIdeaD" },
+  { emoji: "📊", tk: "landing.aiAnalT", dk: "landing.aiAnalD" },
 ];
 
 const testimonialsList = [
-  {
-    name: "Ana Vitória",
-    handle: "@anavitoria.lifestyle",
-    quote: "Finalmente parei de improvisar. O cria virou meu cérebro fora do cérebro.",
-    gradient: "from-pink-500 to-rose-500",
-    initial: "A"
-  },
-  {
-    name: "Pedro Sales",
-    handle: "@pedro.cria",
-    quote: "Triplicou minha consistência. Em 3 meses fiz mais conteúdo do que no ano inteiro anterior.",
-    gradient: "from-blue-500 to-cyan-500",
-    initial: "P"
-  },
-  {
-    name: "Carla Mendonça",
-    handle: "@carlamendonca",
-    quote: "A cria me dá ideias quando trava. É como ter uma sócia criativa disponível 24h.",
-    gradient: "from-violet-500 to-purple-500",
-    initial: "C"
-  }
+  { name: "Ana Vitória", handle: "@anavitoria.lifestyle", qk: "landing.testQ1", gradient: "from-pink-500 to-rose-500", initial: "A" },
+  { name: "Pedro Sales", handle: "@pedro.cria", qk: "landing.testQ2", gradient: "from-blue-500 to-cyan-500", initial: "P" },
+  { name: "Carla Mendonça", handle: "@carlamendonca", qk: "landing.testQ3", gradient: "from-violet-500 to-purple-500", initial: "C" },
 ];
 
 const faqs = [
-  {
-    q: "Preciso saber mexer com tecnologia?",
-    a: "Não. O cria foi feito para criadores, não para especialistas em marketing. A interface é guiada e intuitiva do zero."
-  },
-  {
-    q: "Funciona com qual plataforma?",
-    a: "Instagram, TikTok e YouTube. Você conecta suas contas e o sistema publica, coleta métricas e gera insights automaticamente."
-  },
-  {
-    q: "A IA é genérica ou personalizada?",
-    a: "Personalizada. Ela aprende seu nicho, tom de voz e pilares de conteúdo para gerar sugestões que parecem escritas por você."
-  },
-  {
-    q: "Posso cancelar quando quiser?",
-    a: "Sim. Sem fidelidade, sem multa. Se não gostar, cancela com um clique."
-  }
+  { qk: "landing.faqQ1", ak: "landing.faqA1" },
+  { qk: "landing.faqQ2", ak: "landing.faqA2" },
+  { qk: "landing.faqQ3", ak: "landing.faqA3" },
+  { qk: "landing.faqQ4", ak: "landing.faqA4" },
 ];
 
 export default function Landing() {
   const navigate = useNavigate();
+  const t = useT();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -205,18 +180,18 @@ export default function Landing() {
           </div>
 
           <nav className="hidden md:flex items-center gap-8 font-medium text-sm text-muted-foreground">
-            <button onClick={() => scrollTo("features")} className="hover:text-foreground transition-colors">Funcionalidades</button>
-            <button onClick={() => scrollTo("how-it-works")} className="hover:text-foreground transition-colors">Como funciona</button>
-            <button onClick={() => scrollTo("modulos")} className="hover:text-foreground transition-colors">Para quem gerencia</button>
-            <button onClick={() => scrollTo("pricing")} className="hover:text-foreground transition-colors">Preço</button>
+            <button onClick={() => scrollTo("features")} className="hover:text-foreground transition-colors">{t("landing.navFeatures")}</button>
+            <button onClick={() => scrollTo("how-it-works")} className="hover:text-foreground transition-colors">{t("landing.navHow")}</button>
+            <button onClick={() => scrollTo("modulos")} className="hover:text-foreground transition-colors">{t("landing.navManagers")}</button>
+            <button onClick={() => scrollTo("pricing")} className="hover:text-foreground transition-colors">{t("landing.navPricing")}</button>
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
             <Button variant="ghost" className="font-semibold px-3 sm:px-4" onClick={() => navigate("/login")}>
-              Entrar
+              {t("landing.login")}
             </Button>
             <Button variant="hero" className="hidden sm:flex font-semibold shadow-md" onClick={() => navigate("/signup")}>
-              Começar grátis &rarr;
+              {t("landing.startFree")} &rarr;
             </Button>
             <button
               type="button"
@@ -241,10 +216,10 @@ export default function Landing() {
             >
               <div className="px-4 py-3 flex flex-col">
                 {[
-                  { id: "features", label: "Funcionalidades" },
-                  { id: "how-it-works", label: "Como funciona" },
-                  { id: "modulos", label: "Para quem gerencia" },
-                  { id: "pricing", label: "Preço" },
+                  { id: "features", label: t("landing.navFeatures") },
+                  { id: "how-it-works", label: t("landing.navHow") },
+                  { id: "modulos", label: t("landing.navManagers") },
+                  { id: "pricing", label: t("landing.navPricing") },
                 ].map((item) => (
                   <button
                     key={item.id}
@@ -256,7 +231,7 @@ export default function Landing() {
                 ))}
                 <div className="h-px bg-border my-2" />
                 <Button variant="hero" className="w-full font-semibold h-12" onClick={() => { setMenuOpen(false); navigate("/signup"); }}>
-                  Começar grátis &rarr;
+                  {t("landing.startFree")} &rarr;
                 </Button>
               </div>
             </motion.nav>
@@ -331,7 +306,7 @@ export default function Landing() {
               {[...marqueeItems, ...marqueeItems].map((m, i) => (
                 <div key={i} className="flex items-center gap-2 rounded-full border border-border bg-background px-5 py-2.5 shadow-warm-sm whitespace-nowrap">
                   <m.icon className="w-4 h-4 text-primary" />
-                  <span className="font-display font-semibold text-sm text-foreground">{m.label}</span>
+                  <span className="font-display font-semibold text-sm text-foreground">{t(m.lk)}</span>
                 </div>
               ))}
             </motion.div>
@@ -358,7 +333,7 @@ export default function Landing() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:auto-rows-[200px]">
               {bentoList.map((b, i) => (
                 <motion.div
-                  key={b.title}
+                  key={b.tk}
                   {...fadeUp}
                   transition={{ duration: 0.5, delay: i * 0.05 }}
                   className={cn(
@@ -372,8 +347,8 @@ export default function Landing() {
                   <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center mb-3", b.feature ? "bg-white/20" : cn("bg-gradient-to-br", b.gradient))}>
                     <b.icon className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className={cn("text-xl font-display font-bold mb-2", b.feature ? "text-white" : "text-foreground")}>{b.title}</h3>
-                  <p className={cn("text-sm leading-relaxed", b.feature ? "text-white/85" : "text-muted-foreground")}>{b.desc}</p>
+                  <h3 className={cn("text-xl font-display font-bold mb-2", b.feature ? "text-white" : "text-foreground")}>{t(b.tk)}</h3>
+                  <p className={cn("text-sm leading-relaxed", b.feature ? "text-white/85" : "text-muted-foreground")}>{t(b.dk)}</p>
                 </motion.div>
               ))}
             </div>
@@ -481,8 +456,8 @@ export default function Landing() {
                 {aiList.map((ai, i) => (
                   <div key={i} className="bg-card border border-border rounded-2xl p-6 shadow-warm-sm">
                     <div className="text-2xl mb-3">{ai.emoji}</div>
-                    <h4 className="font-display font-bold text-foreground mb-1">{ai.title}</h4>
-                    <p className="text-sm text-muted-foreground">{ai.desc}</p>
+                    <h4 className="font-display font-bold text-foreground mb-1">{t(ai.tk)}</h4>
+                    <p className="text-sm text-muted-foreground">{t(ai.dk)}</p>
                   </div>
                 ))}
               </motion.div>
@@ -559,8 +534,8 @@ export default function Landing() {
             </motion.div>
             
             <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
-              {testimonialsList.map((t, i) => (
-                <motion.div 
+              {testimonialsList.map((tm, i) => (
+                <motion.div
                   key={i}
                   initial={{ opacity: 0, y: 16 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -569,16 +544,16 @@ export default function Landing() {
                   className="bg-card border border-border rounded-2xl p-8 shadow-warm-sm flex flex-col h-full"
                 >
                   <div className="flex items-center gap-4 mb-6">
-                    <div className={cn("w-12 h-12 rounded-full flex items-center justify-center text-white font-display font-bold text-lg bg-gradient-to-br shadow-inner", t.gradient)}>
-                      {t.initial}
+                    <div className={cn("w-12 h-12 rounded-full flex items-center justify-center text-white font-display font-bold text-lg bg-gradient-to-br shadow-inner", tm.gradient)}>
+                      {tm.initial}
                     </div>
                     <div>
-                      <h4 className="font-display font-bold text-foreground">{t.name}</h4>
-                      <p className="text-sm text-muted-foreground">{t.handle}</p>
+                      <h4 className="font-display font-bold text-foreground">{tm.name}</h4>
+                      <p className="text-sm text-muted-foreground">{tm.handle}</p>
                     </div>
                   </div>
                   <p className="text-foreground/90 italic leading-relaxed flex-1">
-                    "{t.quote}"
+                    "{t(tm.qk)}"
                   </p>
                 </motion.div>
               ))}
@@ -701,10 +676,10 @@ export default function Landing() {
                 {faqs.map((faq, i) => (
                   <AccordionItem key={i} value={`item-${i}`} className="border-border">
                     <AccordionTrigger className="text-left font-display font-bold text-lg hover:text-primary transition-colors py-5">
-                      {faq.q}
+                      {t(faq.qk)}
                     </AccordionTrigger>
                     <AccordionContent className="font-body text-muted-foreground text-base leading-relaxed pb-5">
-                      {faq.a}
+                      {t(faq.ak)}
                     </AccordionContent>
                   </AccordionItem>
                 ))}
