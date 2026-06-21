@@ -20,7 +20,7 @@ export default function Privacidade() {
           Política de Privacidade
         </h1>
         <p className="text-muted-foreground text-sm mb-12">
-          Última atualização: 28 de maio de 2026 · Versão 1.0
+          Última atualização: 19 de junho de 2026 · Versão 1.1
         </p>
 
         <section className="prose prose-sm max-w-none space-y-8 text-foreground">
@@ -54,11 +54,18 @@ export default function Privacidade() {
               de cartão. Recebemos apenas identificadores não-sensíveis
               (stripe_customer_id, stripe_subscription_id).
             </p>
-            <p className="text-muted-foreground leading-relaxed">
+            <p className="text-muted-foreground leading-relaxed mb-2">
               <strong className="text-foreground">Dados técnicos:</strong>{" "}
               endereço IP (registrado apenas em momentos específicos, como
               aceitação dos termos), navegador, sistema operacional, logs de
               acesso.
+            </p>
+            <p className="text-muted-foreground leading-relaxed">
+              <strong className="text-foreground">Dados de redes sociais (opcional):</strong>{" "}
+              se você conectar sua conta profissional do Instagram, coletamos métricas
+              (alcance, interações, salvos, visualizações), informações básicas do perfil
+              (nome de usuário, número de seguidores) e dados das suas publicações (legenda,
+              tipo de mídia, miniatura, data). Acesso somente leitura — não publicamos nada por você.
             </p>
           </div>
 
@@ -120,7 +127,7 @@ export default function Privacidade() {
                 emails transacionais (somente email e conteúdo do email)
               </li>
               <li>
-                <strong className="text-foreground">Google (Anthropic/Gemini):</strong>{" "}
+                <strong className="text-foreground">Google Gemini (via Lovable AI Gateway):</strong>{" "}
                 processamento de requisições de IA (apenas o prompt enviado,
                 sem dados de cadastro)
               </li>
@@ -172,6 +179,39 @@ export default function Privacidade() {
               não são usados para publicidade, não são vendidos a terceiros e não
               são usados para treinar modelos de IA; o acesso se restringe às
               funcionalidades descritas acima.
+            </p>
+
+            <h3 className="text-base font-display font-semibold text-foreground mt-5 mb-2">
+              Acesso aos seus dados do Instagram
+            </h3>
+            <p className="text-muted-foreground leading-relaxed mb-3">
+              Ao conectar sua conta profissional (Business ou Creator) do Instagram, o CRIA
+              solicita acesso estritamente aos escopos abaixo, sempre mediante seu
+              consentimento explícito na tela do Instagram. Você pode revogar esse acesso a
+              qualquer momento em{" "}
+              <a href="https://www.instagram.com/accounts/manage_access/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                instagram.com/accounts/manage_access
+              </a>{" "}
+              ou em Configurações → Integrações no app.
+            </p>
+            <ul className="text-muted-foreground leading-relaxed space-y-1 list-disc list-inside">
+              <li>
+                <strong className="text-foreground">instagram_business_basic:</strong>{" "}
+                ler o perfil e a lista de mídias da sua própria conta, para exibir seu
+                conteúdo e informações básicas no seu painel.
+              </li>
+              <li>
+                <strong className="text-foreground">instagram_business_manage_insights:</strong>{" "}
+                ler as métricas (alcance, interações, salvos, visualizações) da sua conta e
+                das suas publicações, para mostrar sua análise de desempenho no painel.
+              </li>
+            </ul>
+            <p className="text-muted-foreground leading-relaxed mt-3">
+              O acesso é <strong className="text-foreground">somente leitura</strong>: o CRIA
+              não publica, edita nem exclui conteúdo no seu Instagram. Os dados do Instagram
+              não são usados para publicidade, não são vendidos a terceiros e não são usados
+              para treinar modelos de IA; o acesso se restringe às funcionalidades de análise
+              descritas acima.
             </p>
           </div>
 
