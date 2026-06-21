@@ -2,10 +2,11 @@ import { useState } from "react";
 import { NavLink, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Home, Lightbulb, Kanban, CalendarDays,
-  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, ChevronUp, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck, Handshake, Maximize2, Minimize2, Instagram, BarChart3
+  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, ChevronUp, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck, Handshake, Maximize2, Minimize2, Instagram, BarChart3, ShieldCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { useProfile } from "@/hooks/useProfile";
 import { toast } from "sonner";
 import { useCriaAI } from "@/contexts/CriaAIContext";
 
@@ -41,6 +42,10 @@ export function BottomBar() {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { openCria } = useCriaAI();
+  const { profile } = useProfile();
+  const menuItems = profile?.role === "admin"
+    ? [...moreItems, { title: "Admin", url: "/app/cf-admin-panel", icon: ShieldCheck }]
+    : moreItems;
   const [searchParams, setSearchParams] = useSearchParams();
   const onCriando = location.pathname === "/app/criando";
   const overview = searchParams.get("view") === "overview";
@@ -61,7 +66,7 @@ export function BottomBar() {
     return location.pathname.startsWith(url);
   };
 
-  const isMoreActive = moreItems.some(item => location.pathname.startsWith(item.url));
+  const isMoreActive = menuItems.some(item => location.pathname.startsWith(item.url));
 
   const renderNavItem = (item: { title: string; url: string; icon: typeof Home; exact?: boolean }) => {
     const active = isActive(item.url, item.exact);
@@ -98,7 +103,7 @@ export function BottomBar() {
           style={{ bottom: 'calc(84px + env(safe-area-inset-bottom, 0px))' }}
         >
           <div className="grid grid-cols-4 gap-2.5">
-            {moreItems.map((item) => {
+            {menuItems.map((item) => {
               const active = isActive(item.url);
               return (
                 <NavLink key={item.url} to={item.url} onClick={() => setMoreOpen(false)}

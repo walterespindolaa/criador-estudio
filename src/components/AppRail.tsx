@@ -4,10 +4,11 @@ import {
   LayoutDashboard, Layers, Lightbulb, ClipboardCheck, Grid3X3, ListTodo,
   CalendarRange, Kanban, Target, FolderOpen, Compass, BookOpen, BookMarked,
   Link2, Sparkles, BadgeDollarSign, BarChart3, Archive, GraduationCap,
-  PlayCircle, Settings, LogOut, Instagram, type LucideIcon,
+  PlayCircle, Settings, LogOut, Instagram, ShieldCheck, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCriaAI } from "@/contexts/CriaAIContext";
+import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
 
 type NavChild = { label: string; icon: LucideIcon; to: string };
@@ -57,6 +58,8 @@ export function AppRail() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { openCria } = useCriaAI();
+  const { profile } = useProfile();
+  const isAdmin = profile?.role === "admin";
   const [openId, setOpenId] = useState<string | null>(null);
   const railRef = useRef<HTMLElement>(null);
 
@@ -143,7 +146,10 @@ export function AppRail() {
       </div>
       <div className="flex w-full flex-col items-center gap-1">{TOP.map(renderNode)}</div>
       <div className="my-2 h-px w-8 bg-border" />
-      <div className="flex w-full flex-col items-center gap-1">{BOTTOM.map(renderNode)}</div>
+      <div className="flex w-full flex-col items-center gap-1">
+        {isAdmin && renderNode({ id: "admin", label: "Admin", icon: ShieldCheck, to: "/app/cf-admin-panel" })}
+        {BOTTOM.map(renderNode)}
+      </div>
     </nav>
   );
 }
