@@ -37,22 +37,22 @@ Faça tudo isso **antes** de apertar REC:
 
 ## PARTE 2 — Roteiro do vídeo Google (o que FAZER e o que FALAR)
 
-Duração ideal: **2 a 4 minutos**. Fale devagar e claro. Se não quiser narrar com voz, ponha **legendas/textos na tela** em cada etapa. O roteiro abaixo está em PT (sua fala), mas **a tela do app/consentimento deve estar em inglês**.
+Duração ideal: **2 a 4 minutos**. Fale devagar e claro. **A tela do app/consentimento DEVE estar em inglês** e a **narração também em inglês** (ou legendas em inglês). Abaixo, cada cena tem a instrução em PT (**Mostrar**) e a **fala pronta em inglês** para você ler/legendar.
 
 ### Cena 1 — Identificação do app (10–15s)
 **Mostrar:** a home/login do CRIA no domínio real, com a URL `app.criasocialclub.com.br` visível na barra.
-**Falar:**
-> "Este é o CRIA, disponível em app.criasocialclub.com.br. Vou demonstrar o fluxo de consentimento OAuth do Google e como o app usa os escopos do Google Drive e do Google Calendar."
+**Fala (EN):**
+> "This is CRIA, available at app.criasocialclub.com.br. I'll demonstrate the Google OAuth consent flow and how the app uses the Google Drive and Google Calendar scopes."
 
 ### Cena 2 — Início do fluxo OAuth (15–20s)
-**Mostrar:** clicar no botão que inicia a conexão com o Google (ex.: "Conectar Google" / "Entrar com Google" em Configurações → Integrações).
-**Falar:**
-> "Ao clicar em conectar, o app inicia o fluxo OAuth do Google."
+**Mostrar:** clicar no botão que inicia a conexão com o Google (ex.: "Connect Google" / "Sign in with Google" em Configurações → Integrações).
+**Fala (EN):**
+> "When the user clicks connect, the app starts the Google OAuth flow."
 
 ### Cena 3 — Seletor de conta (10s) ⬅️ CRÍTICO
 **Mostrar:** a tela do Google "Choose an account" / "Sign in", e você **escolhendo a conta nova**.
-**Falar:**
-> "O usuário escolhe a conta Google com a qual deseja autorizar."
+**Fala (EN):**
+> "The user chooses the Google account they want to authorize."
 
 ### Cena 4 — TELA DE CONSENTIMENTO (30–40s) ⬅️ O MAIS IMPORTANTE
 **Mostrar, com calma e sem cortar:**
@@ -62,24 +62,24 @@ Duração ideal: **2 a 4 minutos**. Fale devagar e claro. Se não quiser narrar 
 - O seletor de idioma **English** no canto inferior esquerdo.
 - O clique no botão **"Continue" / "Allow"**.
 
-**Falar (enquanto rola os escopos):**
-> "Esta é a tela de consentimento do OAuth. Aqui o Google mostra o nome do app, CRIA, e os escopos solicitados: acesso ao Google Drive do usuário e permissão para criar eventos no Google Calendar. O usuário revisa cada permissão e clica em Permitir para conceder o acesso."
+**Fala (EN) — enquanto rola os escopos:**
+> "This is the OAuth consent screen. Google shows the app name, CRIA, and the requested scopes: access to the user's Google Drive and permission to create events in Google Calendar. The user reviews each permission and clicks Allow to grant access."
 
 > ⚠️ Não pule, não acelere e não corte esta cena. É exatamente o que faltou da última vez. Se a tela de consentimento **não aparecer** (pular direto), pare a gravação — sinal de que a conta já tinha autorizado; revogue o acesso e recomece.
 
 ### Cena 5 — Uso do escopo Drive (30–40s)
 **Mostrar:** de volta no CRIA, a funcionalidade que **usa o Drive** (ex.: listar/importar/salvar um arquivo do Drive). Mostre o arquivo real da conta nova aparecendo dentro do app.
-**Falar:**
-> "Com o acesso concedido, o CRIA usa o escopo do Google Drive para [descrever o que faz — ex.: importar/salvar arquivos do criador]. Aqui está o app acessando o Drive desta conta."
+**Fala (EN):**
+> "With access granted, CRIA uses the Google Drive scope to [descreva o que faz — ex.: import and save the creator's files]. Here is the app accessing this account's Drive."
 
 ### Cena 6 — Uso do escopo Calendar (30–40s)
 **Mostrar:** a funcionalidade que **cria um evento na agenda**. Crie um evento de teste pelo CRIA e depois **abra o Google Calendar** mostrando o evento que apareceu lá.
-**Falar:**
-> "O CRIA também usa o escopo do Google Calendar para adicionar eventos à agenda do usuário. Vou criar um evento aqui no app… e aqui está o mesmo evento agora visível no Google Calendar desta conta."
+**Fala (EN):**
+> "CRIA also uses the Google Calendar scope to add events to the user's calendar. I'll create an event here in the app… and here is that same event now visible in this account's Google Calendar."
 
 ### Cena 7 — Encerramento (5–10s)
-**Falar:**
-> "Isso conclui a demonstração do fluxo de consentimento OAuth e do uso de cada escopo solicitado pelo CRIA."
+**Fala (EN):**
+> "This concludes the demonstration of the OAuth consent flow and the use of each scope requested by CRIA."
 
 ### Resumo do que o vídeo OBRIGATORIAMENTE precisa conter
 - [ ] URL/domínio real do app visível
@@ -134,12 +134,15 @@ Para cada permissão, descreva objetivamente o uso. Modelos (escreva em inglês 
 > Importante: deixe claro em todo lugar que é **somente leitura de insights** — não há publicação nem agendamento. Isso bate com a arquitetura do CRIA e reduz fricção na revisão.
 
 ### 4.4 — Roteiro do screencast Meta (parecido com o do Google)
-Grave (com **conta de teste**), mostrando o fluxo real:
+Grave (com **conta de teste**), narração/legendas **em inglês**, mostrando o fluxo real:
 
 1. **App e contexto** — mostre o CRIA e diga que vai conectar uma conta Instagram Business para ver insights.
+   **Fala (EN):** "This is CRIA. I'll connect an Instagram Business account to display its insights inside the app."
 2. **Login do Facebook / fluxo OAuth do Meta** — clique em conectar, mostre a **tela de permissões do Facebook** com as permissões sendo pedidas, escolha a Página e a conta Instagram, e clique em **autorizar**. (Igual ao Google: a tela de consentimento precisa aparecer.)
+   **Fala (EN):** "The user starts the Facebook login flow, selects the Facebook Page linked to their Instagram Business account, reviews the requested permissions, and authorizes access."
 3. **Uso de cada permissão** — mostre dentro do CRIA: a conta Instagram conectada (instagram_basic + pages_show_list) e a **página de insights exibindo as métricas** puxadas via API (instagram_manage_insights).
-4. **Narração/legendas** explicando cada etapa, em inglês.
+   **Fala (EN):** "Now the connected Instagram account appears in CRIA, and the Insights page displays read-only metrics — reach, impressions and engagement — fetched through the Instagram Graph API. CRIA only reads insights; it does not post or modify anything."
+4. **Encerramento** — **Fala (EN):** "This concludes the demonstration of each requested permission in use."
 
 > Como o app está em modo de **desenvolvimento**, adicione a conta de teste como **Tester/Role** (App Roles → Roles) para conseguir gravar o fluxo funcionando antes da aprovação.
 

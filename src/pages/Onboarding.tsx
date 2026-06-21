@@ -9,6 +9,8 @@ import {
   Loader2,
   Sparkles,
   AtSign,
+  Leaf, Shirt, Dumbbell, ChefHat, GraduationCap, Laptop, Wallet, Rocket, Plane, Baby, Brain, PawPrint, Music, Palette, Laugh,
+  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,25 +31,25 @@ import { ImageCropModal } from "@/components/shared/ImageCropModal";
 
 const TOTAL_STEPS = 5;
 
-type NicheOption = { value: string; emoji: string };
+type NicheOption = { value: string; icon: LucideIcon };
 
 const NICHE_OPTIONS: NicheOption[] = [
-  { value: "Lifestyle", emoji: "🌿" },
-  { value: "Moda", emoji: "👗" },
-  { value: "Beleza", emoji: "💄" },
-  { value: "Fitness", emoji: "💪" },
-  { value: "Gastronomia", emoji: "🍳" },
-  { value: "Educação", emoji: "📚" },
-  { value: "Tecnologia", emoji: "💻" },
-  { value: "Finanças", emoji: "💰" },
-  { value: "Empreendedorismo", emoji: "🚀" },
-  { value: "Viagem", emoji: "✈️" },
-  { value: "Maternidade", emoji: "👶" },
-  { value: "Saúde Mental", emoji: "🧠" },
-  { value: "Pet", emoji: "🐾" },
-  { value: "Música", emoji: "🎵" },
-  { value: "Arte", emoji: "🎨" },
-  { value: "Humor", emoji: "😂" },
+  { value: "Lifestyle", icon: Leaf },
+  { value: "Moda", icon: Shirt },
+  { value: "Beleza", icon: Sparkles },
+  { value: "Fitness", icon: Dumbbell },
+  { value: "Gastronomia", icon: ChefHat },
+  { value: "Educação", icon: GraduationCap },
+  { value: "Tecnologia", icon: Laptop },
+  { value: "Finanças", icon: Wallet },
+  { value: "Empreendedorismo", icon: Rocket },
+  { value: "Viagem", icon: Plane },
+  { value: "Maternidade", icon: Baby },
+  { value: "Saúde Mental", icon: Brain },
+  { value: "Pet", icon: PawPrint },
+  { value: "Música", icon: Music },
+  { value: "Arte", icon: Palette },
+  { value: "Humor", icon: Laugh },
 ];
 
 const PLATFORMS = [
@@ -447,6 +449,7 @@ const Onboarding = () => {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
                 {NICHE_OPTIONS.map((n) => {
                   const selected = niches.includes(n.value);
+                  const Icon = n.icon;
                   return (
                     <button
                       key={n.value}
@@ -459,8 +462,8 @@ const Onboarding = () => {
                           : "bg-card border-border hover:border-primary/30"
                       )}
                     >
-                      <span className="text-xl block mb-1">{n.emoji}</span>
-                      <span className={cn("text-sm font-body font-medium", selected ? "text-primary" : "text-foreground")}>
+                      <Icon className={cn("h-5 w-5 mb-1.5", selected ? "text-primary" : "text-muted-foreground")} strokeWidth={1.75} />
+                      <span className={cn("text-sm font-body font-medium block", selected ? "text-primary" : "text-foreground")}>
                         {n.value}
                       </span>
                     </button>
