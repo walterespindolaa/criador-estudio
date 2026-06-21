@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Mail, Eye, EyeOff } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
+import { useT } from "@/lib/i18n";
 import {
   Dialog,
   DialogContent,
@@ -20,17 +21,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 
-const loginSchema = z.object({
-  email: z.string().email("Email inválido"),
-  password: z.string().min(8, "Mínimo 8 caracteres").max(128, "Máximo 128 caracteres"),
-});
-
-const forgotSchema = z.object({
-  email: z.string().email("Email inválido"),
-});
-
-type LoginFormData = z.infer<typeof loginSchema>;
-type ForgotFormData = z.infer<typeof forgotSchema>;
+type LoginFormData = { email: string; password: string };
+type ForgotFormData = { email: string };
 
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24">
@@ -43,12 +35,19 @@ const GoogleIcon = () => (
 
 const Login = () => {
   const navigate = useNavigate();
+  const t = useT();
   const { signIn } = useAuth();
   const [loading, setLoading] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const loginSchema = z.object({
+    email: z.string().email(t("auth.invalidEmail")),
+    password: z.string().min(8, t("auth.minPassword")).max(128, t("auth.maxPassword")),
+  });
+  const forgotSchema = z.object({ email: z.string().email(t("auth.invalidEmail")) });
 
   const { register, handleSubmit, formState: { errors }, watch } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -65,7 +64,7 @@ const Login = () => {
     const { error } = await signIn(data.email, data.password);
     setLoading(false);
     if (error) {
-      toast.error("E-mail ou senha incorretos.");
+      toast.error(t("auth.wrongCredentials"));
     } else {
       navigate("/app");
     }
@@ -76,7 +75,7 @@ const Login = () => {
       provider: "google",
       options: { redirectTo: window.location.origin + "/app" },
     });
-    if (error) toast.error("Erro ao conectar com Google.");
+    if (error) toast.error(t("auth.googleError"));
   };
 
   const onSubmitForgot = async (data: ForgotFormData) => {
@@ -86,7 +85,7 @@ const Login = () => {
     });
     setForgotLoading(false);
     if (error) {
-      toast.error("Erro ao enviar email.");
+      toast.error(t("auth.sendError"));
     } else {
       setForgotSent(true);
     }
@@ -97,8 +96,8 @@ const Login = () => {
       <div className="hidden lg:flex lg:w-1/2 bg-card items-center justify-center p-12">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }} className="max-w-md">
           <Logo className="h-14 w-auto mb-8" />
-          <h2 className="text-4xl font-display font-extrabold text-foreground tracking-tight mb-4">Bem-vindo de volta, criador. ✨</h2>
-          <p className="text-muted-foreground font-body text-lg leading-relaxed">Suas ideias estão te esperando. Continue de onde parou.</p>
+          <h2 className="text-4xl font-display font-extrabold text-foreground tracking-tight mb-4">{t("auth.welcomeBack")}</h2>
+          <p className="text-muted-foreground font-body text-lg leading-relaxed">{t("auth.welcomeBackDesc")}</p>
         </motion.div>
       </div>
       <div className="flex-1 flex items-center justify-center p-8">
@@ -106,8 +105,8 @@ const Login = () => {
           <Link to="/" className="mb-8 flex justify-center lg:justify-start">
             <Logo className="h-16 lg:h-10 w-auto" />
           </Link>
-          <h3 className="text-2xl font-display font-extrabold text-foreground mb-2">Entrar</h3>
-          <p className="text-muted-foreground font-body mb-8">Acesse seu estúdio criativo</p>
+          <h3 className="text-2xl font-display font-extrabold text-foreground mb-2">{t("auth.signIn")}</h3>
+          <p className="text-muted-foreground font-body mb-8">{t("auth.signInDesc")}</p>
 
           <Button
             type="button"
@@ -117,31 +116,31 @@ const Login = () => {
             onClick={handleGoogleLogin}
           >
             <GoogleIcon />
-            <span className="font-body">Entrar com Google</span>
+            <span className="font-body">{t("auth.signInWithGoogle")}</span>
           </Button>
 
           <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground font-body">ou</span>
+              <span className="bg-background px-2 text-muted-foreground font-body">{t("auth.or")}</span>
             </div>
           </div>
 
           <form onSubmit={handleSubmit(onSubmitLogin)} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email" className="font-body">E-mail</Label>
+              <Label htmlFor="email" className="font-body">{t("auth.email")}</Label>
               <Input id="email" type="email" placeholder="seu@email.com" {...register("email")} className="rounded-xl h-12" />
               {errors.email && <p className="text-xs text-destructive mt-1">{errors.email.message}</p>}
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="font-body">Senha</Label>
+                <Label htmlFor="password" className="font-body">{t("auth.password")}</Label>
                 <button
                   type="button"
                   onClick={() => { setForgotOpen(true); setForgotSent(false); }}
                   className="text-xs text-primary font-body hover:underline"
                 >
-                  Esqueci minha senha
+                  {t("auth.forgot")}
                 </button>
               </div>
               <div className="relative">
@@ -150,7 +149,7 @@ const Login = () => {
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                  aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
                   tabIndex={-1}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -159,12 +158,12 @@ const Login = () => {
               {errors.password && <p className="text-xs text-destructive mt-1">{errors.password.message}</p>}
             </div>
             <Button type="submit" variant="hero" size="lg" className="w-full" disabled={loading}>
-              {loading ? "Entrando..." : "Entrar"}
+              {loading ? t("auth.signingIn") : t("auth.signIn")}
             </Button>
           </form>
           <p className="text-sm text-muted-foreground font-body mt-6 text-center">
-            Ainda não tem conta?{" "}
-            <Link to="/signup" className="text-primary font-medium hover:underline">Criar conta</Link>
+            {t("auth.noAccount")}{" "}
+            <Link to="/signup" className="text-primary font-medium hover:underline">{t("auth.createAccount")}</Link>
           </p>
         </motion.div>
       </div>
@@ -172,11 +171,11 @@ const Login = () => {
       <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-display">Esqueci minha senha</DialogTitle>
+            <DialogTitle className="font-display">{t("auth.forgotTitle")}</DialogTitle>
             <DialogDescription className="font-body">
               {forgotSent
-                ? "Enviamos um link para redefinir sua senha. Verifique seu e-mail."
-                : "Digite seu e-mail e enviaremos um link para redefinir sua senha."
+                ? t("auth.forgotSent")
+                : t("auth.forgotPrompt")
               }
             </DialogDescription>
           </DialogHeader>
@@ -194,12 +193,12 @@ const Login = () => {
               </div>
               <Button type="submit" variant="hero" className="w-full" disabled={forgotLoading}>
                 <Mail className="h-4 w-4 mr-2" />
-                {forgotLoading ? "Enviando..." : "Enviar link"}
+                {forgotLoading ? t("auth.sending") : t("auth.sendLink")}
               </Button>
             </form>
           ) : (
             <Button variant="outline" onClick={() => setForgotOpen(false)} className="w-full">
-              Fechar
+              {t("common.close")}
             </Button>
           )}
         </DialogContent>
