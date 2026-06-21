@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useLocation, Navigate } from "react-router-dom";
-import { Plus, Download, Search, Building2, Instagram, DollarSign, ArrowRight } from "lucide-react";
+import { Plus, Download, Search, Building2, Instagram, DollarSign, ArrowRight, SlidersHorizontal, X } from "lucide-react";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import {
   useCrmClients, useCreateCrmClient, useImportCriaClients, type CrmClient,
@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { PipelineBoard } from "@/components/accounts/crm/PipelineBoard";
 import { ContractsTab } from "@/components/accounts/crm/ContractsTab";
 import { TasksTab } from "@/components/accounts/crm/TasksTab";
@@ -41,12 +42,12 @@ function CrmInner() {
     <div>
       <ManagerSectionTitle t="Cria Gestão" s="Carteira, tarefas, calendário, pipeline e contratos da sua operação." />
       <Tabs value={tab} onValueChange={(v) => navigate(`/socialmidia/criacrm/${v}`)} className="w-full">
-        <TabsList className="bg-card border border-border rounded-2xl p-1.5 mb-5 flex-wrap h-auto">
-          <TabsTrigger value="clientes" className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Clientes</TabsTrigger>
-          <TabsTrigger value="tarefas" className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Tarefas</TabsTrigger>
-          <TabsTrigger value="calendario" className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Calendário</TabsTrigger>
-          <TabsTrigger value="pipeline" className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Pipeline</TabsTrigger>
-          <TabsTrigger value="contratos" className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Contratos</TabsTrigger>
+        <TabsList className="bg-card border border-border rounded-2xl p-1.5 mb-5 flex w-full justify-start overflow-x-auto scrollbar-none">
+          <TabsTrigger value="clientes" className="shrink-0 rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Clientes</TabsTrigger>
+          <TabsTrigger value="tarefas" className="shrink-0 rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Tarefas</TabsTrigger>
+          <TabsTrigger value="calendario" className="shrink-0 rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Calendário</TabsTrigger>
+          <TabsTrigger value="pipeline" className="shrink-0 rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Pipeline</TabsTrigger>
+          <TabsTrigger value="contratos" className="shrink-0 rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Contratos</TabsTrigger>
         </TabsList>
         <TabsContent value="clientes"><ClientsTab /></TabsContent>
         <TabsContent value="tarefas"><TasksTab /></TabsContent>
@@ -68,6 +69,7 @@ function ClientsTab() {
   const [search, setSearch] = useState("");
   const [segFilter, setSegFilter] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [segOpen, setSegOpen] = useState(false);
 
   // avatar dos clientes importados do cria
   const criaAvatar = useMemo(() => {
@@ -95,20 +97,35 @@ function ClientsTab() {
         <Button size="sm" onClick={() => setCreating(true)}><Plus className="h-3.5 w-3.5 mr-1.5" /> Novo cliente</Button>
       </div>
 
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="relative flex-1 min-w-0">
           <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
           <Input placeholder="Buscar cliente..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 rounded-xl" />
         </div>
         {segments.length > 0 && (
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <button onClick={() => setSegFilter(null)} className={cn("px-3 py-1.5 rounded-full text-xs font-body font-bold border", !segFilter ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground")}>Todos</button>
-            {segments.map((s) => (
-              <button key={s} onClick={() => setSegFilter(s)} className={cn("px-3 py-1.5 rounded-full text-xs font-body font-bold border max-w-[160px] truncate", segFilter === s ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground")}>{s}</button>
-            ))}
-          </div>
+          <Button type="button" variant="outline" onClick={() => setSegOpen(true)} className="rounded-xl gap-1.5 shrink-0">
+            <SlidersHorizontal className="h-4 w-4" /> Filtro
+            {segFilter && <span className="ml-0.5 text-[10px] font-bold bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">1</span>}
+          </Button>
         )}
       </div>
+      {segFilter && (
+        <div className="flex items-center gap-1.5 mb-4">
+          <button type="button" onClick={() => setSegFilter(null)} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary/10 text-primary">{segFilter} <X className="h-3 w-3" /></button>
+        </div>
+      )}
+
+      <Sheet open={segOpen} onOpenChange={setSegOpen}>
+        <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] overflow-y-auto">
+          <SheetHeader><SheetTitle className="font-display text-left">Filtrar por nicho</SheetTitle></SheetHeader>
+          <div className="flex flex-wrap gap-2 mt-4 pb-2">
+            <button type="button" onClick={() => { setSegFilter(null); setSegOpen(false); }} className={cn("px-3 py-1.5 rounded-full text-xs font-body font-bold border", !segFilter ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground")}>Todos</button>
+            {segments.map((s) => (
+              <button key={s} type="button" onClick={() => { setSegFilter(s); setSegOpen(false); }} className={cn("px-3 py-1.5 rounded-full text-xs font-body font-bold border", segFilter === s ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground")}>{s}</button>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{[1, 2, 3, 4].map((i) => <div key={i} className="h-32 rounded-2xl bg-muted animate-pulse" />)}</div>
