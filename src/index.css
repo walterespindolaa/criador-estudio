@@ -4,6 +4,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Trava o arrasto lateral no mobile (comportamento de app nativo) */
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+  overscroll-behavior-x: none;
+}
+
 @layer base {
   :root {
     --background: 38 30% 97%;

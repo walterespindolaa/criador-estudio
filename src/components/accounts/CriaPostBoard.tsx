@@ -181,7 +181,7 @@ function ClientDetail({ client, onBack }: { client: ExternalClient; onBack: () =
       )}
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-md md:max-w-4xl bg-white rounded-2xl max-h-[88vh] overflow-y-auto">
+        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="max-w-md md:max-w-4xl bg-white rounded-2xl max-h-[88vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="font-display">{editing ? "Editar post" : "Novo post"}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-[1.1fr_0.9fr] md:gap-5">
 
