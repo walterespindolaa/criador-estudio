@@ -11,6 +11,11 @@ import {
   Search,
   Shield,
   Users,
+  MoreVertical,
+  Trash2,
+  Ban,
+  RotateCcw,
+  Send,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -25,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -119,7 +125,7 @@ const AdminInner = () => {
     }
   };
 
-  const { users, totalCount, stats, isLoading, updateUserRole, updateUserPlan } = useAdmin({
+  const { users, totalCount, stats, emails, isLoading, updateUserRole, updateUserPlan, runAction } = useAdmin({
     page,
     pageSize: PAGE_SIZE,
     search,
@@ -153,6 +159,17 @@ const AdminInner = () => {
       toast.success(`Plano atualizado para ${plan}`);
     } catch {
       toast.error("Erro ao atualizar plano");
+    }
+  };
+
+  const handleAction = async (userId: string, action: string) => {
+    const labels: Record<string, string> = { delete: "excluído", suspend: "suspenso", reactivate: "reativado", resend_access: "email de acesso enviado" };
+    if (action === "delete" && !window.confirm("Excluir permanentemente este usuário? Esta ação não pode ser desfeita.")) return;
+    try {
+      await runAction.mutateAsync({ user_id: userId, action });
+      toast.success(`Usuário ${labels[action] ?? "atualizado"}.`);
+    } catch (e) {
+      toast.error((e as Error)?.message ?? "Erro na ação.");
     }
   };
 
@@ -316,8 +333,10 @@ const AdminInner = () => {
                   users.map((u) => <AdminUserRow
                     key={u.id}
                     user={u}
+                    email={emails[u.id]}
                     onRoleChange={handleRoleChange}
                     onPlanChange={handlePlanChange}
+                    onAction={handleAction}
                     onSelect={setSelectedUserId}
                   />)
                 )}
@@ -523,10 +542,12 @@ type AdminUserRowProps = {
   user: AdminProfile;
   onRoleChange: (userId: string, role: string) => void;
   onPlanChange: (userId: string, plan: string) => void;
+  onAction: (userId: string, action: string) => void;
   onSelect: (userId: string) => void;
+  email?: string;
 };
 
-function AdminUserRow({ user, onRoleChange, onPlanChange, onSelect }: AdminUserRowProps) {
+function AdminUserRow({ user, email, onRoleChange, onPlanChange, onAction, onSelect }: AdminUserRowProps) {
   const planKey = user.plan ?? "free";
   const roleKey = user.role ?? "user";
   const created = user.created_at ? new Date(user.created_at) : null;
@@ -548,8 +569,11 @@ function AdminUserRow({ user, onRoleChange, onPlanChange, onSelect }: AdminUserR
           <div className="min-w-0">
             <p className="font-body font-semibold text-foreground text-sm truncate">{user.name || "—"}</p>
             <p className="text-xs text-muted-foreground font-body truncate">
-              {user.instagram_handle ? `@${user.instagram_handle.replace(/^@/, "")}` : user.id.slice(0, 8)}
+              {email ?? (user.instagram_handle ? `@${user.instagram_handle.replace(/^@/, "")}` : user.id.slice(0, 8))}
             </p>
+            {email && user.instagram_handle && (
+              <p className="text-[11px] text-muted-foreground/70 font-body truncate">@{user.instagram_handle.replace(/^@/, "")}</p>
+            )}
           </div>
         </div>
       </td>
@@ -607,6 +631,19 @@ function AdminUserRow({ user, onRoleChange, onPlanChange, onSelect }: AdminUserR
               ))}
             </SelectContent>
           </Select>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><MoreVertical className="h-4 w-4" /></Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onAction(user.id, "resend_access")}><Send className="h-3.5 w-3.5 mr-2" /> Reenviar acesso</DropdownMenuItem>
+              {user.subscription_status === "suspended"
+                ? <DropdownMenuItem onClick={() => onAction(user.id, "reactivate")}><RotateCcw className="h-3.5 w-3.5 mr-2" /> Reativar</DropdownMenuItem>
+                : <DropdownMenuItem onClick={() => onAction(user.id, "suspend")}><Ban className="h-3.5 w-3.5 mr-2" /> Suspender</DropdownMenuItem>}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onAction(user.id, "delete")} className="text-destructive focus:text-destructive"><Trash2 className="h-3.5 w-3.5 mr-2" /> Excluir</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </td>
     </tr>

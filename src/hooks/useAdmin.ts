@@ -138,14 +138,46 @@ export function useAdmin(filters: AdminFilters) {
     },
   });
 
+  // Emails (vêm do auth, não do profiles) — busca em lote via edge function
+  const userIds = (usersQuery.data?.rows ?? []).map((r) => r.id);
+  const emailsQuery = useQuery<Record<string, string>>({
+    queryKey: ["admin-emails", userIds],
+    enabled: !!user && isAdmin && userIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("admin-user-actions", {
+        body: { action: "get_emails", user_ids: userIds },
+      });
+      if (error) throw error;
+      return ((data as { emails?: Record<string, string> })?.emails) ?? {};
+    },
+  });
+
+  // Ações de admin (excluir, suspender, reativar, validade, reenviar acesso)
+  const runAction = useMutation({
+    mutationFn: async (input: { user_id: string; action: string; validity?: string }) => {
+      const { data, error } = await supabase.functions.invoke("admin-user-actions", { body: input });
+      if (error) throw error;
+      const err = (data as { error?: string })?.error;
+      if (err) throw new Error(err);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-emails"] });
+    },
+  });
+
   return {
     users: usersQuery.data?.rows ?? [],
     totalCount: usersQuery.data?.count ?? 0,
     stats: statsQuery.data ?? EMPTY_STATS,
+    emails: emailsQuery.data ?? {},
     isLoading: usersQuery.isLoading || statsQuery.isLoading,
     error: usersQuery.error ?? statsQuery.error,
     isAdmin,
     updateUserRole,
     updateUserPlan,
+    runAction,
   };
 }

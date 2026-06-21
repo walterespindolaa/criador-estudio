@@ -70,6 +70,18 @@ serve(async (req) => {
 
     const body = await req.json();
     const { user_id, action } = body as { user_id?: string; action?: string };
+
+    // Batch: emails dos usuários (auth) para o painel admin
+    if (action === "get_emails") {
+      const ids = ((body as { user_ids?: string[] }).user_ids ?? []).slice(0, 200);
+      const emails: Record<string, string> = {};
+      for (const id of ids) {
+        const { data } = await svc.auth.admin.getUserById(id);
+        if (data?.user?.email) emails[id] = data.user.email;
+      }
+      return json({ emails });
+    }
+
     if (!user_id || !action) return json({ error: "missing_fields" }, 400);
 
     // Auto-proteção: admin não pode mexer/excluir a si mesmo (exceto reenviar próprio acesso)
