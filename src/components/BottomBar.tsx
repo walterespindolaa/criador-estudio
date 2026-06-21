@@ -2,7 +2,7 @@ import { useState } from "react";
 import { NavLink, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Home, Lightbulb, Kanban, CalendarDays,
-  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, ChevronUp, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck, Handshake, Maximize2, Minimize2
+  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, ChevronUp, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck, Handshake, Maximize2, Minimize2, Instagram, BarChart3
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,6 +26,8 @@ const moreItems = [
   { title: "Tarefas", url: "/app/tarefas", icon: ListTodo },
   { title: "Brandbook", url: "/app/brandbook", icon: BookMarked },
   { title: "Collabs", url: "/app/collabs", icon: Handshake },
+  { title: "Insights", url: "/app/insights", icon: Instagram },
+  { title: "Relatórios", url: "/app/relatorios", icon: BarChart3 },
   { title: "Link in Bio", url: "/app/linkinbio", icon: Link2 },
   { title: "Arquivos", url: "/app/arquivos", icon: FolderOpen },
   { title: "Histórico", url: "/app/historico", icon: Archive },

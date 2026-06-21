@@ -190,10 +190,10 @@ function CaixaInner() {
     <div>
       <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
         <ManagerSectionTitle t="Cria Caixa" s="O financeiro da sua operação — empresa e pessoal, separados." />
-        <div className="flex items-center gap-2 flex-wrap justify-end">
-          {isPj && <Button variant="outline" size="sm" onClick={() => setTransferOpen(true)}><ArrowLeftRight className="h-3.5 w-3.5 mr-1.5" /> Transferir p/ PF</Button>}
-          <Button variant="outline" size="sm" onClick={() => setRecurringOpen(true)}><Repeat className="h-3.5 w-3.5 mr-1.5" /> Recorrentes</Button>
-          <Button variant="outline" size="sm" onClick={() => setCompanyOpen(true)}><Building2 className="h-3.5 w-3.5 mr-1.5" /> Minha empresa</Button>
+        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto scrollbar-none justify-start sm:justify-end">
+          {isPj && <Button variant="outline" size="sm" onClick={() => setTransferOpen(true)} className="shrink-0"><ArrowLeftRight className="h-3.5 w-3.5 mr-1.5" /> Transferir p/ PF</Button>}
+          <Button variant="outline" size="sm" onClick={() => setRecurringOpen(true)} className="shrink-0"><Repeat className="h-3.5 w-3.5 mr-1.5" /> Recorrentes</Button>
+          <Button variant="outline" size="sm" onClick={() => setCompanyOpen(true)} className="shrink-0"><Building2 className="h-3.5 w-3.5 mr-1.5" /> Minha empresa</Button>
         </div>
       </div>
 
