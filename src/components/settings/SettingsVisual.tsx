@@ -1,5 +1,6 @@
 import { useState, useEffect, type CSSProperties } from "react";
-import { Check, Monitor, Type, Palette, PanelLeft } from "lucide-react";
+import { Check, Monitor, Type, Palette, PanelLeft, Languages } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/hooks/useProfile";
 import { THEME_PRESETS, ACCENT_GROUPS, type ThemePreset } from "@/lib/themes";
@@ -47,6 +48,7 @@ export function applyThemeFont(fontKey: string) {
 
 export function SettingsVisual() {
   const { profile, updateProfile } = useProfile();
+  const { lang, setLang, t } = useI18n();
 
   const [selectedTheme, setSelectedTheme] = useState(profile?.theme_preset || "clean-warm");
   const [selectedAccent, setSelectedAccent] = useState(profile?.theme_accent || "#C4622D");
@@ -111,6 +113,32 @@ export function SettingsVisual() {
       <div className="flex flex-col lg:flex-row gap-12">
         {/* LEFT — Controls */}
         <div className="flex-[0_0_45%] space-y-10">
+          {/* Idioma */}
+          <section>
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Languages className="h-5 w-5 text-primary" />
+                <h3 className="text-base font-body font-bold text-foreground">{t("settings.language")}</h3>
+              </div>
+              <p className="text-sm text-muted-foreground font-body">{t("settings.languageDesc")}</p>
+            </div>
+            <div className="flex gap-2">
+              {([["pt", t("settings.portuguese")], ["en", t("settings.english")]] as const).map(([code, label]) => (
+                <button
+                  key={code}
+                  type="button"
+                  onClick={() => setLang(code as "pt" | "en")}
+                  className={cn(
+                    "px-4 py-2 rounded-xl text-sm font-body font-medium border transition-colors",
+                    lang === code ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-foreground hover:border-primary/40"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </section>
+
           {/* Themes */}
           <section>
             <div className="mb-4">
