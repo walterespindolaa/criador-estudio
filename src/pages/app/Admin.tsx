@@ -8,6 +8,7 @@ import {
   CircleDollarSign,
   Handshake,
   Plus,
+  Briefcase,
   Search,
   Shield,
   Users,
@@ -19,10 +20,12 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -96,9 +99,58 @@ const AdminInner = () => {
   const [form, setForm] = useState({ name: "", email: "", phone: "", plan: "trial" });
   const [validity, setValidity] = useState("lifetime");
   const [creating, setCreating] = useState(false);
-  const [result, setResult] = useState<null | { email: string; inviteLink: string }>(null);
+  const [result, setResult] = useState<null | { email: string; inviteLink: string; creator?: { email: string; inviteLink: string } | null }>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  // ── Criar social mídia ───────────────────────────────────
+  const [openCreateMgr, setOpenCreateMgr] = useState(false);
+  const [mgrForm, setMgrForm] = useState({ name: "", email: "", phone: "" });
+  const [mgrModules, setMgrModules] = useState<string[]>([]);
+  const [giveCreator, setGiveCreator] = useState(false);
+  const [creatorEmail, setCreatorEmail] = useState("");
+  const [creatorPlan, setCreatorPlan] = useState("studio");
+  const [creatingMgr, setCreatingMgr] = useState(false);
+
+  const { data: moduleCatalog = [] } = useQuery<{ code: string; name: string }[]>({
+    queryKey: ["admin-module-catalog"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("modules").select("code, name").eq("active", true).eq("coming_soon", false).order("sort_order");
+      if (error) throw error;
+      return (data ?? []) as { code: string; name: string }[];
+    },
+  });
+
+  const toggleMgrModule = (code: string) =>
+    setMgrModules((prev) => prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]);
+
+  const handleCreateManager = async () => {
+    if (!mgrForm.name.trim() || !mgrForm.email.trim()) { toast.error("Nome e e-mail são obrigatórios"); return; }
+    if (giveCreator && !creatorEmail.trim()) { toast.error("Informe o e-mail da conta de criadora"); return; }
+    if (giveCreator && creatorEmail.trim().toLowerCase() === mgrForm.email.trim().toLowerCase()) {
+      toast.error("O e-mail de criadora precisa ser diferente do de gestão"); return;
+    }
+    setCreatingMgr(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-create-manager", {
+        body: {
+          name: mgrForm.name, email: mgrForm.email, phone: mgrForm.phone, modules: mgrModules,
+          creator: giveCreator ? { email: creatorEmail, plan: creatorPlan } : null,
+        },
+      });
+      if (error || (data as { error?: string })?.error) throw new Error((data as { error?: string })?.error ?? "create_failed");
+      setResult({ email: data.email, inviteLink: data.inviteLink, creator: data.creator ?? null });
+      setOpenCreateMgr(false);
+      setMgrForm({ name: "", email: "", phone: "" }); setMgrModules([]); setGiveCreator(false); setCreatorEmail(""); setCreatorPlan("studio");
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+      toast.success("Social mídia criada!");
+    } catch {
+      toast.error("Erro ao criar social mídia.");
+    } finally {
+      setCreatingMgr(false);
+    }
+  };
 
   const handleCreate = async () => {
     if (!form.name.trim() || !form.email.trim()) {
@@ -189,9 +241,14 @@ const AdminInner = () => {
               Gerencie usuários e acompanhe o crescimento.
             </p>
           </div>
-          <Button onClick={() => setOpenCreate(true)} className="shrink-0">
-            <Plus className="h-4 w-4 mr-1.5" /> Adicionar usuário
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button variant="outline" onClick={() => setOpenCreateMgr(true)}>
+              <Briefcase className="h-4 w-4 mr-1.5" /> Criar social mídia
+            </Button>
+            <Button onClick={() => setOpenCreate(true)}>
+              <Plus className="h-4 w-4 mr-1.5" /> Adicionar usuário
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="usuarios" className="w-full">
@@ -474,6 +531,75 @@ const AdminInner = () => {
           </DialogContent>
         </Dialog>
 
+        <Dialog open={openCreateMgr} onOpenChange={(o) => !creatingMgr && setOpenCreateMgr(o)}>
+          <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="font-display">Criar social mídia</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs">Nome</Label>
+                <Input value={mgrForm.name} onChange={(e) => setMgrForm({ ...mgrForm, name: e.target.value })} placeholder="Nome completo" className="rounded-xl" disabled={creatingMgr} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs">E-mail (gestão)</Label>
+                <Input type="email" value={mgrForm.email} onChange={(e) => setMgrForm({ ...mgrForm, email: e.target.value })} placeholder="email@exemplo.com" className="rounded-xl" disabled={creatingMgr} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs">Telefone (opcional)</Label>
+                <Input value={mgrForm.phone} onChange={(e) => setMgrForm({ ...mgrForm, phone: e.target.value })} placeholder="+55 47 99999-9999" className="rounded-xl" disabled={creatingMgr} />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="font-body text-xs">Pacotes liberados</Label>
+                <div className="space-y-1.5">
+                  {moduleCatalog.length === 0 && <p className="text-[11px] text-muted-foreground font-body">Nenhum módulo no catálogo.</p>}
+                  {moduleCatalog.map((m) => (
+                    <label key={m.code} className="flex items-center gap-2.5 rounded-xl border border-border px-3 py-2 cursor-pointer hover:border-primary/40">
+                      <Checkbox checked={mgrModules.includes(m.code)} onCheckedChange={() => toggleMgrModule(m.code)} disabled={creatingMgr} />
+                      <span className="text-sm font-body text-foreground">{m.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border px-3 py-2.5 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-body font-medium text-foreground">Também dar acesso ao Cria (criadora)</p>
+                    <p className="text-[11px] text-muted-foreground font-body">Cria uma conta de criadora pra ela com outro e-mail.</p>
+                  </div>
+                  <Switch checked={giveCreator} onCheckedChange={setGiveCreator} disabled={creatingMgr} />
+                </div>
+                {giveCreator && (
+                  <div className="space-y-3 pt-1">
+                    <div className="space-y-1.5">
+                      <Label className="font-body text-xs">E-mail da conta de criadora</Label>
+                      <Input type="email" value={creatorEmail} onChange={(e) => setCreatorEmail(e.target.value)} placeholder="email-pessoal@exemplo.com" className="rounded-xl" disabled={creatingMgr} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="font-body text-xs">Plano da criadora</Label>
+                      <Select value={creatorPlan} onValueChange={setCreatorPlan} disabled={creatingMgr}>
+                        <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="free">Free</SelectItem>
+                          <SelectItem value="trial">Trial</SelectItem>
+                          <SelectItem value="pro">Pro</SelectItem>
+                          <SelectItem value="studio">Studio</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => setOpenCreateMgr(false)} disabled={creatingMgr}>Cancelar</Button>
+              <Button onClick={handleCreateManager} disabled={creatingMgr}>{creatingMgr ? "Criando..." : "Criar social mídia"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <Dialog open={!!result} onOpenChange={(o) => !o && setResult(null)}>
           <DialogContent className="sm:max-w-md rounded-2xl">
             <DialogHeader>
@@ -498,6 +624,15 @@ const AdminInner = () => {
                     <CopyButton text={result.inviteLink} />
                   </div>
                 </div>
+                {result.creator && (
+                  <div className="rounded-xl border border-primary/30 bg-primary/[0.04] px-3 py-2 min-w-0">
+                    <p className="text-[10px] uppercase tracking-wider text-primary font-semibold mb-1">Conta de criadora · {result.creator.email}</p>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <code className="flex-1 min-w-0 truncate text-xs font-mono bg-muted rounded-lg px-2 py-1.5">{result.creator.inviteLink}</code>
+                      <CopyButton text={result.creator.inviteLink} />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             <DialogFooter>
