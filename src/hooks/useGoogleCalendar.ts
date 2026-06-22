@@ -5,7 +5,6 @@ import { toast } from "sonner";
 
 const TOKEN_KEY = "gcal_access_token";
 const TOKEN_EXP_KEY = "gcal_token_expires";
-const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events";
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -89,33 +88,10 @@ export function useGoogleCalendar() {
   }, []);
 
   const getAccessToken = useCallback(
-    async (forceConsent = false): Promise<string> => {
-      if (!forceConsent) {
-        const cached = getStoredToken();
-        if (cached) return cached;
-      }
-      await loadGsi();
-      const clientId = await getClientId();
-
-      return new Promise<string>((resolve, reject) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const client = window.google.accounts.oauth2.initTokenClient({
-          client_id: clientId,
-          scope: CALENDAR_SCOPE,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          callback: (resp: any) => {
-            if (resp.error) {
-              reject(new Error(resp.error));
-              return;
-            }
-            setStoredToken(resp.access_token, resp.expires_in || 3600);
-            resolve(resp.access_token);
-          },
-        });
-        client.requestAccessToken({ prompt: forceConsent ? "consent" : "" });
-      });
+    async (_forceConsent = false): Promise<string> => {
+      throw new Error("Google Calendar sync is currently disabled.");
     },
-    [getClientId],
+    [],
   );
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
