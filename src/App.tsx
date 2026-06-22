@@ -18,6 +18,7 @@ import AppLayout from "./components/AppLayout";
 import NotFound from "./pages/NotFound";
 import Termos from "./pages/Termos";
 import Privacidade from "./pages/Privacidade";
+import ExcluirDados from "./pages/ExcluirDados";
 
 const Dashboard = lazy(() => import("./pages/app/Dashboard"));
 const Ideias = lazy(() => import("./pages/app/Ideias"));
@@ -86,6 +87,7 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/termos" element={<Termos />} />
               <Route path="/privacidade" element={<Privacidade />} />
+              <Route path="/excluir-dados" element={<ExcluirDados />} />
               <Route path="/onboarding" element={
                 <AuthOnlyRoute><Onboarding /></AuthOnlyRoute>
               } />

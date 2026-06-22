@@ -142,7 +142,7 @@ export default function Privacidade() {
             </p>
 
             <h3 className="text-base font-display font-semibold text-foreground mt-5 mb-2">
-              Acesso aos seus dados do Google (Drive e Agenda)
+              Acesso aos seus dados do Google (Drive)
             </h3>
             <p className="text-muted-foreground leading-relaxed mb-3">
               Ao conectar sua conta Google, o CRIA solicita acesso estritamente
