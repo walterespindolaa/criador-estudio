@@ -188,6 +188,12 @@ export function CollabDialog({ open, onOpenChange, collabId }: {
                   {editing.proposal_status === "ajuste" && editing.proposal_client_comment && (
                     <div className="text-xs text-orange-700 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2">A marca pediu: "{editing.proposal_client_comment}"</div>
                   )}
+                  {editing.proposal_status === "recusada" && (editing.proposal_decline_reason || editing.proposal_decline_note) && (
+                    <div className="text-xs text-red-700 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+                      <span className="font-bold">Recusada{editing.proposal_decline_reason ? ` · ${editing.proposal_decline_reason}` : ""}</span>
+                      {editing.proposal_decline_note && <span className="block mt-0.5 text-red-600/90">"{editing.proposal_decline_note}"</span>}
+                    </div>
+                  )}
                   <div className="flex gap-2">
                     <Button type="button" variant="outline" onClick={genProposal} className="rounded-xl h-9 text-xs gap-1.5 flex-1"><RotateCcw className="h-3.5 w-3.5" /> Gerar novo link</Button>
                     <Button type="button" variant="ghost" onClick={() => revokeProposal.mutate(editing.id)} className="rounded-xl h-9 text-xs text-muted-foreground">Revogar</Button>

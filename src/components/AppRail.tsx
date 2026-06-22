@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Layers, Lightbulb, ClipboardCheck, Grid3X3, ListTodo,
   CalendarRange, Kanban, Target, FolderOpen, Compass, BookOpen, BookMarked,
   Link2, Sparkles, BadgeDollarSign, BarChart3, Archive, GraduationCap,
-  PlayCircle, Settings, LogOut, Instagram, ShieldCheck, type LucideIcon,
+  PlayCircle, Settings, LogOut, Instagram, ShieldCheck, ChevronDown, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCriaAI } from "@/contexts/CriaAIContext";
@@ -61,7 +61,9 @@ export function AppRail() {
   const { profile } = useProfile();
   const isAdmin = profile?.role === "admin";
   const [openId, setOpenId] = useState<string | null>(null);
+  const [hovered, setHovered] = useState(false);
   const railRef = useRef<HTMLElement>(null);
+  const expanded = hovered;
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -87,46 +89,48 @@ export function AppRail() {
   const renderNode = (n: NavNode) => {
     const Icon = n.icon;
     const active = nodeActive(n);
+    const isOpen = openId === n.id;
     return (
-      <div key={n.id} className="group relative flex w-full justify-center">
+      <div key={n.id} className="w-full">
         <button
           onClick={() => handleClick(n)}
+          title={!expanded ? n.label : undefined}
+          aria-label={n.label}
           className={cn(
-            "relative grid h-10 w-10 place-items-center rounded-2xl transition-colors",
+            "relative flex items-center transition-colors",
+            expanded ? "h-10 w-full gap-3 rounded-xl px-3" : "mx-auto h-10 w-10 justify-center rounded-2xl",
             n.featured
               ? "bg-primary text-primary-foreground shadow-lg hover:brightness-105"
               : active
               ? "bg-primary/15 text-primary"
               : "text-[hsl(var(--sidebar-foreground))] hover:bg-primary/10 hover:text-primary",
           )}
-          aria-label={n.label}
         >
-          <Icon className="h-[18px] w-[18px]" />
-          {active && !n.featured && (
+          <Icon className="h-[18px] w-[18px] shrink-0" />
+          {expanded && <span className="flex-1 truncate text-left text-sm font-medium">{n.label}</span>}
+          {expanded && n.children && (
+            <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", isOpen && "rotate-180")} />
+          )}
+          {!expanded && active && !n.featured && (
             <span className="absolute -left-2 top-1/2 h-4 w-1 -translate-y-1/2 rounded bg-primary" />
           )}
         </button>
 
-        {openId !== n.id && (
-          <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded-lg bg-foreground px-2.5 py-1.5 text-xs font-medium text-background opacity-0 transition-opacity group-hover:opacity-100">
-            {n.label}
-          </span>
-        )}
-
-        {n.children && openId === n.id && (
-          <div className="absolute left-full top-1/2 z-50 ml-3 min-w-[230px] -translate-y-1/2 rounded-[22px] border border-border bg-card/90 p-3 shadow-2xl backdrop-blur-xl">
-            <div className="px-2.5 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {n.label}
-            </div>
+        {expanded && n.children && isOpen && (
+          <div className="mt-0.5 flex flex-col gap-0.5 pb-1">
             {n.children.map((c) => {
               const CIcon = c.icon;
+              const cActive = matchTo(c.to);
               return (
                 <button
                   key={c.to + c.label}
-                  onClick={() => { setOpenId(null); navigate(c.to); }}
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-foreground/80 transition-colors hover:bg-primary/10 hover:text-primary"
+                  onClick={() => navigate(c.to)}
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-xl py-2 pl-11 pr-3 text-left text-sm font-medium transition-colors",
+                    cActive ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-primary/10 hover:text-primary",
+                  )}
                 >
-                  <CIcon className="h-4 w-4" /> {c.label}
+                  <CIcon className="h-4 w-4 shrink-0" /> {c.label}
                 </button>
               );
             })}
@@ -139,14 +143,22 @@ export function AppRail() {
   return (
     <nav
       ref={railRef}
-      className="cria-rail-capsule fixed left-5 top-[calc(50%+0.75rem)] z-40 hidden w-[64px] -translate-y-1/2 flex-col items-center rounded-[24px] border border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar-background))] py-2.5 shadow-[0_22px_60px_-22px_rgba(35,25,70,0.3)] backdrop-blur-xl md:flex"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className={cn(
+        "cria-rail-capsule fixed left-5 top-[calc(50%+0.75rem)] z-40 hidden max-h-[92vh] -translate-y-1/2 flex-col items-stretch overflow-y-auto overflow-x-hidden rounded-[24px] border border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar-background))] py-2.5 shadow-[0_22px_60px_-22px_rgba(35,25,70,0.3)] backdrop-blur-xl transition-[width] duration-200 md:flex",
+        expanded ? "w-[248px] px-2.5" : "w-[64px] px-0",
+      )}
     >
-      <div className="mb-2 grid h-[38px] w-[38px] place-items-center rounded-[12px] bg-primary font-display text-[17px] font-extrabold text-primary-foreground">
-        c
+      <div className={cn("mb-2 flex items-center", expanded ? "gap-2 px-2" : "justify-center")}>
+        <div className="grid h-[38px] w-[38px] shrink-0 place-items-center rounded-[12px] bg-primary font-display text-[17px] font-extrabold text-primary-foreground">
+          c
+        </div>
+        {expanded && <span className="font-display text-lg font-extrabold text-foreground">Cria</span>}
       </div>
-      <div className="flex w-full flex-col items-center gap-1">{TOP.map(renderNode)}</div>
-      <div className="my-2 h-px w-8 bg-border" />
-      <div className="flex w-full flex-col items-center gap-1">
+      <div className="flex w-full flex-col items-stretch gap-1">{TOP.map(renderNode)}</div>
+      <div className="my-2 h-px w-8 self-center bg-border" />
+      <div className="flex w-full flex-col items-stretch gap-1">
         {isAdmin && renderNode({ id: "admin", label: "Admin", icon: ShieldCheck, to: "/app/cf-admin-panel" })}
         {BOTTOM.map(renderNode)}
       </div>

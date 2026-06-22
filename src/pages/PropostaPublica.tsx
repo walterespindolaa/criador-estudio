@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Check, RotateCcw, X, Loader2, Lock, Download } from "lucide-react";
 import { applyAccent } from "@/lib/applyTheme";
+import { cn } from "@/lib/utils";
+
+const DECLINE_REASONS = ["Preço", "Quantidade de posts", "Prazo", "Não tem fit", "Outro"] as const;
 
 type AnyRpc = (fn: string, args?: Record<string, unknown>) => ReturnType<typeof supabase.rpc>;
 const sbRpc = supabase.rpc.bind(supabase) as unknown as AnyRpc;
@@ -30,6 +33,9 @@ export default function PropostaPublica() {
   const inv = () => qc.invalidateQueries({ queryKey: ["proposal", token] });
   const [adjOpen, setAdjOpen] = useState(false);
   const [comment, setComment] = useState("");
+  const [rejOpen, setRejOpen] = useState(false);
+  const [rejReason, setRejReason] = useState<string | null>(null);
+  const [rejNote, setRejNote] = useState("");
 
   const q = useQuery({
     queryKey: ["proposal", token], enabled: !!token,
@@ -46,8 +52,11 @@ export default function PropostaPublica() {
     onError: () => toast.error("Não foi possível aprovar."),
   });
   const reject = useMutation({
-    mutationFn: async () => { const { error } = await sbRpc("reject_proposal_by_token", { _token: token }); if (error) throw error; },
-    onSuccess: () => { inv(); },
+    mutationFn: async () => {
+      const { error } = await sbRpc("reject_proposal_by_token", { _token: token, _reason: rejReason, _note: rejNote.trim() || null });
+      if (error) throw error;
+    },
+    onSuccess: () => { setRejOpen(false); setRejReason(null); setRejNote(""); inv(); },
     onError: () => toast.error("Não foi possível recusar."),
   });
   const change = useMutation({
@@ -138,22 +147,48 @@ export default function PropostaPublica() {
 
         {!decided && p.status !== "ajuste" && (
           <div className="px-6 pb-6">
-            {!adjOpen ? (
+            {adjOpen ? (
+              <div className="space-y-2.5">
+                <Textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={3} placeholder="O que você gostaria de ajustar?" className="rounded-2xl" />
+                <div className="flex gap-2.5">
+                  <Button className="flex-1 h-11 rounded-2xl" disabled={busy || !comment.trim()} onClick={() => change.mutate()}>{change.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar"}</Button>
+                  <Button variant="ghost" className="h-11 rounded-2xl" onClick={() => setAdjOpen(false)} disabled={busy}>Cancelar</Button>
+                </div>
+              </div>
+            ) : rejOpen ? (
+              <div className="space-y-3 rounded-2xl border border-dashed border-red-200 bg-red-50/50 p-3.5">
+                <p className="text-sm font-bold text-foreground">Por que está recusando?</p>
+                <div className="flex flex-wrap gap-2">
+                  {DECLINE_REASONS.map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setRejReason(r)}
+                      className={cn(
+                        "text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors",
+                        rejReason === r ? "bg-red-600 text-white border-red-600" : "bg-card border-border text-foreground hover:border-red-300"
+                      )}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+                <Textarea value={rejNote} onChange={(e) => setRejNote(e.target.value)} rows={2} placeholder="Conte mais pra pessoa entender (opcional)…" className="rounded-2xl bg-card" />
+                <div className="flex gap-2.5">
+                  <Button className="flex-1 h-11 rounded-2xl bg-red-600 hover:bg-red-700 text-white" disabled={busy || !rejReason} onClick={() => reject.mutate()}>
+                    {reject.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar recusa"}
+                  </Button>
+                  <Button variant="ghost" className="h-11 rounded-2xl" onClick={() => { setRejOpen(false); setRejReason(null); setRejNote(""); }} disabled={busy}>Cancelar</Button>
+                </div>
+              </div>
+            ) : (
               <div className="space-y-2.5">
                 <Button className="w-full h-13 rounded-2xl text-base font-bold gap-2 shadow-lg shadow-primary/25" style={{ height: 52 }} onClick={() => accept.mutate()} disabled={busy}>
                   {accept.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Check className="h-5 w-5" /> Aprovar proposta</>}
                 </Button>
                 <div className="grid grid-cols-2 gap-2.5">
                   <Button variant="outline" className="rounded-2xl h-11 gap-1.5" onClick={() => { setAdjOpen(true); setComment(""); }} disabled={busy}><RotateCcw className="h-4 w-4" /> Pedir alteração</Button>
-                  <Button variant="outline" className="rounded-2xl h-11 gap-1.5 text-red-600 hover:text-red-700" onClick={() => reject.mutate()} disabled={busy}><X className="h-4 w-4" /> Recusar</Button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                <Textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={3} placeholder="O que você gostaria de ajustar?" className="rounded-2xl" />
-                <div className="flex gap-2.5">
-                  <Button className="flex-1 h-11 rounded-2xl" disabled={busy || !comment.trim()} onClick={() => change.mutate()}>{change.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar"}</Button>
-                  <Button variant="ghost" className="h-11 rounded-2xl" onClick={() => setAdjOpen(false)} disabled={busy}>Cancelar</Button>
+                  <Button variant="outline" className="rounded-2xl h-11 gap-1.5 text-red-600 hover:text-red-700" onClick={() => { setRejOpen(true); setRejReason(null); setRejNote(""); }} disabled={busy}><X className="h-4 w-4" /> Recusar</Button>
                 </div>
               </div>
             )}

@@ -39,6 +39,8 @@ export type Collab = {
   proposal_viewed_at: string | null;
   proposal_responded_at: string | null;
   proposal_client_comment: string | null;
+  proposal_decline_reason: string | null;
+  proposal_decline_note: string | null;
   created_at: string;
   updated_at: string;
 };
