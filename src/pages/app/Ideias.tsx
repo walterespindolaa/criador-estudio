@@ -275,9 +275,9 @@ const Ideias = () => {
               <p className="text-muted-foreground font-body mt-0.5 text-sm whitespace-nowrap">Seu banco de inspirações.</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2 ml-auto">
             {aiUsed > 0 && (
-              <span className="text-[10px] text-muted-foreground/50 font-body">
+              <span className="hidden sm:inline text-[10px] text-muted-foreground/50 font-body">
                 {AI_LIMIT - aiUsed}/{AI_LIMIT} sugestões restantes
               </span>
             )}
@@ -291,7 +291,7 @@ const Ideias = () => {
                 )}
                 aria-pressed={viewMode === "list"}
               >
-                <List className="h-3.5 w-3.5 mr-1 inline" /> Lista
+                <List className="h-3.5 w-3.5 sm:mr-1 inline" /> <span className="hidden sm:inline">Lista</span>
               </button>
               <button
                 type="button"
@@ -302,7 +302,7 @@ const Ideias = () => {
                 )}
                 aria-pressed={viewMode === "gallery"}
               >
-                <LayoutGrid className="h-3.5 w-3.5 mr-1 inline" /> Galeria
+                <LayoutGrid className="h-3.5 w-3.5 sm:mr-1 inline" /> <span className="hidden sm:inline">Galeria</span>
               </button>
             </div>
             <Button variant="hero" onClick={openNew} className="shrink-0" size="sm">

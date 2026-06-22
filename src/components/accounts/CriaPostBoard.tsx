@@ -84,7 +84,7 @@ function ClientsList({ onOpen }: { onOpen: (c: ExternalClient) => void }) {
       )}
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-md rounded-2xl">
+        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="max-w-md rounded-2xl">
           <DialogHeader><DialogTitle className="font-display">{editing ? "Editar cliente" : "Novo cliente"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5"><Label className="text-xs font-body">Nome *</Label><Input value={f.name} onChange={(e) => setF((p) => ({ ...p, name: e.target.value }))} className="rounded-xl" /></div>
