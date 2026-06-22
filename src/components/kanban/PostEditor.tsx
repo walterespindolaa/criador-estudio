@@ -381,7 +381,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
       setScheduledTime(post.scheduled_time || "");
       setNotes(post.notes || "");
       setWeekNumber(post.week_number ?? null);
-      setGoogleEventId(post.google_event_id ?? null);
+      
       setViews(post.result_views?.toString() || "");
       setSaves(post.result_saves?.toString() || "");
       setComments(post.result_comments?.toString() || "");
@@ -406,7 +406,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
       setPillarId(""); setStatus("ideia"); setHook(""); setScript("");
       setCaption(""); setCta(""); setScheduledDate(""); setScheduledTime(""); setNotes("");
       setWeekNumber(null);
-      setGoogleEventId(null);
+      
       setViews(""); setSaves(""); setComments(""); setReach(""); setShares(""); setShowResults(false); setReferenceLink("");
       setSections(Array(5).fill(null).map(emptySection));
       setDriveMedia([]);
