@@ -160,11 +160,6 @@ export default function Privacidade() {
                 seus posts. Não acessamos nem listamos os demais arquivos do seu Drive.
               </li>
               <li>
-                <strong className="text-foreground">Google Agenda (calendar.events):</strong>{" "}
-                criamos e atualizamos eventos do seu calendário de conteúdo, para
-                sincronizar suas publicações planejadas.
-              </li>
-              <li>
                 <strong className="text-foreground">Perfil básico (email, profile):</strong>{" "}
                 identificar a conta Google conectada.
               </li>
