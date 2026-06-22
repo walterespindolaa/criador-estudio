@@ -895,6 +895,164 @@ export type Database = {
           },
         ]
       }
+      cronograma_datas: {
+        Row: {
+          created_at: string | null
+          cronograma_id: string
+          day_label: string | null
+          id: string
+          label: string
+          selected: boolean
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string | null
+          cronograma_id: string
+          day_label?: string | null
+          id?: string
+          label: string
+          selected?: boolean
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string | null
+          cronograma_id?: string
+          day_label?: string | null
+          id?: string
+          label?: string
+          selected?: boolean
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cronograma_datas_cronograma_id_fkey"
+            columns: ["cronograma_id"]
+            isOneToOne: false
+            referencedRelation: "cronogramas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cronograma_items: {
+        Row: {
+          approval_status: string
+          client_comment: string | null
+          converted_post_id: string | null
+          copy: string | null
+          created_at: string | null
+          cronograma_id: string
+          date: string | null
+          description: string | null
+          id: string
+          sort_order: number
+          type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          approval_status?: string
+          client_comment?: string | null
+          converted_post_id?: string | null
+          copy?: string | null
+          created_at?: string | null
+          cronograma_id: string
+          date?: string | null
+          description?: string | null
+          id?: string
+          sort_order?: number
+          type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          approval_status?: string
+          client_comment?: string | null
+          converted_post_id?: string | null
+          copy?: string | null
+          created_at?: string | null
+          cronograma_id?: string
+          date?: string | null
+          description?: string | null
+          id?: string
+          sort_order?: number
+          type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cronograma_items_converted_post_id_fkey"
+            columns: ["converted_post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cronograma_items_cronograma_id_fkey"
+            columns: ["cronograma_id"]
+            isOneToOne: false
+            referencedRelation: "cronogramas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cronogramas: {
+        Row: {
+          client_handle: string | null
+          client_label: string | null
+          created_at: string | null
+          cria_owner_id: string | null
+          crm_client_id: string | null
+          external_client_id: string | null
+          id: string
+          manager_id: string
+          status: string
+          title: string
+          token: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_handle?: string | null
+          client_label?: string | null
+          created_at?: string | null
+          cria_owner_id?: string | null
+          crm_client_id?: string | null
+          external_client_id?: string | null
+          id?: string
+          manager_id: string
+          status?: string
+          title: string
+          token?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_handle?: string | null
+          client_label?: string | null
+          created_at?: string | null
+          cria_owner_id?: string | null
+          crm_client_id?: string | null
+          external_client_id?: string | null
+          id?: string
+          manager_id?: string
+          status?: string
+          title?: string
+          token?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cronogramas_external_client_id_fkey"
+            columns: ["external_client_id"]
+            isOneToOne: false
+            referencedRelation: "external_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cronogramas_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -2324,6 +2482,7 @@ export type Database = {
           bio: string | null
           bio_settings: Json | null
           bio_slug: string | null
+          brand_logo_url: string | null
           created_at: string | null
           editorial_line: Json | null
           id: string
@@ -2369,6 +2528,7 @@ export type Database = {
           bio?: string | null
           bio_settings?: Json | null
           bio_slug?: string | null
+          brand_logo_url?: string | null
           created_at?: string | null
           editorial_line?: Json | null
           id: string
@@ -2414,6 +2574,7 @@ export type Database = {
           bio?: string | null
           bio_settings?: Json | null
           bio_slug?: string | null
+          brand_logo_url?: string | null
           created_at?: string | null
           editorial_line?: Json | null
           id?: string
@@ -3240,6 +3401,7 @@ export type Database = {
           total_users: number
         }[]
       }
+      get_cronograma_by_token: { Args: { _token: string }; Returns: Json }
       get_external_client_by_token: {
         Args: { _token: string }
         Returns: {
@@ -3400,6 +3562,19 @@ export type Database = {
           _token: string
         }
         Returns: undefined
+      }
+      set_cronograma_data_by_token: {
+        Args: { _data_id: string; _selected: boolean; _token: string }
+        Returns: boolean
+      }
+      set_cronograma_item_by_token: {
+        Args: {
+          _comment: string
+          _item_id: string
+          _status: string
+          _token: string
+        }
+        Returns: boolean
       }
       set_manager_notes: {
         Args: { _notes: string; _owner_id: string }
