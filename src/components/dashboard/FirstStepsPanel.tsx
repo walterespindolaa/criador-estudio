@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Rocket, X, Check, ArrowRight,
-  Lightbulb, Instagram, Palette, Send, Link as LinkIcon, LayoutGrid,
+  Lightbulb, Instagram, Palette, Send, Link as LinkIcon, Target,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -50,7 +50,7 @@ export function FirstStepsPanel() {
     { id: "moodboard", label: "Preencher meu moodboard", note: "a Cria IA aprende seu estilo", icon: Palette, to: "/app/brandbook", done: (entries?.length ?? 0) > 0 },
     { id: "post", label: "Publicar meu 1º post", icon: Send, to: "/app/criando", done: hasPublished },
     { id: "bio", label: "Montar meu link in bio", icon: LinkIcon, to: "/app/linkinbio", done: clicked.includes("bio"), markOnClick: true },
-    { id: "modulos", label: "Explorar os módulos do Cria", icon: LayoutGrid, to: "/app/modulos", done: clicked.includes("modulos"), markOnClick: true },
+    { id: "metas", label: "Definir minhas metas", icon: Target, to: "/app/metas", done: clicked.includes("metas"), markOnClick: true },
   ];
 
   const total = steps.length;
