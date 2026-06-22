@@ -1360,60 +1360,6 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     </div>
                   </div>
 
-                  {/* Google Agenda desativado temporariamente p/ verificação OAuth (escopo sensível calendar.events). Religar = trocar false por !isNew. */}
-                  {false && !isNew && post && scheduledDate && (
-                    <div className="space-y-2 pt-1">
-                      <Button
-                        variant={googleEventId ? "outline" : "secondary"}
-                        size="sm"
-                        disabled={calendarSyncing}
-                        onClick={async () => {
-                          const newId = await syncCalendarPost({
-                            id: post.id,
-                            title: title || post.title,
-                            scheduled_date: scheduledDate,
-                            scheduled_time: scheduledTime || null,
-                            caption: caption || null,
-                            notes: notes || null,
-                            platform,
-                            format,
-                            google_event_id: googleEventId,
-                          });
-                          if (newId) setGoogleEventId(newId);
-                        }}
-                        className="w-full rounded-xl"
-                      >
-                        {calendarSyncing ? (
-                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sincronizando…</>
-                        ) : googleEventId ? (
-                          <><CalendarCheck className="h-4 w-4 mr-2" /> Atualizar na Agenda</>
-                        ) : (
-                          <><CalendarPlus className="h-4 w-4 mr-2" /> Adicionar à Google Agenda</>
-                        )}
-                      </Button>
-
-                      {googleEventId && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={calendarSyncing}
-                          onClick={async () => {
-                            await removeFromCalendar({
-                              id: post.id,
-                              title: title || post.title,
-                              scheduled_date: scheduledDate,
-                              scheduled_time: scheduledTime || null,
-                              google_event_id: googleEventId,
-                            });
-                            setGoogleEventId(null);
-                          }}
-                          className="w-full rounded-xl text-muted-foreground hover:text-destructive"
-                        >
-                          <CalendarX className="h-4 w-4 mr-2" /> Remover da Agenda
-                        </Button>
-                      )}
-                    </div>
-                  )}
                 </section>
 
                 {/* Content Assistant */}
