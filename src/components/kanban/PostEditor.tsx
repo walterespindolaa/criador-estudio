@@ -100,7 +100,7 @@ import { useBrandContext } from "@/hooks/useBrandContext";
 import { RoteiroPdfTemplate } from "@/components/pdf/RoteiroPdfTemplate";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { sanitizeText } from "@/lib/sanitize";
-import { useGoogleCalendar } from "@/hooks/useGoogleCalendar";
+
 
 interface Post {
   id: string;
@@ -216,7 +216,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   const [scheduledTime, setScheduledTime] = useState("");
   const [notes, setNotes] = useState("");
   const [weekNumber, setWeekNumber] = useState<number | null>(null);
-  const [googleEventId, setGoogleEventId] = useState<string | null>(null);
+  
   const [views, setViews] = useState("");
   const [saves, setSaves] = useState("");
   const [comments, setComments] = useState("");
@@ -280,7 +280,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   const { pickAndSave, picking } = useGoogleDrive();
   const { startUpload, updateUpload, finishUpload, hasActive: hasActiveUpload, uploads } = useUploadProgress();
   const queryClient = useQueryClient();
-  const { syncPost: syncCalendarPost, removeFromCalendar, syncing: calendarSyncing } = useGoogleCalendar();
+  
   const { createPost, updatePost, deletePost } = usePosts();
   const { referenceFormats } = useReferenceLibrary();
   const { userHooks, userPrompts } = useUserLibrary();
