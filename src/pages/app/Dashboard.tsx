@@ -26,6 +26,7 @@ import { usePillars } from "@/hooks/usePillars";
 import { BestTimeToPost } from "@/components/insights/BestTimeToPost";
 import { SmartNotificationsCard } from "@/components/notifications/SmartNotificationsCard";
 import { NextBestAction } from "@/components/dashboard/NextBestAction";
+import { FirstStepsPanel } from "@/components/dashboard/FirstStepsPanel";
 import { UpcomingPosts } from "@/components/dashboard/UpcomingPosts";
 import { UpcomingTasks } from "@/components/dashboard/UpcomingTasks";
 import { WhoYouAre } from "@/components/dashboard/WhoYouAre";
@@ -322,6 +323,8 @@ const Dashboard = () => {
           </div>
         </div>
         {heroSlot && createPortal(renderPeriodFilter(true), heroSlot)}
+
+        <FirstStepsPanel />
 
         <div className="mb-4">
           <NextBestAction />

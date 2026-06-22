@@ -61,11 +61,11 @@ const PLATFORMS = [
 const GOAL_OPTIONS = [1, 2, 3, 5, 7] as const;
 
 const GOAL_LABELS: Record<number, string> = {
-  1: "Tranquilo e consistente 🌱",
-  2: "Bom ritmo 💪",
-  3: "Consistente e sustentável ✨",
-  5: "Dedicação total 🔥",
-  7: "Todo dia! Máquina 🚀",
+  1: "Tranquilo e consistente",
+  2: "Bom ritmo",
+  3: "Consistente e sustentável",
+  5: "Dedicação total",
+  7: "Todo dia, no talo",
 };
 
 const DEFAULT_HABITS = [
@@ -100,6 +100,7 @@ const Onboarding = () => {
   const [setupLoading, setSetupLoading] = useState(false);
   const [setupDone, setSetupDone] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
+  const [generatedIdeas, setGeneratedIdeas] = useState<{ title: string; format?: string | null }[]>([]);
   const setupStartedRef = useRef(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -240,6 +241,8 @@ const Onboarding = () => {
         platform: idea.platform ?? platforms[0] ?? "instagram",
       })).filter((idea) => idea.title);
 
+      setGeneratedIdeas(ideasToCreate.map(({ title, format }) => ({ title, format })));
+
       const profileUpdates: Record<string, unknown> = {
         onboarding_completed: true,
         weekly_goal: weeklyGoal,
@@ -304,7 +307,7 @@ const Onboarding = () => {
   }, [step, setupDone, runSetup]);
 
   const enterApp = () => {
-    toast.success("Bem-vindo ao cria! 🎉");
+    toast.success("Bem-vindo ao cria!");
     navigate("/app");
   };
 
@@ -385,7 +388,7 @@ const Onboarding = () => {
                 </button>
                 <div className="flex-1">
                   <p className="text-sm font-display font-bold text-foreground">
-                    {name.trim() ? `Bem-vindo, ${name.trim()}! 🎉` : "Bem-vindo ao cria 🎉"}
+                    {name.trim() ? `Bem-vindo, ${name.trim()}!` : "Bem-vindo ao cria"}
                   </p>
                   <p className="text-xs text-muted-foreground font-body mt-0.5">Toque para adicionar uma foto</p>
                 </div>
@@ -673,20 +676,51 @@ const Onboarding = () => {
                   transition={{ duration: 0.4 }}
                   className="space-y-6"
                 >
-                  <div className="relative mx-auto w-24 h-24">
+                  <div className="relative mx-auto w-20 h-20">
                     <div className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 opacity-90" />
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <Check className="h-12 w-12 text-white" strokeWidth={2.5} />
+                      <Check className="h-10 w-10 text-white" strokeWidth={2.5} />
                     </div>
                   </div>
                   <div>
-                    <h1 className="text-3xl sm:text-4xl font-display font-extrabold text-foreground tracking-tight mb-3">
-                      Tudo pronto! 🎉
+                    <h1 className="text-3xl sm:text-4xl font-display font-extrabold text-foreground tracking-tight mb-2">
+                      Pronto{name.trim() ? `, ${name.trim()}` : ""} — montei sua primeira semana
                     </h1>
                     <p className="text-base text-muted-foreground font-body max-w-md mx-auto">
-                      Seu espaço criativo está configurado. Pilares, hábitos e ideias já estão te esperando.
+                      {generatedIdeas.length > 0
+                        ? "Já deixei estas ideias no seu espaço. Edite o que quiser depois."
+                        : "Seu espaço criativo está configurado. Pilares, hábitos e ideias já estão te esperando."}
                     </p>
                   </div>
+
+                  {generatedIdeas.length > 0 && (
+                    <div className="text-left max-w-md mx-auto space-y-2">
+                      {generatedIdeas.slice(0, 5).map((idea, i) => (
+                        <motion.div
+                          key={i}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.15 + i * 0.07 }}
+                          className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5"
+                        >
+                          {idea.format && (
+                            <span className="text-[11px] font-body font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary shrink-0 whitespace-nowrap">
+                              {idea.format}
+                            </span>
+                          )}
+                          <span className="text-sm font-body text-foreground">{idea.title}</span>
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="max-w-md mx-auto rounded-xl border border-primary/20 bg-primary/[0.04] px-4 py-3 flex items-start gap-3 text-left">
+                    <Palette className="h-5 w-5 text-primary shrink-0 mt-0.5" strokeWidth={1.75} />
+                    <p className="text-xs text-muted-foreground font-body leading-relaxed">
+                      <span className="font-semibold text-foreground">Próximo passo importante:</span> preencha seu moodboard no Brandbook — é de lá que a Cria IA aprende o seu estilo pra gerar ideias e textos com a sua cara.
+                    </p>
+                  </div>
+
                   <Button variant="hero" size="lg" onClick={enterApp} className="text-base">
                     Entrar no cria <ArrowRight className="ml-1 h-5 w-5" />
                   </Button>

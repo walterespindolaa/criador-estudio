@@ -16,12 +16,22 @@ export type Cronograma = {
   manager_id: string;
   title: string;
   client_label: string | null;
+  client_handle: string | null;
   external_client_id: string | null;
   crm_client_id: string | null;
   cria_owner_id: string | null;
   status: CronogramaStatus;
   token: string;
   created_at: string;
+};
+
+export type CronogramaData = {
+  id: string;
+  cronograma_id: string;
+  label: string;
+  day_label: string | null;
+  sort_order: number;
+  selected: boolean;
 };
 
 export type CronogramaItem = {
@@ -53,7 +63,7 @@ export function useCronogramas() {
   });
 
   const create = useMutation({
-    mutationFn: async (input: { title: string; client_label?: string | null; external_client_id?: string | null; crm_client_id?: string | null; cria_owner_id?: string | null }) => {
+    mutationFn: async (input: { title: string; client_label?: string | null; client_handle?: string | null; external_client_id?: string | null; crm_client_id?: string | null; cria_owner_id?: string | null }) => {
       if (!user?.id) throw new Error("Sem sessão");
       const { data, error } = await sbFrom("cronogramas")
         .insert({ ...input, manager_id: user.id } as never).select("*").single();
@@ -123,4 +133,59 @@ export function useCronogramaItems(cronogramaId: string | null) {
   });
 
   return { items: list.data ?? [], isLoading: list.isLoading, addItem, updateItem, deleteItem };
+}
+
+export function useCronogramaDatas(cronogramaId: string | null) {
+  const qc = useQueryClient();
+
+  const list = useQuery<CronogramaData[]>({
+    queryKey: ["cronograma-datas", cronogramaId],
+    enabled: !!cronogramaId,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("cronograma_datas")
+        .select("*").eq("cronograma_id", cronogramaId!).order("sort_order", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as CronogramaData[];
+    },
+  });
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["cronograma-datas", cronogramaId] });
+
+  const addData = useMutation({
+    mutationFn: async (input: { label: string; day_label?: string | null }) => {
+      const { error } = await sbFrom("cronograma_datas")
+        .insert({ cronograma_id: cronogramaId, sort_order: (list.data?.length ?? 0), ...input } as never);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+    onError: () => toast.error("Erro ao adicionar data."),
+  });
+
+  const addManyDatas = useMutation({
+    mutationFn: async (rows: { label: string; day_label?: string | null }[]) => {
+      const base = list.data?.length ?? 0;
+      const { error } = await sbFrom("cronograma_datas")
+        .insert(rows.map((r, i) => ({ cronograma_id: cronogramaId, sort_order: base + i, ...r })) as never);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+    onError: () => toast.error("Erro ao adicionar datas."),
+  });
+
+  const updateData = useMutation({
+    mutationFn: async ({ id, ...patch }: { id: string } & Partial<CronogramaData>) => {
+      const { error } = await sbFrom("cronograma_datas").update(patch as never).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+    onError: () => toast.error("Erro ao salvar data."),
+  });
+
+  const deleteData = useMutation({
+    mutationFn: async (id: string) => { const { error } = await sbFrom("cronograma_datas").delete().eq("id", id); if (error) throw error; },
+    onSuccess: invalidate,
+    onError: () => toast.error("Erro ao excluir data."),
+  });
+
+  return { datas: list.data ?? [], isLoading: list.isLoading, addData, addManyDatas, updateData, deleteData };
 }
