@@ -175,8 +175,9 @@ export default function Landing() {
         )}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center cursor-pointer" onClick={() => { setMenuOpen(false); scrollTo("hero"); }}>
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => { setMenuOpen(false); scrollTo("hero"); }}>
             <Logo className="h-8 w-auto" />
+            <span className="font-display font-bold text-foreground text-base sm:text-lg">Cria Social Club</span>
           </div>
 
           <nav className="hidden md:flex items-center gap-8 font-medium text-sm text-muted-foreground">
