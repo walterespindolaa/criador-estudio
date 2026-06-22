@@ -25,6 +25,12 @@ const ST_CLASS: Record<ItemStatus, string> = {
   recusado: "bg-red-100 text-red-700", ajuste: "bg-amber-100 text-amber-700",
 };
 
+// máscara DD/MM enquanto digita (ex.: "1505" -> "15/05")
+const maskDay = (v: string) => {
+  const d = v.replace(/\D/g, "").slice(0, 4);
+  return d.length <= 2 ? d : `${d.slice(0, 2)}/${d.slice(2)}`;
+};
+
 export function CronogramaBoard() {
   const { clients } = useExternalClients();
   const { cronogramas, create, update, remove } = useCronogramas();
@@ -296,7 +302,7 @@ function DatasComemorativasSection({ cronogramaId }: { cronogramaId: string }) {
 
       <div className="flex gap-2 flex-wrap">
         <Input value={label} onChange={(e) => setLabel(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addCustom()} placeholder="Ex.: Dia do Café" className="rounded-xl flex-1 min-w-[160px] h-9" />
-        <Input value={day} onChange={(e) => setDay(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addCustom()} placeholder="14/04" className="rounded-xl w-24 h-9" />
+        <Input value={day} onChange={(e) => setDay(maskDay(e.target.value))} onKeyDown={(e) => e.key === "Enter" && addCustom()} placeholder="14/04" inputMode="numeric" className="rounded-xl w-24 h-9" />
         <Button onClick={addCustom} disabled={!label.trim()} className="rounded-xl h-9 gap-1.5"><Plus className="h-4 w-4" /> Adicionar</Button>
       </div>
 
