@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Plus, Pencil, Trash2, Send, Link2, CalendarRange } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Send, Link2, CalendarRange, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   useCronogramas, useCronogramaItems, CRONOGRAMA_TYPES,
   type Cronograma, type CronogramaItem, type ItemStatus,
 } from "@/hooks/useCronograma";
+import { useExternalClients } from "@/hooks/useCriaPost";
 
 const TYPE_COLOR: Record<string, string> = {
   "Reels": "bg-red-600", "Carrossel": "bg-green-700", "Feed": "bg-blue-700",
@@ -24,70 +25,105 @@ const ST_CLASS: Record<ItemStatus, string> = {
 };
 
 export function CronogramaBoard() {
+  const { clients } = useExternalClients();
   const { cronogramas, create, update, remove } = useCronogramas();
+  const [clientId, setClientId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
-  const [newClient, setNewClient] = useState("");
 
   const selected = selectedId ? cronogramas.find((c) => c.id === selectedId) ?? null : null;
+  const selectedClient = clientId ? clients.find((c) => c.id === clientId) ?? null : null;
+  const clientCronos = cronogramas.filter((c) => c.external_client_id === clientId);
+  const countFor = (cid: string) => cronogramas.filter((c) => c.external_client_id === cid).length;
 
-  const createCronograma = async () => {
-    if (!newTitle.trim()) return;
-    const c = await create.mutateAsync({ title: newTitle.trim(), client_label: newClient.trim() || null });
-    setNewOpen(false); setNewTitle(""); setNewClient("");
-    setSelectedId(c.id);
-  };
-
+  // Nível 3 — detalhe do cronograma
   if (selected) {
     return <CronogramaDetail c={selected} onBack={() => setSelectedId(null)} onUpdate={update.mutate} onDelete={async (id) => { await remove.mutateAsync(id); setSelectedId(null); }} />;
   }
 
+  const createCronograma = async () => {
+    if (!newTitle.trim() || !selectedClient) return;
+    const c = await create.mutateAsync({ title: newTitle.trim(), external_client_id: selectedClient.id, client_label: selectedClient.name });
+    setNewOpen(false); setNewTitle("");
+    setSelectedId(c.id);
+  };
+
+  // Nível 2 — cronogramas do cliente (histórico)
+  if (clientId && selectedClient) {
+    return (
+      <div>
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <Button variant="ghost" size="sm" onClick={() => setClientId(null)} className="gap-1.5"><ArrowLeft className="h-4 w-4" /> Clientes</Button>
+          <div className="min-w-0">
+            <h3 className="font-display font-bold text-foreground leading-tight">{selectedClient.name}</h3>
+            {selectedClient.instagram_handle && <p className="text-xs text-muted-foreground">@{selectedClient.instagram_handle.replace(/^@/, "")}</p>}
+          </div>
+          <Button size="sm" onClick={() => setNewOpen(true)} className="ml-auto gap-1.5"><Plus className="h-4 w-4" /> Novo cronograma</Button>
+        </div>
+
+        {clientCronos.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border p-10 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-3"><CalendarRange className="h-5 w-5 text-muted-foreground" /></div>
+            <p className="text-sm font-medium text-foreground">Nenhum cronograma pra este cliente</p>
+            <p className="text-xs text-muted-foreground mt-1">Crie o primeiro cronograma de conteúdos.</p>
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {clientCronos.map((c) => (
+              <button key={c.id} onClick={() => setSelectedId(c.id)} className="text-left bg-card border border-border rounded-2xl p-5 hover:border-primary/40 hover:shadow-md transition-all">
+                <div className="flex items-center gap-2 mb-1"><CalendarRange className="h-4 w-4 text-primary" /><span className="font-display font-bold text-foreground">{c.title}</span></div>
+                <span className={cn("inline-block mt-3 text-[10px] font-bold px-2 py-0.5 rounded-full",
+                  c.status === "aprovado" ? "bg-green-100 text-green-700" : c.status === "enviado" ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground")}>
+                  {c.status === "aprovado" ? "Aprovado" : c.status === "enviado" ? "Enviado" : "Rascunho"}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        <Dialog open={newOpen} onOpenChange={setNewOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader><DialogTitle className="font-display">Novo cronograma · {selectedClient.name}</DialogTitle></DialogHeader>
+            <div className="space-y-3 py-2">
+              <div><Label className="text-xs">Título</Label><Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Ex.: Julho 2026" className="rounded-xl" /></div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setNewOpen(false)} className="rounded-xl">Cancelar</Button>
+              <Button onClick={createCronograma} disabled={!newTitle.trim()} className="rounded-xl">Criar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
+  // Nível 1 — lista de clientes
+  const activeClients = clients.filter((c) => c.active);
   return (
     <div>
-      <div className="flex items-center justify-between mb-4 gap-3">
-        <p className="text-sm text-muted-foreground">Monte o calendário de conteúdos e envie pro cliente aprovar.</p>
-        <Button size="sm" onClick={() => setNewOpen(true)} className="gap-1.5"><Plus className="h-4 w-4" /> Novo cronograma</Button>
-      </div>
-
-      {cronogramas.length === 0 ? (
+      <p className="text-sm text-muted-foreground mb-4">Escolha um cliente pra ver o histórico e montar cronogramas.</p>
+      {activeClients.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border p-10 text-center">
-          <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-3"><CalendarRange className="h-5 w-5 text-muted-foreground" /></div>
-          <p className="text-sm font-medium text-foreground">Nenhum cronograma ainda</p>
-          <p className="text-xs text-muted-foreground mt-1">Crie um cronograma e adicione os conteúdos do mês.</p>
+          <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-3"><Building2 className="h-5 w-5 text-muted-foreground" /></div>
+          <p className="text-sm font-medium text-foreground">Nenhum cliente cadastrado</p>
+          <p className="text-xs text-muted-foreground mt-1">Cadastre um cliente na aba "Posts" pra começar.</p>
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {cronogramas.map((c) => (
-            <button key={c.id} onClick={() => setSelectedId(c.id)}
-              className="text-left bg-card border border-border rounded-2xl p-5 hover:border-primary/40 hover:shadow-md transition-all">
-              <div className="flex items-center gap-2 mb-1">
-                <CalendarRange className="h-4 w-4 text-primary" />
-                <span className="font-display font-bold text-foreground">{c.title}</span>
+          {activeClients.map((cl) => (
+            <button key={cl.id} onClick={() => setClientId(cl.id)} className="text-left bg-card border border-border rounded-2xl p-5 hover:border-primary/40 hover:shadow-md transition-all flex items-center gap-3">
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary via-purple-600 to-pink-500 p-[2px] shrink-0">
+                <div className="w-full h-full rounded-full bg-card grid place-items-center font-display font-extrabold text-primary">{cl.name.charAt(0).toUpperCase()}</div>
               </div>
-              {c.client_label && <p className="text-xs text-muted-foreground">{c.client_label}</p>}
-              <span className={cn("inline-block mt-3 text-[10px] font-bold px-2 py-0.5 rounded-full",
-                c.status === "aprovado" ? "bg-green-100 text-green-700" : c.status === "enviado" ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground")}>
-                {c.status === "aprovado" ? "Aprovado" : c.status === "enviado" ? "Enviado" : "Rascunho"}
-              </span>
+              <div className="min-w-0">
+                <p className="font-display font-bold text-foreground truncate">{cl.name}</p>
+                <p className="text-xs text-muted-foreground">{countFor(cl.id)} cronograma{countFor(cl.id) === 1 ? "" : "s"}</p>
+              </div>
             </button>
           ))}
         </div>
       )}
-
-      <Dialog open={newOpen} onOpenChange={setNewOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle className="font-display">Novo cronograma</DialogTitle></DialogHeader>
-          <div className="space-y-3 py-2">
-            <div><Label className="text-xs">Título</Label><Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Ex.: Julho 2026" className="rounded-xl" /></div>
-            <div><Label className="text-xs">Cliente (opcional)</Label><Input value={newClient} onChange={(e) => setNewClient(e.target.value)} placeholder="@cliente" className="rounded-xl" /></div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setNewOpen(false)} className="rounded-xl">Cancelar</Button>
-            <Button onClick={createCronograma} disabled={!newTitle.trim()} className="rounded-xl">Criar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

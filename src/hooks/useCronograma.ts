@@ -16,6 +16,7 @@ export type Cronograma = {
   manager_id: string;
   title: string;
   client_label: string | null;
+  external_client_id: string | null;
   crm_client_id: string | null;
   cria_owner_id: string | null;
   status: CronogramaStatus;
@@ -52,7 +53,7 @@ export function useCronogramas() {
   });
 
   const create = useMutation({
-    mutationFn: async (input: { title: string; client_label?: string | null; crm_client_id?: string | null; cria_owner_id?: string | null }) => {
+    mutationFn: async (input: { title: string; client_label?: string | null; external_client_id?: string | null; crm_client_id?: string | null; cria_owner_id?: string | null }) => {
       if (!user?.id) throw new Error("Sem sessão");
       const { data, error } = await sbFrom("cronogramas")
         .insert({ ...input, manager_id: user.id } as never).select("*").single();
