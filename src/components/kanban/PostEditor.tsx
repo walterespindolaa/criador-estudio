@@ -1360,7 +1360,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     </div>
                   </div>
 
-                  {!isNew && post && scheduledDate && (
+                  {/* Google Agenda desativado temporariamente p/ verificação OAuth (escopo sensível calendar.events). Religar = trocar false por !isNew. */}
+                  {false && !isNew && post && scheduledDate && (
                     <div className="space-y-2 pt-1">
                       <Button
                         variant={googleEventId ? "outline" : "secondary"}
