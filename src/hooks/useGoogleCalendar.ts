@@ -5,7 +5,6 @@ import { toast } from "sonner";
 
 const TOKEN_KEY = "gcal_access_token";
 const TOKEN_EXP_KEY = "gcal_token_expires";
-const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events";
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
