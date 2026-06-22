@@ -14,6 +14,7 @@ export type Profile = Database["public"]["Tables"]["profiles"]["Row"] & {
   storage_quota_bytes?: number | null;
   storage_retention_days?: number | null;
   editorial_line?: Record<string, string> | null;
+  brand_logo_url?: string | null;
 };
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"] & {
   role?: string | null;
@@ -25,6 +26,7 @@ type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"] & {
   storage_quota_bytes?: number | null;
   storage_retention_days?: number | null;
   editorial_line?: Record<string, string> | null;
+  brand_logo_url?: string | null;
 };
 
 export function useProfile() {

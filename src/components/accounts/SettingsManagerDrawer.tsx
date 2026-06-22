@@ -10,7 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Camera, ExternalLink, FileText, HardDrive, Loader2, Lock, Palette, Plug, Unplug, User, Users } from "lucide-react";
+import { Camera, ExternalLink, FileText, HardDrive, Image as ImageIcon, Loader2, Lock, Palette, Plug, Unplug, User, Users } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useProfile } from "@/hooks/useProfile";
@@ -37,9 +37,11 @@ export function SettingsManagerDrawer({ open, onOpenChange }: Props) {
   const { connection: drive, connect: driveConnect, disconnect: driveDisconnect } = useGoogleDriveConnection();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const [companyOpen, setCompanyOpen] = useState(false);
   const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
   const [cropOpen, setCropOpen] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   const [name, setName] = useState(profile?.name ?? "");
   const [savingName, setSavingName] = useState(false);
@@ -78,6 +80,34 @@ export function SettingsManagerDrawer({ open, onOpenChange }: Props) {
       setCropOpen(false);
       setRawImageSrc(null);
     }
+  };
+
+  // ── Logo da marca ────────────────────────────────────────
+  const handleLogoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !user) return;
+    const v = validateUpload(file, "managerAvatar");
+    if (!v.ok) { toast.error(v.reason); return; }
+    setUploadingLogo(true);
+    try {
+      const ext = (file.name.split(".").pop() || "png").toLowerCase();
+      const path = `${user.id}/brand-logo.${ext}`;
+      const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
+      if (error) throw error;
+      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+      await updateProfile.mutateAsync({ brand_logo_url: `${data.publicUrl}?t=${Date.now()}` });
+      toast.success("Logo atualizada!");
+    } catch {
+      toast.error("Erro ao enviar a logo.");
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const removeLogo = async () => {
+    try { await updateProfile.mutateAsync({ brand_logo_url: null }); toast.success("Logo removida."); }
+    catch { toast.error("Erro ao remover a logo."); }
   };
 
   // ── Nome ─────────────────────────────────────────────────
@@ -241,7 +271,29 @@ export function SettingsManagerDrawer({ open, onOpenChange }: Props) {
             </section>
             </TabsContent>
 
-            <TabsContent value="tema" className="mt-5">
+            <TabsContent value="tema" className="mt-5 space-y-6">
+              <section className="space-y-2">
+                <h3 className="font-display font-semibold text-sm text-foreground flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" /> Logo da marca
+                </h3>
+                <p className="text-xs text-muted-foreground font-body">Aparece no cabeçalho do cronograma que o cliente recebe. Opcional — sem logo, mostramos só o nome e a cor.</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-20 h-20 rounded-xl border border-border bg-muted/30 grid place-items-center overflow-hidden shrink-0">
+                    {profile?.brand_logo_url
+                      ? <img src={profile.brand_logo_url} alt="" className="w-full h-full object-contain" loading="lazy" />
+                      : <ImageIcon className="h-6 w-6 text-muted-foreground" />}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Button variant="outline" size="sm" onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo}>
+                      {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar logo"}
+                    </Button>
+                    {profile?.brand_logo_url && (
+                      <Button variant="ghost" size="sm" onClick={removeLogo} className="text-destructive h-7">Remover</Button>
+                    )}
+                  </div>
+                  <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoSelect} />
+                </div>
+              </section>
               <SettingsVisual />
             </TabsContent>
 

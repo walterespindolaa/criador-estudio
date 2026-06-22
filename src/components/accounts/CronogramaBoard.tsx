@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Plus, Pencil, Trash2, Send, Link2, CalendarRange, Building2 } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Send, Link2, CalendarRange, Building2, PartyPopper, Check, AtSign } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -9,10 +9,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  useCronogramas, useCronogramaItems, CRONOGRAMA_TYPES,
+  useCronogramas, useCronogramaItems, useCronogramaDatas, CRONOGRAMA_TYPES,
   type Cronograma, type CronogramaItem, type ItemStatus,
 } from "@/hooks/useCronograma";
 import { useExternalClients } from "@/hooks/useCriaPost";
+import { DATAS_COMEMORATIVAS } from "@/lib/datasComemorativas";
 
 const TYPE_COLOR: Record<string, string> = {
   "Reels": "bg-red-600", "Carrossel": "bg-green-700", "Feed": "bg-blue-700",
@@ -44,7 +45,7 @@ export function CronogramaBoard() {
 
   const createCronograma = async () => {
     if (!newTitle.trim() || !selectedClient) return;
-    const c = await create.mutateAsync({ title: newTitle.trim(), external_client_id: selectedClient.id, client_label: selectedClient.name });
+    const c = await create.mutateAsync({ title: newTitle.trim(), external_client_id: selectedClient.id, client_label: selectedClient.name, client_handle: selectedClient.instagram_handle ?? null });
     setNewOpen(false); setNewTitle("");
     setSelectedId(c.id);
   };
@@ -137,6 +138,7 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
   const [editing, setEditing] = useState<CronogramaItem | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [f, setF] = useState<Partial<CronogramaItem>>({});
+  const [handle, setHandle] = useState(c.client_handle ?? "");
 
   const openNew = () => { setEditing(null); setF({ type: "Reels" }); setFormOpen(true); };
   const openEdit = (it: CronogramaItem) => { setEditing(it); setF(it); setFormOpen(true); };
@@ -158,7 +160,19 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
         <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5"><ArrowLeft className="h-4 w-4" /> Voltar</Button>
         <div className="min-w-0">
           <h3 className="font-display font-bold text-foreground leading-tight">{c.title}</h3>
-          {c.client_label && <p className="text-xs text-muted-foreground">{c.client_label}</p>}
+          <div className="flex items-center gap-1.5 mt-0.5">
+            {c.client_label && <span className="text-xs text-muted-foreground">{c.client_label} ·</span>}
+            <div className="relative">
+              <AtSign className="absolute left-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+              <input
+                value={handle.replace(/^@/, "")}
+                onChange={(e) => setHandle(e.target.value.replace(/^@/, ""))}
+                onBlur={() => onUpdate({ id: c.id, client_handle: handle.replace(/^@/, "") || null })}
+                placeholder="cliente"
+                className="h-6 w-32 pl-5 pr-1.5 text-xs rounded-md border border-border bg-background text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+          </div>
         </div>
         <div className="ml-auto flex items-center gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={() => { navigator.clipboard?.writeText(link); toast.success("Link copiado."); }} className="gap-1.5"><Link2 className="h-3.5 w-3.5" /> Copiar link</Button>
@@ -166,6 +180,8 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => { if (confirm("Excluir este cronograma?")) onDelete(c.id); }}><Trash2 className="h-4 w-4" /></Button>
         </div>
       </div>
+
+      <DatasComemorativasSection cronogramaId={c.id} />
 
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
@@ -233,5 +249,114 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function DatasComemorativasSection({ cronogramaId }: { cronogramaId: string }) {
+  const { datas, addData, addManyDatas, deleteData } = useCronogramaDatas(cronogramaId);
+  const [label, setLabel] = useState("");
+  const [day, setDay] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const addCustom = async () => {
+    if (!label.trim()) return;
+    await addData.mutateAsync({ label: label.trim(), day_label: day.trim() || null });
+    setLabel(""); setDay("");
+  };
+
+  const existingLabels = new Set(datas.map((d) => d.label.toLowerCase()));
+  const selectedCount = datas.filter((d) => d.selected).length;
+
+  return (
+    <div className="bg-card border border-border rounded-2xl p-4 mb-4">
+      <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+        <h4 className="font-display font-bold text-foreground flex items-center gap-2 text-sm">
+          <PartyPopper className="h-4 w-4 text-primary" /> Datas comemorativas
+          {datas.length > 0 && <span className="text-xs font-body font-normal text-muted-foreground">· {selectedCount} marcadas pelo cliente</span>}
+        </h4>
+        <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)} className="gap-1.5"><Plus className="h-3.5 w-3.5" /> Lista anual</Button>
+      </div>
+
+      <p className="text-xs text-muted-foreground mb-3">Adicione datas pro cliente marcar quais quer trabalhar. Ele dá check no link.</p>
+
+      {datas.length > 0 && (
+        <div className="flex flex-col gap-1.5 mb-3">
+          {datas.map((d) => (
+            <div key={d.id} className={cn("flex items-center gap-2.5 rounded-lg border px-3 py-2 group", d.selected ? "border-primary/40 bg-primary/[0.04]" : "border-border")}>
+              {d.selected
+                ? <span className="w-4 h-4 rounded bg-primary grid place-items-center shrink-0"><Check className="h-3 w-3 text-primary-foreground" strokeWidth={3} /></span>
+                : <span className="w-4 h-4 rounded border border-border shrink-0" />}
+              <span className="text-sm text-foreground">{d.label}</span>
+              {d.day_label && <span className="text-xs text-muted-foreground">{d.day_label}</span>}
+              <button onClick={() => deleteData.mutate(d.id)} className="ml-auto opacity-0 group-hover:opacity-100 text-destructive transition-opacity"><Trash2 className="h-3.5 w-3.5" /></button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex gap-2 flex-wrap">
+        <Input value={label} onChange={(e) => setLabel(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addCustom()} placeholder="Ex.: Dia do Café" className="rounded-xl flex-1 min-w-[160px] h-9" />
+        <Input value={day} onChange={(e) => setDay(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addCustom()} placeholder="14/04" className="rounded-xl w-24 h-9" />
+        <Button onClick={addCustom} disabled={!label.trim()} className="rounded-xl h-9 gap-1.5"><Plus className="h-4 w-4" /> Adicionar</Button>
+      </div>
+
+      <AnnualDatesDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        existingLabels={existingLabels}
+        onConfirm={async (rows) => { if (rows.length) await addManyDatas.mutateAsync(rows); setPickerOpen(false); }}
+      />
+    </div>
+  );
+}
+
+function AnnualDatesDialog({ open, onOpenChange, existingLabels, onConfirm }: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  existingLabels: Set<string>;
+  onConfirm: (rows: { label: string; day_label: string | null }[]) => void;
+}) {
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const toggle = (key: string) => setPicked((prev) => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; });
+
+  const rows = DATAS_COMEMORATIVAS.flatMap((g) => g.items.map((it) => ({ key: `${g.month}-${it.label}`, label: it.label, day_label: it.day })));
+  const confirm = () => onConfirm(rows.filter((r) => picked.has(r.key)).map(({ label, day_label }) => ({ label, day_label })));
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogHeader><DialogTitle className="font-display">Lista anual de datas</DialogTitle></DialogHeader>
+        <p className="text-xs text-muted-foreground -mt-2">Marque as datas pra adicionar ao cronograma deste cliente.</p>
+        <div className="space-y-4 py-2">
+          {DATAS_COMEMORATIVAS.map((g) => (
+            <div key={g.month}>
+              <p className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground mb-1.5">{g.month}</p>
+              <div className="grid gap-1">
+                {g.items.map((it) => {
+                  const key = `${g.month}-${it.label}`;
+                  const already = existingLabels.has(it.label.toLowerCase());
+                  const checked = picked.has(key);
+                  return (
+                    <button key={key} disabled={already} onClick={() => toggle(key)}
+                      className={cn("flex items-center gap-2.5 rounded-lg border px-3 py-1.5 text-left transition-colors",
+                        already ? "opacity-40 cursor-not-allowed border-border" : checked ? "border-primary bg-primary/[0.05]" : "border-border hover:border-primary/40")}>
+                      <span className={cn("w-4 h-4 rounded grid place-items-center shrink-0", checked ? "bg-primary" : "border border-border")}>
+                        {checked && <Check className="h-3 w-3 text-primary-foreground" strokeWidth={3} />}
+                      </span>
+                      <span className="text-sm text-foreground flex-1">{it.label}</span>
+                      <span className="text-xs text-muted-foreground">{already ? "já incluída" : it.day}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">Cancelar</Button>
+          <Button onClick={confirm} disabled={picked.size === 0} className="rounded-xl">Adicionar {picked.size > 0 ? `(${picked.size})` : ""}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
