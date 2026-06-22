@@ -251,30 +251,30 @@ export default function Landing() {
               <motion.div {...fadeUp} className="text-center lg:text-left">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-6 border border-primary/20 shadow-sm">
                   <Sparkles className="w-4 h-4" />
-                  ✦ Para criadores brasileiros
+                  {t("landing.heroBadge")}
                 </div>
-                
+
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-extrabold tracking-tight leading-[1.1] mb-6">
-                  Do caos criativo ao <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-purple-600 to-pink-500">conteúdo publicado.</span>
+                  {t("landing.heroTitlePre")}<span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-purple-600 to-pink-500">{t("landing.heroTitleHighlight")}</span>
                 </h1>
-                
+
                 <p className="text-lg lg:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-                  O sistema operacional completo do criador: capture ideias, planeje no calendário, produza, agende e analise os resultados — sem pular de app em app.
+                  {t("landing.heroSubtitle")}
                 </p>
 
                 <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-8">
                   <Button variant="hero" size="lg" className="w-full sm:w-auto text-base h-14 px-8" onClick={() => navigate("/signup")}>
-                    Começar grátis &rarr;
+                    {t("landing.startFree")} &rarr;
                   </Button>
                   <Button variant="outline" size="lg" className="w-full sm:w-auto text-base h-14 px-8" onClick={() => scrollTo("how-it-works")}>
-                    Ver como funciona
+                    {t("landing.heroCtaSecondary")}
                   </Button>
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 sm:gap-6 text-sm text-muted-foreground font-medium">
-                  <div className="flex items-center gap-1.5"><Check className="w-4 h-4 text-primary" /> 14 dias grátis</div>
-                  <div className="flex items-center gap-1.5"><Check className="w-4 h-4 text-primary" /> Sem cartão</div>
-                  <div className="flex items-center gap-1.5"><Check className="w-4 h-4 text-primary" /> Cancele quando quiser</div>
+                  <div className="flex items-center gap-1.5"><Check className="w-4 h-4 text-primary" /> {t("landing.trial")}</div>
+                  <div className="flex items-center gap-1.5"><Check className="w-4 h-4 text-primary" /> {t("landing.noCard")}</div>
+                  <div className="flex items-center gap-1.5"><Check className="w-4 h-4 text-primary" /> {t("landing.cancel")}</div>
                 </div>
               </motion.div>
 
@@ -295,7 +295,7 @@ export default function Landing() {
         {/* ─── 3. MARQUEE ─── */}
         <section className="py-10 sm:py-12 bg-card border-y border-border overflow-hidden">
           <p className="text-center text-sm font-medium text-muted-foreground mb-6 px-4">
-            Tudo que você precisa pra crescer no Instagram, TikTok e YouTube
+            {t("landing.marqueeTagline")}
           </p>
           <div className="relative">
             <motion.div
@@ -320,13 +320,13 @@ export default function Landing() {
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
             <motion.div {...fadeUp} className="text-center mb-12 sm:mb-16">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-4 border border-primary/20">
-                <Sparkles className="w-4 h-4" /> Tudo num lugar só
+                <Sparkles className="w-4 h-4" /> {t("landing.featBadge")}
               </div>
               <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight mb-4">
-                Do primeiro insight ao post no ar
+                {t("landing.featTitle")}
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Cada etapa do seu conteúdo num fluxo visual — pensado pra quem não sabe por onde começar.
+                {t("landing.featSubtitle")}
               </p>
             </motion.div>
 
@@ -360,26 +360,26 @@ export default function Landing() {
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
             <motion.div {...fadeUp} className="text-center mb-12 sm:mb-16">
               <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight mb-4">
-                Veja por dentro
+                {t("landing.insideTitle")}
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Os recursos que fecham o ciclo de ideia → análise.
+                {t("landing.insideSubtitle")}
               </p>
             </motion.div>
 
             <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center mb-16 lg:mb-24">
               <motion.div initial={{ opacity: 0, x: -32 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-4 border border-primary/20">
-                  <CalendarDays className="w-4 h-4" /> Planejamento
+                  <CalendarDays className="w-4 h-4" /> {t("landing.planBadge")}
                 </div>
-                <h3 className="text-2xl lg:text-3xl font-display font-bold mb-4">Planeje o mês e arraste pra reagendar</h3>
+                <h3 className="text-2xl lg:text-3xl font-display font-bold mb-4">{t("landing.planTitle")}</h3>
                 <p className="text-muted-foreground text-base lg:text-lg mb-6 leading-relaxed">
-                  Um calendário visual onde você posiciona cada post no dia certo. Mudou de ideia? Arrasta e solta — o sistema reagenda na hora.
+                  {t("landing.planDesc")}
                 </p>
                 <ul className="space-y-3">
-                  {["Visão de mês e semana", "Arrastar e soltar pra reagendar", "Metas mensais e hábitos de consistência"].map((t) => (
-                    <li key={t} className="flex items-center gap-3 font-medium">
-                      <div className="rounded-full bg-primary/10 p-0.5"><Check className="w-4 h-4 text-primary" /></div>{t}
+                  {[t("landing.planB1"), t("landing.planB2"), t("landing.planB3")].map((item) => (
+                    <li key={item} className="flex items-center gap-3 font-medium">
+                      <div className="rounded-full bg-primary/10 p-0.5"><Check className="w-4 h-4 text-primary" /></div>{item}
                     </li>
                   ))}
                 </ul>
@@ -399,16 +399,16 @@ export default function Landing() {
             <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
               <motion.div initial={{ opacity: 0, x: 32 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="lg:order-2">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-4 border border-primary/20">
-                  <Sparkles className="w-4 h-4" /> Inteligência
+                  <Sparkles className="w-4 h-4" /> {t("landing.intBadge")}
                 </div>
-                <h3 className="text-2xl lg:text-3xl font-display font-bold mb-4">Uma IA que escreve no seu tom</h3>
+                <h3 className="text-2xl lg:text-3xl font-display font-bold mb-4">{t("landing.intTitle")}</h3>
                 <p className="text-muted-foreground text-base lg:text-lg mb-6 leading-relaxed">
-                  Ela aprende seu nicho, pilares e tom de voz pra gerar legendas, hashtags, ideias e roteiros que parecem escritos por você — não genéricos.
+                  {t("landing.intDesc")}
                 </p>
                 <ul className="space-y-3">
-                  {["Legendas e roteiros completos", "Hashtags por relevância e nicho", "Ideias baseadas nos seus pilares"].map((t) => (
-                    <li key={t} className="flex items-center gap-3 font-medium">
-                      <div className="rounded-full bg-primary/10 p-0.5"><Check className="w-4 h-4 text-primary" /></div>{t}
+                  {[t("landing.intB1"), t("landing.intB2"), t("landing.intB3")].map((item) => (
+                    <li key={item} className="flex items-center gap-3 font-medium">
+                      <div className="rounded-full bg-primary/10 p-0.5"><Check className="w-4 h-4 text-primary" /></div>{item}
                     </li>
                   ))}
                 </ul>
@@ -416,7 +416,7 @@ export default function Landing() {
               <motion.div initial={{ opacity: 0, x: -32 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="lg:order-1">
                 <div className="bg-card border border-border rounded-2xl shadow-warm p-5 sm:p-6 space-y-3">
                   <div className="bg-muted rounded-xl p-4">
-                    <p className="text-sm font-semibold mb-2 flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> Legenda gerada</p>
+                    <p className="text-sm font-semibold mb-2 flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> {t("landing.legendLabel")}</p>
                     <div className="h-2.5 bg-foreground/10 rounded-full mb-2 w-[90%]" />
                     <div className="h-2.5 bg-foreground/10 rounded-full w-[70%]" />
                   </div>
@@ -436,13 +436,13 @@ export default function Landing() {
             <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
               <motion.div {...fadeUp}>
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-6">
-                  <Sparkles className="w-4 h-4" /> Inteligência Artificial
+                  <Sparkles className="w-4 h-4" /> {t("landing.aiBadge")}
                 </div>
                 <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight mb-4">
-                  A cria trabalha enquanto você cria.
+                  {t("landing.aiTitle")}
                 </h2>
                 <p className="text-lg text-muted-foreground leading-relaxed mb-8">
-                  Não é um chatbot genérico. É uma IA que conhece seu nicho, seu tom e seu público.
+                  {t("landing.aiSubtitle")}
                 </p>
               </motion.div>
               
@@ -470,10 +470,10 @@ export default function Landing() {
           <div className="max-w-5xl mx-auto px-4 sm:px-6">
             <motion.div {...fadeUp} className="text-center mb-14">
               <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight mb-4">
-                Por que não Buffer, mLabs ou Later?
+                {t("landing.cmpTitle")}
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Essas ferramentas foram feitas para agências. O cria foi feito para você.
+                {t("landing.cmpSubtitle")}
               </p>
             </motion.div>
             
@@ -481,7 +481,7 @@ export default function Landing() {
               <table className="w-full min-w-[600px] text-left border-collapse">
                 <thead>
                   <tr className="border-b border-border text-sm font-display font-bold text-foreground">
-                    <th className="p-4 sm:p-6 w-2/5">Funcionalidade</th>
+                    <th className="p-4 sm:p-6 w-2/5">{t("landing.cmpFeature")}</th>
                     <th className="p-4 sm:p-6 w-1/5 text-center bg-primary/10 border-x border-primary/20 text-primary">cria</th>
                     <th className="p-4 sm:p-6 w-1/5 text-center text-muted-foreground">Buffer/Later</th>
                     <th className="p-4 sm:p-6 w-1/5 text-center text-muted-foreground">mLabs</th>
@@ -489,34 +489,34 @@ export default function Landing() {
                 </thead>
                 <tbody className="font-body text-sm text-foreground/90 divide-y divide-border">
                   <tr>
-                    <td className="p-4 sm:p-6 font-medium">Banco de ideias integrado</td>
+                    <td className="p-4 sm:p-6 font-medium">{t("landing.cmpRow1")}</td>
                     <td className="p-4 sm:p-6 text-center bg-primary/5 border-x border-primary/20"><Check className="w-5 h-5 mx-auto text-primary" /></td>
                     <td className="p-4 sm:p-6 text-center text-muted-foreground"><X className="w-5 h-5 mx-auto opacity-30" /></td>
                     <td className="p-4 sm:p-6 text-center text-muted-foreground"><X className="w-5 h-5 mx-auto opacity-30" /></td>
                   </tr>
                   <tr>
-                    <td className="p-4 sm:p-6 font-medium">Roteiro e produção com IA</td>
+                    <td className="p-4 sm:p-6 font-medium">{t("landing.cmpRow2")}</td>
                     <td className="p-4 sm:p-6 text-center bg-primary/5 border-x border-primary/20"><Check className="w-5 h-5 mx-auto text-primary" /></td>
                     <td className="p-4 sm:p-6 text-center text-muted-foreground"><X className="w-5 h-5 mx-auto opacity-30" /></td>
                     <td className="p-4 sm:p-6 text-center text-muted-foreground"><X className="w-5 h-5 mx-auto opacity-30" /></td>
                   </tr>
                   <tr>
-                    <td className="p-4 sm:p-6 font-medium">Brandbook e identidade visual</td>
+                    <td className="p-4 sm:p-6 font-medium">{t("landing.cmpRow3")}</td>
                     <td className="p-4 sm:p-6 text-center bg-primary/5 border-x border-primary/20"><Check className="w-5 h-5 mx-auto text-primary" /></td>
                     <td className="p-4 sm:p-6 text-center text-muted-foreground"><X className="w-5 h-5 mx-auto opacity-30" /></td>
                     <td className="p-4 sm:p-6 text-center text-muted-foreground"><X className="w-5 h-5 mx-auto opacity-30" /></td>
                   </tr>
                   <tr>
-                    <td className="p-4 sm:p-6 font-medium">Link in Bio incluso</td>
+                    <td className="p-4 sm:p-6 font-medium">{t("landing.cmpRow4")}</td>
                     <td className="p-4 sm:p-6 text-center bg-primary/5 border-x border-primary/20"><Check className="w-5 h-5 mx-auto text-primary" /></td>
-                    <td className="p-4 sm:p-6 text-center text-muted-foreground font-medium">Pago à parte</td>
+                    <td className="p-4 sm:p-6 text-center text-muted-foreground font-medium">{t("landing.cmpPaidApart")}</td>
                     <td className="p-4 sm:p-6 text-center text-muted-foreground"><X className="w-5 h-5 mx-auto opacity-30" /></td>
                   </tr>
                   <tr>
-                    <td className="p-4 sm:p-6 font-medium">Preço acessível para pessoa física</td>
+                    <td className="p-4 sm:p-6 font-medium">{t("landing.cmpRow5")}</td>
                     <td className="p-4 sm:p-6 text-center bg-primary/10 border-x border-b-0 border-primary/20 rounded-b-2xl"><Check className="w-5 h-5 mx-auto text-primary" /></td>
                     <td className="p-4 sm:p-6 text-center text-muted-foreground"><X className="w-5 h-5 mx-auto opacity-30" /></td>
-                    <td className="p-4 sm:p-6 text-center text-muted-foreground font-medium">Parcial</td>
+                    <td className="p-4 sm:p-6 text-center text-muted-foreground font-medium">{t("landing.cmpPartial")}</td>
                   </tr>
                 </tbody>
               </table>
@@ -529,7 +529,7 @@ export default function Landing() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
             <motion.div {...fadeUp} className="text-center mb-16">
               <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight">
-                Criadores que pararam de improvisar.
+                {t("landing.testTitle")}
               </h2>
             </motion.div>
             
@@ -566,10 +566,10 @@ export default function Landing() {
           <div className="max-w-5xl mx-auto px-4 sm:px-6">
             <motion.div {...fadeUp} className="text-center mb-12 sm:mb-16">
               <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight mb-4">
-                Escolha seu plano
+                {t("landing.priceTitle")}
               </h2>
               <p className="text-lg text-muted-foreground">
-                Sem fidelidade, sem plano básico que não serve. Cancele quando quiser.
+                {t("landing.priceSubtitle")}
               </p>
             </motion.div>
 
@@ -586,7 +586,7 @@ export default function Landing() {
                 >
                   {plan.highlighted && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white px-4 py-1 rounded-full text-sm font-semibold flex items-center gap-1.5 shadow-md whitespace-nowrap">
-                      <Sparkles className="w-4 h-4" /> Mais completo
+                      <Sparkles className="w-4 h-4" /> {t("landing.priceMostComplete")}
                     </div>
                   )}
                   <div className="text-center mb-6 pt-2">
@@ -595,7 +595,7 @@ export default function Landing() {
                   </div>
                   <div className="text-center mb-8">
                     <span className="text-4xl font-display font-extrabold text-foreground tracking-tight">{plan.price}</span>
-                    <span className="text-lg font-body text-muted-foreground">/mês</span>
+                    <span className="text-lg font-body text-muted-foreground">{t("landing.perMonth")}</span>
                   </div>
                   <div className="space-y-3 mb-8 flex-1">
                     {plan.features.map((feat) => (
@@ -613,14 +613,14 @@ export default function Landing() {
                     className="w-full text-base h-12"
                     onClick={() => navigate("/signup")}
                   >
-                    Começar 14 dias grátis &rarr;
+                    {t("landing.priceCta")} &rarr;
                   </Button>
                 </motion.div>
               ))}
             </div>
 
             <p className="text-center text-sm text-muted-foreground mt-6 font-medium">
-              14 dias grátis · Sem cartão de crédito · Cancele quando quiser
+              {t("landing.priceFootnote")}
             </p>
           </div>
         </section>
@@ -630,21 +630,21 @@ export default function Landing() {
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
             <motion.div {...fadeUp} className="text-center mb-14">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-4 border border-primary/20">
-                <Users className="w-4 h-4" /> Para social media e agências
+                <Users className="w-4 h-4" /> {t("landing.mgBadge")}
               </div>
               <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight mb-4">
-                Gerencia criadores? O cria também é seu.
+                {t("landing.mgTitle")}
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Módulos extras transformam o cria num painel de operação pra quem cuida de vários perfis — sem trocar de ferramenta.
+                {t("landing.mgSubtitle")}
               </p>
             </motion.div>
 
             <motion.div {...fadeUp} className="grid md:grid-cols-3 gap-6">
               {[
-                { icon: Kanban, title: "Cria Gestão", desc: "CRM completo: carteira de clientes, pipeline de prospecção, contratos, tarefas e calendário da sua operação.", gradient: "from-violet-500 to-purple-600" },
-                { icon: Wallet, title: "Cria Caixa", desc: "Controle financeiro de empresa e pessoa física: entradas, saídas, recorrências e visão clara por mês.", gradient: "from-emerald-500 to-teal-500" },
-                { icon: ClipboardCheck, title: "Aprovação por link", desc: "Seu cliente aprova os posts por um link — sem precisar criar conta nem instalar nada.", gradient: "from-blue-500 to-cyan-500" },
+                { icon: Kanban, title: t("landing.mg1T"), desc: t("landing.mg1D"), gradient: "from-violet-500 to-purple-600" },
+                { icon: Wallet, title: t("landing.mg2T"), desc: t("landing.mg2D"), gradient: "from-emerald-500 to-teal-500" },
+                { icon: ClipboardCheck, title: t("landing.mg3T"), desc: t("landing.mg3D"), gradient: "from-blue-500 to-cyan-500" },
               ].map((m) => (
                 <div key={m.title} className="rounded-2xl border border-border bg-card p-6 shadow-warm-sm hover:shadow-warm-md transition-shadow">
                   <div className={cn("w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center mb-4", m.gradient)}>
@@ -657,7 +657,7 @@ export default function Landing() {
             </motion.div>
 
             <motion.p {...fadeUp} className="text-center text-sm text-muted-foreground mt-8">
-              Módulos opcionais, contratados à parte dentro do app.
+              {t("landing.mgFootnote")}
             </motion.p>
           </div>
         </section>
@@ -667,7 +667,7 @@ export default function Landing() {
           <div className="max-w-3xl mx-auto px-4 sm:px-6">
             <motion.div {...fadeUp} className="text-center mb-12">
               <h2 className="text-3xl lg:text-4xl font-display font-extrabold tracking-tight">
-                Perguntas frequentes
+                {t("landing.faqTitle")}
               </h2>
             </motion.div>
             
@@ -694,20 +694,20 @@ export default function Landing() {
           <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
             <motion.div {...fadeUp}>
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display font-extrabold tracking-tight mb-6">
-                Pronto para parar de improvisar?
+                {t("landing.ctaTitle")}
               </h2>
               <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
-                Junte-se a criadores que produziram mais em 30 dias do que em 6 meses tentando sozinhos.
+                {t("landing.ctaSubtitle")}
               </p>
               <Button variant="hero" size="xl" className="h-16 px-10 text-lg shadow-glow hover:shadow-glow-hover" onClick={() => navigate("/signup")}>
-                Criar minha conta grátis &rarr;
+                {t("landing.ctaButton")} &rarr;
               </Button>
               <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-sm text-muted-foreground font-medium">
-                <span>14 dias grátis</span>
+                <span>{t("landing.trial")}</span>
                 <span className="hidden sm:inline">&middot;</span>
-                <span>Sem cartão</span>
+                <span>{t("landing.noCard")}</span>
                 <span className="hidden sm:inline">&middot;</span>
-                <span>Cancele quando quiser</span>
+                <span>{t("landing.cancel")}</span>
               </div>
             </motion.div>
           </div>
@@ -722,9 +722,9 @@ export default function Landing() {
           </div>
           
           <div className="flex flex-wrap justify-center items-center gap-6 text-sm font-medium text-muted-foreground">
-            <a href="/termos" className="hover:text-primary transition-colors">Termos de Uso</a>
-            <a href="/privacidade" className="hover:text-primary transition-colors">Política de Privacidade</a>
-            <a href="#" className="hover:text-primary transition-colors">Contato</a>
+            <a href="/termos" className="hover:text-primary transition-colors">{t("landing.footTerms")}</a>
+            <a href="/privacidade" className="hover:text-primary transition-colors">{t("landing.footPrivacy")}</a>
+            <a href="#" className="hover:text-primary transition-colors">{t("landing.footContact")}</a>
           </div>
 
           <div className="flex items-center gap-4 text-muted-foreground">
@@ -735,7 +735,7 @@ export default function Landing() {
           </div>
         </div>
         <div className="mt-8 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} Cria Social Club. Feito com ♥ para criadores brasileiros.
+          © {new Date().getFullYear()} Cria Social Club. {t("landing.footMadeWith")}
         </div>
       </footer>
     </div>
