@@ -443,6 +443,8 @@ export type Database = {
           notes: string | null
           objective: string | null
           proposal_client_comment: string | null
+          proposal_decline_note: string | null
+          proposal_decline_reason: string | null
           proposal_responded_at: string | null
           proposal_sent_at: string | null
           proposal_status: string
@@ -466,6 +468,8 @@ export type Database = {
           notes?: string | null
           objective?: string | null
           proposal_client_comment?: string | null
+          proposal_decline_note?: string | null
+          proposal_decline_reason?: string | null
           proposal_responded_at?: string | null
           proposal_sent_at?: string | null
           proposal_status?: string
@@ -489,6 +493,8 @@ export type Database = {
           notes?: string | null
           objective?: string | null
           proposal_client_comment?: string | null
+          proposal_decline_note?: string | null
+          proposal_decline_reason?: string | null
           proposal_responded_at?: string | null
           proposal_sent_at?: string | null
           proposal_status?: string
@@ -3541,7 +3547,10 @@ export type Database = {
           read_ct: number
         }[]
       }
-      reject_proposal_by_token: { Args: { _token: string }; Returns: undefined }
+      reject_proposal_by_token: {
+        Args: { _note?: string; _reason?: string; _token: string }
+        Returns: undefined
+      }
       request_adjustment_by_token: {
         Args: { _comment: string; _post_id: string; _token: string }
         Returns: undefined
