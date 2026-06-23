@@ -24,6 +24,7 @@ export function ContractGeneratorDialog({ open, onOpenChange }: Props) {
   const pdfRef = useRef<HTMLDivElement>(null);
   const [clientId, setClientId] = useState("");
   const [busy, setBusy] = useState(false);
+  const [capturing, setCapturing] = useState(false);
 
   const company = profile?.contract_company ?? {};
   const [d, setD] = useState<ContractData>(() => baseData(company));
@@ -49,8 +50,12 @@ export function ContractGeneratorDialog({ open, onOpenChange }: Props) {
   const generate = async () => {
     setBusy(true);
     try {
-      await new Promise((r) => setTimeout(r, 50)); // garante render do template off-screen
+      // Captura em tamanho natural (zoom 1) — o html2canvas quebra o texto com zoom != 1.
+      setCapturing(true);
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
+      await new Promise((r) => setTimeout(r, 60));
       await exportPdf(pdfRef, `contrato-${slug(clientName || "cliente")}`);
+      setCapturing(false);
       await createContract.mutateAsync({
         title: `Contrato - ${clientName || "cliente"}`,
         crm_client_id: clientId || null,
@@ -63,7 +68,7 @@ export function ContractGeneratorDialog({ open, onOpenChange }: Props) {
       onOpenChange(false);
     } catch (e) {
       console.error(e); toast.error("Erro ao gerar o contrato.");
-    } finally { setBusy(false); }
+    } finally { setBusy(false); setCapturing(false); }
   };
 
   return (
@@ -152,7 +157,7 @@ export function ContractGeneratorDialog({ open, onOpenChange }: Props) {
           <div className="mt-6">
             <p className="text-xs font-medium text-muted-foreground mb-2">Pré-visualização do contrato</p>
             <div className="rounded-xl border border-border bg-muted/30 overflow-auto" style={{ maxHeight: "55vh" }}>
-              <div style={{ zoom: 0.72 } as CSSProperties}>
+              <div style={{ zoom: capturing ? 1 : 0.72 } as CSSProperties}>
                 <ContractPdfTemplate ref={pdfRef} data={{ ...d, company }} />
               </div>
             </div>

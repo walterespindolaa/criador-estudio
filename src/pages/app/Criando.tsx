@@ -6,7 +6,7 @@ import { CoverHeader } from "@/components/shared/CoverHeader";
 import { useStatusCovers } from "@/hooks/useStatusCovers";
 import { FormatPicker } from "@/components/kanban/FormatPicker";
 import { statusRamp } from "@/lib/statusRamp";
-import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, X, Kanban, Pencil, Table, Search, SlidersHorizontal, ArrowLeftRight } from "lucide-react";
+import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, X, Kanban, Pencil, Table, Search, SlidersHorizontal, ArrowLeftRight, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -151,6 +151,7 @@ const Criando = () => {
   const [filterFormat, setFilterFormat] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [dateSort, setDateSort] = useState<null | "asc" | "desc">(null);
 
   const handlePeriodChange = (p: PeriodKey) => {
     setPeriod(p);
@@ -627,15 +628,27 @@ const Criando = () => {
                       <th className="px-4 py-2.5 font-medium">Formato</th>
                       <th className="px-4 py-2.5 font-medium">Plataforma</th>
                       <th className="px-4 py-2.5 font-medium">Pilar</th>
-                      <th className="px-4 py-2.5 font-medium">Data</th>
+                      <th className="px-4 py-2.5 font-medium">
+                        <button type="button" onClick={() => setDateSort((s) => (s === "asc" ? "desc" : "asc"))} className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
+                          Data
+                          {dateSort === "asc" ? <ArrowUp className="h-3 w-3" /> : dateSort === "desc" ? <ArrowDown className="h-3 w-3" /> : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                        </button>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {[...filteredPosts]
-                      .sort((a, b) =>
-                        statusRank(a.status) - statusRank(b.status) ||
-                        (a.scheduled_date ?? "").localeCompare(b.scheduled_date ?? "")
-                      )
+                      .sort((a, b) => {
+                        if (dateSort) {
+                          const da = a.scheduled_date ?? "", db = b.scheduled_date ?? "";
+                          if (!da && !db) return 0;
+                          if (!da) return 1;   // sem data sempre por último
+                          if (!db) return -1;
+                          return dateSort === "asc" ? da.localeCompare(db) : db.localeCompare(da);
+                        }
+                        return statusRank(a.status) - statusRank(b.status) ||
+                          (a.scheduled_date ?? "").localeCompare(b.scheduled_date ?? "");
+                      })
                       .map(post => {
                         const st = ramp[post.status ?? "ideia"];
                         const stLabel = COLUMNS.find(c => c.key === (post.status ?? "ideia"))?.label ?? (post.status ?? "—");

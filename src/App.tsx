@@ -19,6 +19,7 @@ import NotFound from "./pages/NotFound";
 import Termos from "./pages/Termos";
 import Privacidade from "./pages/Privacidade";
 import ExcluirDados from "./pages/ExcluirDados";
+import { UpdatePrompt } from "@/components/UpdatePrompt";
 
 const Dashboard = lazy(() => import("./pages/app/Dashboard"));
 const Ideias = lazy(() => import("./pages/app/Ideias"));
@@ -74,6 +75,7 @@ const App = () => (
         <TooltipProvider delayDuration={0}>
         <Toaster />
         <Sonner />
+        <UpdatePrompt />
         <BrowserRouter>
           <Suspense fallback={<LoadingScreen />}>
             <Routes>
