@@ -1308,6 +1308,36 @@ export type Database = {
           },
         ]
       }
+      feedbacks: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          status: string
+          type: string
+          url: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          status?: string
+          type?: string
+          url?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          status?: string
+          type?: string
+          url?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       files: {
         Row: {
           bunny_video_id: string | null
