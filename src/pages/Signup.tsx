@@ -45,18 +45,34 @@ const Signup = () => {
     path: ["confirmPassword"],
   });
 
-  const { register, handleSubmit, formState: { errors } } = useForm<SignupFormData>({
+  const { register, handleSubmit, setError, formState: { errors } } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
   });
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const mapSignupError = (msg: string): { field?: "email" | "password"; text: string } => {
+    const m = (msg || "").toLowerCase();
+    if (m.includes("already") || m.includes("registered") || m.includes("exists")) return { field: "email", text: t("signup.errEmailInUse") };
+    if (m.includes("email") && (m.includes("invalid") || m.includes("validate"))) return { field: "email", text: t("signup.errInvalidEmail") };
+    if (m.includes("password")) return { field: "password", text: t("signup.errWeakPassword") };
+    if (m.includes("rate") || m.includes("limit") || m.includes("too many")) return { text: t("signup.errRateLimit") };
+    if (m.includes("signups") || m.includes("not allowed") || m.includes("disabled")) return { text: t("signup.errSignupsOff") };
+    if (m.includes("network") || m.includes("fetch") || m.includes("failed to fetch")) return { text: t("signup.errNetwork") };
+    return { text: t("signup.createError") };
+  };
 
   const onSubmit = async (data: SignupFormData) => {
     setEmailValue(data.email);
+    setFormError(null);
     setLoading(true);
     const { error } = await signUp(data.email, data.password, data.name);
     setLoading(false);
     if (error) {
       console.warn("[signup] error:", error.message);
-      toast.error(t("signup.createError"));
+      const mapped = mapSignupError(error.message);
+      if (mapped.field) setError(mapped.field, { message: mapped.text });
+      setFormError(mapped.text);
+      toast.error(mapped.text);
     } else {
       setEmailSent(true);
     }
@@ -173,6 +189,11 @@ const Signup = () => {
                   </div>
                   {errors.confirmPassword && <p className="text-xs text-destructive mt-1">{errors.confirmPassword.message}</p>}
                 </div>
+                {formError && (
+                  <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive font-body">
+                    {formError}
+                  </div>
+                )}
                 <Button type="submit" variant="hero" size="lg" className="w-full" disabled={loading}>
                   {loading ? t("signup.creating") : t("signup.createMyAccount")}
                 </Button>
