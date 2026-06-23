@@ -163,6 +163,36 @@ export type Database = {
           },
         ]
       }
+      app_logs: {
+        Row: {
+          context: Json | null
+          created_at: string
+          id: string
+          level: string
+          message: string
+          url: string | null
+          user_id: string | null
+        }
+        Insert: {
+          context?: Json | null
+          created_at?: string
+          id?: string
+          level?: string
+          message: string
+          url?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          context?: Json | null
+          created_at?: string
+          id?: string
+          level?: string
+          message?: string
+          url?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       approval_tokens: {
         Row: {
           active: boolean
@@ -383,6 +413,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      broadcasts: {
+        Row: {
+          active: boolean
+          audience: string
+          created_at: string
+          id: string
+          level: string
+          message: string
+          title: string | null
+        }
+        Insert: {
+          active?: boolean
+          audience?: string
+          created_at?: string
+          id?: string
+          level?: string
+          message: string
+          title?: string | null
+        }
+        Update: {
+          active?: boolean
+          audience?: string
+          created_at?: string
+          id?: string
+          level?: string
+          message?: string
+          title?: string | null
+        }
+        Relationships: []
       }
       collab_deliverables: {
         Row: {
@@ -2619,6 +2679,44 @@ export type Database = {
         }
         Relationships: []
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reference_formats: {
         Row: {
           format_type: string
@@ -3355,6 +3453,10 @@ export type Database = {
         Args: { _post_id: string; _stage: string; _token: string }
         Returns: undefined
       }
+      bio_slug_available: {
+        Args: { _exclude?: string; _slug: string }
+        Returns: boolean
+      }
       bump_ai_quota: {
         Args: { _user: string }
         Returns: {
@@ -3491,6 +3593,15 @@ export type Database = {
           script: string
           title: string
         }[]
+      }
+      log_app_error: {
+        Args: {
+          _context?: Json
+          _level?: string
+          _message: string
+          _url?: string
+        }
+        Returns: undefined
       }
       manager_approval_items: {
         Args: never
