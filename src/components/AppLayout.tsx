@@ -2,6 +2,7 @@ import { Suspense, useEffect } from "react";
 import { Outlet, NavLink, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { ContentSkeleton } from "@/components/shared/ContentSkeleton";
 import { BottomBar } from "@/components/BottomBar";
+import { BroadcastBanner } from "@/components/BroadcastBanner";
 import { PWAInstallBanner } from "@/components/shared/PWAInstallBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { PlanBadge } from "@/components/shared/PlanBadge";
@@ -162,6 +163,7 @@ const AppLayout = () => {
 
             <main className="flex-1 pb-[96px] md:pb-0 w-full">
               <div className="max-w-screen-2xl mx-auto px-4 py-4 md:px-8 md:py-6">
+                <BroadcastBanner />
                 <Suspense fallback={<ContentSkeleton />}>
                   <Outlet />
                 </Suspense>

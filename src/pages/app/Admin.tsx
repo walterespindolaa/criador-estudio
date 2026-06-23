@@ -54,6 +54,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminPartners } from "@/components/admin/AdminPartners";
 import { AdminReferrals } from "@/components/admin/AdminReferrals";
 import { AdminLogs } from "@/components/admin/AdminLogs";
+import { AdminRecados } from "@/components/admin/AdminRecados";
 import { UserDetailsDrawer } from "@/components/admin/UserDetailsDrawer";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -478,11 +479,7 @@ const AdminInner = () => {
           </TabsContent>
 
           <TabsContent value="recados">
-            <div className="rounded-2xl border border-dashed border-border p-10 text-center">
-              <MessageSquare className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm font-medium text-foreground">Recados (broadcast)</p>
-              <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">Em breve: envie um aviso daqui e ele aparece pra todos os usuários dentro do app (e no celular, quando ligarmos as notificações).</p>
-            </div>
+            <AdminRecados />
           </TabsContent>
         </Tabs>
 
