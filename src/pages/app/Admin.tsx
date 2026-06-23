@@ -101,6 +101,15 @@ const AdminInner = () => {
   const [planFilter, setPlanFilter] = useState("todos");
   const [roleFilter, setRoleFilter] = useState("todos");
   const [page, setPage] = useState(0);
+  const [tab, setTab] = useState("usuarios");
+
+  const goToPlan = (plan: string) => {
+    setPlanFilter(plan);
+    setRoleFilter("todos");
+    setSearch("");
+    setPage(0);
+    setTab("usuarios");
+  };
   const [openCreate, setOpenCreate] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", phone: "", plan: "trial" });
   const [validity, setValidity] = useState("lifetime");
@@ -257,12 +266,12 @@ const AdminInner = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="usuarios" className="w-full">
+        <Tabs value={tab} onValueChange={setTab} className="w-full">
           <TabsList className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3 mb-6 bg-transparent h-auto p-0">
             {[
               { value: "usuarios", icon: Users, title: "Usuários", desc: "Contas, planos e permissões", hint: `${stats.totalUsers} usuário(s)` },
               { value: "logs", icon: FileWarning, title: "Logs", desc: "Erros e incidentes do app", hint: "auto" },
-              { value: "faturamento", icon: DollarSign, title: "Faturamento", desc: "Assinaturas e receita", hint: `${stats.byPlan.pro + stats.byPlan.studio} ativa(s)` },
+              { value: "faturamento", icon: DollarSign, title: "Faturamento", desc: "Receita e assinaturas (Stripe)", hint: "" },
               { value: "parceiros", icon: Handshake, title: "Parceiros", desc: "Rede de parceiros", hint: "" },
               { value: "comissoes", icon: CircleDollarSign, title: "Comissões", desc: "Indicações e pagamentos", hint: "" },
               { value: "recados", icon: MessageSquare, title: "Recados", desc: "Avisos pros usuários", hint: "em breve" },
@@ -468,13 +477,32 @@ const AdminInner = () => {
           </TabsContent>
 
           <TabsContent value="faturamento">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
-              <StatCard icon={DollarSign} label="Assinaturas ativas" value={stats.byPlan.pro + stats.byPlan.studio} gradient="from-emerald-500/15 to-teal-500/5" iconBg="bg-emerald-500" />
-              <StatCard icon={CircleDollarSign} label="Studio" value={stats.byPlan.studio} gradient="from-violet-500/15 to-purple-500/5" iconBg="bg-violet-500" />
-              <StatCard icon={CircleDollarSign} label="Pro" value={stats.byPlan.pro} gradient="from-blue-500/15 to-sky-500/5" iconBg="bg-blue-500" />
-              <StatCard icon={Users} label="Free" value={stats.byPlan.free} gradient="from-gray-500/15 to-slate-500/5" iconBg="bg-gray-500" />
-            </div>
             <AdminFaturamento />
+            <div className="mt-6">
+              <p className="text-sm font-display font-semibold text-foreground">Contas por plano</p>
+              <p className="text-xs text-muted-foreground font-body mb-3">
+                Distribuição pela flag de plano (inclui cortesias e contas criadas manualmente). Clique pra ver os usuários. As <strong>assinaturas ativas</strong> acima contam só quem paga no Stripe.
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { plan: "studio", label: "Studio", n: stats.byPlan.studio },
+                  { plan: "pro", label: "Pro", n: stats.byPlan.pro },
+                  { plan: "free", label: "Free", n: stats.byPlan.free },
+                ].map((p) => (
+                  <button
+                    key={p.plan}
+                    onClick={() => goToPlan(p.plan)}
+                    className="rounded-2xl border border-border bg-card p-4 text-left hover:border-primary/40 transition-colors flex items-center justify-between"
+                  >
+                    <div>
+                      <p className="text-2xl font-display font-extrabold text-foreground">{p.n}</p>
+                      <p className="text-xs text-muted-foreground font-body">{p.label}</p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground/40" />
+                  </button>
+                ))}
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="recados">

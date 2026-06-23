@@ -61,7 +61,20 @@ serve(async (req) => {
     }
 
     const mrr = Math.round(mrrCents) / 100;
-    return json({ active, trialing, mrr, currency: currency.toUpperCase() });
+
+    // Módulos da social mídia (assinaturas separadas) — conta os ativos por módulo.
+    const { data: ents } = await svc.from("module_entitlements").select("module_code, status").eq("status", "active");
+    const { data: cat } = await svc.from("modules").select("code, name, price_cents").eq("active", true).order("sort_order");
+    const byCode: Record<string, number> = {};
+    (ents ?? []).forEach((e: { module_code: string }) => { byCode[e.module_code] = (byCode[e.module_code] ?? 0) + 1; });
+    const modules = (cat ?? []).map((m: { code: string; name: string; price_cents: number }) => ({
+      code: m.code,
+      name: m.name,
+      active: byCode[m.code] ?? 0,
+      price: (m.price_cents ?? 0) / 100,
+    }));
+
+    return json({ active, trialing, mrr, currency: currency.toUpperCase(), modules });
   } catch (e) {
     console.error("[admin-billing] error:", e);
     return json({ error: "internal_error" }, 500);

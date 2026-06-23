@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { RefreshCw, TrendingUp, Users, Clock, Ticket } from "lucide-react";
 
-type Billing = { active: number; trialing: number; mrr: number; currency: string };
+type ModuleStat = { code: string; name: string; active: number; price: number };
+type Billing = { active: number; trialing: number; mrr: number; currency: string; modules?: ModuleStat[] };
 
 const brl = (n: number) => "R$ " + (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
 
@@ -50,12 +51,29 @@ export function AdminFaturamento() {
           Não consegui ler o Stripe. Confira se a function <code>admin-billing</code> foi deployada e se o <code>STRIPE_SECRET_KEY</code> está configurado.
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <Card icon={TrendingUp} label="MRR (receita recorrente)" value={brl(data!.mrr)} sub={`em ${data!.currency}`} />
-          <Card icon={Users} label="Assinaturas ativas" value={String(data!.active)} />
-          <Card icon={Clock} label="Em teste (trial)" value={String(data!.trialing)} />
-          <Card icon={Ticket} label="Ticket médio" value={brl(ticket)} sub="MRR ÷ ativas" />
-        </div>
+        <>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <Card icon={TrendingUp} label="MRR (receita recorrente)" value={brl(data!.mrr)} sub={`em ${data!.currency}`} />
+            <Card icon={Users} label="Assinaturas ativas" value={String(data!.active)} sub="pagando no Stripe" />
+            <Card icon={Clock} label="Em teste (trial)" value={String(data!.trialing)} />
+            <Card icon={Ticket} label="Ticket médio" value={brl(ticket)} sub="MRR ÷ ativas" />
+          </div>
+
+          {data!.modules && data!.modules.length > 0 && (
+            <div className="mt-5">
+              <p className="text-sm font-display font-semibold text-foreground mb-2">Módulos da social mídia (ativos)</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {data!.modules.map((m) => (
+                  <div key={m.code} className="rounded-2xl border border-border bg-card p-4">
+                    <p className="text-sm font-body font-medium text-foreground">{m.name}</p>
+                    <p className="text-2xl font-display font-extrabold text-foreground mt-1">{m.active}</p>
+                    <p className="text-[11px] text-muted-foreground font-body">assinaturas · {brl(m.price)}/mês cada</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
