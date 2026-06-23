@@ -32,6 +32,7 @@ serve(async (req) => {
     let mrrCents = 0;
     let active = 0;
     let trialing = 0;
+    let converted = 0; // assinaturas ativas que vieram de trial
     let currency = "brl";
     // quebra por produto (somente assinaturas ATIVAS = pagantes reais)
     const breakdown: Record<string, { count: number; mrrCents: number; emails: string[] }> = {};
@@ -47,6 +48,7 @@ serve(async (req) => {
         });
         for (const sub of res.data) {
           if (status === "active") active++; else trialing++;
+          if (status === "active" && sub.trial_end && sub.trial_end * 1000 < Date.now()) converted++;
           let subMrr = 0;
           let label = "Outro";
           for (const item of sub.items.data) {
@@ -82,7 +84,27 @@ serve(async (req) => {
       .map(([label, b]) => ({ label, count: b.count, mrr: Math.round(b.mrrCents) / 100, emails: b.emails }))
       .sort((a, b) => b.mrr - a.mrr);
 
-    return json({ active, trialing, mrr, currency: currency.toUpperCase(), planBreakdown });
+    // Inadimplência (pagamentos em atraso/não pagos)
+    let pastDue = 0;
+    for (const status of ["past_due", "unpaid"] as const) {
+      const r = await stripe.subscriptions.list({ status, limit: 100 });
+      pastDue += r.data.length;
+    }
+
+    // Churn: cancelamentos nos últimos 30 dias
+    let canceled30 = 0;
+    const cutoff = Math.floor((Date.now() - 30 * 86400000) / 1000);
+    {
+      let sa: string | undefined;
+      for (let p = 0; p < 3; p++) {
+        const r = await stripe.subscriptions.list({ status: "canceled", limit: 100, starting_after: sa });
+        for (const s of r.data) { if ((s.canceled_at ?? 0) >= cutoff) canceled30++; }
+        if (!r.has_more) break;
+        sa = r.data[r.data.length - 1]?.id;
+      }
+    }
+
+    return json({ active, trialing, converted, pastDue, canceled30, mrr, currency: currency.toUpperCase(), planBreakdown });
   } catch (e) {
     console.error("[admin-billing] error:", e);
     return json({ error: "internal_error" }, 500);

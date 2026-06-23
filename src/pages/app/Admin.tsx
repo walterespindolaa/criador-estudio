@@ -15,6 +15,7 @@ import {
   DollarSign,
   MessageSquare,
   Inbox,
+  LineChart,
   Users,
   MoreVertical,
   Trash2,
@@ -58,6 +59,7 @@ import { AdminLogs } from "@/components/admin/AdminLogs";
 import { AdminRecados } from "@/components/admin/AdminRecados";
 import { AdminFaturamento } from "@/components/admin/AdminFaturamento";
 import { AdminFeedback } from "@/components/admin/AdminFeedback";
+import { AdminGrowth } from "@/components/admin/AdminGrowth";
 import { UserDetailsDrawer } from "@/components/admin/UserDetailsDrawer";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -270,6 +272,7 @@ const AdminInner = () => {
               { value: "comissoes", icon: CircleDollarSign, title: "Comissões", desc: "Indicações e pagamentos", hint: "" },
               { value: "recados", icon: MessageSquare, title: "Recados", desc: "Avisos pros usuários", hint: "" },
               { value: "feedback", icon: Inbox, title: "Feedback", desc: "Bugs e ideias dos usuários", hint: "" },
+              { value: "crescimento", icon: LineChart, title: "Crescimento", desc: "Novos usuários e uso do app", hint: "" },
             ].map((c) => (
               <TabsTrigger
                 key={c.value}
@@ -481,6 +484,10 @@ const AdminInner = () => {
 
           <TabsContent value="feedback">
             <AdminFeedback />
+          </TabsContent>
+
+          <TabsContent value="crescimento">
+            <AdminGrowth />
           </TabsContent>
         </Tabs>
 

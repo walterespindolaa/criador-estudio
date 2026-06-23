@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { RefreshCw, TrendingUp, Users, Clock, Ticket, ChevronDown } from "lucide-react";
+import { RefreshCw, TrendingUp, Users, Clock, Ticket, ChevronDown, ArrowUpRight, AlertCircle, UserMinus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type PlanRow = { label: string; count: number; mrr: number; emails: string[] };
-type Billing = { active: number; trialing: number; mrr: number; currency: string; planBreakdown?: PlanRow[] };
+type Billing = {
+  active: number; trialing: number; converted?: number; pastDue?: number; canceled30?: number;
+  mrr: number; currency: string; planBreakdown?: PlanRow[];
+};
 
 const brl = (n: number) => "R$ " + (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
 
@@ -61,6 +64,12 @@ export function AdminFaturamento() {
             <Card icon={Users} label="Assinaturas ativas" value={String(data!.active)} sub="pagando no Stripe" />
             <Card icon={Clock} label="Em teste (trial)" value={String(data!.trialing)} />
             <Card icon={Ticket} label="Ticket médio" value={brl(ticket)} sub="MRR ÷ ativas" />
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 auto-rows-fr">
+            <Card icon={ArrowUpRight} label="Converteram de trial" value={String(data!.converted ?? 0)} sub="trials que viraram pagantes" />
+            <Card icon={AlertCircle} label="Inadimplência" value={String(data!.pastDue ?? 0)} sub="pagamentos em atraso" />
+            <Card icon={UserMinus} label="Churn (30 dias)" value={String(data!.canceled30 ?? 0)} sub="cancelamentos no mês" />
           </div>
 
           <div>
