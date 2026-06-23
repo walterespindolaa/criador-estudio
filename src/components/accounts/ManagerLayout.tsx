@@ -2,6 +2,7 @@ import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { Navigate, Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { ContentSkeleton } from "@/components/shared/ContentSkeleton";
 import { BroadcastBanner } from "@/components/BroadcastBanner";
+import { FeedbackButton } from "@/components/FeedbackButton";
 import {
   Home, Boxes, Handshake, DollarSign, Users, ListChecks, ChevronUp,
   Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, type LucideIcon,
@@ -180,6 +181,7 @@ export default function ManagerLayout() {
         <div className="hidden md:block md:-ml-[104px] md:w-[calc(100%+104px)]">
           <HeroBand eyebrow={isDash ? `${greet},` : undefined} title={heroTitle} avatar={avatarNode}>
             <div className="flex items-center gap-2 rounded-2xl bg-white/15 px-2 py-1 backdrop-blur">
+              <FeedbackButton />
               <NotificationsBell />
             </div>
           </HeroBand>

@@ -14,6 +14,7 @@ import {
   FileWarning,
   DollarSign,
   MessageSquare,
+  Inbox,
   Users,
   MoreVertical,
   Trash2,
@@ -56,6 +57,7 @@ import { AdminReferrals } from "@/components/admin/AdminReferrals";
 import { AdminLogs } from "@/components/admin/AdminLogs";
 import { AdminRecados } from "@/components/admin/AdminRecados";
 import { AdminFaturamento } from "@/components/admin/AdminFaturamento";
+import { AdminFeedback } from "@/components/admin/AdminFeedback";
 import { UserDetailsDrawer } from "@/components/admin/UserDetailsDrawer";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -274,7 +276,8 @@ const AdminInner = () => {
               { value: "faturamento", icon: DollarSign, title: "Faturamento", desc: "Receita e assinaturas (Stripe)", hint: "" },
               { value: "parceiros", icon: Handshake, title: "Parceiros", desc: "Rede de parceiros", hint: "" },
               { value: "comissoes", icon: CircleDollarSign, title: "Comissões", desc: "Indicações e pagamentos", hint: "" },
-              { value: "recados", icon: MessageSquare, title: "Recados", desc: "Avisos pros usuários", hint: "em breve" },
+              { value: "recados", icon: MessageSquare, title: "Recados", desc: "Avisos pros usuários", hint: "" },
+              { value: "feedback", icon: Inbox, title: "Feedback", desc: "Bugs e ideias dos usuários", hint: "" },
             ].map((c) => (
               <TabsTrigger
                 key={c.value}
@@ -507,6 +510,10 @@ const AdminInner = () => {
 
           <TabsContent value="recados">
             <AdminRecados />
+          </TabsContent>
+
+          <TabsContent value="feedback">
+            <AdminFeedback />
           </TabsContent>
         </Tabs>
 

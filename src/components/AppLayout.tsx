@@ -3,6 +3,7 @@ import { Outlet, NavLink, Navigate, useLocation, useNavigate } from "react-route
 import { ContentSkeleton } from "@/components/shared/ContentSkeleton";
 import { BottomBar } from "@/components/BottomBar";
 import { BroadcastBanner } from "@/components/BroadcastBanner";
+import { FeedbackButton } from "@/components/FeedbackButton";
 import { PWAInstallBanner } from "@/components/shared/PWAInstallBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { PlanBadge } from "@/components/shared/PlanBadge";
@@ -136,6 +137,7 @@ const AppLayout = () => {
                 <div className="flex items-center gap-2 rounded-2xl bg-white/15 px-2 py-1 backdrop-blur">
                   <PlanBadge />
                   <UploadProgressIndicator />
+                  <FeedbackButton />
                   <NotificationsBell />
                 </div>
               </HeroBand>
@@ -154,6 +156,7 @@ const AppLayout = () => {
                 <AccountSwitcher compact />
                 <PlanBadge />
                 <UploadProgressIndicator />
+                <FeedbackButton />
                 <NotificationsBell />
                 <NavLink to="/app/configuracoes" className="p-2 hover:bg-accent/60 rounded-xl transition-colors">
                   <Settings className="h-5 w-5 text-muted-foreground hover:text-foreground" />
