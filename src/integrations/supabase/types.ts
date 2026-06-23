@@ -3539,6 +3539,7 @@ export type Database = {
           total_users: number
         }[]
       }
+      get_admin_usage: { Args: never; Returns: Json }
       get_cronograma_by_token: { Args: { _token: string }; Returns: Json }
       get_external_client_by_token: {
         Args: { _token: string }
