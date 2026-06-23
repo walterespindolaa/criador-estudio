@@ -55,6 +55,7 @@ import { AdminPartners } from "@/components/admin/AdminPartners";
 import { AdminReferrals } from "@/components/admin/AdminReferrals";
 import { AdminLogs } from "@/components/admin/AdminLogs";
 import { AdminRecados } from "@/components/admin/AdminRecados";
+import { AdminFaturamento } from "@/components/admin/AdminFaturamento";
 import { UserDetailsDrawer } from "@/components/admin/UserDetailsDrawer";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -473,9 +474,7 @@ const AdminInner = () => {
               <StatCard icon={CircleDollarSign} label="Pro" value={stats.byPlan.pro} gradient="from-blue-500/15 to-sky-500/5" iconBg="bg-blue-500" />
               <StatCard icon={Users} label="Free" value={stats.byPlan.free} gradient="from-gray-500/15 to-slate-500/5" iconBg="bg-gray-500" />
             </div>
-            <div className="rounded-2xl border border-dashed border-border p-5 text-sm text-muted-foreground font-body">
-              Receita e MRR em tempo real (via Stripe) entram aqui na próxima etapa. Por enquanto, acompanhe a distribuição de planos acima.
-            </div>
+            <AdminFaturamento />
           </TabsContent>
 
           <TabsContent value="recados">
