@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { CopyButton } from "@/components/shared/CopyButton";
+import { VoiceInput } from "@/components/shared/VoiceInput";
 
 type Question = {
   key: string;
@@ -65,12 +66,18 @@ export function GuidedSection({
               <CardTitle className="text-sm font-body font-semibold text-foreground">{q.label}</CardTitle>
             </CardHeader>
             <CardContent>
-              <Textarea
-                value={answers[q.key] || ""}
-                onChange={(e) => onAnswerChange(q.key, e.target.value)}
-                placeholder={q.placeholder}
-                className="min-h-[80px] resize-y font-body text-sm border-border rounded-xl"
-              />
+              <div className="relative">
+                <Textarea
+                  value={answers[q.key] || ""}
+                  onChange={(e) => onAnswerChange(q.key, e.target.value)}
+                  placeholder={q.placeholder}
+                  className="min-h-[80px] resize-y font-body text-sm border-border rounded-xl pr-12"
+                />
+                <VoiceInput
+                  onTranscript={(txt) => onAnswerChange(q.key, ((answers[q.key] || "").trim() ? answers[q.key] + " " : "") + txt)}
+                  className="absolute bottom-2 right-2"
+                />
+              </div>
             </CardContent>
           </Card>
         </motion.div>

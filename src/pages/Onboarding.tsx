@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -28,8 +29,25 @@ import { PILLAR_COLORS } from "@/lib/constants";
 import { Logo } from "@/components/shared/Logo";
 import { fireConfetti } from "@/lib/confetti";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
+import { VoiceInput } from "@/components/shared/VoiceInput";
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 6;
+
+const OBJETIVO_OPTIONS = [
+  "Crescer minha audiência",
+  "Vender meu produto/serviço",
+  "Construir autoridade",
+  "Monetizar com marcas",
+  "Manter consistência",
+] as const;
+
+const TOM_OPTIONS = [
+  "Descontraído",
+  "Profissional",
+  "Inspirador",
+  "Educativo",
+  "Divertido",
+] as const;
 
 type NicheOption = { value: string; icon: LucideIcon };
 
@@ -95,6 +113,9 @@ const Onboarding = () => {
   const [niches, setNiches] = useState<string[]>([]);
   const [customNiche, setCustomNiche] = useState("");
   const [platforms, setPlatforms] = useState<string[]>([]);
+  const [objetivo, setObjetivo] = useState<string>("");
+  const [publico, setPublico] = useState<string>("");
+  const [tom, setTom] = useState<string>("");
   const [weeklyGoal, setWeeklyGoal] = useState<number>(3);
 
   const [setupLoading, setSetupLoading] = useState(false);
@@ -167,7 +188,8 @@ const Onboarding = () => {
     if (step === 1) return name.trim().length > 0;
     if (step === 2) return niches.length > 0;
     if (step === 3) return platforms.length > 0;
-    if (step === 4) return weeklyGoal > 0;
+    if (step === 4) return objetivo.length > 0;
+    if (step === 5) return weeklyGoal > 0;
     return false;
   })();
 
@@ -204,6 +226,9 @@ const Onboarding = () => {
             nichos: niches,
             plataformas: platforms,
             meta_semanal: weeklyGoal,
+            objetivo: objetivo || undefined,
+            publico: publico.trim() || undefined,
+            tom: tom || undefined,
           },
         });
         if (typeof raw === "string") {
@@ -298,10 +323,10 @@ const Onboarding = () => {
     } finally {
       setSetupLoading(false);
     }
-  }, [user, name, handle, niches, platforms, weeklyGoal, uploadAvatar, updateProfile]);
+  }, [user, name, handle, niches, platforms, weeklyGoal, objetivo, publico, tom, uploadAvatar, updateProfile]);
 
   useEffect(() => {
-    if (step === 5 && !setupStartedRef.current && !setupDone) {
+    if (step === 6 && !setupStartedRef.current && !setupDone) {
       runSetup();
     }
   }, [step, setupDone, runSetup]);
@@ -546,7 +571,7 @@ const Onboarding = () => {
                           : "bg-card border-border hover:border-primary/30"
                       )}
                     >
-                      <PlatformIcon platform={p.id} size="lg" />
+                      <PlatformIcon platform={p.id} size="lg" className={selected ? "text-primary" : "text-muted-foreground"} />
                       <span className={cn("text-base font-display font-bold", selected ? "text-primary" : "text-foreground")}>
                         {p.label}
                       </span>
@@ -562,10 +587,87 @@ const Onboarding = () => {
             </motion.div>
           )}
 
-          {/* ─── Step 4: Meta semanal ─── */}
+          {/* ─── Step 4: Estratégia (objetivo, público, tom) ─── */}
           {step === 4 && (
             <motion.div
               key="step-4"
+              custom={direction}
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.25 }}
+              className="space-y-7"
+            >
+              <header className="space-y-3">
+                <h1 className="text-3xl sm:text-4xl font-display font-extrabold text-foreground tracking-tight">
+                  Sua estratégia
+                </h1>
+                <p className="text-base text-muted-foreground font-body">
+                  Isso ajuda a Cria IA a montar ideias com a sua cara.
+                </p>
+              </header>
+
+              <div className="space-y-2">
+                <Label className="font-body text-sm">Qual seu principal objetivo?</Label>
+                <div className="flex flex-wrap gap-2">
+                  {OBJETIVO_OPTIONS.map((o) => (
+                    <button
+                      key={o}
+                      type="button"
+                      onClick={() => setObjetivo(o)}
+                      className={cn(
+                        "rounded-full border px-4 py-2 text-sm font-body transition-all",
+                        objetivo === o ? "bg-primary/10 border-primary text-primary" : "bg-card border-border text-foreground hover:border-primary/30"
+                      )}
+                    >
+                      {o}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="font-body text-sm">Pra quem você cria? (público)</Label>
+                <div className="flex gap-2 items-start">
+                  <Textarea
+                    value={publico}
+                    onChange={(e) => setPublico(e.target.value)}
+                    rows={2}
+                    placeholder="Ex: mulheres de 25 a 40 anos interessadas em maquiagem e autocuidado"
+                    className="rounded-xl flex-1"
+                    maxLength={300}
+                  />
+                  <VoiceInput onTranscript={(txt) => setPublico((p) => (p ? p + " " : "") + txt)} className="mt-1" />
+                </div>
+                <p className="text-[11px] text-muted-foreground font-body">Pode falar em vez de digitar: toque no microfone e descreva.</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="font-body text-sm">Qual seu tom de voz?</Label>
+                <div className="flex flex-wrap gap-2">
+                  {TOM_OPTIONS.map((tomOpt) => (
+                    <button
+                      key={tomOpt}
+                      type="button"
+                      onClick={() => setTom(tomOpt)}
+                      className={cn(
+                        "rounded-full border px-4 py-2 text-sm font-body transition-all",
+                        tom === tomOpt ? "bg-primary/10 border-primary text-primary" : "bg-card border-border text-foreground hover:border-primary/30"
+                      )}
+                    >
+                      {tomOpt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ─── Step 5: Meta semanal ─── */}
+          {step === 5 && (
+            <motion.div
+              key="step-5"
               custom={direction}
               variants={slideVariants}
               initial="enter"
@@ -614,10 +716,10 @@ const Onboarding = () => {
             </motion.div>
           )}
 
-          {/* ─── Step 5: Setup automático ─── */}
-          {step === 5 && (
+          {/* ─── Step 6: Setup automático ─── */}
+          {step === 6 && (
             <motion.div
-              key="step-5"
+              key="step-6"
               custom={direction}
               variants={slideVariants}
               initial="enter"

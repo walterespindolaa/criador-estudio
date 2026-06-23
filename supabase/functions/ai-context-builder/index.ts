@@ -351,10 +351,14 @@ LEGENDA: ${(data.legenda || '').slice(0, 200)}`
         maxTokens = 400
         break
       case 'onboarding-setup':
-        operationPrompt = `Você é um estrategista de conteúdo brasileiro. Configure o espaço criativo de um novo criador. Retorne APENAS JSON válido, sem texto antes ou depois.
+        operationPrompt = `Você é um estrategista de conteúdo brasileiro. Configure o espaço criativo de um novo criador, personalizando ao máximo com base no objetivo, público e tom informados. Retorne APENAS JSON válido, sem texto antes ou depois.
 {"pilares":[{"name":"string","color":"#hex"}],"habitos":["string"],"ideias":[{"title":"string","format":"string","platform":"string"}]}`
         userPrompt = `Nicho: ${data.nicho || 'lifestyle'}
-Plataformas: ${Array.isArray(data.plataformas) ? data.plataformas.join(', ') : data.plataformas || 'instagram'}`
+Plataformas: ${Array.isArray(data.plataformas) ? data.plataformas.join(', ') : data.plataformas || 'instagram'}
+Objetivo principal: ${data.objetivo || 'crescer audiência'}
+Público-alvo: ${data.publico || 'não informado'}
+Tom de voz: ${data.tom || 'autêntico'}
+Use o objetivo, o público e o tom pra deixar os pilares e as ideias bem específicos e relevantes pra essa pessoa.`
         maxTokens = 600
         break
       case 'cria-chat':
