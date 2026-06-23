@@ -12,6 +12,8 @@ import {
   Search,
   Shield,
   FileWarning,
+  DollarSign,
+  MessageSquare,
   Users,
   MoreVertical,
   Trash2,
@@ -254,19 +256,31 @@ const AdminInner = () => {
         </div>
 
         <Tabs defaultValue="usuarios" className="w-full">
-          <TabsList className="inline-flex h-auto bg-card border border-border rounded-2xl p-1.5 gap-1 mb-6">
-            <TabsTrigger value="usuarios" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-              <Users className="h-3.5 w-3.5 shrink-0" /> Usuários
-            </TabsTrigger>
-            <TabsTrigger value="parceiros" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-              <Handshake className="h-3.5 w-3.5 shrink-0" /> Parceiros
-            </TabsTrigger>
-            <TabsTrigger value="comissoes" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-              <CircleDollarSign className="h-3.5 w-3.5 shrink-0" /> Comissões
-            </TabsTrigger>
-            <TabsTrigger value="logs" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-              <FileWarning className="h-3.5 w-3.5 shrink-0" /> Logs
-            </TabsTrigger>
+          <TabsList className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3 mb-6 bg-transparent h-auto p-0">
+            {[
+              { value: "usuarios", icon: Users, title: "Usuários", desc: "Contas, planos e permissões", hint: `${stats.totalUsers} usuário(s)` },
+              { value: "logs", icon: FileWarning, title: "Logs", desc: "Erros e incidentes do app", hint: "auto" },
+              { value: "faturamento", icon: DollarSign, title: "Faturamento", desc: "Assinaturas e receita", hint: `${stats.byPlan.pro + stats.byPlan.studio} ativa(s)` },
+              { value: "parceiros", icon: Handshake, title: "Parceiros", desc: "Rede de parceiros", hint: "" },
+              { value: "comissoes", icon: CircleDollarSign, title: "Comissões", desc: "Indicações e pagamentos", hint: "" },
+              { value: "recados", icon: MessageSquare, title: "Recados", desc: "Avisos pros usuários", hint: "em breve" },
+            ].map((c) => (
+              <TabsTrigger
+                key={c.value}
+                value={c.value}
+                className="flex flex-col items-start gap-1 text-left rounded-2xl border border-border bg-card p-4 h-auto data-[state=active]:border-primary/50 data-[state=active]:bg-primary/[0.04] data-[state=active]:shadow-sm transition-colors"
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <span className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center shrink-0">
+                    <c.icon className="h-4 w-4 text-foreground/70" />
+                  </span>
+                  <span className="font-display font-bold text-foreground">{c.title}</span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground/40 ml-auto" />
+                </div>
+                <span className="text-xs text-muted-foreground font-body">{c.desc}</span>
+                {c.hint && <span className="text-[11px] text-primary font-body">{c.hint}</span>}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
           <TabsContent value="usuarios" className="space-y-0">
@@ -449,6 +463,26 @@ const AdminInner = () => {
 
           <TabsContent value="logs">
             <AdminLogs />
+          </TabsContent>
+
+          <TabsContent value="faturamento">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
+              <StatCard icon={DollarSign} label="Assinaturas ativas" value={stats.byPlan.pro + stats.byPlan.studio} gradient="from-emerald-500/15 to-teal-500/5" iconBg="bg-emerald-500" />
+              <StatCard icon={CircleDollarSign} label="Studio" value={stats.byPlan.studio} gradient="from-violet-500/15 to-purple-500/5" iconBg="bg-violet-500" />
+              <StatCard icon={CircleDollarSign} label="Pro" value={stats.byPlan.pro} gradient="from-blue-500/15 to-sky-500/5" iconBg="bg-blue-500" />
+              <StatCard icon={Users} label="Free" value={stats.byPlan.free} gradient="from-gray-500/15 to-slate-500/5" iconBg="bg-gray-500" />
+            </div>
+            <div className="rounded-2xl border border-dashed border-border p-5 text-sm text-muted-foreground font-body">
+              Receita e MRR em tempo real (via Stripe) entram aqui na próxima etapa. Por enquanto, acompanhe a distribuição de planos acima.
+            </div>
+          </TabsContent>
+
+          <TabsContent value="recados">
+            <div className="rounded-2xl border border-dashed border-border p-10 text-center">
+              <MessageSquare className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm font-medium text-foreground">Recados (broadcast)</p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">Em breve: envie um aviso daqui e ele aparece pra todos os usuários dentro do app (e no celular, quando ligarmos as notificações).</p>
+            </div>
           </TabsContent>
         </Tabs>
 
