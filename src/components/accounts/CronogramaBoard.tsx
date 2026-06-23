@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { ArrowLeft, Plus, Pencil, Trash2, Send, Link2, CalendarRange, Building2, PartyPopper, Check, AtSign } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Send, Link2, CalendarRange, Building2, PartyPopper, Check, AtSign, LayoutGrid } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +32,9 @@ const maskDay = (v: string) => {
   const d = v.replace(/\D/g, "").slice(0, 4);
   return d.length <= 2 ? d : `${d.slice(0, 2)}/${d.slice(2)}`;
 };
+
+// posts (Cria Post) ainda via cast — padrão do projeto.
+const sbFrom = supabase.from.bind(supabase) as unknown as (t: string) => ReturnType<typeof supabase.from>;
 
 export function CronogramaBoard() {
   const { clients } = useExternalClients();
@@ -141,10 +146,43 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
   onDelete: (id: string) => void;
 }) {
   const { items, addItem, updateItem, deleteItem } = useCronogramaItems(c.id);
+  const { user } = useAuth();
   const [editing, setEditing] = useState<CronogramaItem | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [f, setF] = useState<Partial<CronogramaItem>>({});
   const [handle, setHandle] = useState(c.client_handle ?? "");
+  const [converting, setConverting] = useState(false);
+
+  const approvedToConvert = items.filter((it) => it.approval_status === "aprovado" && !it.converted_post_id);
+
+  const convertApproved = async () => {
+    if (!c.external_client_id) { toast.error("Esse cronograma não está vinculado a um cliente."); return; }
+    if (!user || approvedToConvert.length === 0) return;
+    setConverting(true);
+    try {
+      for (const it of approvedToConvert) {
+        const { data, error } = await sbFrom("posts").insert({
+          user_id: user.id,
+          external_client_id: c.external_client_id,
+          title: it.copy ?? "(sem título)",
+          platform: "instagram",
+          format: it.type ?? "Feed",
+          caption: it.description ?? null,
+          status: "editando",
+          approval_status: "pendente",
+          approval_mode: "fast",
+          scheduled_date: it.date ?? null,
+        } as never).select("id").single();
+        if (error) throw error;
+        await updateItem.mutateAsync({ id: it.id, converted_post_id: (data as { id: string }).id });
+      }
+      toast.success(`${approvedToConvert.length} post(s) criado(s) no Cria Post do cliente!`);
+    } catch {
+      toast.error("Erro ao converter pro Cria Post. Tente de novo.");
+    } finally {
+      setConverting(false);
+    }
+  };
 
   const openNew = () => { setEditing(null); setF({ type: "Reels" }); setFormOpen(true); };
   const openEdit = (it: CronogramaItem) => { setEditing(it); setF(it); setFormOpen(true); };
@@ -181,6 +219,11 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
           </div>
         </div>
         <div className="ml-auto flex items-center gap-2 flex-wrap">
+          {approvedToConvert.length > 0 && (
+            <Button variant="secondary" size="sm" onClick={convertApproved} disabled={converting} className="gap-1.5">
+              <LayoutGrid className="h-3.5 w-3.5" /> {converting ? "Convertendo…" : `Converter ${approvedToConvert.length} aprovado(s) → Cria Post`}
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={() => { navigator.clipboard?.writeText(link); toast.success("Link copiado."); }} className="gap-1.5"><Link2 className="h-3.5 w-3.5" /> Copiar link</Button>
           <Button size="sm" onClick={sendForApproval} className="gap-1.5"><Send className="h-3.5 w-3.5" /> Enviar pra aprovação</Button>
           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => { if (confirm("Excluir este cronograma?")) onDelete(c.id); }}><Trash2 className="h-4 w-4" /></Button>
@@ -213,6 +256,7 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
                   <td className="px-3 py-2.5">{it.type && <span className={cn("text-[11px] font-bold text-white px-2 py-0.5 rounded-full whitespace-nowrap", TYPE_COLOR[it.type] ?? "bg-gray-500")}>{it.type}</span>}</td>
                   <td className="px-3 py-2.5">
                     <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", ST_CLASS[it.approval_status])}>{ST_LABEL[it.approval_status]}</span>
+                    {it.converted_post_id && <span className="ml-1 inline-flex items-center gap-0.5 text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full"><Check className="h-2.5 w-2.5" /> no Cria Post</span>}
                     {it.client_comment && <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1 mt-1 max-w-[240px]">"{it.client_comment}"</div>}
                   </td>
                   <td className="px-3 py-2.5">
