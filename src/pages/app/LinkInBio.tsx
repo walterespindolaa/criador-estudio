@@ -27,6 +27,8 @@ import {
   ChevronDown,
   ImagePlus,
   Download,
+  Check,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -302,6 +304,10 @@ function getInitial(name?: string | null): string {
   return name?.trim().charAt(0).toUpperCase() || "C";
 }
 
+// RPC nova ainda não está nos tipos gerados — cast (padrão do projeto).
+type AnyRpc = (fn: string, args?: Record<string, unknown>) => ReturnType<typeof supabase.rpc>;
+const sbRpc = supabase.rpc.bind(supabase) as unknown as AnyRpc;
+
 const LinkInBio = () => {
   const { user } = useAuth();
   const { activeAccountId } = useActiveAccount();
@@ -340,6 +346,7 @@ const LinkInBio = () => {
   const isSavingAppearance = isOwnAccount ? updateProfile.isPending : savingAppearance;
 
   const [slug, setSlug] = useState("");
+  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
   const [settings, setSettings] = useState<BioSettings>(DEFAULT_SETTINGS);
   const { leads, isLoading: leadsLoading, deleteLead } = useBioLeads();
   const exportLeadsCsv = () => {
@@ -369,6 +376,25 @@ const LinkInBio = () => {
     setSettings(parseSettings(profile.bio_settings));
     setAppearanceDirty(false);
   }, [profile?.id, profile?.bio_slug, profile?.bio_settings]);
+
+  // Checagem de disponibilidade do slug (debounce).
+  useEffect(() => {
+    const clean = normalizeSlug(slug);
+    if (!clean) { setSlugStatus("idle"); return; }
+    const current = normalizeSlug(profile?.bio_slug ?? "");
+    if (clean === current) { setSlugStatus("available"); return; }
+    setSlugStatus("checking");
+    const handle = setTimeout(async () => {
+      try {
+        const { data, error } = await sbRpc("bio_slug_available", { _slug: clean, _exclude: profile?.id ?? null });
+        if (error) throw error;
+        setSlugStatus(data ? "available" : "taken");
+      } catch {
+        setSlugStatus("idle");
+      }
+    }, 450);
+    return () => clearTimeout(handle);
+  }, [slug, profile?.bio_slug, profile?.id]);
 
   const sortedLinks = useMemo(
     () => [...links].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)),
@@ -527,6 +553,10 @@ const LinkInBio = () => {
       toast.error("Escolha um nome para o seu link público.");
       return;
     }
+    if (slugStatus === "taken") {
+      toast.error("Esse nome de link já está em uso. Escolha outro.");
+      return;
+    }
     try {
       if (isOwnAccount) {
         await updateProfile.mutateAsync({
@@ -658,6 +688,19 @@ const LinkInBio = () => {
                   <Copy className="h-3.5 w-3.5" />
                 </Button>
               </div>
+              {slug.trim() && (
+                <p className="mt-1.5 text-[11px] font-body flex items-center gap-1">
+                  {slugStatus === "checking" && (
+                    <span className="text-muted-foreground flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> verificando disponibilidade…</span>
+                  )}
+                  {slugStatus === "available" && (
+                    <span className="text-emerald-600 flex items-center gap-1"><Check className="h-3 w-3" /> disponível</span>
+                  )}
+                  {slugStatus === "taken" && (
+                    <span className="text-destructive flex items-center gap-1"><X className="h-3 w-3" /> já está em uso — escolha outro</span>
+                  )}
+                </p>
+              )}
             </Card>
 
             <Card className="p-4 md:p-5 rounded-2xl border-border">
