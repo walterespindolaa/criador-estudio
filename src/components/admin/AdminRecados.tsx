@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useBroadcastsAdmin } from "@/hooks/useBroadcasts";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,7 +25,14 @@ export function AdminRecados() {
 
   const send = async () => {
     if (!message.trim()) return;
-    await create.mutateAsync({ title: title.trim() || null, message: message.trim(), level, audience });
+    const payload = { title: title.trim() || null, message: message.trim(), level, audience };
+    await create.mutateAsync(payload);
+    // Dispara também a notificação push (best-effort; ignora se a function não estiver no ar).
+    try {
+      await supabase.functions.invoke("send-push", {
+        body: { title: payload.title, message: payload.message, audience, url: "/app" },
+      });
+    } catch { /* push é opcional */ }
     setTitle(""); setMessage(""); setLevel("info"); setAudience("todos");
   };
 

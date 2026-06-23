@@ -3,7 +3,8 @@ import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Trash2, Camera, Lock, AlertTriangle, Shield, Paintbrush, HardDrive, ExternalLink, Unplug, User, Users, LayoutGrid, Plug, Settings, Pencil, CreditCard, Instagram } from "lucide-react";
+import { Plus, Trash2, Camera, Lock, AlertTriangle, Shield, Paintbrush, HardDrive, ExternalLink, Unplug, User, Users, LayoutGrid, Plug, Settings, Pencil, CreditCard, Instagram, Bell } from "lucide-react";
+import { NotificationToggle } from "@/components/NotificationToggle";
 import { useSocialConnection, connectInstagram, useDisconnectInstagram } from "@/hooks/useSocialInsights";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Button } from "@/components/ui/button";
@@ -825,6 +826,11 @@ const Configuracoes = () => {
                   <div className="space-y-4">
                     <Button variant="outline" onClick={() => setPasswordOpen(true)} className="w-full sm:w-auto"><Lock className="h-4 w-4 mr-2" /> Alterar Senha</Button>
                   </div>
+                </div>
+                <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-3">
+                  <h3 className="font-display font-semibold text-foreground flex items-center gap-2"><Bell className="h-5 w-5 text-primary" /> Notificações</h3>
+                  <p className="text-sm text-muted-foreground font-body">Receba avisos e recados no aparelho (celular/PC), mesmo com o app fechado.</p>
+                  <NotificationToggle />
                 </div>
                 {profile?.stripe_customer_id && (
                   <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">

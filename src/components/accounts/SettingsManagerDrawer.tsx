@@ -23,6 +23,8 @@ import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { sanitizeText } from "@/lib/sanitize";
 import { ManagerCompanyDialog } from "@/components/accounts/ManagerCompanyDialog";
 import { SettingsVisual } from "@/components/settings/SettingsVisual";
+import { NotificationToggle } from "@/components/NotificationToggle";
+import { Bell } from "lucide-react";
 
 type Props = {
   open: boolean;
@@ -257,6 +259,15 @@ export function SettingsManagerDrawer({ open, onOpenChange }: Props) {
               >
                 Trocar senha
               </Button>
+            </section>
+
+            {/* Notificações */}
+            <section className="space-y-2">
+              <h3 className="font-display font-semibold text-sm text-foreground flex items-center gap-2">
+                <Bell className="h-4 w-4" /> Notificações
+              </h3>
+              <p className="text-xs text-muted-foreground font-body">Receba avisos e recados no aparelho (celular/PC), mesmo com o app fechado.</p>
+              <NotificationToggle />
             </section>
 
             {/* Dados da empresa (contratos) */}
