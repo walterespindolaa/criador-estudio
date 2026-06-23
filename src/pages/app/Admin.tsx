@@ -104,14 +104,6 @@ const AdminInner = () => {
   const [roleFilter, setRoleFilter] = useState("todos");
   const [page, setPage] = useState(0);
   const [tab, setTab] = useState("usuarios");
-
-  const goToPlan = (plan: string) => {
-    setPlanFilter(plan);
-    setRoleFilter("todos");
-    setSearch("");
-    setPage(0);
-    setTab("usuarios");
-  };
   const [openCreate, setOpenCreate] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", phone: "", plan: "trial" });
   const [validity, setValidity] = useState("lifetime");
@@ -269,7 +261,7 @@ const AdminInner = () => {
         </div>
 
         <Tabs value={tab} onValueChange={setTab} className="w-full">
-          <TabsList className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3 mb-6 bg-transparent h-auto p-0">
+          <TabsList className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3 mb-6 bg-transparent h-auto p-0 auto-rows-fr">
             {[
               { value: "usuarios", icon: Users, title: "Usuários", desc: "Contas, planos e permissões", hint: `${stats.totalUsers} usuário(s)` },
               { value: "logs", icon: FileWarning, title: "Logs", desc: "Erros e incidentes do app", hint: "auto" },
@@ -282,7 +274,7 @@ const AdminInner = () => {
               <TabsTrigger
                 key={c.value}
                 value={c.value}
-                className="flex flex-col items-start gap-1 text-left rounded-2xl border border-border bg-card p-4 h-auto data-[state=active]:border-primary/50 data-[state=active]:bg-primary/[0.04] data-[state=active]:shadow-sm transition-colors"
+                className="flex flex-col items-start gap-1 text-left rounded-2xl border border-border bg-card p-4 h-full data-[state=active]:border-primary/50 data-[state=active]:bg-primary/[0.04] data-[state=active]:shadow-sm transition-colors"
               >
                 <div className="flex items-center gap-2 w-full">
                   <span className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center shrink-0">
@@ -481,31 +473,6 @@ const AdminInner = () => {
 
           <TabsContent value="faturamento">
             <AdminFaturamento />
-            <div className="mt-6">
-              <p className="text-sm font-display font-semibold text-foreground">Contas por plano</p>
-              <p className="text-xs text-muted-foreground font-body mb-3">
-                Distribuição pela flag de plano (inclui cortesias e contas criadas manualmente). Clique pra ver os usuários. As <strong>assinaturas ativas</strong> acima contam só quem paga no Stripe.
-              </p>
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { plan: "studio", label: "Studio", n: stats.byPlan.studio },
-                  { plan: "pro", label: "Pro", n: stats.byPlan.pro },
-                  { plan: "free", label: "Free", n: stats.byPlan.free },
-                ].map((p) => (
-                  <button
-                    key={p.plan}
-                    onClick={() => goToPlan(p.plan)}
-                    className="rounded-2xl border border-border bg-card p-4 text-left hover:border-primary/40 transition-colors flex items-center justify-between"
-                  >
-                    <div>
-                      <p className="text-2xl font-display font-extrabold text-foreground">{p.n}</p>
-                      <p className="text-xs text-muted-foreground font-body">{p.label}</p>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground/40" />
-                  </button>
-                ))}
-              </div>
-            </div>
           </TabsContent>
 
           <TabsContent value="recados">

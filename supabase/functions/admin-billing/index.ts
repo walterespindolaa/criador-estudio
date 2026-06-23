@@ -33,26 +33,43 @@ serve(async (req) => {
     let active = 0;
     let trialing = 0;
     let currency = "brl";
+    // quebra por produto (somente assinaturas ATIVAS = pagantes reais)
+    const breakdown: Record<string, { count: number; mrrCents: number; emails: string[] }> = {};
 
     for (const status of ["active", "trialing"] as const) {
       let startingAfter: string | undefined;
-      // limite de segurança: até 20 páginas (2000 assinaturas)
       for (let page = 0; page < 20; page++) {
         const res = await stripe.subscriptions.list({
           status,
           limit: 100,
           starting_after: startingAfter,
-          expand: ["data.items.data.price"],
+          expand: ["data.items.data.price.product", "data.customer"],
         });
         for (const sub of res.data) {
           if (status === "active") active++; else trialing++;
+          let subMrr = 0;
+          let label = "Outro";
           for (const item of sub.items.data) {
             const price = item.price;
             if (price?.currency) currency = price.currency;
             const amt = (price?.unit_amount ?? 0) * (item.quantity ?? 1);
             const interval = price?.recurring?.interval ?? "month";
             const factor = interval === "year" ? 1 / 12 : interval === "week" ? 4.345 : interval === "day" ? 30 : 1;
-            mrrCents += amt * factor;
+            const monthly = amt * factor;
+            mrrCents += monthly;
+            subMrr += monthly;
+            const product = price?.product as { name?: string } | string | undefined;
+            const pName = typeof product === "object" ? product?.name : undefined;
+            label = pName || price?.nickname || label;
+          }
+          if (status === "active") {
+            const cust = sub.customer as { email?: string } | string | undefined;
+            const email = typeof cust === "object" ? (cust?.email ?? "") : "";
+            const b = breakdown[label] ?? { count: 0, mrrCents: 0, emails: [] };
+            b.count += 1;
+            b.mrrCents += subMrr;
+            if (email) b.emails.push(email);
+            breakdown[label] = b;
           }
         }
         if (!res.has_more) break;
@@ -61,20 +78,11 @@ serve(async (req) => {
     }
 
     const mrr = Math.round(mrrCents) / 100;
+    const planBreakdown = Object.entries(breakdown)
+      .map(([label, b]) => ({ label, count: b.count, mrr: Math.round(b.mrrCents) / 100, emails: b.emails }))
+      .sort((a, b) => b.mrr - a.mrr);
 
-    // Módulos da social mídia (assinaturas separadas) — conta os ativos por módulo.
-    const { data: ents } = await svc.from("module_entitlements").select("module_code, status").eq("status", "active");
-    const { data: cat } = await svc.from("modules").select("code, name, price_cents").eq("active", true).order("sort_order");
-    const byCode: Record<string, number> = {};
-    (ents ?? []).forEach((e: { module_code: string }) => { byCode[e.module_code] = (byCode[e.module_code] ?? 0) + 1; });
-    const modules = (cat ?? []).map((m: { code: string; name: string; price_cents: number }) => ({
-      code: m.code,
-      name: m.name,
-      active: byCode[m.code] ?? 0,
-      price: (m.price_cents ?? 0) / 100,
-    }));
-
-    return json({ active, trialing, mrr, currency: currency.toUpperCase(), modules });
+    return json({ active, trialing, mrr, currency: currency.toUpperCase(), planBreakdown });
   } catch (e) {
     console.error("[admin-billing] error:", e);
     return json({ error: "internal_error" }, 500);

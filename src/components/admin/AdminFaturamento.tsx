@@ -1,15 +1,17 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { RefreshCw, TrendingUp, Users, Clock, Ticket } from "lucide-react";
+import { RefreshCw, TrendingUp, Users, Clock, Ticket, ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-type ModuleStat = { code: string; name: string; active: number; price: number };
-type Billing = { active: number; trialing: number; mrr: number; currency: string; modules?: ModuleStat[] };
+type PlanRow = { label: string; count: number; mrr: number; emails: string[] };
+type Billing = { active: number; trialing: number; mrr: number; currency: string; planBreakdown?: PlanRow[] };
 
 const brl = (n: number) => "R$ " + (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
 
 function Card({ icon: Icon, label, value, sub }: { icon: typeof Users; label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
+    <div className="rounded-2xl border border-border bg-card p-4 h-full">
       <div className="flex items-center gap-2 text-muted-foreground mb-2">
         <Icon className="h-4 w-4" />
         <span className="text-xs font-body">{label}</span>
@@ -21,6 +23,7 @@ function Card({ icon: Icon, label, value, sub }: { icon: typeof Users; label: st
 }
 
 export function AdminFaturamento() {
+  const [openRow, setOpenRow] = useState<string | null>(null);
   const { data, isLoading, error, refetch, isFetching } = useQuery<Billing>({
     queryKey: ["admin-billing"],
     queryFn: async () => {
@@ -34,11 +37,12 @@ export function AdminFaturamento() {
   });
 
   const ticket = data && data.active > 0 ? data.mrr / data.active : 0;
+  const rows = data?.planBreakdown ?? [];
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground font-body">Dados ao vivo do Stripe (assinaturas e receita recorrente).</p>
+        <p className="text-sm text-muted-foreground font-body">Dados ao vivo do Stripe — só assinaturas pagas.</p>
         <button onClick={() => refetch()} className="shrink-0 inline-flex items-center gap-1.5 text-xs font-body font-medium rounded-lg border border-border px-3 py-1.5 hover:bg-muted transition-colors">
           <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} /> Atualizar
         </button>
@@ -52,27 +56,48 @@ export function AdminFaturamento() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 auto-rows-fr">
             <Card icon={TrendingUp} label="MRR (receita recorrente)" value={brl(data!.mrr)} sub={`em ${data!.currency}`} />
             <Card icon={Users} label="Assinaturas ativas" value={String(data!.active)} sub="pagando no Stripe" />
             <Card icon={Clock} label="Em teste (trial)" value={String(data!.trialing)} />
             <Card icon={Ticket} label="Ticket médio" value={brl(ticket)} sub="MRR ÷ ativas" />
           </div>
 
-          {data!.modules && data!.modules.length > 0 && (
-            <div className="mt-5">
-              <p className="text-sm font-display font-semibold text-foreground mb-2">Módulos da social mídia (ativos)</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {data!.modules.map((m) => (
-                  <div key={m.code} className="rounded-2xl border border-border bg-card p-4">
-                    <p className="text-sm font-body font-medium text-foreground">{m.name}</p>
-                    <p className="text-2xl font-display font-extrabold text-foreground mt-1">{m.active}</p>
-                    <p className="text-[11px] text-muted-foreground font-body">assinaturas · {brl(m.price)}/mês cada</p>
-                  </div>
-                ))}
+          <div>
+            <p className="text-sm font-display font-semibold text-foreground mb-2">Assinaturas por produto</p>
+            {rows.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground font-body">
+                Nenhuma assinatura paga ativa no Stripe ainda.
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="space-y-2">
+                {rows.map((r) => {
+                  const isOpen = openRow === r.label;
+                  return (
+                    <div key={r.label} className="rounded-xl border border-border bg-card overflow-hidden">
+                      <button onClick={() => setOpenRow(isOpen ? null : r.label)} className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/40 transition-colors">
+                        <span className="font-display font-bold text-foreground flex-1">{r.label}</span>
+                        <span className="text-sm text-muted-foreground">{r.count} assinante(s)</span>
+                        <span className="text-sm font-semibold text-foreground">{brl(r.mrr)}/mês</span>
+                        <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", isOpen && "rotate-180")} />
+                      </button>
+                      {isOpen && (
+                        <div className="px-4 pb-3 pt-1 border-t border-border">
+                          {r.emails.length === 0 ? (
+                            <p className="text-xs text-muted-foreground font-body py-1">Sem e-mails disponíveis.</p>
+                          ) : (
+                            <ul className="text-xs text-muted-foreground font-body space-y-0.5 max-h-48 overflow-y-auto">
+                              {r.emails.map((e, i) => <li key={i} className="truncate">{e}</li>)}
+                            </ul>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </>
       )}
     </div>
