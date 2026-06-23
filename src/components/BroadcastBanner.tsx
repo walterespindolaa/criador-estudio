@@ -7,11 +7,13 @@ const getDismissed = (): string[] => {
   try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; }
 };
 
-export function BroadcastBanner() {
+export function BroadcastBanner({ audience }: { audience: "criadora" | "social" }) {
   const { broadcasts } = useActiveBroadcasts();
   const [dismissed, setDismissed] = useState<string[]>(getDismissed);
 
-  const next = broadcasts.find((b) => !dismissed.includes(b.id));
+  const next = broadcasts.find(
+    (b) => (b.audience === "todos" || b.audience === audience) && !dismissed.includes(b.id),
+  );
   if (!next) return null;
 
   const dismiss = () => {

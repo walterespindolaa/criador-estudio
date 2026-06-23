@@ -20,12 +20,15 @@ export function AdminRecados() {
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [level, setLevel] = useState("info");
+  const [audience, setAudience] = useState("todos");
 
   const send = async () => {
     if (!message.trim()) return;
-    await create.mutateAsync({ title: title.trim() || null, message: message.trim(), level });
-    setTitle(""); setMessage(""); setLevel("info");
+    await create.mutateAsync({ title: title.trim() || null, message: message.trim(), level, audience });
+    setTitle(""); setMessage(""); setLevel("info"); setAudience("todos");
   };
+
+  const AUD_LABEL: Record<string, string> = { todos: "Todos", criadora: "Criadoras", social: "Social mídia" };
 
   return (
     <div className="space-y-5">
@@ -43,6 +46,17 @@ export function AdminRecados() {
               <SelectContent>{LEVELS.map((l) => <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>)}</SelectContent>
             </Select>
           </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Enviar para</Label>
+          <Select value={audience} onValueChange={setAudience}>
+            <SelectTrigger className="rounded-xl sm:w-60"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos (criadoras + social mídia)</SelectItem>
+              <SelectItem value="criadora">Só criadoras</SelectItem>
+              <SelectItem value="social">Só social mídia</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Mensagem</Label>
@@ -68,7 +82,7 @@ export function AdminRecados() {
                 <div className="min-w-0 flex-1">
                   {b.title && <p className="text-sm font-semibold text-foreground">{b.title}</p>}
                   <p className="text-sm text-muted-foreground break-words">{b.message}</p>
-                  <p className="text-[11px] text-muted-foreground/70 mt-1">{new Date(b.created_at).toLocaleString("pt-BR")} · {b.active ? "ativo" : "inativo"}</p>
+                  <p className="text-[11px] text-muted-foreground/70 mt-1">{new Date(b.created_at).toLocaleString("pt-BR")} · {AUD_LABEL[b.audience] ?? "Todos"} · {b.active ? "ativo" : "inativo"}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <Switch checked={b.active} onCheckedChange={(v) => setActive.mutate({ id: b.id, active: v })} />

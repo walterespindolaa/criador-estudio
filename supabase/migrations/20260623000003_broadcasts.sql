@@ -4,10 +4,13 @@ create table if not exists public.broadcasts (
   id uuid primary key default gen_random_uuid(),
   title text,
   message text not null,
-  level text not null default 'info',   -- info | aviso | novidade
+  level text not null default 'info',     -- info | aviso | novidade
+  audience text not null default 'todos', -- todos | criadora | social
   active boolean not null default true,
   created_at timestamptz not null default now()
 );
+-- idempotente: se a tabela já existir, garante a coluna
+alter table public.broadcasts add column if not exists audience text not null default 'todos';
 
 alter table public.broadcasts enable row level security;
 

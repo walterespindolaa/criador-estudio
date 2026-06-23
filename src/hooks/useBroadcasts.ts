@@ -6,11 +6,13 @@ import { toast } from "sonner";
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 
+export type BroadcastAudience = "todos" | "criadora" | "social";
 export type Broadcast = {
   id: string;
   title: string | null;
   message: string;
   level: "info" | "aviso" | "novidade";
+  audience: BroadcastAudience;
   active: boolean;
   created_at: string;
 };
@@ -32,7 +34,7 @@ export function useBroadcastsAdmin() {
   };
 
   const create = useMutation({
-    mutationFn: async (input: { title?: string | null; message: string; level?: string }) => {
+    mutationFn: async (input: { title?: string | null; message: string; level?: string; audience?: string }) => {
       const { error } = await sbFrom("broadcasts").insert({ ...input, active: true } as never);
       if (error) throw error;
     },
