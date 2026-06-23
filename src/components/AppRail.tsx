@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard, Layers, Lightbulb, ClipboardCheck, Grid3X3, ListTodo,
-  CalendarRange, Kanban, Target, FolderOpen, Compass, BookOpen, BookMarked,
+  LayoutDashboard, PenLine, Lightbulb, ClipboardCheck, Grid3X3, ListTodo,
+  CalendarRange, Kanban, Target, FolderOpen, Palette, BookOpen, BookMarked,
   Link2, Sparkles, BadgeDollarSign, BarChart3, Archive, GraduationCap,
   PlayCircle, Settings, LogOut, Instagram, ShieldCheck, ChevronDown, type LucideIcon,
 } from "lucide-react";
@@ -19,34 +19,34 @@ type NavNode = {
 };
 
 const TOP: NavNode[] = [
-  { id: "dash", label: "Dashboard", icon: LayoutDashboard, to: "/app", end: true },
-  { id: "op", label: "Operação", icon: Layers, children: [
+  { id: "dash", label: "Início", icon: LayoutDashboard, to: "/app", end: true },
+  { id: "ia", label: "Cria IA", icon: Sparkles, action: "cria", featured: true },
+  { id: "criar", label: "Criar", icon: PenLine, children: [
     { label: "Ideias", icon: Lightbulb, to: "/app/ideias" },
+    { label: "Em produção", icon: Kanban, to: "/app/criando" },
     { label: "Aprovações", icon: ClipboardCheck, to: "/app/aprovacao" },
     { label: "Meu Feed", icon: Grid3X3, to: "/app/feed" },
-    { label: "Tarefas", icon: ListTodo, to: "/app/tarefas" },
   ]},
-  { id: "plan", label: "Planejamento", icon: CalendarRange, children: [
-    { label: "Criando", icon: Kanban, to: "/app/criando" },
-    { label: "Metas", icon: Target, to: "/app/metas" },
+  { id: "planejar", label: "Planejar", icon: CalendarRange, children: [
+    { label: "Calendário & Metas", icon: Target, to: "/app/metas" },
+    { label: "Tarefas", icon: ListTodo, to: "/app/tarefas" },
     { label: "Arquivos", icon: FolderOpen, to: "/app/arquivos" },
   ]},
-  { id: "estr", label: "Estratégia", icon: Compass, children: [
-    { label: "Biblioteca", icon: BookOpen, to: "/app/biblioteca" },
+  { id: "marca", label: "Minha marca", icon: Palette, children: [
     { label: "Brandbook", icon: BookMarked, to: "/app/brandbook" },
-    { label: "Link in Bio", icon: Link2, to: "/app/linkinbio" },
+    { label: "Link na bio", icon: Link2, to: "/app/linkinbio" },
+    { label: "Biblioteca", icon: BookOpen, to: "/app/biblioteca" },
   ]},
-  { id: "ia", label: "Cria IA", icon: Sparkles, action: "cria", featured: true },
-  { id: "mon", label: "Monetização", icon: BadgeDollarSign, to: "/app/collabs" },
-  { id: "ana", label: "Análise", icon: BarChart3, children: [
+  { id: "result", label: "Resultados", icon: BarChart3, children: [
     { label: "Insights", icon: Instagram, to: "/app/insights" },
     { label: "Relatórios", icon: BarChart3, to: "/app/relatorios" },
     { label: "Histórico", icon: Archive, to: "/app/historico" },
   ]},
-  { id: "edu", label: "Educacional", icon: GraduationCap, children: [
+  { id: "aprender", label: "Aprender", icon: GraduationCap, children: [
     { label: "Cursos", icon: BookMarked, to: "/app/aprender" },
-    { label: "Tutorial", icon: PlayCircle, to: "/app/aprender" },
+    { label: "Tutoriais", icon: PlayCircle, to: "/app/aprender" },
   ]},
+  { id: "parcerias", label: "Parcerias", icon: BadgeDollarSign, to: "/app/collabs" },
 ];
 
 const BOTTOM: NavNode[] = [

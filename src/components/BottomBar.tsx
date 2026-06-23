@@ -2,7 +2,7 @@ import { useState } from "react";
 import { NavLink, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Home, Lightbulb, Kanban, CalendarDays,
-  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, ChevronUp, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck, Handshake, Maximize2, Minimize2, Instagram, BarChart3, ShieldCheck
+  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, ChevronUp, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck, Handshake, Maximize2, Minimize2, Instagram, BarChart3, ShieldCheck, PlayCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,24 +16,40 @@ const leftItems = [
 ];
 
 const rightItems = [
-  { title: "Criando", url: "/app/criando", icon: Kanban },
-  { title: "Plano", url: "/app/plano", icon: CalendarDays },
+  { title: "Calendário", url: "/app/metas", icon: CalendarDays },
 ];
 
-const moreItems = [
-  { title: "Aprovações", url: "/app/aprovacao", icon: ClipboardCheck },
-  { title: "Meu Feed", url: "/app/feed", icon: Grid3X3 },
-  { title: "Biblioteca", url: "/app/biblioteca", icon: BookOpen },
-  { title: "Tarefas", url: "/app/tarefas", icon: ListTodo },
-  { title: "Brandbook", url: "/app/brandbook", icon: BookMarked },
-  { title: "Collabs", url: "/app/collabs", icon: Handshake },
-  { title: "Insights", url: "/app/insights", icon: Instagram },
-  { title: "Relatórios", url: "/app/relatorios", icon: BarChart3 },
-  { title: "Link in Bio", url: "/app/linkinbio", icon: Link2 },
-  { title: "Arquivos", url: "/app/arquivos", icon: FolderOpen },
-  { title: "Histórico", url: "/app/historico", icon: Archive },
-  { title: "Aprender", url: "/app/aprender", icon: GraduationCap },
-  { title: "Config.", url: "/app/configuracoes", icon: Settings },
+type MoreItem = { title: string; url: string; icon: typeof Home };
+const MORE_SECTIONS: { title: string; items: MoreItem[] }[] = [
+  { title: "Criar", items: [
+    { title: "Ideias", url: "/app/ideias", icon: Lightbulb },
+    { title: "Em produção", url: "/app/criando", icon: Kanban },
+    { title: "Aprovações", url: "/app/aprovacao", icon: ClipboardCheck },
+    { title: "Meu Feed", url: "/app/feed", icon: Grid3X3 },
+  ]},
+  { title: "Planejar", items: [
+    { title: "Calendário & Metas", url: "/app/metas", icon: CalendarDays },
+    { title: "Tarefas", url: "/app/tarefas", icon: ListTodo },
+    { title: "Arquivos", url: "/app/arquivos", icon: FolderOpen },
+  ]},
+  { title: "Minha marca", items: [
+    { title: "Brandbook", url: "/app/brandbook", icon: BookMarked },
+    { title: "Link na bio", url: "/app/linkinbio", icon: Link2 },
+    { title: "Biblioteca", url: "/app/biblioteca", icon: BookOpen },
+  ]},
+  { title: "Resultados", items: [
+    { title: "Insights", url: "/app/insights", icon: Instagram },
+    { title: "Relatórios", url: "/app/relatorios", icon: BarChart3 },
+    { title: "Histórico", url: "/app/historico", icon: Archive },
+  ]},
+  { title: "Aprender", items: [
+    { title: "Cursos", url: "/app/aprender", icon: GraduationCap },
+    { title: "Tutoriais", url: "/app/aprender", icon: PlayCircle },
+  ]},
+  { title: "Mais", items: [
+    { title: "Parcerias", url: "/app/collabs", icon: Handshake },
+    { title: "Configurações", url: "/app/configuracoes", icon: Settings },
+  ]},
 ];
 
 export function BottomBar() {
@@ -43,9 +59,12 @@ export function BottomBar() {
   const { signOut } = useAuth();
   const { openCria } = useCriaAI();
   const { profile } = useProfile();
-  const menuItems = profile?.role === "admin"
-    ? [...moreItems, { title: "Admin", url: "/app/cf-admin-panel", icon: ShieldCheck }]
-    : moreItems;
+  const sections = profile?.role === "admin"
+    ? MORE_SECTIONS.map((s) => s.title === "Mais"
+        ? { ...s, items: [...s.items, { title: "Admin", url: "/app/cf-admin-panel", icon: ShieldCheck }] }
+        : s)
+    : MORE_SECTIONS;
+  const allMoreItems = sections.flatMap((s) => s.items);
   const [searchParams, setSearchParams] = useSearchParams();
   const onCriando = location.pathname === "/app/criando";
   const overview = searchParams.get("view") === "overview";
@@ -66,7 +85,7 @@ export function BottomBar() {
     return location.pathname.startsWith(url);
   };
 
-  const isMoreActive = menuItems.some(item => location.pathname.startsWith(item.url));
+  const isMoreActive = allMoreItems.some(item => location.pathname.startsWith(item.url));
 
   const renderNavItem = (item: { title: string; url: string; icon: typeof Home; exact?: boolean }) => {
     const active = isActive(item.url, item.exact);
@@ -99,24 +118,29 @@ export function BottomBar() {
       )}
       {moreOpen && (
         <div
-          className="fixed left-3 right-3 z-40 md:hidden bg-card/95 backdrop-blur-lg border border-border rounded-3xl shadow-warm-lg p-4"
+          className="fixed left-3 right-3 z-40 md:hidden bg-card/95 backdrop-blur-lg border border-border rounded-3xl shadow-warm-lg p-4 max-h-[68vh] overflow-y-auto"
           style={{ bottom: 'calc(84px + env(safe-area-inset-bottom, 0px))' }}
         >
-          <div className="grid grid-cols-4 gap-2.5">
-            {menuItems.map((item) => {
-              const active = isActive(item.url);
-              return (
-                <NavLink key={item.url} to={item.url} onClick={() => setMoreOpen(false)}
-                  className={cn(
-                    "flex flex-col items-center gap-1.5 p-3 rounded-2xl transition-colors",
-                    active ? "bg-primary/10 text-primary" : "bg-muted/50 text-muted-foreground hover:text-foreground"
-                  )}>
-                  <item.icon className="h-5 w-5" strokeWidth={1.5} />
-                  <span className="text-[10px] font-body font-medium leading-tight text-center">{item.title}</span>
-                </NavLink>
-              );
-            })}
-          </div>
+          {sections.map((sec) => (
+            <div key={sec.title} className="mb-3.5 last:mb-0">
+              <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground/70 px-1 mb-1.5">{sec.title}</p>
+              <div className="grid grid-cols-4 gap-2.5">
+                {sec.items.map((item) => {
+                  const active = isActive(item.url);
+                  return (
+                    <NavLink key={item.url + item.title} to={item.url} onClick={() => setMoreOpen(false)}
+                      className={cn(
+                        "flex flex-col items-center gap-1.5 p-3 rounded-2xl transition-colors",
+                        active ? "bg-primary/10 text-primary" : "bg-muted/50 text-muted-foreground hover:text-foreground"
+                      )}>
+                      <item.icon className="h-5 w-5" strokeWidth={1.5} />
+                      <span className="text-[10px] font-body font-medium leading-tight text-center">{item.title}</span>
+                    </NavLink>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
           <button type="button" onClick={handleSignOut}
             className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-destructive/10 text-destructive hover:bg-destructive/15 transition-colors text-sm font-body font-medium">
             <LogOut className="h-4 w-4" strokeWidth={1.5} /> Sair
