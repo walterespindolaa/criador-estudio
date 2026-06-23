@@ -1,4 +1,5 @@
 import { Component, ReactNode, ErrorInfo } from "react";
+import { logError } from "@/lib/logError";
 
 interface Props { children: ReactNode; }
 interface State { hasError: boolean; error?: Error; }
@@ -13,6 +14,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("ErrorBoundary:", error, info);
+    logError(error?.message || "Erro de renderização", {
+      stack: error?.stack?.slice(0, 1200),
+      componentStack: info?.componentStack?.slice(0, 1200),
+      boundary: true,
+    });
   }
   render() {
     if (this.state.hasError) {

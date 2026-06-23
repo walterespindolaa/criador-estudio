@@ -11,6 +11,7 @@ import {
   Briefcase,
   Search,
   Shield,
+  FileWarning,
   Users,
   MoreVertical,
   Trash2,
@@ -50,6 +51,7 @@ import { CopyButton } from "@/components/shared/CopyButton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminPartners } from "@/components/admin/AdminPartners";
 import { AdminReferrals } from "@/components/admin/AdminReferrals";
+import { AdminLogs } from "@/components/admin/AdminLogs";
 import { UserDetailsDrawer } from "@/components/admin/UserDetailsDrawer";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -262,6 +264,9 @@ const AdminInner = () => {
             <TabsTrigger value="comissoes" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               <CircleDollarSign className="h-3.5 w-3.5 shrink-0" /> Comissões
             </TabsTrigger>
+            <TabsTrigger value="logs" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              <FileWarning className="h-3.5 w-3.5 shrink-0" /> Logs
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="usuarios" className="space-y-0">
@@ -440,6 +445,10 @@ const AdminInner = () => {
 
           <TabsContent value="comissoes">
             <AdminReferrals />
+          </TabsContent>
+
+          <TabsContent value="logs">
+            <AdminLogs />
           </TabsContent>
         </Tabs>
 

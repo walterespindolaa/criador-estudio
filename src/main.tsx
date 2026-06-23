@@ -3,6 +3,9 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { I18nProvider } from "./lib/i18n";
 import App from "./App.tsx";
 import "./index.css";
+import { installGlobalErrorLogging } from "./lib/logError";
+
+installGlobalErrorLogging();
 
 // Apply saved font immediately to avoid flash of unstyled text
 const savedFont = localStorage.getItem("theme_font");
