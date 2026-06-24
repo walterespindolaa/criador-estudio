@@ -5,7 +5,7 @@ import { Loader2, Download, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { useAuth } from "@/contexts/AuthContext";
-import { clientReportInsight, type ClientReportInsight } from "@/lib/ai/claude";
+import { clientReportInsight } from "@/lib/ai/claude";
 import { FORMAT_LABELS } from "@/lib/constants";
 import type { ExternalClient, ExternalPost } from "@/hooks/useCriaPost";
 
@@ -44,14 +44,22 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   const { exportPdf } = usePdfExport();
   const { user } = useAuth();
   const reportRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
   const months = useMemo(() => lastNMonths(6), []);
   const [monthKey, setMonthKey] = useState(months[0].key);
   const [downloading, setDownloading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
-  const [ai, setAi] = useState<ClientReportInsight | null>(null);
 
   // Limpa a análise ao trocar de mês (não vale pra outro período).
-  useEffect(() => { setAi(null); }, [monthKey]);
+  useEffect(() => { if (editorRef.current) editorRef.current.innerHTML = ""; }, [monthKey]);
+
+  const escapeHtml = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  const exec = (cmd: string, val?: string) => {
+    editorRef.current?.focus();
+    document.execCommand(cmd, false, val);
+  };
 
   const monthPosts = useMemo(
     () => posts.filter((p) => (p.created_at || "").slice(0, 7) === monthKey),
@@ -94,8 +102,12 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         aprovados: stats.byStatus.aprovado ?? 0, aguardando: stats.byStatus.pendente ?? 0, ajustes: stats.byStatus.ajuste_solicitado ?? 0,
         titulos: monthPosts.map((p) => p.title).slice(0, 20).join("; "),
       }, user?.id);
-      if (res && typeof res.resumo === "string") setAi(res);
-      else throw new Error("formato inesperado");
+      if (!res || typeof res.resumo !== "string") throw new Error("formato inesperado");
+      const recs = (res.recomendacoes ?? []).map((r) => `<li>${escapeHtml(r)}</li>`).join("");
+      const html =
+        `<p><strong>Resumo.</strong> ${escapeHtml(res.resumo)}</p>` +
+        (recs ? `<p><strong>Recomendações</strong></p><ul>${recs}</ul>` : "");
+      if (editorRef.current) editorRef.current.innerHTML = html;
     } catch (e) {
       console.error("Report AI failed", e);
       toast.error("Erro ao gerar a análise.");
@@ -142,6 +154,30 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
               }`}
             >
               {m.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Barra de formatação (fora do que vira PDF) */}
+        <style>{`.report-editor:empty:before{content:attr(data-placeholder);color:#9ca3af;}
+.report-editor ul{padding-left:18px;margin:6px 0;} .report-editor li{margin-bottom:4px;} .report-editor p{margin:0 0 8px;}`}</style>
+        <div className="mt-3 flex items-center gap-1">
+          <span className="text-xs font-body text-muted-foreground mr-1">Formatar análise:</span>
+          {([
+            ["Negrito", "bold", "B", "font-bold"],
+            ["Itálico", "italic", "I", "italic"],
+            ["Lista", "insertUnorderedList", "•", ""],
+            ["Lista numerada", "insertOrderedList", "1.", ""],
+          ] as [string, string, string, string][]).map(([label, cmd, icon, cls]) => (
+            <button
+              key={cmd}
+              type="button"
+              title={label}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => exec(cmd)}
+              className={`h-8 w-8 rounded-lg border border-border bg-card text-sm text-foreground hover:bg-accent transition-colors ${cls}`}
+            >
+              {icon}
             </button>
           ))}
         </div>
@@ -217,23 +253,18 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
               )}
             </div>
 
-            {/* Análise com IA (quando gerada) */}
-            {ai && (
-              <div style={{ marginTop: 24 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: C.sub, marginBottom: 10 }}>Análise do mês</div>
-                <p style={{ fontSize: 13, color: C.ink, lineHeight: 1.5 }}>{ai.resumo}</p>
-                {ai.recomendacoes?.length > 0 && (
-                  <>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginTop: 12, marginBottom: 6 }}>Recomendações</div>
-                    <ul style={{ margin: 0, paddingLeft: 18 }}>
-                      {ai.recomendacoes.map((r, i) => (
-                        <li key={i} style={{ fontSize: 12, color: C.sub, marginBottom: 4 }}>{r}</li>
-                      ))}
-                    </ul>
-                  </>
-                )}
-              </div>
-            )}
+            {/* Análise do mês — editável (Word-like) */}
+            <div style={{ marginTop: 24 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: C.sub, marginBottom: 10 }}>Análise do mês</div>
+              <div
+                ref={editorRef}
+                contentEditable
+                suppressContentEditableWarning
+                data-placeholder="Escreva a análise ou clique em “Gerar análise (IA)”. Você pode formatar com a barra acima."
+                className="report-editor"
+                style={{ fontSize: 13, color: C.ink, lineHeight: 1.6, outline: "none", minHeight: 48 }}
+              />
+            </div>
 
             {/* Espaço pros números reais (Insights) */}
             <div style={{ marginTop: 20, padding: "14px 16px", border: `1px dashed ${C.line}`, borderRadius: 12, background: C.soft }}>
@@ -255,7 +286,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
 
         <DialogFooter className="mt-4 sm:justify-between">
           <Button variant="outline" onClick={genAI} disabled={aiLoading} className="mr-auto">
-            {aiLoading ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Analisando…</> : <><Sparkles className="h-4 w-4 mr-1.5" /> {ai ? "Refazer análise" : "Gerar análise (IA)"}</>}
+            {aiLoading ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Analisando…</> : <><Sparkles className="h-4 w-4 mr-1.5" /> Gerar análise (IA)</>}
           </Button>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
