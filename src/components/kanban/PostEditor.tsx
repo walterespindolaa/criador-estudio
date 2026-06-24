@@ -259,6 +259,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
   const [previewOpen, setPreviewOpen] = useState(false);
   const [repurposeOpen, setRepurposeOpen] = useState(false);
+  const [repurposeMode, setRepurposeMode] = useState<"repurpose" | "recycle">("repurpose");
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [videoTipOpen, setVideoTipOpen] = useState(false);
   const [dontShowVideoTip, setDontShowVideoTip] = useState(false);
@@ -1165,12 +1166,23 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   <Eye className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">Prévia</span>
                 </Button>
+                {!isNew && post && status === "publicado" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => { setRepurposeMode("recycle"); setRepurposeOpen(true); }}
+                  >
+                    <Repeat2 className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Reciclar</span>
+                  </Button>
+                )}
                 {!isNew && post && (status === "publicado" || status === "agendado") && (
                   <Button
                     variant="outline"
                     size="sm"
                     className="gap-1.5"
-                    onClick={() => setRepurposeOpen(true)}
+                    onClick={() => { setRepurposeMode("repurpose"); setRepurposeOpen(true); }}
                   >
                     <Repeat2 className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">Reaproveitar</span>
@@ -2301,6 +2313,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
           open={repurposeOpen}
           onOpenChange={setRepurposeOpen}
           originalPost={post as unknown as DbPost}
+          mode={repurposeMode}
         />
       )}
       <PostPreviewModal

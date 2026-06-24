@@ -25,6 +25,9 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   originalPost: Post;
+  // "repurpose" = adaptar pra outra plataforma. "recycle" = repostar conteúdo
+  // que funcionou, mesma plataforma, com ângulo/gancho novo (perene).
+  mode?: "repurpose" | "recycle";
 };
 
 const PLATFORMS: { id: string; label: string }[] = [
@@ -71,16 +74,19 @@ function parseRepurpose(raw: unknown): RepurposeResult | null {
   return null;
 }
 
-export function RepurposeSheet({ open, onOpenChange, originalPost }: Props) {
+export function RepurposeSheet({ open, onOpenChange, originalPost, mode = "repurpose" }: Props) {
   const { user } = useAuth();
   const { profile } = useProfile();
   const { createPost } = usePosts();
   const navigate = useNavigate();
+  const isRecycle = mode === "recycle";
 
-  const initialPlatform = originalPost.platform === "instagram" ? "tiktok" : "instagram";
+  const initialPlatform = isRecycle
+    ? originalPost.platform
+    : originalPost.platform === "instagram" ? "tiktok" : "instagram";
   const [targetPlatform, setTargetPlatform] = useState(initialPlatform);
   const [targetFormat, setTargetFormat] = useState<string>(
-    FORMATS_BY_PLATFORM[initialPlatform]?.[0] ?? "reels"
+    isRecycle ? originalPost.format : (FORMATS_BY_PLATFORM[initialPlatform]?.[0] ?? "reels")
   );
   const [targetTone, setTargetTone] = useState("descontraido");
   const [result, setResult] = useState<RepurposeResult | null>(null);
@@ -98,13 +104,18 @@ export function RepurposeSheet({ open, onOpenChange, originalPost }: Props) {
     }
   }, [availableFormats, targetFormat]);
 
+  // Ao abrir, ajusta os defaults conforme o modo (reciclar = mesma plataforma/formato).
   useEffect(() => {
     if (!open) {
       setResult(null);
       setLoading(false);
       setCreating(false);
+      return;
     }
-  }, [open]);
+    const p = isRecycle ? originalPost.platform : (originalPost.platform === "instagram" ? "tiktok" : "instagram");
+    setTargetPlatform(p);
+    setTargetFormat(isRecycle ? originalPost.format : (FORMATS_BY_PLATFORM[p]?.[0] ?? "reels"));
+  }, [open, isRecycle, originalPost]);
 
   const handleRepurpose = async () => {
     if (loading) return;
@@ -149,7 +160,7 @@ export function RepurposeSheet({ open, onOpenChange, originalPost }: Props) {
         status: "ideia",
         notes: result.dica ? `Dica: ${result.dica}` : null,
       });
-      toast.success("Post criado em Ideia. Bora produzir! 🎬");
+      toast.success(isRecycle ? "Nova versão criada em Ideia! ♻️" : "Post criado em Ideia. Bora produzir! 🎬");
       onOpenChange(false);
       navigate("/app/criando");
     } catch (e) {
@@ -184,11 +195,13 @@ export function RepurposeSheet({ open, onOpenChange, originalPost }: Props) {
               <Repeat2 className="h-4 w-4 text-white" strokeWidth={1.75} />
             </div>
             <SheetTitle className="text-base font-display font-bold text-foreground text-left">
-              Reaproveitar
+              {isRecycle ? "Reciclar conteúdo" : "Reaproveitar"}
             </SheetTitle>
           </div>
           <p className="text-xs font-body text-muted-foreground line-clamp-2 text-left">
-            {originalPost.title}
+            {isRecycle
+              ? `Repostar com ângulo novo: ${originalPost.title}`
+              : originalPost.title}
           </p>
         </SheetHeader>
 
@@ -260,11 +273,11 @@ export function RepurposeSheet({ open, onOpenChange, originalPost }: Props) {
           >
             {loading ? (
               <>
-                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Gerando variação...
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Gerando...
               </>
             ) : (
               <>
-                <Sparkles className="h-4 w-4 mr-1.5" /> Gerar variação
+                <Sparkles className="h-4 w-4 mr-1.5" /> {isRecycle ? "Gerar nova versão" : "Gerar variação"}
               </>
             )}
           </Button>

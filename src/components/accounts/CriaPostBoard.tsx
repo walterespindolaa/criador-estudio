@@ -5,8 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Link2, Pencil, Loader2, Users, ArrowRight, ArrowLeft, Trash2, RotateCcw } from "lucide-react";
+import { Plus, Link2, Pencil, Loader2, Users, ArrowRight, ArrowLeft, Trash2, RotateCcw, FileText } from "lucide-react";
 import { CriaPostMedia } from "@/components/accounts/CriaPostMedia";
+import { ClientReportDialog } from "@/components/accounts/ClientReportDialog";
+import { useProfile } from "@/hooks/useProfile";
 import { FORMATS_BY_PLATFORM, FORMAT_LABELS } from "@/lib/constants";
 
 const PLATFORMS = ["instagram", "tiktok", "youtube"];
@@ -107,7 +109,9 @@ function ClientsList({ onOpen }: { onOpen: (c: ExternalClient) => void }) {
 function ClientDetail({ client, onBack }: { client: ExternalClient; onBack: () => void }) {
   const { posts, isLoading, create, update, remove } = useExternalPosts(client.id);
   const { copyLink } = useExternalClients();
+  const { profile } = useProfile();
   const [formOpen, setFormOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [editing, setEditing] = useState<ExternalPost | null>(null);
   const [f, setF] = useState<ExternalPostInput>({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "" });
   const [copying, setCopying] = useState(false);
@@ -138,10 +142,13 @@ function ClientDetail({ client, onBack }: { client: ExternalClient; onBack: () =
           {client.instagram_handle && <p className="text-sm text-muted-foreground font-body">@{client.instagram_handle.replace(/^@/, "")}</p>}
         </div>
         <div className="flex gap-2 shrink-0">
-          <Button variant="outline" onClick={doCopy} disabled={copying}>{copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Link2 className="h-4 w-4 mr-1.5" /> Copiar link</>}</Button>
-          <Button onClick={openNew}><Plus className="h-4 w-4 mr-1.5" /> Novo post</Button>
+          <Button variant="outline" onClick={() => setReportOpen(true)} aria-label="Relatório"><FileText className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Relatório</span></Button>
+          <Button variant="outline" onClick={doCopy} disabled={copying}>{copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Link2 className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Copiar link</span></>}</Button>
+          <Button onClick={openNew}><Plus className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Novo post</span></Button>
         </div>
       </div>
+
+      <ClientReportDialog open={reportOpen} onOpenChange={setReportOpen} client={client} posts={posts} managerName={profile?.name ?? undefined} />
 
       {isLoading ? (
         <div className="space-y-3">{[0, 1].map((i) => <div key={i} className="h-20 rounded-2xl bg-muted animate-pulse" />)}</div>
