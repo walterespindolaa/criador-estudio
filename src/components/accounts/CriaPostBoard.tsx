@@ -9,6 +9,7 @@ import { Plus, Link2, Pencil, Loader2, Users, ArrowRight, ArrowLeft, Trash2, Rot
 import { CriaPostMedia } from "@/components/accounts/CriaPostMedia";
 import { ClientReportDialog } from "@/components/accounts/ClientReportDialog";
 import { useProfile } from "@/hooks/useProfile";
+import { useCrmClients } from "@/hooks/useCrm";
 import { FORMATS_BY_PLATFORM, FORMAT_LABELS } from "@/lib/constants";
 
 const PLATFORMS = ["instagram", "tiktok", "youtube"];
@@ -29,13 +30,14 @@ export function CriaPostBoard() {
 
 function ClientsList({ onOpen }: { onOpen: (c: ExternalClient) => void }) {
   const { clients, isLoading, pending, create, update, setActive, copyLink } = useExternalClients();
+  const { data: crmClients = [] } = useCrmClients();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<ExternalClient | null>(null);
-  const [f, setF] = useState<ExternalClientInput>({ name: "", instagram_handle: "", notes: "", color: CLIENT_COLORS[0] });
+  const [f, setF] = useState<ExternalClientInput>({ name: "", instagram_handle: "", notes: "", color: CLIENT_COLORS[0], crm_client_id: null });
   const [copying, setCopying] = useState<string | null>(null);
 
-  const openNew = () => { setEditing(null); setF({ name: "", instagram_handle: "", notes: "", color: CLIENT_COLORS[clients.length % CLIENT_COLORS.length] }); setFormOpen(true); };
-  const openEdit = (c: ExternalClient) => { setEditing(c); setF({ name: c.name, instagram_handle: c.instagram_handle ?? "", notes: c.notes ?? "", color: c.color ?? CLIENT_COLORS[0] }); setFormOpen(true); };
+  const openNew = () => { setEditing(null); setF({ name: "", instagram_handle: "", notes: "", color: CLIENT_COLORS[clients.length % CLIENT_COLORS.length], crm_client_id: null }); setFormOpen(true); };
+  const openEdit = (c: ExternalClient) => { setEditing(c); setF({ name: c.name, instagram_handle: c.instagram_handle ?? "", notes: c.notes ?? "", color: c.color ?? CLIENT_COLORS[0], crm_client_id: c.crm_client_id ?? null }); setFormOpen(true); };
   const submit = async () => {
     if (!f.name.trim()) return;
     if (editing) await update.mutateAsync({ id: editing.id, ...f }); else await create.mutateAsync(f);
@@ -102,6 +104,18 @@ function ClientsList({ onOpen }: { onOpen: (c: ExternalClient) => void }) {
                     style={{ backgroundColor: c }} aria-label={`Cor ${c}`} />
                 ))}
               </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-body">Cadastro central</Label>
+              <select
+                value={f.crm_client_id ?? ""}
+                onChange={(e) => setF((p) => ({ ...p, crm_client_id: e.target.value || null }))}
+                className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm"
+              >
+                <option value="">Criar novo cliente central</option>
+                {crmClients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <p className="text-[11px] text-muted-foreground font-body">Vincule a um cliente que você já tem no Gestão/Caixa, ou deixe criar um novo. Assim o mesmo cliente fica em todos os módulos.</p>
             </div>
           </div>
           <DialogFooter className="mt-4 sm:justify-between">

@@ -12,9 +12,11 @@ const PORTAL_ORIGIN =
 export type ExternalClient = {
   id: string; manager_id: string; name: string; logo_url: string | null;
   instagram_handle: string | null; notes: string | null; active: boolean; created_at: string;
-  color: string | null;
+  color: string | null; crm_client_id: string | null;
 };
-export type ExternalClientInput = { name: string; instagram_handle?: string | null; notes?: string | null; color?: string | null };
+// crm_client_id: vincular a um cliente já existente no cadastro central.
+// Se vier null/undefined, criamos um novo cliente central automaticamente.
+export type ExternalClientInput = { name: string; instagram_handle?: string | null; notes?: string | null; color?: string | null; crm_client_id?: string | null };
 
 export type ExternalPost = {
   id: string; title: string; platform: string; format: string;
@@ -55,18 +57,45 @@ export function useExternalClients() {
 
   const create = useMutation({
     mutationFn: async (input: ExternalClientInput) => {
-      const { data, error } = await sbFrom("external_clients").insert({ manager_id: user!.id, ...input }).select().single();
+      const { crm_client_id: linkId, ...rest } = input;
+      // Vincula a um cliente central existente ou cria um novo no hub (crm_clients).
+      let crmId = linkId ?? null;
+      if (!crmId) {
+        const { data: crm, error: e0 } = await sbFrom("crm_clients").insert({
+          manager_id: user!.id, name: rest.name,
+          instagram: rest.instagram_handle ?? null, notes: rest.notes ?? null,
+        }).select("id").single();
+        if (e0) throw e0;
+        crmId = (crm as { id: string }).id;
+      }
+      const { data, error } = await sbFrom("external_clients")
+        .insert({ manager_id: user!.id, ...rest, crm_client_id: crmId }).select().single();
       if (error) throw error; return data as ExternalClient;
     },
-    onSuccess: () => { toast.success("Cliente criado!"); qc.invalidateQueries({ queryKey: ["external-clients", user?.id] }); },
+    onSuccess: () => {
+      toast.success("Cliente criado!");
+      qc.invalidateQueries({ queryKey: ["external-clients", user?.id] });
+      qc.invalidateQueries({ queryKey: ["crm-clients", user?.id] });
+    },
     onError: () => toast.error("Erro ao criar cliente."),
   });
 
   const update = useMutation({
-    mutationFn: async ({ id, ...input }: ExternalClientInput & { id: string }) => {
-      const { error } = await sbFrom("external_clients").update(input).eq("id", id); if (error) throw error;
+    mutationFn: async ({ id, crm_client_id: linkId, ...input }: ExternalClientInput & { id: string }) => {
+      const { error } = await sbFrom("external_clients").update({ ...input, crm_client_id: linkId ?? null }).eq("id", id);
+      if (error) throw error;
+      // Mantém o cadastro central em sincronia com o básico.
+      if (linkId) {
+        await sbFrom("crm_clients").update({
+          name: input.name, instagram: input.instagram_handle ?? null, notes: input.notes ?? null,
+        }).eq("id", linkId);
+      }
     },
-    onSuccess: () => { toast.success("Cliente atualizado!"); qc.invalidateQueries({ queryKey: ["external-clients", user?.id] }); },
+    onSuccess: () => {
+      toast.success("Cliente atualizado!");
+      qc.invalidateQueries({ queryKey: ["external-clients", user?.id] });
+      qc.invalidateQueries({ queryKey: ["crm-clients", user?.id] });
+    },
     onError: () => toast.error("Erro ao atualizar."),
   });
 
