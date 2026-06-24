@@ -73,4 +73,17 @@ export async function generateNotifications(userId: string) {
       link: "/app/plano",
     } as any);
   }
+
+  // 4. Posts em andamento (pendentes de publicação)
+  const pendentes = posts.filter(p => p.status !== "publicado").length;
+  const pendentesHoje = existingNotifs.find(n => n.type === "posts_pendentes" && n.created_at?.startsWith(today));
+  if (pendentes >= 3 && !pendentesHoje) {
+    await supabase.from("notifications").insert({
+      user_id: userId,
+      type: "posts_pendentes",
+      title: `Você tem ${pendentes} posts em andamento`,
+      description: "Que tal avançar com alguns hoje?",
+      link: "/app/criando",
+    } as any);
+  }
 }
