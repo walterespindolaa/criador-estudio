@@ -13,6 +13,7 @@ import { FORMATS_BY_PLATFORM, FORMAT_LABELS } from "@/lib/constants";
 
 const PLATFORMS = ["instagram", "tiktok", "youtube"];
 const FORMATS = ["reels", "carrossel", "foto", "story", "video"];
+export const CLIENT_COLORS = ["#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#EF4444", "#14B8A6", "#A855F7"];
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 function initial(n?: string | null) { return n ? n.trim().charAt(0).toUpperCase() : "?"; }
 const STATUS: Record<string, { label: string; cls: string }> = {
@@ -30,11 +31,11 @@ function ClientsList({ onOpen }: { onOpen: (c: ExternalClient) => void }) {
   const { clients, isLoading, pending, create, update, setActive, copyLink } = useExternalClients();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<ExternalClient | null>(null);
-  const [f, setF] = useState<ExternalClientInput>({ name: "", instagram_handle: "", notes: "" });
+  const [f, setF] = useState<ExternalClientInput>({ name: "", instagram_handle: "", notes: "", color: CLIENT_COLORS[0] });
   const [copying, setCopying] = useState<string | null>(null);
 
-  const openNew = () => { setEditing(null); setF({ name: "", instagram_handle: "", notes: "" }); setFormOpen(true); };
-  const openEdit = (c: ExternalClient) => { setEditing(c); setF({ name: c.name, instagram_handle: c.instagram_handle ?? "", notes: c.notes ?? "" }); setFormOpen(true); };
+  const openNew = () => { setEditing(null); setF({ name: "", instagram_handle: "", notes: "", color: CLIENT_COLORS[clients.length % CLIENT_COLORS.length] }); setFormOpen(true); };
+  const openEdit = (c: ExternalClient) => { setEditing(c); setF({ name: c.name, instagram_handle: c.instagram_handle ?? "", notes: c.notes ?? "", color: c.color ?? CLIENT_COLORS[0] }); setFormOpen(true); };
   const submit = async () => {
     if (!f.name.trim()) return;
     if (editing) await update.mutateAsync({ id: editing.id, ...f }); else await create.mutateAsync(f);
@@ -92,6 +93,16 @@ function ClientsList({ onOpen }: { onOpen: (c: ExternalClient) => void }) {
             <div className="space-y-1.5"><Label className="text-xs font-body">Nome *</Label><Input value={f.name} onChange={(e) => setF((p) => ({ ...p, name: e.target.value }))} className="rounded-xl" /></div>
             <div className="space-y-1.5"><Label className="text-xs font-body">@ do Instagram</Label><Input value={f.instagram_handle ?? ""} onChange={(e) => setF((p) => ({ ...p, instagram_handle: e.target.value }))} placeholder="@cliente" className="rounded-xl" /></div>
             <div className="space-y-1.5"><Label className="text-xs font-body">Notas (interno)</Label><Textarea value={f.notes ?? ""} onChange={(e) => setF((p) => ({ ...p, notes: e.target.value }))} rows={2} className="rounded-xl" /></div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-body">Cor (calendário)</Label>
+              <div className="flex flex-wrap gap-2">
+                {CLIENT_COLORS.map((c) => (
+                  <button key={c} type="button" onClick={() => setF((p) => ({ ...p, color: c }))}
+                    className={`h-7 w-7 rounded-full transition-transform ${f.color === c ? "ring-2 ring-offset-2 ring-foreground scale-110" : "hover:scale-105"}`}
+                    style={{ backgroundColor: c }} aria-label={`Cor ${c}`} />
+                ))}
+              </div>
+            </div>
           </div>
           <DialogFooter className="mt-4 sm:justify-between">
             {editing && <Button variant="ghost" className="text-destructive mr-auto" onClick={async () => { await setActive.mutateAsync({ id: editing.id, active: false }); setFormOpen(false); }}>Desativar</Button>}

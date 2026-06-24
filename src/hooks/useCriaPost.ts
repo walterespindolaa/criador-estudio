@@ -12,8 +12,9 @@ const PORTAL_ORIGIN =
 export type ExternalClient = {
   id: string; manager_id: string; name: string; logo_url: string | null;
   instagram_handle: string | null; notes: string | null; active: boolean; created_at: string;
+  color: string | null;
 };
-export type ExternalClientInput = { name: string; instagram_handle?: string | null; notes?: string | null };
+export type ExternalClientInput = { name: string; instagram_handle?: string | null; notes?: string | null; color?: string | null };
 
 export type ExternalPost = {
   id: string; title: string; platform: string; format: string;
