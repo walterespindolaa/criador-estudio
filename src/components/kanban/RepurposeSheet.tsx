@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Copy, Loader2, Repeat2, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -187,23 +187,23 @@ export function RepurposeSheet({ open, onOpenChange, originalPost, mode = "repur
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col gap-0 overflow-y-auto">
-        <SheetHeader className="px-5 py-4 border-b border-border space-y-2 sticky top-0 bg-background z-10">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg p-0 gap-0 max-h-[88vh] overflow-y-auto rounded-2xl">
+        <DialogHeader className="px-5 py-4 border-b border-border space-y-2 sticky top-0 bg-background z-10">
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary via-purple-500 to-pink-500 flex items-center justify-center shadow-sm">
               <Repeat2 className="h-4 w-4 text-white" strokeWidth={1.75} />
             </div>
-            <SheetTitle className="text-base font-display font-bold text-foreground text-left">
+            <DialogTitle className="text-base font-display font-bold text-foreground text-left">
               {isRecycle ? "Reciclar conteúdo" : "Reaproveitar"}
-            </SheetTitle>
+            </DialogTitle>
           </div>
           <p className="text-xs font-body text-muted-foreground line-clamp-2 text-left">
             {isRecycle
               ? `Repostar com ângulo novo: ${originalPost.title}`
               : originalPost.title}
           </p>
-        </SheetHeader>
+        </DialogHeader>
 
         <div className="flex-1 px-5 py-5 space-y-6">
           <section className="space-y-2">
@@ -351,7 +351,7 @@ export function RepurposeSheet({ open, onOpenChange, originalPost, mode = "repur
             </div>
           )}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

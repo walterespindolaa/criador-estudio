@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  addDays, addMonths, endOfMonth, format, isSameDay, isSameMonth,
+  addDays, addMonths, format, isSameDay, isSameMonth,
   startOfMonth, startOfWeek, subMonths,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -31,7 +31,8 @@ export function ManagerCalendar() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const { clients } = useExternalClients();
-  const [cursor, setCursor] = useState(() => startOfMonth(new Date()));
+  const [cursor, setCursor] = useState(() => new Date());
+  const [view, setView] = useState<"mes" | "semana">("mes");
   const [hidden, setHidden] = useState<Set<string>>(new Set());
 
   const colorOf = useMemo(() => {
@@ -80,9 +81,18 @@ export function ManagerCalendar() {
   }, [posts, hidden]);
   const unscheduled = posts.filter((p) => !p.scheduled_date && visible(p));
 
-  // Grid: 6 semanas a partir do domingo da semana do dia 1.
-  const gridStart = startOfWeek(startOfMonth(cursor), { weekStartsOn: 0 });
-  const days = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
+  // Mês: 6 semanas a partir do domingo da semana do dia 1. Semana: 7 dias.
+  const gridStart = view === "mes"
+    ? startOfWeek(startOfMonth(cursor), { weekStartsOn: 0 })
+    : startOfWeek(cursor, { weekStartsOn: 0 });
+  const cellCount = view === "mes" ? 42 : 7;
+  const days = Array.from({ length: cellCount }, (_, i) => addDays(gridStart, i));
+
+  const goPrev = () => setCursor((c) => (view === "mes" ? subMonths(c, 1) : addDays(c, -7)));
+  const goNext = () => setCursor((c) => (view === "mes" ? addMonths(c, 1) : addDays(c, 7)));
+  const headerLabel = view === "mes"
+    ? format(cursor, "MMMM 'de' yyyy", { locale: ptBR })
+    : `${format(gridStart, "d MMM", { locale: ptBR })} – ${format(addDays(gridStart, 6), "d MMM", { locale: ptBR })}`;
 
   const onDrop = (date: string | null) => (e: React.DragEvent) => {
     e.preventDefault();
@@ -146,13 +156,19 @@ export function ManagerCalendar() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <h1 className="text-2xl font-display font-extrabold text-foreground tracking-tight">Calendário</h1>
-        <div className="flex items-center gap-1.5">
-          <Button variant="outline" size="sm" onClick={() => setCursor((c) => subMonths(c, 1))} aria-label="Mês anterior"><ChevronLeft className="h-4 w-4" /></Button>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex rounded-lg border border-border overflow-hidden mr-1">
+            <button type="button" onClick={() => setView("mes")}
+              className={`px-3 py-1.5 text-xs font-body transition-colors ${view === "mes" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}>Mês</button>
+            <button type="button" onClick={() => setView("semana")}
+              className={`px-3 py-1.5 text-xs font-body transition-colors ${view === "semana" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}>Semana</button>
+          </div>
+          <Button variant="outline" size="sm" onClick={goPrev} aria-label="Anterior"><ChevronLeft className="h-4 w-4" /></Button>
           <span className="text-sm font-display font-semibold text-foreground min-w-[140px] text-center capitalize">
-            {format(cursor, "MMMM 'de' yyyy", { locale: ptBR })}
+            {headerLabel}
           </span>
-          <Button variant="outline" size="sm" onClick={() => setCursor((c) => addMonths(c, 1))} aria-label="Próximo mês"><ChevronRight className="h-4 w-4" /></Button>
-          <Button variant="outline" size="sm" onClick={() => setCursor(startOfMonth(new Date()))}>Hoje</Button>
+          <Button variant="outline" size="sm" onClick={goNext} aria-label="Próximo"><ChevronRight className="h-4 w-4" /></Button>
+          <Button variant="outline" size="sm" onClick={() => setCursor(new Date())}>Hoje</Button>
         </div>
       </div>
 
@@ -201,15 +217,15 @@ export function ManagerCalendar() {
         </div>
         <div className="grid grid-cols-7">
           {days.map((d) => {
-            const inMonth = isSameMonth(d, cursor);
+            const dim = view === "mes" && !isSameMonth(d, cursor);
             const today = isSameDay(d, new Date());
             const list = byDay[dkey(d)] ?? [];
             return (
               <div key={d.toISOString()}
                 onDrop={onDrop(dkey(d))} onDragOver={allowDrop}
-                className={`min-h-[92px] border-b border-r border-border p-1.5 ${inMonth ? "" : "bg-muted/20"}`}
+                className={`${view === "semana" ? "min-h-[240px]" : "min-h-[92px]"} border-b border-r border-border p-1.5 ${dim ? "bg-muted/20" : ""}`}
               >
-                <div className={`text-[11px] font-body mb-1 ${today ? "font-bold text-primary" : inMonth ? "text-foreground" : "text-muted-foreground/50"}`}>
+                <div className={`text-[11px] font-body mb-1 ${today ? "font-bold text-primary" : dim ? "text-muted-foreground/50" : "text-foreground"}`}>
                   {format(d, "d")}
                 </div>
                 {list.map(chip)}

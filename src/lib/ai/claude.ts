@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type AIOperation = 'tag-suggestion' | 'reference-filter' | 'archive-summary' | 'daily-insight' | 'idea-suggestions' | 'generate-caption' | 'suggest-hashtags' | 'onboarding-setup' | 'cria-chat' | 'repurpose-content' | 'refine-caption' | 'score-caption';
+export type AIOperation = 'tag-suggestion' | 'reference-filter' | 'archive-summary' | 'daily-insight' | 'idea-suggestions' | 'generate-caption' | 'suggest-hashtags' | 'onboarding-setup' | 'cria-chat' | 'repurpose-content' | 'refine-caption' | 'score-caption' | 'client-report-insight';
 
 export interface CaptionScore {
   nota: number;
@@ -8,6 +8,23 @@ export interface CaptionScore {
   melhorias: string[];
   variacoes: string[];
 }
+
+export interface ClientReportInsight {
+  resumo: string;
+  recomendacoes: string[];
+}
+
+export const clientReportInsight = async (
+  params: {
+    cliente: string; mes: string; total: number;
+    formatos: string; plataformas: string;
+    aprovados: number; aguardando: number; ajustes: number;
+    titulos: string;
+  },
+  userId?: string
+): Promise<ClientReportInsight> => {
+  return callAIContextBuilder({ userId, operation: 'client-report-insight', data: params });
+};
 
 interface AIRequest {
   userId?: string;

@@ -523,6 +523,26 @@ PLATAFORMA: ${data.plataforma || 'instagram'}
 NICHO: ${data.nicho || 'geral'}`
         maxTokens = 800
         break
+      case 'client-report-insight':
+        operationPrompt = `Você é um gestor de social media sênior. Com base nos dados do mês de um cliente, escreva uma análise curta e profissional pra um relatório de prestação de serviço (será lido pelo cliente).
+
+TOM: profissional, claro, sem encher linguiça. Português BR.
+
+ENTREGUE:
+- resumo: 2 a 3 frases sobre o que foi entregue no mês e o ritmo de produção.
+- recomendacoes: 2 a 3 recomendações práticas pro próximo mês (formato, cadência, tema ou foco).
+
+RESPONDA APENAS com JSON válido, sem texto antes ou depois:
+{"resumo":"string","recomendacoes":["r1","r2"]}`
+        userPrompt = `Cliente: ${data.cliente || 'cliente'}
+Mês: ${data.mes || ''}
+Total de posts: ${data.total ?? 0}
+Por formato: ${data.formatos || '-'}
+Por plataforma: ${data.plataformas || '-'}
+Aprovados: ${data.aprovados ?? 0} | Aguardando: ${data.aguardando ?? 0} | Ajustes: ${data.ajustes ?? 0}
+Títulos dos posts: ${data.titulos || '-'}`
+        maxTokens = 500
+        break
       default:
         throw new Error('Invalid operation')
     }
@@ -565,7 +585,7 @@ NICHO: ${data.nicho || 'geral'}`
     const result = await response.json()
     const content = result.choices?.[0]?.message?.content || ''
 
-    if (operation === 'reference-filter' || operation === 'score-caption') {
+    if (operation === 'reference-filter' || operation === 'score-caption' || operation === 'client-report-insight') {
       try {
         const jsonMatch = content.match(/\{.*\}/s)
         const jsonStr = jsonMatch ? jsonMatch[0] : content
