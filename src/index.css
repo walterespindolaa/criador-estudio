@@ -109,6 +109,14 @@ html, body {
   html, body {
     overflow-x: clip;
   }
+  /* App nativo: preenche a altura real da tela e não deixa input dar zoom no iOS */
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  html, body, #root {
+    min-height: 100svh;
+  }
   #root {
     width: 100%;
     max-width: 100%;
@@ -118,6 +126,14 @@ html, body {
   body {
     @apply bg-background text-foreground;
     font-family: var(--active-font-body, var(--font-body));
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* iOS não dá zoom ao focar um campo (fonte >= 16px no mobile) */
+  @media (max-width: 640px) {
+    input, textarea, select {
+      font-size: 16px;
+    }
   }
 
   h1, h2, h3, h4, h5, h6 {
