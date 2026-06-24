@@ -55,5 +55,22 @@ export function useNotifications() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey }),
   });
 
-  return { notifications, unreadCount, isLoading, error, markAsRead, markAllAsRead };
+  const deleteOne = useMutation({
+    mutationFn: async (id: string): Promise<void> => {
+      const { error } = await supabase.from("notifications").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+  });
+
+  const clearAll = useMutation({
+    mutationFn: async (): Promise<void> => {
+      if (!userId) throw new Error("Not authenticated");
+      const { error } = await supabase.from("notifications").delete().eq("user_id", userId);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+  });
+
+  return { notifications, unreadCount, isLoading, error, markAsRead, markAllAsRead, deleteOne, clearAll };
 }

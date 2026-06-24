@@ -10,7 +10,25 @@ const TIPS = [
   { t: "Gancho do dia", d: "\"Pare de [hábito comum] se você quer [resultado].\"" },
 ];
 
-export async function generateNotifications(userId: string) {
+// O sininho é montado 2x (cabeçalho desktop + mobile) e o StrictMode duplica
+// o efeito em dev — sem isso, duas execuções simultâneas furam a checagem de
+// duplicata e geram notificações repetidas. Colapsa tudo numa só execução e
+// limita a 1x a cada 5 min por carregamento.
+let inFlight: Promise<void> | null = null;
+let lastRun = 0;
+const THROTTLE_MS = 5 * 60 * 1000;
+
+export async function generateNotifications(userId: string): Promise<void> {
+  if (inFlight) return inFlight;
+  if (Date.now() - lastRun < THROTTLE_MS) return;
+  inFlight = runGenerate(userId).finally(() => {
+    lastRun = Date.now();
+    inFlight = null;
+  });
+  return inFlight;
+}
+
+async function runGenerate(userId: string) {
   const today = new Date().toISOString().split("T")[0];
 
   // Get current week range

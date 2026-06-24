@@ -2,6 +2,7 @@ import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { Navigate, Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { ContentSkeleton } from "@/components/shared/ContentSkeleton";
 import { BroadcastBanner } from "@/components/BroadcastBanner";
+import { NotificationNudge } from "@/components/NotificationNudge";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import {
   Home, Boxes, Handshake, DollarSign, Users, ListChecks, ChevronUp,
@@ -190,6 +191,7 @@ export default function ManagerLayout() {
         <main className="flex-1 px-4 py-7 pb-[96px] sm:px-8 sm:py-10 md:pb-10 overflow-x-hidden">
           <div className="mx-auto w-full max-w-6xl">
             <BroadcastBanner audience="social" />
+            <NotificationNudge />
             <Suspense fallback={<ContentSkeleton />}>
               <Outlet context={ctx} />
             </Suspense>

@@ -3,6 +3,7 @@ import { Outlet, NavLink, Navigate, useLocation, useNavigate } from "react-route
 import { ContentSkeleton } from "@/components/shared/ContentSkeleton";
 import { BottomBar } from "@/components/BottomBar";
 import { BroadcastBanner } from "@/components/BroadcastBanner";
+import { NotificationNudge } from "@/components/NotificationNudge";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import { PWAInstallBanner } from "@/components/shared/PWAInstallBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
@@ -167,6 +168,7 @@ const AppLayout = () => {
             <main className="flex-1 pb-[96px] md:pb-0 w-full overflow-x-hidden">
               <div className="max-w-screen-2xl mx-auto px-4 py-4 md:px-8 md:py-6">
                 <BroadcastBanner audience="criadora" />
+                <NotificationNudge />
                 <Suspense fallback={<ContentSkeleton />}>
                   <Outlet />
                 </Suspense>
