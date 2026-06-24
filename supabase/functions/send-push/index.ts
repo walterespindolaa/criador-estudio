@@ -12,20 +12,24 @@ const json = (b: unknown, s = 200) =>
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return json({ error: "unauthorized" }, 401);
-
-    const userClient = createClient(
-      Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } });
-    const { data: { user } } = await userClient.auth.getUser();
-    if (!user) return json({ error: "unauthorized" }, 401);
-
     const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { data: caller } = await svc.from("profiles").select("role").eq("id", user.id).single();
-    if (caller?.role !== "admin") return json({ error: "forbidden" }, 403);
 
-    const { title, message, audience, url } = await req.json();
+    // Chamada interna (gatilho do banco) usa um segredo; senão exige admin logado.
+    const internalSecret = req.headers.get("x-internal-secret");
+    const isInternal = !!internalSecret && internalSecret === Deno.env.get("INTERNAL_PUSH_SECRET");
+    if (!isInternal) {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) return json({ error: "unauthorized" }, 401);
+      const userClient = createClient(
+        Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: authHeader } } });
+      const { data: { user } } = await userClient.auth.getUser();
+      if (!user) return json({ error: "unauthorized" }, 401);
+      const { data: caller } = await svc.from("profiles").select("role").eq("id", user.id).single();
+      if (caller?.role !== "admin") return json({ error: "forbidden" }, 403);
+    }
+
+    const { title, message, audience, url, user_id } = await req.json();
     if (!message) return json({ error: "missing_message" }, 400);
 
     const pub = Deno.env.get("VAPID_PUBLIC_KEY");
@@ -33,12 +37,13 @@ serve(async (req) => {
     if (!pub || !priv) return json({ error: "vapid_not_configured" }, 500);
     webpush.setVapidDetails("mailto:contato@criasocialclub.com.br", pub, priv);
 
-    const { data: subs } = await svc
-      .from("push_subscriptions")
-      .select("endpoint, p256dh, auth, user_id, profiles!inner(account_type)");
+    let q = svc.from("push_subscriptions").select("endpoint, p256dh, auth, user_id, profiles!inner(account_type)");
+    if (user_id) q = q.eq("user_id", user_id);
+    const { data: subs } = await q;
 
     const aud = audience ?? "todos";
     const filtered = (subs ?? []).filter((s: { profiles?: { account_type?: string | null } }) => {
+      if (user_id) return true; // alvo específico: manda pra todos os aparelhos dele
       const at = s.profiles?.account_type ?? null;
       if (aud === "social") return at === "manager";
       if (aud === "criadora") return at !== "manager";

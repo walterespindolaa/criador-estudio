@@ -1,5 +1,15 @@
 import { supabase } from "@/integrations/supabase/client";
 
+const TIPS = [
+  { t: "Gancho do dia", d: "Abra o vídeo com: \"O erro que quase todo mundo comete sem perceber...\"" },
+  { t: "Dica de conteúdo", d: "Transforme uma dúvida frequente do seu cliente num carrossel." },
+  { t: "Ideia rápida", d: "Mostre os bastidores de algo que você fez hoje — gera conexão." },
+  { t: "Gancho do dia", d: "\"3 coisas que eu faria diferente se começasse hoje.\"" },
+  { t: "Dica de alcance", d: "Poste nos horários de pico do seu público (veja em Insights)." },
+  { t: "Ideia rápida", d: "Pegue um comentário recente e responda em vídeo." },
+  { t: "Gancho do dia", d: "\"Pare de [hábito comum] se você quer [resultado].\"" },
+];
+
 export async function generateNotifications(userId: string) {
   const today = new Date().toISOString().split("T")[0];
 
@@ -84,6 +94,20 @@ export async function generateNotifications(userId: string) {
       title: `Você tem ${pendentes} posts em andamento`,
       description: "Que tal avançar com alguns hoje?",
       link: "/app/criando",
+    } as any);
+  }
+
+  // 5. Dica do dia (rotativa, leva pra biblioteca)
+  const tipHoje = existingNotifs.find(n => n.type === "dica_dia" && n.created_at?.startsWith(today));
+  if (!tipHoje) {
+    const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000);
+    const tip = TIPS[dayOfYear % TIPS.length];
+    await supabase.from("notifications").insert({
+      user_id: userId,
+      type: "dica_dia",
+      title: tip.t,
+      description: tip.d,
+      link: "/app/biblioteca",
     } as any);
   }
 }
