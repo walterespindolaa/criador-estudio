@@ -92,6 +92,26 @@ function ClientsList({ onOpen }: { onOpen: (c: ExternalClient) => void }) {
         <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="max-w-md rounded-2xl">
           <DialogHeader><DialogTitle className="font-display">{editing ? "Editar cliente" : "Novo cliente"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-body">Cadastro central</Label>
+              <select
+                value={f.crm_client_id ?? ""}
+                onChange={(e) => {
+                  const id = e.target.value || null;
+                  const c = id ? crmClients.find((x) => x.id === id) : null;
+                  setF((p) => ({
+                    ...p,
+                    crm_client_id: id,
+                    ...(c ? { name: c.name, instagram_handle: c.instagram ?? "", notes: c.notes ?? "" } : {}),
+                  }));
+                }}
+                className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm"
+              >
+                <option value="">Criar novo cliente central</option>
+                {crmClients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <p className="text-[11px] text-muted-foreground font-body">Vincule a um cliente que já existe no Gestão/Caixa (puxa os dados) ou deixe "Criar novo". Assim o mesmo cliente fica em todos os módulos.</p>
+            </div>
             <div className="space-y-1.5"><Label className="text-xs font-body">Nome *</Label><Input value={f.name} onChange={(e) => setF((p) => ({ ...p, name: e.target.value }))} className="rounded-xl" /></div>
             <div className="space-y-1.5"><Label className="text-xs font-body">@ do Instagram</Label><Input value={f.instagram_handle ?? ""} onChange={(e) => setF((p) => ({ ...p, instagram_handle: e.target.value }))} placeholder="@cliente" className="rounded-xl" /></div>
             <div className="space-y-1.5"><Label className="text-xs font-body">Notas (interno)</Label><Textarea value={f.notes ?? ""} onChange={(e) => setF((p) => ({ ...p, notes: e.target.value }))} rows={2} className="rounded-xl" /></div>
@@ -104,18 +124,6 @@ function ClientsList({ onOpen }: { onOpen: (c: ExternalClient) => void }) {
                     style={{ backgroundColor: c }} aria-label={`Cor ${c}`} />
                 ))}
               </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-body">Cadastro central</Label>
-              <select
-                value={f.crm_client_id ?? ""}
-                onChange={(e) => setF((p) => ({ ...p, crm_client_id: e.target.value || null }))}
-                className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm"
-              >
-                <option value="">Criar novo cliente central</option>
-                {crmClients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-              <p className="text-[11px] text-muted-foreground font-body">Vincule a um cliente que você já tem no Gestão/Caixa, ou deixe criar um novo. Assim o mesmo cliente fica em todos os módulos.</p>
             </div>
           </div>
           <DialogFooter className="mt-4 sm:justify-between">
