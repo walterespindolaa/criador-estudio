@@ -496,6 +496,33 @@ FORMATO: ${data.formato || 'post'}
 NICHO: ${data.nicho || 'geral'}`
         maxTokens = 500
         break
+      case 'score-caption':
+        operationPrompt = `Você é um analista de copy de redes sociais brasileiras. Avalie a legenda recebida.
+
+CRITÉRIOS (o que faz uma legenda performar):
+- Gancho na 1ª linha (para o scroll?)
+- Clareza da mensagem
+- Emoção / curiosidade / identificação
+- CTA que provoca resposta
+- Ritmo: usa line breaks, não é um bloco
+- Sem clichê ("Olá", "Você sabia", "Bora?")
+
+ENTREGUE:
+- nota: de 0 a 10, uma casa decimal, pra força do gancho + potencial de engajamento
+- veredito: 1 frase direta e honesta
+- melhorias: 2 a 3 ações concretas pra subir a nota
+- variacoes: 3 versões alternativas da legenda, cada uma com um gancho diferente, prontas pra copiar e colar (mantenha o idioma português BR, tom natural)
+
+RESPONDA APENAS com JSON válido, sem texto antes ou depois:
+{"nota":7.5,"veredito":"string","melhorias":["m1","m2"],"variacoes":["v1","v2","v3"]}`
+        userPrompt = `LEGENDA:
+${(data.legenda || '').slice(0, 1000)}
+
+FORMATO: ${data.formato || 'post'}
+PLATAFORMA: ${data.plataforma || 'instagram'}
+NICHO: ${data.nicho || 'geral'}`
+        maxTokens = 800
+        break
       default:
         throw new Error('Invalid operation')
     }
@@ -538,7 +565,7 @@ NICHO: ${data.nicho || 'geral'}`
     const result = await response.json()
     const content = result.choices?.[0]?.message?.content || ''
 
-    if (operation === 'reference-filter') {
+    if (operation === 'reference-filter' || operation === 'score-caption') {
       try {
         const jsonMatch = content.match(/\{.*\}/s)
         const jsonStr = jsonMatch ? jsonMatch[0] : content

@@ -82,6 +82,7 @@ import { getStatusClasses } from "@/lib/statusColors";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import {
   filterReferences, generateArchiveSummary, callAIContextBuilder,
+  type CaptionScore,
 } from "@/lib/ai/claude";
 import { ScriptEditor, emptySection, type Section } from "./drawer/ScriptEditor";
 import { RepurposeSheet } from "./RepurposeSheet";
@@ -241,6 +242,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   // Caption refinement
   const [refineLoading, setRefineLoading] = useState<string | null>(null);
   const [refinedPreview, setRefinedPreview] = useState<string | null>(null);
+  // Caption score (nota de gancho + variações)
+  const [scoreLoading, setScoreLoading] = useState(false);
+  const [scoreResult, setScoreResult] = useState<CaptionScore | null>(null);
 
   const [mobileTab, setMobileTab] = useState<"config" | "criar">("config");
   const mainRef = useRef<HTMLElement>(null);
@@ -1007,6 +1011,28 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
     }
   };
 
+  // AI: avaliar legenda (nota de gancho + melhorias + 3 variações)
+  const handleScoreCaption = async () => {
+    if (!caption || caption.length < 10 || scoreLoading) return;
+    setScoreLoading(true);
+    setScoreResult(null);
+    try {
+      const result = await callAIContextBuilder({
+        userId,
+        operation: "score-caption",
+        data: { legenda: caption, plataforma: platform, formato: format, nicho: profile?.niche },
+      });
+      const obj = (typeof result === "string" ? JSON.parse(result) : result) as CaptionScore;
+      if (obj && typeof obj.nota === "number") setScoreResult(obj);
+      else throw new Error("formato inesperado");
+    } catch (e) {
+      console.error("Score caption failed", e);
+      toast.error("Erro ao avaliar legenda.");
+    } finally {
+      setScoreLoading(false);
+    }
+  };
+
   const mediaList: DriveRef[] = isNew ? pendingDriveFiles : driveMedia;
   const activeUpload = uploads.find((u) => u.status === "uploading") ?? null;
 
@@ -1596,6 +1622,90 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                           </button>
                         );
                       })}
+                      <button
+                        type="button"
+                        disabled={scoreLoading}
+                        onClick={handleScoreCaption}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 hover:bg-primary/15 text-xs font-body font-semibold text-primary transition-all disabled:opacity-50"
+                      >
+                        {scoreLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <BarChart3 className="h-3 w-3" />}
+                        Avaliar legenda
+                      </button>
+                    </div>
+                  )}
+
+                  {scoreResult && (
+                    <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+                      <div className="flex items-center gap-3">
+                        {(() => {
+                          const nota = scoreResult.nota;
+                          const cls = nota >= 8 ? "text-emerald-600 bg-emerald-500/10"
+                            : nota >= 6 ? "text-amber-600 bg-amber-500/10"
+                            : "text-destructive bg-destructive/10";
+                          return (
+                            <div className={`flex flex-col items-center justify-center h-14 w-14 rounded-2xl shrink-0 ${cls}`}>
+                              <span className="text-xl font-display font-extrabold leading-none tabular-nums">
+                                {nota.toFixed(1)}
+                              </span>
+                              <span className="text-[9px] font-body opacity-70">/ 10</span>
+                            </div>
+                          );
+                        })()}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80 mb-0.5">
+                            Nota de gancho
+                          </p>
+                          <p className="text-sm font-body text-foreground">{scoreResult.veredito}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setScoreResult(null)}
+                          className="shrink-0 p-1 rounded-md text-muted-foreground/50 hover:text-foreground transition-colors"
+                          aria-label="Fechar"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      {scoreResult.melhorias?.length > 0 && (
+                        <div className="space-y-1">
+                          <p className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                            Como melhorar
+                          </p>
+                          <ul className="space-y-1">
+                            {scoreResult.melhorias.map((m, i) => (
+                              <li key={i} className="flex gap-2 text-xs font-body text-muted-foreground">
+                                <span className="text-primary">•</span>
+                                <span>{m}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {scoreResult.variacoes?.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                            Variações prontas
+                          </p>
+                          {scoreResult.variacoes.map((v, i) => (
+                            <div key={i} className="bg-muted/40 rounded-lg p-3 space-y-2">
+                              <p className="text-sm font-body text-foreground whitespace-pre-line">{v}</p>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setCaption(v);
+                                  setScoreResult(null);
+                                  toast.success("Legenda atualizada!");
+                                }}
+                                className="text-xs font-body font-semibold text-primary hover:underline"
+                              >
+                                Usar esta
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
 

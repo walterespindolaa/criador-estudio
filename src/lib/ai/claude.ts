@@ -1,6 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type AIOperation = 'tag-suggestion' | 'reference-filter' | 'archive-summary' | 'daily-insight' | 'idea-suggestions' | 'generate-caption' | 'suggest-hashtags' | 'onboarding-setup' | 'cria-chat' | 'repurpose-content' | 'refine-caption';
+export type AIOperation = 'tag-suggestion' | 'reference-filter' | 'archive-summary' | 'daily-insight' | 'idea-suggestions' | 'generate-caption' | 'suggest-hashtags' | 'onboarding-setup' | 'cria-chat' | 'repurpose-content' | 'refine-caption' | 'score-caption';
+
+export interface CaptionScore {
+  nota: number;
+  veredito: string;
+  melhorias: string[];
+  variacoes: string[];
+}
 
 interface AIRequest {
   userId?: string;
@@ -87,6 +94,22 @@ export const generateCaption = async (
   return callAIContextBuilder({
     userId,
     operation: 'generate-caption',
+    data: params,
+  });
+};
+
+export const scoreCaption = async (
+  params: {
+    legenda: string;
+    formato?: string;
+    plataforma?: string;
+    nicho?: string;
+  },
+  userId?: string
+): Promise<CaptionScore> => {
+  return callAIContextBuilder({
+    userId,
+    operation: 'score-caption',
     data: params,
   });
 };
