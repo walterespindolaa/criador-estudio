@@ -1209,6 +1209,7 @@ export type Database = {
       external_clients: {
         Row: {
           active: boolean
+          color: string | null
           created_at: string
           id: string
           instagram_handle: string | null
@@ -1219,6 +1220,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          color?: string | null
           created_at?: string
           id?: string
           instagram_handle?: string | null
@@ -1229,6 +1231,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          color?: string | null
           created_at?: string
           id?: string
           instagram_handle?: string | null
