@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Droppable, Draggable } from "@hello-pangea/dnd";
-import { Search, Image as ImageIcon } from "lucide-react";
+import { Search, Image as ImageIcon, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { FORMAT_LABELS } from "@/lib/constants";
@@ -25,6 +25,7 @@ type Props = {
   onStatusFilterChange: (s: StatusFilter) => void;
   searchFilter: string;
   onSearchFilterChange: (q: string) => void;
+  onAdd?: (postId: string) => void;
 };
 
 export function FeedSidebar({
@@ -34,6 +35,7 @@ export function FeedSidebar({
   onStatusFilterChange,
   searchFilter,
   onSearchFilterChange,
+  onAdd,
 }: Props) {
   const filteredPosts = useMemo(() => {
     const q = searchFilter.trim().toLowerCase();
@@ -143,6 +145,20 @@ export function FeedSidebar({
                           </span>
                         </div>
                       </div>
+                      {onAdd && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onAdd(post.id);
+                          }}
+                          onPointerDown={(e) => e.stopPropagation()}
+                          className="md:hidden shrink-0 h-9 w-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center active:scale-95 transition-transform"
+                          aria-label="Adicionar ao feed"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                   )}
                 </Draggable>

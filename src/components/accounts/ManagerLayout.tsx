@@ -187,7 +187,7 @@ export default function ManagerLayout() {
           </HeroBand>
         </div>
 
-        <main className="flex-1 px-4 py-7 pb-[96px] sm:px-8 sm:py-10 md:pb-10">
+        <main className="flex-1 px-4 py-7 pb-[96px] sm:px-8 sm:py-10 md:pb-10 overflow-x-hidden">
           <div className="mx-auto w-full max-w-6xl">
             <BroadcastBanner audience="social" />
             <Suspense fallback={<ContentSkeleton />}>

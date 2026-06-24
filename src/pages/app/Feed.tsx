@@ -226,6 +226,15 @@ const Feed = () => {
     });
   };
 
+  // Mobile: adicionar ao feed por toque (arrastar de dentro do painel não funciona).
+  const addToGrid = (postId: string) => {
+    const post = availablePosts.find((p) => p.id === postId);
+    if (!post) return;
+    setAvailablePosts((prev) => prev.filter((p) => p.id !== postId));
+    setGridPosts((prev) => (prev.some((p) => p.id === post.id) ? prev : [...prev, post]));
+    setMobileSidebarOpen(false);
+  };
+
   const sidebarPanel = (
     <FeedSidebar
       posts={availablePosts}
@@ -234,6 +243,7 @@ const Feed = () => {
       onStatusFilterChange={setStatusFilter}
       searchFilter={searchFilter}
       onSearchFilterChange={setSearchFilter}
+      onAdd={addToGrid}
     />
   );
 

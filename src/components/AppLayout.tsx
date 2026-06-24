@@ -164,7 +164,7 @@ const AppLayout = () => {
               </div>
             </header>
 
-            <main className="flex-1 pb-[96px] md:pb-0 w-full">
+            <main className="flex-1 pb-[96px] md:pb-0 w-full overflow-x-hidden">
               <div className="max-w-screen-2xl mx-auto px-4 py-4 md:px-8 md:py-6">
                 <BroadcastBanner audience="criadora" />
                 <Suspense fallback={<ContentSkeleton />}>

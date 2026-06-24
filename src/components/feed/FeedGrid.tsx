@@ -70,9 +70,17 @@ export function FeedGrid({ posts, pillars, thumbnails, onRemove }: Props) {
                       </div>
                     )}
 
-                    <div className="absolute inset-0 bg-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    {/* Desktop: título no hover */}
+                    <div className="hidden md:flex absolute inset-0 bg-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity items-center justify-center">
                       <p className="text-white text-xs font-body font-medium text-center px-3 line-clamp-2">{post.title}</p>
                     </div>
+
+                    {/* Mobile: legenda fixa em baixo (sem hover no toque) */}
+                    {thumb && (
+                      <div className="md:hidden absolute inset-x-0 bottom-0 bg-gradient-to-t from-foreground/75 to-transparent px-1.5 pt-5 pb-1 pointer-events-none">
+                        <p className="text-white text-[9px] font-body line-clamp-1">{post.title}</p>
+                      </div>
+                    )}
 
                     <button
                       type="button"
@@ -80,10 +88,11 @@ export function FeedGrid({ posts, pillars, thumbnails, onRemove }: Props) {
                         e.stopPropagation();
                         onRemove(post.id);
                       }}
-                      className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-foreground/70 hover:bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      onPointerDown={(e) => e.stopPropagation()}
+                      className="absolute top-1 right-1 h-7 w-7 rounded-full bg-foreground/70 hover:bg-destructive text-white flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                       aria-label="Remover do feed"
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 )}
