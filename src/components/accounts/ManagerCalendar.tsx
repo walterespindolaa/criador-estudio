@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { FORMAT_LABELS } from "@/lib/constants";
 import { CLIENT_COLORS } from "@/components/accounts/CriaPostBoard";
+import { BestTimesHint } from "@/components/shared/BestTimesHint";
 import { toast } from "sonner";
 
 const sbFrom = supabase.from.bind(supabase) as unknown as (t: string) => ReturnType<typeof supabase.from>;
@@ -131,6 +132,7 @@ export function ManagerCalendar() {
                 className="w-full mt-1 rounded-lg border border-border bg-card px-2 py-1.5 text-xs" />
             </div>
           </div>
+          <BestTimesHint platform={p.platform} onPick={(t) => reschedule.mutate({ id: p.id, date: p.scheduled_date, time: t })} />
           <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground hover:text-destructive"
             onClick={() => reschedule.mutate({ id: p.id, date: null })}>
             Tirar do calendário

@@ -86,6 +86,7 @@ import {
 } from "@/lib/ai/claude";
 import { ScriptEditor, emptySection, type Section } from "./drawer/ScriptEditor";
 import { RepurposeSheet } from "./RepurposeSheet";
+import { BestTimesHint } from "@/components/shared/BestTimesHint";
 import { PostPreviewModal } from "./PostPreviewModal";
 import { PublishButton } from "./PublishButton";
 import { useProfile } from "@/hooks/useProfile";
@@ -1398,6 +1399,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     </div>
                   </div>
 
+                  <BestTimesHint platform={platform} niche={profile?.niche} onPick={setScheduledTime} />
                 </section>
 
                 {/* Content Assistant */}
