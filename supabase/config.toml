@@ -37,3 +37,5 @@ project_id = "exuxlwdnkgmhtnwoyvwo"
     verify_jwt = false
   [functions.instagram-sync]
     verify_jwt = true
+  [functions.ai-context-builder]
+    verify_jwt = true
