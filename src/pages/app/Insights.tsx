@@ -114,7 +114,7 @@ export default function Insights() {
               Conta <b>Business</b> ou <b>Creator</b>. Puxamos alcance, seguidores e desempenho dos posts — só leitura, o CRIA não publica nada por você.
             </p>
           </div>
-          <Button onClick={connectInstagram} className="gap-2 shrink-0 bg-gradient-to-r from-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90">
+          <Button onClick={() => connectInstagram()} className="gap-2 shrink-0 bg-gradient-to-r from-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90">
             <Instagram className="h-4 w-4" /> Conectar
           </Button>
         </div>
