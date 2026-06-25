@@ -1,14 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2, Download, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { useAuth } from "@/contexts/AuthContext";
 import { clientReportInsight } from "@/lib/ai/claude";
 import { useCrmClients } from "@/hooks/useCrm";
 import { FORMAT_LABELS } from "@/lib/constants";
 import type { ExternalClient, ExternalPost } from "@/hooks/useCriaPost";
+
+const sbFromR = supabase.from.bind(supabase) as unknown as (t: string) => ReturnType<typeof supabase.from>;
+type InsightRow = { post_id: string | null; metrics: Record<string, number> | null };
 
 const MONTHS = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -100,6 +105,33 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   }, [monthPosts]);
 
   const monthLabel = months.find((m) => m.key === monthKey)?.label ?? "";
+
+  // Métricas reais do Instagram (quando o post está vinculado a uma mídia em social_insights).
+  const monthPostIds = useMemo(() => monthPosts.map((p) => p.id), [monthPosts]);
+  const { data: insightRows = [] } = useQuery<InsightRow[]>({
+    queryKey: ["report-insights", monthKey, monthPostIds.join(",")],
+    enabled: open && monthPostIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await sbFromR("social_insights").select("post_id, metrics").in("post_id", monthPostIds);
+      if (error) throw error;
+      return (data as InsightRow[]) ?? [];
+    },
+  });
+  const metricsByPost = useMemo(() => {
+    const m: Record<string, Record<string, number>> = {};
+    for (const r of insightRows) if (r.post_id && r.metrics) m[r.post_id] = r.metrics;
+    return m;
+  }, [insightRows]);
+  const perf = useMemo(() => {
+    const vals = Object.values(metricsByPost);
+    const sum = (k: string) => vals.reduce((a, mm) => a + (Number(mm[k]) || 0), 0);
+    const views = vals.reduce((a, mm) => a + (Number(mm.views ?? mm.plays) || 0), 0);
+    return {
+      has: vals.length > 0,
+      reach: sum("reach"), likes: sum("likes"), comments: sum("comments"), saved: sum("saved"), views,
+      interactions: sum("total_interactions") || (sum("likes") + sum("comments") + sum("saved") + sum("shares")),
+    };
+  }, [metricsByPost]);
 
   const download = async () => {
     setDownloading(true);
@@ -282,6 +314,13 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>{p.title}</div>
                           <div style={{ fontSize: 11, color: C.sub }}>{FORMAT_LABELS[p.format] ?? cap(p.format)} · {cap(p.platform)}</div>
+                          {metricsByPost[p.id] && (
+                            <div style={{ fontSize: 11, color: C.brand, marginTop: 2 }}>
+                              {(metricsByPost[p.id].likes ?? 0).toLocaleString("pt-BR")} curtidas · {(metricsByPost[p.id].comments ?? 0).toLocaleString("pt-BR")} coment.
+                              {(metricsByPost[p.id].views ?? metricsByPost[p.id].plays)
+                                ? ` · ${(metricsByPost[p.id].views ?? metricsByPost[p.id].plays).toLocaleString("pt-BR")} views` : ""}
+                            </div>
+                          )}
                         </div>
                         <div style={{ fontSize: 11, fontWeight: 700, color: st.c, whiteSpace: "nowrap" }}>{st.t}</div>
                       </div>
@@ -307,11 +346,24 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
               />
             </div>
 
-            {/* Espaço pros números reais (Insights) */}
-            <div style={{ marginTop: 20, padding: "14px 16px", border: `1px dashed ${C.line}`, borderRadius: 12, background: C.soft }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: C.ink }}>Desempenho (alcance, contas alcançadas, engajamento)</div>
-              <div style={{ fontSize: 11, color: C.sub, marginTop: 4 }}>Disponível automaticamente quando a integração com o Instagram for ativada.</div>
-            </div>
+            {/* Desempenho — números reais do Instagram quando os posts estão vinculados */}
+            {perf.has ? (
+              <div style={{ marginTop: 24 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: C.sub, marginBottom: 10 }}>Desempenho no Instagram</div>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  {statCard("Alcance", perf.reach.toLocaleString("pt-BR"))}
+                  {statCard("Visualizações", perf.views.toLocaleString("pt-BR"))}
+                  {statCard("Curtidas", perf.likes.toLocaleString("pt-BR"))}
+                  {statCard("Comentários", perf.comments.toLocaleString("pt-BR"))}
+                  {statCard("Interações", perf.interactions.toLocaleString("pt-BR"))}
+                </div>
+              </div>
+            ) : (
+              <div style={{ marginTop: 20, padding: "14px 16px", border: `1px dashed ${C.line}`, borderRadius: 12, background: C.soft }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.ink }}>Desempenho (alcance, visualizações, engajamento)</div>
+                <div style={{ fontSize: 11, color: C.sub, marginTop: 4 }}>Vincule os posts às mídias do Instagram (em Insights) pra os números aparecerem aqui automaticamente.</div>
+              </div>
+            )}
 
             {/* Rodapé branded (white-label) */}
             <div style={{ marginTop: 22, paddingTop: 14, borderTop: `1px solid ${C.line}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
