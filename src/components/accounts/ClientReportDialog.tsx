@@ -13,7 +13,13 @@ import { FORMAT_LABELS } from "@/lib/constants";
 import type { ExternalClient, ExternalPost } from "@/hooks/useCriaPost";
 
 const sbRpcR = supabase.rpc.bind(supabase) as unknown as (fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
-type IgMediaRow = { caption: string | null; media_type: string | null; posted_at: string | null; metrics: Record<string, number> | null };
+type IgMediaRow = {
+  caption: string | null; media_type: string | null; permalink: string | null;
+  thumbnail_url: string | null; posted_at: string | null; metrics: Record<string, number> | null;
+};
+const MEDIA_PT: Record<string, string> = { IMAGE: "Imagem", VIDEO: "Vídeo", REELS: "Reels", CAROUSEL_ALBUM: "Carrossel" };
+const engOf = (m: Record<string, number> | null) =>
+  m ? (Number(m.likes) || 0) + (Number(m.comments) || 0) + (Number(m.saved) || 0) + (Number(m.shares) || 0) : 0;
 
 const MONTHS = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -139,6 +145,22 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     };
   }, [igMedia]);
 
+  // Ranking por engajamento (desempate por alcance) + melhor horário (hora do top post).
+  const ranking = useMemo(
+    () => [...igMedia].sort((a, b) =>
+      (engOf(b.metrics) - engOf(a.metrics)) || ((Number(b.metrics?.reach) || 0) - (Number(a.metrics?.reach) || 0))
+    ).slice(0, 5),
+    [igMedia],
+  );
+  const bestHour = useMemo(() => {
+    const top = ranking[0];
+    if (!top?.posted_at) return null;
+    const d = new Date(top.posted_at);
+    return `${String(d.getHours()).padStart(2, "0")}h`;
+  }, [ranking]);
+  const dtFmt = (s: string | null) =>
+    s ? new Date(s).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+
   const download = async () => {
     setDownloading(true);
     try {
@@ -157,11 +179,10 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       const persona = linked?.persona
         ? Object.entries(linked.persona).filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join("; ").slice(0, 400)
         : undefined;
-      // Destaques: top 3 mídias por alcance (formato + números) pra IA comentar.
-      const igDestaques = [...igMedia]
-        .sort((a, b) => (Number(b.metrics?.reach) || 0) - (Number(a.metrics?.reach) || 0))
+      // Destaques: top 3 por engajamento, com formato, horário e números — pra IA comentar.
+      const igDestaques = ranking
         .slice(0, 3)
-        .map((r) => `${r.media_type ?? "post"}: ${Number(r.metrics?.reach) || 0} alcance, ${Number(r.metrics?.likes) || 0} curtidas`)
+        .map((r) => `${MEDIA_PT[r.media_type ?? ""] ?? r.media_type ?? "post"} (${dtFmt(r.posted_at)}): ${Number(r.metrics?.reach) || 0} alcance, ${engOf(r.metrics)} interações`)
         .join("; ");
       const res = await clientReportInsight({
         cliente: client.name, mes: monthLabel, total: stats.total,
@@ -377,6 +398,38 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
                   {statCard("Comentários", perf.comments.toLocaleString("pt-BR"))}
                   {statCard("Interações", perf.interactions.toLocaleString("pt-BR"))}
                 </div>
+
+                {ranking.length > 0 && (
+                  <div style={{ marginTop: 18 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>
+                      Ranking de posts{bestHour ? ` · top post publicado às ${bestHour}` : ""}
+                    </div>
+                    <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden" }}>
+                      {ranking.map((r, i) => {
+                        const views = Number(r.metrics?.views ?? r.metrics?.plays) || 0;
+                        return (
+                          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
+                            <div style={{ width: 20, fontSize: 13, fontWeight: 800, color: C.brand, textAlign: "center" }}>{i + 1}</div>
+                            <div style={{ width: 44, height: 44, borderRadius: 8, background: C.soft, overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              {r.thumbnail_url
+                                ? <img src={r.thumbnail_url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                : <span style={{ fontSize: 9, color: C.sub }}>{MEDIA_PT[r.media_type ?? ""] ?? "post"}</span>}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 12, fontWeight: 600, color: C.ink }}>
+                                {MEDIA_PT[r.media_type ?? ""] ?? r.media_type ?? "Post"} · {dtFmt(r.posted_at)}
+                              </div>
+                              <div style={{ fontSize: 11, color: C.sub }}>
+                                {(Number(r.metrics?.reach) || 0).toLocaleString("pt-BR")} alcance · {(Number(r.metrics?.likes) || 0).toLocaleString("pt-BR")} curtidas · {(Number(r.metrics?.comments) || 0).toLocaleString("pt-BR")} coment.{views ? ` · ${views.toLocaleString("pt-BR")} views` : ""}
+                              </div>
+                            </div>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: C.brand, whiteSpace: "nowrap" }}>{engOf(r.metrics)} interações</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div style={{ marginTop: 20, padding: "14px 16px", border: `1px dashed ${C.line}`, borderRadius: 12, background: C.soft }}>
