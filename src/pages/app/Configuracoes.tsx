@@ -691,7 +691,7 @@ const Configuracoes = () => {
                       <Button variant="outline" size="sm" onClick={() => igDisconnect.mutate()} className="shrink-0"><Unplug className="h-4 w-4 mr-2" /> Desconectar</Button>
                     </div>
                   ) : (
-                    <Button variant="hero" onClick={connectInstagram} className="w-full sm:w-auto"><Instagram className="h-4 w-4 mr-2" /> Conectar Instagram</Button>
+                    <Button variant="hero" onClick={() => connectInstagram()} className="w-full sm:w-auto"><Instagram className="h-4 w-4 mr-2" /> Conectar Instagram</Button>
                   )}
                 </div>
 
