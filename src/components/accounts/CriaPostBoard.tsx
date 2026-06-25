@@ -5,11 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Link2, Pencil, Loader2, Users, ArrowRight, ArrowLeft, Trash2, RotateCcw, FileText } from "lucide-react";
+import { Plus, Link2, Pencil, Loader2, Users, ArrowRight, ArrowLeft, Trash2, RotateCcw, FileText, Instagram } from "lucide-react";
 import { CriaPostMedia } from "@/components/accounts/CriaPostMedia";
 import { ClientReportDialog } from "@/components/accounts/ClientReportDialog";
 import { useProfile } from "@/hooks/useProfile";
 import { useCrmClients } from "@/hooks/useCrm";
+import { useClientSocialConnection, connectInstagram } from "@/hooks/useSocialInsights";
 import { FORMATS_BY_PLATFORM, FORMAT_LABELS } from "@/lib/constants";
 
 const PLATFORMS = ["instagram", "tiktok", "youtube"];
@@ -143,6 +144,7 @@ function ClientDetail({ client, onBack }: { client: ExternalClient; onBack: () =
   const { posts, isLoading, create, update, remove } = useExternalPosts(client.id);
   const { copyLink } = useExternalClients();
   const { profile } = useProfile();
+  const { data: igConn } = useClientSocialConnection(client.crm_client_id);
   const [formOpen, setFormOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [editing, setEditing] = useState<ExternalPost | null>(null);
@@ -175,6 +177,17 @@ function ClientDetail({ client, onBack }: { client: ExternalClient; onBack: () =
           {client.instagram_handle && <p className="text-sm text-muted-foreground font-body">@{client.instagram_handle.replace(/^@/, "")}</p>}
         </div>
         <div className="flex gap-2 shrink-0">
+          {client.crm_client_id && (
+            igConn ? (
+              <Button variant="outline" className="gap-1.5 text-green-700 border-green-200" disabled title={`Instagram conectado: @${igConn.username ?? ""}`}>
+                <Instagram className="h-4 w-4" /> <span className="hidden sm:inline">@{igConn.username ?? "conectado"}</span>
+              </Button>
+            ) : (
+              <Button variant="outline" className="gap-1.5" onClick={() => connectInstagram(client.crm_client_id)} aria-label="Conectar Instagram">
+                <Instagram className="h-4 w-4" /> <span className="hidden sm:inline">Conectar IG</span>
+              </Button>
+            )
+          )}
           <Button variant="outline" onClick={() => setReportOpen(true)} aria-label="Relatório"><FileText className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Relatório</span></Button>
           <Button variant="outline" onClick={doCopy} disabled={copying}>{copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Link2 className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Copiar link</span></>}</Button>
           <Button onClick={openNew}><Plus className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Novo post</span></Button>

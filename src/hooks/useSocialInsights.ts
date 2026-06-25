@@ -165,8 +165,26 @@ export function useSyncInstagram() {
   });
 }
 
+// Conexão de Instagram de um cliente específico (gerenciado pela social mídia).
+export function useClientSocialConnection(crmClientId: string | null | undefined) {
+  return useQuery<SocialConnection | null>({
+    queryKey: ["social-connection-client", crmClientId],
+    enabled: !!crmClientId,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("social_connections")
+        .select("id,user_id,provider,external_account_id,username,account_type,token_expires_at,connected_at,updated_at")
+        .eq("crm_client_id", crmClientId!)
+        .eq("provider", "instagram")
+        .maybeSingle();
+      if (error) throw error;
+      return (data as unknown as SocialConnection) ?? null;
+    },
+  });
+}
+
 // Inicia o OAuth do Instagram: pega o App ID público via edge function e redireciona pro consentimento.
-export async function connectInstagram() {
+// clientId (crm_client_id) opcional: conecta a conta NO contexto de um cliente gerenciado.
+export async function connectInstagram(clientId?: string | null) {
   try {
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
@@ -178,8 +196,9 @@ export async function connectInstagram() {
     }
     const cfg = data as { client_id: string; redirect_uri: string; scope?: string };
     const scope = cfg.scope ?? "instagram_business_basic,instagram_business_manage_insights";
-    // state carrega o JWT do usuário CRIA pra o callback saber de quem é a conexão
-    const url = `https://www.instagram.com/oauth/authorize?client_id=${encodeURIComponent(cfg.client_id)}&redirect_uri=${encodeURIComponent(cfg.redirect_uri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(token)}`;
+    // state carrega o JWT (+ clientId quando conectando uma conta de cliente)
+    const stateValue = clientId ? `${token}::${clientId}` : token;
+    const url = `https://www.instagram.com/oauth/authorize?client_id=${encodeURIComponent(cfg.client_id)}&redirect_uri=${encodeURIComponent(cfg.redirect_uri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(stateValue)}`;
     window.location.href = url;
   } catch {
     toast.error("Integração ainda não configurada.");
