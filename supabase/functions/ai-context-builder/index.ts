@@ -521,7 +521,7 @@ ${(data.legenda || '').slice(0, 1000)}
 FORMATO: ${data.formato || 'post'}
 PLATAFORMA: ${data.plataforma || 'instagram'}
 NICHO: ${data.nicho || 'geral'}`
-        maxTokens = 800
+        maxTokens = 8192
         break
       case 'client-report-insight':
         operationPrompt = `Você é um gestor de social media sênior. Com base nos dados do mês de um cliente, escreva uma análise curta e profissional pra um relatório de prestação de serviço (será lido pelo cliente).
