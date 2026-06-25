@@ -59,12 +59,26 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   // Limpa a análise ao trocar de mês (não vale pra outro período).
   useEffect(() => { if (editorRef.current) editorRef.current.innerHTML = ""; }, [monthKey]);
 
+  const [active, setActive] = useState<Record<string, boolean>>({});
+
   const escapeHtml = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-  const exec = (cmd: string, val?: string) => {
+  const updateActive = () => {
+    try {
+      setActive({
+        bold: document.queryCommandState("bold"),
+        italic: document.queryCommandState("italic"),
+        insertUnorderedList: document.queryCommandState("insertUnorderedList"),
+        insertOrderedList: document.queryCommandState("insertOrderedList"),
+      });
+    } catch { /* noop */ }
+  };
+
+  const exec = (cmd: string) => {
     editorRef.current?.focus();
-    document.execCommand(cmd, false, val);
+    document.execCommand(cmd, false);
+    updateActive();
   };
 
   const monthPosts = useMemo(
@@ -178,22 +192,27 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
 
         {/* Barra de formatação (fora do que vira PDF) */}
         <style>{`.report-editor:empty:before{content:attr(data-placeholder);color:#9ca3af;}
-.report-editor ul{padding-left:18px;margin:6px 0;} .report-editor li{margin-bottom:4px;} .report-editor p{margin:0 0 8px;}`}</style>
+.report-editor ul{list-style:disc;padding-left:22px;margin:6px 0;} .report-editor ol{list-style:decimal;padding-left:22px;margin:6px 0;} .report-editor li{margin-bottom:4px;} .report-editor p{margin:0 0 8px;}`}</style>
         <div className="mt-3 flex items-center gap-1">
           <span className="text-xs font-body text-muted-foreground mr-1">Formatar análise:</span>
           {([
             ["Negrito", "bold", "B", "font-bold"],
             ["Itálico", "italic", "I", "italic"],
-            ["Lista", "insertUnorderedList", "•", ""],
+            ["Lista com marcadores", "insertUnorderedList", "•", ""],
             ["Lista numerada", "insertOrderedList", "1.", ""],
           ] as [string, string, string, string][]).map(([label, cmd, icon, cls]) => (
             <button
               key={cmd}
               type="button"
               title={label}
+              aria-pressed={!!active[cmd]}
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => exec(cmd)}
-              className={`h-8 w-8 rounded-lg border border-border bg-card text-sm text-foreground hover:bg-accent transition-colors ${cls}`}
+              className={`h-8 w-8 rounded-lg border text-sm transition-colors ${cls} ${
+                active[cmd]
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-card text-foreground border-border hover:bg-accent"
+              }`}
             >
               {icon}
             </button>
@@ -278,6 +297,9 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
                 ref={editorRef}
                 contentEditable
                 suppressContentEditableWarning
+                onKeyUp={updateActive}
+                onMouseUp={updateActive}
+                onFocus={updateActive}
                 data-placeholder="Escreva a análise ou clique em “Gerar análise (IA)”. Você pode formatar com a barra acima."
                 className="report-editor"
                 style={{ fontSize: 13, color: C.ink, lineHeight: 1.6, outline: "none", minHeight: 48 }}
