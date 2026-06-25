@@ -38,6 +38,8 @@ export const clientReportInsight = async (
     aprovados: number; aguardando: number; ajustes: number;
     titulos: string;
     segmento?: string; servicos?: string; persona?: string;
+    igPosts?: number; igReach?: number; igViews?: number; igLikes?: number;
+    igComments?: number; igInteractions?: number; igDestaques?: string;
   },
   userId?: string
 ): Promise<ClientReportInsight> => {

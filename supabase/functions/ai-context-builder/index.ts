@@ -524,25 +524,32 @@ NICHO: ${data.nicho || 'geral'}`
         maxTokens = 8192
         break
       case 'client-report-insight':
-        operationPrompt = `Você é um gestor de social media sênior. Com base nos dados do mês de um cliente, escreva uma análise curta e profissional pra um relatório de prestação de serviço (será lido pelo cliente).
+        operationPrompt = `Você é um gestor de social media sênior. Escreva uma análise curta e profissional pra um relatório de prestação de serviço (lido pelo cliente), com base nos dados do mês.
 
 TOM: profissional, claro, sem encher linguiça. Português BR.
 
-Se houver segmento, serviços e persona do cliente, USE pra deixar a análise e as recomendações sob medida (alinhadas ao posicionamento e ao público-alvo dele).
+PRIORIDADE: quando houver DESEMPENHO REAL NO INSTAGRAM (alcance, visualizações, curtidas, comentários, interações), baseie a análise NESSES números — são o resultado real da conta. Cite os números. A produção no fluxo (posts criados/aprovados) é só contexto.
+- Se houver desempenho no Instagram mas pouca/nenhuma produção no fluxo, foque 100% no desempenho real da conta — NÃO diga que "não houve produção" como se nada tivesse acontecido.
+- Se houver segmento/serviços/persona, conecte as recomendações ao posicionamento e ao público.
 
 ENTREGUE:
-- resumo: 2 a 3 frases sobre o que foi entregue no mês e o ritmo de produção.
-- recomendacoes: 2 a 3 recomendações práticas pro próximo mês (formato, cadência, tema ou foco), conectadas à persona/segmento quando informados.
+- resumo: 2 a 3 frases sobre o DESEMPENHO do mês, citando números reais do Instagram quando houver.
+- recomendacoes: 2 a 3 ações práticas conectadas aos resultados e à persona/segmento.
 
 RESPONDA APENAS com JSON válido, sem texto antes ou depois:
 {"resumo":"string","recomendacoes":["r1","r2"]}`
         userPrompt = `Cliente: ${data.cliente || 'cliente'}
 Mês: ${data.mes || ''}
-Total de posts: ${data.total ?? 0}
+
+DESEMPENHO REAL NO INSTAGRAM (mês):
+Posts publicados: ${data.igPosts ?? 0}
+Alcance: ${data.igReach ?? 0} | Visualizações: ${data.igViews ?? 0}
+Curtidas: ${data.igLikes ?? 0} | Comentários: ${data.igComments ?? 0} | Interações: ${data.igInteractions ?? 0}
+Destaques: ${data.igDestaques || '-'}
+
+PRODUÇÃO NO FLUXO (Cria Post):
+Total de posts: ${data.total ?? 0} | Aprovados: ${data.aprovados ?? 0} | Aguardando: ${data.aguardando ?? 0} | Ajustes: ${data.ajustes ?? 0}
 Por formato: ${data.formatos || '-'}
-Por plataforma: ${data.plataformas || '-'}
-Aprovados: ${data.aprovados ?? 0} | Aguardando: ${data.aguardando ?? 0} | Ajustes: ${data.ajustes ?? 0}
-Títulos dos posts: ${data.titulos || '-'}
 ${data.segmento ? `Segmento do cliente: ${data.segmento}` : ''}
 ${data.servicos ? `Serviços contratados: ${data.servicos}` : ''}
 ${data.persona ? `Persona/público-alvo: ${data.persona}` : ''}`

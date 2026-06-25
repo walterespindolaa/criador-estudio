@@ -157,6 +157,12 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       const persona = linked?.persona
         ? Object.entries(linked.persona).filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join("; ").slice(0, 400)
         : undefined;
+      // Destaques: top 3 mídias por alcance (formato + números) pra IA comentar.
+      const igDestaques = [...igMedia]
+        .sort((a, b) => (Number(b.metrics?.reach) || 0) - (Number(a.metrics?.reach) || 0))
+        .slice(0, 3)
+        .map((r) => `${r.media_type ?? "post"}: ${Number(r.metrics?.reach) || 0} alcance, ${Number(r.metrics?.likes) || 0} curtidas`)
+        .join("; ");
       const res = await clientReportInsight({
         cliente: client.name, mes: monthLabel, total: stats.total,
         formatos: fmt, plataformas: plat,
@@ -165,6 +171,8 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         segmento: linked?.segment ?? undefined,
         servicos: linked?.services?.length ? linked.services.join(", ") : undefined,
         persona,
+        igPosts: perf.posts, igReach: perf.reach, igViews: perf.views, igLikes: perf.likes,
+        igComments: perf.comments, igInteractions: perf.interactions, igDestaques: igDestaques || undefined,
       }, user?.id);
       if (!res || typeof res.resumo !== "string") throw new Error("formato inesperado");
       const recs = (res.recomendacoes ?? []).map((r) => `<li>${escapeHtml(r)}</li>`).join("");
