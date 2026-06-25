@@ -20,6 +20,7 @@ export const clientReportInsight = async (
     formatos: string; plataformas: string;
     aprovados: number; aguardando: number; ajustes: number;
     titulos: string;
+    segmento?: string; servicos?: string; persona?: string;
   },
   userId?: string
 ): Promise<ClientReportInsight> => {

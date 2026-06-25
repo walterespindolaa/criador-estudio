@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { useAuth } from "@/contexts/AuthContext";
 import { clientReportInsight } from "@/lib/ai/claude";
+import { useCrmClients } from "@/hooks/useCrm";
 import { FORMAT_LABELS } from "@/lib/constants";
 import type { ExternalClient, ExternalPost } from "@/hooks/useCriaPost";
 
@@ -43,6 +44,11 @@ const C = {
 export function ClientReportDialog({ open, onOpenChange, client, posts, managerName }: Props) {
   const { exportPdf } = usePdfExport();
   const { user } = useAuth();
+  const { data: crmClients = [] } = useCrmClients();
+  const linked = useMemo(
+    () => (client.crm_client_id ? crmClients.find((c) => c.id === client.crm_client_id) ?? null : null),
+    [crmClients, client.crm_client_id],
+  );
   const reportRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const months = useMemo(() => lastNMonths(6), []);
@@ -96,11 +102,17 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     try {
       const fmt = Object.entries(stats.byFormat).map(([f, v]) => `${FORMAT_LABELS[f] ?? f}: ${v}`).join(", ") || "-";
       const plat = Object.entries(stats.byPlatform).map(([p, v]) => `${cap(p)}: ${v}`).join(", ") || "-";
+      const persona = linked?.persona
+        ? Object.entries(linked.persona).filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join("; ").slice(0, 400)
+        : undefined;
       const res = await clientReportInsight({
         cliente: client.name, mes: monthLabel, total: stats.total,
         formatos: fmt, plataformas: plat,
         aprovados: stats.byStatus.aprovado ?? 0, aguardando: stats.byStatus.pendente ?? 0, ajustes: stats.byStatus.ajuste_solicitado ?? 0,
         titulos: monthPosts.map((p) => p.title).slice(0, 20).join("; "),
+        segmento: linked?.segment ?? undefined,
+        servicos: linked?.services?.length ? linked.services.join(", ") : undefined,
+        persona,
       }, user?.id);
       if (!res || typeof res.resumo !== "string") throw new Error("formato inesperado");
       const recs = (res.recomendacoes ?? []).map((r) => `<li>${escapeHtml(r)}</li>`).join("");
@@ -157,6 +169,12 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
             </button>
           ))}
         </div>
+
+        <p className="mt-2 text-[11px] font-body text-muted-foreground">
+          {linked
+            ? "✨ A análise da IA vai usar a persona e o segmento do cadastro central deste cliente."
+            : "Dica: vincule este cliente ao cadastro central (no cadastro do Cria Post) pra uma análise mais rica."}
+        </p>
 
         {/* Barra de formatação (fora do que vira PDF) */}
         <style>{`.report-editor:empty:before{content:attr(data-placeholder);color:#9ca3af;}

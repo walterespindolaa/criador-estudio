@@ -528,9 +528,11 @@ NICHO: ${data.nicho || 'geral'}`
 
 TOM: profissional, claro, sem encher linguiça. Português BR.
 
+Se houver segmento, serviços e persona do cliente, USE pra deixar a análise e as recomendações sob medida (alinhadas ao posicionamento e ao público-alvo dele).
+
 ENTREGUE:
 - resumo: 2 a 3 frases sobre o que foi entregue no mês e o ritmo de produção.
-- recomendacoes: 2 a 3 recomendações práticas pro próximo mês (formato, cadência, tema ou foco).
+- recomendacoes: 2 a 3 recomendações práticas pro próximo mês (formato, cadência, tema ou foco), conectadas à persona/segmento quando informados.
 
 RESPONDA APENAS com JSON válido, sem texto antes ou depois:
 {"resumo":"string","recomendacoes":["r1","r2"]}`
@@ -540,7 +542,10 @@ Total de posts: ${data.total ?? 0}
 Por formato: ${data.formatos || '-'}
 Por plataforma: ${data.plataformas || '-'}
 Aprovados: ${data.aprovados ?? 0} | Aguardando: ${data.aguardando ?? 0} | Ajustes: ${data.ajustes ?? 0}
-Títulos dos posts: ${data.titulos || '-'}`
+Títulos dos posts: ${data.titulos || '-'}
+${data.segmento ? `Segmento do cliente: ${data.segmento}` : ''}
+${data.servicos ? `Serviços contratados: ${data.servicos}` : ''}
+${data.persona ? `Persona/público-alvo: ${data.persona}` : ''}`
         maxTokens = 500
         break
       default:
