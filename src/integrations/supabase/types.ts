@@ -3570,7 +3570,9 @@ export type Database = {
           caption: string
           media_type: string
           metrics: Json
+          permalink: string
           posted_at: string
+          thumbnail_url: string
         }[]
       }
       get_cronograma_by_token: { Args: { _token: string }; Returns: Json }
