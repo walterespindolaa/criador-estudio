@@ -144,6 +144,8 @@ function ClientDetail({ client, onBack }: { client: ExternalClient; onBack: () =
   const { posts, isLoading, create, update, remove } = useExternalPosts(client.id);
   const { copyLink } = useExternalClients();
   const { profile } = useProfile();
+  const { data: crmClients = [] } = useCrmClients();
+  const hasCriaAccount = !!crmClients.find((c) => c.id === client.crm_client_id)?.cria_owner_id;
   const { data: igConn } = useClientSocialConnection(client.crm_client_id);
   const [formOpen, setFormOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -177,7 +179,11 @@ function ClientDetail({ client, onBack }: { client: ExternalClient; onBack: () =
           {client.instagram_handle && <p className="text-sm text-muted-foreground font-body">@{client.instagram_handle.replace(/^@/, "")}</p>}
         </div>
         <div className="flex gap-2 shrink-0">
-          {client.crm_client_id && (
+          {client.crm_client_id && hasCriaAccount ? (
+            <Button variant="outline" className="gap-1.5 text-green-700 border-green-200" disabled title="Os insights vêm do Instagram conectado pelo próprio cliente na conta CRIA dele.">
+              <Instagram className="h-4 w-4" /> <span className="hidden sm:inline">Insights via cliente</span>
+            </Button>
+          ) : client.crm_client_id ? (
             igConn ? (
               <Button variant="outline" className="gap-1.5 text-green-700 border-green-200" disabled title={`Instagram conectado: @${igConn.username ?? ""}`}>
                 <Instagram className="h-4 w-4" /> <span className="hidden sm:inline">@{igConn.username ?? "conectado"}</span>
@@ -187,7 +193,7 @@ function ClientDetail({ client, onBack }: { client: ExternalClient; onBack: () =
                 <Instagram className="h-4 w-4" /> <span className="hidden sm:inline">Conectar IG</span>
               </Button>
             )
-          )}
+          ) : null}
           <Button variant="outline" onClick={() => setReportOpen(true)} aria-label="Relatório"><FileText className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Relatório</span></Button>
           <Button variant="outline" onClick={doCopy} disabled={copying}>{copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Link2 className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Copiar link</span></>}</Button>
           <Button onClick={openNew}><Plus className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Novo post</span></Button>

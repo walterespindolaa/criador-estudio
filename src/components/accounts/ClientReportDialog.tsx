@@ -12,8 +12,8 @@ import { useCrmClients } from "@/hooks/useCrm";
 import { FORMAT_LABELS } from "@/lib/constants";
 import type { ExternalClient, ExternalPost } from "@/hooks/useCriaPost";
 
-const sbFromR = supabase.from.bind(supabase) as unknown as (t: string) => ReturnType<typeof supabase.from>;
-type InsightRow = { post_id: string | null; metrics: Record<string, number> | null };
+const sbRpcR = supabase.rpc.bind(supabase) as unknown as (fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
+type IgMediaRow = { caption: string | null; media_type: string | null; posted_at: string | null; metrics: Record<string, number> | null };
 
 const MONTHS = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -106,32 +106,38 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
 
   const monthLabel = months.find((m) => m.key === monthKey)?.label ?? "";
 
-  // Métricas reais do Instagram (quando o post está vinculado a uma mídia em social_insights).
-  const monthPostIds = useMemo(() => monthPosts.map((p) => p.id), [monthPosts]);
-  const { data: insightRows = [] } = useQuery<InsightRow[]>({
-    queryKey: ["report-insights", monthKey, monthPostIds.join(",")],
-    enabled: open && monthPostIds.length > 0,
+  // Métricas reais do Instagram do PRÓPRIO CLIENTE (conta que ele conectou).
+  // Lidas via RPC segura (a gestora não conecta nada; só lê o que o cliente conectou).
+  const monthRange = useMemo(() => {
+    const [y, mo] = monthKey.split("-").map(Number);
+    return {
+      since: new Date(Date.UTC(y, mo - 1, 1)).toISOString(),
+      until: new Date(Date.UTC(y, mo, 1)).toISOString(),
+    };
+  }, [monthKey]);
+  const { data: igMedia = [] } = useQuery<IgMediaRow[]>({
+    queryKey: ["report-ig-media", client.crm_client_id, monthKey],
+    enabled: open && !!client.crm_client_id,
     queryFn: async () => {
-      const { data, error } = await sbFromR("social_insights").select("post_id, metrics").in("post_id", monthPostIds);
+      const { data, error } = await sbRpcR("get_client_ig_media", {
+        _crm_client_id: client.crm_client_id,
+        _since: monthRange.since,
+        _until: monthRange.until,
+      });
       if (error) throw error;
-      return (data as InsightRow[]) ?? [];
+      return (data as IgMediaRow[]) ?? [];
     },
   });
-  const metricsByPost = useMemo(() => {
-    const m: Record<string, Record<string, number>> = {};
-    for (const r of insightRows) if (r.post_id && r.metrics) m[r.post_id] = r.metrics;
-    return m;
-  }, [insightRows]);
   const perf = useMemo(() => {
-    const vals = Object.values(metricsByPost);
-    const sum = (k: string) => vals.reduce((a, mm) => a + (Number(mm[k]) || 0), 0);
-    const views = vals.reduce((a, mm) => a + (Number(mm.views ?? mm.plays) || 0), 0);
+    const sum = (k: string) => igMedia.reduce((a, r) => a + (Number(r.metrics?.[k]) || 0), 0);
+    const views = igMedia.reduce((a, r) => a + (Number(r.metrics?.views ?? r.metrics?.plays) || 0), 0);
     return {
-      has: vals.length > 0,
+      has: igMedia.length > 0,
+      posts: igMedia.length,
       reach: sum("reach"), likes: sum("likes"), comments: sum("comments"), saved: sum("saved"), views,
       interactions: sum("total_interactions") || (sum("likes") + sum("comments") + sum("saved") + sum("shares")),
     };
-  }, [metricsByPost]);
+  }, [igMedia]);
 
   const download = async () => {
     setDownloading(true);
@@ -325,13 +331,6 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>{p.title}</div>
                           <div style={{ fontSize: 11, color: C.sub }}>{FORMAT_LABELS[p.format] ?? cap(p.format)} · {cap(p.platform)}</div>
-                          {metricsByPost[p.id] && (
-                            <div style={{ fontSize: 11, color: C.brand, marginTop: 2 }}>
-                              {(metricsByPost[p.id].likes ?? 0).toLocaleString("pt-BR")} curtidas · {(metricsByPost[p.id].comments ?? 0).toLocaleString("pt-BR")} coment.
-                              {(metricsByPost[p.id].views ?? metricsByPost[p.id].plays)
-                                ? ` · ${(metricsByPost[p.id].views ?? metricsByPost[p.id].plays).toLocaleString("pt-BR")} views` : ""}
-                            </div>
-                          )}
                         </div>
                         <div style={{ fontSize: 11, fontWeight: 700, color: st.c, whiteSpace: "nowrap" }}>{st.t}</div>
                       </div>
@@ -360,7 +359,9 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
             {/* Desempenho — números reais do Instagram quando os posts estão vinculados */}
             {perf.has ? (
               <div style={{ marginTop: 24 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: C.sub, marginBottom: 10 }}>Desempenho no Instagram</div>
+                <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: C.sub, marginBottom: 10 }}>
+                  Desempenho no Instagram ({perf.posts} post{perf.posts === 1 ? "" : "s"})
+                </div>
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                   {statCard("Alcance", perf.reach.toLocaleString("pt-BR"))}
                   {statCard("Visualizações", perf.views.toLocaleString("pt-BR"))}
@@ -372,7 +373,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
             ) : (
               <div style={{ marginTop: 20, padding: "14px 16px", border: `1px dashed ${C.line}`, borderRadius: 12, background: C.soft }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: C.ink }}>Desempenho (alcance, visualizações, engajamento)</div>
-                <div style={{ fontSize: 11, color: C.sub, marginTop: 4 }}>Vincule os posts às mídias do Instagram (em Insights) pra os números aparecerem aqui automaticamente.</div>
+                <div style={{ fontSize: 11, color: C.sub, marginTop: 4 }}>Aparece automaticamente quando o cliente conectar o Instagram na conta CRIA dele e tiver posts no período.</div>
               </div>
             )}
 
