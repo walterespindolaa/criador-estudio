@@ -2859,6 +2859,7 @@ export type Database = {
           access_token: string
           account_type: string | null
           connected_at: string | null
+          crm_client_id: string | null
           external_account_id: string
           id: string
           provider: string
@@ -2872,6 +2873,7 @@ export type Database = {
           access_token: string
           account_type?: string | null
           connected_at?: string | null
+          crm_client_id?: string | null
           external_account_id: string
           id?: string
           provider?: string
@@ -2885,6 +2887,7 @@ export type Database = {
           access_token?: string
           account_type?: string | null
           connected_at?: string | null
+          crm_client_id?: string | null
           external_account_id?: string
           id?: string
           provider?: string
@@ -2895,6 +2898,13 @@ export type Database = {
           username?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "social_connections_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "social_connections_user_id_fkey"
             columns: ["user_id"]
