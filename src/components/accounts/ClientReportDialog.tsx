@@ -169,7 +169,18 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     } catch (e) {
       console.error("Report AI failed", e);
       const msg = e instanceof Error ? e.message : "";
-      toast.error(msg && !/non-2xx/i.test(msg) ? `Erro: ${msg}` : "Erro ao gerar a análise. Tente de novo em instantes.");
+      // Fallback: gera um resumo automático com os números pra não travar o relatório.
+      const fmtList = Object.entries(stats.byFormat).map(([f, v]) => `${FORMAT_LABELS[f] ?? f} (${v})`).join(", ");
+      const aprov = stats.byStatus.aprovado ?? 0;
+      const fallback =
+        `<p><strong>Resumo.</strong> Em ${escapeHtml(monthLabel)}, foram produzidos ${stats.total} post(s) para ${escapeHtml(client.name)}` +
+        (fmtList ? ` — ${escapeHtml(fmtList)}` : "") +
+        `. ${aprov} aprovado(s) pelo cliente.</p>` +
+        `<p><strong>Recomendações</strong></p><ul><li>Manter a constância de publicações no próximo mês.</li><li>Priorizar os formatos com melhor desempenho.</li></ul>`;
+      if (editorRef.current) editorRef.current.innerHTML = fallback;
+      toast.message(
+        msg && !/non-2xx/i.test(msg) ? `IA indisponível (${msg}). Gerei um resumo automático — você pode editar.` : "IA indisponível agora. Gerei um resumo automático — você pode editar.",
+      );
     } finally {
       setAiLoading(false);
     }

@@ -56,8 +56,17 @@ export async function callAIContextBuilder(payload: AIRequest) {
   });
 
   if (error) {
-    console.error('AI Operation error:', error);
-    throw error;
+    // Tenta extrair a mensagem real que a edge function retornou no corpo.
+    let detail = error.message;
+    try {
+      const ctx = (error as { context?: { json?: () => Promise<unknown> } }).context;
+      if (ctx?.json) {
+        const body = (await ctx.json()) as { error?: string };
+        if (body?.error) detail = body.error;
+      }
+    } catch { /* ignore */ }
+    console.error('AI Operation error:', detail, error);
+    throw new Error(detail || 'AI Operation error');
   }
 
   return data?.result;
