@@ -591,14 +591,21 @@ ${data.persona ? `Persona/público-alvo: ${data.persona}` : ''}`
     const content = result.choices?.[0]?.message?.content || ''
 
     if (operation === 'reference-filter' || operation === 'score-caption' || operation === 'client-report-insight') {
+      const cleaned = String(content).replace(/```json/gi, '').replace(/```/g, '').trim()
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
+      const jsonStr = jsonMatch ? jsonMatch[0] : cleaned
       try {
-        const jsonMatch = content.match(/\{.*\}/s)
-        const jsonStr = jsonMatch ? jsonMatch[0] : content
         return new Response(JSON.stringify({ result: JSON.parse(jsonStr) }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       } catch {
         console.error('Failed to parse JSON response', content)
+        // client-report-insight nunca deve quebrar o relatório: devolve um fallback usável.
+        if (operation === 'client-report-insight') {
+          return new Response(JSON.stringify({ result: { resumo: cleaned.slice(0, 600), recomendacoes: [] } }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          })
+        }
         throw new Error('Invalid JSON from AI')
       }
     }
