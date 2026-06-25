@@ -1211,6 +1211,7 @@ export type Database = {
           active: boolean
           color: string | null
           created_at: string
+          crm_client_id: string | null
           id: string
           instagram_handle: string | null
           logo_url: string | null
@@ -1222,6 +1223,7 @@ export type Database = {
           active?: boolean
           color?: string | null
           created_at?: string
+          crm_client_id?: string | null
           id?: string
           instagram_handle?: string | null
           logo_url?: string | null
@@ -1233,6 +1235,7 @@ export type Database = {
           active?: boolean
           color?: string | null
           created_at?: string
+          crm_client_id?: string | null
           id?: string
           instagram_handle?: string | null
           logo_url?: string | null
@@ -1240,7 +1243,15 @@ export type Database = {
           name?: string
           notes?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "external_clients_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       external_media_refs: {
         Row: {
