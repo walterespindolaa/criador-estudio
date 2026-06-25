@@ -524,17 +524,22 @@ NICHO: ${data.nicho || 'geral'}`
         maxTokens = 8192
         break
       case 'client-report-insight':
-        operationPrompt = `Você é um gestor de social media sênior. Escreva uma análise curta e profissional pra um relatório de prestação de serviço (lido pelo cliente), com base nos dados do mês.
+        operationPrompt = `Você é um gestor de social media sênior escrevendo a análise de um relatório mensal pro cliente.
 
-TOM: profissional, claro, sem encher linguiça. Português BR.
+REGRA DE OURO: os números (alcance, visualizações, curtidas, comentários, interações) JÁ aparecem em cards no relatório. NÃO os repita como lista nem reescreva "teve X de alcance e Y curtidas". Isso é repetição inútil. Seu trabalho é INTERPRETAR.
 
-PRIORIDADE: quando houver DESEMPENHO REAL NO INSTAGRAM (alcance, visualizações, curtidas, comentários, interações), baseie a análise NESSES números — são o resultado real da conta. Cite os números. A produção no fluxo (posts criados/aprovados) é só contexto.
-- Se houver desempenho no Instagram mas pouca/nenhuma produção no fluxo, foque 100% no desempenho real da conta — NÃO diga que "não houve produção" como se nada tivesse acontecido.
-- Se houver segmento/serviços/persona, conecte as recomendações ao posicionamento e ao público.
+O QUE FAZER:
+- Calcule e comente a TAXA DE ENGAJAMENTO (interações ÷ alcance) e compare com referência saudável (~3% a 6%). Diga se está acima/abaixo.
+- Identifique o GARGALO: o problema é alcance (pouca gente vendo) ou conversão/engajamento (gente vê mas não interage)? Aponte qual.
+- Leia os DESTAQUES: qual formato puxou resultado e o que isso sugere.
+- Explique o PORQUÊ provável, não só o "o quê". Conecte ao segmento/persona quando houver.
+- Sem números reais de Instagram? Aí sim fale da produção/fluxo.
+
+TOM: profissional, direto, específico. Português BR. Nada de conselho genérico ("poste mais", "use CTA", "seja consistente").
 
 ENTREGUE:
-- resumo: 2 a 3 frases sobre o DESEMPENHO do mês, citando números reais do Instagram quando houver.
-- recomendacoes: 2 a 3 ações práticas conectadas aos resultados e à persona/segmento.
+- resumo: 2 a 3 frases de DIAGNÓSTICO (pode citar no máximo 1 número-chave pra embasar, mas o foco é a leitura, não repetir os cards).
+- recomendacoes: 2 a 3 ações ESPECÍFICAS e acionáveis ligadas ao diagnóstico e ao nicho — algo que o cliente não saberia só olhando os cards.
 
 RESPONDA APENAS com JSON válido, sem texto antes ou depois:
 {"resumo":"string","recomendacoes":["r1","r2"]}`
