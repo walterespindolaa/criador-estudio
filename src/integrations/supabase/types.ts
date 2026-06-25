@@ -3564,6 +3564,15 @@ export type Database = {
         }[]
       }
       get_admin_usage: { Args: never; Returns: Json }
+      get_client_ig_media: {
+        Args: { _crm_client_id: string; _since: string; _until: string }
+        Returns: {
+          caption: string
+          media_type: string
+          metrics: Json
+          posted_at: string
+        }[]
+      }
       get_cronograma_by_token: { Args: { _token: string }; Returns: Json }
       get_external_client_by_token: {
         Args: { _token: string }
