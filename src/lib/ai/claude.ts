@@ -1,6 +1,23 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type AIOperation = 'tag-suggestion' | 'reference-filter' | 'archive-summary' | 'daily-insight' | 'idea-suggestions' | 'generate-caption' | 'suggest-hashtags' | 'onboarding-setup' | 'cria-chat' | 'repurpose-content' | 'refine-caption' | 'score-caption' | 'client-report-insight';
+export type AIOperation = 'tag-suggestion' | 'reference-filter' | 'archive-summary' | 'daily-insight' | 'idea-suggestions' | 'generate-caption' | 'suggest-hashtags' | 'onboarding-setup' | 'cria-chat' | 'repurpose-content' | 'refine-caption' | 'score-caption' | 'client-report-insight' | 'insights-reading';
+
+export interface InsightsReading {
+  leituras: string[];
+  acoes: string[];
+}
+
+export const insightsReading = async (
+  params: {
+    periodo?: string; followers?: number | null; followersDelta?: number;
+    reach?: number; interactions?: number; profileViews?: number | null;
+    mediaCount?: number; bestFormat?: string; worstFormat?: string;
+    topPost?: string; topSaved?: string; nicho?: string;
+  },
+  userId?: string
+): Promise<InsightsReading> => {
+  return callAIContextBuilder({ userId, operation: 'insights-reading', data: params });
+};
 
 export interface CaptionScore {
   nota: number;

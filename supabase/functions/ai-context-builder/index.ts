@@ -548,6 +548,33 @@ ${data.servicos ? `Serviços contratados: ${data.servicos}` : ''}
 ${data.persona ? `Persona/público-alvo: ${data.persona}` : ''}`
         maxTokens = 8192
         break
+      case 'insights-reading':
+        operationPrompt = `Você é um analista de social media sênior. Recebe métricas REAIS de uma conta do Instagram e escreve uma leitura afiada e específica — nada de conselho genérico.
+
+REGRAS:
+- Cite números, formatos e comparações dos dados recebidos.
+- Conecte causa e efeito (ex: "Reels puxaram X% mais alcance que foto").
+- Português BR, direto.
+
+ENTREGUE:
+- leituras: 3 a 4 observações concretas baseadas nos números.
+- acoes: 2 a 3 ações práticas pra próxima semana, conectadas às observações.
+
+RESPONDA APENAS com JSON válido, sem texto antes ou depois:
+{"leituras":["..."],"acoes":["..."]}`
+        userPrompt = `Período: ${data.periodo || '30 dias'}
+Seguidores: ${data.followers ?? '-'} (variação no período: ${data.followersDelta ?? 0})
+Alcance total dos posts: ${data.reach ?? 0}
+Interações totais (curtidas+coment+salvos+compart): ${data.interactions ?? 0}
+Visitas ao perfil: ${data.profileViews ?? '-'}
+Qtde de posts no período: ${data.mediaCount ?? 0}
+Melhor formato (maior alcance médio): ${data.bestFormat || '-'}
+Pior formato (menor alcance médio): ${data.worstFormat || '-'}
+Post de maior alcance: ${data.topPost || '-'}
+Post mais salvo: ${data.topSaved || '-'}
+Nicho: ${data.nicho || '-'}`
+        maxTokens = 700
+        break
       default:
         throw new Error('Invalid operation')
     }
@@ -590,7 +617,7 @@ ${data.persona ? `Persona/público-alvo: ${data.persona}` : ''}`
     const result = await response.json()
     const content = result.choices?.[0]?.message?.content || ''
 
-    if (operation === 'reference-filter' || operation === 'score-caption' || operation === 'client-report-insight') {
+    if (operation === 'reference-filter' || operation === 'score-caption' || operation === 'client-report-insight' || operation === 'insights-reading') {
       const cleaned = String(content).replace(/```json/gi, '').replace(/```/g, '').trim()
       const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
       const jsonStr = jsonMatch ? jsonMatch[0] : cleaned
@@ -603,6 +630,11 @@ ${data.persona ? `Persona/público-alvo: ${data.persona}` : ''}`
         // client-report-insight nunca deve quebrar o relatório: devolve um fallback usável.
         if (operation === 'client-report-insight') {
           return new Response(JSON.stringify({ result: { resumo: cleaned.slice(0, 600), recomendacoes: [] } }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          })
+        }
+        if (operation === 'insights-reading') {
+          return new Response(JSON.stringify({ result: { leituras: [cleaned.slice(0, 400)], acoes: [] } }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           })
         }

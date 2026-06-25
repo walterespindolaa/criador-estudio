@@ -3,10 +3,12 @@ import { motion } from "framer-motion";
 import {
   Instagram, Users, Eye, Zap, UserPlus, RefreshCw, Unplug, Link2, Bookmark, Heart, Play, Image as ImageIcon, Images, Sparkles, Info, TrendingUp, BarChart3,
 } from "lucide-react";
-import { LineChart, Line, BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { insightsReading, type InsightsReading } from "@/lib/ai/claude";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -32,7 +34,46 @@ export default function Insights() {
   const sync = useSyncInstagram();
   const disconnect = useDisconnectInstagram();
   const link = useLinkMediaToPost();
+  const { user } = useAuth();
   const [linkFor, setLinkFor] = useState<MediaInsight | null>(null);
+  const [aiRead, setAiRead] = useState<InsightsReading | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const genReading = async () => {
+    if (aiLoading || media.length === 0) return;
+    setAiLoading(true);
+    try {
+      const fmtAvg: Record<string, { sum: number; n: number }> = {};
+      media.forEach((mi) => {
+        const t = mi.media_type ?? "—";
+        fmtAvg[t] = fmtAvg[t] || { sum: 0, n: 0 };
+        fmtAvg[t].sum += m(mi, "reach"); fmtAvg[t].n += 1;
+      });
+      const fmts = Object.entries(fmtAvg).map(([t, v]) => ({ t, avg: v.n ? v.sum / v.n : 0 })).sort((a, b) => b.avg - a.avg);
+      const byReachL = [...media].sort((a, b) => m(b, "reach") - m(a, "reach"));
+      const bySavedL = [...media].sort((a, b) => (m(b, "saved") + m(b, "saves")) - (m(a, "saved") + m(a, "saves")));
+      const res = await insightsReading({
+        periodo: "30 dias",
+        followers: kpis?.followers ?? null,
+        followersDelta: kpis?.followersDelta ?? 0,
+        reach: kpis?.reach ?? 0,
+        interactions: kpis?.interactions ?? 0,
+        profileViews: kpis?.profileViews ?? null,
+        mediaCount: media.length,
+        bestFormat: fmts[0] ? `${fmtType(fmts[0].t)} (${Math.round(fmts[0].avg)} alcance médio)` : undefined,
+        worstFormat: fmts.length > 1 ? `${fmtType(fmts[fmts.length - 1].t)} (${Math.round(fmts[fmts.length - 1].avg)} alcance médio)` : undefined,
+        topPost: byReachL[0]?.caption ? `${byReachL[0].caption.slice(0, 60)} — ${m(byReachL[0], "reach")} alcance` : undefined,
+        topSaved: bySavedL[0]?.caption ? `${bySavedL[0].caption.slice(0, 60)} — ${m(bySavedL[0], "saved") + m(bySavedL[0], "saves")} salvos` : undefined,
+      }, user?.id);
+      if (res?.leituras?.length) setAiRead(res);
+      else throw new Error("formato inesperado");
+    } catch (e) {
+      console.error("insights-reading failed", e);
+      toast.error("Não consegui gerar a leitura agora. Tenta de novo.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const kpis = useMemo(() => {
     const last = daily[daily.length - 1];
@@ -163,8 +204,9 @@ export default function Insights() {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={followerSeries}>
                     <XAxis dataKey="date" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
+                    <YAxis hide domain={["dataMin - 1", "dataMax + 1"]} />
                     <Tooltip />
-                    <Line type="monotone" dataKey="v" stroke="#8B5CF6" strokeWidth={2.5} dot={false} />
+                    <Line type="monotone" dataKey="v" stroke="#8B5CF6" strokeWidth={2.5} dot={{ r: 2.5, fill: "#8B5CF6" }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -233,11 +275,39 @@ export default function Insights() {
       {/* leitura IA */}
       {media.length > 0 && bestFormat && (
         <div className="bg-card border border-border rounded-2xl p-4 mt-4">
-          <h4 className="text-sm font-extrabold flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> Leitura da IA</h4>
-          <ul className="mt-2.5 space-y-2 text-[13px]">
-            <li className="flex gap-2"><TrendingUp className="h-4 w-4 text-green-600 shrink-0 mt-0.5" /><span>Seu formato <b>{bestFormat.t}</b> tem o maior alcance médio. Vale priorizar.</span></li>
-            <li className="flex gap-2"><TrendingUp className="h-4 w-4 text-green-600 shrink-0 mt-0.5" /><span>Vincule mais posts ao conteúdo do CRIA pra cruzar roteiro, legenda e hook com o desempenho.</span></li>
-          </ul>
+          <div className="flex items-center justify-between gap-2">
+            <h4 className="text-sm font-extrabold flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> Leitura da IA</h4>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={genReading} disabled={aiLoading}>
+              {aiLoading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+              {aiRead ? "Refazer" : "Analisar com IA"}
+            </Button>
+          </div>
+
+          {aiRead ? (
+            <div className="mt-3 space-y-3">
+              <ul className="space-y-2 text-[13px]">
+                {aiRead.leituras.map((l, i) => (
+                  <li key={i} className="flex gap-2"><TrendingUp className="h-4 w-4 text-primary shrink-0 mt-0.5" /><span>{l}</span></li>
+                ))}
+              </ul>
+              {aiRead.acoes.length > 0 && (
+                <div>
+                  <p className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground mb-1.5">Ações pra próxima semana</p>
+                  <ul className="space-y-1.5 text-[13px]">
+                    {aiRead.acoes.map((a, i) => (
+                      <li key={i} className="flex gap-2"><Zap className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" /><span>{a}</span></li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ) : (
+            <ul className="mt-2.5 space-y-2 text-[13px]">
+              <li className="flex gap-2"><TrendingUp className="h-4 w-4 text-green-600 shrink-0 mt-0.5" /><span>Seu formato <b>{fmtType(bestFormat.t)}</b> tem o maior alcance médio. Vale priorizar.</span></li>
+              <li className="flex gap-2"><TrendingUp className="h-4 w-4 text-green-600 shrink-0 mt-0.5" /><span>Clique em <b>Analisar com IA</b> pra uma leitura completa cruzando seus números.</span></li>
+            </ul>
+          )}
+
           <p className="text-[11.5px] text-muted-foreground mt-3 flex gap-2"><Info className="h-3.5 w-3.5 shrink-0 mt-0.5" /><span>“Seguidores por post” é estimativa (cruza a data do post com a variação diária). Alcance, salvos e interações são dados diretos da API do Instagram.</span></p>
         </div>
       )}
