@@ -546,7 +546,7 @@ Títulos dos posts: ${data.titulos || '-'}
 ${data.segmento ? `Segmento do cliente: ${data.segmento}` : ''}
 ${data.servicos ? `Serviços contratados: ${data.servicos}` : ''}
 ${data.persona ? `Persona/público-alvo: ${data.persona}` : ''}`
-        maxTokens = 500
+        maxTokens = 800
         break
       default:
         throw new Error('Invalid operation')

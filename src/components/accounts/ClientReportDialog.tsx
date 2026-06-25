@@ -136,7 +136,8 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       if (editorRef.current) editorRef.current.innerHTML = html;
     } catch (e) {
       console.error("Report AI failed", e);
-      toast.error("Erro ao gerar a análise.");
+      const msg = e instanceof Error ? e.message : "";
+      toast.error(msg && !/non-2xx/i.test(msg) ? `Erro: ${msg}` : "Erro ao gerar a análise. Tente de novo em instantes.");
     } finally {
       setAiLoading(false);
     }
