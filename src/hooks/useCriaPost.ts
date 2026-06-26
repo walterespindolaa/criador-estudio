@@ -174,5 +174,17 @@ export function useExternalPosts(clientId: string | null) {
     onSuccess: () => { toast.success("Post removido."); qc.invalidateQueries({ queryKey: key }); qc.invalidateQueries({ queryKey: ["external-pending", user?.id] }); },
   });
 
-  return { posts: postsQ.data ?? [], isLoading: postsQ.isLoading, create, update, remove };
+  // Move o status de aprovação manualmente (gestora arrastando no kanban).
+  const moveStatus = useMutation({
+    mutationFn: async ({ id, approval_status }: { id: string; approval_status: ExternalPost["approval_status"] }) => {
+      const { error } = await sbFrom("posts")
+        .update({ approval_status, approval_updated_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); qc.invalidateQueries({ queryKey: ["external-pending", user?.id] }); },
+    onError: () => toast.error("Erro ao mover o post."),
+  });
+
+  return { posts: postsQ.data ?? [], isLoading: postsQ.isLoading, create, update, remove, moveStatus };
 }

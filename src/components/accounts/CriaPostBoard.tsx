@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { Plus, Link2, Pencil, Loader2, Users, ArrowRight, ArrowLeft, Trash2, RotateCcw, FileText, Instagram } from "lucide-react";
 import { CriaPostMedia } from "@/components/accounts/CriaPostMedia";
 import { ClientReportDialog } from "@/components/accounts/ClientReportDialog";
@@ -23,6 +25,8 @@ const STATUS: Record<string, { label: string; cls: string }> = {
   ajuste_solicitado: { label: "Ajuste solicitado", cls: "bg-orange-100 text-orange-700" },
   aprovado: { label: "Aprovado", cls: "bg-green-100 text-green-700" },
 };
+const APPROVAL_COLS = ["pendente", "ajuste_solicitado", "aprovado"] as const;
+type ApprovalKey = (typeof APPROVAL_COLS)[number];
 
 export function CriaPostBoard() {
   const [client, setClient] = useState<ExternalClient | null>(null);
@@ -141,9 +145,20 @@ function ClientsList({ onOpen }: { onOpen: (c: ExternalClient) => void }) {
 }
 
 function ClientDetail({ client, onBack }: { client: ExternalClient; onBack: () => void }) {
-  const { posts, isLoading, create, update, remove } = useExternalPosts(client.id);
+  const { posts, isLoading, create, update, remove, moveStatus } = useExternalPosts(client.id);
   const { copyLink } = useExternalClients();
   const { profile } = useProfile();
+  const [confirmMove, setConfirmMove] = useState<{ id: string; status: ApprovalKey } | null>(null);
+
+  const handleApprovalDragEnd = (r: DropResult) => {
+    if (!r.destination) return;
+    const dest = r.destination.droppableId as ApprovalKey;
+    const post = posts.find((p) => p.id === r.draggableId);
+    if (!post || (post.approval_status ?? "pendente") === dest) return;
+    // Avançar manualmente pra "Aprovado" sem o cliente: pede confirmação.
+    if (dest === "aprovado") setConfirmMove({ id: r.draggableId, status: dest });
+    else moveStatus.mutate({ id: r.draggableId, approval_status: dest });
+  };
   const { data: crmClients = [] } = useCrmClients();
   const hasCriaAccount = !!crmClients.find((c) => c.id === client.crm_client_id)?.cria_owner_id;
   const { data: igConn } = useClientSocialConnection(client.crm_client_id);
@@ -210,34 +225,73 @@ function ClientDetail({ client, onBack }: { client: ExternalClient; onBack: () =
           <p className="text-xs text-muted-foreground font-body mt-1">Crie um post e ele já entra na fila de aprovação do cliente.</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {posts.map((p) => {
-            const st = STATUS[p.approval_status ?? "pendente"] ?? STATUS.pendente;
-            return (
-              <div key={p.id} className="bg-card border border-border rounded-2xl p-4">
-                <div className="flex items-start gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wide">{cap(p.format)} · {cap(p.platform)}</span>
-                      <span className={`text-[10px] font-body font-bold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
-                      <span className="text-[10px] font-body font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">{p.approval_mode === "flow" ? "Detalhada" : p.approval_mode === "both" ? "Ambas" : "Simplificada"}</span>
-                    </div>
-                    <p className="font-display font-bold text-foreground truncate mt-1">{p.title}</p>
-                    {p.caption && <p className="text-xs text-muted-foreground font-body line-clamp-2 mt-0.5">{p.caption}</p>}
-                    {p.approval_status === "ajuste_solicitado" && p.last_comment && p.last_comment_role === "cliente_externo" && (
-                      <div className="mt-2 text-xs font-body text-orange-700 bg-orange-50 border border-orange-100 rounded-lg px-2.5 py-1.5">Cliente pediu: "{p.last_comment}"</div>
-                    )}
+        <DragDropContext onDragEnd={handleApprovalDragEnd}>
+          <div className="flex gap-3 overflow-x-auto pb-4 -mx-1 px-1 kanban-scroll">
+            {APPROVAL_COLS.map((colKey) => {
+              const st = STATUS[colKey];
+              const colPosts = posts.filter((p) => (p.approval_status ?? "pendente") === colKey);
+              return (
+                <div key={colKey} className="w-[80vw] max-w-[300px] sm:w-72 shrink-0">
+                  <div className="flex items-center justify-between px-2 py-2">
+                    <span className={`text-[10px] font-body font-bold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{colPosts.length}</span>
                   </div>
-                  <div className="flex gap-1 shrink-0">
-                    <Button variant="ghost" size="sm" onClick={() => openEdit(p)} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => remove.mutate(p.id)} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>
+                  <Droppable droppableId={colKey}>
+                  {(dropP, dropS) => (
+                  <div ref={dropP.innerRef} {...dropP.droppableProps}
+                    className={`min-h-[260px] rounded-xl p-2 space-y-2 transition-colors ${dropS.isDraggingOver ? "bg-primary/5 ring-2 ring-primary/30" : "bg-muted/30"}`}>
+                    {colPosts.map((p, idx) => (
+                      <Draggable key={p.id} draggableId={p.id} index={idx}>
+                      {(dragP, dragS) => (
+                      <div ref={dragP.innerRef} {...dragP.draggableProps} {...dragP.dragHandleProps} style={dragP.draggableProps.style}
+                        className={`bg-card border border-border rounded-xl p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all ${dragS.isDragging ? "shadow-warm-lg ring-2 ring-primary/40" : ""}`}>
+                        <div className="flex items-start gap-2">
+                          <div className="flex-1 min-w-0">
+                            <span className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wide">{cap(p.format)} · {cap(p.platform)}</span>
+                            <p className="font-display font-bold text-sm text-foreground truncate mt-1">{p.title}</p>
+                            {p.caption && <p className="text-xs text-muted-foreground font-body line-clamp-2 mt-0.5">{p.caption}</p>}
+                            {p.approval_status === "ajuste_solicitado" && p.last_comment && p.last_comment_role === "cliente_externo" && (
+                              <div className="mt-2 text-xs font-body text-orange-700 bg-orange-50 border border-orange-100 rounded-lg px-2.5 py-1.5">Cliente pediu: "{p.last_comment}"</div>
+                            )}
+                            <span className="inline-block mt-2 text-[9px] font-body font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">{p.approval_mode === "flow" ? "Detalhada" : p.approval_mode === "both" ? "Ambas" : "Simplificada"}</span>
+                          </div>
+                          <div className="flex flex-col gap-1 shrink-0">
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEdit(p)} aria-label="Editar"><Pencil className="h-3.5 w-3.5" /></Button>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => remove.mutate(p.id)} aria-label="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button>
+                          </div>
+                        </div>
+                      </div>
+                      )}
+                      </Draggable>
+                    ))}
+                    {colPosts.length === 0 && <div className="text-center py-10 text-muted-foreground/40 text-[10px]">vazio</div>}
+                    {dropP.placeholder}
                   </div>
+                  )}
+                  </Droppable>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </DragDropContext>
       )}
+
+      <AlertDialog open={!!confirmMove} onOpenChange={(o) => { if (!o) setConfirmMove(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Avançar sem o cliente aprovar?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O cliente ainda não aprovou este post pelo link. Você está movendo manualmente para <b>Aprovado</b> e assume essa decisão.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { if (confirmMove) moveStatus.mutate({ id: confirmMove.id, approval_status: confirmMove.status }); setConfirmMove(null); }}>
+              Sim, avançar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="max-w-md md:max-w-4xl bg-white rounded-2xl max-h-[88vh] overflow-y-auto">
