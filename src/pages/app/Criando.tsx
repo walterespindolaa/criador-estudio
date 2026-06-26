@@ -847,6 +847,7 @@ const Criando = () => {
 
         {overview ? (
           <div className="md:hidden">
+            <DragDropContext onDragEnd={handleDragEnd}>
             <div className="flex gap-2.5 overflow-x-auto -mx-4 px-4 kanban-scroll h-[calc(100svh-230px)] min-h-[340px]">
               {COLUMNS.map((col, i) => {
                 const colPosts = filteredPosts.filter(p => (p.status ?? "ideia") === col.key);
@@ -861,26 +862,38 @@ const Criando = () => {
                       <span className="font-display italic font-light text-lg leading-none" style={{ color: step.ink }}>{col.label}</span>
                     </button>
 
-                    <div className="flex-1 overflow-y-auto flex flex-col gap-2 pr-0.5 kanban-scroll">
-                      {colPosts.map(post => {
+                    <Droppable droppableId={col.key}>
+                    {(dropProvided, dropSnapshot) => (
+                    <div ref={dropProvided.innerRef} {...dropProvided.droppableProps}
+                      className={`flex-1 overflow-y-auto flex flex-col gap-2 pr-0.5 kanban-scroll rounded-xl transition-colors ${dropSnapshot.isDraggingOver ? "bg-primary/5" : ""}`}>
+                      {colPosts.map((post, pIdx) => {
                         const pil = getPillar(post.pillar_id);
                         return (
-                          <button key={post.id} onClick={() => openEdit(post)}
-                            className="relative bg-card rounded-[10px] pl-3 pr-2.5 py-2 text-left shadow-warm-sm border border-border"
-                            style={{ borderLeftColor: step.line, borderLeftWidth: 3 }}>
+                          <Draggable key={post.id} draggableId={post.id} index={pIdx}>
+                          {(dragProvided, dragSnapshot) => (
+                          <div ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
+                            onClick={() => openEdit(post)}
+                            className={`relative bg-card rounded-[10px] pl-3 pr-2.5 py-2 text-left shadow-warm-sm border border-border cursor-grab active:cursor-grabbing ${dragSnapshot.isDragging ? "shadow-warm-lg ring-2 ring-primary/40" : ""}`}
+                            style={{ borderLeftColor: step.line, borderLeftWidth: 3, ...dragProvided.draggableProps.style }}>
                             <span className="block text-[11.5px] font-body font-semibold leading-tight line-clamp-2">{post.title}</span>
                             <span className="block text-[9.5px] text-muted-foreground mt-1 truncate">{FORMAT_LABELS[post.format] || post.format}{pil ? ` · ${pil.name}` : ""}</span>
-                          </button>
+                          </div>
+                          )}
+                          </Draggable>
                         );
                       })}
                       {colPosts.length === 0 && (
                         <div className="text-[10.5px] text-muted-foreground/60 text-center py-6 border border-dashed border-border rounded-xl">vazio</div>
                       )}
+                      {dropProvided.placeholder}
                     </div>
+                    )}
+                    </Droppable>
                   </div>
                 );
               })}
             </div>
+            </DragDropContext>
           </div>
         ) : (
         <div className="md:hidden">
