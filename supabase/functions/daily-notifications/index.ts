@@ -19,41 +19,42 @@ serve(async (req) => {
     const dayMs = 86400000;
     const now = Date.now();
     const iso = (ms: number) => new Date(ms).toISOString();
-    let created = 0;
+    // 1) Re-engajamento: sumiram há ~5 dias. 2) Acesso vencendo (~3 dias antes).
+    const [goneRes, expRes] = await Promise.all([
+      svc.from("profiles").select("id")
+        .gte("last_seen_at", iso(now - 6 * dayMs)).lte("last_seen_at", iso(now - 5 * dayMs)),
+      svc.from("profiles").select("id")
+        .gte("access_expires_at", iso(now + 2 * dayMs)).lte("access_expires_at", iso(now + 3 * dayMs)),
+    ]);
+    const goneIds = ((goneRes.data ?? []) as { id: string }[]).map((p) => p.id);
+    const expIds = ((expRes.data ?? []) as { id: string }[]).map((p) => p.id);
 
-    // 1) Re-engajamento: sumiram há ~5 dias (janela de 1 dia pra notificar uma vez só).
-    const { data: gone } = await svc
-      .from("profiles")
-      .select("id")
-      .gte("last_seen_at", iso(now - 6 * dayMs))
-      .lte("last_seen_at", iso(now - 5 * dayMs));
-    for (const p of (gone ?? []) as { id: string }[]) {
-      await svc.from("notifications").insert({
-        user_id: p.id, type: "volte",
-        title: "Sentimos sua falta!",
-        description: "Que tal voltar e planejar seu conteúdo da semana?",
-        link: "/app",
-      });
-      created++;
+    // Dedup: não repetir quem já recebeu esse tipo nas últimas 48h (caso o cron rode 2x).
+    const candidates = [...new Set([...goneIds, ...expIds])];
+    const already = new Set<string>();
+    if (candidates.length) {
+      const { data: recent } = await svc.from("notifications")
+        .select("user_id, type")
+        .in("user_id", candidates)
+        .in("type", ["volte", "acesso_vencendo"])
+        .gte("created_at", iso(now - 2 * dayMs));
+      for (const r of (recent ?? []) as { user_id: string; type: string }[]) already.add(`${r.user_id}:${r.type}`);
     }
 
-    // 2) Acesso vencendo (~3 dias antes).
-    const { data: exp } = await svc
-      .from("profiles")
-      .select("id")
-      .gte("access_expires_at", iso(now + 2 * dayMs))
-      .lte("access_expires_at", iso(now + 3 * dayMs));
-    for (const p of (exp ?? []) as { id: string }[]) {
-      await svc.from("notifications").insert({
-        user_id: p.id, type: "acesso_vencendo",
-        title: "Seu acesso vence em breve",
-        description: "Renove pra não perder seus conteúdos e o acesso à Cria IA.",
-        link: "/app/configuracoes",
-      });
-      created++;
+    const rows: Record<string, unknown>[] = [];
+    for (const id of goneIds) {
+      if (already.has(`${id}:volte`)) continue;
+      rows.push({ user_id: id, type: "volte", title: "Sentimos sua falta!", description: "Que tal voltar e planejar seu conteúdo da semana?", link: "/app" });
+    }
+    for (const id of expIds) {
+      if (already.has(`${id}:acesso_vencendo`)) continue;
+      rows.push({ user_id: id, type: "acesso_vencendo", title: "Seu acesso vence em breve", description: "Renove pra não perder seus conteúdos e o acesso à Cria IA.", link: "/app/configuracoes" });
     }
 
-    return json({ ok: true, created });
+    // Insert em lote (1 chamada) — o trigger de push dispara por linha.
+    if (rows.length) await svc.from("notifications").insert(rows);
+
+    return json({ ok: true, created: rows.length });
   } catch (e) {
     console.error("[daily-notifications] error:", e);
     return json({ error: "internal_error" }, 500);

@@ -51,18 +51,23 @@ serve(async (req) => {
     });
 
     const payload = JSON.stringify({ title: title || "Cria", body: message, url: url || "/app" });
+    const list = filtered as { endpoint: string; p256dh: string; auth: string }[];
     let sent = 0;
-    for (const s of filtered as { endpoint: string; p256dh: string; auth: string }[]) {
-      try {
-        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
-        sent++;
-      } catch (e) {
-        const code = (e as { statusCode?: number })?.statusCode;
-        if (code === 404 || code === 410) {
-          await svc.from("push_subscriptions").delete().eq("endpoint", s.endpoint);
-        }
-      }
+    const stale: string[] = [];
+    const BATCH = 50; // envia em lotes paralelos pra não estourar o tempo da function
+    for (let i = 0; i < list.length; i += BATCH) {
+      const chunk = list.slice(i, i + BATCH);
+      const results = await Promise.allSettled(
+        chunk.map((s) => webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload)),
+      );
+      results.forEach((r, j) => {
+        if (r.status === "fulfilled") { sent++; return; }
+        const code = (r.reason as { statusCode?: number })?.statusCode;
+        if (code === 404 || code === 410) stale.push(chunk[j].endpoint);
+      });
     }
+    // limpa inscrições mortas de uma vez
+    if (stale.length) await svc.from("push_subscriptions").delete().in("endpoint", stale);
     return json({ ok: true, sent });
   } catch (e) {
     console.error("[send-push] error:", e);
