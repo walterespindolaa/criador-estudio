@@ -162,8 +162,9 @@ export function useAddCrmRef() {
       const path = `${user.id}/${crmClientId}/${crypto.randomUUID()}.${ext}`;
       const { error: upErr } = await supabase.storage.from("crm").upload(path, file, { upsert: false, contentType: file.type });
       if (upErr) throw upErr;
-      const { data: urlData } = supabase.storage.from("crm").getPublicUrl(path);
-      const { error } = await sbFrom("crm_client_refs").insert({ manager_id: user.id, crm_client_id: crmClientId, image_url: urlData.publicUrl } as never);
+      const { data: signed, error: sErr } = await supabase.storage.from("crm").createSignedUrl(path, 60 * 60 * 24 * 365);
+      if (sErr) throw sErr;
+      const { error } = await sbFrom("crm_client_refs").insert({ manager_id: user.id, crm_client_id: crmClientId, image_url: signed.signedUrl } as never);
       if (error) throw error;
     },
     onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: ["crm-refs", v.crmClientId] }),
