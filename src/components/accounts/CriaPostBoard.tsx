@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { CronogramaBoard } from "@/components/accounts/CronogramaBoard";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { Plus, Link2, Pencil, Loader2, Users, ArrowRight, ArrowLeft, Trash2, RotateCcw, FileText, Instagram } from "lucide-react";
 import { CriaPostMedia } from "@/components/accounts/CriaPostMedia";
@@ -194,29 +196,24 @@ function ClientDetail({ client, onBack }: { client: ExternalClient; onBack: () =
           {client.instagram_handle && <p className="text-sm text-muted-foreground font-body">@{client.instagram_handle.replace(/^@/, "")}</p>}
         </div>
         <div className="flex gap-2 shrink-0">
-          {client.crm_client_id && hasCriaAccount ? (
-            <Button variant="outline" className="gap-1.5 text-green-700 border-green-200" disabled title="Os insights vêm do Instagram conectado pelo próprio cliente na conta CRIA dele.">
-              <Instagram className="h-4 w-4" /> <span className="hidden sm:inline">Insights via cliente</span>
-            </Button>
-          ) : client.crm_client_id ? (
-            igConn ? (
-              <Button variant="outline" className="gap-1.5 text-green-700 border-green-200" disabled title={`Instagram conectado: @${igConn.username ?? ""}`}>
-                <Instagram className="h-4 w-4" /> <span className="hidden sm:inline">@{igConn.username ?? "conectado"}</span>
-              </Button>
-            ) : (
-              <Button variant="outline" className="gap-1.5" onClick={() => connectInstagram(client.crm_client_id)} aria-label="Conectar Instagram">
-                <Instagram className="h-4 w-4" /> <span className="hidden sm:inline">Conectar IG</span>
-              </Button>
-            )
-          ) : null}
-          <Button variant="outline" onClick={() => setReportOpen(true)} aria-label="Relatório"><FileText className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Relatório</span></Button>
           <Button variant="outline" onClick={doCopy} disabled={copying}>{copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Link2 className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Copiar link</span></>}</Button>
-          <Button onClick={openNew}><Plus className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Novo post</span></Button>
         </div>
       </div>
 
       <ClientReportDialog open={reportOpen} onOpenChange={setReportOpen} client={client} posts={posts} managerName={profile?.name ?? undefined} />
 
+      <Tabs defaultValue="posts" className="w-full">
+        <TabsList className="bg-card border border-border rounded-2xl p-1.5 mb-5 flex flex-wrap h-auto gap-1">
+          <TabsTrigger value="posts" className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Posts</TabsTrigger>
+          <TabsTrigger value="cronograma" className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Cronograma</TabsTrigger>
+          <TabsTrigger value="relatorio" className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Relatório</TabsTrigger>
+          <TabsTrigger value="instagram" className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Instagram</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="posts">
+          <div className="flex justify-end mb-3">
+            <Button onClick={openNew}><Plus className="h-4 w-4 mr-1.5" /> Novo post</Button>
+          </div>
       {isLoading ? (
         <div className="space-y-3">{[0, 1].map((i) => <div key={i} className="h-20 rounded-2xl bg-muted animate-pulse" />)}</div>
       ) : posts.length === 0 ? (
@@ -275,6 +272,39 @@ function ClientDetail({ client, onBack }: { client: ExternalClient; onBack: () =
           </div>
         </DragDropContext>
       )}
+        </TabsContent>
+
+        <TabsContent value="cronograma">
+          <CronogramaBoard fixedClientId={client.id} />
+        </TabsContent>
+
+        <TabsContent value="relatorio">
+          <div className="rounded-2xl border border-border bg-card p-6 text-center">
+            <p className="text-sm font-body text-foreground font-medium mb-1">Relatório mensal do cliente</p>
+            <p className="text-xs text-muted-foreground font-body mb-4">Produção, desempenho do Instagram e análise da IA — pronto pra enviar em PDF.</p>
+            <Button onClick={() => setReportOpen(true)}><FileText className="h-4 w-4 mr-1.5" /> Abrir relatório</Button>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="instagram">
+          <div className="rounded-2xl border border-border bg-card p-6 space-y-3">
+            {client.crm_client_id && hasCriaAccount ? (
+              <div className="flex items-center gap-2 text-green-700"><Instagram className="h-5 w-5" /> <span className="font-body text-sm font-medium">Os insights vêm do Instagram conectado pelo próprio cliente na conta CRIA dele.</span></div>
+            ) : client.crm_client_id ? (
+              igConn ? (
+                <div className="flex items-center gap-2 text-green-700"><Instagram className="h-5 w-5" /> <span className="font-body text-sm font-medium">Conectado: @{igConn.username ?? "conta"}</span></div>
+              ) : (
+                <>
+                  <p className="text-sm font-body text-foreground">Este cliente não usa o CRIA. Você pode conectar o Instagram dele aqui pra puxar os insights.</p>
+                  <Button onClick={() => connectInstagram(client.crm_client_id)} className="gap-1.5"><Instagram className="h-4 w-4" /> Conectar Instagram</Button>
+                </>
+              )
+            ) : (
+              <p className="text-sm font-body text-muted-foreground">Vincule este cliente ao cadastro central (no botão "Editar" do cliente, na lista) pra habilitar os insights do Instagram.</p>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
 
       <AlertDialog open={!!confirmMove} onOpenChange={(o) => { if (!o) setConfirmMove(null); }}>
         <AlertDialogContent>

@@ -40,7 +40,7 @@ const NAV = [
 
 // Títulos do HeroBand por rota (gestão)
 const HERO_TITLES: Record<string, string> = {
-  "/socialmidia/criapost": "Cria Post",
+  "/socialmidia/criapost": "Clientes",
   "/socialmidia/criacrm": "Cria Gestão",
   "/socialmidia/criacaixa": "Cria Caixa",
   "/socialmidia/parceria": "Parceria",
@@ -212,7 +212,7 @@ export default function ManagerLayout() {
         const fin = modules.find((m) => m.code === "financeiro");
         const post = modules.find((m) => m.code === "aprovapost_externo");
         const moreNav = [
-          ...(post ? [{ label: "Cria Post", icon: Send, onClick: () => openModule(post) }] : []),
+          ...(post ? [{ label: "Clientes", icon: Send, onClick: () => openModule(post) }] : []),
           { label: "Parceria", icon: Handshake, onClick: () => navigate("/socialmidia/parceria") },
           { label: "Comissões", icon: DollarSign, onClick: onNavComissoes },
           { label: "Suas contas", icon: Users, onClick: () => navigate("/socialmidia/contas") },

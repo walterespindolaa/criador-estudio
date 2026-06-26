@@ -36,10 +36,10 @@ const maskDay = (v: string) => {
 // posts (Cria Post) ainda via cast — padrão do projeto.
 const sbFrom = supabase.from.bind(supabase) as unknown as (t: string) => ReturnType<typeof supabase.from>;
 
-export function CronogramaBoard() {
+export function CronogramaBoard({ fixedClientId }: { fixedClientId?: string }) {
   const { clients } = useExternalClients();
   const { cronogramas, create, update, remove } = useCronogramas();
-  const [clientId, setClientId] = useState<string | null>(null);
+  const [clientId, setClientId] = useState<string | null>(fixedClientId ?? null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -66,7 +66,7 @@ export function CronogramaBoard() {
     return (
       <div>
         <div className="flex items-center gap-2 mb-4 flex-wrap">
-          <Button variant="ghost" size="sm" onClick={() => setClientId(null)} className="gap-1.5"><ArrowLeft className="h-4 w-4" /> Clientes</Button>
+          {!fixedClientId && <Button variant="ghost" size="sm" onClick={() => setClientId(null)} className="gap-1.5"><ArrowLeft className="h-4 w-4" /> Clientes</Button>}
           <div className="min-w-0">
             <h3 className="font-display font-bold text-foreground leading-tight">{selectedClient.name}</h3>
             {selectedClient.instagram_handle && <p className="text-xs text-muted-foreground">@{selectedClient.instagram_handle.replace(/^@/, "")}</p>}
