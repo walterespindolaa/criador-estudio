@@ -2761,6 +2761,36 @@ export type Database = {
           },
         ]
       }
+      rate_limit_v2: {
+        Row: {
+          count: number
+          created_at: string
+          id: string
+          scope: string
+          updated_at: string
+          user_id: string
+          window_key: string
+        }
+        Insert: {
+          count?: number
+          created_at?: string
+          id?: string
+          scope: string
+          updated_at?: string
+          user_id: string
+          window_key: string
+        }
+        Update: {
+          count?: number
+          created_at?: string
+          id?: string
+          scope?: string
+          updated_at?: string
+          user_id?: string
+          window_key?: string
+        }
+        Relationships: []
+      }
       reference_formats: {
         Row: {
           format_type: string
@@ -3521,6 +3551,19 @@ export type Database = {
       bump_ai_rate_limit: {
         Args: { _max: number; _user: string; _window: string }
         Returns: number
+      }
+      check_and_increment_rate_limit: {
+        Args: {
+          _limit: number
+          _scope: string
+          _user_id: string
+          _window_key: string
+        }
+        Returns: {
+          allowed: boolean
+          current_count: number
+          limit: number
+        }[]
       }
       claim_account_invites: { Args: never; Returns: number }
       criapost_add_media: {
