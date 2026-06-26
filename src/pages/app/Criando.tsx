@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
+import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { cn } from "@/lib/utils";
 import { CoverHeader } from "@/components/shared/CoverHeader";
 import { useStatusCovers } from "@/hooks/useStatusCovers";
@@ -88,8 +89,6 @@ const Criando = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
-  const [draggedPost, setDraggedPost] = useState<string | null>(null);
-  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
 
   const { byStatus, saveCover, resetCover, isSaving } = useStatusCovers();
   const ramp = statusRamp();
@@ -220,12 +219,12 @@ const Criando = () => {
     await updatePost.mutateAsync({ id: postId, updates: { scheduled_date: dateKey } });
   };
 
-  const handleDrop = async (newStatus: string) => {
-    setDragOverCol(null);
-    if (!draggedPost) return;
-    const id = draggedPost;
-    setDraggedPost(null);
-    await movePostStatus(id, newStatus);
+  // Drag estilo Trello (@hello-pangea/dnd): solta o card e arrasta com o dedo.
+  const handleDragEnd = (result: DropResult) => {
+    const { source, destination, draggableId } = result;
+    if (!destination) return;
+    if (source.droppableId === destination.droppableId) return;
+    void movePostStatus(draggableId, destination.droppableId);
   };
 
   const getPillar = (id: string | null) => pillars.find(p => p.id === id);
@@ -509,13 +508,13 @@ const Criando = () => {
         </div>
 
         {view === "board" && (
+        <DragDropContext onDragEnd={handleDragEnd}>
         <div className="hidden md:flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-proximity kanban-scroll">
           {COLUMNS.map(col => {
             const colPosts = filteredPosts.filter(p => p.status === col.key);
             const isPublished = col.key === "publicado";
             const isAfterIdeia = col.key === "roteiro";
             const showDividerBefore = isPublished || isAfterIdeia;
-            const isDragOver = dragOverCol === col.key;
             const step = ramp[col.key];
             const savedC = byStatus[col.key];
             const cFrom = savedC?.cover_from || step.from;
@@ -524,8 +523,7 @@ const Criando = () => {
             const cSub = savedC ? "rgba(255,255,255,.78)" : step.sub;
             const cTitle = savedC?.label || col.label;
             return (
-              <div key={col.key} className={`w-[85vw] max-w-[320px] sm:w-auto sm:max-w-none sm:min-w-[200px] flex-shrink-0 sm:flex-1 snap-start ${showDividerBefore ? "border-l-2 border-dashed border-border pl-4" : ""}`}
-                onDragOver={(e) => { e.preventDefault(); setDragOverCol(col.key); }} onDragLeave={() => setDragOverCol(null)} onDrop={() => handleDrop(col.key)}>
+              <div key={col.key} className={`w-[85vw] max-w-[320px] sm:w-auto sm:max-w-none sm:min-w-[200px] flex-shrink-0 sm:flex-1 snap-start ${showDividerBefore ? "border-l-2 border-dashed border-border pl-4" : ""}`}>
                 <div className="relative mb-3 group/cover">
                   <CoverHeader label="Status" title={cTitle} count={colPosts.length} from={cFrom} to={cTo} ink={cInk} sub={cSub} hint={COLUMN_TOOLTIPS[col.key]} compact />
                   <button onClick={() => openEditCover(col.key)} aria-label="Editar capa"
@@ -533,8 +531,11 @@ const Criando = () => {
                     <Pencil className="h-3.5 w-3.5 text-white/90" />
                   </button>
                 </div>
-                <div className={`space-y-3 min-h-[200px] rounded-xl transition-all ${isDragOver ? "ring-2 ring-primary bg-primary/5" : ""}`}>
-                  {colPosts.map(post => {
+                <Droppable droppableId={col.key}>
+                {(dropProvided, dropSnapshot) => (
+                <div ref={dropProvided.innerRef} {...dropProvided.droppableProps}
+                  className={`space-y-3 min-h-[200px] rounded-xl transition-all ${dropSnapshot.isDraggingOver ? "ring-2 ring-primary bg-primary/5" : ""}`}>
+                  {colPosts.map((post, pIdx) => {
                     const pillar = getPillar(post.pillar_id);
                     const tc = taskCounts.get(post.id);
                     const approvalStatus = (post as unknown as { approval_status?: string | null }).approval_status ?? null;
@@ -543,9 +544,11 @@ const Criando = () => {
                     const pendingTasks = tc ? tc.count - tc.done : 0;
                     const blocks = (post.content_blocks ?? null) as ContentBlocks | null;
                     return (
-                      <motion.div key={post.id} layout draggable onDragStart={() => setDraggedPost(post.id)} onClick={() => openEdit(post)}
-                        style={{ borderLeftColor: ramp[post.status ?? "ideia"]?.line ?? "transparent", borderLeftWidth: 4 }}
-                        className={`group relative bg-card rounded-xl p-4 shadow-warm-sm border border-border cursor-grab active:cursor-grabbing hover:shadow-warm-md hover:scale-[1.01] transition-all duration-200 ${isPublished ? "opacity-70" : ""}`}>
+                      <Draggable key={post.id} draggableId={post.id} index={pIdx}>
+                      {(dragProvided, dragSnapshot) => (
+                      <div ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps} onClick={() => openEdit(post)}
+                        style={{ borderLeftColor: ramp[post.status ?? "ideia"]?.line ?? "transparent", borderLeftWidth: 4, ...dragProvided.draggableProps.style }}
+                        className={`group relative bg-card rounded-xl p-4 shadow-warm-sm border border-border cursor-grab active:cursor-grabbing hover:shadow-warm-md transition-all duration-200 ${dragSnapshot.isDragging ? "shadow-warm-lg ring-2 ring-primary/40" : ""} ${isPublished ? "opacity-70" : ""}`}>
                         <button
                           type="button"
                           onClick={(e) => {
@@ -597,19 +600,25 @@ const Criando = () => {
                             <SelectContent>{STATUS_OPTIONS.map(s => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}</SelectContent>
                           </Select>
                         </div>
-                      </motion.div>
+                      </div>
+                      )}
+                      </Draggable>
                     );
                   })}
                   {colPosts.length === 0 && (
-                    <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${isDragOver ? "border-primary" : "border-border"}`}>
+                    <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${dropSnapshot.isDraggingOver ? "border-primary" : "border-border"}`}>
                       <p className="text-xs text-muted-foreground font-body">Arraste pra cá</p>
                     </div>
                   )}
+                  {dropProvided.placeholder}
                 </div>
+                )}
+                </Droppable>
               </div>
             );
           })}
         </div>
+        </DragDropContext>
         )}
 
         {view === "tabela" && (
