@@ -289,8 +289,9 @@ export function useUploadCrmAsset() {
       const path = `${user.id}/${clientId}/${kind}-${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage.from("crm").upload(path, file, { upsert: true, contentType: file.type || undefined });
       if (upErr) throw upErr;
-      const { data } = supabase.storage.from("crm").getPublicUrl(path);
-      return data.publicUrl;
+      const { data: signed, error: sErr } = await supabase.storage.from("crm").createSignedUrl(path, 60 * 60 * 24 * 365);
+      if (sErr) throw sErr;
+      return signed.signedUrl;
     },
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao enviar arquivo."),
   });
