@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { cn } from "@/lib/utils";
 
 const brl = (v?: number | null) => `R$ ${Number(v ?? 0).toLocaleString("pt-BR")}`;
@@ -37,7 +38,6 @@ export function PipelineBoard() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editLead, setEditLead] = useState<CrmLead | null>(null);
-  const [dragId, setDragId] = useState<string | null>(null);
   const [panelEdit, setPanelEdit] = useState<CrmTask | null>(null);
 
   const metrics = useMemo(() => {
@@ -62,9 +62,12 @@ export function PipelineBoard() {
 
   const today = new Date().toISOString().split("T")[0];
 
-  const handleDrop = async (stage: CrmStage) => {
-    const id = dragId; setDragId(null);
-    if (!id) return;
+  const handleDragEnd = (r: DropResult) => {
+    if (!r.destination || r.source.droppableId === r.destination.droppableId) return;
+    void moveStage(r.draggableId, r.destination.droppableId as CrmStage);
+  };
+
+  const moveStage = async (id: string, stage: CrmStage) => {
     const lead = leads.find((l) => l.id === id);
     if (!lead || lead.stage === stage) return;
     try {
@@ -110,23 +113,30 @@ export function PipelineBoard() {
         <Button size="sm" onClick={() => { setEditLead(null); setDialogOpen(true); }}><Plus className="h-3.5 w-3.5 mr-1.5" /> Novo lead</Button>
       </div>
 
+      <DragDropContext onDragEnd={handleDragEnd}>
       <div className="overflow-x-auto pb-4 -mx-1 px-1">
         <div className="flex gap-3 min-w-max">
           {CRM_STAGES.map((stage) => {
             const col = leads.filter((l) => l.stage === stage);
             return (
-              <div key={stage} className="w-60 shrink-0" onDragOver={(e) => e.preventDefault()} onDrop={() => handleDrop(stage)}>
+              <div key={stage} className="w-60 shrink-0">
                 <div className="flex items-center justify-between px-2 py-2">
                   <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{CRM_STAGE_LABELS[stage]}</h4>
                   <Badge variant="secondary" className="text-[10px] h-4 px-1.5">{col.length}</Badge>
                 </div>
-                <div className={cn("min-h-[280px] rounded-xl p-2 space-y-2", STAGE_BG[stage])}>
-                  {col.map((lead) => {
+                <Droppable droppableId={stage}>
+                {(dropP, dropS) => (
+                <div ref={dropP.innerRef} {...dropP.droppableProps}
+                  className={cn("min-h-[280px] rounded-xl p-2 space-y-2 transition-colors", STAGE_BG[stage], dropS.isDraggingOver && "ring-2 ring-primary/40")}>
+                  {col.map((lead, lIdx) => {
                     const openCount = (pendingByLead.get(lead.id) ?? []).length;
                     return (
-                      <div key={lead.id} draggable onDragStart={() => setDragId(lead.id)} onDragEnd={() => setDragId(null)}
+                      <Draggable key={lead.id} draggableId={lead.id} index={lIdx}>
+                      {(dragP, dragS) => (
+                      <div ref={dragP.innerRef} {...dragP.draggableProps} {...dragP.dragHandleProps}
                         onClick={() => { setEditLead(lead); setDialogOpen(true); }}
-                        className={cn("rounded-xl border border-border bg-card p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all", dragId === lead.id && "opacity-40")}>
+                        style={dragP.draggableProps.style}
+                        className={cn("rounded-xl border border-border bg-card p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all", dragS.isDragging && "shadow-warm-lg ring-2 ring-primary/40")}>
                         <p className="text-xs font-display font-bold text-foreground truncate">{lead.name}</p>
                         {lead.company && <p className="text-[10px] text-muted-foreground truncate">{lead.company}</p>}
                         <div className="flex flex-wrap gap-1 mt-1.5">
@@ -137,15 +147,21 @@ export function PipelineBoard() {
                         {Number(lead.monthly_value) > 0 && <p className="text-[11px] font-semibold text-primary flex items-center gap-0.5 mt-1.5"><DollarSign className="h-3 w-3" />{brl(lead.monthly_value)}</p>}
                         {lead.next_interaction_date && <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-1"><Target className="h-2.5 w-2.5" />{new Date(lead.next_interaction_date + "T00:00:00").toLocaleDateString("pt-BR")}</p>}
                       </div>
+                      )}
+                      </Draggable>
                     );
                   })}
                   {col.length === 0 && <div className="text-center py-12 text-muted-foreground/40 text-[10px]">Arraste leads aqui</div>}
+                  {dropP.placeholder}
                 </div>
+                )}
+                </Droppable>
               </div>
             );
           })}
         </div>
       </div>
+      </DragDropContext>
 
       {pendingByLead.size > 0 && (
         <div className="space-y-3">
