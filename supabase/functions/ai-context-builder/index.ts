@@ -1,10 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "npm:@supabase/supabase-js@2"
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') || 'https://localhost:8080',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-}
+import { getCorsHeaders } from "../_shared/cors.ts"
+import { aiFetch, AiTimeoutError } from "../_shared/ai-fetch.ts"
+import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limit.ts"
 
 const getNichePresets = (niche: string): string => {
   const presets: Record<string, string> = {
@@ -41,6 +39,7 @@ const getNichePresets = (niche: string): string => {
 };
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req)
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -73,6 +72,10 @@ serve(async (req) => {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
+
+    // Limite de rajada por usuário (além da cota mensal): 25 chamadas/min.
+    const rl = await checkRateLimit(user.id, { scope: 'ai-context-builder', window: 'minute', limit: 25 })
+    if (!rl.allowed) return rateLimitResponse(rl, corsHeaders)
 
     // ── Access gate: trial ativo, subscription ativa, ou admin ─────
     const { data: accessRow, error: accessErr } = await supabase
@@ -593,7 +596,7 @@ Nicho: ${data.nicho || '-'}`
 
     const systemPrompt = `${userContext}\n\nTAREFA ESPECÍFICA:\n${operationPrompt}`
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${lovableApiKey}`,
@@ -659,6 +662,11 @@ Nicho: ${data.nicho || '-'}`
     })
 
   } catch (error) {
+    if (error instanceof AiTimeoutError) {
+      return new Response(JSON.stringify({ error: 'ai_timeout', message: 'A IA demorou demais. Tente de novo.' }), {
+        status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
     console.error('[ai-context-builder] unhandled error:', error)
     return new Response(JSON.stringify({ error: 'internal_error' }), {
       status: 400,
