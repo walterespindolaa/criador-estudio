@@ -383,7 +383,7 @@ const Arquivos = () => {
                       <p className="text-xs font-body font-medium text-foreground truncate">{f.name}</p>
                       <div className="flex items-center justify-between mt-1">
                         <span className="text-[10px] text-muted-foreground font-body">{formatSize(f.size_bytes)}</span>
-                        <button onClick={(e) => { e.stopPropagation(); handleDelete(f); }} className="p-1 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 rounded transition-opacity">
+                        <button aria-label="Excluir arquivo" onClick={(e) => { e.stopPropagation(); handleDelete(f); }} className="p-1 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 rounded transition-opacity">
                           <Trash2 className="h-3 w-3 text-destructive" />
                         </button>
                       </div>

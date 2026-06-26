@@ -301,9 +301,9 @@ const Biblioteca = () => {
                     <div className="flex items-start justify-between mb-2">
                       <span className="px-2 py-0.5 rounded-lg text-xs font-body bg-primary/10 text-primary capitalize">{h.category}</span>
                       <div className="flex items-center gap-1">
-                        <button onClick={() => toggleFavorite("hook", h.id, !!h.is_favorite)}>{h.is_favorite ? <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" /> : <StarOff className="h-3.5 w-3.5 text-muted-foreground" />}</button>
-                        <button onClick={() => openSheet("hook", h)}><Pencil className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" /></button>
-                        <button onClick={() => deleteItem("hook", h.id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></button>
+                        <button aria-label="Favoritar" onClick={() => toggleFavorite("hook", h.id, !!h.is_favorite)}>{h.is_favorite ? <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" /> : <StarOff className="h-3.5 w-3.5 text-muted-foreground" />}</button>
+                        <button aria-label="Editar" onClick={() => openSheet("hook", h)}><Pencil className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" /></button>
+                        <button aria-label="Excluir" onClick={() => deleteItem("hook", h.id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></button>
                         <CopyButton text={h.hook_text} />
                       </div>
                     </div>
@@ -476,9 +476,9 @@ const Biblioteca = () => {
                     <div className="flex items-start justify-between mb-2">
                       <span className="px-2 py-0.5 rounded-lg text-xs font-body bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 capitalize">{h.category}</span>
                       <div className="flex items-center gap-1">
-                        <button onClick={() => toggleFavorite("hook", h.id, !!h.is_favorite)}>{h.is_favorite ? <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" /> : <StarOff className="h-3.5 w-3.5 text-muted-foreground" />}</button>
-                        <button onClick={() => openSheet("hook", h)}><Pencil className="h-3.5 w-3.5 text-muted-foreground" /></button>
-                        <button onClick={() => deleteItem("hook", h.id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></button>
+                        <button aria-label="Favoritar" onClick={() => toggleFavorite("hook", h.id, !!h.is_favorite)}>{h.is_favorite ? <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" /> : <StarOff className="h-3.5 w-3.5 text-muted-foreground" />}</button>
+                        <button aria-label="Editar" onClick={() => openSheet("hook", h)}><Pencil className="h-3.5 w-3.5 text-muted-foreground" /></button>
+                        <button aria-label="Excluir" onClick={() => deleteItem("hook", h.id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></button>
                         <CopyButton text={h.hook_text} />
                       </div>
                     </div>
