@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, QueryCache } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -59,7 +60,18 @@ const Comissoes = lazy(() => import("./pages/socialmidia/Comissoes"));
 const Contas = lazy(() => import("./pages/socialmidia/Contas"));
 const Aprovacoes = lazy(() => import("./pages/socialmidia/Aprovacoes"));
 
+// Avisa o usuário quando uma query falha (antes os erros eram engolidos →
+// skeleton infinito / tela vazia). Throttle pra não floodar com vários toasts.
+let lastQueryErrorToast = 0;
 const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: () => {
+      const now = Date.now();
+      if (now - lastQueryErrorToast < 8000) return;
+      lastQueryErrorToast = now;
+      toast.error("Não consegui carregar alguns dados. Verifique sua conexão e tente de novo.");
+    },
+  }),
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5,
