@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { track } from "@/lib/metaPixel";
 import {
   ArrowLeft,
   ArrowRight,
@@ -332,6 +333,7 @@ const Onboarding = () => {
   }, [step, setupDone, runSetup]);
 
   const enterApp = () => {
+    track("StartTrial", { content_name: "onboarding_complete" });
     toast.success("Bem-vindo ao cria!");
     navigate("/app");
   };

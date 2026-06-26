@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PLANS, type PlanId } from "@/lib/plans";
+import { track, newEventId } from "@/lib/metaPixel";
 
 export default function Assinar() {
   const navigate = useNavigate();
@@ -85,6 +86,11 @@ export default function Assinar() {
 
   const handleSubscribe = async (planId: PlanId) => {
     setLoadingPlan(planId);
+    // Guarda o valor pra disparar a conversão (Purchase) na página de obrigado + mede InitiateCheckout.
+    const planValue = planId === "studio" ? 49.9 : 32.9;
+    const eventId = newEventId();
+    try { sessionStorage.setItem("cria_checkout", JSON.stringify({ plano: planId, value: planValue, name: `cria ${planId}`, eventId })); } catch { /* ignore */ }
+    track("InitiateCheckout", { value: planValue, currency: "BRL", content_ids: [planId] }, eventId);
     try {
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: {

@@ -130,7 +130,7 @@ serve(async (req) => {
       subscription_data: {
         metadata: { app: "cria", user_id: user.id, plan, ...partnerMeta, ...selfSubMark },
       },
-      success_url: `${origin}/app?checkout=success`,
+      success_url: `${origin}/app/obrigado?checkout=success`,
       cancel_url: `${origin}/app/assinar?checkout=cancel`,
     };
     if (appliedPromotionCodeId) {

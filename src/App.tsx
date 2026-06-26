@@ -9,11 +9,13 @@ import { AccountProvider } from "@/contexts/AccountContext";
 import { AuthOnlyRoute, ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
+import MetaPixelTracker from "@/components/MetaPixelTracker";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ResetPassword from "./pages/ResetPassword";
 import Onboarding from "./pages/Onboarding";
+import Obrigado from "./pages/Obrigado";
 import AppLayout from "./components/AppLayout";
 import NotFound from "./pages/NotFound";
 import Termos from "./pages/Termos";
@@ -77,6 +79,7 @@ const App = () => (
         <Sonner />
         <UpdatePrompt />
         <BrowserRouter>
+          <MetaPixelTracker />
           <Suspense fallback={<LoadingScreen />}>
             <Routes>
               <Route path="/" element={<Landing />} />
@@ -95,6 +98,9 @@ const App = () => (
               } />
               <Route path="/app/assinar" element={
                 <AuthOnlyRoute><Assinar /></AuthOnlyRoute>
+              } />
+              <Route path="/app/obrigado" element={
+                <AuthOnlyRoute><Obrigado /></AuthOnlyRoute>
               } />
               <Route path="/app/trocar-senha" element={
                 <AuthOnlyRoute><TrocarSenha /></AuthOnlyRoute>

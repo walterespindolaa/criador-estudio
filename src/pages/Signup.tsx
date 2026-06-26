@@ -11,6 +11,7 @@ import { Mail, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { track } from "@/lib/metaPixel";
 import { Logo } from "@/components/shared/Logo";
 import { useT } from "@/lib/i18n";
 
@@ -74,6 +75,7 @@ const Signup = () => {
       setFormError(mapped.text);
       toast.error(mapped.text);
     } else {
+      track("CompleteRegistration", { content_name: "signup_email" });
       setEmailSent(true);
     }
   };

@@ -10,7 +10,8 @@ serve(async (req) => {
   // Aceita chamada manual (POST) ou de cron (GET)
   const authHeader = req.headers.get("Authorization");
   const cronSecret = Deno.env.get("CRON_SECRET");
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  // Falha FECHADO: sem segredo configurado, ninguém chama esta função destrutiva.
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return new Response("Unauthorized", { status: 401 });
   }
 

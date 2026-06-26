@@ -22,7 +22,8 @@ export function useNotifications() {
         .from("notifications")
         .select("*")
         .eq("user_id", userId!)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(50);
       if (error) throw error;
       return (data ?? []) as Notification[];
     },
