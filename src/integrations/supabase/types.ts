@@ -269,6 +269,44 @@ export type Database = {
           },
         ]
       }
+      autopilot_runs: {
+        Row: {
+          created_at: string
+          foco: string | null
+          id: string
+          periodo: string
+          posts: Json
+          qtd: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          foco?: string | null
+          id?: string
+          periodo?: string
+          posts?: Json
+          qtd?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          foco?: string | null
+          id?: string
+          periodo?: string
+          posts?: Json
+          qtd?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "autopilot_runs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       billing_events: {
         Row: {
           event_id: string
