@@ -1,6 +1,26 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type AIOperation = 'tag-suggestion' | 'reference-filter' | 'archive-summary' | 'daily-insight' | 'idea-suggestions' | 'generate-caption' | 'suggest-hashtags' | 'onboarding-setup' | 'cria-chat' | 'repurpose-content' | 'refine-caption' | 'score-caption' | 'client-report-insight' | 'insights-reading';
+export type AIOperation = 'tag-suggestion' | 'reference-filter' | 'archive-summary' | 'daily-insight' | 'idea-suggestions' | 'generate-caption' | 'suggest-hashtags' | 'onboarding-setup' | 'cria-chat' | 'repurpose-content' | 'refine-caption' | 'score-caption' | 'client-report-insight' | 'insights-reading' | 'autopilot-cronograma';
+
+export interface AutopilotPost {
+  titulo: string;
+  formato: string;
+  plataforma: string;
+  pilar: string;
+  legenda: string;
+  porque: string;
+}
+
+export const generateAutopilot = async (
+  params: {
+    nicho?: string; plataformas?: string; pilares?: string; foco?: string;
+    qtd?: number; periodo?: string; performou?: string; recentes?: string;
+    tendencias?: string; brandContext?: string;
+  },
+  userId?: string
+): Promise<{ posts: AutopilotPost[] }> => {
+  return callAIContextBuilder({ userId, operation: 'autopilot-cronograma', data: params });
+};
 
 export interface InsightsReading {
   leituras: string[];

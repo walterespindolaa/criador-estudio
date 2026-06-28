@@ -4,7 +4,7 @@ import {
   LayoutDashboard, PenLine, Lightbulb, ClipboardCheck, Grid3X3, ListTodo,
   CalendarRange, Kanban, Target, FolderOpen, Palette, BookOpen, BookMarked,
   Link2, Sparkles, BadgeDollarSign, BarChart3, Archive, GraduationCap,
-  PlayCircle, Settings, LogOut, Instagram, ShieldCheck, ChevronDown, type LucideIcon,
+  PlayCircle, Settings, LogOut, Instagram, ShieldCheck, ChevronDown, Wand2, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCriaAI } from "@/contexts/CriaAIContext";
@@ -24,6 +24,7 @@ const TOP: NavNode[] = [
   { id: "criar", label: "Criar", icon: PenLine, children: [
     { label: "Ideias", icon: Lightbulb, to: "/app/ideias" },
     { label: "Em produção", icon: Kanban, to: "/app/criando" },
+    { label: "Autopilot", icon: Wand2, to: "/app/autopilot" },
     { label: "Aprovações", icon: ClipboardCheck, to: "/app/aprovacao" },
     { label: "Meu Feed", icon: Grid3X3, to: "/app/feed" },
   ]},

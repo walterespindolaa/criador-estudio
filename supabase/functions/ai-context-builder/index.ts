@@ -590,6 +590,32 @@ Post mais salvo: ${data.topSaved || '-'}
 Nicho: ${data.nicho || '-'}`
         maxTokens = 700
         break
+      case 'autopilot-cronograma':
+        operationPrompt = `Você é um estrategista de conteúdo brasileiro montando um cronograma pronto pra um criador.
+
+OBJETIVO: ${data.qtd || 8} posts pro período (${data.periodo || 'semana'}), no TOM DA MARCA, com variedade de formatos e pilares, SEM repetir o que a pessoa já fez, priorizando o que performou.
+
+REGRAS:
+- Gancho forte na 1ª linha (sem clichê tipo "Olá"/"Você sabia").
+- Varie formatos (reels, carrossel, foto, story) e pilares — nada repetitivo.
+- Cada post traz uma legenda curta PRONTA pra usar.
+- "porque": 1 frase ligando à estratégia/dados/nicho (ex.: "Reels foi seu maior alcance").
+- Considere o FOCO informado.
+- NÃO repita títulos/temas dos posts recentes listados.
+
+RESPONDA APENAS com JSON válido, sem texto antes ou depois:
+{"posts":[{"titulo":"gancho/título","formato":"reels|carrossel|foto|story","plataforma":"instagram","pilar":"nome do pilar","legenda":"legenda pronta curta","porque":"motivo curto"}]}`
+        userPrompt = `Nicho: ${data.nicho || 'lifestyle'}
+Plataformas: ${data.plataformas || 'instagram'}
+Pilares disponíveis: ${data.pilares || '-'}
+Foco: ${data.foco || 'crescimento'}
+Quantidade: ${data.qtd || 8}
+O que mais performou (priorizar): ${data.performou || '-'}
+Tendências do nicho (se houver): ${data.tendencias || '-'}
+Posts recentes (NÃO repetir): ${data.recentes || '-'}
+${data.brandContext ? `\nMARCA DO CRIADOR:\n${data.brandContext}` : ''}`
+        maxTokens = 4000
+        break
       default:
         throw new Error('Invalid operation')
     }
@@ -632,7 +658,7 @@ Nicho: ${data.nicho || '-'}`
     const result = await response.json()
     const content = result.choices?.[0]?.message?.content || ''
 
-    if (operation === 'reference-filter' || operation === 'score-caption' || operation === 'client-report-insight' || operation === 'insights-reading') {
+    if (operation === 'reference-filter' || operation === 'score-caption' || operation === 'client-report-insight' || operation === 'insights-reading' || operation === 'autopilot-cronograma') {
       const cleaned = String(content).replace(/```json/gi, '').replace(/```/g, '').trim()
       const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
       const jsonStr = jsonMatch ? jsonMatch[0] : cleaned
