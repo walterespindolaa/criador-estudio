@@ -48,16 +48,26 @@ export function NotificationNudge() {
   const activate = async () => {
     if (!user || busy) return;
     setBusy(true);
-    const res = await enablePush(user.id);
-    setBusy(false);
-    if (res.ok) {
-      toast.success("Notificações ativadas! Você vai receber leads, aprovações e lembretes.");
-      localStorage.setItem(DISMISS_KEY, "1");
-      setShow(false);
-    } else if (res.reason === "denied") {
-      toast.error("Permissão negada. Ative nas configurações do navegador.");
-    } else {
-      toast.error("Não foi possível ativar agora. Tente em Configurações.");
+    try {
+      const res = await enablePush(user.id);
+      if (res.ok) {
+        toast.success("Notificações ativadas! Você vai receber leads, aprovações e lembretes.");
+        localStorage.setItem(DISMISS_KEY, "1");
+        setShow(false);
+      } else if (res.reason === "denied") {
+        toast.error("Permissão negada. Ative as notificações nas configurações do navegador.");
+      } else if (res.reason === "unsupported") {
+        toast.error("Seu navegador não suporta notificações push.");
+      } else if (res.reason === "sw_timeout") {
+        toast.error("Demorou pra preparar as notificações. Recarregue a página e tente de novo.");
+      } else {
+        toast.error("Não foi possível ativar agora. Tente de novo.");
+      }
+    } catch (e) {
+      console.error("activate push failed", e);
+      toast.error("Não foi possível ativar as notificações.");
+    } finally {
+      setBusy(false);
     }
   };
 

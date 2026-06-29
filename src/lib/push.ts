@@ -34,33 +34,43 @@ export async function isPushEnabled(): Promise<boolean> {
 
 export async function enablePush(userId: string): Promise<{ ok: boolean; reason?: string }> {
   if (!pushSupported()) return { ok: false, reason: "unsupported" };
-  const perm = await Notification.requestPermission();
-  if (perm !== "granted") return { ok: false, reason: "denied" };
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") return { ok: false, reason: "denied" };
 
-  const reg = (await navigator.serviceWorker.getRegistration()) || (await registerSW());
-  if (!reg) return { ok: false, reason: "sw" };
-  await navigator.serviceWorker.ready;
+    const reg = (await navigator.serviceWorker.getRegistration()) || (await registerSW());
+    if (!reg) return { ok: false, reason: "sw" };
 
-  let sub = await reg.pushManager.getSubscription();
-  if (!sub) {
-    sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource,
-    });
+    // Não trava pra sempre: espera o SW ativar com timeout de 8s.
+    await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise((_, rej) => setTimeout(() => rej(new Error("sw_timeout")), 8000)),
+    ]);
+
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource,
+      });
+    }
+    const json = sub.toJSON();
+    const { error } = await sbFrom("push_subscriptions").upsert(
+      {
+        user_id: userId,
+        endpoint: sub.endpoint,
+        p256dh: json.keys?.p256dh,
+        auth: json.keys?.auth,
+        user_agent: navigator.userAgent,
+      } as never,
+      { onConflict: "endpoint" },
+    );
+    if (error) return { ok: false, reason: "save" };
+    return { ok: true };
+  } catch (e) {
+    console.error("[push] enable error:", e);
+    return { ok: false, reason: (e as Error)?.message === "sw_timeout" ? "sw_timeout" : "error" };
   }
-  const json = sub.toJSON();
-  const { error } = await sbFrom("push_subscriptions").upsert(
-    {
-      user_id: userId,
-      endpoint: sub.endpoint,
-      p256dh: json.keys?.p256dh,
-      auth: json.keys?.auth,
-      user_agent: navigator.userAgent,
-    } as never,
-    { onConflict: "endpoint" },
-  );
-  if (error) return { ok: false, reason: "save" };
-  return { ok: true };
 }
 
 export async function disablePush(): Promise<void> {
