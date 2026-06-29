@@ -15,6 +15,7 @@ import {
   BarChart3,
   Shield,
   Link2,
+  IdCard,
   Handshake,
   ClipboardCheck,
   Package,
@@ -68,6 +69,7 @@ const groups = [
       { title: "Biblioteca", url: "/app/biblioteca", icon: BookOpen },
       { title: "Brandbook", url: "/app/brandbook", icon: BookMarked },
       { title: "Link in Bio", url: "/app/linkinbio", icon: Link2 },
+      { title: "Media Kit", url: "/app/media-kit", icon: IdCard },
     ],
   },
   {

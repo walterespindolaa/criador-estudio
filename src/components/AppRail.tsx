@@ -4,7 +4,7 @@ import {
   LayoutDashboard, PenLine, Lightbulb, ClipboardCheck, Grid3X3, ListTodo,
   CalendarRange, Kanban, Target, FolderOpen, Palette, BookOpen, BookMarked,
   Link2, Sparkles, BadgeDollarSign, BarChart3, Archive, GraduationCap,
-  PlayCircle, Settings, LogOut, Instagram, ShieldCheck, ChevronDown, Wand2, type LucideIcon,
+  PlayCircle, Settings, LogOut, Instagram, ShieldCheck, ChevronDown, Wand2, IdCard, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCriaAI } from "@/contexts/CriaAIContext";
@@ -39,6 +39,7 @@ const TOP: NavNode[] = [
   { id: "marca", label: "Minha marca", icon: Palette, children: [
     { label: "Brandbook", icon: BookMarked, to: "/app/brandbook" },
     { label: "Link na bio", icon: Link2, to: "/app/linkinbio" },
+    { label: "Media Kit", icon: IdCard, to: "/app/media-kit" },
     { label: "Biblioteca", icon: BookOpen, to: "/app/biblioteca" },
   ]},
   { id: "result", label: "Resultados", icon: BarChart3, children: [

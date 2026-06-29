@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Media Kit · @marina.cria</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --teal: #0F6E56; --teal-d: #085041; --teal-l: #E1F5EE;
+    --ink: #1a2420; --muted: #6b7670; --line: #e7ece9; --bg: #f4f7f5;
+  }
+  body { font-family: 'Inter', sans-serif; color: var(--ink); background: var(--bg); padding: 28px 16px; line-height: 1.5; }
+  .kit { max-width: 820px; margin: 0 auto; background: #fff; border-radius: 22px; overflow: hidden; box-shadow: 0 24px 60px -28px rgba(15,110,86,.35); }
+
+  .hero { background: linear-gradient(135deg, #0F6E56 0%, #0c5947 55%, #1d9e75 100%); color: #fff; padding: 34px 38px 30px; position: relative; }
+  .hero .brand { position: absolute; top: 22px; right: 32px; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; opacity: .8; font-weight: 600; }
+  .hero .top { display: flex; align-items: center; gap: 20px; }
+  .avatar { width: 92px; height: 92px; border-radius: 50%; background: linear-gradient(135deg,#F58529,#DD2A7B,#515BD4); border: 3px solid rgba(255,255,255,.6); flex-shrink: 0; }
+  .hero h1 { font-family: 'Sora', sans-serif; font-size: 30px; font-weight: 800; letter-spacing: -.02em; }
+  .hero .handle { font-size: 15px; opacity: .9; margin-top: 2px; }
+  .hero .tags { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .tag { background: rgba(255,255,255,.16); padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 500; }
+  .hero .bio { margin-top: 18px; font-size: 14px; max-width: 560px; opacity: .95; line-height: 1.6; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); }
+  .stat { background: #fff; padding: 20px 16px; text-align: center; }
+  .stat .n { font-family: 'Sora', sans-serif; font-size: 26px; font-weight: 800; color: var(--teal); letter-spacing: -.02em; }
+  .stat .l { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-top: 4px; font-weight: 600; }
+
+  .body { padding: 30px 38px 12px; }
+  .sec { margin-bottom: 30px; }
+  .sec h2 { font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--teal-d); margin-bottom: 16px; display: flex; align-items: center; gap: 9px; }
+  .sec h2::before { content: ''; width: 22px; height: 3px; background: var(--teal); border-radius: 2px; }
+
+  .aud { display: grid; grid-template-columns: 1.1fr 1fr; gap: 26px; }
+  .bar { margin-bottom: 11px; }
+  .bar .row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
+  .bar .row .v { color: var(--muted); font-weight: 600; }
+  .track { height: 8px; background: var(--teal-l); border-radius: 999px; overflow: hidden; }
+  .fill { height: 100%; background: var(--teal); border-radius: 999px; }
+  .donut-wrap { display: flex; align-items: center; gap: 18px; }
+  .donut { width: 120px; height: 120px; border-radius: 50%; background: conic-gradient(var(--teal) 0 68%, #1d9e75 68% 100%); flex-shrink: 0; position: relative; }
+  .donut::after { content: ''; position: absolute; inset: 26px; background: #fff; border-radius: 50%; }
+  .leg { font-size: 13px; }
+  .leg div { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .dot { width: 11px; height: 11px; border-radius: 3px; }
+
+  .posts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .post { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .post .thumb { aspect-ratio: 4/5; background: linear-gradient(160deg,#0F6E56,#1d9e75); position: relative; }
+  .post:nth-child(2) .thumb { background: linear-gradient(160deg,#DD2A7B,#F58529); }
+  .post:nth-child(3) .thumb { background: linear-gradient(160deg,#515BD4,#1d9e75); }
+  .post .thumb .badge { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,.45); color:#fff; font-size: 11px; padding: 3px 8px; border-radius: 999px; }
+  .post .meta { padding: 10px 12px; font-size: 12px; }
+  .post .meta .t { font-weight: 600; margin-bottom: 6px; line-height: 1.35; }
+  .post .meta .nums { display: flex; gap: 12px; color: var(--muted); }
+  .post .meta .nums b { color: var(--ink); }
+
+  .services { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .services th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 0 0 10px; border-bottom: 1px solid var(--line); }
+  .services td { padding: 13px 0; border-bottom: 1px solid var(--line); }
+  .services td:last-child { text-align: right; font-weight: 700; color: var(--teal-d); font-family: 'Sora', sans-serif; }
+  .services .desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  .cta { background: var(--teal-l); margin: 4px 38px 0; border-radius: 16px; padding: 22px 26px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .cta .txt h3 { font-family: 'Sora', sans-serif; font-size: 17px; color: var(--teal-d); }
+  .cta .txt p { font-size: 13px; color: var(--teal); margin-top: 3px; }
+  .cta .btn { background: var(--teal); color: #fff; padding: 12px 22px; border-radius: 999px; font-weight: 600; font-size: 14px; white-space: nowrap; }
+
+  .foot { padding: 22px 38px 30px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted); flex-wrap: wrap; gap: 8px; }
+  .foot .logo { font-family: 'Sora', sans-serif; font-weight: 800; color: var(--teal); letter-spacing: .04em; }
+
+  @media print { body { background: #fff; padding: 0; } .kit { box-shadow: none; border-radius: 0; max-width: 100%; } }
+  @media (max-width: 640px) { .stats { grid-template-columns: repeat(2,1fr); } .aud, .posts { grid-template-columns: 1fr; } .hero, .body, .foot { padding-left: 22px; padding-right: 22px; } .cta { margin: 4px 22px 0; } }
+</style>
+</head>
+<body>
+<div class="kit">
+
+  <div class="hero">
+    <span class="brand">Media Kit · 2026</span>
+    <div class="top">
+      <div class="avatar"></div>
+      <div>
+        <h1>Marina Costa</h1>
+        <div class="handle">@marina.cria · Instagram</div>
+        <div class="tags">
+          <span class="tag">Empreendedorismo</span>
+          <span class="tag">Finanças pessoais</span>
+          <span class="tag">Rotina de criadora</span>
+        </div>
+      </div>
+    </div>
+    <p class="bio">Ajudo mulheres a organizarem as finanças do negócio sem planilha complicada. Conteúdo prático, bastidores reais e muita conversa franca sobre empreender no Brasil.</p>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="n">18,4 mil</div><div class="l">Seguidores</div></div>
+    <div class="stat"><div class="n">96 mil</div><div class="l">Alcance / mês</div></div>
+    <div class="stat"><div class="n">6,2%</div><div class="l">Engajamento</div></div>
+    <div class="stat"><div class="n">3,1 mil</div><div class="l">Salvamentos</div></div>
+  </div>
+
+  <div class="body">
+
+    <div class="sec">
+      <h2>Audiência</h2>
+      <div class="aud">
+        <div>
+          <div class="bar"><div class="row"><span>25–34 anos</span><span class="v">46%</span></div><div class="track"><div class="fill" style="width:46%"></div></div></div>
+          <div class="bar"><div class="row"><span>35–44 anos</span><span class="v">29%</span></div><div class="track"><div class="fill" style="width:29%"></div></div></div>
+          <div class="bar"><div class="row"><span>18–24 anos</span><span class="v">17%</span></div><div class="track"><div class="fill" style="width:17%"></div></div></div>
+          <div class="bar"><div class="row"><span>45+ anos</span><span class="v">8%</span></div><div class="track"><div class="fill" style="width:8%"></div></div></div>
+        </div>
+        <div>
+          <div class="donut-wrap">
+            <div class="donut"></div>
+            <div class="leg">
+              <div><span class="dot" style="background:#0F6E56"></span> Mulheres · 68%</div>
+              <div><span class="dot" style="background:#1d9e75"></span> Homens · 32%</div>
+              <div style="margin-top:10px; color:var(--muted)"><span class="dot" style="background:#cfe0d8"></span> Top cidades: SP, RJ, BH</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h2>Melhores conteúdos · 90 dias</h2>
+      <div class="posts">
+        <div class="post">
+          <div class="thumb"><span class="badge">Reels</span></div>
+          <div class="meta"><div class="t">"O erro que te faz perder dinheiro todo mês"</div><div class="nums"><span><b>214 mil</b> alcance</span><span><b>4,8 mil</b> salvos</span></div></div>
+        </div>
+        <div class="post">
+          <div class="thumb"><span class="badge">Carrossel</span></div>
+          <div class="meta"><div class="t">"3 contas que todo MEI deveria separar"</div><div class="nums"><span><b>88 mil</b> alcance</span><span><b>3,1 mil</b> salvos</span></div></div>
+        </div>
+        <div class="post">
+          <div class="thumb"><span class="badge">Reels</span></div>
+          <div class="meta"><div class="t">"Como fechei o mês no azul"</div><div class="nums"><span><b>72 mil</b> alcance</span><span><b>2,2 mil</b> salvos</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h2>Formatos de parceria</h2>
+      <table class="services">
+        <thead><tr><th>Entrega</th><th></th></tr></thead>
+        <tbody>
+          <tr><td><div>Reels patrocinado</div><div class="desc">Roteiro + gravação + edição · 1 publicação no feed</div></td><td>R$ 1.800</td></tr>
+          <tr><td><div>Sequência de Stories</div><div class="desc">3–5 stories com link e CTA</div></td><td>R$ 900</td></tr>
+          <tr><td><div>Carrossel educativo</div><div class="desc">Conteúdo + arte na identidade da marca</div></td><td>R$ 1.200</td></tr>
+          <tr><td><div>Combo mensal</div><div class="desc">2 reels + 1 carrossel + stories · melhor custo</div></td><td>R$ 4.200</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <div class="cta">
+    <div class="txt">
+      <h3>Vamos criar juntos?</h3>
+      <p>Aberta a campanhas alinhadas com finanças, empreendedorismo e lifestyle.</p>
+    </div>
+    <div class="btn">marina.costa@email.com</div>
+  </div>
+
+  <div class="foot">
+    <span>Dados extraídos do Instagram em jun/2026 · sujeitos a variação mensal.</span>
+    <span class="logo">feito com CRIA</span>
+  </div>
+
+</div>
+</body>
+</html>
