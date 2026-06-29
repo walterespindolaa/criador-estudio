@@ -1,8 +1,40 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "npm:@supabase/supabase-js@2"
-import { getCorsHeaders } from "../_shared/cors.ts"
-import { aiFetch, AiTimeoutError } from "../_shared/ai-fetch.ts"
-import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limit.ts"
+
+// Helpers embutidos (sem depender de _shared no bundle do deploy).
+const ALLOWED_ORIGINS = [
+  "https://app.criasocialclub.com.br", "https://criasocialclub.com.br",
+  "https://criador-estudio.lovable.app", "http://localhost:5173", "http://localhost:8080",
+]
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("origin") ?? ""
+  const isLovable = /^https:\/\/[a-zA-Z0-9-]+\.lovable\.app$/.test(origin)
+  const allow = ALLOWED_ORIGINS.includes(origin) || isLovable ? origin : ALLOWED_ORIGINS[0]
+  return {
+    "Access-Control-Allow-Origin": allow,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-internal-secret",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Vary": "Origin",
+  }
+}
+class AiTimeoutError extends Error { constructor() { super("ai_timeout"); this.name = "AiTimeoutError" } }
+async function aiFetch(url: string, init: RequestInit, timeoutMs = 30000): Promise<Response> {
+  const ac = new AbortController()
+  const t = setTimeout(() => ac.abort(), timeoutMs)
+  try { return await fetch(url, { ...init, signal: ac.signal }) }
+  catch (e) { if (e instanceof DOMException && e.name === "AbortError") throw new AiTimeoutError(); throw e }
+  finally { clearTimeout(t) }
+}
+// deno-lint-ignore no-explicit-any
+async function checkRateLimit(admin: any, userId: string, scope: string, limit: number): Promise<boolean> {
+  try {
+    const windowKey = new Date().toISOString().slice(0, 16)
+    const { data, error } = await admin.rpc("check_and_increment_rate_limit", { _user_id: userId, _scope: scope, _window_key: windowKey, _limit: limit })
+    if (error || !data) return true // fail-open
+    const row = Array.isArray(data) ? data[0] : data
+    return row?.allowed === true
+  } catch { return true }
+}
 
 const getNichePresets = (niche: string): string => {
   const presets: Record<string, string> = {
@@ -74,8 +106,12 @@ serve(async (req) => {
     }
 
     // Limite de rajada por usuário (além da cota mensal): 25 chamadas/min.
-    const rl = await checkRateLimit(user.id, { scope: 'ai-context-builder', window: 'minute', limit: 25 })
-    if (!rl.allowed) return rateLimitResponse(rl, corsHeaders)
+    const rlOk = await checkRateLimit(supabase, user.id, 'ai-context-builder', 25)
+    if (!rlOk) {
+      return new Response(JSON.stringify({ error: 'rate_limited', message: 'Muitas requisições. Aguarde um pouco.' }), {
+        status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
 
     // ── Access gate: trial ativo, subscription ativa, ou admin ─────
     const { data: accessRow, error: accessErr } = await supabase
