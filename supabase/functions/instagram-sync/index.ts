@@ -1,6 +1,6 @@
 // Coleta insights do Instagram e grava no cache local (social_metrics_daily + social_insights).
 // Invocada pelo frontend (botão "Atualizar") com o JWT do usuário CRIA.
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') || '*',
