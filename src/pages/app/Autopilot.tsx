@@ -173,44 +173,44 @@ export default function Autopilot() {
         <aside className="w-full md:w-[300px] md:shrink-0 md:sticky md:top-4 space-y-3">
           <div className="bg-card border border-border rounded-2xl p-4 space-y-4">
             <div>
-              <p className="text-xs font-body text-muted-foreground mb-1.5">Período</p>
+              <p className="text-[13px] font-body text-muted-foreground mb-1.5">Período</p>
               <div className="flex rounded-lg border border-border overflow-hidden">
                 {(["semana", "mes"] as const).map((p) => (
-                  <button key={p} onClick={() => setPeriodo(p)} className={`flex-1 text-xs py-2 ${periodo === p ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{p === "semana" ? "Semana" : "Mês"}</button>
+                  <button key={p} onClick={() => setPeriodo(p)} className={`flex-1 text-sm py-2.5 ${periodo === p ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{p === "semana" ? "Semana" : "Mês"}</button>
                 ))}
               </div>
             </div>
             <div>
-              <p className="text-xs font-body text-muted-foreground mb-1.5">Quantos posts</p>
+              <p className="text-[13px] font-body text-muted-foreground mb-1.5">Quantos posts</p>
               <div className="flex rounded-lg border border-border overflow-hidden">
                 {[5, 8, 12].map((n) => (
-                  <button key={n} onClick={() => setQtd(n)} className={`flex-1 text-xs py-2 ${qtd === n ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{n}</button>
+                  <button key={n} onClick={() => setQtd(n)} className={`flex-1 text-sm py-2.5 ${qtd === n ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{n}</button>
                 ))}
               </div>
             </div>
             <div>
-              <p className="text-xs font-body text-muted-foreground mb-1.5">Plataforma</p>
+              <p className="text-[13px] font-body text-muted-foreground mb-1.5">Plataforma</p>
               <div className="flex rounded-lg border border-border overflow-hidden">
                 {[["instagram", "Instagram"], ["tiktok", "TikTok"], ["youtube", "YouTube"]].map(([id, lb]) => (
-                  <button key={id} onClick={() => setPlataforma(id)} className={`flex-1 text-[11px] py-2 ${plataforma === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{lb}</button>
+                  <button key={id} onClick={() => setPlataforma(id)} className={`flex-1 text-[13px] py-2.5 ${plataforma === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{lb}</button>
                 ))}
               </div>
             </div>
             <div>
-              <p className="text-xs font-body text-muted-foreground mb-1.5">Foco (opcional)</p>
+              <p className="text-[13px] font-body text-muted-foreground mb-1.5">Foco (opcional)</p>
               <div className="flex gap-1.5 flex-wrap">
                 {FOCOS.map((f) => (
-                  <button key={f} onClick={() => setFoco(foco === f ? "" : f)} className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${foco === f ? "bg-primary/10 text-primary border-primary/30" : "bg-card border-border text-muted-foreground"}`}>{f}</button>
+                  <button key={f} onClick={() => setFoco(foco === f ? "" : f)} className={`text-[13px] px-3 py-1.5 rounded-full border transition-colors ${foco === f ? "bg-primary/10 text-primary border-primary/30" : "bg-card border-border text-muted-foreground"}`}>{f}</button>
                 ))}
               </div>
             </div>
             <div>
-              <p className="text-xs font-body text-muted-foreground mb-1.5">Tema/contexto (opcional)</p>
-              <textarea value={contexto} onChange={(e) => setContexto(e.target.value)} rows={2} placeholder="Ex.: lançamento do curso, semana de Black Friday…" className="w-full rounded-lg border border-border bg-card p-2 text-xs font-body outline-none resize-none focus:ring-1 focus:ring-primary/30" />
+              <p className="text-[13px] font-body text-muted-foreground mb-1.5">Tema/contexto (opcional)</p>
+              <textarea value={contexto} onChange={(e) => setContexto(e.target.value)} rows={2} placeholder="Ex.: lançamento do curso, semana de Black Friday…" className="w-full rounded-lg border border-border bg-card p-2.5 text-sm font-body outline-none resize-none focus:ring-1 focus:ring-primary/30" />
             </div>
             <div>
-              <p className="text-xs font-body text-muted-foreground mb-1.5">Público (opcional)</p>
-              <input value={publico} onChange={(e) => setPublico(e.target.value)} placeholder="Ex.: mães empreendedoras 25-40" className="w-full rounded-lg border border-border bg-card px-2.5 py-2 text-xs font-body outline-none focus:ring-1 focus:ring-primary/30" />
+              <p className="text-[13px] font-body text-muted-foreground mb-1.5">Público (opcional)</p>
+              <input value={publico} onChange={(e) => setPublico(e.target.value)} placeholder="Ex.: mães empreendedoras 25-40" className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm font-body outline-none focus:ring-1 focus:ring-primary/30" />
             </div>
             <Button onClick={generate} disabled={loading} className="w-full gap-2">
               {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Gerando…</> : <><Sparkles className="h-4 w-4" /> Gerar cronograma</>}
@@ -262,23 +262,23 @@ export default function Autopilot() {
                         {it.selected && <Check className="h-3 w-3" />}
                       </button>
                       <div className="flex gap-1 flex-wrap justify-end">
-                        <span className="text-[9px] font-body px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{FORMAT_LABELS[(it.formato || "").toLowerCase()] ?? it.formato}</span>
-                        {it.pilar && <span className="text-[9px] font-body px-1.5 py-0.5 rounded bg-primary/10 text-primary">{it.pilar}</span>}
+                        <span className="text-[11px] font-body px-2 py-0.5 rounded bg-muted text-muted-foreground">{FORMAT_LABELS[(it.formato || "").toLowerCase()] ?? it.formato}</span>
+                        {it.pilar && <span className="text-[11px] font-body px-2 py-0.5 rounded bg-primary/10 text-primary">{it.pilar}</span>}
                       </div>
                     </div>
-                    <textarea value={it.titulo} onChange={(e) => patch(i, { titulo: e.target.value })} rows={2} className="w-full bg-transparent font-body font-medium text-[13px] leading-snug text-foreground outline-none resize-none focus:bg-muted/30 rounded p-0.5" />
-                    <div className="flex items-center gap-1.5 mt-1.5">
-                      <input type="date" value={it.date} onChange={(e) => patch(i, { date: e.target.value })} className="text-[10px] rounded border border-border bg-card px-1 py-0.5 flex-1 min-w-0" />
-                      <input type="time" value={it.time} onChange={(e) => patch(i, { time: e.target.value })} className="text-[10px] rounded border border-border bg-card px-1 py-0.5" />
+                    <textarea value={it.titulo} onChange={(e) => patch(i, { titulo: e.target.value })} rows={2} className="w-full bg-transparent font-body font-semibold text-[15px] leading-snug text-foreground outline-none resize-none focus:bg-muted/30 rounded p-0.5" />
+                    <div className="flex items-center gap-1.5 mt-2">
+                      <input type="date" value={it.date} onChange={(e) => patch(i, { date: e.target.value })} className="text-xs rounded border border-border bg-card px-1.5 py-1 flex-1 min-w-0" />
+                      <input type="time" value={it.time} onChange={(e) => patch(i, { time: e.target.value })} className="text-xs rounded border border-border bg-card px-1.5 py-1" />
                     </div>
                     {editingCap[i] ? (
-                      <textarea value={it.legenda} onChange={(e) => patch(i, { legenda: e.target.value })} onBlur={() => setEditingCap((p) => ({ ...p, [i]: false }))} autoFocus rows={3} className="w-full mt-2 bg-muted/30 rounded-md p-2 text-[11px] leading-snug font-body text-foreground outline-none resize-none focus:ring-1 focus:ring-primary/30" />
+                      <textarea value={it.legenda} onChange={(e) => patch(i, { legenda: e.target.value })} onBlur={() => setEditingCap((p) => ({ ...p, [i]: false }))} autoFocus rows={4} className="w-full mt-2 bg-muted/30 rounded-md p-2 text-[13px] leading-relaxed font-body text-foreground outline-none resize-none focus:ring-1 focus:ring-primary/30" />
                     ) : (
-                      <button type="button" onClick={() => setEditingCap((p) => ({ ...p, [i]: true }))} className="w-full text-left mt-2 text-[11px] leading-snug font-body text-muted-foreground line-clamp-2 hover:text-foreground" title="Clique pra editar a legenda">
+                      <button type="button" onClick={() => setEditingCap((p) => ({ ...p, [i]: true }))} className="w-full text-left mt-2 text-[13px] leading-relaxed font-body text-muted-foreground line-clamp-3 hover:text-foreground" title="Clique pra editar a legenda">
                         {it.legenda || "Sem legenda — clique pra escrever"}
                       </button>
                     )}
-                    {it.porque && <p className="text-[10px] font-body text-muted-foreground/80 mt-2 line-clamp-2 flex items-start gap-1"><Sparkles className="h-2.5 w-2.5 mt-0.5 text-primary shrink-0" /> {it.porque}</p>}
+                    {it.porque && <p className="text-xs font-body text-muted-foreground/80 mt-2.5 line-clamp-2 flex items-start gap-1.5"><Sparkles className="h-3 w-3 mt-0.5 text-primary shrink-0" /> {it.porque}</p>}
                   </div>
                 ))}
               </div>
