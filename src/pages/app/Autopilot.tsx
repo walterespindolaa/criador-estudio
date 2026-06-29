@@ -145,8 +145,8 @@ export default function Autopilot() {
     return (
       <div className="max-w-lg mx-auto text-center py-16">
         <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4"><Lock className="h-6 w-6 text-primary" /></div>
-        <h1 className="text-2xl font-display font-extrabold text-foreground">Autopilot é do Cria Studio</h1>
-        <p className="text-sm font-body text-muted-foreground mt-2">A IA monta sua semana de conteúdo no seu tom, sem repetir o que você já fez. Disponível no plano Studio.</p>
+        <h1 className="text-2xl font-display font-extrabold text-foreground">Cria Plano é do Cria Studio</h1>
+        <p className="text-sm font-body text-muted-foreground mt-2">A IA monta seu mês (ou semana) de conteúdo no seu tom, sem repetir o que você já fez. Disponível no plano Studio.</p>
         <Button asChild className="mt-5"><Link to="/app/assinar">Conhecer o Studio</Link></Button>
       </div>
     );
@@ -163,8 +163,11 @@ export default function Autopilot() {
           <Wand2 className="h-5 w-5 text-white" strokeWidth={1.75} />
         </div>
         <div>
-          <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Autopilot</h1>
-          <p className="text-muted-foreground font-body text-sm mt-0.5">A IA monta seu conteúdo usando seu brandbook, histórico e o que performou.</p>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Cria Plano</h1>
+            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-gradient-to-r from-primary to-purple-600 text-white">Studio</span>
+          </div>
+          <p className="text-muted-foreground font-body text-sm mt-0.5">A IA monta seu mês (ou semana) de conteúdo usando seu brandbook, histórico e o que performou.</p>
         </div>
       </div>
 
@@ -256,9 +259,9 @@ export default function Autopilot() {
 
               <div className={`grid ${gridCols} gap-3`}>
                 {items.map((it, i) => (
-                  <div key={i} className={`bg-card border rounded-xl p-3 flex flex-col transition-colors ${it.selected ? "border-primary/40" : "border-border opacity-60"}`}>
+                  <div key={i} onClick={() => patch(i, { selected: !it.selected })} className={`bg-card rounded-xl p-3 flex flex-col cursor-pointer transition-all border-2 ${it.selected ? "border-primary ring-2 ring-primary/15 shadow-sm" : "border-border opacity-70 hover:opacity-100 hover:border-primary/30"}`}>
                     <div className="flex items-start justify-between gap-2 mb-1.5">
-                      <button onClick={() => patch(i, { selected: !it.selected })} aria-label="Selecionar" className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${it.selected ? "bg-primary border-primary text-primary-foreground" : "border-border"}`}>
+                      <button onClick={(e) => { e.stopPropagation(); patch(i, { selected: !it.selected }); }} aria-label="Selecionar" className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${it.selected ? "bg-primary border-primary text-primary-foreground" : "border-border"}`}>
                         {it.selected && <Check className="h-3 w-3" />}
                       </button>
                       <div className="flex gap-1 flex-wrap justify-end">
@@ -266,15 +269,15 @@ export default function Autopilot() {
                         {it.pilar && <span className="text-[11px] font-body px-2 py-0.5 rounded bg-primary/10 text-primary">{it.pilar}</span>}
                       </div>
                     </div>
-                    <textarea value={it.titulo} onChange={(e) => patch(i, { titulo: e.target.value })} rows={2} className="w-full bg-transparent font-body font-semibold text-[15px] leading-snug text-foreground outline-none resize-none focus:bg-muted/30 rounded p-0.5" />
+                    <textarea value={it.titulo} onClick={(e) => e.stopPropagation()} onChange={(e) => patch(i, { titulo: e.target.value })} rows={2} className="w-full bg-transparent font-body font-semibold text-[15px] leading-snug text-foreground outline-none resize-none focus:bg-muted/30 rounded p-0.5 cursor-text" />
                     <div className="flex items-center gap-1.5 mt-2">
-                      <input type="date" value={it.date} onChange={(e) => patch(i, { date: e.target.value })} className="text-xs rounded border border-border bg-card px-1.5 py-1 flex-1 min-w-0" />
-                      <input type="time" value={it.time} onChange={(e) => patch(i, { time: e.target.value })} className="text-xs rounded border border-border bg-card px-1.5 py-1" />
+                      <input type="date" value={it.date} onClick={(e) => e.stopPropagation()} onChange={(e) => patch(i, { date: e.target.value })} className="text-xs rounded border border-border bg-card px-1.5 py-1 flex-1 min-w-0 cursor-text" />
+                      <input type="time" value={it.time} onClick={(e) => e.stopPropagation()} onChange={(e) => patch(i, { time: e.target.value })} className="text-xs rounded border border-border bg-card px-1.5 py-1 cursor-text" />
                     </div>
                     {editingCap[i] ? (
-                      <textarea value={it.legenda} onChange={(e) => patch(i, { legenda: e.target.value })} onBlur={() => setEditingCap((p) => ({ ...p, [i]: false }))} autoFocus rows={4} className="w-full mt-2 bg-muted/30 rounded-md p-2 text-[13px] leading-relaxed font-body text-foreground outline-none resize-none focus:ring-1 focus:ring-primary/30" />
+                      <textarea value={it.legenda} onClick={(e) => e.stopPropagation()} onChange={(e) => patch(i, { legenda: e.target.value })} onBlur={() => setEditingCap((p) => ({ ...p, [i]: false }))} autoFocus rows={4} className="w-full mt-2 bg-muted/30 rounded-md p-2 text-[13px] leading-relaxed font-body text-foreground outline-none resize-none focus:ring-1 focus:ring-primary/30 cursor-text" />
                     ) : (
-                      <button type="button" onClick={() => setEditingCap((p) => ({ ...p, [i]: true }))} className="w-full text-left mt-2 text-[13px] leading-relaxed font-body text-muted-foreground line-clamp-3 hover:text-foreground" title="Clique pra editar a legenda">
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setEditingCap((p) => ({ ...p, [i]: true })); }} className="w-full text-left mt-2 text-[13px] leading-relaxed font-body text-muted-foreground line-clamp-3 hover:text-foreground" title="Clique pra editar a legenda">
                         {it.legenda || "Sem legenda — clique pra escrever"}
                       </button>
                     )}

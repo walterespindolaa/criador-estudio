@@ -9,9 +9,12 @@ import {
 import { cn } from "@/lib/utils";
 import { useCriaAI } from "@/contexts/CriaAIContext";
 import { useProfile } from "@/hooks/useProfile";
+import { useTier } from "@/hooks/useTier";
 import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
-type NavChild = { label: string; icon: LucideIcon; to: string };
+type NavChild = { label: string; icon: LucideIcon; to: string; studio?: boolean };
 type NavNode = {
   id: string; label: string; icon: LucideIcon;
   to?: string; end?: boolean; children?: NavChild[];
@@ -24,7 +27,7 @@ const TOP: NavNode[] = [
   { id: "criar", label: "Criar", icon: PenLine, children: [
     { label: "Ideias", icon: Lightbulb, to: "/app/ideias" },
     { label: "Em produção", icon: Kanban, to: "/app/criando" },
-    { label: "Autopilot", icon: Wand2, to: "/app/autopilot" },
+    { label: "Cria Plano", icon: Wand2, to: "/app/autopilot", studio: true },
     { label: "Aprovações", icon: ClipboardCheck, to: "/app/aprovacao" },
     { label: "Meu Feed", icon: Grid3X3, to: "/app/feed" },
   ]},
@@ -60,8 +63,10 @@ export function AppRail() {
   const { pathname } = useLocation();
   const { openCria } = useCriaAI();
   const { profile } = useProfile();
+  const { isStudio } = useTier();
   const isAdmin = profile?.role === "admin";
   const [openId, setOpenId] = useState<string | null>(null);
+  const [studioGate, setStudioGate] = useState(false);
   const [hovered, setHovered] = useState(false);
   const railRef = useRef<HTMLElement>(null);
   const expanded = hovered;
@@ -122,16 +127,21 @@ export function AppRail() {
             {n.children.map((c) => {
               const CIcon = c.icon;
               const cActive = matchTo(c.to);
+              const locked = c.studio && !isStudio;
               return (
                 <button
                   key={c.to + c.label}
-                  onClick={() => navigate(c.to)}
+                  onClick={() => { setOpenId(null); if (locked) { setStudioGate(true); } else { navigate(c.to); } }}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-xl py-2 pl-11 pr-3 text-left text-sm font-medium transition-colors",
+                    "flex w-full items-center gap-2.5 rounded-xl py-2 pl-11 pr-3 text-left text-sm font-medium transition-colors",
                     cActive ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-primary/10 hover:text-primary",
                   )}
                 >
-                  <CIcon className="h-4 w-4 shrink-0" /> {c.label}
+                  <CIcon className="h-4 w-4 shrink-0" />
+                  <span className="flex-1 truncate">{c.label}</span>
+                  {c.studio && (
+                    <span className="shrink-0 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-gradient-to-r from-primary to-purple-600 text-white">Studio</span>
+                  )}
                 </button>
               );
             })}
@@ -163,6 +173,31 @@ export function AppRail() {
         {isAdmin && renderNode({ id: "admin", label: "Admin", icon: ShieldCheck, to: "/app/cf-admin-panel" })}
         {BOTTOM.map(renderNode)}
       </div>
+
+      <Dialog open={studioGate} onOpenChange={setStudioGate}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center mb-2">
+              <Wand2 className="h-6 w-6 text-white" />
+            </div>
+            <DialogTitle className="text-xl font-display font-extrabold">Cria Plano é do Cria Studio</DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed pt-1">
+              Uma IA treinada na <strong>sua marca</strong> que monta um mês inteiro (ou uma semana) de conteúdo estratégico de uma vez: ideias, formatos, legendas e o melhor horário pra postar — sem repetir o que você já fez.
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="space-y-2 text-sm font-body text-foreground/80 py-1">
+            <li className="flex gap-2"><Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" /> Cronograma pronto a partir do seu brandbook e histórico</li>
+            <li className="flex gap-2"><Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" /> Você escolhe tema, público e foco pra nichar de verdade</li>
+            <li className="flex gap-2"><Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" /> Edita e manda direto pro Criando, com ou sem revisão</li>
+          </ul>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="ghost" onClick={() => setStudioGate(false)}>Agora não</Button>
+            <Button variant="hero" onClick={() => { setStudioGate(false); navigate("/app/assinar"); }}>
+              <Sparkles className="h-4 w-4 mr-2" /> Conhecer o Studio
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </nav>
   );
 }
