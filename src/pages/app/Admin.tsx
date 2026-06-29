@@ -692,7 +692,7 @@ const AdminInner = () => {
                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Mensagem pronta pra enviar</p>
                         <CopyButton text={msg} />
                       </div>
-                      <pre className="text-xs font-body text-foreground whitespace-pre-wrap leading-relaxed break-words">{msg}</pre>
+                      <pre className="text-xs font-body text-foreground whitespace-pre-wrap leading-relaxed [overflow-wrap:anywhere] max-w-full max-h-60 overflow-y-auto">{msg}</pre>
                     </div>
                   );
                 })()}
