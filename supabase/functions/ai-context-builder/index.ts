@@ -143,7 +143,42 @@ serve(async (req) => {
     const { operation, data } = await req.json()
     const userId = user.id // use this, ignore userId from body
 
-    // ── Banco de tendências: refresh só pra admin (não consome cota) ──
+    // ── Operações admin (não consome cota) ──
+    if (operation === 'admin-system-insight') {
+      if (!_isAdmin) {
+        return new Response(JSON.stringify({ error: 'forbidden' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      const sys = `Você é um consultor estratégico sênior analisando métricas do CreatorsFlow. Responda APENAS JSON válido, sem markdown.`
+      const usr = `Dados administrativos: ${JSON.stringify(data || {})}
+Gere um insight estratégico conciso em português BR no formato:
+{"titulo":"string","insight":"string","acoes":["a1","a2","a3"]}`
+      const r = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${lovableApiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash-lite',
+          messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }],
+          max_tokens: 2000,
+          temperature: 0.3,
+        }),
+      })
+      if (!r.ok) throw new Error('AI gateway error')
+      const j = await r.json()
+      const c = String(j.choices?.[0]?.message?.content || '')
+      const cleaned = c.replace(/```json/gi, '').replace(/```/g, '').trim()
+      const m = cleaned.match(/\{[\s\S]*\}/)
+      try {
+        return new Response(JSON.stringify({ result: JSON.parse(m ? m[0] : cleaned) }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      } catch {
+        return new Response(JSON.stringify({ result: { titulo: 'Insight', insight: cleaned.slice(0, 600), acoes: [] } }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+    }
     if (operation === 'trend-bank-refresh') {
       if (!_isAdmin) {
         return new Response(JSON.stringify({ error: 'forbidden' }), {
