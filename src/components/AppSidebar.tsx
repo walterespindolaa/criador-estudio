@@ -1,6 +1,7 @@
 import {
   Lightbulb,
   Kanban,
+  TrendingUp,
   LayoutDashboard,
   BookOpen,
   Archive,
@@ -59,6 +60,7 @@ const groups = [
     label: "Planejamento",
     items: [
       { title: "Criando", url: "/app/criando", icon: Kanban },
+      { title: "Tendências", url: "/app/tendencias", icon: TrendingUp },
       { title: "Metas", url: "/app/metas", icon: Target },
       { title: "Arquivos", url: "/app/arquivos", icon: FolderOpen },
     ],

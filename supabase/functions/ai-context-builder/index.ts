@@ -143,6 +143,64 @@ serve(async (req) => {
     const { operation, data } = await req.json()
     const userId = user.id // use this, ignore userId from body
 
+    // ── Banco de tendências: refresh só pra admin (não consome cota) ──
+    if (operation === 'trend-bank-refresh') {
+      if (!_isAdmin) {
+        return new Response(JSON.stringify({ error: 'forbidden' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+      const trendSys = `Você é um analista de tendências de conteúdo para criadores e social medias no Brasil. Hoje é ${hoje}. Gere um banco de tendências ATUAL e prático para usar em Instagram, TikTok e Reels. Responda SOMENTE em JSON válido, sem markdown.`
+      const trendUsr = `Gere de 10 a 14 tendências variadas e acionáveis no formato:
+{"trends":[{"kind":"formato|tema|gancho|data","title":"curto (max 8 palavras)","description":"1 frase prática de como usar","niche":"geral"}]}
+Distribua entre os 4 tipos: "formato" (formatos de vídeo/post em alta), "tema" (assuntos quentes do momento), "gancho" (aberturas que retêm), "data" (datas comemorativas/sazonais próximas do mês atual no Brasil). Seja específico e brasileiro. Nada genérico.`
+
+      const tr = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${lovableApiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash-lite',
+          messages: [ { role: 'system', content: trendSys }, { role: 'user', content: trendUsr } ],
+          max_tokens: 4096,
+          temperature: 0.7,
+        }),
+      })
+      if (!tr.ok) {
+        const t = await tr.text()
+        console.error('trend refresh gateway error', tr.status, t)
+        throw new Error('AI gateway error')
+      }
+      const tj = await tr.json()
+      const tcontent = String(tj.choices?.[0]?.message?.content || '')
+      const tcleaned = tcontent.replace(/```json/gi, '').replace(/```/g, '').trim()
+      const tmatch = tcleaned.match(/\{[\s\S]*\}/)
+      let parsed: { trends?: Array<Record<string, unknown>> } = {}
+      try { parsed = JSON.parse(tmatch ? tmatch[0] : tcleaned) } catch { throw new Error('Invalid JSON from AI') }
+      const allowed = new Set(['formato', 'tema', 'gancho', 'data'])
+      const rows = (parsed.trends || [])
+        .filter((t) => t && typeof t.title === 'string')
+        .slice(0, 16)
+        .map((t) => ({
+          kind: allowed.has(String(t.kind)) ? String(t.kind) : 'tema',
+          title: String(t.title).slice(0, 120),
+          description: t.description ? String(t.description).slice(0, 300) : null,
+          niche: t.niche ? String(t.niche).slice(0, 60) : 'geral',
+          created_by: userId,
+        }))
+      if (rows.length === 0) throw new Error('Nenhuma tendência gerada')
+
+      // substitui o banco inteiro
+      await supabase.from('content_trends').delete().not('id', 'is', null)
+      const { error: insErr } = await supabase.from('content_trends').insert(rows)
+      if (insErr) { console.error('trend insert error', insErr); throw new Error('Falha ao salvar tendências') }
+
+      return new Response(JSON.stringify({ result: { count: rows.length } }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    // ── fim trend bank refresh ───────────────────────────────────────
+
     const truncate = (s: unknown, max: number) =>
       typeof s === 'string' ? s.slice(0, max) : s
     if (data) {

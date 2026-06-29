@@ -12,6 +12,7 @@ import { usePosts } from "@/hooks/usePosts";
 import { useBrandContext } from "@/hooks/useBrandContext";
 import { generateAutopilot, type AutopilotPost } from "@/lib/ai/claude";
 import { bestTimes } from "@/lib/bestTimes";
+import { useTrends, trendsToContext } from "@/hooks/useTrends";
 import { FORMAT_LABELS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 
@@ -28,6 +29,7 @@ export default function Autopilot() {
   const { pillars } = usePillars();
   const { posts, createPost } = usePosts();
   const { brandContext, hasBrandContext } = useBrandContext();
+  const { data: trends = [] } = useTrends();
   const qc = useQueryClient();
 
   const [periodo, setPeriodo] = useState<"semana" | "mes">("semana");
@@ -85,6 +87,7 @@ export default function Autopilot() {
         recentes: recentes || undefined,
         contexto: contexto || undefined,
         publico: publico || undefined,
+        tendencias: trends.length ? trendsToContext(trends) : undefined,
         brandContext: hasBrandContext ? brandContext : undefined,
       }, user?.id);
       if (!res?.posts?.length) throw new Error("vazio");
