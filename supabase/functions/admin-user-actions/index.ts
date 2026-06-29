@@ -142,7 +142,8 @@ serve(async (req) => {
       }
       const email = userData.user.email;
 
-      const redirectTo = (req.headers.get("origin") ?? "https://app.criasocialclub.com.br") + "/app";
+      const origin = req.headers.get("origin") ?? "https://app.criasocialclub.com.br";
+      const redirectTo = origin + "/app/trocar-senha";
       const { data: linkData, error: linkErr } = await svc.auth.admin.generateLink({
         type: "recovery",
         email,
@@ -152,7 +153,11 @@ serve(async (req) => {
         console.error("[admin-user-actions] generateLink failed:", linkErr);
         return json({ error: "link_failed" }, 500);
       }
-      const actionLink = linkData.properties.action_link;
+      // Link branded do CRIA (não expõe supabase.co).
+      const hashed = linkData.properties.hashed_token;
+      const actionLink = hashed
+        ? `${origin}/ativar?th=${hashed}&type=recovery&to=${encodeURIComponent("/app/trocar-senha")}`
+        : linkData.properties.action_link;
 
       const html = emailHtml({
         title: "Redefina sua senha",

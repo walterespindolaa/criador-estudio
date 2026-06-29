@@ -83,7 +83,8 @@ serve(async (req) => {
     const { data: list } = await svc.auth.admin.listUsers();
     const existing = list?.users?.find((u) => u.email?.toLowerCase() === normEmail);
 
-    const redirectTo = (req.headers.get("origin") ?? "https://app.criasocialclub.com.br") + "/app/assinar";
+    const origin = req.headers.get("origin") ?? "https://app.criasocialclub.com.br";
+    const redirectTo = origin + "/app/assinar";
     const type: "magiclink" | "invite" = existing ? "magiclink" : "invite";
     const { data: linkData, error: linkErr } = await svc.auth.admin.generateLink({
       type,
@@ -94,7 +95,11 @@ serve(async (req) => {
       console.error("[manager-self-subscribe] generateLink failed:", linkErr);
       return json({ error: "link_failed" }, 400);
     }
-    const actionLink = linkData.properties.action_link;
+    // Link branded do CRIA (não expõe supabase.co).
+    const hashed = linkData.properties.hashed_token;
+    const actionLink = hashed
+      ? `${origin}/ativar?th=${hashed}&type=${type}&to=${encodeURIComponent("/app/assinar")}`
+      : linkData.properties.action_link;
     const pfUserId = linkData.user.id;
 
     // Vínculo PENDENTE: manager gerencia a conta PF (PF é owner_id; manager fica em member_*).

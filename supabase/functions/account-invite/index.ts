@@ -73,7 +73,8 @@ serve(async (req) => {
     const existing = list?.users?.find((u) => u.email?.toLowerCase() === normEmail);
 
     // Gera o link conforme o caso
-    const redirectTo = (req.headers.get("origin") ?? "https://app.criasocialclub.com.br") + "/app";
+    const origin = req.headers.get("origin") ?? "https://app.criasocialclub.com.br";
+    const redirectTo = origin + "/app";
     const type: "magiclink" | "invite" = existing ? "magiclink" : "invite";
     const { data: linkData, error: linkErr } = await svc.auth.admin.generateLink({
       type,
@@ -84,7 +85,11 @@ serve(async (req) => {
       console.error("[account-invite] generateLink failed:", linkErr);
       return json({ error: "link_failed" }, 400);
     }
-    const actionLink = linkData.properties.action_link;
+    // Link branded do CRIA (não expõe supabase.co).
+    const hashed = linkData.properties.hashed_token;
+    const actionLink = hashed
+      ? `${origin}/ativar?th=${hashed}&type=${type}&to=${encodeURIComponent("/app")}`
+      : linkData.properties.action_link;
     const targetUser = linkData.user;
 
     // Vincula o gerente à conta do dono. Status já 'active': clicar no link é a ativação.
