@@ -36,6 +36,7 @@ export default function Autopilot() {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
+  const [editingCap, setEditingCap] = useState<Record<number, boolean>>({});
 
   const trialOk = profile?.trial_ends_at ? new Date(profile.trial_ends_at).getTime() > Date.now() : false;
   const isStudio = profile?.plan === "studio" || profile?.role === "admin" || trialOk;
@@ -224,7 +225,25 @@ export default function Autopilot() {
                       <input type="time" value={it.time} onChange={(e) => patch(i, { time: e.target.value })} className="text-[10px] rounded border border-border bg-card px-1 py-0.5" />
                       {it.porque && <span className="text-[10px] font-body text-muted-foreground truncate hidden sm:inline" title={it.porque}><Sparkles className="h-2.5 w-2.5 inline mr-0.5 text-primary" />{it.porque}</span>}
                     </div>
-                    <textarea value={it.legenda} onChange={(e) => patch(i, { legenda: e.target.value })} rows={2} className="w-full mt-1.5 bg-muted/30 rounded-md p-2 text-[11px] leading-snug font-body text-foreground outline-none resize-none focus:ring-1 focus:ring-primary/30" />
+                    {editingCap[i] ? (
+                      <textarea
+                        value={it.legenda}
+                        onChange={(e) => patch(i, { legenda: e.target.value })}
+                        onBlur={() => setEditingCap((p) => ({ ...p, [i]: false }))}
+                        autoFocus
+                        rows={2}
+                        className="w-full mt-1.5 bg-muted/30 rounded-md p-2 text-[11px] leading-snug font-body text-foreground outline-none resize-none focus:ring-1 focus:ring-primary/30"
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setEditingCap((p) => ({ ...p, [i]: true }))}
+                        className="w-full text-left mt-1 text-[11px] leading-snug font-body text-muted-foreground line-clamp-1 hover:text-foreground"
+                        title="Clique pra editar a legenda"
+                      >
+                        {it.legenda || "Sem legenda — clique pra escrever"}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
