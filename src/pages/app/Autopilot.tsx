@@ -85,7 +85,8 @@ export default function Autopilot() {
       setItems(buildItems(res.posts));
     } catch (e) {
       console.error("autopilot generate failed", e);
-      toast.error("Não consegui gerar agora. Tenta de novo em instantes.");
+      const msg = e instanceof Error ? e.message : "";
+      toast.error(msg && !/non-2xx/i.test(msg) ? `Erro: ${msg}` : "Não consegui gerar agora. Tenta de novo em instantes.");
     } finally {
       setLoading(false);
     }
