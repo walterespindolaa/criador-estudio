@@ -607,6 +607,36 @@ export type Database = {
         }
         Relationships: []
       }
+      content_trends: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          kind: string
+          niche: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          kind: string
+          niche?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          kind?: string
+          niche?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       course_purchases: {
         Row: {
           course_id: string
