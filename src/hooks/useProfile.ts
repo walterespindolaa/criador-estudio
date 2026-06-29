@@ -15,6 +15,7 @@ export type Profile = Database["public"]["Tables"]["profiles"]["Row"] & {
   storage_retention_days?: number | null;
   editorial_line?: Record<string, string> | null;
   brand_logo_url?: string | null;
+  bio_views?: number | null;
 };
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"] & {
   role?: string | null;

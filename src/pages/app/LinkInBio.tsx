@@ -416,6 +416,18 @@ const LinkInBio = () => {
     [sortedLinks]
   );
 
+  // Analytics
+  const totalClicks = useMemo(
+    () => sortedLinks.reduce((s, l) => (l.link_type === "header" ? s : s + (l.clicks ?? 0)), 0),
+    [sortedLinks]
+  );
+  const bioViews = profile?.bio_views ?? 0;
+  const conversao = bioViews > 0 ? Math.min(100, Math.round((totalClicks / bioViews) * 100)) : 0;
+  const topLink = useMemo(
+    () => sortedLinks.filter((l) => l.link_type !== "header").sort((a, b) => (b.clicks ?? 0) - (a.clicks ?? 0))[0] ?? null,
+    [sortedLinks]
+  );
+
   const publicPath = slug ? `/bio/${slug}` : null;
   const publicUrl = publicPath
     ? `${typeof window !== "undefined" ? window.location.origin : ""}${publicPath}`
@@ -701,6 +713,30 @@ const LinkInBio = () => {
                   )}
                 </p>
               )}
+            </Card>
+
+            <Card className="p-4 md:p-5 rounded-2xl border-border">
+              <h2 className="font-display font-semibold text-foreground mb-4">Desempenho</h2>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-muted/40 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-display font-extrabold text-foreground">{bioViews.toLocaleString("pt-BR")}</p>
+                  <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide mt-0.5">Visitas</p>
+                </div>
+                <div className="bg-muted/40 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-display font-extrabold text-foreground">{totalClicks.toLocaleString("pt-BR")}</p>
+                  <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide mt-0.5">Cliques</p>
+                </div>
+                <div className="bg-muted/40 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-display font-extrabold text-foreground">{conversao}%</p>
+                  <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide mt-0.5">Conversão</p>
+                </div>
+              </div>
+              {topLink && (topLink.clicks ?? 0) > 0 && (
+                <p className="text-xs font-body text-muted-foreground mt-3">
+                  Link mais clicado: <span className="font-semibold text-foreground">{topLink.title}</span> · {topLink.clicks} cliques
+                </p>
+              )}
+              <p className="text-[11px] font-body text-muted-foreground/70 mt-2">Visitas contam 1x por visitante na sessão. Cliques somam todos os toques nos links.</p>
             </Card>
 
             <Card className="p-4 md:p-5 rounded-2xl border-border">

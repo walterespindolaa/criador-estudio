@@ -241,6 +241,17 @@ const BioPage = () => {
       setProfile(profileData as ProfileLite);
       setLinks((linkData ?? []) as BioLinkLite[]);
       setLoading(false);
+
+      // Conta a visita 1x por sessão/navegador (evita inflar com refresh).
+      if (slug) {
+        const key = `bioviewed:${slug}`;
+        try {
+          if (!sessionStorage.getItem(key)) {
+            sessionStorage.setItem(key, "1");
+            void supabase.rpc("increment_bio_view", { _slug: slug });
+          }
+        } catch { /* sessionStorage indisponível: ignora */ }
+      }
     }
     load();
     return () => {
