@@ -78,13 +78,20 @@ export async function callAIContextBuilder(payload: AIRequest) {
   });
 
   if (error) {
-    // Tenta extrair a mensagem real que a edge function retornou no corpo.
+    // Extrai a mensagem real que a edge function retornou no corpo (usa clone+text pra não dar "body consumed").
     let detail = error.message;
     try {
-      const ctx = (error as { context?: { json?: () => Promise<unknown> } }).context;
-      if (ctx?.json) {
-        const body = (await ctx.json()) as { error?: string };
-        if (body?.error) detail = body.error;
+      const ctx = (error as { context?: Response }).context;
+      if (ctx && typeof ctx.text === "function") {
+        const raw = await ctx.clone().text();
+        if (raw) {
+          try {
+            const body = JSON.parse(raw) as { error?: string; message?: string };
+            detail = body?.error || body?.message || raw.slice(0, 200);
+          } catch {
+            detail = raw.slice(0, 200);
+          }
+        }
       }
     } catch { /* ignore */ }
     console.error('AI Operation error:', detail, error);

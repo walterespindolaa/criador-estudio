@@ -650,7 +650,7 @@ O que mais performou (priorizar): ${data.performou || '-'}
 Tendências do nicho (se houver): ${data.tendencias || '-'}
 Posts recentes (NÃO repetir): ${data.recentes || '-'}
 ${data.brandContext ? `\nMARCA DO CRIADOR:\n${data.brandContext}` : ''}`
-        maxTokens = 4000
+        maxTokens = 8192
         break
       default:
         throw new Error('Invalid operation')
