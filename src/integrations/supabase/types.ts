@@ -1864,6 +1864,7 @@ export type Database = {
           contact: string | null
           gender: Json | null
           headline: string | null
+          link: string | null
           niche: string | null
           services: Json | null
           updated_at: string | null
@@ -1877,6 +1878,7 @@ export type Database = {
           contact?: string | null
           gender?: Json | null
           headline?: string | null
+          link?: string | null
           niche?: string | null
           services?: Json | null
           updated_at?: string | null
@@ -1890,6 +1892,7 @@ export type Database = {
           contact?: string | null
           gender?: Json | null
           headline?: string | null
+          link?: string | null
           niche?: string | null
           services?: Json | null
           updated_at?: string | null
