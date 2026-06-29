@@ -1855,6 +1855,48 @@ export type Database = {
           },
         ]
       }
+      media_kit_profiles: {
+        Row: {
+          accent: string | null
+          audience: Json | null
+          bio: string | null
+          cities: string | null
+          contact: string | null
+          gender: Json | null
+          headline: string | null
+          niche: string | null
+          services: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          accent?: string | null
+          audience?: Json | null
+          bio?: string | null
+          cities?: string | null
+          contact?: string | null
+          gender?: Json | null
+          headline?: string | null
+          niche?: string | null
+          services?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          accent?: string | null
+          audience?: Json | null
+          bio?: string | null
+          cities?: string | null
+          contact?: string | null
+          gender?: Json | null
+          headline?: string | null
+          niche?: string | null
+          services?: Json | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       milestones: {
         Row: {
           completed: boolean | null
@@ -2930,6 +2972,7 @@ export type Database = {
           crm_client_id: string | null
           external_account_id: string
           id: string
+          profile_picture_url: string | null
           provider: string
           scopes: string | null
           token_expires_at: string | null
@@ -2944,6 +2987,7 @@ export type Database = {
           crm_client_id?: string | null
           external_account_id: string
           id?: string
+          profile_picture_url?: string | null
           provider?: string
           scopes?: string | null
           token_expires_at?: string | null
@@ -2958,6 +3002,7 @@ export type Database = {
           crm_client_id?: string | null
           external_account_id?: string
           id?: string
+          profile_picture_url?: string | null
           provider?: string
           scopes?: string | null
           token_expires_at?: string | null
