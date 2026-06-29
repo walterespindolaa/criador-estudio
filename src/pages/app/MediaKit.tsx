@@ -1,11 +1,12 @@
 import { useMemo, useRef, useState, useEffect, type ReactNode, type ChangeEvent } from "react";
 import { motion } from "framer-motion";
-import { IdCard, Download, Pencil, Instagram, Upload, FileText, Trash2, ExternalLink, Loader2, Plus, X } from "lucide-react";
+import { IdCard, Download, Pencil, Instagram, Upload, FileText, Trash2, ExternalLink, Loader2, Plus, X, RefreshCw, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/hooks/useProfile";
-import { useSocialConnection, useDailyMetrics, useMediaInsights, connectInstagram } from "@/hooks/useSocialInsights";
+import { useSocialConnection, useDailyMetrics, useMediaInsights, useSyncInstagram, connectInstagram } from "@/hooks/useSocialInsights";
 import { useMediaKitProfile, useSaveMediaKitProfile, useCustomMediaKit, type MediaKitProfile, type KitService } from "@/hooks/useMediaKit";
 import { AutoMediaKit, type KitStats, type KitTopPost } from "@/components/mediakit/AutoMediaKit";
+import { usePdfExport } from "@/hooks/usePdfExport";
 import { toast } from "sonner";
 
 export default function MediaKit() {
@@ -16,11 +17,35 @@ export default function MediaKit() {
   const { data: kit } = useMediaKitProfile();
   const save = useSaveMediaKitProfile();
   const custom = useCustomMediaKit();
+  const sync = useSyncInstagram();
+  const { exportPdf } = usePdfExport();
   const printRef = useRef<HTMLDivElement>(null);
 
   const [editing, setEditing] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [form, setForm] = useState<MediaKitProfile | null>(null);
+  const [linkInput, setLinkInput] = useState("");
   useEffect(() => { if (kit && !form) setForm(kit); }, [kit, form]);
+  useEffect(() => { if (kit?.link != null) setLinkInput(kit.link); }, [kit?.link]);
+
+  const downloadPdf = async () => {
+    setDownloading(true);
+    try {
+      await exportPdf(printRef, `media-kit-${(conn?.username || profile?.name || "cria").replace(/\W+/g, "-").toLowerCase()}`);
+    } catch (e) {
+      console.error("media kit pdf failed", e);
+      toast.error("Não consegui gerar o PDF agora.");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const saveLink = async () => {
+    const url = linkInput.trim();
+    if (url && !/^https?:\/\//i.test(url)) { toast.error("O link precisa começar com http:// ou https://"); return; }
+    await save.mutateAsync({ link: url || null });
+    toast.success(url ? "Link salvo!" : "Link removido.");
+  };
 
   const stats: KitStats = useMemo(() => {
     const followers = [...daily].reverse().find((d) => d.followers != null)?.followers ?? 0;
@@ -88,9 +113,10 @@ export default function MediaKit() {
         <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
           <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Media kit automático</h2>
           {conn && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <Button variant="outline" size="sm" onClick={() => sync.mutate()} disabled={sync.isPending} className="gap-1.5"><RefreshCw className={`h-3.5 w-3.5 ${sync.isPending ? "animate-spin" : ""}`} /> Atualizar</Button>
               <Button variant="outline" size="sm" onClick={() => setEditing((v) => !v)} className="gap-1.5"><Pencil className="h-3.5 w-3.5" /> Editar dados</Button>
-              <Button size="sm" onClick={() => window.print()} className="gap-1.5"><Download className="h-3.5 w-3.5" /> Baixar PDF</Button>
+              <Button size="sm" onClick={downloadPdf} disabled={downloading} className="gap-1.5">{downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />} Baixar PDF</Button>
             </div>
           )}
         </div>
@@ -214,6 +240,16 @@ export default function MediaKit() {
               )}
             </label>
           )}
+
+          <div className="mt-5 pt-5 border-t border-border">
+            <p className="text-sm font-body text-foreground font-medium flex items-center gap-2 mb-1"><Link2 className="h-4 w-4 text-primary" /> Ou cole um link</p>
+            <p className="text-xs font-body text-muted-foreground mb-3">Tem o media kit no Canva, Notion, Behance ou Google Drive? Cole o link público aqui.</p>
+            <div className="flex gap-2 flex-wrap">
+              <input value={linkInput} onChange={(e) => setLinkInput(e.target.value)} placeholder="https://canva.com/..." className="flex-1 min-w-[200px] rounded-lg border border-border bg-card px-3 py-2.5 text-sm font-body outline-none focus:ring-1 focus:ring-primary/30" />
+              <Button variant="outline" size="sm" onClick={saveLink} disabled={save.isPending} className="gap-1.5">Salvar link</Button>
+              {kit?.link && <Button variant="ghost" size="sm" onClick={() => window.open(kit.link!, "_blank", "noopener")} className="gap-1.5"><ExternalLink className="h-3.5 w-3.5" /> Abrir</Button>}
+            </div>
+          </div>
         </div>
       </section>
     </motion.div>

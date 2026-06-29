@@ -10,8 +10,12 @@ create table if not exists public.media_kit_profiles (
   audience jsonb default '[]'::jsonb,
   services jsonb default '[]'::jsonb,
   accent text default '#0F6E56',
+  link text,
   updated_at timestamptz default now()
 );
+
+-- caso a tabela já exista de uma versão anterior
+alter table public.media_kit_profiles add column if not exists link text;
 
 alter table public.media_kit_profiles enable row level security;
 

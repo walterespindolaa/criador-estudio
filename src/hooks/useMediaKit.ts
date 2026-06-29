@@ -20,6 +20,7 @@ export type MediaKitProfile = {
   audience: AudienceBand[] | null;
   services: KitService[] | null;
   accent: string | null;
+  link: string | null;
 };
 
 export const MEDIA_KIT_DEFAULTS: MediaKitProfile = {
@@ -41,6 +42,7 @@ export const MEDIA_KIT_DEFAULTS: MediaKitProfile = {
     { name: "Carrossel educativo", desc: "Conteúdo + arte na identidade da marca", price: "R$ 0" },
   ],
   accent: "#0F6E56",
+  link: null,
 };
 
 // Configuração editável do media kit (audiência, serviços/valores, contato…).
@@ -51,7 +53,7 @@ export function useMediaKitProfile() {
     enabled: !!user?.id,
     queryFn: async () => {
       const { data, error } = await sbFrom("media_kit_profiles")
-        .select("headline,bio,niche,contact,cities,gender,audience,services,accent")
+        .select("headline,bio,niche,contact,cities,gender,audience,services,accent,link")
         .eq("user_id", user!.id)
         .maybeSingle();
       if (error) throw error;
