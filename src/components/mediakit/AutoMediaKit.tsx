@@ -1,4 +1,4 @@
-import { forwardRef, type ReactNode } from "react";
+import { forwardRef, type ReactNode, type SyntheticEvent } from "react";
 import type { MediaKitProfile } from "@/hooks/useMediaKit";
 
 export type KitStats = {
@@ -6,6 +6,12 @@ export type KitStats = {
   reachMonth: number;
   engagementPct: number;
   saves: number;
+  profileViews?: number;
+  accountsEngaged?: number;
+  interactions?: number;
+  postsCount?: number;
+  avgReach?: number;
+  followersGrowth?: number;
 };
 
 export type KitTopPost = {
@@ -21,10 +27,13 @@ type Props = {
   handle: string;
   niche: string;
   bio: string;
+  avatarUrl?: string | null;
   kit: MediaKitProfile;
   stats: KitStats;
   posts: KitTopPost[];
 };
+
+const hideImg = (e: SyntheticEvent<HTMLImageElement>) => { e.currentTarget.style.display = "none"; };
 
 const fmt = (n: number): string => {
   if (!n) return "0";
@@ -40,7 +49,7 @@ const POST_GRADS = [
 ];
 
 export const AutoMediaKit = forwardRef<HTMLDivElement, Props>(function AutoMediaKit(
-  { name, handle, niche, bio, kit, stats, posts },
+  { name, handle, niche, bio, avatarUrl, kit, stats, posts },
   ref,
 ) {
   const accent = kit.accent || "#0F6E56";
@@ -61,7 +70,9 @@ export const AutoMediaKit = forwardRef<HTMLDivElement, Props>(function AutoMedia
         <div style={{ background: `linear-gradient(135deg, ${accent} 0%, #0c5947 55%, #1d9e75 100%)`, color: "#fff", padding: "30px 32px 26px", position: "relative" }}>
           <span style={{ position: "absolute", top: 20, right: 28, fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", opacity: .8, fontWeight: 600 }}>Media Kit · {new Date().getFullYear()}</span>
           <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-            <div style={{ width: 84, height: 84, borderRadius: "50%", background: "linear-gradient(135deg,#F58529,#DD2A7B,#515BD4)", border: "3px solid rgba(255,255,255,.6)", flexShrink: 0 }} />
+            <div style={{ width: 84, height: 84, borderRadius: "50%", background: "linear-gradient(135deg,#F58529,#DD2A7B,#515BD4)", border: "3px solid rgba(255,255,255,.6)", flexShrink: 0, overflow: "hidden", display: "grid", placeItems: "center", color: "#fff", fontWeight: 800, fontSize: 28 }}>
+              {avatarUrl ? <img src={avatarUrl} alt="" referrerPolicy="no-referrer" onError={hideImg} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (name || "?").trim().charAt(0).toUpperCase()}
+            </div>
             <div>
               <h1 style={{ fontFamily: "Sora, Inter, sans-serif", fontSize: 27, fontWeight: 800, letterSpacing: "-.02em", margin: 0 }}>{name || "Seu nome"}</h1>
               <div style={{ fontSize: 14, opacity: .9, marginTop: 2 }}>{handle} · Instagram</div>
@@ -121,14 +132,39 @@ export const AutoMediaKit = forwardRef<HTMLDivElement, Props>(function AutoMedia
             </div>
           </Section>
 
+          {/* desempenho do mês */}
+          {(() => {
+            const extra: Array<[string, string]> = [];
+            if (stats.followersGrowth) extra.push([`${stats.followersGrowth > 0 ? "+" : ""}${fmt(stats.followersGrowth)}`, "Novos seguidores"]);
+            if (stats.profileViews) extra.push([fmt(stats.profileViews), "Visitas ao perfil"]);
+            if (stats.accountsEngaged) extra.push([fmt(stats.accountsEngaged), "Contas engajadas"]);
+            if (stats.interactions) extra.push([fmt(stats.interactions), "Interações"]);
+            if (stats.avgReach) extra.push([fmt(stats.avgReach), "Alcance médio/post"]);
+            if (stats.postsCount) extra.push([String(stats.postsCount), "Posts no período"]);
+            if (extra.length < 2) return null;
+            return (
+              <Section title="Desempenho · últimos 30 dias" accent={accent}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 10 }}>
+                  {extra.map(([n, l]) => (
+                    <div key={l} style={{ background: "#f4f7f5", borderRadius: 10, padding: "12px 14px" }}>
+                      <div style={{ fontFamily: "Sora, Inter, sans-serif", fontSize: 19, fontWeight: 700, color: accent }}>{n}</div>
+                      <div style={{ fontSize: 11, color: "#6b7670", marginTop: 2 }}>{l}</div>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            );
+          })()}
+
           {/* melhores conteúdos */}
           {posts.length > 0 && (
             <Section title="Melhores conteúdos · 90 dias" accent={accent}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12 }}>
                 {posts.slice(0, 3).map((p, i) => (
                   <div key={i} style={{ border: "1px solid #e7ece9", borderRadius: 12, overflow: "hidden" }}>
-                    <div style={{ aspectRatio: "4/5", background: p.thumbnail_url ? `center/cover no-repeat url(${p.thumbnail_url})` : POST_GRADS[i % 3], position: "relative" }}>
-                      <span style={{ position: "absolute", top: 7, left: 7, background: "rgba(0,0,0,.45)", color: "#fff", fontSize: 10.5, padding: "3px 8px", borderRadius: 999 }}>{p.format}</span>
+                    <div style={{ aspectRatio: "4/5", background: POST_GRADS[i % 3], position: "relative", overflow: "hidden" }}>
+                      {p.thumbnail_url && <img src={p.thumbnail_url} alt="" referrerPolicy="no-referrer" onError={hideImg} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
+                      <span style={{ position: "absolute", top: 7, left: 7, background: "rgba(0,0,0,.45)", color: "#fff", fontSize: 10.5, padding: "3px 8px", borderRadius: 999, zIndex: 1 }}>{p.format}</span>
                     </div>
                     <div style={{ padding: "9px 11px", fontSize: 11.5 }}>
                       <div style={{ fontWeight: 600, marginBottom: 5, lineHeight: 1.35, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{p.title}</div>

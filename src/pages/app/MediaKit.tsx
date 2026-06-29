@@ -24,11 +24,18 @@ export default function MediaKit() {
 
   const stats: KitStats = useMemo(() => {
     const followers = [...daily].reverse().find((d) => d.followers != null)?.followers ?? 0;
+    const firstFollowers = daily.find((d) => d.followers != null)?.followers ?? 0;
+    const followersGrowth = followers && firstFollowers ? followers - firstFollowers : 0;
     const reachMonth = daily.reduce((s, d) => s + (d.reach ?? 0), 0);
     const interactions = daily.reduce((s, d) => s + (d.total_interactions ?? 0), 0);
     const engagementPct = reachMonth > 0 ? Math.min(100, (interactions / reachMonth) * 100) : 0;
     const saves = media.reduce((s, m) => s + (m.metrics?.saved ?? m.metrics?.saves ?? 0), 0);
-    return { followers, reachMonth, engagementPct, saves };
+    const profileViews = daily.reduce((s, d) => s + (d.profile_views ?? 0), 0);
+    const accountsEngaged = daily.reduce((s, d) => s + (d.accounts_engaged ?? 0), 0);
+    const postsCount = media.length;
+    const reachPosts = media.filter((m) => (m.metrics?.reach ?? 0) > 0);
+    const avgReach = reachPosts.length ? Math.round(reachPosts.reduce((s, m) => s + (m.metrics?.reach ?? 0), 0) / reachPosts.length) : 0;
+    return { followers, reachMonth, engagementPct, saves, profileViews, accountsEngaged, interactions, postsCount, avgReach, followersGrowth };
   }, [daily, media]);
 
   const topPosts: KitTopPost[] = useMemo(() => {
@@ -154,6 +161,7 @@ export default function MediaKit() {
                   ref={printRef}
                   name={profile?.name ?? "Seu nome"}
                   handle={handle}
+                  avatarUrl={conn?.profile_picture_url ?? profile?.avatar_url ?? null}
                   niche={liveKit.niche ?? profile?.niche ?? ""}
                   bio={liveKit.bio ?? profile?.bio ?? ""}
                   kit={liveKit}

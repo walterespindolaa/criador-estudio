@@ -16,6 +16,7 @@ export type SocialConnection = {
   external_account_id: string;
   username: string | null;
   account_type: string | null;
+  profile_picture_url: string | null;
   token_expires_at: string | null;
   connected_at: string | null;
   updated_at: string | null;
@@ -60,7 +61,7 @@ export function useSocialConnection() {
     enabled: !!user?.id,
     queryFn: async () => {
       const { data, error } = await sbFrom("social_connections")
-        .select("id,user_id,provider,external_account_id,username,account_type,token_expires_at,connected_at,updated_at")
+        .select("id,user_id,provider,external_account_id,username,account_type,profile_picture_url,token_expires_at,connected_at,updated_at")
         .eq("user_id", user!.id)
         .eq("provider", "instagram")
         .maybeSingle();

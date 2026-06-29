@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     if (!token) return json({ error: 'not_connected' }, 400);
 
     // 1) conta -> métricas diárias + atualiza a conexão
-    const me = await getJson(`${GRAPH}/me?fields=username,account_type,followers_count,media_count&access_token=${token}`);
+    const me = await getJson(`${GRAPH}/me?fields=username,account_type,followers_count,media_count,profile_picture_url&access_token=${token}`);
     const today = new Date().toISOString().slice(0, 10);
 
     // Insights de conta (best-effort): série diária de alcance (gráfico) + visitas ao perfil
@@ -68,7 +68,8 @@ Deno.serve(async (req) => {
       captured_at: new Date().toISOString(),
     } as never, { onConflict: 'user_id,provider,date' });
     await admin.from('social_connections').update({
-      username: me.username ?? null, account_type: me.account_type ?? null, updated_at: new Date().toISOString(),
+      username: me.username ?? null, account_type: me.account_type ?? null,
+      profile_picture_url: me.profile_picture_url ?? null, updated_at: new Date().toISOString(),
     } as never).eq('user_id', userId).eq('provider', 'instagram');
 
     // 2) mídias + insights por post
