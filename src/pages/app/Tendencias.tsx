@@ -2,8 +2,10 @@ import { motion } from "framer-motion";
 import { TrendingUp, RefreshCw, Loader2, Wand2, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { CopyButton } from "@/components/shared/CopyButton";
+import { useCriaAI } from "@/contexts/CriaAIContext";
 import { useProfile } from "@/hooks/useProfile";
-import { useTrends, useRefreshTrends, type TrendKind } from "@/hooks/useTrends";
+import { useTrends, useRefreshTrends, type Trend, type TrendKind } from "@/hooks/useTrends";
 
 const KIND: Record<TrendKind, { label: string; chipBg: string; chipFg: string }> = {
   formato: { label: "Formato em alta", chipBg: "#EEEDFE", chipFg: "#3C3489" },
@@ -14,9 +16,14 @@ const KIND: Record<TrendKind, { label: string; chipBg: string; chipFg: string }>
 
 export default function Tendencias() {
   const { profile } = useProfile();
+  const { openCria } = useCriaAI();
   const isAdmin = profile?.role === "admin";
   const { data: trends = [], isLoading } = useTrends();
   const refresh = useRefreshTrends();
+
+  const gerarIdeia = (t: Trend) => {
+    openCria(`Quero ideias de conteúdo pra minha marca sobre esta tendência: "${t.title}"${t.description ? ` — ${t.description}` : ""}. Me dá 3 ideias prontas (gancho + formato), no meu tom e nicho, com uma legenda curta em cada.`);
+  };
 
   const lastUpdated = trends[0]?.created_at ? new Date(trends[0].created_at) : null;
 
@@ -59,6 +66,12 @@ export default function Tendencias() {
                   <span className="text-[11px] font-body px-2 py-0.5 rounded-full self-start" style={{ background: k.chipBg, color: k.chipFg }}>{k.label}</span>
                   <p className="text-[15px] font-body font-semibold text-foreground mt-2 leading-snug">{t.title}</p>
                   {t.description && <p className="text-[13px] font-body text-muted-foreground mt-1.5 leading-relaxed">{t.description}</p>}
+                  <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-border/60">
+                    <button onClick={() => gerarIdeia(t)} className="text-[12px] font-medium text-primary flex items-center gap-1 hover:underline">
+                      <Wand2 className="h-3.5 w-3.5" /> Gerar ideia
+                    </button>
+                    <CopyButton text={`${t.title}${t.description ? ` — ${t.description}` : ""}`} className="ml-auto" />
+                  </div>
                 </div>
               );
             })}

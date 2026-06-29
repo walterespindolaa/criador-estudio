@@ -7,6 +7,9 @@ import { useSocialConnection, useDailyMetrics, useMediaInsights, useSyncInstagra
 import { useMediaKitProfile, useSaveMediaKitProfile, useCustomMediaKit, type MediaKitProfile, type KitService } from "@/hooks/useMediaKit";
 import { AutoMediaKit, type KitStats, type KitTopPost } from "@/components/mediakit/AutoMediaKit";
 import { usePdfExport } from "@/hooks/usePdfExport";
+import { useTier } from "@/hooks/useTier";
+import { Link } from "react-router-dom";
+import { Lock } from "lucide-react";
 import { toast } from "sonner";
 
 export default function MediaKit() {
@@ -19,6 +22,7 @@ export default function MediaKit() {
   const custom = useCustomMediaKit();
   const sync = useSyncInstagram();
   const { exportPdf } = usePdfExport();
+  const { isPaidOrTrial, isLoading: tierLoading } = useTier();
   const printRef = useRef<HTMLDivElement>(null);
 
   const [editing, setEditing] = useState(false);
@@ -95,6 +99,17 @@ export default function MediaKit() {
     if (file) custom.upload.mutate(file);
     e.target.value = "";
   };
+
+  if (!tierLoading && !isPaidOrTrial) {
+    return (
+      <div className="max-w-lg mx-auto text-center py-16">
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center mx-auto mb-4"><Lock className="h-6 w-6 text-white" /></div>
+        <h1 className="text-2xl font-display font-extrabold text-foreground">Media Kit é dos planos Pro e Studio</h1>
+        <p className="text-sm font-body text-muted-foreground mt-2">Monte um portfólio profissional com os números reais do seu Instagram (ou suba o seu PDF) pra fechar publis. Disponível a partir do plano Pro.</p>
+        <Button asChild className="mt-5"><Link to="/app/assinar">Conhecer os planos</Link></Button>
+      </div>
+    );
+  }
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="pb-24 md:pb-0">
