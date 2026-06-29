@@ -48,7 +48,8 @@ serve(async (req) => {
 
     // Plano de agência: assinatura com QUANTIDADE = nº de assentos (preço por assento).
     const isAgency = plan === "agency";
-    const seats = isAgency ? Math.max(1, Math.min(50, Math.floor(Number(body?.seats) || 1))) : 1;
+    // Plano de agência exige no mínimo 3 assentos.
+    const seats = isAgency ? Math.max(3, Math.min(50, Math.floor(Number(body?.seats) || 3))) : 1;
 
     const priceId = isAgency
       ? Deno.env.get("STRIPE_PRICE_AGENCY_SEAT")!

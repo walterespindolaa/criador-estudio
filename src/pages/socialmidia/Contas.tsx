@@ -202,9 +202,14 @@ export default function Contas() {
         <DialogContent className="sm:max-w-md rounded-2xl">
           <DialogHeader>
             <DialogTitle className="font-display">{seatLimit > 0 ? "Expandir assentos" : "Assinar plano de Agência"}</DialogTitle>
-            <DialogDescription className="font-body text-sm">Escolha quantos assentos de cliente você quer. Você é cobrada por assento, mensalmente.</DialogDescription>
+            <DialogDescription className="font-body text-sm">Escolha quantos assentos de cliente você quer (mínimo 3). Você é cobrada por assento, mensalmente.</DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-4 gap-2 mt-2">
+          <div className="rounded-xl bg-primary/5 border border-primary/15 px-3 py-2 mt-1 text-sm font-body">
+            <span className="text-muted-foreground line-through mr-2">R$ 49,90</span>
+            <span className="font-display font-bold text-primary">R$ 36,90</span>
+            <span className="text-muted-foreground"> /assento ao mês</span>
+          </div>
+          <div className="grid grid-cols-4 gap-2 mt-3">
             {SEAT_OPTIONS.map((n) => (
               <button key={n} type="button" onClick={() => setExpandSeats(n)} disabled={expanding}
                 className={cn("rounded-xl border-2 py-3 text-center transition-all", expandSeats === n ? "border-primary bg-primary/5" : "border-border hover:border-primary/30")}>
@@ -214,9 +219,10 @@ export default function Contas() {
           </div>
           <div className="flex items-center gap-2 mt-3">
             <Label className="font-body text-xs">Outro:</Label>
-            <Input type="number" min={1} max={50} value={expandSeats} onChange={(e) => setExpandSeats(Math.max(1, Math.min(50, Number(e.target.value) || 1)))} disabled={expanding} className="rounded-xl w-24" />
+            <Input type="number" min={3} max={50} value={expandSeats} onChange={(e) => setExpandSeats(Math.max(3, Math.min(50, Number(e.target.value) || 3)))} disabled={expanding} className="rounded-xl w-24" />
             <span className="text-xs font-body text-muted-foreground">assentos</span>
           </div>
+          <p className="text-sm font-body text-foreground mt-3">Total: <span className="font-bold">R$ {(expandSeats * 36.9).toFixed(2).replace(".", ",")}</span>/mês · {expandSeats} assentos</p>
           <div className="flex justify-end gap-2 mt-6">
             <Button variant="outline" onClick={() => setExpandOpen(false)} disabled={expanding}>Cancelar</Button>
             <Button onClick={handleExpand} disabled={expanding}>{expanding && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}Ir pro pagamento</Button>
