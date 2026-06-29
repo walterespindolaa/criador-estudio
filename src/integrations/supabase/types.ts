@@ -3910,6 +3910,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      reconcile_agency_seats: { Args: { _manager: string }; Returns: number }
       reject_proposal_by_token: {
         Args: { _note?: string; _reason?: string; _token: string }
         Returns: undefined
