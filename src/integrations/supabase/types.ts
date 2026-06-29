@@ -2718,6 +2718,8 @@ export type Database = {
           name: string
           niche: string | null
           onboarding_completed: boolean | null
+          parked_at: string | null
+          parked_until: string | null
           phone: string | null
           pix_key: string | null
           plan: string | null
@@ -2767,6 +2769,8 @@ export type Database = {
           name: string
           niche?: string | null
           onboarding_completed?: boolean | null
+          parked_at?: string | null
+          parked_until?: string | null
           phone?: string | null
           pix_key?: string | null
           plan?: string | null
@@ -2816,6 +2820,8 @@ export type Database = {
           name?: string
           niche?: string | null
           onboarding_completed?: boolean | null
+          parked_at?: string | null
+          parked_until?: string | null
           phone?: string | null
           pix_key?: string | null
           plan?: string | null
@@ -3643,6 +3649,16 @@ export type Database = {
           referred_user_id: string
           status: string
           unlocked_at: string
+        }[]
+      }
+      agency_clients: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          parked_until: string
         }[]
       }
       agency_seats_used: { Args: never; Returns: number }
