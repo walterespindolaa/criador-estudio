@@ -152,6 +152,8 @@ serve(async (req) => {
               subscription_status: status,
               seat_limit: status === "active" ? qty : 0,
             }).eq("id", userId);
+            // Se o limite caiu abaixo do uso, pausa os clientes excedentes (inventário).
+            await supabase.rpc("reconcile_agency_seats", { _manager: userId });
           }
           break;
         }
@@ -184,6 +186,8 @@ serve(async (req) => {
         if (sub.metadata?.plan === "agency" && userId) {
           await supabase.from("profiles")
             .update({ subscription_status: "canceled", seat_limit: 0 }).eq("id", userId);
+          // Cancelou o plano de agência: todos os clientes cobertos vão pro inventário.
+          await supabase.rpc("reconcile_agency_seats", { _manager: userId });
           break;
         }
         if (userId) {
