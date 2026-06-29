@@ -73,6 +73,19 @@ serve(async (req) => {
         const plan = s.metadata?.plan;
         if (!userId || !plan) break;
 
+        // Plano de agência: provisiona assentos (não mexe no plano pessoal de criação).
+        if (plan === "agency") {
+          const seats = Math.max(1, Math.floor(Number(s.metadata?.seats) || 1));
+          await supabase.from("profiles").update({
+            subscription_status: "active",
+            stripe_customer_id: s.customer as string,
+            stripe_subscription_id: s.subscription as string,
+            account_type: "manager",
+            seat_limit: seats,
+          }).eq("id", userId);
+          break;
+        }
+
         await supabase.from("profiles").update({
           subscription_status: "active",
           stripe_customer_id: s.customer as string,
@@ -131,6 +144,18 @@ serve(async (req) => {
           sub.status === "unpaid" ? "past_due" :
           sub.status;
 
+        if (plan === "agency") {
+          // Atualiza assentos pela quantidade atual da assinatura.
+          const qty = Math.max(0, Math.floor(Number(sub.items?.data?.[0]?.quantity) || Number(sub.metadata?.seats) || 0));
+          if (userId) {
+            await supabase.from("profiles").update({
+              subscription_status: status,
+              seat_limit: status === "active" ? qty : 0,
+            }).eq("id", userId);
+          }
+          break;
+        }
+
         if (userId) {
           const update: Record<string, string | number> = { subscription_status: status };
           if (plan) update.plan = plan;
@@ -156,6 +181,11 @@ serve(async (req) => {
           break;
         }
         const userId = sub.metadata?.user_id;
+        if (sub.metadata?.plan === "agency" && userId) {
+          await supabase.from("profiles")
+            .update({ subscription_status: "canceled", seat_limit: 0 }).eq("id", userId);
+          break;
+        }
         if (userId) {
           await supabase.from("profiles")
             .update({ subscription_status: "canceled" }).eq("id", userId);

@@ -40,15 +40,26 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const plan = body?.plan;
-    if (plan !== "pro" && plan !== "studio") {
+    if (plan !== "pro" && plan !== "studio" && plan !== "agency") {
       return new Response(JSON.stringify({ error: "invalid_plan" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const priceId = plan === "studio"
+    // Plano de agência: assinatura com QUANTIDADE = nº de assentos (preço por assento).
+    const isAgency = plan === "agency";
+    const seats = isAgency ? Math.max(1, Math.min(50, Math.floor(Number(body?.seats) || 1))) : 1;
+
+    const priceId = isAgency
+      ? Deno.env.get("STRIPE_PRICE_AGENCY_SEAT")!
+      : plan === "studio"
       ? Deno.env.get("STRIPE_PRICE_STUDIO")!
       : Deno.env.get("STRIPE_PRICE_PRO")!;
+    if (!priceId) {
+      return new Response(JSON.stringify({ error: "price_not_configured" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Service client pra ler/gravar o stripe_customer_id
     const svc = createClient(
@@ -122,16 +133,20 @@ serve(async (req) => {
 
     const origin = req.headers.get("origin") ?? "https://app.criasocialclub.com.br";
 
+    const agencyMeta: Record<string, string> = isAgency ? { seats: String(seats) } : {};
+    const successUrl = isAgency ? `${origin}/socialmidia/contas?checkout=success` : `${origin}/app/obrigado?checkout=success`;
+    const cancelUrl = isAgency ? `${origin}/socialmidia/contas?checkout=cancel` : `${origin}/app/assinar?checkout=cancel`;
+
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: "subscription",
       customer: customerId,
-      line_items: [{ price: priceId, quantity: 1 }],
-      metadata: { app: "cria", user_id: user.id, plan, ...partnerMeta, ...selfSubMark },
+      line_items: [{ price: priceId, quantity: seats }],
+      metadata: { app: "cria", user_id: user.id, plan, ...agencyMeta, ...partnerMeta, ...selfSubMark },
       subscription_data: {
-        metadata: { app: "cria", user_id: user.id, plan, ...partnerMeta, ...selfSubMark },
+        metadata: { app: "cria", user_id: user.id, plan, ...agencyMeta, ...partnerMeta, ...selfSubMark },
       },
-      success_url: `${origin}/app/obrigado?checkout=success`,
-      cancel_url: `${origin}/app/assinar?checkout=cancel`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
     };
     if (appliedPromotionCodeId) {
       sessionParams.discounts = [{ promotion_code: appliedPromotionCodeId }];
