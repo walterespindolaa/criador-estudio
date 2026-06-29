@@ -681,6 +681,21 @@ const AdminInner = () => {
                     </div>
                   </div>
                 )}
+
+                {(() => {
+                  const msg = result.creator
+                    ? `Oi! Criei seus acessos no CRIA. 🎉\n\n🔧 Painel de gestão (social mídia)\nE-mail: ${result.email}\n1º acesso: ${result.inviteLink}\n\n✨ Conta de criadora (${result.creator.email})\n1º acesso: ${result.creator.inviteLink}\n\nÉ só abrir cada link, criar sua senha e começar — cada um leva pra uma área. Qualquer dúvida, me chama!`
+                    : `Oi! Criei seu acesso no CRIA. 🎉\n\nE-mail: ${result.email}\n1º acesso: ${result.inviteLink}\n\nÉ só abrir o link, criar sua senha e pronto. Qualquer dúvida, me chama!`;
+                  return (
+                    <div className="rounded-xl border border-border bg-card px-3 py-2.5 min-w-0 mt-1">
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Mensagem pronta pra enviar</p>
+                        <CopyButton text={msg} />
+                      </div>
+                      <pre className="text-xs font-body text-foreground whitespace-pre-wrap leading-relaxed break-words">{msg}</pre>
+                    </div>
+                  );
+                })()}
               </div>
             )}
             <DialogFooter>

@@ -48,6 +48,10 @@ export function useRefreshTrends() {
       qc.invalidateQueries({ queryKey: ["content-trends"] });
       toast.success(`Banco atualizado — ${res?.count ?? 0} tendências.`);
     },
-    onError: () => toast.error("Não consegui atualizar as tendências agora."),
+    onError: (e) => {
+      const msg = e instanceof Error ? e.message : "";
+      console.error("trend refresh failed:", e);
+      toast.error(msg && !/non-2xx/i.test(msg) ? `Tendências: ${msg}` : "Não consegui atualizar agora. Confirme se o ai-context-builder foi redeployado.");
+    },
   });
 }
