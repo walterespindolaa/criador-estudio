@@ -14,6 +14,7 @@ import { CopyButton } from "@/components/shared/CopyButton";
 import { PLANS, type PlanId } from "@/lib/plans";
 import { cn } from "@/lib/utils";
 import { ClientsGrid } from "@/components/accounts/ClientsGrid";
+import { AgencyClients } from "@/components/accounts/AgencyClients";
 import { ManagerSectionTitle } from "@/components/accounts/ManagerSectionTitle";
 
 const SEAT_OPTIONS = [3, 5, 10, 20];
@@ -145,7 +146,8 @@ export default function Contas() {
             <div className="mt-3 h-2 rounded-full bg-muted overflow-hidden">
               <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${seatPct}%` }} />
             </div>
-            {seatsFree <= 0 && <p className="text-[11px] font-body text-muted-foreground mt-2">Assentos esgotados — expanda o plano pra adicionar mais clientes.</p>}
+            {seatsFree <= 0 && <p className="text-[11px] font-body text-muted-foreground mt-2">Assentos esgotados — expanda o plano ou pause um cliente pra liberar assento.</p>}
+            <AgencyClients seatsFree={seatsFree} />
           </>
         ) : (
           <div className="flex items-center justify-between gap-3 flex-wrap">
