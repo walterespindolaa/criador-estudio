@@ -39,3 +39,5 @@ project_id = "exuxlwdnkgmhtnwoyvwo"
     verify_jwt = true
   [functions.ai-context-builder]
     verify_jwt = true
+  [functions.create-checkout]
+    verify_jwt = false
