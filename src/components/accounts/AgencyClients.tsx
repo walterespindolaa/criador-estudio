@@ -48,6 +48,7 @@ export function AgencyClients({ seatsFree }: { seatsFree: number }) {
       if (error || err) {
         toast.error(err === "seats_full" ? "Sem assento livre pra reativar — pause outro ou expanda."
           : err === "email_update_failed" ? "Não consegui trocar o e-mail (já em uso?)."
+          : err === "rate_limited" ? "Muitas ações em sequência. Aguarde um minuto."
           : "Não consegui concluir a ação.");
         return false;
       }

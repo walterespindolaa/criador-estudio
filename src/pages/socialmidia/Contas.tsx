@@ -59,6 +59,7 @@ export default function Contas() {
         toast.error(err === "seats_full" ? "Seus assentos acabaram. Expanda o plano pra adicionar mais."
           : err === "no_seats" ? "Você ainda não tem um plano de agência ativo."
           : err === "use_different_email" ? "Use um e-mail diferente do seu de gestora."
+          : err === "rate_limited" ? "Muitas tentativas. Aguarde um minuto."
           : "Não consegui adicionar agora.");
         return;
       }

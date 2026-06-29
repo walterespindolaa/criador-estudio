@@ -10,6 +10,18 @@ const cors = {
 const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
+// Rate limit por usuário/minuto via RPC existente. Fail-open: erro não bloqueia.
+async function rateOk(svc: SupabaseClient, userId: string, scope: string, limit: number): Promise<boolean> {
+  try {
+    const windowKey = new Date().toISOString().slice(0, 16); // bucket por minuto
+    const { data, error } = await svc.rpc("check_and_increment_rate_limit", {
+      _user_id: userId, _scope: scope, _window_key: windowKey, _limit: limit,
+    });
+    if (error) return true;
+    return data !== false;
+  } catch { return true; }
+}
+
 async function ensureUnsubscribeToken(svc: SupabaseClient, email: string): Promise<string> {
   const token = crypto.randomUUID();
   await svc.from("email_unsubscribe_tokens").upsert({ email, token }, { onConflict: "email", ignoreDuplicates: true });
@@ -65,6 +77,11 @@ serve(async (req) => {
 
     const svc: SupabaseClient = createClient(
       Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // Rate limit: no máx. 10 criações de cliente por minuto por manager.
+    if (!(await rateOk(svc, user.id, "manager-add-client", 10))) {
+      return json({ error: "rate_limited", message: "Muitas tentativas. Aguarde um minuto." }, 429);
+    }
 
     // Caller precisa ser manager com assentos.
     const { data: caller } = await svc.from("profiles")

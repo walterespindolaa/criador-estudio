@@ -10,6 +10,18 @@ const cors = {
 const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
+// Rate limit por usuário/minuto via RPC existente. Fail-open.
+async function rateOk(svc: SupabaseClient, userId: string, scope: string, limit: number): Promise<boolean> {
+  try {
+    const windowKey = new Date().toISOString().slice(0, 16);
+    const { data, error } = await svc.rpc("check_and_increment_rate_limit", {
+      _user_id: userId, _scope: scope, _window_key: windowKey, _limit: limit,
+    });
+    if (error) return true;
+    return data !== false;
+  } catch { return true; }
+}
+
 const PARK_DAYS = 60;
 
 serve(async (req) => {
@@ -26,6 +38,10 @@ serve(async (req) => {
 
     const svc: SupabaseClient = createClient(
       Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    if (!(await rateOk(svc, user.id, "manager-client-actions", 30))) {
+      return json({ error: "rate_limited", message: "Muitas ações em sequência. Aguarde um minuto." }, 429);
+    }
 
     const body = await req.json().catch(() => ({}));
     const action = String(body?.action ?? "");
