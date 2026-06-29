@@ -49,6 +49,7 @@ const Tendencias = lazy(() => import("./pages/app/Tendencias"));
 const TrocarSenha = lazy(() => import("./pages/app/TrocarSenha"));
 const Assinar = lazy(() => import("./pages/app/Assinar"));
 const BioPage = lazy(() => import("./pages/BioPage"));
+const Ativar = lazy(() => import("./pages/Ativar"));
 const AprovarPortal = lazy(() => import("./pages/AprovarPortal"));
 const PropostaPublica = lazy(() => import("./pages/PropostaPublica"));
 const CronogramaPublica = lazy(() => import("./pages/CronogramaPublica"));
@@ -102,6 +103,7 @@ const App = () => (
               <Route path="/aprovar/:token" element={<AprovarPortal />} />
               <Route path="/proposta/:token" element={<PropostaPublica />} />
               <Route path="/cronograma/:token" element={<CronogramaPublica />} />
+              <Route path="/ativar" element={<Ativar />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/reset-password" element={<ResetPassword />} />

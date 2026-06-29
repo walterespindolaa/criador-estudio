@@ -43,7 +43,12 @@ async function inviteUser(svc: SupabaseClient, email: string, origin: string, re
   if (error || !linkData?.properties?.action_link || !linkData.user) {
     return { error: (error?.message ?? "link_failed") };
   }
-  return { actionLink: linkData.properties.action_link, userId: linkData.user.id, existed: !!existing };
+  // Link branded do CRIA (não expõe supabase.co): /ativar autentica via token_hash e redireciona.
+  const hashed = linkData.properties.hashed_token;
+  const branded = hashed
+    ? `${origin}/ativar?th=${hashed}&type=${type}&to=${encodeURIComponent(redirectPath)}`
+    : linkData.properties.action_link;
+  return { actionLink: branded, userId: linkData.user.id, existed: !!existing };
 }
 
 async function sendInvite(svc: SupabaseClient, email: string, title: string, paragraph: string, actionLink: string) {

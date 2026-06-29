@@ -77,7 +77,8 @@ serve(async (req) => {
     };
 
     // Gera invite link (Supabase cria o usuário como parte do generateLink type='invite')
-    const redirectTo = (req.headers.get("origin") ?? "https://app.criasocialclub.com.br") + "/app";
+    const origin = req.headers.get("origin") ?? "https://app.criasocialclub.com.br";
+    const redirectTo = origin + "/app";
     const { data: linkData, error: linkErr } = await svc.auth.admin.generateLink({
       type: "invite",
       email: normEmail,
@@ -91,7 +92,11 @@ serve(async (req) => {
       console.error("[admin-create-user] generateLink failed:", linkErr);
       return json({ error: "link_failed" }, 400);
     }
-    const actionLink = linkData.properties.action_link;
+    // Link branded do CRIA (não expõe supabase.co): /ativar autentica via token_hash.
+    const hashed = linkData.properties.hashed_token;
+    const actionLink = hashed
+      ? `${origin}/ativar?th=${hashed}&type=invite&to=${encodeURIComponent("/app")}`
+      : linkData.properties.action_link;
     const newId = linkData.user.id;
 
     // Ajusta o profile (o trigger de trial seta plan='trial'; sobrescrevemos com o escolhido)
