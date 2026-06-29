@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Camera, ArrowRight, Ticket, Settings, Users, Sparkles, X, Check } from "lucide-react";
+import { Camera, ArrowRight, Ticket, Settings, Users, Sparkles, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -33,9 +33,7 @@ export default function ManagerHome() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
   const [cropOpen, setCropOpen] = useState(false);
-  const [promoOff, setPromoOff] = useState(() => { try { return localStorage.getItem("agency_promo_dismissed") === "1"; } catch { return false; } });
   const hasAgency = (profile?.seat_limit ?? 0) > 0;
-  const dismissPromo = () => { try { localStorage.setItem("agency_promo_dismissed", "1"); } catch { /* ignore */ } setPromoOff(true); };
 
   const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; e.target.value = "";
@@ -80,9 +78,50 @@ export default function ManagerHome() {
         </button>
       </div>
 
-      {!hasAgency && !promoOff && (
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-purple-600 text-white p-5 sm:p-6 mb-8">
-          <button onClick={dismissPromo} aria-label="Dispensar" className="absolute top-3 right-3 p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10"><X className="h-4 w-4" /></button>
+      <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">Seus módulos</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+        {modules.map((m) => {
+          const active = m.status === "active" || m.status === "past_due";
+          return (
+            <button key={m.code} type="button" onClick={() => openModule(m)}
+              className="text-left bg-card border border-border rounded-2xl p-4 hover:border-primary/40 transition-colors">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="font-display font-bold text-foreground text-sm">{m.name}</span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${active ? "bg-green-100 text-green-700" : m.coming_soon ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"}`}>
+                  {active ? "Ativo" : m.coming_soon ? "Em breve" : "Adquirir"}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground font-body">{active ? "Toque para abrir" : m.coming_soon ? "Em desenvolvimento" : "Toque para conhecer"}</p>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider">Aprovações recentes</h2>
+        <button onClick={() => navigate("/socialmidia/aprovacoes")} className="text-primary font-body font-bold text-xs flex items-center gap-1 hover:underline">Ver todas <ArrowRight className="h-3 w-3" /></button>
+      </div>
+      <div className="mb-8"><ApprovalTracker hideHeader limit={5} /></div>
+
+      {isPartner && partner?.coupon_code && (
+        <>
+          <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">Seu cupom de parceira</h2>
+          <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-card px-4 py-3 flex items-center gap-3 mb-8">
+            <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0"><Ticket className="h-5 w-5 text-primary" /></div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Seu cupom</p>
+              <p className="text-lg font-display font-extrabold text-foreground tracking-wider truncate">{partner.coupon_code}</p>
+            </div>
+            <CopyButton text={partner.coupon_code} />
+          </div>
+        </>
+      )}
+
+      <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">Seus clientes</h2>
+      <ClientsGrid defaultLimit={5} />
+
+      {!hasAgency && (
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-purple-600 text-white p-5 sm:p-6 mt-8">
           <div className="flex items-center gap-2 mb-2">
             <span className="w-8 h-8 rounded-lg bg-white/15 grid place-items-center"><Users className="h-4 w-4" /></span>
             <h3 className="font-display font-extrabold text-lg">Vire uma agência no CRIA</h3>
@@ -127,48 +166,6 @@ export default function ManagerHome() {
           </button>
         </div>
       )}
-
-      <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">Seus módulos</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
-        {modules.map((m) => {
-          const active = m.status === "active" || m.status === "past_due";
-          return (
-            <button key={m.code} type="button" onClick={() => openModule(m)}
-              className="text-left bg-card border border-border rounded-2xl p-4 hover:border-primary/40 transition-colors">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="font-display font-bold text-foreground text-sm">{m.name}</span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${active ? "bg-green-100 text-green-700" : m.coming_soon ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"}`}>
-                  {active ? "Ativo" : m.coming_soon ? "Em breve" : "Adquirir"}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground font-body">{active ? "Toque para abrir" : m.coming_soon ? "Em desenvolvimento" : "Toque para conhecer"}</p>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider">Aprovações recentes</h2>
-        <button onClick={() => navigate("/socialmidia/aprovacoes")} className="text-primary font-body font-bold text-xs flex items-center gap-1 hover:underline">Ver todas <ArrowRight className="h-3 w-3" /></button>
-      </div>
-      <div className="mb-8"><ApprovalTracker hideHeader limit={5} /></div>
-
-      {isPartner && partner?.coupon_code && (
-        <>
-          <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">Seu cupom de parceira</h2>
-          <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-card px-4 py-3 flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0"><Ticket className="h-5 w-5 text-primary" /></div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Seu cupom</p>
-              <p className="text-lg font-display font-extrabold text-foreground tracking-wider truncate">{partner.coupon_code}</p>
-            </div>
-            <CopyButton text={partner.coupon_code} />
-          </div>
-        </>
-      )}
-
-      <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">Seus clientes</h2>
-      <ClientsGrid defaultLimit={5} />
 
       {rawImageSrc && (
         <ImageCropModal open={cropOpen} onOpenChange={(o) => { setCropOpen(o); if (!o) setRawImageSrc(null); }}
