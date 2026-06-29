@@ -29,6 +29,7 @@ import { useActiveAccount } from "@/contexts/AccountContext";
 import { SettingsVisual } from "@/components/settings/SettingsVisual";
 import { SettingsEquipe } from "@/components/settings/SettingsEquipe";
 import { InfoTooltip } from "@/components/shared/InfoTooltip";
+import { AiUsageCard } from "@/components/shared/AiUsageCard";
 import { sanitizeText, sanitizeUrl } from "@/lib/sanitize";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { cn } from "@/lib/utils";
@@ -676,6 +677,7 @@ const Configuracoes = () => {
             {!isManaging && (
             <TabsContent value="integracoes">
               <div className="max-w-2xl space-y-6">
+                <AiUsageCard />
                 <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
                   <h3 className="font-display font-semibold text-foreground flex items-center gap-2"><Instagram className="h-5 w-5 text-primary" /> Instagram</h3>
                   <p className="text-sm text-muted-foreground font-body leading-relaxed">Conecte sua conta Business ou Creator pra ver seus insights (alcance, seguidores, desempenho) na página de Insights. Só leitura — o CRIA não publica por você.</p>

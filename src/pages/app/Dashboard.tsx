@@ -31,6 +31,7 @@ import { UpcomingPosts } from "@/components/dashboard/UpcomingPosts";
 import { UpcomingTasks } from "@/components/dashboard/UpcomingTasks";
 import { WhoYouAre } from "@/components/dashboard/WhoYouAre";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
+import { AiUsageCard } from "@/components/shared/AiUsageCard";
 
 const HOOKS_VIRAL = [
   { text: "Você sabia que [dado surpreendente]?", category: "curiosidade" },
@@ -467,6 +468,7 @@ const Dashboard = () => {
 
           <div className="lg:col-span-4 space-y-6">
             <WhoYouAre />
+            <AiUsageCard />
             <SmartNotificationsCard />
              <DCard className="border-border/20">
               <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
