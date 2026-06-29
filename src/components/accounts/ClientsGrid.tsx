@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, StickyNote, Users } from "lucide-react";
 import { useActiveAccount, type ManagedAccount } from "@/contexts/AccountContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ClientNotesDrawer } from "@/components/accounts/ClientNotesDrawer";
 import { cn } from "@/lib/utils";
@@ -15,12 +17,27 @@ export function ClientsGrid({ defaultLimit = 5 }: { defaultLimit?: number }) {
   const [limit, setLimit] = useState(defaultLimit);
   const [notesAccount, setNotesAccount] = useState<ManagedAccount | null>(null);
 
+  // IDs de clientes em inventário (pausados) — escondidos daqui.
+  const { data: parkedIds } = useQuery<Set<string>>({
+    queryKey: ["agency-parked-ids"],
+    queryFn: async () => {
+      const { data } = await supabase.rpc("agency_clients");
+      const set = new Set<string>();
+      ((data ?? []) as Array<{ id: string; parked_until: string | null }>).forEach((c) => { if (c.parked_until) set.add(c.id); });
+      return set;
+    },
+  });
+  const visibleAccounts = useMemo(
+    () => managedAccounts.filter((a) => !(parkedIds?.has(a.owner_id))),
+    [managedAccounts, parkedIds],
+  );
+
   const manage = (ownerId: string) => { setActiveAccount(ownerId); navigate("/app"); };
 
   if (accountsLoading) {
     return <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{[1, 2].map((i) => <div key={i} className="h-40 rounded-2xl bg-muted animate-pulse" />)}</div>;
   }
-  if (managedAccounts.length === 0) {
+  if (visibleAccounts.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-border p-10 text-center">
         <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-3"><Users className="h-5 w-5 text-muted-foreground" /></div>
@@ -32,7 +49,7 @@ export function ClientsGrid({ defaultLimit = 5 }: { defaultLimit?: number }) {
 
   return (
     <>
-      {managedAccounts.length > 5 && (
+      {visibleAccounts.length > 5 && (
         <div className="flex items-center gap-2 mb-4">
           <span className="text-xs text-muted-foreground font-body mr-1">Mostrar:</span>
           {CLIENT_STEPS.map((n) => (
@@ -43,7 +60,7 @@ export function ClientsGrid({ defaultLimit = 5 }: { defaultLimit?: number }) {
         </div>
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {managedAccounts.slice(0, limit).map((account) => (
+        {visibleAccounts.slice(0, limit).map((account) => (
           <div key={account.owner_id} className="group rounded-2xl border border-border bg-card p-5 flex flex-col gap-4 hover:shadow-md hover:border-primary/40 transition-all">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary via-purple-600 to-pink-500 p-[2px] shrink-0 overflow-hidden">

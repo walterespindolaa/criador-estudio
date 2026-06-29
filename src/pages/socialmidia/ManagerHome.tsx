@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Camera, ArrowRight, Ticket, Settings } from "lucide-react";
+import { Camera, ArrowRight, Ticket, Settings, Users, Sparkles, X, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -33,6 +33,9 @@ export default function ManagerHome() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
   const [cropOpen, setCropOpen] = useState(false);
+  const [promoOff, setPromoOff] = useState(() => { try { return localStorage.getItem("agency_promo_dismissed") === "1"; } catch { return false; } });
+  const hasAgency = (profile?.seat_limit ?? 0) > 0;
+  const dismissPromo = () => { try { localStorage.setItem("agency_promo_dismissed", "1"); } catch { /* ignore */ } setPromoOff(true); };
 
   const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; e.target.value = "";
@@ -76,6 +79,33 @@ export default function ManagerHome() {
           <Settings className="h-5 w-5" />
         </button>
       </div>
+
+      {!hasAgency && !promoOff && (
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-purple-600 text-white p-5 sm:p-6 mb-8">
+          <button onClick={dismissPromo} aria-label="Dispensar" className="absolute top-3 right-3 p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10"><X className="h-4 w-4" /></button>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="w-8 h-8 rounded-lg bg-white/15 grid place-items-center"><Users className="h-4 w-4" /></span>
+            <h3 className="font-display font-extrabold text-lg">Vire uma agência no CRIA</h3>
+          </div>
+          <p className="text-sm font-body text-white/90 max-w-xl leading-relaxed">
+            Gerencie vários clientes num lugar só e cobre quanto quiser deles — você paga só pelos assentos, eles entram sem custo.
+          </p>
+          <div className="grid sm:grid-cols-3 gap-2 mt-4">
+            {[
+              "Posts, cronograma e relatório de cada cliente num painel",
+              "Assento a R$ 36,90 vs R$ 49,90 avulso — sua margem",
+              "Acesso e relatórios com a cara do CRIA (white-label)",
+            ].map((b) => (
+              <div key={b} className="flex items-start gap-2 text-[13px] font-body text-white/95">
+                <Check className="h-4 w-4 shrink-0 mt-0.5" /> {b}
+              </div>
+            ))}
+          </div>
+          <button onClick={() => navigate("/socialmidia/contas")} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-primary hover:opacity-90 transition">
+            <Sparkles className="h-4 w-4" /> Conhecer o Plano de Agência
+          </button>
+        </div>
+      )}
 
       <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">Seus módulos</h2>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">

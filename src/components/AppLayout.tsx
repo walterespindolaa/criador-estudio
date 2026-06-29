@@ -14,6 +14,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { applyTheme } from "@/lib/applyTheme";
 import { applySidebarColor } from "@/lib/sidebarTheme";
 import { applyThemeFont } from "@/components/settings/SettingsVisual";
+import ContaPausada from "@/pages/ContaPausada";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AppRail } from "@/components/AppRail";
 import { HeroBand } from "@/components/HeroBand";
@@ -66,6 +67,11 @@ const AppLayout = () => {
 
   if (!isLoading && profile?.must_change_password === true && location.pathname !== "/app/trocar-senha") {
     return <Navigate to="/app/trocar-senha" replace />;
+  }
+
+  // Conta de criadora pausada pela agência (inventário): bloqueia o uso.
+  if (!isLoading && !isManaging && profile?.subscription_status === "parked") {
+    return <ContaPausada />;
   }
 
   // Social media (manager) sem cliente ativo: vai pra área dedicada /socialmidia
