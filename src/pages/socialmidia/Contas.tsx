@@ -237,7 +237,7 @@ export default function Contas() {
         <DialogContent className="sm:max-w-md rounded-2xl">
           <DialogHeader>
             <DialogTitle className="font-display">Cliente adicionado</DialogTitle>
-            <DialogDescription className="font-body text-sm">Mande o link de 1º acesso pro seu cliente.</DialogDescription>
+            <DialogDescription className="font-body text-sm">Já enviamos o acesso por e-mail pro cliente. Se quiser, mande também a mensagem abaixo (WhatsApp).</DialogDescription>
           </DialogHeader>
           {addResult && (
             <div className="rounded-xl border border-border bg-card px-3 py-2.5 mt-1">
