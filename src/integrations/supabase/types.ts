@@ -2699,12 +2699,14 @@ export type Database = {
         Row: {
           access_expires_at: string | null
           account_type: string
+          agency_owner_id: string | null
           ai_ideas_reset_at: string | null
           ai_ideas_used_month: number | null
           avatar_url: string | null
           bio: string | null
           bio_settings: Json | null
           bio_slug: string | null
+          bio_views: number | null
           brand_logo_url: string | null
           created_at: string | null
           editorial_line: Json | null
@@ -2721,6 +2723,7 @@ export type Database = {
           plan: string | null
           platforms: string[] | null
           role: string | null
+          seat_limit: number | null
           storage_quota_bytes: number | null
           storage_retention_days: number | null
           storage_used_bytes: number | null
@@ -2745,12 +2748,14 @@ export type Database = {
         Insert: {
           access_expires_at?: string | null
           account_type?: string
+          agency_owner_id?: string | null
           ai_ideas_reset_at?: string | null
           ai_ideas_used_month?: number | null
           avatar_url?: string | null
           bio?: string | null
           bio_settings?: Json | null
           bio_slug?: string | null
+          bio_views?: number | null
           brand_logo_url?: string | null
           created_at?: string | null
           editorial_line?: Json | null
@@ -2767,6 +2772,7 @@ export type Database = {
           plan?: string | null
           platforms?: string[] | null
           role?: string | null
+          seat_limit?: number | null
           storage_quota_bytes?: number | null
           storage_retention_days?: number | null
           storage_used_bytes?: number | null
@@ -2791,12 +2797,14 @@ export type Database = {
         Update: {
           access_expires_at?: string | null
           account_type?: string
+          agency_owner_id?: string | null
           ai_ideas_reset_at?: string | null
           ai_ideas_used_month?: number | null
           avatar_url?: string | null
           bio?: string | null
           bio_settings?: Json | null
           bio_slug?: string | null
+          bio_views?: number | null
           brand_logo_url?: string | null
           created_at?: string | null
           editorial_line?: Json | null
@@ -2813,6 +2821,7 @@ export type Database = {
           plan?: string | null
           platforms?: string[] | null
           role?: string | null
+          seat_limit?: number | null
           storage_quota_bytes?: number | null
           storage_retention_days?: number | null
           storage_used_bytes?: number | null
@@ -3636,6 +3645,7 @@ export type Database = {
           unlocked_at: string
         }[]
       }
+      agency_seats_used: { Args: never; Returns: number }
       ai_monthly_quota: { Args: never; Returns: number }
       ai_usage_this_month: {
         Args: never
@@ -3793,6 +3803,7 @@ export type Database = {
         Args: { link_id: string }
         Returns: undefined
       }
+      increment_bio_view: { Args: { _slug: string }; Returns: undefined }
       increment_storage: {
         Args: { _delta: number; _user: string }
         Returns: undefined
