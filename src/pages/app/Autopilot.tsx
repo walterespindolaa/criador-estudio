@@ -208,21 +208,23 @@ export default function Autopilot() {
 
           <div className="space-y-3">
             {items.map((it, i) => (
-              <div key={i} className={`bg-card border rounded-2xl p-4 transition-colors ${it.selected ? "border-primary/40" : "border-border opacity-70"}`}>
-                <div className="flex items-start gap-3">
-                  <button onClick={() => patch(i, { selected: !it.selected })} aria-label="Selecionar" className={`mt-0.5 h-5 w-5 rounded-md border flex items-center justify-center shrink-0 ${it.selected ? "bg-primary border-primary text-primary-foreground" : "border-border"}`}>
-                    {it.selected && <Check className="h-3.5 w-3.5" />}
+              <div key={i} className={`bg-card border rounded-xl px-3 py-2.5 transition-colors ${it.selected ? "border-primary/40" : "border-border opacity-60"}`}>
+                <div className="flex items-start gap-2.5">
+                  <button onClick={() => patch(i, { selected: !it.selected })} aria-label="Selecionar" className={`mt-0.5 h-4 w-4 rounded border flex items-center justify-center shrink-0 ${it.selected ? "bg-primary border-primary text-primary-foreground" : "border-border"}`}>
+                    {it.selected && <Check className="h-3 w-3" />}
                   </button>
-                  <div className="flex-1 min-w-0 space-y-2">
-                    <input value={it.titulo} onChange={(e) => patch(i, { titulo: e.target.value })} className="w-full bg-transparent font-body font-semibold text-sm text-foreground outline-none border-b border-transparent focus:border-border" />
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[10px] font-body px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{FORMAT_LABELS[(it.formato || "").toLowerCase()] ?? it.formato}</span>
-                      {it.pilar && <span className="text-[10px] font-body px-1.5 py-0.5 rounded bg-primary/10 text-primary">{it.pilar}</span>}
-                      <input type="date" value={it.date} onChange={(e) => patch(i, { date: e.target.value })} className="text-[11px] rounded-md border border-border bg-card px-1.5 py-0.5" />
-                      <input type="time" value={it.time} onChange={(e) => patch(i, { time: e.target.value })} className="text-[11px] rounded-md border border-border bg-card px-1.5 py-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <input value={it.titulo} onChange={(e) => patch(i, { titulo: e.target.value })} className="flex-1 min-w-0 bg-transparent font-body font-medium text-[13px] text-foreground outline-none truncate focus:border-b focus:border-border" />
+                      <span className="text-[9px] font-body px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">{FORMAT_LABELS[(it.formato || "").toLowerCase()] ?? it.formato}</span>
+                      {it.pilar && <span className="text-[9px] font-body px-1.5 py-0.5 rounded bg-primary/10 text-primary shrink-0 hidden sm:inline">{it.pilar}</span>}
                     </div>
-                    <textarea value={it.legenda} onChange={(e) => patch(i, { legenda: e.target.value })} rows={2} className="w-full bg-muted/30 rounded-lg p-2.5 text-xs font-body text-foreground outline-none resize-none focus:ring-1 focus:ring-primary/30" />
-                    {it.porque && <p className="text-[11px] font-body text-muted-foreground flex items-start gap-1.5"><Sparkles className="h-3 w-3 mt-0.5 text-primary shrink-0" /> {it.porque}</p>}
+                    <div className="flex items-center gap-2 mt-1">
+                      <input type="date" value={it.date} onChange={(e) => patch(i, { date: e.target.value })} className="text-[10px] rounded border border-border bg-card px-1 py-0.5" />
+                      <input type="time" value={it.time} onChange={(e) => patch(i, { time: e.target.value })} className="text-[10px] rounded border border-border bg-card px-1 py-0.5" />
+                      {it.porque && <span className="text-[10px] font-body text-muted-foreground truncate hidden sm:inline" title={it.porque}><Sparkles className="h-2.5 w-2.5 inline mr-0.5 text-primary" />{it.porque}</span>}
+                    </div>
+                    <textarea value={it.legenda} onChange={(e) => patch(i, { legenda: e.target.value })} rows={2} className="w-full mt-1.5 bg-muted/30 rounded-md p-2 text-[11px] leading-snug font-body text-foreground outline-none resize-none focus:ring-1 focus:ring-primary/30" />
                   </div>
                 </div>
               </div>
