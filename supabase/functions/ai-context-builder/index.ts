@@ -649,6 +649,8 @@ Quantidade: ${data.qtd || 8}
 O que mais performou (priorizar): ${data.performou || '-'}
 Tendências do nicho (se houver): ${data.tendencias || '-'}
 Posts recentes (NÃO repetir): ${data.recentes || '-'}
+${data.contexto ? `Contexto/tema do período (priorizar): ${data.contexto}` : ''}
+${data.publico ? `Público-alvo: ${data.publico}` : ''}
 ${data.brandContext ? `\nMARCA DO CRIADOR:\n${data.brandContext}` : ''}`
         maxTokens = 8192
         break

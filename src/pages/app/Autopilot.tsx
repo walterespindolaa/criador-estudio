@@ -37,6 +37,9 @@ export default function Autopilot() {
   const [sending, setSending] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
   const [editingCap, setEditingCap] = useState<Record<number, boolean>>({});
+  const [plataforma, setPlataforma] = useState("instagram");
+  const [contexto, setContexto] = useState("");
+  const [publico, setPublico] = useState("");
 
   const trialOk = profile?.trial_ends_at ? new Date(profile.trial_ends_at).getTime() > Date.now() : false;
   const isStudio = profile?.plan === "studio" || profile?.role === "admin" || trialOk;
@@ -61,7 +64,7 @@ export default function Autopilot() {
   };
 
   const buildItems = (raw: AutopilotPost[]): Item[] => {
-    const slot = bestTimes("instagram", profile?.niche).slots[0] ?? "19:00";
+    const slot = bestTimes(plataforma, profile?.niche).slots[0] ?? "19:00";
     const dates = spreadDates(raw.length);
     return raw.map((p, i) => ({ ...p, selected: true, date: dates[i], time: slot }));
   };
@@ -74,12 +77,14 @@ export default function Autopilot() {
       const recentes = posts.slice(0, 15).map((p) => p.title).filter(Boolean).join("; ");
       const res = await generateAutopilot({
         nicho: profile?.niche ?? undefined,
-        plataformas: "instagram",
+        plataformas: plataforma,
         pilares: pillars.map((p) => p.name).join(", ") || undefined,
         foco: foco || undefined,
         qtd,
         periodo,
         recentes: recentes || undefined,
+        contexto: contexto || undefined,
+        publico: publico || undefined,
         brandContext: hasBrandContext ? brandContext : undefined,
       }, user?.id);
       if (!res?.posts?.length) throw new Error("vazio");
@@ -147,6 +152,10 @@ export default function Autopilot() {
     );
   }
 
+  const gridCols = periodo === "mes"
+    ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+    : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
+
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="pb-24 md:pb-0">
       <div className="flex items-center gap-3 mb-5">
@@ -159,116 +168,124 @@ export default function Autopilot() {
         </div>
       </div>
 
-      {/* Config */}
-      <div className="bg-card border border-border rounded-2xl p-4 sm:p-5">
-        <div className="flex flex-wrap gap-5 items-start">
-          <div>
-            <p className="text-xs font-body text-muted-foreground mb-1.5">Período</p>
-            <div className="inline-flex rounded-full border border-border overflow-hidden">
-              {(["semana", "mes"] as const).map((p) => (
-                <button key={p} onClick={() => setPeriodo(p)} className={`text-xs px-4 py-1.5 ${periodo === p ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{p === "semana" ? "Semana" : "Mês"}</button>
-              ))}
+      <div className="flex flex-col md:flex-row gap-5 items-start">
+        {/* Sidebar de configuração */}
+        <aside className="w-full md:w-[300px] md:shrink-0 md:sticky md:top-4 space-y-3">
+          <div className="bg-card border border-border rounded-2xl p-4 space-y-4">
+            <div>
+              <p className="text-xs font-body text-muted-foreground mb-1.5">Período</p>
+              <div className="flex rounded-lg border border-border overflow-hidden">
+                {(["semana", "mes"] as const).map((p) => (
+                  <button key={p} onClick={() => setPeriodo(p)} className={`flex-1 text-xs py-2 ${periodo === p ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{p === "semana" ? "Semana" : "Mês"}</button>
+                ))}
+              </div>
             </div>
-          </div>
-          <div>
-            <p className="text-xs font-body text-muted-foreground mb-1.5">Quantos posts</p>
-            <div className="inline-flex rounded-full border border-border overflow-hidden">
-              {[5, 8, 12].map((n) => (
-                <button key={n} onClick={() => setQtd(n)} className={`text-xs px-4 py-1.5 ${qtd === n ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{n}</button>
-              ))}
+            <div>
+              <p className="text-xs font-body text-muted-foreground mb-1.5">Quantos posts</p>
+              <div className="flex rounded-lg border border-border overflow-hidden">
+                {[5, 8, 12].map((n) => (
+                  <button key={n} onClick={() => setQtd(n)} className={`flex-1 text-xs py-2 ${qtd === n ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{n}</button>
+                ))}
+              </div>
             </div>
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-body text-muted-foreground mb-1.5">Foco (opcional)</p>
-            <div className="flex gap-1.5 flex-wrap">
-              {FOCOS.map((f) => (
-                <button key={f} onClick={() => setFoco(foco === f ? "" : f)} className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${foco === f ? "bg-primary/10 text-primary border-primary/30" : "bg-card border-border text-muted-foreground"}`}>{f}</button>
-              ))}
+            <div>
+              <p className="text-xs font-body text-muted-foreground mb-1.5">Plataforma</p>
+              <div className="flex rounded-lg border border-border overflow-hidden">
+                {[["instagram", "Instagram"], ["tiktok", "TikTok"], ["youtube", "YouTube"]].map(([id, lb]) => (
+                  <button key={id} onClick={() => setPlataforma(id)} className={`flex-1 text-[11px] py-2 ${plataforma === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{lb}</button>
+                ))}
+              </div>
             </div>
+            <div>
+              <p className="text-xs font-body text-muted-foreground mb-1.5">Foco (opcional)</p>
+              <div className="flex gap-1.5 flex-wrap">
+                {FOCOS.map((f) => (
+                  <button key={f} onClick={() => setFoco(foco === f ? "" : f)} className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${foco === f ? "bg-primary/10 text-primary border-primary/30" : "bg-card border-border text-muted-foreground"}`}>{f}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-body text-muted-foreground mb-1.5">Tema/contexto (opcional)</p>
+              <textarea value={contexto} onChange={(e) => setContexto(e.target.value)} rows={2} placeholder="Ex.: lançamento do curso, semana de Black Friday…" className="w-full rounded-lg border border-border bg-card p-2 text-xs font-body outline-none resize-none focus:ring-1 focus:ring-primary/30" />
+            </div>
+            <div>
+              <p className="text-xs font-body text-muted-foreground mb-1.5">Público (opcional)</p>
+              <input value={publico} onChange={(e) => setPublico(e.target.value)} placeholder="Ex.: mães empreendedoras 25-40" className="w-full rounded-lg border border-border bg-card px-2.5 py-2 text-xs font-body outline-none focus:ring-1 focus:ring-primary/30" />
+            </div>
+            <Button onClick={generate} disabled={loading} className="w-full gap-2">
+              {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Gerando…</> : <><Sparkles className="h-4 w-4" /> Gerar cronograma</>}
+            </Button>
+            {!hasBrandContext && <p className="text-[11px] text-muted-foreground font-body">Dica: preencha o Brandbook pra IA acertar mais o seu tom.</p>}
           </div>
-        </div>
-        <Button onClick={generate} disabled={loading} className="mt-4 gap-2">
-          {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Gerando…</> : <><Sparkles className="h-4 w-4" /> Gerar cronograma</>}
-        </Button>
-        {!hasBrandContext && <p className="text-[11px] text-muted-foreground font-body mt-2">Dica: preencha o Brandbook pra IA acertar mais o seu tom.</p>}
-      </div>
 
-      {/* Resultado */}
-      {items.length > 0 && (
-        <div className="mt-5">
-          <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-            <button onClick={() => setItems((prev) => prev.map((it) => ({ ...it, selected: !allSelected })))} className="text-xs font-body text-muted-foreground hover:text-foreground flex items-center gap-1.5">
-              <Check className="h-3.5 w-3.5" /> {allSelected ? "Desmarcar todos" : "Selecionar todos"} ({selectedCount}/{items.length})
-            </button>
-            <div className="flex gap-2 flex-wrap">
-              <Button variant="outline" size="sm" onClick={generate} disabled={loading} className="gap-1.5"><RefreshCw className="h-3.5 w-3.5" /> Regenerar</Button>
-              <Button variant="outline" size="sm" onClick={() => send(true)} disabled={sending} className="gap-1.5"><Eye className="h-3.5 w-3.5" /> Enviar c/ revisão</Button>
-              <Button size="sm" onClick={() => send(false)} disabled={sending} className="gap-1.5">{sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} Enviar pro Criando</Button>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {items.map((it, i) => (
-              <div key={i} className={`bg-card border rounded-xl px-3 py-2.5 transition-colors ${it.selected ? "border-primary/40" : "border-border opacity-60"}`}>
-                <div className="flex items-start gap-2.5">
-                  <button onClick={() => patch(i, { selected: !it.selected })} aria-label="Selecionar" className={`mt-0.5 h-4 w-4 rounded border flex items-center justify-center shrink-0 ${it.selected ? "bg-primary border-primary text-primary-foreground" : "border-border"}`}>
-                    {it.selected && <Check className="h-3 w-3" />}
+          {runs.length > 0 && (
+            <div className="bg-card border border-border rounded-2xl p-4">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5"><History className="h-3.5 w-3.5" /> Histórico</p>
+              <div className="space-y-1.5">
+                {runs.slice(0, 8).map((r) => (
+                  <button key={r.id} onClick={() => reopen(r)} className="w-full text-left flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-accent/50 transition-colors">
+                    <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="text-[11px] font-body text-foreground truncate">{r.periodo === "mes" ? "Mês" : "Semana"} · {r.qtd}{r.foco ? ` · ${r.foco}` : ""} · {new Date(r.created_at).toLocaleDateString("pt-BR")}</span>
                   </button>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <input value={it.titulo} onChange={(e) => patch(i, { titulo: e.target.value })} className="flex-1 min-w-0 bg-transparent font-body font-medium text-[13px] text-foreground outline-none truncate focus:border-b focus:border-border" />
-                      <span className="text-[9px] font-body px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">{FORMAT_LABELS[(it.formato || "").toLowerCase()] ?? it.formato}</span>
-                      {it.pilar && <span className="text-[9px] font-body px-1.5 py-0.5 rounded bg-primary/10 text-primary shrink-0 hidden sm:inline">{it.pilar}</span>}
+                ))}
+              </div>
+            </div>
+          )}
+        </aside>
+
+        {/* Resultados */}
+        <section className="flex-1 min-w-0 w-full">
+          {items.length === 0 ? (
+            <div className="border border-dashed border-border rounded-2xl py-16 px-6 text-center">
+              <Wand2 className="h-7 w-7 text-muted-foreground/40 mx-auto mb-3" strokeWidth={1.5} />
+              <p className="text-sm font-body text-foreground font-medium">Configure ao lado e clique em Gerar</p>
+              <p className="text-xs font-body text-muted-foreground mt-1">A IA monta {qtd} posts pro período no seu tom.</p>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+                <button onClick={() => setItems((prev) => prev.map((it) => ({ ...it, selected: !allSelected })))} className="text-xs font-body text-muted-foreground hover:text-foreground flex items-center gap-1.5">
+                  <Check className="h-3.5 w-3.5" /> {allSelected ? "Desmarcar todos" : "Selecionar todos"} ({selectedCount}/{items.length})
+                </button>
+                <div className="flex gap-2 flex-wrap">
+                  <Button variant="outline" size="sm" onClick={generate} disabled={loading} className="gap-1.5"><RefreshCw className="h-3.5 w-3.5" /> Regenerar</Button>
+                  <Button variant="outline" size="sm" onClick={() => send(true)} disabled={sending} className="gap-1.5"><Eye className="h-3.5 w-3.5" /> Revisão</Button>
+                  <Button size="sm" onClick={() => send(false)} disabled={sending} className="gap-1.5">{sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} Enviar</Button>
+                </div>
+              </div>
+
+              <div className={`grid ${gridCols} gap-3`}>
+                {items.map((it, i) => (
+                  <div key={i} className={`bg-card border rounded-xl p-3 flex flex-col transition-colors ${it.selected ? "border-primary/40" : "border-border opacity-60"}`}>
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <button onClick={() => patch(i, { selected: !it.selected })} aria-label="Selecionar" className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${it.selected ? "bg-primary border-primary text-primary-foreground" : "border-border"}`}>
+                        {it.selected && <Check className="h-3 w-3" />}
+                      </button>
+                      <div className="flex gap-1 flex-wrap justify-end">
+                        <span className="text-[9px] font-body px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{FORMAT_LABELS[(it.formato || "").toLowerCase()] ?? it.formato}</span>
+                        {it.pilar && <span className="text-[9px] font-body px-1.5 py-0.5 rounded bg-primary/10 text-primary">{it.pilar}</span>}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <input type="date" value={it.date} onChange={(e) => patch(i, { date: e.target.value })} className="text-[10px] rounded border border-border bg-card px-1 py-0.5" />
+                    <textarea value={it.titulo} onChange={(e) => patch(i, { titulo: e.target.value })} rows={2} className="w-full bg-transparent font-body font-medium text-[13px] leading-snug text-foreground outline-none resize-none focus:bg-muted/30 rounded p-0.5" />
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <input type="date" value={it.date} onChange={(e) => patch(i, { date: e.target.value })} className="text-[10px] rounded border border-border bg-card px-1 py-0.5 flex-1 min-w-0" />
                       <input type="time" value={it.time} onChange={(e) => patch(i, { time: e.target.value })} className="text-[10px] rounded border border-border bg-card px-1 py-0.5" />
-                      {it.porque && <span className="text-[10px] font-body text-muted-foreground truncate hidden sm:inline" title={it.porque}><Sparkles className="h-2.5 w-2.5 inline mr-0.5 text-primary" />{it.porque}</span>}
                     </div>
                     {editingCap[i] ? (
-                      <textarea
-                        value={it.legenda}
-                        onChange={(e) => patch(i, { legenda: e.target.value })}
-                        onBlur={() => setEditingCap((p) => ({ ...p, [i]: false }))}
-                        autoFocus
-                        rows={2}
-                        className="w-full mt-1.5 bg-muted/30 rounded-md p-2 text-[11px] leading-snug font-body text-foreground outline-none resize-none focus:ring-1 focus:ring-primary/30"
-                      />
+                      <textarea value={it.legenda} onChange={(e) => patch(i, { legenda: e.target.value })} onBlur={() => setEditingCap((p) => ({ ...p, [i]: false }))} autoFocus rows={3} className="w-full mt-2 bg-muted/30 rounded-md p-2 text-[11px] leading-snug font-body text-foreground outline-none resize-none focus:ring-1 focus:ring-primary/30" />
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() => setEditingCap((p) => ({ ...p, [i]: true }))}
-                        className="w-full text-left mt-1 text-[11px] leading-snug font-body text-muted-foreground line-clamp-1 hover:text-foreground"
-                        title="Clique pra editar a legenda"
-                      >
+                      <button type="button" onClick={() => setEditingCap((p) => ({ ...p, [i]: true }))} className="w-full text-left mt-2 text-[11px] leading-snug font-body text-muted-foreground line-clamp-2 hover:text-foreground" title="Clique pra editar a legenda">
                         {it.legenda || "Sem legenda — clique pra escrever"}
                       </button>
                     )}
+                    {it.porque && <p className="text-[10px] font-body text-muted-foreground/80 mt-2 line-clamp-2 flex items-start gap-1"><Sparkles className="h-2.5 w-2.5 mt-0.5 text-primary shrink-0" /> {it.porque}</p>}
                   </div>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Histórico */}
-      {runs.length > 0 && (
-        <div className="mt-8">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2"><History className="h-4 w-4" /> Cronogramas gerados</h2>
-          <div className="space-y-2">
-            {runs.map((r) => (
-              <div key={r.id} className="flex items-center justify-between gap-2 bg-card border border-border rounded-xl px-3.5 py-2.5">
-                <span className="text-sm font-body text-foreground flex items-center gap-2 min-w-0">
-                  <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="truncate">{r.periodo === "mes" ? "Mês" : "Semana"} · {r.qtd} posts{r.foco ? ` · ${r.foco}` : ""} · {new Date(r.created_at).toLocaleDateString("pt-BR")}</span>
-                </span>
-                <Button variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={() => reopen(r)}><Eye className="h-3.5 w-3.5" /> Ver</Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+            </>
+          )}
+        </section>
+      </div>
     </motion.div>
   );
 }

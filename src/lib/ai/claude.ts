@@ -15,7 +15,7 @@ export const generateAutopilot = async (
   params: {
     nicho?: string; plataformas?: string; pilares?: string; foco?: string;
     qtd?: number; periodo?: string; performou?: string; recentes?: string;
-    tendencias?: string; brandContext?: string;
+    tendencias?: string; brandContext?: string; contexto?: string; publico?: string;
   },
   userId?: string
 ): Promise<{ posts: AutopilotPost[] }> => {
