@@ -165,7 +165,7 @@ const AppLayout = () => {
                 <UploadProgressIndicator />
                 <FeedbackButton />
                 <NotificationsBell />
-                <NavLink to="/app/configuracoes" className="p-2 hover:bg-accent/60 rounded-xl transition-colors">
+                <NavLink to="/app/configuracoes" aria-label="Configurações" className="p-2 hover:bg-accent/60 rounded-xl transition-colors">
                   <Settings className="h-5 w-5 text-muted-foreground hover:text-foreground" />
                 </NavLink>
               </div>

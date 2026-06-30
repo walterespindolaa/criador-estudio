@@ -3,14 +3,26 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-const ok = (b: unknown = { ok: true }) =>
-  new Response(JSON.stringify(b), { headers: { ...cors, "Content-Type": "application/json" } });
+// Allowlist (+ localhost/preview do Lovable) — bloqueia origens aleatórias sem quebrar dev.
+function isAllowedOrigin(origin: string): boolean {
+  if (["https://app.criasocialclub.com.br", "https://criasocialclub.com.br", "https://www.criasocialclub.com.br"].includes(origin)) return true;
+  if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
+  if (/^https:\/\/[a-z0-9-]+\.(lovableproject\.com|lovable\.app)$/.test(origin)) return true;
+  return false;
+}
+function corsFor(req: Request) {
+  const origin = req.headers.get("origin") ?? "";
+  return {
+    "Access-Control-Allow-Origin": isAllowedOrigin(origin) ? origin : "https://app.criasocialclub.com.br",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Vary": "Origin",
+  };
+}
 
 serve(async (req) => {
+  const cors = corsFor(req);
+  const ok = (b: unknown = { ok: true }) =>
+    new Response(JSON.stringify(b), { headers: { ...cors, "Content-Type": "application/json" } });
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
     const body = await req.json().catch(() => ({}));

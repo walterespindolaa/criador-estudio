@@ -3,14 +3,15 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const ALLOWED = new Set([
-  "https://app.criasocialclub.com.br",
-  "https://criasocialclub.com.br",
-  "https://www.criasocialclub.com.br",
-]);
+function isAllowedOrigin(origin: string): boolean {
+  if (["https://app.criasocialclub.com.br", "https://criasocialclub.com.br", "https://www.criasocialclub.com.br"].includes(origin)) return true;
+  if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
+  if (/^https:\/\/[a-z0-9-]+\.(lovableproject\.com|lovable\.app)$/.test(origin)) return true;
+  return false;
+}
 function corsFor(req: Request) {
   const origin = req.headers.get("origin") ?? "";
-  const allow = ALLOWED.has(origin) ? origin : "https://app.criasocialclub.com.br";
+  const allow = isAllowedOrigin(origin) ? origin : "https://app.criasocialclub.com.br";
   return {
     "Access-Control-Allow-Origin": allow,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
