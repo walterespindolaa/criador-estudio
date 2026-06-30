@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CopyButton } from "@/components/shared/CopyButton";
+import { isValidEmail } from "@/lib/sanitize";
 import { PLANS, type PlanId } from "@/lib/plans";
 import { cn } from "@/lib/utils";
 import { ClientsGrid } from "@/components/accounts/ClientsGrid";
@@ -50,7 +51,7 @@ export default function Contas() {
 
   const handleAddClient = async () => {
     const name = addName.trim(); const email = addEmail.trim();
-    if (!name || !email.includes("@")) { toast.error("Preencha nome e e-mail válido."); return; }
+    if (!name || !isValidEmail(email)) { toast.error("Preencha nome e e-mail válido."); return; }
     setAdding(true);
     try {
       const { data, error } = await supabase.functions.invoke("manager-add-client", { body: { name, email } });

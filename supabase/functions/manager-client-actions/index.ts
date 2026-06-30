@@ -78,9 +78,11 @@ serve(async (req) => {
       const name = body?.name != null ? String(body.name).trim() : null;
       const email = body?.email != null ? String(body.email).trim().toLowerCase() : null;
       if (name) await svc.from("profiles").update({ name }).eq("id", clientId);
-      if (email && email.includes("@")) {
+      if (email && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
         const { error: upErr } = await svc.auth.admin.updateUserById(clientId, { email });
         if (upErr) return json({ error: "email_update_failed", detail: upErr.message }, 400);
+      } else if (email) {
+        return json({ error: "invalid_email" }, 400);
       }
       return json({ ok: true });
     }

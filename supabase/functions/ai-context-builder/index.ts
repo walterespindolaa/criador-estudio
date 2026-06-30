@@ -30,10 +30,11 @@ async function checkRateLimit(admin: any, userId: string, scope: string, limit: 
   try {
     const windowKey = new Date().toISOString().slice(0, 16)
     const { data, error } = await admin.rpc("check_and_increment_rate_limit", { _user_id: userId, _scope: scope, _window_key: windowKey, _limit: limit })
-    if (error || !data) return true // fail-open
+    if (error) { console.error("[rate-limit] rpc error, fail-closed:", error.message); return false } // fail-closed
+    if (data == null) return false
     const row = Array.isArray(data) ? data[0] : data
     return row?.allowed === true
-  } catch { return true }
+  } catch (e) { console.error("[rate-limit] exception, fail-closed:", e); return false }
 }
 
 const getNichePresets = (niche: string): string => {
@@ -270,8 +271,12 @@ Distribua entre os 4 tipos: "formato" (formatos de vídeo/post em alta), "tema" 
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      // erro inesperado: loga mas não bloqueia (fail-open pra não quebrar UX)
-      console.warn("[ai-context-builder] bump_ai_quota error:", msg);
+      // erro inesperado: fail-CLOSED (não libera IA paga em falha da cota).
+      console.error("[ai-context-builder] bump_ai_quota unexpected error, fail-closed:", msg);
+      return new Response(
+        JSON.stringify({ error: "quota_unavailable", message: "Não foi possível validar sua cota agora. Tente de novo em instantes." }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
     // ── fim cota ───────────────────────────────────────────────
 

@@ -49,3 +49,5 @@ project_id = "exuxlwdnkgmhtnwoyvwo"
     verify_jwt = true
   [functions.meta-capi]
     verify_jwt = false
+  [functions.bio-track]
+    verify_jwt = false

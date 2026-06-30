@@ -77,15 +77,16 @@ Deno.serve(async (req) => {
       `${GRAPH}/me/media?fields=id,caption,media_type,thumbnail_url,media_url,permalink,timestamp,like_count,comments_count&limit=25&access_token=${token}`,
     );
     const items = (mediaRes.data ?? []) as Array<Record<string, unknown>>;
-    let saved = 0;
-    for (const it of items) {
+
+    // Monta a linha de cada mídia (chamadas de insight em paralelo, com pool de concorrência).
+    const buildRow = async (it: Record<string, unknown>) => {
       const id = String(it.id);
       const type = String(it.media_type ?? '');
-      // alcance numa chamada isolada (quase sempre disponível) — não quebra com métrica inválida
-      const reachIns = await getJson(`${GRAPH}/${id}/insights?metric=reach&access_token=${token}`);
-      const extraIns = await getJson(`${GRAPH}/${id}/insights?metric=saved,shares,total_interactions&access_token=${token}`);
+      const [reachIns, extraIns] = await Promise.all([
+        getJson(`${GRAPH}/${id}/insights?metric=reach&access_token=${token}`),
+        getJson(`${GRAPH}/${id}/insights?metric=saved,shares,total_interactions&access_token=${token}`),
+      ]);
       const rows = [...(reachIns.data ?? []), ...(extraIns.data ?? [])];
-      // visualizações (reels/vídeo) numa chamada isolada — tenta 'views', cai pra 'plays'
       if (type === 'VIDEO' || type === 'REELS') {
         let v = await getJson(`${GRAPH}/${id}/insights?metric=views&access_token=${token}`);
         if (!(v.data?.length)) v = await getJson(`${GRAPH}/${id}/insights?metric=plays&access_token=${token}`);
@@ -97,15 +98,30 @@ Deno.serve(async (req) => {
       for (const row of rows as Array<{ name: string; values?: Array<{ value: number }> }>) {
         metrics[row.name] = Number(row.values?.[0]?.value ?? 0);
       }
-      const { error: upErr } = await admin.from('social_insights').upsert({
+      return {
         user_id: userId, provider: 'instagram', object_type: 'media', object_id: id,
         media_type: type || null, caption: (it.caption as string) ?? null,
         permalink: (it.permalink as string) ?? null,
         thumbnail_url: (it.thumbnail_url as string) ?? (it.media_url as string) ?? null,
         posted_at: (it.timestamp as string) ?? null, metrics,
         captured_at: new Date().toISOString(),
-      } as never, { onConflict: 'user_id,provider,object_type,object_id' });
-      if (!upErr) saved++;
+      };
+    };
+
+    // Pool de 5 em 5 pra não estourar limite/tempo, e bulk-upsert no fim.
+    const built: Array<Record<string, unknown>> = [];
+    const POOL = 5;
+    for (let i = 0; i < items.length; i += POOL) {
+      const chunk = items.slice(i, i + POOL);
+      const rows = await Promise.all(chunk.map((it) => buildRow(it).catch(() => null)));
+      for (const r of rows) if (r) built.push(r);
+    }
+    let saved = 0;
+    if (built.length) {
+      const { error: upErr } = await admin.from('social_insights')
+        .upsert(built as never, { onConflict: 'user_id,provider,object_type,object_id' });
+      if (!upErr) saved = built.length;
+      else console.error('[instagram-sync] bulk upsert error', upErr);
     }
 
     return json({ ok: true, followers: me.followers_count ?? null, media_synced: saved });

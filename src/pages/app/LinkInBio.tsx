@@ -31,6 +31,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { sanitizeUrl } from "@/lib/sanitize";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -1231,7 +1232,14 @@ function LinkCard({
     if (title !== link.title) onUpdate(link.id, { title });
   };
   const commitUrl = () => {
-    if (url !== link.url) onUpdate(link.id, { url });
+    let next = url.trim();
+    if (next && next !== "https://") {
+      if (!/^https?:\/\//i.test(next)) next = "https://" + next;
+      const safe = sanitizeUrl(next);
+      if (!safe) { toast.error("Link inválido — confira o endereço."); return; }
+      next = safe;
+    }
+    if (next !== link.url) onUpdate(link.id, { url: next });
   };
   const commitIcon = () => {
     const next = icon || null;

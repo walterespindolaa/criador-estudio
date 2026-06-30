@@ -10,12 +10,15 @@ type PostUpdate = Database["public"]["Tables"]["posts"]["Update"];
 export type CreatePostInput = Omit<PostInsert, "user_id" | "id" | "created_at" | "updated_at">;
 export type UpdatePostInput = { id: string; updates: PostUpdate };
 
+// Teto padrão pra não puxar histórico infinito (perf). Páginas que pedem menos passam um limit menor.
+const DEFAULT_POSTS_CAP = 1000;
+
 export function usePosts(options?: { limit?: number }) {
   const { activeAccountId } = useActiveAccount();
   const queryClient = useQueryClient();
   const userId = activeAccountId;
-  const limit = options?.limit;
-  const queryKey = ["posts", userId, limit ?? null] as const;
+  const limit = options?.limit ?? DEFAULT_POSTS_CAP;
+  const queryKey = ["posts", userId, limit] as const;
 
   const {
     data: posts = [],
@@ -24,14 +27,16 @@ export function usePosts(options?: { limit?: number }) {
   } = useQuery<Post[]>({
     queryKey,
     queryFn: async () => {
-      let query = supabase
+      // Pega os N mais recentes (desc + limit) e reverte pra ascendente,
+      // preservando a ordem que as telas já esperavam.
+      const { data, error } = await supabase
         .from("posts")
         .select("*")
-        .eq("user_id", userId!);
-      if (limit) query = query.limit(limit);
-      const { data, error } = await query.order("created_at");
+        .eq("user_id", userId!)
+        .order("created_at", { ascending: false })
+        .limit(limit);
       if (error) throw error;
-      return (data ?? []) as Post[];
+      return ((data ?? []) as Post[]).reverse();
     },
     enabled: !!userId,
   });

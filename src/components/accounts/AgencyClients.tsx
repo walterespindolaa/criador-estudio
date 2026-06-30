@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Pencil, PauseCircle, PlayCircle, Trash2, Loader2, PackageOpen } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { isValidEmail } from "@/lib/sanitize";
 import { useAuth } from "@/contexts/AuthContext";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { Button } from "@/components/ui/button";
@@ -64,8 +65,10 @@ export function AgencyClients({ seatsFree }: { seatsFree: number }) {
   const openEdit = (c: AgencyClient) => { setEditing(c); setEditName(c.name ?? ""); setEditEmail(c.email ?? ""); };
   const saveEdit = async () => {
     if (!editing) return;
+    const em = editEmail.trim();
+    if (em && !isValidEmail(em)) { toast.error("E-mail inválido."); return; }
     setSavingEdit(true);
-    const ok = await action(editing.id, "edit", { name: editName.trim(), email: editEmail.trim() });
+    const ok = await action(editing.id, "edit", { name: editName.trim(), email: em });
     setSavingEdit(false);
     if (ok) { toast.success("Cliente atualizado."); setEditing(null); }
   };

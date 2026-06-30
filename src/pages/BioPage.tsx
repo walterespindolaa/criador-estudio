@@ -248,7 +248,7 @@ const BioPage = () => {
         try {
           if (!sessionStorage.getItem(key)) {
             sessionStorage.setItem(key, "1");
-            void supabase.rpc("increment_bio_view", { _slug: slug });
+            void supabase.functions.invoke("bio-track", { body: { type: "view", slug } });
           }
         } catch { /* sessionStorage indisponível: ignora */ }
       }
@@ -264,7 +264,7 @@ const BioPage = () => {
   const isOutline = settings.buttonStyle === "outline";
 
   const trackClick = (id: string) => {
-    void supabase.rpc("increment_bio_link_click", { link_id: id });
+    void supabase.functions.invoke("bio-track", { body: { type: "click", linkId: id, slug } });
   };
 
   if (loading) {

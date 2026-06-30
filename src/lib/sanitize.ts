@@ -8,3 +8,7 @@ export const sanitizeUrl = (url: string): string => {
     return parsed.toString();
   } catch { return ''; }
 };
+
+// Validação de e-mail razoável (não exaustiva, mas barra "a@", "a@b", espaços, etc.).
+export const isValidEmail = (email: string): boolean =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());

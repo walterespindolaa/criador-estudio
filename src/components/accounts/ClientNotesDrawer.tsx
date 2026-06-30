@@ -8,8 +8,13 @@ import {
 } from "@/components/ui/dialog";
 import { Bold, Italic, List, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import DOMPurify from "dompurify";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+
+// Sanitiza HTML das notas (só formatação básica) — protege contra HTML/JS injetado.
+const NOTE_SANITIZE = { ALLOWED_TAGS: ["b", "i", "u", "strong", "em", "br", "p", "div", "span", "ul", "ol", "li"], ALLOWED_ATTR: [] };
+const cleanNote = (html: string) => DOMPurify.sanitize(html, NOTE_SANITIZE);
 
 type Props = {
   open: boolean;
@@ -66,7 +71,7 @@ export function ClientNotesDrawer({ open, onOpenChange, ownerId, clientName }: P
           toast.error("Não foi possível carregar as notas.");
           return;
         }
-        const html = (data as string | null) ?? "";
+        const html = cleanNote((data as string | null) ?? "");
         if (editorRef.current) {
           editorRef.current.innerHTML = html;
           setHasContent(html.length > 0 && (editorRef.current.textContent ?? "").trim().length > 0);
@@ -103,7 +108,7 @@ export function ClientNotesDrawer({ open, onOpenChange, ownerId, clientName }: P
   };
 
   const handleInput = () => {
-    const html = editorRef.current?.innerHTML ?? "";
+    const html = cleanNote(editorRef.current?.innerHTML ?? "");
     setHasContent((editorRef.current?.textContent ?? "").trim().length > 0);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => saveNow(html), 800);

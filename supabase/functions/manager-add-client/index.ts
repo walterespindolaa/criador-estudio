@@ -99,7 +99,7 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const name = String(body?.name ?? "").trim();
     const email = String(body?.email ?? "").trim().toLowerCase();
-    if (!name || !email || !email.includes("@")) return json({ error: "missing_fields" }, 400);
+    if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return json({ error: "missing_fields" }, 400);
     if (email === (user.email ?? "").toLowerCase()) return json({ error: "use_different_email" }, 400);
 
     const origin = req.headers.get("origin") ?? "https://app.criasocialclub.com.br";
