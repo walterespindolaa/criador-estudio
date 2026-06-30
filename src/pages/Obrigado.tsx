@@ -3,11 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { track } from "@/lib/metaPixel";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Página de sucesso pós-Stripe. Dispara a conversão (Purchase/Subscribe) com o
 // valor guardado no início do checkout, pra o Meta/Google medirem a compra.
 export default function Obrigado() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
     let info: { plano?: string; value?: number; eventId?: string; name?: string } = {};
@@ -17,11 +19,12 @@ export default function Obrigado() {
       currency: "BRL",
       content_name: info.name,
       content_ids: info.plano ? [info.plano] : undefined,
+      email: user?.email,
     };
     track("Purchase", params, info.eventId);
     track("Subscribe", params, info.eventId ? `${info.eventId}-sub` : undefined);
     try { sessionStorage.removeItem("cria_checkout"); } catch { /* ignore */ }
-  }, []);
+  }, [user?.email]);
 
   return (
     <div className="min-h-screen w-full app-canvas flex items-center justify-center px-4 py-16">

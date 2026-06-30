@@ -43,3 +43,9 @@ project_id = "exuxlwdnkgmhtnwoyvwo"
     verify_jwt = false
   [functions.stripe-webhook]
     verify_jwt = false
+  [functions.manager-add-client]
+    verify_jwt = true
+  [functions.manager-client-actions]
+    verify_jwt = true
+  [functions.meta-capi]
+    verify_jwt = false

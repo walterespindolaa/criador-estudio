@@ -1,8 +1,35 @@
-// Meta (Facebook) Pixel — client-side.
+// Meta (Facebook) Pixel — client-side + espelho no CAPI server-side.
 // O ID vem da env VITE_META_PIXEL_ID (configurar no Lovable). Sem ID, tudo vira no-op.
-// Os event_id gerados aqui permitem deduplicar com o CAPI server-side (futuro).
+// Cada track() também é enviado pro CAPI (edge meta-capi) com o mesmo event_id → o Meta deduplica.
+
+import { supabase } from "@/integrations/supabase/client";
 
 const PIXEL_ID = import.meta.env.VITE_META_PIXEL_ID as string | undefined;
+
+function getCookie(name: string): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const m = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
+  return m ? decodeURIComponent(m[1]) : undefined;
+}
+
+// Envia o evento pro CAPI (fire-and-forget). Email opcional pra melhorar o match.
+function sendCapi(event: string, eventId?: string, params?: Record<string, unknown>): void {
+  if (!PIXEL_ID || typeof window === "undefined") return;
+  try {
+    void supabase.functions.invoke("meta-capi", {
+      body: {
+        event_name: event,
+        event_id: eventId,
+        event_source_url: window.location.href,
+        value: params?.value,
+        currency: params?.currency,
+        email: params?.email,
+        fbp: getCookie("_fbp"),
+        fbc: getCookie("_fbc"),
+      },
+    });
+  } catch { /* tracking nunca quebra a UX */ }
+}
 
 declare global {
   interface Window { fbq?: (...args: unknown[]) => void; _fbq?: unknown; }
@@ -32,11 +59,13 @@ export function newEventId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-/** Dispara um evento padrão do Pixel (PageView, Purchase, Lead, etc.). */
+/** Dispara um evento padrão do Pixel (PageView, Purchase, Lead, etc.) + espelha no CAPI. */
 export function track(event: string, params?: Record<string, unknown>, eventId?: string): void {
   if (!PIXEL_ID || typeof window === "undefined") return;
   initMetaPixel();
-  (window.fbq as ((...a: unknown[]) => void))?.("track", event, params || {}, eventId ? { eventID: eventId } : undefined);
+  const id = eventId ?? newEventId();
+  (window.fbq as ((...a: unknown[]) => void))?.("track", event, params || {}, { eventID: id });
+  sendCapi(event, id, params);
 }
 
 export function trackPageView(): void {
