@@ -3012,6 +3012,24 @@ export type Database = {
         }
         Relationships: []
       }
+      rl_buckets: {
+        Row: {
+          count: number
+          key: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          key: string
+          window_start?: string
+        }
+        Update: {
+          count?: number
+          key?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       social_connections: {
         Row: {
           access_token: string
@@ -3903,6 +3921,7 @@ export type Database = {
           owner_id: string
         }[]
       }
+      rate_touch: { Args: { _key: string; _limit: number }; Returns: boolean }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
