@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { track } from "@/lib/metaPixel";
@@ -10,10 +10,14 @@ import { useAuth } from "@/contexts/AuthContext";
 export default function Obrigado() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [sp] = useSearchParams();
 
   useEffect(() => {
     let info: { plano?: string; value?: number; eventId?: string; name?: string } = {};
     try { info = JSON.parse(sessionStorage.getItem("cria_checkout") || "{}"); } catch { /* ignore */ }
+    // event_id baseado na sessão do Stripe → o webhook usa o mesmo pra o Meta deduplicar.
+    const sid = sp.get("sid");
+    const baseId = sid ? `purchase-${sid}` : info.eventId;
     const params: Record<string, unknown> = {
       value: info.value ?? 0,
       currency: "BRL",
@@ -21,10 +25,10 @@ export default function Obrigado() {
       content_ids: info.plano ? [info.plano] : undefined,
       email: user?.email,
     };
-    track("Purchase", params, info.eventId);
-    track("Subscribe", params, info.eventId ? `${info.eventId}-sub` : undefined);
+    track("Purchase", params, baseId);
+    track("Subscribe", params, baseId ? `${baseId}-sub` : undefined);
     try { sessionStorage.removeItem("cria_checkout"); } catch { /* ignore */ }
-  }, [user?.email]);
+  }, [user?.email, sp]);
 
   return (
     <div className="min-h-screen w-full app-canvas flex items-center justify-center px-4 py-16">

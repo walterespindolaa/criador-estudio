@@ -17,6 +17,41 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
+async function sha256(input: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input.trim().toLowerCase()));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Purchase server-side no Meta CAPI (fonte da verdade: só dispara quando o Stripe confirma).
+// event_id = purchase-<session_id> → o Meta deduplica com o Purchase do navegador (/app/obrigado).
+async function sendMetaPurchase(s: Stripe.Checkout.Session): Promise<void> {
+  const PIXEL_ID = Deno.env.get("META_PIXEL_ID");
+  const TOKEN = Deno.env.get("META_CAPI_TOKEN");
+  if (!PIXEL_ID || !TOKEN) return;
+  try {
+    const value = (s.amount_total ?? 0) / 100;
+    const currency = (s.currency ?? "brl").toUpperCase();
+    const email = s.customer_details?.email ?? undefined;
+    const user_data: Record<string, unknown> = {};
+    if (email) user_data.em = [await sha256(email)];
+    const payload = {
+      data: [{
+        event_name: "Purchase",
+        event_time: Math.floor(Date.now() / 1000),
+        event_id: `purchase-${s.id}`,
+        action_source: "website",
+        event_source_url: "https://app.criasocialclub.com.br/app/obrigado",
+        user_data,
+        custom_data: { value, currency },
+      }],
+    };
+    const res = await fetch(`https://graph.facebook.com/v19.0/${PIXEL_ID}/events?access_token=${encodeURIComponent(TOKEN)}`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+    });
+    if (!res.ok) console.error("[stripe-webhook] meta capi purchase error", res.status, await res.text());
+  } catch (e) { console.error("[stripe-webhook] meta capi purchase failed", e); }
+}
+
 serve(async (req) => {
   const signature = req.headers.get("stripe-signature");
   const body = await req.text();
@@ -93,6 +128,9 @@ serve(async (req) => {
           plan,
           storage_quota_bytes: STORAGE_BY_PLAN[plan] ?? 524288000,
         }).eq("id", userId);
+
+        // Purchase server-side no Meta (fonte da verdade da compra confirmada).
+        await sendMetaPurchase(s);
 
         // Self-subscribe: ativa vínculo pendente manager→PF.
         // PF (owner_id) agora aparece automaticamente na equipe da gestora.

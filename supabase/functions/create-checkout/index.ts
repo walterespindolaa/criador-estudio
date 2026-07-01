@@ -135,7 +135,8 @@ serve(async (req) => {
     const origin = req.headers.get("origin") ?? "https://app.criasocialclub.com.br";
 
     const agencyMeta: Record<string, string> = isAgency ? { seats: String(seats) } : {};
-    const successUrl = isAgency ? `${origin}/socialmidia/contas?checkout=success` : `${origin}/app/obrigado?checkout=success`;
+    // sid={CHECKOUT_SESSION_ID} é substituído pelo Stripe — usado como event_id do Purchase (dedupe com o webhook).
+    const successUrl = isAgency ? `${origin}/socialmidia/contas?checkout=success` : `${origin}/app/obrigado?checkout=success&sid={CHECKOUT_SESSION_ID}`;
     const cancelUrl = isAgency ? `${origin}/socialmidia/contas?checkout=cancel` : `${origin}/app/assinar?checkout=cancel`;
 
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
