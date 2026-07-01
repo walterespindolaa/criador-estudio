@@ -62,6 +62,8 @@ const CriaCaixa = lazy(() => import("./pages/socialmidia/CriaCaixa"));
 const Parceria = lazy(() => import("./pages/socialmidia/Parceria"));
 const Comissoes = lazy(() => import("./pages/socialmidia/Comissoes"));
 const Contas = lazy(() => import("./pages/socialmidia/Contas"));
+const Clientes = lazy(() => import("./pages/socialmidia/Clientes"));
+const ClienteHub = lazy(() => import("./pages/socialmidia/ClienteHub"));
 const Aprovacoes = lazy(() => import("./pages/socialmidia/Aprovacoes"));
 
 // Avisa o usuário quando uma query falha (antes os erros eram engolidos →
@@ -168,6 +170,9 @@ const App = () => (
                 <Route path="parceria" element={<ErrorBoundary><Parceria /></ErrorBoundary>} />
                 <Route path="comissoes" element={<ErrorBoundary><Comissoes /></ErrorBoundary>} />
                 <Route path="contas" element={<ErrorBoundary><Contas /></ErrorBoundary>} />
+                <Route path="clientes" element={<ErrorBoundary><Clientes /></ErrorBoundary>} />
+                <Route path="clientes/:id" element={<ErrorBoundary><ClienteHub /></ErrorBoundary>} />
+                <Route path="clientes/:id/:tab" element={<ErrorBoundary><ClienteHub /></ErrorBoundary>} />
                 <Route path="aprovacoes" element={<ErrorBoundary><Aprovacoes /></ErrorBoundary>} />
               </Route>
               <Route path="*" element={<NotFound />} />

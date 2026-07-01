@@ -6,7 +6,7 @@ import { NotificationNudge } from "@/components/NotificationNudge";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import {
   Home, Boxes, Handshake, DollarSign, Users, ListChecks, ChevronUp,
-  Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, type LucideIcon,
+  Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -40,7 +40,8 @@ const NAV = [
 
 // Títulos do HeroBand por rota (gestão)
 const HERO_TITLES: Record<string, string> = {
-  "/socialmidia/criapost": "Clientes",
+  "/socialmidia/clientes": "Clientes",
+  "/socialmidia/criapost": "Cria Post",
   "/socialmidia/criacrm": "Cria Gestão",
   "/socialmidia/criacaixa": "Cria Caixa",
   "/socialmidia/parceria": "Parceria",
@@ -148,6 +149,7 @@ export default function ManagerLayout() {
         <div className="mb-2 grid h-[38px] w-[38px] place-items-center rounded-[12px] bg-primary font-display text-[17px] font-extrabold text-primary-foreground">c</div>
         <div className="flex w-full flex-col items-center gap-1">
           {railNode(Home, "Início", { active: isActive("/socialmidia/dashboard"), onClick: () => navigate("/socialmidia/dashboard") })}
+          {railNode(Contact, "Clientes", { active: isActive("/socialmidia/clientes"), onClick: () => navigate("/socialmidia/clientes") })}
           {modules.map((m) => {
             const Icon = (MODICONS[m.code] ?? Boxes) as LucideIcon;
             const active = m.status === "active" || m.status === "past_due";
@@ -208,11 +210,9 @@ export default function ManagerLayout() {
             <span className={cn("text-[10px] font-body", active ? "text-primary font-semibold" : "text-muted-foreground font-medium")}>{label}</span>
           </button>
         );
-        const crm = modules.find((m) => m.code === "crm");
         const fin = modules.find((m) => m.code === "financeiro");
-        const post = modules.find((m) => m.code === "aprovapost_externo");
         const moreNav = [
-          ...(post ? [{ label: "Clientes", icon: Send, onClick: () => openModule(post) }] : []),
+          { label: "Clientes", icon: Contact, onClick: () => navigate("/socialmidia/clientes") },
           { label: "Parceria", icon: Handshake, onClick: () => navigate("/socialmidia/parceria") },
           { label: "Comissões", icon: DollarSign, onClick: onNavComissoes },
           { label: "Suas contas", icon: Users, onClick: () => navigate("/socialmidia/contas") },
@@ -246,7 +246,7 @@ export default function ManagerLayout() {
               <div className="flex items-center justify-center gap-2.5 px-3 pointer-events-auto">
                 <div className="dock-pill flex items-center gap-0.5 rounded-[30px] p-1.5">
                   {dockItem(isActive("/socialmidia/dashboard"), Home, "Início", () => navigate("/socialmidia/dashboard"))}
-                  {crm && dockItem(isActive("/socialmidia/criacrm"), Users2, "Gestão", () => openModule(crm))}
+                  {dockItem(isActive("/socialmidia/clientes"), Contact, "Clientes", () => navigate("/socialmidia/clientes"))}
                   {fin && dockItem(isActive("/socialmidia/criacaixa"), Wallet, "Caixa", () => openModule(fin))}
                   {dockItem(isActive("/socialmidia/aprovacoes"), ListChecks, "Aprov.", () => navigate("/socialmidia/aprovacoes"))}
                 </div>

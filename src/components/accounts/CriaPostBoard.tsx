@@ -146,7 +146,7 @@ function ClientsList({ onOpen }: { onOpen: (c: ExternalClient) => void }) {
   );
 }
 
-function ClientDetail({ client, onBack }: { client: ExternalClient; onBack: () => void }) {
+export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange }: { client: ExternalClient; onBack?: () => void; embedded?: boolean; activeTab?: string; onTabChange?: (t: string) => void }) {
   const { posts, isLoading, create, update, remove, moveStatus } = useExternalPosts(client.id);
   const { copyLink } = useExternalClients();
   const { profile } = useProfile();
@@ -189,26 +189,32 @@ function ClientDetail({ client, onBack }: { client: ExternalClient; onBack: () =
 
   return (
     <div>
-      <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground font-body mb-4"><ArrowLeft className="h-4 w-4" /> Clientes</button>
-      <div className="flex items-start justify-between gap-3 mb-5">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-display font-extrabold text-foreground tracking-tight truncate">{client.name}</h1>
-          {client.instagram_handle && <p className="text-sm text-muted-foreground font-body">@{client.instagram_handle.replace(/^@/, "")}</p>}
-        </div>
-        <div className="flex gap-2 shrink-0">
-          <Button variant="outline" onClick={doCopy} disabled={copying}>{copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Link2 className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Copiar link</span></>}</Button>
-        </div>
-      </div>
+      {!embedded && (
+        <>
+          <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground font-body mb-4"><ArrowLeft className="h-4 w-4" /> Clientes</button>
+          <div className="flex items-start justify-between gap-3 mb-5">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-display font-extrabold text-foreground tracking-tight truncate">{client.name}</h1>
+              {client.instagram_handle && <p className="text-sm text-muted-foreground font-body">@{client.instagram_handle.replace(/^@/, "")}</p>}
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <Button variant="outline" onClick={doCopy} disabled={copying}>{copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Link2 className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Copiar link</span></>}</Button>
+            </div>
+          </div>
+        </>
+      )}
 
       <ClientReportDialog open={reportOpen} onOpenChange={setReportOpen} client={client} posts={posts} managerName={profile?.name ?? undefined} />
 
-      <Tabs defaultValue="posts" className="w-full">
+      <Tabs value={embedded ? activeTab : undefined} defaultValue={embedded ? undefined : "posts"} onValueChange={embedded ? onTabChange : undefined} className="w-full">
+        {!embedded && (
         <TabsList className="bg-card border border-border rounded-2xl p-1.5 mb-5 flex flex-wrap h-auto gap-1">
           <TabsTrigger value="posts" className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Posts</TabsTrigger>
           <TabsTrigger value="cronograma" className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Cronograma</TabsTrigger>
           <TabsTrigger value="relatorio" className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Relatório</TabsTrigger>
           <TabsTrigger value="instagram" className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Instagram</TabsTrigger>
         </TabsList>
+        )}
 
         <TabsContent value="posts">
           <div className="flex justify-end mb-3">
