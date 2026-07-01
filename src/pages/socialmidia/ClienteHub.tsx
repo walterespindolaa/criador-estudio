@@ -52,8 +52,9 @@ export default function ClienteHub() {
       <button onClick={() => navigate("/socialmidia/clientes")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground font-body mb-4"><ArrowLeft className="h-4 w-4" /> Clientes</button>
 
       <div className="flex items-center gap-3 mb-4">
-        <span className="w-12 h-12 rounded-full grid place-items-center text-white font-display font-bold shrink-0 overflow-hidden" style={{ background: "linear-gradient(135deg,#0F6E56,#1d9e75)" }}>
-          {client.logo ? <img src={client.logo} alt="" className="w-full h-full object-cover" /> : initial(client.name)}
+        <span className="relative w-12 h-12 rounded-full grid place-items-center text-white font-display font-bold shrink-0 overflow-hidden" style={{ background: "linear-gradient(135deg,#0F6E56,#1d9e75)" }}>
+          {initial(client.name)}
+          {client.logo && <img src={client.logo} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 w-full h-full object-cover" />}
         </span>
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-display font-extrabold text-foreground tracking-tight truncate">{client.name}</h1>

@@ -78,8 +78,9 @@ export default function Clientes() {
             return (
               <button key={c.id} onClick={() => open(c.id)} className="text-left bg-card border border-border rounded-2xl p-4 hover:border-primary/40 hover:shadow-md transition-all">
                 <div className="flex items-center gap-3">
-                  <span className="w-11 h-11 rounded-full grid place-items-center text-white font-display font-bold shrink-0 overflow-hidden" style={{ background: "linear-gradient(135deg,#0F6E56,#1d9e75)" }}>
-                    {c.logo ? <img src={c.logo} alt="" className="w-full h-full object-cover" /> : initial(c.name)}
+                  <span className="relative w-11 h-11 rounded-full grid place-items-center text-white font-display font-bold shrink-0 overflow-hidden" style={{ background: "linear-gradient(135deg,#0F6E56,#1d9e75)" }}>
+                    {initial(c.name)}
+                    {c.logo && <img src={c.logo} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 w-full h-full object-cover" />}
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="font-display font-bold text-foreground truncate">{c.name || "Sem nome"}</p>
