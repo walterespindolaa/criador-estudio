@@ -71,6 +71,82 @@ const getNichePresets = (niche: string): string => {
   return presets[niche] || `- Adapte as sugestões ao contexto específico do nicho ${niche}`;
 };
 
+// Refresh do banco de tendências: pesquisa web (Perplexity) + formata (Gemini) + grava.
+// deno-lint-ignore no-explicit-any
+async function runTrendRefresh(admin: any, lovableApiKey: string, corsHeaders: Record<string, string>, createdBy: string | null): Promise<Response> {
+  const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+
+  // 1) Pesquisa ao vivo na web (Perplexity Sonar). Se falhar/faltar chave, degrada.
+  let webResearch = ''
+  const pplxKey = Deno.env.get('PERPLEXITY_API_KEY')
+  if (pplxKey) {
+    try {
+      const pr = await aiFetch('https://api.perplexity.ai/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${pplxKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'sonar',
+          messages: [
+            { role: 'system', content: 'Você é analista de tendências de redes sociais no Brasil. Responda em português, objetivo e concreto, com base no que está em alta AGORA na web.' },
+            { role: 'user', content: `Hoje é ${hoje}. Pesquise e liste o que está EM ALTA AGORA para criadores de conteúdo no Brasil (Instagram, TikTok, Reels): (1) formatos de vídeo/post em alta, (2) temas/assuntos quentes do momento, (3) ganchos/aberturas que estão retendo, (4) datas comemorativas e sazonais nas próximas 4-6 semanas. Seja específico e atual, evite genérico.` },
+          ],
+          max_tokens: 900,
+          temperature: 0.2,
+        }),
+      })
+      if (pr.ok) {
+        const pj = await pr.json()
+        webResearch = String(pj.choices?.[0]?.message?.content || '').slice(0, 4000)
+      } else {
+        console.error('perplexity error', pr.status, await pr.text())
+      }
+    } catch (e) { console.error('perplexity fetch failed', e) }
+  }
+
+  // 2) Formata a pesquisa nos cards (Gemini).
+  const trendSys = `Você é um analista de tendências de conteúdo para criadores e social medias no Brasil. Hoje é ${hoje}. Gere um banco de tendências ATUAL e prático para Instagram, TikTok e Reels. Responda SOMENTE em JSON válido, sem markdown.`
+  const trendUsr = `${webResearch ? `PESQUISA DA WEB (use como base, é atual):\n${webResearch}\n\n` : ''}Gere de 10 a 14 tendências variadas e acionáveis no formato:
+{"trends":[{"kind":"formato|tema|gancho|data","title":"curto (max 8 palavras)","description":"1 frase prática de como usar","niche":"geral"}]}
+OBRIGATÓRIO variar os tipos — inclua PELO MENOS 2 de cada: "formato" (formatos de vídeo/post em alta), "tema" (assuntos quentes), "gancho" (aberturas que retêm), "data" (datas comemorativas/sazonais próximas no Brasil). Seja específico e brasileiro. Nada genérico.`
+
+  const tr = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${lovableApiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'google/gemini-2.5-flash-lite',
+      messages: [ { role: 'system', content: trendSys }, { role: 'user', content: trendUsr } ],
+      max_tokens: 4096,
+      temperature: 0.7,
+    }),
+  })
+  if (!tr.ok) { console.error('trend refresh gateway error', tr.status, await tr.text()); throw new Error('AI gateway error') }
+  const tj = await tr.json()
+  const tcleaned = String(tj.choices?.[0]?.message?.content || '').replace(/```json/gi, '').replace(/```/g, '').trim()
+  const tmatch = tcleaned.match(/\{[\s\S]*\}/)
+  let parsed: { trends?: Array<Record<string, unknown>> } = {}
+  try { parsed = JSON.parse(tmatch ? tmatch[0] : tcleaned) } catch { throw new Error('Invalid JSON from AI') }
+  const allowed = new Set(['formato', 'tema', 'gancho', 'data'])
+  const rows = (parsed.trends || [])
+    .filter((t) => t && typeof t.title === 'string')
+    .slice(0, 16)
+    .map((t) => ({
+      kind: allowed.has(String(t.kind)) ? String(t.kind) : 'tema',
+      title: String(t.title).slice(0, 120),
+      description: t.description ? String(t.description).slice(0, 300) : null,
+      niche: t.niche ? String(t.niche).slice(0, 60) : 'geral',
+      created_by: createdBy,
+    }))
+  if (rows.length === 0) throw new Error('Nenhuma tendência gerada')
+
+  await admin.from('content_trends').delete().not('id', 'is', null)
+  const { error: insErr } = await admin.from('content_trends').insert(rows)
+  if (insErr) { console.error('trend insert error', insErr); throw new Error('Falha ao salvar tendências') }
+
+  return new Response(JSON.stringify({ result: { count: rows.length } }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
+}
+
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req)
   if (req.method === 'OPTIONS') {
@@ -78,6 +154,18 @@ serve(async (req) => {
   }
 
   try {
+    // Cron interno (sem JWT): x-internal-secret válido só pode disparar o refresh de tendências.
+    const internalSecret = req.headers.get('x-internal-secret')
+    if (internalSecret && internalSecret === Deno.env.get('INTERNAL_PUSH_SECRET')) {
+      const cronBody = await req.json().catch(() => ({}))
+      if (cronBody?.operation !== 'trend-bank-refresh') {
+        return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+      const url = Deno.env.get('SUPABASE_URL'); const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'); const lk = Deno.env.get('LOVABLE_API_KEY')
+      if (!url || !key || !lk) throw new Error('Missing credentials')
+      return await runTrendRefresh(createClient(url, key), lk, corsHeaders, null)
+    }
+
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -186,83 +274,7 @@ Gere um insight estratégico conciso em português BR no formato:
           status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
-      const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
-
-      // 1) Pesquisa ao vivo na web (Perplexity Sonar). Se falhar/faltar chave, segue sem (degrada).
-      let webResearch = ''
-      const pplxKey = Deno.env.get('PERPLEXITY_API_KEY')
-      if (pplxKey) {
-        try {
-          const pr = await aiFetch('https://api.perplexity.ai/chat/completions', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${pplxKey}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              model: 'sonar',
-              messages: [
-                { role: 'system', content: 'Você é analista de tendências de redes sociais no Brasil. Responda em português, objetivo e concreto, com base no que está em alta AGORA na web.' },
-                { role: 'user', content: `Hoje é ${hoje}. Pesquise e liste o que está EM ALTA AGORA para criadores de conteúdo no Brasil (Instagram, TikTok, Reels): (1) formatos de vídeo/post em alta, (2) temas/assuntos quentes do momento, (3) ganchos/aberturas que estão retendo, (4) datas comemorativas e sazonais nas próximas 4-6 semanas. Seja específico e atual, evite genérico.` },
-              ],
-              max_tokens: 900,
-              temperature: 0.2,
-            }),
-          })
-          if (pr.ok) {
-            const pj = await pr.json()
-            webResearch = String(pj.choices?.[0]?.message?.content || '').slice(0, 4000)
-          } else {
-            console.error('perplexity error', pr.status, await pr.text())
-          }
-        } catch (e) { console.error('perplexity fetch failed', e) }
-      }
-
-      // 2) Formata a pesquisa nos cards (Gemini). Usa a pesquisa web quando houver.
-      const trendSys = `Você é um analista de tendências de conteúdo para criadores e social medias no Brasil. Hoje é ${hoje}. Gere um banco de tendências ATUAL e prático para Instagram, TikTok e Reels. Responda SOMENTE em JSON válido, sem markdown.`
-      const trendUsr = `${webResearch ? `PESQUISA DA WEB (use como base, é atual):\n${webResearch}\n\n` : ''}Gere de 10 a 14 tendências variadas e acionáveis no formato:
-{"trends":[{"kind":"formato|tema|gancho|data","title":"curto (max 8 palavras)","description":"1 frase prática de como usar","niche":"geral"}]}
-OBRIGATÓRIO variar os tipos — inclua PELO MENOS 2 de cada: "formato" (formatos de vídeo/post em alta), "tema" (assuntos quentes), "gancho" (aberturas que retêm), "data" (datas comemorativas/sazonais próximas no Brasil). Seja específico e brasileiro. Nada genérico.`
-
-      const tr = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${lovableApiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash-lite',
-          messages: [ { role: 'system', content: trendSys }, { role: 'user', content: trendUsr } ],
-          max_tokens: 4096,
-          temperature: 0.7,
-        }),
-      })
-      if (!tr.ok) {
-        const t = await tr.text()
-        console.error('trend refresh gateway error', tr.status, t)
-        throw new Error('AI gateway error')
-      }
-      const tj = await tr.json()
-      const tcontent = String(tj.choices?.[0]?.message?.content || '')
-      const tcleaned = tcontent.replace(/```json/gi, '').replace(/```/g, '').trim()
-      const tmatch = tcleaned.match(/\{[\s\S]*\}/)
-      let parsed: { trends?: Array<Record<string, unknown>> } = {}
-      try { parsed = JSON.parse(tmatch ? tmatch[0] : tcleaned) } catch { throw new Error('Invalid JSON from AI') }
-      const allowed = new Set(['formato', 'tema', 'gancho', 'data'])
-      const rows = (parsed.trends || [])
-        .filter((t) => t && typeof t.title === 'string')
-        .slice(0, 16)
-        .map((t) => ({
-          kind: allowed.has(String(t.kind)) ? String(t.kind) : 'tema',
-          title: String(t.title).slice(0, 120),
-          description: t.description ? String(t.description).slice(0, 300) : null,
-          niche: t.niche ? String(t.niche).slice(0, 60) : 'geral',
-          created_by: userId,
-        }))
-      if (rows.length === 0) throw new Error('Nenhuma tendência gerada')
-
-      // substitui o banco inteiro
-      await supabase.from('content_trends').delete().not('id', 'is', null)
-      const { error: insErr } = await supabase.from('content_trends').insert(rows)
-      if (insErr) { console.error('trend insert error', insErr); throw new Error('Falha ao salvar tendências') }
-
-      return new Response(JSON.stringify({ result: { count: rows.length } }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return await runTrendRefresh(supabase, lovableApiKey, corsHeaders, userId)
     }
     // ── fim trend bank refresh ───────────────────────────────────────
 

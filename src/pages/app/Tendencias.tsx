@@ -1,11 +1,10 @@
 import { motion } from "framer-motion";
-import { TrendingUp, RefreshCw, Loader2, Wand2, Sparkles } from "lucide-react";
+import { TrendingUp, Loader2, Wand2, Sparkles, Globe } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { useCriaAI } from "@/contexts/CriaAIContext";
 import { useProfile } from "@/hooks/useProfile";
-import { useTrends, useRefreshTrends, type Trend, type TrendKind } from "@/hooks/useTrends";
+import { useTrends, type Trend, type TrendKind } from "@/hooks/useTrends";
 
 const KIND: Record<TrendKind, { label: string; chipBg: string; chipFg: string }> = {
   formato: { label: "Formato em alta", chipBg: "#EEEDFE", chipFg: "#3C3489" },
@@ -19,7 +18,6 @@ export default function Tendencias() {
   const { openCria } = useCriaAI();
   const isAdmin = profile?.role === "admin";
   const { data: trends = [], isLoading } = useTrends();
-  const refresh = useRefreshTrends();
 
   const gerarIdeia = (t: Trend) => {
     openCria(`Quero ideias de conteúdo pra minha marca sobre esta tendência: "${t.title}"${t.description ? ` — ${t.description}` : ""}. Me dá 3 ideias prontas (gancho + formato), no meu tom e nicho, com uma legenda curta em cada.`);
@@ -29,23 +27,18 @@ export default function Tendencias() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="pb-24 md:pb-0">
-      <div className="flex items-start justify-between gap-3 mb-5 flex-wrap">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-sm shrink-0">
-            <TrendingUp className="h-5 w-5 text-white" strokeWidth={1.75} />
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Tendências</h1>
-            <p className="text-muted-foreground font-body text-sm mt-0.5">
-              {lastUpdated ? `Atualizado em ${lastUpdated.toLocaleDateString("pt-BR")}` : "O que está bombando pra você usar nos seus conteúdos."}
-            </p>
-          </div>
+      <div className="flex items-center gap-3 mb-5">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-sm shrink-0">
+          <TrendingUp className="h-5 w-5 text-white" strokeWidth={1.75} />
         </div>
-        {isAdmin && (
-          <Button size="sm" onClick={() => refresh.mutate()} disabled={refresh.isPending} className="gap-1.5">
-            {refresh.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />} Atualizar banco
-          </Button>
-        )}
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Tendências</h1>
+          <p className="text-muted-foreground font-body text-sm mt-0.5 flex items-center gap-1.5">
+            {lastUpdated ? (
+              <><Globe className="h-3.5 w-3.5 text-primary" /> Pesquisado na web · atualizado em {lastUpdated.toLocaleDateString("pt-BR")}</>
+            ) : "O que está bombando pra você usar nos seus conteúdos."}
+          </p>
+        </div>
       </div>
 
       {isLoading ? (
@@ -54,7 +47,7 @@ export default function Tendencias() {
         <div className="border border-dashed border-border rounded-2xl py-16 px-6 text-center">
           <TrendingUp className="h-7 w-7 text-muted-foreground/40 mx-auto mb-3" strokeWidth={1.5} />
           <p className="text-sm font-body text-foreground font-medium">Banco de tendências ainda não atualizado</p>
-          <p className="text-xs font-body text-muted-foreground mt-1">{isAdmin ? "Clique em “Atualizar banco” pra gerar a primeira leva." : "Em breve a curadoria do CRIA traz as novidades aqui."}</p>
+          <p className="text-xs font-body text-muted-foreground mt-1">{isAdmin ? "Gere a primeira leva pelo Painel Admin → Banco de Tendências." : "Em breve a curadoria do CRIA traz as novidades aqui."}</p>
         </div>
       ) : (
         <>
