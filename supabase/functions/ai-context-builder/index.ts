@@ -187,10 +187,39 @@ Gere um insight estratégico conciso em português BR no formato:
         })
       }
       const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
-      const trendSys = `Você é um analista de tendências de conteúdo para criadores e social medias no Brasil. Hoje é ${hoje}. Gere um banco de tendências ATUAL e prático para usar em Instagram, TikTok e Reels. Responda SOMENTE em JSON válido, sem markdown.`
-      const trendUsr = `Gere de 10 a 14 tendências variadas e acionáveis no formato:
+
+      // 1) Pesquisa ao vivo na web (Perplexity Sonar). Se falhar/faltar chave, segue sem (degrada).
+      let webResearch = ''
+      const pplxKey = Deno.env.get('PERPLEXITY_API_KEY')
+      if (pplxKey) {
+        try {
+          const pr = await aiFetch('https://api.perplexity.ai/chat/completions', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${pplxKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'sonar',
+              messages: [
+                { role: 'system', content: 'Você é analista de tendências de redes sociais no Brasil. Responda em português, objetivo e concreto, com base no que está em alta AGORA na web.' },
+                { role: 'user', content: `Hoje é ${hoje}. Pesquise e liste o que está EM ALTA AGORA para criadores de conteúdo no Brasil (Instagram, TikTok, Reels): (1) formatos de vídeo/post em alta, (2) temas/assuntos quentes do momento, (3) ganchos/aberturas que estão retendo, (4) datas comemorativas e sazonais nas próximas 4-6 semanas. Seja específico e atual, evite genérico.` },
+              ],
+              max_tokens: 900,
+              temperature: 0.2,
+            }),
+          })
+          if (pr.ok) {
+            const pj = await pr.json()
+            webResearch = String(pj.choices?.[0]?.message?.content || '').slice(0, 4000)
+          } else {
+            console.error('perplexity error', pr.status, await pr.text())
+          }
+        } catch (e) { console.error('perplexity fetch failed', e) }
+      }
+
+      // 2) Formata a pesquisa nos cards (Gemini). Usa a pesquisa web quando houver.
+      const trendSys = `Você é um analista de tendências de conteúdo para criadores e social medias no Brasil. Hoje é ${hoje}. Gere um banco de tendências ATUAL e prático para Instagram, TikTok e Reels. Responda SOMENTE em JSON válido, sem markdown.`
+      const trendUsr = `${webResearch ? `PESQUISA DA WEB (use como base, é atual):\n${webResearch}\n\n` : ''}Gere de 10 a 14 tendências variadas e acionáveis no formato:
 {"trends":[{"kind":"formato|tema|gancho|data","title":"curto (max 8 palavras)","description":"1 frase prática de como usar","niche":"geral"}]}
-Distribua entre os 4 tipos: "formato" (formatos de vídeo/post em alta), "tema" (assuntos quentes do momento), "gancho" (aberturas que retêm), "data" (datas comemorativas/sazonais próximas do mês atual no Brasil). Seja específico e brasileiro. Nada genérico.`
+OBRIGATÓRIO variar os tipos — inclua PELO MENOS 2 de cada: "formato" (formatos de vídeo/post em alta), "tema" (assuntos quentes), "gancho" (aberturas que retêm), "data" (datas comemorativas/sazonais próximas no Brasil). Seja específico e brasileiro. Nada genérico.`
 
       const tr = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
