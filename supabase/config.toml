@@ -38,7 +38,7 @@ project_id = "exuxlwdnkgmhtnwoyvwo"
   [functions.instagram-sync]
     verify_jwt = true
   [functions.ai-context-builder]
-    verify_jwt = true
+    verify_jwt = false
   [functions.create-checkout]
     verify_jwt = false
   [functions.stripe-webhook]

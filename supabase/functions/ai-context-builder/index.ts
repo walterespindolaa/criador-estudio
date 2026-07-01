@@ -156,7 +156,8 @@ serve(async (req) => {
   try {
     // Cron interno (sem JWT): x-internal-secret válido só pode disparar o refresh de tendências.
     const internalSecret = req.headers.get('x-internal-secret')
-    if (internalSecret && internalSecret === Deno.env.get('INTERNAL_PUSH_SECRET')) {
+    const cronSecret = Deno.env.get('TREND_CRON_SECRET')
+    if (internalSecret && cronSecret && internalSecret === cronSecret) {
       const cronBody = await req.json().catch(() => ({}))
       if (cronBody?.operation !== 'trend-bank-refresh') {
         return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
