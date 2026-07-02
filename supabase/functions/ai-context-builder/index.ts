@@ -147,6 +147,75 @@ OBRIGATÓRIO variar os tipos — inclua PELO MENOS 2 de cada: "formato" (formato
   })
 }
 
+// Banco de tendências de STORIES (compartilhado). Mesma ideia do runTrendRefresh.
+async function runStoryTrendRefresh(admin: any, lovableApiKey: string, corsHeaders: Record<string, string>, _createdBy: string | null): Promise<Response> {
+  const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+
+  let webResearch = ''
+  const pplxKey = Deno.env.get('PERPLEXITY_API_KEY')
+  if (pplxKey) {
+    try {
+      const pr = await aiFetch('https://api.perplexity.ai/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${pplxKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'sonar',
+          messages: [
+            { role: 'system', content: 'Você é analista de Stories do Instagram no Brasil. Responda em português, objetivo e concreto, com base no que está em alta AGORA.' },
+            { role: 'user', content: `Hoje é ${hoje}. Pesquise e liste o que está EM ALTA AGORA em STORIES do Instagram no Brasil: (1) formatos de story em alta (enquete, caixinha de perguntas, bastidores, tutorial rápido, antes/depois, contagem regressiva, quiz), (2) trends de áudio/figurinhas/interações, (3) ideias de story que estão engajando muito. Seja específico e atual, evite genérico.` },
+          ],
+          max_tokens: 900,
+          temperature: 0.2,
+        }),
+      })
+      if (pr.ok) {
+        const pj = await pr.json()
+        webResearch = String(pj.choices?.[0]?.message?.content || '').slice(0, 4000)
+      } else { console.error('perplexity(story) error', pr.status, await pr.text()) }
+    } catch (e) { console.error('perplexity(story) fetch failed', e) }
+  }
+
+  const sys = `Você é um analista de tendências de STORIES do Instagram no Brasil. Hoje é ${hoje}. Responda SOMENTE em JSON válido, sem markdown.`
+  const usr = `${webResearch ? `PESQUISA DA WEB (use como base, é atual):\n${webResearch}\n\n` : ''}Gere de 8 a 12 tendências de STORIES acionáveis no formato:
+{"trends":[{"format":"enquete|caixinha|bastidor|tutorial|antes-depois|dica-rapida|contagem|quiz|trend","title":"curto (max 8 palavras)","description":"1 frase prática de como usar no story","why_trending":"por que está em alta agora"}]}
+Seja específico e brasileiro. Nada genérico.`
+
+  const tr = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${lovableApiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'google/gemini-2.5-flash-lite',
+      messages: [ { role: 'system', content: sys }, { role: 'user', content: usr } ],
+      max_tokens: 4096,
+      temperature: 0.7,
+    }),
+  })
+  if (!tr.ok) { console.error('story trend gateway error', tr.status, await tr.text()); throw new Error('AI gateway error') }
+  const tj = await tr.json()
+  const cleaned = String(tj.choices?.[0]?.message?.content || '').replace(/```json/gi, '').replace(/```/g, '').trim()
+  const match = cleaned.match(/\{[\s\S]*\}/)
+  let parsed: { trends?: Array<Record<string, unknown>> } = {}
+  try { parsed = JSON.parse(match ? match[0] : cleaned) } catch { throw new Error('Invalid JSON from AI') }
+  const rows = (parsed.trends || [])
+    .filter((t) => t && typeof t.title === 'string')
+    .slice(0, 14)
+    .map((t) => ({
+      format: t.format ? String(t.format).slice(0, 40) : 'trend',
+      title: String(t.title).slice(0, 120),
+      description: t.description ? String(t.description).slice(0, 300) : null,
+      why_trending: t.why_trending ? String(t.why_trending).slice(0, 300) : null,
+    }))
+  if (rows.length === 0) throw new Error('Nenhuma tendência de story gerada')
+
+  await admin.from('story_trends').delete().not('id', 'is', null)
+  const { error: insErr } = await admin.from('story_trends').insert(rows)
+  if (insErr) { console.error('story trend insert error', insErr); throw new Error('Falha ao salvar tendências de stories') }
+
+  return new Response(JSON.stringify({ result: { count: rows.length } }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
+}
+
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req)
   if (req.method === 'OPTIONS') {
@@ -159,12 +228,16 @@ serve(async (req) => {
     const cronSecret = Deno.env.get('TREND_CRON_SECRET')
     if (internalSecret && cronSecret && internalSecret === cronSecret) {
       const cronBody = await req.json().catch(() => ({}))
-      if (cronBody?.operation !== 'trend-bank-refresh') {
+      const cronOp = cronBody?.operation
+      if (cronOp !== 'trend-bank-refresh' && cronOp !== 'story-trend-refresh') {
         return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
       const url = Deno.env.get('SUPABASE_URL'); const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'); const lk = Deno.env.get('LOVABLE_API_KEY')
       if (!url || !key || !lk) throw new Error('Missing credentials')
-      return await runTrendRefresh(createClient(url, key), lk, corsHeaders, null)
+      const cronAdmin = createClient(url, key)
+      return cronOp === 'story-trend-refresh'
+        ? await runStoryTrendRefresh(cronAdmin, lk, corsHeaders, null)
+        : await runTrendRefresh(cronAdmin, lk, corsHeaders, null)
     }
 
     const authHeader = req.headers.get('Authorization')
@@ -276,6 +349,14 @@ Gere um insight estratégico conciso em português BR no formato:
         })
       }
       return await runTrendRefresh(supabase, lovableApiKey, corsHeaders, userId)
+    }
+    if (operation === 'story-trend-refresh') {
+      if (!_isAdmin) {
+        return new Response(JSON.stringify({ error: 'forbidden' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      return await runStoryTrendRefresh(supabase, lovableApiKey, corsHeaders, userId)
     }
     // ── fim trend bank refresh ───────────────────────────────────────
 
@@ -794,6 +875,32 @@ ${data.publico ? `Público-alvo: ${data.publico}` : ''}
 ${data.brandContext ? `\nMARCA DO CRIADOR:\n${data.brandContext}` : ''}`
         maxTokens = 8192
         break
+      case 'story-plan-generate': {
+        const perDia = Math.max(1, Math.min(6, Number(data.perDia) || 3))
+        const dias = Math.max(1, Math.min(15, Number(data.dias) || 7))
+        operationPrompt = `Você é um estrategista de STORIES do Instagram no Brasil. Monte um plano de stories PRONTO pra gravar, no tom da marca do criador.
+
+OBJETIVO: ${perDia} stories por dia, por ${dias} dias. Cada story é acionável, específico ao nicho e à marca — nada genérico.
+
+REGRAS:
+- Varie os formatos ao longo do dia e da semana: enquete, caixinha de perguntas, bastidor, tutorial rápido, antes/depois, dica rápida, contagem regressiva, quiz, "assista até o fim".
+- "roteiro": 1 a 3 frases dizendo EXATAMENTE o que gravar/mostrar e o texto que vai na tela.
+- "horario": distribua ao longo do dia (manhã, almoço, noite) conforme o melhor engajamento.
+- Use as tendências de stories informadas quando encaixarem no nicho.
+- Português BR informal, como amigo falando.
+
+RESPONDA APENAS com JSON válido, sem texto antes ou depois:
+{"stories":[{"dia":0,"horario":"09:00","titulo":"curto","roteiro":"o que gravar + texto da tela","formato":"enquete|caixinha|bastidor|tutorial|antes-depois|dica-rapida|contagem|quiz|trend"}]}
+- "dia" é o índice do dia (0 = primeiro dia), de 0 a ${dias - 1}.
+- Gere EXATAMENTE ${perDia} stories por dia (total ${perDia * dias}).`
+        userPrompt = `Nicho: ${data.nicho || 'lifestyle'}
+Stories por dia: ${perDia}
+Dias: ${dias}
+Tendências de stories em alta: ${data.tendencias || '-'}
+${data.brandContext ? `\nMARCA DO CRIADOR:\n${data.brandContext}` : ''}`
+        maxTokens = 8192
+        break
+      }
       default:
         throw new Error('Invalid operation')
     }
@@ -836,7 +943,7 @@ ${data.brandContext ? `\nMARCA DO CRIADOR:\n${data.brandContext}` : ''}`
     const result = await response.json()
     const content = result.choices?.[0]?.message?.content || ''
 
-    if (operation === 'reference-filter' || operation === 'score-caption' || operation === 'client-report-insight' || operation === 'insights-reading' || operation === 'autopilot-cronograma') {
+    if (operation === 'reference-filter' || operation === 'score-caption' || operation === 'client-report-insight' || operation === 'insights-reading' || operation === 'autopilot-cronograma' || operation === 'story-plan-generate') {
       const cleaned = String(content).replace(/```json/gi, '').replace(/```/g, '').trim()
       const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
       const jsonStr = jsonMatch ? jsonMatch[0] : cleaned

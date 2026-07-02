@@ -25,8 +25,10 @@ import {
   TrendingUp,
   RefreshCw,
   Loader2,
+  Clapperboard,
 } from "lucide-react";
 import { useTrends, useRefreshTrends } from "@/hooks/useTrends";
+import { useStoryTrends, useRefreshStoryTrends } from "@/hooks/useStoryTrends";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -267,6 +269,7 @@ const AdminInner = () => {
         </div>
 
         <TrendBankAdminCard />
+        <StoryBankAdminCard />
 
         <Tabs value={tab} onValueChange={setTab} className="w-full">
           <TabsList className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3 mb-6 bg-transparent h-auto p-0 auto-rows-fr">
@@ -738,6 +741,28 @@ function TrendBankAdminCard() {
         <span className="w-9 h-9 rounded-xl bg-primary/10 grid place-items-center shrink-0"><TrendingUp className="h-4 w-4 text-primary" /></span>
         <div>
           <p className="font-display font-bold text-foreground text-sm">Banco de Tendências</p>
+          <p className="text-xs text-muted-foreground font-body">
+            {last ? `Pesquisa na web · atualizado em ${last.toLocaleDateString("pt-BR")} · vale pra todas as contas` : "Nunca atualizado — gere a primeira leva"}
+          </p>
+        </div>
+      </div>
+      <Button size="sm" onClick={() => refresh.mutate()} disabled={refresh.isPending} className="gap-1.5 shrink-0">
+        {refresh.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />} Atualizar agora
+      </Button>
+    </div>
+  );
+}
+
+function StoryBankAdminCard() {
+  const { data: trends = [] } = useStoryTrends();
+  const refresh = useRefreshStoryTrends();
+  const last = trends[0]?.created_at ? new Date(trends[0].created_at) : null;
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4 mb-6 flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex items-center gap-3">
+        <span className="w-9 h-9 rounded-xl bg-primary/10 grid place-items-center shrink-0"><Clapperboard className="h-4 w-4 text-primary" /></span>
+        <div>
+          <p className="font-display font-bold text-foreground text-sm">Banco de Stories</p>
           <p className="text-xs text-muted-foreground font-body">
             {last ? `Pesquisa na web · atualizado em ${last.toLocaleDateString("pt-BR")} · vale pra todas as contas` : "Nunca atualizado — gere a primeira leva"}
           </p>
