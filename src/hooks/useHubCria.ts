@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
+import { bestTimes } from "@/lib/bestTimes";
 import { toast } from "sonner";
 
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
@@ -129,6 +130,53 @@ export function useRunScrape() {
     onError: (e) => {
       const m = e instanceof Error ? e.message : "";
       toast.error(m ? `Falha: ${m}` : "Não consegui rodar a análise agora.");
+    },
+  });
+}
+
+// "Gerar plano a partir da análise": transforma as ideias marcadas "usar" em posts
+// no cronograma do cliente (Cria Post) e marca as ideias como "usada".
+export function useGeneratePlanFromIdeas() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { externalClientId: string; ideas: CreativeIdea[]; nicho?: string }): Promise<number> => {
+      if (!user?.id) throw new Error("Not authenticated");
+      const ideas = input.ideas.filter((i) => i.status === "usar");
+      if (ideas.length === 0) throw new Error("Marque ao menos uma ideia como 'Usar' primeiro.");
+      const slots = bestTimes("instagram", input.nicho).slots;
+      const start = new Date();
+      const rows = ideas.map((idea, i) => {
+        const d = new Date(start);
+        d.setDate(d.getDate() + 1 + Math.floor((i * 21) / Math.max(1, ideas.length)));
+        return {
+          user_id: user.id,
+          external_client_id: input.externalClientId,
+          status: "editando",
+          approval_status: "pendente",
+          approval_mode: "fast",
+          title: idea.title.slice(0, 200),
+          caption: idea.rationale ?? null,
+          format: (idea.format || "reels").toLowerCase(),
+          scheduled_date: d.toISOString().slice(0, 10),
+          scheduled_time: slots[i % slots.length],
+        };
+      });
+      const { error } = await sbFrom("posts").insert(rows as never);
+      if (error) throw error;
+      const ids = ideas.map((i) => i.id);
+      await sbFrom("creative_ideas").update({ status: "usada", updated_at: new Date().toISOString() } as never).in("id", ids);
+      return rows.length;
+    },
+    onSuccess: (n) => {
+      qc.invalidateQueries({ queryKey: ["hubcria-ideas"] });
+      qc.invalidateQueries({ queryKey: ["external-posts"] });
+      qc.invalidateQueries({ queryKey: ["external-pending"] });
+      toast.success(`${n} posts criados no cronograma do cliente.`);
+    },
+    onError: (e) => {
+      const m = e instanceof Error ? e.message : "";
+      toast.error(m || "Não consegui gerar o cronograma.");
     },
   });
 }

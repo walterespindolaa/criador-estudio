@@ -23,6 +23,23 @@ type Item = AutopilotPost & { selected: boolean; date: string; time: string };
 
 const FOCOS = ["Crescer alcance", "Engajar", "Vender", "Lançamento"];
 
+// Deriva os horários "da conta" a partir de quando a pessoa mais publica.
+// Retorna null se não houver dados suficientes (aí usa o recomendado).
+function deriveUserSlots(list: { scheduled_time?: string | null }[]): string[] | null {
+  const counts: Record<string, number> = {};
+  let n = 0;
+  for (const p of list) {
+    const t = p.scheduled_time;
+    if (!t) continue;
+    const hh = t.slice(0, 2);
+    if (!/^\d{2}$/.test(hh)) continue;
+    counts[hh] = (counts[hh] || 0) + 1; n++;
+  }
+  if (n < 4) return null;
+  const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([h]) => `${h}:00`);
+  return top.length ? [...new Set(top)].sort() : null;
+}
+
 export default function Autopilot() {
   const { user } = useAuth();
   const { profile } = useProfile();
@@ -42,6 +59,14 @@ export default function Autopilot() {
   const [plataforma, setPlataforma] = useState("instagram");
   const [contexto, setContexto] = useState("");
   const [publico, setPublico] = useState("");
+  const [horarioPref, setHorarioPref] = useState<"auto" | "conta" | "recomendado">("auto");
+
+  const userSlots = useMemo(() => deriveUserSlots(posts), [posts]);
+  const usingConta = horarioPref === "conta" || (horarioPref === "auto" && !!userSlots);
+  const activeSlots = useMemo(
+    () => (usingConta && userSlots ? userSlots : bestTimes(plataforma, profile?.niche).slots),
+    [usingConta, userSlots, plataforma, profile?.niche],
+  );
 
   const trialOk = profile?.trial_ends_at ? new Date(profile.trial_ends_at).getTime() > Date.now() : false;
   const isStudio = profile?.plan === "studio" || profile?.role === "admin" || trialOk;
@@ -66,9 +91,10 @@ export default function Autopilot() {
   };
 
   const buildItems = (raw: AutopilotPost[]): Item[] => {
-    const slot = bestTimes(plataforma, profile?.niche).slots[0] ?? "19:00";
+    const slots = activeSlots.length ? activeSlots : ["12:00", "19:00"];
     const dates = spreadDates(raw.length);
-    return raw.map((p, i) => ({ ...p, selected: true, date: dates[i], time: slot }));
+    // distribui os horários (manhã/almoço/noite) em vez de cravar tudo no mesmo.
+    return raw.map((p, i) => ({ ...p, selected: true, date: dates[i], time: slots[i % slots.length] }));
   };
 
   const generate = async () => {
@@ -201,6 +227,31 @@ export default function Autopilot() {
                   <button key={id} onClick={() => setPlataforma(id)} className={`flex-1 text-[13px] py-2.5 ${plataforma === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{lb}</button>
                 ))}
               </div>
+            </div>
+            <div>
+              <p className="text-[13px] font-body text-muted-foreground mb-1.5">Horários</p>
+              <div className="flex rounded-lg border border-border overflow-hidden">
+                <button
+                  onClick={() => setHorarioPref("conta")}
+                  disabled={!userSlots}
+                  className={`flex-1 text-[12px] py-2.5 disabled:opacity-40 ${usingConta ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+                >
+                  Da minha conta
+                </button>
+                <button
+                  onClick={() => setHorarioPref("recomendado")}
+                  className={`flex-1 text-[12px] py-2.5 ${!usingConta ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+                >
+                  Recomendado
+                </button>
+              </div>
+              <p className="text-[11px] font-body text-muted-foreground mt-1">
+                {usingConta
+                  ? `Distribui nos seus horários: ${activeSlots.join(", ")}.`
+                  : userSlots
+                  ? `Padrão do nicho: ${activeSlots.join(", ")}.`
+                  : `Sem dados suficientes ainda — usando o recomendado (${activeSlots.join(", ")}). Publique mais pra liberar "da minha conta".`}
+              </p>
             </div>
             <div>
               <p className="text-[13px] font-body text-muted-foreground mb-1.5">Foco (opcional)</p>
