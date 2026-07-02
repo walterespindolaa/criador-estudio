@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import type { Database } from "@/integrations/supabase/types";
@@ -78,4 +78,48 @@ export function usePosts(options?: { limit?: number }) {
   });
 
   return { posts, isLoading, error, createPost, updatePost, deletePost };
+}
+
+// Lista paginada de posts publicados (Histórico) — carrega em lotes com "Carregar mais".
+export function usePublishedPostsInfinite(pageSize = 40) {
+  const { activeAccountId } = useActiveAccount();
+  const userId = activeAccountId;
+  return useInfiniteQuery({
+    queryKey: ["posts-published-infinite", userId, pageSize] as const,
+    enabled: !!userId,
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) => {
+      const from = (pageParam as number) * pageSize;
+      const to = from + pageSize - 1;
+      const { data, error } = await supabase
+        .from("posts")
+        .select("*")
+        .eq("user_id", userId!)
+        .eq("status", "publicado")
+        .order("published_at", { ascending: false })
+        .range(from, to);
+      if (error) throw error;
+      return (data ?? []) as Post[];
+    },
+    getNextPageParam: (lastPage, allPages) => (lastPage.length === pageSize ? allPages.length : undefined),
+  });
+}
+
+// Contagem total de posts publicados (pro cabeçalho do Histórico ficar exato).
+export function usePublishedPostsCount() {
+  const { activeAccountId } = useActiveAccount();
+  const userId = activeAccountId;
+  return useQuery<number>({
+    queryKey: ["posts-published-count", userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("posts")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId!)
+        .eq("status", "publicado");
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
 }

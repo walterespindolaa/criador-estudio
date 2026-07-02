@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Archive, Eye, Bookmark, MessageSquare, BarChart3, Calendar, Filter, ChevronDown, ChevronRight, Repeat2 } from "lucide-react";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
-import { usePosts, type Post } from "@/hooks/usePosts";
+import { usePublishedPostsInfinite, usePublishedPostsCount, type Post } from "@/hooks/usePosts";
 import { Button } from "@/components/ui/button";
 import { RepurposeSheet } from "@/components/kanban/RepurposeSheet";
 import { usePillars } from "@/hooks/usePillars";
@@ -16,7 +16,9 @@ const PERIOD_OPTIONS = [
 ];
 
 const Historico = () => {
-  const { posts: allPosts } = usePosts();
+  const infinite = usePublishedPostsInfinite(40);
+  const allPosts = useMemo(() => infinite.data?.pages.flat() ?? [], [infinite.data]);
+  const { data: totalCount = 0 } = usePublishedPostsCount();
   const { pillars } = usePillars();
   const [filterPlatform, setFilterPlatform] = useState<string | null>(null);
   const [filterPillar, setFilterPillar] = useState<string | null>(null);
@@ -67,7 +69,6 @@ const Historico = () => {
 
   // Stats
   const stats = useMemo(() => {
-    const total = posts.length;
     const platformCounts: Record<string, number> = {};
     const monthCounts: Record<string, number> = {};
     posts.forEach(p => {
@@ -81,12 +82,12 @@ const Historico = () => {
     const topMonth = Object.entries(monthCounts).sort((a, b) => b[1] - a[1])[0];
     const months = Object.keys(monthCounts).length || 1;
     return {
-      total,
+      total: totalCount,
       topPlatform: topPlatform?.[0] || "-",
       topMonth: topMonth ? new Date(topMonth[0] + "-01").toLocaleDateString("pt-BR", { month: "short", year: "numeric" }) : "-",
-      avgPerMonth: Math.round(total / months),
+      avgPerMonth: Math.round(posts.length / months),
     };
-  }, [posts]);
+  }, [posts, totalCount]);
 
   // Memory feature
   const memoryPost = useMemo(() => {
@@ -305,6 +306,14 @@ const Historico = () => {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {infinite.hasNextPage && (
+          <div className="text-center mt-6">
+            <Button variant="outline" onClick={() => infinite.fetchNextPage()} disabled={infinite.isFetchingNextPage}>
+              {infinite.isFetchingNextPage ? "Carregando…" : "Carregar mais"}
+            </Button>
           </div>
         )}
       </motion.div>
