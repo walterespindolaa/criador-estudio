@@ -135,6 +135,7 @@ const App = () => (
                 <Route path="media-kit" element={<ErrorBoundary><MediaKit /></ErrorBoundary>} />
                 <Route path="tendencias" element={<ErrorBoundary><Tendencias /></ErrorBoundary>} />
                 <Route path="stories" element={<ErrorBoundary><CriaStories /></ErrorBoundary>} />
+                <Route path="stories/semanastories" element={<ErrorBoundary><CriaStories /></ErrorBoundary>} />
                 <Route path="aprovacao" element={<ErrorBoundary><Aprovacao /></ErrorBoundary>} />
                 <Route path="modulos" element={<ErrorBoundary><Modulos /></ErrorBoundary>} />
                 <Route path="feed" element={<ErrorBoundary><Feed /></ErrorBoundary>} />
