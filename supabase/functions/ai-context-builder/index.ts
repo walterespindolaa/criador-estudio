@@ -348,7 +348,15 @@ Gere um insight estratégico conciso em português BR no formato:
           status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
-      return await runTrendRefresh(supabase, lovableApiKey, corsHeaders, userId)
+      try {
+        return await runTrendRefresh(supabase, lovableApiKey, corsHeaders, userId)
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        console.error('[trend-bank-refresh] failed:', msg)
+        return new Response(JSON.stringify({ error: `trend-refresh: ${msg}` }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
     }
     if (operation === 'story-trend-refresh') {
       if (!_isAdmin) {
@@ -356,7 +364,15 @@ Gere um insight estratégico conciso em português BR no formato:
           status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
-      return await runStoryTrendRefresh(supabase, lovableApiKey, corsHeaders, userId)
+      try {
+        return await runStoryTrendRefresh(supabase, lovableApiKey, corsHeaders, userId)
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        console.error('[story-trend-refresh] failed:', msg)
+        return new Response(JSON.stringify({ error: `story-refresh: ${msg}` }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
     }
     // ── fim trend bank refresh ───────────────────────────────────────
 
