@@ -134,6 +134,24 @@ serve(async (req) => {
       return json({ ok: true });
     }
 
+    // Limpar conta: apaga TODO o conteúdo do usuário (posts, ideias, CRM, clientes,
+    // cronograma, media kit, bio, hábitos, metas, personas, pilares, arquivos…) mas
+    // MANTÉM a conta: login, plano, assinatura, cobrança, conexões (IG/Drive), push
+    // e vínculos de agência. A função SQL descobre as tabelas em runtime.
+    if (action === "wipe_data") {
+      const { data: wiped, error } = await (svc.rpc as unknown as (
+        fn: string, args: unknown,
+      ) => Promise<{ data: unknown; error: unknown }>)(
+        "admin_wipe_user_content", { _user_id: user_id },
+      );
+      if (error) {
+        console.error("[admin-user-actions] wipe_data failed:", error);
+        return json({ error: "wipe_failed" }, 500);
+      }
+      console.log("[admin-user-actions] wipe_data ok:", JSON.stringify(wiped));
+      return json({ ok: true, result: wiped });
+    }
+
     if (action === "resend_access") {
       const { data: userData, error: getErr } = await svc.auth.admin.getUserById(user_id);
       if (getErr || !userData?.user?.email) {

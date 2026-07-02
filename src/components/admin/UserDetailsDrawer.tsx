@@ -26,7 +26,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Mail, ShieldOff, ShieldCheck, Trash2, Loader2 } from "lucide-react";
+import { Mail, ShieldOff, ShieldCheck, Trash2, Loader2, Eraser } from "lucide-react";
 
 interface UserDetailsDrawerProps {
   open: boolean;
@@ -91,6 +91,7 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
   const queryClient = useQueryClient();
   const [validity, setValidity] = useState<string>("lifetime");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmWipe, setConfirmWipe] = useState(false);
 
   const { data, isLoading, error } = useQuery<UserDetails | null>({
     queryKey: ["admin-user-details", userId],
@@ -143,6 +144,18 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     },
     onError: (e: Error) => toast.error(`Falha: ${e.message}`),
+  });
+
+  const wipeMutation = useMutation({
+    mutationFn: () => invokeAction({ user_id: userId, action: "wipe_data" }),
+    onSuccess: () => {
+      toast.success("Conta limpa. Conteúdo apagado, acesso mantido.");
+      setConfirmWipe(false);
+      queryClient.invalidateQueries({ queryKey: ["admin-user-details", userId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+    },
+    onError: (e: Error) => toast.error(`Falha ao limpar: ${e.message}`),
   });
 
   const deleteMutation = useMutation({
@@ -280,6 +293,19 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
 
                   {!isSelf && (
                     <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-800"
+                      onClick={() => setConfirmWipe(true)}
+                      disabled={wipeMutation.isPending}
+                    >
+                      {wipeMutation.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Eraser className="h-3 w-3 mr-1" />}
+                      Limpar dados
+                    </Button>
+                  )}
+
+                  {!isSelf && (
+                    <Button
                       variant="destructive"
                       size="sm"
                       onClick={() => setConfirmDelete(true)}
@@ -298,6 +324,32 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={confirmWipe} onOpenChange={setConfirmWipe}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display">Limpar dados da conta?</AlertDialogTitle>
+            <AlertDialogDescription className="font-body">
+              Apaga <strong>todo o conteúdo</strong> deste usuário — posts, ideias, CRM, clientes,
+              cronograma, media kit, bio, hábitos, metas, personas, pilares e arquivos.
+              <br /><br />
+              <strong>Mantém:</strong> login, plano, assinatura, cobrança, conexões (Instagram/Drive),
+              push e vínculos de agência. A conta fica zerada, pronta pra recomeçar. Ação irreversível.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={wipeMutation.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-amber-600 text-white hover:bg-amber-700"
+              onClick={(e) => { e.preventDefault(); wipeMutation.mutate(); }}
+              disabled={wipeMutation.isPending}
+            >
+              {wipeMutation.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+              Limpar tudo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
