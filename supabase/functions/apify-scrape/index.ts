@@ -118,11 +118,13 @@ serve(async (req) => {
     if (!["posts", "reels", "profile", "hashtag", "comments"].includes(type)) return json({ error: "invalid_type" }, 400);
 
     // Cliente precisa ser do gestor.
-    let client: { name?: string; segment?: string; persona?: unknown } | null = null;
+    let client: Record<string, any> | null = null;
     if (crmClientId) {
-      const { data: c } = await svc.from("crm_clients").select("id, manager_id, segment, name, persona").eq("id", crmClientId).maybeSingle();
+      const { data: c } = await svc.from("crm_clients")
+        .select("id, manager_id, segment, name, persona, brand_core, cria_owner_id")
+        .eq("id", crmClientId).maybeSingle();
       if (!c || (c as { manager_id?: string }).manager_id !== user.id) return json({ error: "forbidden_client" }, 403);
-      client = c as { name?: string; segment?: string; persona?: unknown };
+      client = c as Record<string, any>;
     }
 
     const apifyToken = Deno.env.get("APIFY_TOKEN");
@@ -160,23 +162,52 @@ serve(async (req) => {
       let ideas: Array<{ title: string; format: string; rationale: string }> = [];
       const lovableKey = Deno.env.get("LOVABLE_API_KEY");
       if (lovableKey && type !== "profile" && top.length > 0) {
-        // Nicho vem do CLIENTE analisado (segmento), não do gestor.
-        const nicho = client?.segment || prof?.niche || "geral";
         const clientName = client?.name || "o cliente";
-        const personaTxt = client?.persona && typeof client.persona === "object"
-          ? JSON.stringify(client.persona).slice(0, 400) : "";
+        let nicho = client?.segment || "geral";
+        let clientCtx = "";
+        const ownerId = client?.cria_owner_id as string | null | undefined;
+
+        if (ownerId) {
+          // Cliente TEM conta no Cria → usa os dados ricos dele (marca + o que já faz).
+          const [prof2, pilRes, brandRes, persRes, recentRes] = await Promise.all([
+            svc.from("profiles").select("niche").eq("id", ownerId).maybeSingle(),
+            svc.from("pillars").select("name").eq("user_id", ownerId),
+            svc.from("brand_items").select("type, name").eq("user_id", ownerId),
+            svc.from("personas").select("name, pain_points, interests").eq("user_id", ownerId).limit(1),
+            svc.from("posts").select("title").eq("user_id", ownerId).order("created_at", { ascending: false }).limit(15),
+          ]);
+          nicho = (prof2.data as any)?.niche || nicho;
+          const pilares = (pilRes.data || []).map((p: any) => p.name).join(", ");
+          const brand = brandRes.data || [];
+          const tom = brand.filter((b: any) => b.type === "tom").map((b: any) => b.name).join(", ");
+          const evitar = brand.filter((b: any) => b.type === "evitar").map((b: any) => b.name).join(", ");
+          const persona = (persRes.data || [])[0] as any;
+          const recentes = (recentRes.data || []).map((p: any) => p.title).filter(Boolean).slice(0, 12).join("; ");
+          clientCtx = `O cliente TEM conta no Cria — use a marca REAL dele.
+Nicho: ${nicho}
+Pilares de conteúdo: ${pilares || "-"}
+Tom de voz: ${tom || "-"}${evitar ? `\nEvitar: ${evitar}` : ""}${persona ? `\nPersona: ${persona.name || ""} — dores: ${(persona.pain_points || []).join(", ")}; interesses: ${(persona.interests || []).join(", ")}` : ""}
+Conteúdo que o cliente JÁ fez (NÃO repita, complemente): ${recentes || "-"}`;
+        } else {
+          // Cliente SEM conta no Cria → usa o que a social mídia cadastrou no CRM.
+          const personaTxt = client?.persona && typeof client.persona === "object" ? JSON.stringify(client.persona).slice(0, 400) : "";
+          const brandTxt = client?.brand_core && typeof client.brand_core === "object" ? JSON.stringify(client.brand_core).slice(0, 400) : "";
+          clientCtx = `O cliente NÃO tem conta no Cria — use SÓ o que a social mídia cadastrou no CRM.
+Nicho/segmento: ${nicho}${personaTxt ? `\nPersona (CRM): ${personaTxt}` : ""}${brandTxt ? `\nMarca (CRM): ${brandTxt}` : ""}`;
+        }
+
         const topText = top.slice(0, 8).map((x: any, i: number) =>
           `${i + 1}. [${x.productType || x.type}] ${x.likesCount || 0} curtidas, ${x.commentsCount || 0} coment${x.videoPlayCount ? `, ${x.videoPlayCount} views` : ""} — "${(x.caption || "").replace(/\s+/g, " ").slice(0, 120)}"`).join("\n");
-        const sys = `Você é estrategista de conteúdo brasileiro. A partir do que ENGAJOU no concorrente, gere ideias PRONTAS pro cliente, SEMPRE dentro do NICHO/SEGMENTO do cliente. Responda SOMENTE JSON válido.`;
-        const usr = `CLIENTE: ${clientName}
-NICHO/SEGMENTO do cliente (use ESTE tema, nunca fuja dele): ${nicho}
-${personaTxt ? `Persona do cliente: ${personaTxt}\n` : ""}
-Concorrente analisado (@${cleanHandle(inputHandle)}) — posts que mais engajaram:
+        const sys = `Você é estrategista de conteúdo brasileiro. Gere ideias PRONTAS pro cliente, SEMPRE dentro da marca e do nicho DELE. O concorrente serve só de inspiração de FORMATO/gancho — nunca copie o assunto se for de outro nicho. Responda SOMENTE JSON válido.`;
+        const usr = `=== CLIENTE: ${clientName} ===
+${clientCtx}
+
+=== CONCORRENTE @${cleanHandle(inputHandle)} — o que mais engajou ===
 ${topText}
 
-Gere de 5 a 8 ideias de conteúdo PRO CLIENTE, no NICHO dele (${nicho}), inspiradas na ESTRUTURA/gancho do que funcionou no concorrente (não no tema do concorrente se ele for de outro nicho). Formato:
+Gere de 5 a 8 ideias de conteúdo PRO CLIENTE (${clientName}), no nicho ${nicho} e na VOZ dele, aproveitando o FORMATO/gancho que funcionou no concorrente. Formato:
 {"ideas":[{"title":"gancho/título pronto (max 80 chars)","format":"reels|carrossel|foto","rationale":"1 frase: por que essa ideia, ligada ao que engajou no concorrente"}]}
-REGRA: as ideias TÊM que ser do nicho ${nicho}. Se o concorrente for de outro nicho, aproveite só o FORMATO/gancho que engajou, nunca o assunto. Português BR, específico.`;
+REGRAS: ideias 100% no nicho ${nicho}; se o concorrente é de outro nicho, use SÓ a estrutura/gancho, nunca o tema; não repita o que o cliente já faz. Português BR, específico.`;
         try {
           const air = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST", headers: { "Authorization": `Bearer ${lovableKey}`, "Content-Type": "application/json" },
