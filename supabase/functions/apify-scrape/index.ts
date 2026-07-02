@@ -49,7 +49,10 @@ function summarize(items: any[], type: string): { summary: Record<string, unknow
         kind: "profile",
         username: p.username, fullName: p.fullName, biography: p.biography,
         followers: p.followersCount, following: p.followsCount, posts: p.postsCount,
-        verified: p.verified, url: p.url,
+        verified: p.verified, private: p.private, isBusiness: p.isBusinessAccount,
+        category: p.businessCategoryName ?? p.categoryName ?? null,
+        externalUrl: p.externalUrl ?? p.externalUrls?.[0]?.url ?? null,
+        url: p.url,
       },
       top: [],
     };

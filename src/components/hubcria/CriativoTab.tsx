@@ -211,6 +211,13 @@ function SummaryCard({ summary, handle }: { summary: Record<string, unknown>; ha
           <Stat label="Seguindo" value={fmtNum(s.following)} />
           <Stat label="Posts" value={fmtNum(s.posts)} />
           {s.biography && <p className="col-span-3 text-[13px] font-body text-muted-foreground mt-1 whitespace-pre-wrap">{s.biography}</p>}
+          <div className="col-span-3 flex flex-wrap items-center gap-1.5 mt-1">
+            {s.verified && <span className="text-[10px] font-body px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">✔ Verificado</span>}
+            {s.isBusiness && <span className="text-[10px] font-body px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">Conta comercial</span>}
+            {s.private && <span className="text-[10px] font-body px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">Privada</span>}
+            {s.category && <span className="text-[10px] font-body px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{s.category}</span>}
+            {s.externalUrl && <a href={s.externalUrl} target="_blank" rel="noreferrer" className="text-[11px] font-body text-primary hover:underline truncate max-w-[220px]">🔗 {String(s.externalUrl).replace(/^https?:\/\//, "")}</a>}
+          </div>
         </div>
       ) : isComments ? (
         <div>
