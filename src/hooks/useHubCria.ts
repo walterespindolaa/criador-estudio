@@ -1,9 +1,33 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useProfile } from "@/hooks/useProfile";
 import { toast } from "sonner";
 
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
+
+// Acesso ao HUB CRIA: admin OU módulo hub_cria liberado (module_entitlements).
+export function useHasHubCria(): { allowed: boolean; isLoading: boolean } {
+  const { user } = useAuth();
+  const { profile } = useProfile();
+  const isAdmin = profile?.role === "admin";
+  const q = useQuery<boolean>({
+    queryKey: ["hubcria-entitlement", user?.id],
+    enabled: !!user?.id && !isAdmin,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("module_entitlements")
+        .select("id")
+        .eq("manager_id", user!.id)
+        .eq("module_code", "hub_cria")
+        .eq("status", "active")
+        .maybeSingle();
+      if (error) throw error;
+      return !!data;
+    },
+  });
+  return { allowed: isAdmin || q.data === true, isLoading: !isAdmin && q.isLoading };
+}
 
 export type ScrapeType = "posts" | "reels" | "profile" | "hashtag" | "comments";
 
@@ -43,6 +67,20 @@ export function useScrapes(crmClientId?: string) {
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as CompetitorScrape[];
+    },
+  });
+}
+
+// Todas as ideias do gestor (todos os clientes) — pro overview do HUB.
+export function useAllCreativeIdeas() {
+  return useQuery<CreativeIdea[]>({
+    queryKey: ["hubcria-ideas-all"],
+    queryFn: async () => {
+      const { data, error } = await sbFrom("creative_ideas")
+        .select("id,crm_client_id,scrape_id,source,title,format,rationale,status,created_at")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as CreativeIdea[];
     },
   });
 }

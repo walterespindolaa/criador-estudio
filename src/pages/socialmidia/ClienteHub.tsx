@@ -8,13 +8,14 @@ import { useExternalClients } from "@/hooks/useCriaPost";
 import { useFinRecords, useCreateFinRecord, type FinType } from "@/hooks/useFinance";
 import { ClientDetail } from "@/components/accounts/CriaPostBoard";
 import { CriativoTab } from "@/components/hubcria/CriativoTab";
+import { useHasHubCria } from "@/hooks/useHubCria";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const TABS = [
   { key: "visao-geral", label: "Visão geral" },
-  { key: "criativo", label: "Criativo" },
+  { key: "criativo", label: "Criativo", gated: true },
   { key: "posts", label: "Posts" },
   { key: "cronograma", label: "Cronograma" },
   { key: "relatorio", label: "Relatório" },
@@ -28,7 +29,9 @@ const brl = (c: number) => `R$ ${(c / 100).toFixed(2).replace(".", ",")}`;
 export default function ClienteHub() {
   const { id, tab } = useParams<{ id: string; tab?: string }>();
   const navigate = useNavigate();
-  const activeTab = tab && TABS.some((t) => t.key === tab) ? tab : "visao-geral";
+  const { allowed: hasHubCria } = useHasHubCria();
+  const visibleTabs = useMemo(() => TABS.filter((t) => !("gated" in t && t.gated) || hasHubCria), [hasHubCria]);
+  const activeTab = tab && visibleTabs.some((t) => t.key === tab) ? tab : "visao-geral";
   const { data: client, isLoading } = useCrmClient(id);
   const { clients: ext, create: createExt } = useExternalClients();
   const extClient = useMemo(() => ext.find((e) => e.crm_client_id === id) ?? null, [ext, id]);
@@ -68,7 +71,7 @@ export default function ClienteHub() {
 
       {/* Abas por URL */}
       <div className="flex gap-1 border-b border-border mb-5 overflow-x-auto">
-        {TABS.map((t) => {
+        {visibleTabs.map((t) => {
           const on = activeTab === t.key;
           return (
             <button key={t.key} onClick={() => goTab(t.key)} className={`px-3 py-2 text-sm whitespace-nowrap border-b-2 transition-colors ${on ? "border-primary text-primary font-medium" : "border-transparent text-muted-foreground hover:text-foreground"}`}>{t.label}</button>
@@ -112,7 +115,7 @@ export default function ClienteHub() {
         )
       )}
 
-      {activeTab === "criativo" && <CriativoTab clientId={id!} clientName={client.name} />}
+      {activeTab === "criativo" && hasHubCria && <CriativoTab clientId={id!} clientName={client.name} />}
 
       {activeTab === "financeiro" && <FinanceTab clientId={id!} clientName={client.name} />}
     </motion.div>

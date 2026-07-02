@@ -6,13 +6,14 @@ import { NotificationNudge } from "@/components/NotificationNudge";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import {
   Home, Boxes, Handshake, DollarSign, Users, ListChecks, ChevronUp,
-  Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, type LucideIcon,
+  Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, Sparkles, type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { usePartner } from "@/hooks/usePartner";
 import { useModules, type ModuleWithStatus } from "@/hooks/useModules";
+import { useHasHubCria } from "@/hooks/useHubCria";
 import { cn } from "@/lib/utils";
 import { ModulePopup } from "@/components/accounts/ModulePopup";
 import { SettingsManagerDrawer } from "@/components/accounts/SettingsManagerDrawer";
@@ -41,6 +42,7 @@ const NAV = [
 // Títulos do HeroBand por rota (gestão)
 const HERO_TITLES: Record<string, string> = {
   "/socialmidia/clientes": "Clientes",
+  "/socialmidia/hubcria": "HUB CRIA",
   "/socialmidia/criapost": "Cria Post",
   "/socialmidia/criacrm": "Cria Gestão",
   "/socialmidia/criacaixa": "Cria Caixa",
@@ -61,6 +63,7 @@ export default function ManagerLayout() {
   const { hasManagedAccounts } = useActiveAccount();
   const { isPartner } = usePartner();
   const { modules } = useModules();
+  const { allowed: hasHubCria } = useHasHubCria();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedModule, setSelectedModule] = useState<ModuleWithStatus | null>(null);
@@ -150,6 +153,7 @@ export default function ManagerLayout() {
         <div className="flex w-full flex-col items-center gap-1">
           {railNode(Home, "Início", { active: isActive("/socialmidia/dashboard"), onClick: () => navigate("/socialmidia/dashboard") })}
           {railNode(Contact, "Clientes", { active: isActive("/socialmidia/clientes"), onClick: () => navigate("/socialmidia/clientes") })}
+          {hasHubCria && railNode(Sparkles, "HUB CRIA", { active: isActive("/socialmidia/hubcria"), onClick: () => navigate("/socialmidia/hubcria") })}
           {modules.map((m) => {
             const Icon = (MODICONS[m.code] ?? Boxes) as LucideIcon;
             const active = m.status === "active" || m.status === "past_due";
@@ -213,6 +217,7 @@ export default function ManagerLayout() {
         const fin = modules.find((m) => m.code === "financeiro");
         const moreNav = [
           { label: "Clientes", icon: Contact, onClick: () => navigate("/socialmidia/clientes") },
+          ...(hasHubCria ? [{ label: "HUB CRIA", icon: Sparkles, onClick: () => navigate("/socialmidia/hubcria") }] : []),
           { label: "Parceria", icon: Handshake, onClick: () => navigate("/socialmidia/parceria") },
           { label: "Comissões", icon: DollarSign, onClick: onNavComissoes },
           { label: "Suas contas", icon: Users, onClick: () => navigate("/socialmidia/contas") },
