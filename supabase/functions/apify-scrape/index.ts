@@ -118,9 +118,11 @@ serve(async (req) => {
     if (!["posts", "reels", "profile", "hashtag", "comments"].includes(type)) return json({ error: "invalid_type" }, 400);
 
     // Cliente precisa ser do gestor.
+    let client: { name?: string; segment?: string; persona?: unknown } | null = null;
     if (crmClientId) {
-      const { data: c } = await svc.from("crm_clients").select("id, manager_id, segment, name").eq("id", crmClientId).maybeSingle();
-      if (!c || c.manager_id !== user.id) return json({ error: "forbidden_client" }, 403);
+      const { data: c } = await svc.from("crm_clients").select("id, manager_id, segment, name, persona").eq("id", crmClientId).maybeSingle();
+      if (!c || (c as { manager_id?: string }).manager_id !== user.id) return json({ error: "forbidden_client" }, 403);
+      client = c as { name?: string; segment?: string; persona?: unknown };
     }
 
     const apifyToken = Deno.env.get("APIFY_TOKEN");
@@ -158,17 +160,23 @@ serve(async (req) => {
       let ideas: Array<{ title: string; format: string; rationale: string }> = [];
       const lovableKey = Deno.env.get("LOVABLE_API_KEY");
       if (lovableKey && type !== "profile" && top.length > 0) {
-        const nicho = prof?.niche || "geral";
+        // Nicho vem do CLIENTE analisado (segmento), não do gestor.
+        const nicho = client?.segment || prof?.niche || "geral";
+        const clientName = client?.name || "o cliente";
+        const personaTxt = client?.persona && typeof client.persona === "object"
+          ? JSON.stringify(client.persona).slice(0, 400) : "";
         const topText = top.slice(0, 8).map((x: any, i: number) =>
           `${i + 1}. [${x.productType || x.type}] ${x.likesCount || 0} curtidas, ${x.commentsCount || 0} coment${x.videoPlayCount ? `, ${x.videoPlayCount} views` : ""} — "${(x.caption || "").replace(/\s+/g, " ").slice(0, 120)}"`).join("\n");
-        const sys = `Você é estrategista de conteúdo brasileiro. A partir do que ENGAJOU no concorrente, gere ideias PRONTAS pro cliente, adaptadas ao nicho dele. Responda SOMENTE JSON válido.`;
-        const usr = `Nicho do cliente: ${nicho}
+        const sys = `Você é estrategista de conteúdo brasileiro. A partir do que ENGAJOU no concorrente, gere ideias PRONTAS pro cliente, SEMPRE dentro do NICHO/SEGMENTO do cliente. Responda SOMENTE JSON válido.`;
+        const usr = `CLIENTE: ${clientName}
+NICHO/SEGMENTO do cliente (use ESTE tema, nunca fuja dele): ${nicho}
+${personaTxt ? `Persona do cliente: ${personaTxt}\n` : ""}
 Concorrente analisado (@${cleanHandle(inputHandle)}) — posts que mais engajaram:
 ${topText}
 
-Gere de 5 a 8 ideias de conteúdo pro cliente, inspiradas no que funcionou (sem copiar), adaptadas ao nicho. Formato:
-{"ideas":[{"title":"gancho/título pronto (max 80 chars)","format":"reels|carrossel|foto|story","rationale":"1 frase: por que essa ideia, ligada ao que engajou no concorrente"}]}
-Português BR, específico. Nada genérico.`;
+Gere de 5 a 8 ideias de conteúdo PRO CLIENTE, no NICHO dele (${nicho}), inspiradas na ESTRUTURA/gancho do que funcionou no concorrente (não no tema do concorrente se ele for de outro nicho). Formato:
+{"ideas":[{"title":"gancho/título pronto (max 80 chars)","format":"reels|carrossel|foto","rationale":"1 frase: por que essa ideia, ligada ao que engajou no concorrente"}]}
+REGRA: as ideias TÊM que ser do nicho ${nicho}. Se o concorrente for de outro nicho, aproveite só o FORMATO/gancho que engajou, nunca o assunto. Português BR, específico.`;
         try {
           const air = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST", headers: { "Authorization": `Bearer ${lovableKey}`, "Content-Type": "application/json" },

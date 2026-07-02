@@ -886,14 +886,14 @@ OBJETIVO: ${data.qtd || 8} posts pro período (${data.periodo || 'semana'}), no 
 
 REGRAS:
 - Gancho forte na 1ª linha (sem clichê tipo "Olá"/"Você sabia").
-- Varie formatos (reels, carrossel, foto, story) e pilares — nada repetitivo.
+- Varie formatos entre reels, carrossel e foto — nada repetitivo. NÃO sugira "story"/"stories": eles têm um módulo próprio (Cria Stories). O cronograma é só pra posts de feed.
 - Cada post traz uma legenda curta PRONTA pra usar.
 - "porque": 1 frase ligando à estratégia/dados/nicho (ex.: "Reels foi seu maior alcance").
 - Considere o FOCO informado.
 - NÃO repita títulos/temas dos posts recentes listados.
 
 RESPONDA APENAS com JSON válido, sem texto antes ou depois:
-{"posts":[{"titulo":"gancho/título","formato":"reels|carrossel|foto|story","plataforma":"instagram","pilar":"nome do pilar","legenda":"legenda pronta curta","porque":"motivo curto"}]}`
+{"posts":[{"titulo":"gancho/título","formato":"reels|carrossel|foto","plataforma":"instagram","pilar":"nome do pilar","legenda":"legenda pronta curta","porque":"motivo curto"}]}`
         userPrompt = `Nicho: ${data.nicho || 'lifestyle'}
 Plataformas: ${data.plataformas || 'instagram'}
 Pilares disponíveis: ${data.pilares || '-'}
