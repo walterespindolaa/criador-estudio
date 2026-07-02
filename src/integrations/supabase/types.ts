@@ -3311,6 +3311,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          example: string | null
           format: string
           id: string
           title: string
@@ -3319,6 +3320,7 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          example?: string | null
           format: string
           id?: string
           title: string
@@ -3327,6 +3329,7 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          example?: string | null
           format?: string
           id?: string
           title?: string
