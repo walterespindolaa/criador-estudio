@@ -3259,6 +3259,81 @@ export type Database = {
           },
         ]
       }
+      story_slots: {
+        Row: {
+          created_at: string
+          format: string | null
+          id: string
+          script: string | null
+          slot_date: string
+          slot_time: string | null
+          sort_order: number
+          source: string
+          status: string
+          title: string
+          trend_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          format?: string | null
+          id?: string
+          script?: string | null
+          slot_date: string
+          slot_time?: string | null
+          sort_order?: number
+          source?: string
+          status?: string
+          title: string
+          trend_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          format?: string | null
+          id?: string
+          script?: string | null
+          slot_date?: string
+          slot_time?: string | null
+          sort_order?: number
+          source?: string
+          status?: string
+          title?: string
+          trend_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      story_trends: {
+        Row: {
+          created_at: string
+          description: string | null
+          format: string
+          id: string
+          title: string
+          why_trending: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          format: string
+          id?: string
+          title: string
+          why_trending?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          format?: string
+          id?: string
+          title?: string
+          why_trending?: string | null
+        }
+        Relationships: []
+      }
       structured_goals: {
         Row: {
           category: string
@@ -3669,6 +3744,7 @@ export type Database = {
           unlocked_at: string
         }[]
       }
+      admin_wipe_user_content: { Args: { _user_id: string }; Returns: Json }
       agency_clients: {
         Args: never
         Returns: {
