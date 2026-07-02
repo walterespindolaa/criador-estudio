@@ -36,6 +36,12 @@ function buildApifyInput(type: string, handle: string, limit: number): Record<st
     // input_handle deve ser a URL do post
     return { directUrls: [handle.trim()], resultsType: "comments", resultsLimit: limit, addParentData: false };
   }
+  if (type === "stories") {
+    return { directUrls: [`https://www.instagram.com/${h}/`], resultsType: "stories", resultsLimit: limit, addParentData: false };
+  }
+  if (type === "mentions") {
+    return { directUrls: [`https://www.instagram.com/${h}/`], resultsType: "mentions", resultsLimit: limit, addParentData: false };
+  }
   // posts | reels
   return { directUrls: [`https://www.instagram.com/${h}/`], resultsType: "posts", resultsLimit: limit, addParentData: false };
 }
@@ -67,6 +73,38 @@ function summarize(items: any[], type: string): { summary: Record<string, unknow
         top: topC.map((c) => ({ text: String(c.text || "").slice(0, 220), user: c.ownerUsername, likes: c.likesCount || 0 })),
       },
       top: topC,
+    };
+  }
+  if (type === "ads") {
+    const ads = items.filter((x) => x);
+    return {
+      summary: {
+        kind: "ads",
+        count: ads.length,
+        top: ads.slice(0, 12).map((a: any) => ({
+          text: String(a.adText || a.snapshot?.body?.text || a.body || a.text || a.adCreativeBody || "").replace(/\s+/g, " ").slice(0, 240),
+          page: a.pageName || a.snapshot?.page_name || a.pageId || null,
+          since: a.startDate || a.adDeliveryStartTime || a.ad_delivery_start_time || a.startDateFormatted || null,
+          active: a.isActive ?? a.active ?? null,
+          link: a.linkUrl || a.snapshot?.link_url || a.link || null,
+        })),
+      },
+      top: ads.slice(0, 12),
+    };
+  }
+  if (type === "stories") {
+    const st = items.filter((x) => x);
+    return {
+      summary: {
+        kind: "stories",
+        count: st.length,
+        top: st.slice(0, 12).map((x: any) => ({
+          type: x.type || (x.videoUrl ? "Video" : "Image"),
+          url: x.url || x.displayUrl || null,
+          caption: String(x.caption || "").slice(0, 120),
+        })),
+      },
+      top: st,
     };
   }
   const transcriptOf = (x: any): string =>
@@ -133,7 +171,7 @@ serve(async (req) => {
     const crmClientId = body?.crm_client_id ? String(body.crm_client_id) : null;
     const limit = Math.max(1, Math.min(20, Number(body?.limit) || 10));
     if (!inputHandle) return json({ error: "missing_input" }, 400);
-    if (!["posts", "reels", "profile", "hashtag", "comments", "transcription"].includes(type)) return json({ error: "invalid_type" }, 400);
+    if (!["posts", "reels", "profile", "hashtag", "comments", "transcription", "stories", "mentions", "ads"].includes(type)) return json({ error: "invalid_type" }, 400);
 
     // Cliente precisa ser do gestor.
     let client: Record<string, any> | null = null;
@@ -157,12 +195,20 @@ serve(async (req) => {
     const scrapeId = scrapeRow.id;
 
     try {
-      // Transcrição usa um actor dedicado (scrape de reels + Whisper); o resto usa o instagram-scraper.
-      const isTranscript = type === "transcription";
-      const actor = isTranscript ? "makework36~instagram-reels-transcript-scraper" : "apify~instagram-scraper";
-      const input = isTranscript
-        ? { profiles: [cleanHandle(inputHandle)], maxPostsPerProfile: limit, onlyVideos: true, transcribe: true, language: "pt" }
-        : buildApifyInput(type, inputHandle, limit);
+      // Cada tipo pode usar um actor diferente do Apify.
+      let actor: string;
+      let input: Record<string, unknown>;
+      if (type === "transcription") {
+        actor = "makework36~instagram-reels-transcript-scraper";
+        input = { profiles: [cleanHandle(inputHandle)], maxPostsPerProfile: limit, onlyVideos: true, transcribe: true, language: "pt" };
+      } else if (type === "ads") {
+        actor = "apify~facebook-ads-scraper";
+        const adUrl = `https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=BR&q=${encodeURIComponent(cleanHandle(inputHandle))}&search_type=keyword_unordered`;
+        input = { startUrls: [{ url: adUrl }], resultsLimit: limit, activeStatus: "active" };
+      } else {
+        actor = "apify~instagram-scraper";
+        input = buildApifyInput(type, inputHandle, limit);
+      }
       const apifyUrl = `https://api.apify.com/v2/acts/${actor}/run-sync-get-dataset-items?token=${apifyToken}&maxItems=${limit}`;
       const resp = await fetch(apifyUrl, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
@@ -175,7 +221,8 @@ serve(async (req) => {
       }
       const items = await resp.json() as any[];
       const { summary, top } = summarize(Array.isArray(items) ? items : [], type);
-      const costUsd = Number(((Array.isArray(items) ? items.length : 0) * (type === "transcription" ? 0.015 : 0.0025)).toFixed(4));
+      const perItem = type === "transcription" ? 0.015 : type === "ads" ? 0.006 : 0.0025;
+      const costUsd = Number(((Array.isArray(items) ? items.length : 0) * perItem).toFixed(4));
 
       await svc.from("competitor_scrapes").update({
         status: "done", result_summary: summary, cost_usd: costUsd, finished_at: new Date().toISOString(),
@@ -231,6 +278,16 @@ Nicho/segmento: ${nicho}${personaTxt ? `\nPersona (CRM): ${personaTxt}` : ""}${b
           const ts = top.slice(0, 8).map((x: any, i: number) => `${i + 1}. [${x.likesCount || 0} curtidas${x.videoPlayCount ? `, ${x.videoPlayCount} views` : ""}] roteiro: "${String(x.transcript || x.transcriptText || x.transcription || x.captions || "").replace(/\s+/g, " ").slice(0, 400)}"`).join("\n");
           fonte = `=== REELS de @${cleanHandle(inputHandle)} que engajaram (roteiro transcrito) ===\n${ts}`;
           tarefa = `Analise a ESTRUTURA dos roteiros que funcionaram (gancho, ordem das ideias, CTA) e gere ideias de reels pro cliente (${clientName}) no nicho ${nicho}, usando a mesma estrutura mas com o assunto DELE.`;
+        } else if (type === "ads") {
+          const as = top.slice(0, 10).map((a: any, i: number) =>
+            `${i + 1}.${a.isActive ?? a.active ? " [ativo]" : ""} "${String(a.adText || a.snapshot?.body?.text || a.body || a.text || "").replace(/\s+/g, " ").slice(0, 180)}"`).join("\n");
+          fonte = `=== ANÚNCIOS que @${cleanHandle(inputHandle)} está rodando (Meta Ad Library) ===\n${as}`;
+          tarefa = `Esses são os anúncios que o concorrente PAGA pra promover — revelam a oferta, o ângulo e o gancho que funcionam pra ele. Gere ideias de conteúdo ORGÂNICO pro cliente (${clientName}) no nicho ${nicho}, inspiradas nesses ângulos (sem copiar a oferta).`;
+        } else if (type === "stories") {
+          const ss = top.slice(0, 12).map((x: any, i: number) =>
+            `${i + 1}. ${x.type || ""} ${x.caption ? `"${String(x.caption).replace(/\s+/g, " ").slice(0, 120)}"` : "(sem texto na tela)"}`).join("\n");
+          fonte = `=== STORIES recentes de @${cleanHandle(inputHandle)} ===\n${ss}`;
+          tarefa = `Analise o tipo de story que o concorrente usa no dia a dia e gere ideias de stories pro cliente (${clientName}) no nicho ${nicho}, na estrutura que funciona.`;
         } else {
           const ps = top.slice(0, 8).map((x: any, i: number) =>
             `${i + 1}. [${x.productType || x.type}] ${x.likesCount || 0} curtidas, ${x.commentsCount || 0} coment${x.videoPlayCount ? `, ${x.videoPlayCount} views` : ""} — "${(x.caption || "").replace(/\s+/g, " ").slice(0, 120)}"`).join("\n");

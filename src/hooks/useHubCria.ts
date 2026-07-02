@@ -30,7 +30,7 @@ export function useHasHubCria(): { allowed: boolean; isLoading: boolean } {
   return { allowed: isAdmin || q.data === true, isLoading: !isAdmin && q.isLoading };
 }
 
-export type ScrapeType = "posts" | "reels" | "profile" | "hashtag" | "comments";
+export type ScrapeType = "posts" | "reels" | "profile" | "hashtag" | "comments" | "transcription" | "stories" | "mentions" | "ads";
 
 export type CompetitorScrape = {
   id: string;

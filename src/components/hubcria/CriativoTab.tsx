@@ -16,6 +16,9 @@ const TYPES: { key: ScrapeType; label: string }[] = [
   { key: "hashtag", label: "Hashtag" },
   { key: "comments", label: "Comentários" },
   { key: "transcription", label: "Reels + transcrição" },
+  { key: "stories", label: "Stories" },
+  { key: "mentions", label: "Menções/UGC" },
+  { key: "ads", label: "Anúncios" },
 ];
 
 const STATUS_META: Record<CreativeIdea["status"], { label: string; cls: string }> = {
@@ -90,6 +93,12 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
             ? "Puxa os comentários do post e transforma as dúvidas do público em pautas. Cole a URL do post."
             : type === "transcription"
             ? "⚠️ Transcreve o áudio dos reels (add-on pago do Apify, ~US$ 0,015/reel) pra analisar o roteiro do que viralizou."
+            : type === "ads"
+            ? "⚠️ Puxa os anúncios ATIVOS do concorrente na Biblioteca do Meta (~US$ 0,006/anúncio) — revela a oferta e o ângulo que ele paga pra promover."
+            : type === "stories"
+            ? "Captura os stories recentes do concorrente (rode logo, eles somem em 24h)."
+            : type === "mentions"
+            ? "Puxa posts que marcam/mencionam o @ — UGC, parceiros e oportunidades."
             : "Puxa dados reais do Instagram e gera ideias adaptadas ao nicho do cliente. Pode levar até ~1 min."}
         </p>
       </div>
@@ -198,6 +207,8 @@ function SummaryCard({ summary, handle }: { summary: Record<string, unknown>; ha
   const s = summary as Record<string, any>;
   const isProfile = s.kind === "profile";
   const isComments = s.kind === "comments";
+  const isAds = s.kind === "ads";
+  const isStories = s.kind === "stories";
   return (
     <div className="bg-card border border-border rounded-2xl p-4">
       <div className="flex items-center gap-2 mb-3">
@@ -217,6 +228,36 @@ function SummaryCard({ summary, handle }: { summary: Record<string, unknown>; ha
             {s.private && <span className="text-[10px] font-body px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">Privada</span>}
             {s.category && <span className="text-[10px] font-body px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{s.category}</span>}
             {s.externalUrl && <a href={s.externalUrl} target="_blank" rel="noreferrer" className="text-[11px] font-body text-primary hover:underline truncate max-w-[220px]">🔗 {String(s.externalUrl).replace(/^https?:\/\//, "")}</a>}
+          </div>
+        </div>
+      ) : isAds ? (
+        <div>
+          <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-2">{fmtNum(s.count)} anúncios ativos — a oferta que ele paga pra promover</p>
+          <div className="space-y-1.5">
+            {Array.isArray(s.top) && s.top.slice(0, 10).map((a: any, i: number) => (
+              <div key={i} className="bg-muted/30 rounded-lg px-2.5 py-2">
+                <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                  {a.active && <span className="text-[9px] font-body px-1.5 py-0.5 rounded-full bg-secondary/15 text-secondary">ativo</span>}
+                  {a.page && <span className="text-[10px] font-body text-muted-foreground">{a.page}</span>}
+                  {a.since && <span className="text-[10px] font-body text-muted-foreground">· desde {String(a.since).slice(0, 10)}</span>}
+                </div>
+                <p className="text-[12px] font-body text-foreground leading-snug">{a.text || "(sem texto)"}</p>
+                {a.link && <a href={a.link} target="_blank" rel="noreferrer" className="text-[11px] font-body text-primary hover:underline">ver anúncio →</a>}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : isStories ? (
+        <div>
+          <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-2">{fmtNum(s.count)} stories recentes</p>
+          <div className="space-y-1.5">
+            {Array.isArray(s.top) && s.top.slice(0, 12).map((x: any, i: number) => (
+              <div key={i} className="flex items-center gap-2 bg-muted/30 rounded-lg px-2.5 py-2">
+                <span className="text-[10px] font-body px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">{x.type || "story"}</span>
+                <p className="text-[12px] font-body text-foreground flex-1 min-w-0 leading-snug truncate">{x.caption || "(sem texto na tela)"}</p>
+                {x.url && <a href={x.url} target="_blank" rel="noreferrer" className="text-[11px] font-body text-primary hover:underline shrink-0">ver</a>}
+              </div>
+            ))}
           </div>
         </div>
       ) : isComments ? (
