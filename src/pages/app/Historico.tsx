@@ -165,44 +165,57 @@ const Historico = () => {
           </div>
         )}
 
-        {/* Filters */}
+        {/* Filters — barra organizada por grupo */}
         {posts.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-6">
-            {/* Platform filter */}
-            <div className="flex gap-1 flex-wrap">
-              <button onClick={() => setFilterPlatform(null)}
-                className={`p-1.5 sm:p-2 rounded-xl border transition-colors ${!filterPlatform ? "bg-primary/10 border-primary" : "bg-card border-border"}`}>
-                <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </button>
-              {(["instagram", "tiktok", "youtube"] as const).map(p => (
-                <button key={p} onClick={() => setFilterPlatform(filterPlatform === p ? null : p)}
-                  className={`p-1.5 sm:p-2 rounded-xl border transition-colors ${filterPlatform === p ? "bg-primary/10 border-primary" : "bg-card border-border"}`}>
-                  <PlatformIcon platform={p} size="sm" />
+          <div className="bg-card border border-border rounded-2xl p-3 mb-6 flex flex-col gap-3 md:flex-row md:items-center md:flex-wrap md:gap-x-6 md:gap-y-3">
+            {/* Plataforma */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider shrink-0">Plataforma</span>
+              <div className="flex gap-1">
+                <button onClick={() => setFilterPlatform(null)} aria-label="Todas as plataformas"
+                  className={`p-1.5 rounded-lg border transition-colors ${!filterPlatform ? "bg-primary/10 border-primary text-primary" : "bg-card border-border text-muted-foreground hover:text-foreground"}`}>
+                  <Filter className="h-3.5 w-3.5" />
                 </button>
-              ))}
+                {(["instagram", "tiktok", "youtube"] as const).map(p => (
+                  <button key={p} onClick={() => setFilterPlatform(filterPlatform === p ? null : p)} aria-label={p}
+                    className={`p-1.5 rounded-lg border transition-colors ${filterPlatform === p ? "bg-primary/10 border-primary" : "bg-card border-border"}`}>
+                    <PlatformIcon platform={p} size="sm" />
+                  </button>
+                ))}
+              </div>
             </div>
-            {/* Pillar filter */}
-            <div className="flex gap-1 flex-wrap">
-              {pillars.map(p => (
-                <button key={p.id} onClick={() => setFilterPillar(filterPillar === p.id ? null : p.id)}
-                  className={`px-2 py-1 sm:px-2.5 rounded-xl text-[10px] sm:text-xs font-body border transition-colors ${
-                    filterPillar === p.id ? "text-primary-foreground border-transparent" : "bg-card border-border"
-                  }`}
-                  style={filterPillar === p.id ? { backgroundColor: p.color } : {}}>
-                  {p.name}
-                </button>
-              ))}
-            </div>
-            {/* Period filter */}
-            <div className="flex gap-1 flex-wrap sm:ml-auto">
-              {PERIOD_OPTIONS.map(o => (
-                <button key={o.key} onClick={() => setFilterPeriod(o.key)}
-                  className={`px-2 py-1 sm:px-2.5 rounded-xl text-[10px] sm:text-xs font-body border transition-colors ${
-                    filterPeriod === o.key ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"
-                  }`}>
-                  {o.label}
-                </button>
-              ))}
+
+            {/* Pilar */}
+            {pillars.length > 0 && (
+              <div className="flex items-start gap-2 min-w-0 md:flex-1">
+                <span className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider shrink-0 mt-1.5">Pilar</span>
+                <div className="flex gap-1.5 flex-wrap min-w-0">
+                  {pillars.map(p => (
+                    <button key={p.id} onClick={() => setFilterPillar(filterPillar === p.id ? null : p.id)}
+                      className={`px-2.5 py-1 rounded-full text-xs font-body border transition-colors ${
+                        filterPillar === p.id ? "text-primary-foreground border-transparent" : "bg-card border-border text-muted-foreground hover:text-foreground"
+                      }`}
+                      style={filterPillar === p.id ? { backgroundColor: p.color } : {}}>
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Período */}
+            <div className="flex items-center gap-2 md:ml-auto shrink-0">
+              <span className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider shrink-0">Período</span>
+              <div className="flex gap-1">
+                {PERIOD_OPTIONS.map(o => (
+                  <button key={o.key} onClick={() => setFilterPeriod(o.key)}
+                    className={`px-2.5 py-1 rounded-full text-xs font-body border transition-colors ${
+                      filterPeriod === o.key ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground"
+                    }`}>
+                    {o.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}
