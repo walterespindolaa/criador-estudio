@@ -2,7 +2,7 @@ import { useState } from "react";
 import { NavLink, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Home, Lightbulb, Kanban, CalendarDays,
-  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, ChevronUp, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck, Handshake, Maximize2, Minimize2, Instagram, BarChart3, ShieldCheck, PlayCircle
+  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, ChevronUp, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck, Handshake, Maximize2, Minimize2, Instagram, BarChart3, ShieldCheck, PlayCircle, Clapperboard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,6 +24,7 @@ const MORE_SECTIONS: { title: string; items: MoreItem[] }[] = [
   { title: "Criar", items: [
     { title: "Ideias", url: "/app/ideias", icon: Lightbulb },
     { title: "Em produção", url: "/app/criando", icon: Kanban },
+    { title: "Cria Stories", url: "/app/stories", icon: Clapperboard },
     { title: "Aprovações", url: "/app/aprovacao", icon: ClipboardCheck },
     { title: "Meu Feed", url: "/app/feed", icon: Grid3X3 },
   ]},
