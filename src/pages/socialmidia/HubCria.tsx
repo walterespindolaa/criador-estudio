@@ -1,15 +1,17 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Loader2, TrendingUp, ChevronRight, Lightbulb } from "lucide-react";
+import { Sparkles, Loader2, TrendingUp, ChevronRight, Lightbulb, ChevronDown } from "lucide-react";
 import { useCrmClients } from "@/hooks/useCrm";
 import { useAllCreativeIdeas, useHasHubCria } from "@/hooks/useHubCria";
+import { CriativoTab } from "@/components/hubcria/CriativoTab";
 import { Button } from "@/components/ui/button";
 
 const initial = (n?: string | null) => (n ? n.trim().charAt(0).toUpperCase() : "?");
 
 export default function HubCria() {
   const navigate = useNavigate();
+  const [avulsa, setAvulsa] = useState(false);
   const { allowed, isLoading: gateLoading } = useHasHubCria();
   const { data: clients = [], isLoading } = useCrmClients();
   const { data: ideas = [] } = useAllCreativeIdeas();
@@ -90,6 +92,16 @@ export default function HubCria() {
             })}
           </div>
         )}
+      </div>
+
+      {/* Análise avulsa (sem cliente) */}
+      <div className="mt-8 border-t border-border pt-5">
+        <button onClick={() => setAvulsa((v) => !v)} className="flex items-center gap-2 text-sm font-display font-bold text-foreground">
+          <TrendingUp className="h-4 w-4 text-primary" /> Análise avulsa (sem cliente)
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${avulsa ? "rotate-180" : ""}`} />
+        </button>
+        <p className="text-xs font-body text-muted-foreground mt-1">Rode um scrape exploratório sem amarrar a um cliente — as ideias ficam guardadas aqui no HUB.</p>
+        {avulsa && <div className="mt-4"><CriativoTab /></div>}
       </div>
     </motion.div>
   );

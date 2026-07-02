@@ -56,15 +56,15 @@ export type CreativeIdea = {
   created_at: string;
 };
 
+// crmClientId undefined = análise avulsa (crm_client_id null).
 export function useScrapes(crmClientId?: string) {
   return useQuery<CompetitorScrape[]>({
-    queryKey: ["hubcria-scrapes", crmClientId],
-    enabled: !!crmClientId,
+    queryKey: ["hubcria-scrapes", crmClientId ?? "avulsa"],
     queryFn: async () => {
-      const { data, error } = await sbFrom("competitor_scrapes")
-        .select("id,crm_client_id,scrape_type,input_handle,status,result_summary,cost_usd,error,created_at,finished_at")
-        .eq("crm_client_id", crmClientId!)
-        .order("created_at", { ascending: false });
+      let q = sbFrom("competitor_scrapes")
+        .select("id,crm_client_id,scrape_type,input_handle,status,result_summary,cost_usd,error,created_at,finished_at");
+      q = crmClientId ? q.eq("crm_client_id", crmClientId) : q.is("crm_client_id", null);
+      const { data, error } = await q.order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as CompetitorScrape[];
     },
@@ -87,13 +87,12 @@ export function useAllCreativeIdeas() {
 
 export function useCreativeIdeas(crmClientId?: string) {
   return useQuery<CreativeIdea[]>({
-    queryKey: ["hubcria-ideas", crmClientId],
-    enabled: !!crmClientId,
+    queryKey: ["hubcria-ideas", crmClientId ?? "avulsa"],
     queryFn: async () => {
-      const { data, error } = await sbFrom("creative_ideas")
-        .select("id,crm_client_id,scrape_id,source,title,format,rationale,status,created_at")
-        .eq("crm_client_id", crmClientId!)
-        .order("created_at", { ascending: false });
+      let q = sbFrom("creative_ideas")
+        .select("id,crm_client_id,scrape_id,source,title,format,rationale,status,created_at");
+      q = crmClientId ? q.eq("crm_client_id", crmClientId) : q.is("crm_client_id", null);
+      const { data, error } = await q.order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as CreativeIdea[];
     },
@@ -103,9 +102,9 @@ export function useCreativeIdeas(crmClientId?: string) {
 export function useRunScrape() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { type: ScrapeType; input: string; crm_client_id: string; limit?: number }) => {
+    mutationFn: async (input: { type: ScrapeType; input: string; crm_client_id?: string | null; limit?: number }) => {
       const { data, error } = await supabase.functions.invoke("apify-scrape", {
-        body: { type: input.type, input: input.input, crm_client_id: input.crm_client_id, limit: input.limit ?? 10 },
+        body: { type: input.type, input: input.input, crm_client_id: input.crm_client_id ?? null, limit: input.limit ?? 10 },
       });
       if (error) {
         // tenta extrair a mensagem real do corpo
@@ -121,8 +120,10 @@ export function useRunScrape() {
       return data as { scrape_id: string; ideas_count: number; cost_usd: number };
     },
     onSuccess: (res, vars) => {
-      qc.invalidateQueries({ queryKey: ["hubcria-scrapes", vars.crm_client_id] });
-      qc.invalidateQueries({ queryKey: ["hubcria-ideas", vars.crm_client_id] });
+      const key = vars.crm_client_id ?? "avulsa";
+      qc.invalidateQueries({ queryKey: ["hubcria-scrapes", key] });
+      qc.invalidateQueries({ queryKey: ["hubcria-ideas", key] });
+      qc.invalidateQueries({ queryKey: ["hubcria-ideas-all"] });
       toast.success(`Análise pronta — ${res.ideas_count} ideias geradas.`);
     },
     onError: (e) => {

@@ -54,7 +54,21 @@ function summarize(items: any[], type: string): { summary: Record<string, unknow
       top: [],
     };
   }
-  const posts = items.filter((x) => x && (x.likesCount != null || x.commentsCount != null));
+  if (type === "comments") {
+    const comments = items.filter((x) => x && (x.text || x.ownerUsername));
+    const topC = [...comments].sort((a, b) => (Number(b.likesCount) || 0) - (Number(a.likesCount) || 0)).slice(0, 25);
+    return {
+      summary: {
+        kind: "comments",
+        count: comments.length,
+        top: topC.map((c) => ({ text: String(c.text || "").slice(0, 220), user: c.ownerUsername, likes: c.likesCount || 0 })),
+      },
+      top: topC,
+    };
+  }
+  const transcriptOf = (x: any): string =>
+    String(x.transcript || x.transcriptText || x.transcription || x.captions || x.text || "").slice(0, 800);
+  const posts = items.filter((x) => x && (x.likesCount != null || x.commentsCount != null || transcriptOf(x)));
   const eng = (x: any) => (Number(x.likesCount) || 0) + (Number(x.commentsCount) || 0);
   const top = [...posts].sort((a, b) => eng(b) - eng(a)).slice(0, 8);
   const fmt: Record<string, number> = {};
@@ -74,6 +88,7 @@ function summarize(items: any[], type: string): { summary: Record<string, unknow
         views: x.videoPlayCount ?? x.videoViewCount ?? null,
         format: x.productType || x.type, url: x.url,
         music: x.musicInfo?.song_name ?? null,
+        transcript: type === "transcription" ? transcriptOf(x).slice(0, 300) : undefined,
       })),
     },
     top,
@@ -115,7 +130,7 @@ serve(async (req) => {
     const crmClientId = body?.crm_client_id ? String(body.crm_client_id) : null;
     const limit = Math.max(1, Math.min(20, Number(body?.limit) || 10));
     if (!inputHandle) return json({ error: "missing_input" }, 400);
-    if (!["posts", "reels", "profile", "hashtag", "comments"].includes(type)) return json({ error: "invalid_type" }, 400);
+    if (!["posts", "reels", "profile", "hashtag", "comments", "transcription"].includes(type)) return json({ error: "invalid_type" }, 400);
 
     // Cliente precisa ser do gestor.
     let client: Record<string, any> | null = null;
@@ -139,8 +154,13 @@ serve(async (req) => {
     const scrapeId = scrapeRow.id;
 
     try {
-      const input = buildApifyInput(type, inputHandle, limit);
-      const apifyUrl = `https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=${apifyToken}&maxItems=${limit}`;
+      // Transcrição usa um actor dedicado (scrape de reels + Whisper); o resto usa o instagram-scraper.
+      const isTranscript = type === "transcription";
+      const actor = isTranscript ? "makework36~instagram-reels-transcript-scraper" : "apify~instagram-scraper";
+      const input = isTranscript
+        ? { profiles: [cleanHandle(inputHandle)], maxPostsPerProfile: limit, onlyVideos: true, transcribe: true, language: "pt" }
+        : buildApifyInput(type, inputHandle, limit);
+      const apifyUrl = `https://api.apify.com/v2/acts/${actor}/run-sync-get-dataset-items?token=${apifyToken}&maxItems=${limit}`;
       const resp = await fetch(apifyUrl, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
       });
@@ -152,7 +172,7 @@ serve(async (req) => {
       }
       const items = await resp.json() as any[];
       const { summary, top } = summarize(Array.isArray(items) ? items : [], type);
-      const costUsd = Number(((Array.isArray(items) ? items.length : 0) * 0.0025).toFixed(4));
+      const costUsd = Number(((Array.isArray(items) ? items.length : 0) * (type === "transcription" ? 0.015 : 0.0025)).toFixed(4));
 
       await svc.from("competitor_scrapes").update({
         status: "done", result_summary: summary, cost_usd: costUsd, finished_at: new Date().toISOString(),
@@ -196,18 +216,34 @@ Conteúdo que o cliente JÁ fez (NÃO repita, complemente): ${recentes || "-"}`;
 Nicho/segmento: ${nicho}${personaTxt ? `\nPersona (CRM): ${personaTxt}` : ""}${brandTxt ? `\nMarca (CRM): ${brandTxt}` : ""}`;
         }
 
-        const topText = top.slice(0, 8).map((x: any, i: number) =>
-          `${i + 1}. [${x.productType || x.type}] ${x.likesCount || 0} curtidas, ${x.commentsCount || 0} coment${x.videoPlayCount ? `, ${x.videoPlayCount} views` : ""} — "${(x.caption || "").replace(/\s+/g, " ").slice(0, 120)}"`).join("\n");
-        const sys = `Você é estrategista de conteúdo brasileiro. Gere ideias PRONTAS pro cliente, SEMPRE dentro da marca e do nicho DELE. O concorrente serve só de inspiração de FORMATO/gancho — nunca copie o assunto se for de outro nicho. Responda SOMENTE JSON válido.`;
+        const sys = `Você é estrategista de conteúdo brasileiro. Gere ideias PRONTAS pro cliente, SEMPRE dentro da marca e do nicho DELE. O concorrente serve só de inspiração de FORMATO/gancho/roteiro — nunca copie o assunto se for de outro nicho. Responda SOMENTE JSON válido.`;
+
+        let fonte = "";
+        let tarefa = "";
+        if (type === "comments") {
+          const cs = top.slice(0, 25).map((c: any, i: number) => `${i + 1}. "${String(c.text || "").replace(/\s+/g, " ").slice(0, 160)}"`).join("\n");
+          fonte = `=== COMENTÁRIOS do público no post de @${cleanHandle(inputHandle)} ===\n${cs}`;
+          tarefa = `Leia os comentários, identifique as DÚVIDAS, pedidos e objeções recorrentes do público e transforme em PAUTAS de conteúdo pro cliente (${clientName}), no nicho ${nicho}. Cada dúvida vira uma ideia que responde/resolve.`;
+        } else if (type === "transcription") {
+          const ts = top.slice(0, 8).map((x: any, i: number) => `${i + 1}. [${x.likesCount || 0} curtidas${x.videoPlayCount ? `, ${x.videoPlayCount} views` : ""}] roteiro: "${String(x.transcript || x.transcriptText || x.transcription || x.captions || "").replace(/\s+/g, " ").slice(0, 400)}"`).join("\n");
+          fonte = `=== REELS de @${cleanHandle(inputHandle)} que engajaram (roteiro transcrito) ===\n${ts}`;
+          tarefa = `Analise a ESTRUTURA dos roteiros que funcionaram (gancho, ordem das ideias, CTA) e gere ideias de reels pro cliente (${clientName}) no nicho ${nicho}, usando a mesma estrutura mas com o assunto DELE.`;
+        } else {
+          const ps = top.slice(0, 8).map((x: any, i: number) =>
+            `${i + 1}. [${x.productType || x.type}] ${x.likesCount || 0} curtidas, ${x.commentsCount || 0} coment${x.videoPlayCount ? `, ${x.videoPlayCount} views` : ""} — "${(x.caption || "").replace(/\s+/g, " ").slice(0, 120)}"`).join("\n");
+          fonte = `=== CONCORRENTE @${cleanHandle(inputHandle)} — o que mais engajou ===\n${ps}`;
+          tarefa = `Aproveite o FORMATO/gancho que funcionou no concorrente e gere ideias no nicho ${nicho} e na VOZ do cliente.`;
+        }
+
         const usr = `=== CLIENTE: ${clientName} ===
 ${clientCtx}
 
-=== CONCORRENTE @${cleanHandle(inputHandle)} — o que mais engajou ===
-${topText}
+${fonte}
 
-Gere de 5 a 8 ideias de conteúdo PRO CLIENTE (${clientName}), no nicho ${nicho} e na VOZ dele, aproveitando o FORMATO/gancho que funcionou no concorrente. Formato:
-{"ideas":[{"title":"gancho/título pronto (max 80 chars)","format":"reels|carrossel|foto","rationale":"1 frase: por que essa ideia, ligada ao que engajou no concorrente"}]}
-REGRAS: ideias 100% no nicho ${nicho}; se o concorrente é de outro nicho, use SÓ a estrutura/gancho, nunca o tema; não repita o que o cliente já faz. Português BR, específico.`;
+${tarefa}
+Gere de 5 a 8 ideias PRO CLIENTE (${clientName}). Formato:
+{"ideas":[{"title":"gancho/título pronto (max 80 chars)","format":"reels|carrossel|foto","rationale":"1 frase: por que essa ideia (ligada à fonte acima)"}]}
+REGRAS: 100% no nicho ${nicho}; se a fonte for de outro nicho, use SÓ a estrutura/gancho, nunca o tema; não repita o que o cliente já faz. Português BR, específico.`;
         try {
           const air = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST", headers: { "Authorization": `Bearer ${lovableKey}`, "Content-Type": "application/json" },

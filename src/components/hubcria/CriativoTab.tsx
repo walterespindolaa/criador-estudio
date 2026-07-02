@@ -13,6 +13,8 @@ const TYPES: { key: ScrapeType; label: string }[] = [
   { key: "reels", label: "Reels" },
   { key: "profile", label: "Perfil" },
   { key: "hashtag", label: "Hashtag" },
+  { key: "comments", label: "Comentários" },
+  { key: "transcription", label: "Reels + transcrição" },
 ];
 
 const STATUS_META: Record<CreativeIdea["status"], { label: string; cls: string }> = {
@@ -23,7 +25,7 @@ const STATUS_META: Record<CreativeIdea["status"], { label: string; cls: string }
 };
 const STATUS_FILTERS = ["todas", "novo", "usar", "usada", "descartada"] as const;
 
-export function CriativoTab({ clientId }: { clientId: string; clientName?: string }) {
+export function CriativoTab({ clientId }: { clientId?: string; clientName?: string }) {
   const [type, setType] = useState<ScrapeType>("posts");
   const [handle, setHandle] = useState("");
   const [limit, setLimit] = useState(10);
@@ -64,8 +66,8 @@ export function CriativoTab({ clientId }: { clientId: string; clientName?: strin
             </div>
           </div>
           <div className="flex-1 min-w-[180px]">
-            <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{type === "hashtag" ? "Hashtag" : "@ do concorrente"}</p>
-            <Input value={handle} onChange={(e) => setHandle(e.target.value)} placeholder={type === "hashtag" ? "esteticafacial" : "@concorrente"} className="h-9" onKeyDown={(e) => { if (e.key === "Enter") analisar(); }} />
+            <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{type === "hashtag" ? "Hashtag" : type === "comments" ? "URL do post" : "@ do concorrente"}</p>
+            <Input value={handle} onChange={(e) => setHandle(e.target.value)} placeholder={type === "hashtag" ? "esteticafacial" : type === "comments" ? "https://instagram.com/p/..." : "@concorrente"} className="h-9" onKeyDown={(e) => { if (e.key === "Enter") analisar(); }} />
           </div>
           {type !== "profile" && (
             <div>
@@ -79,7 +81,11 @@ export function CriativoTab({ clientId }: { clientId: string; clientName?: strin
           </Button>
         </div>
         <p className="text-[11px] font-body text-muted-foreground mt-2">
-          Puxa dados reais do Instagram e gera ideias adaptadas ao nicho do cliente. Pode levar até ~1 min.
+          {type === "comments"
+            ? "Puxa os comentários do post e transforma as dúvidas do público em pautas. Cole a URL do post."
+            : type === "transcription"
+            ? "⚠️ Transcreve o áudio dos reels (add-on pago do Apify, ~US$ 0,015/reel) pra analisar o roteiro do que viralizou."
+            : "Puxa dados reais do Instagram e gera ideias adaptadas ao nicho do cliente. Pode levar até ~1 min."}
         </p>
       </div>
 
@@ -175,6 +181,7 @@ function IdeaBtn({ active, onClick, icon, children }: { active: boolean; onClick
 function SummaryCard({ summary, handle }: { summary: Record<string, unknown>; handle: string }) {
   const s = summary as Record<string, any>;
   const isProfile = s.kind === "profile";
+  const isComments = s.kind === "comments";
   return (
     <div className="bg-card border border-border rounded-2xl p-4">
       <div className="flex items-center gap-2 mb-3">
@@ -188,6 +195,19 @@ function SummaryCard({ summary, handle }: { summary: Record<string, unknown>; ha
           <Stat label="Seguindo" value={fmtNum(s.following)} />
           <Stat label="Posts" value={fmtNum(s.posts)} />
           {s.biography && <p className="col-span-3 text-[13px] font-body text-muted-foreground mt-1 whitespace-pre-wrap">{s.biography}</p>}
+        </div>
+      ) : isComments ? (
+        <div>
+          <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-2">{fmtNum(s.count)} comentários — as dúvidas viram pauta</p>
+          <div className="space-y-1.5">
+            {Array.isArray(s.top) && s.top.slice(0, 12).map((c: any, i: number) => (
+              <div key={i} className="flex items-start gap-2 bg-muted/30 rounded-lg px-2.5 py-2">
+                <MessageCircle className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                <p className="text-[12px] font-body text-foreground flex-1 min-w-0 leading-snug">{c.text}</p>
+                {c.likes > 0 && <span className="flex items-center gap-0.5 text-[11px] font-body text-muted-foreground shrink-0"><Heart className="h-3 w-3" />{fmtNum(c.likes)}</span>}
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         <>
@@ -204,7 +224,10 @@ function SummaryCard({ summary, handle }: { summary: Record<string, unknown>; ha
                 {s.top.slice(0, 5).map((p: any, i: number) => (
                   <div key={i} className="flex items-start gap-2 bg-muted/30 rounded-lg px-2.5 py-2">
                     <span className="text-[10px] font-body px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground capitalize shrink-0 mt-0.5">{p.format}</span>
-                    <p className="text-[12px] font-body text-foreground flex-1 min-w-0 leading-snug line-clamp-2">{p.caption || "(sem legenda)"}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12px] font-body text-foreground leading-snug line-clamp-2">{p.caption || "(sem legenda)"}</p>
+                      {p.transcript && <p className="text-[11px] font-body text-muted-foreground/80 mt-0.5 line-clamp-2 italic">🎙 {p.transcript}</p>}
+                    </div>
                     <div className="flex items-center gap-2 text-[11px] font-body text-muted-foreground shrink-0">
                       <span className="flex items-center gap-0.5"><Heart className="h-3 w-3" />{fmtNum(p.likes)}</span>
                       <span className="flex items-center gap-0.5"><MessageCircle className="h-3 w-3" />{fmtNum(p.comments)}</span>
