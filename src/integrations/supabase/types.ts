@@ -607,6 +607,62 @@ export type Database = {
         }
         Relationships: []
       }
+      competitor_scrapes: {
+        Row: {
+          apify_run_id: string | null
+          cost_usd: number | null
+          created_at: string
+          crm_client_id: string | null
+          error: string | null
+          finished_at: string | null
+          id: string
+          input_handle: string
+          manager_id: string
+          result_summary: Json | null
+          results_limit: number
+          scrape_type: string
+          status: string
+        }
+        Insert: {
+          apify_run_id?: string | null
+          cost_usd?: number | null
+          created_at?: string
+          crm_client_id?: string | null
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          input_handle: string
+          manager_id: string
+          result_summary?: Json | null
+          results_limit?: number
+          scrape_type: string
+          status?: string
+        }
+        Update: {
+          apify_run_id?: string | null
+          cost_usd?: number | null
+          created_at?: string
+          crm_client_id?: string | null
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          input_handle?: string
+          manager_id?: string
+          result_summary?: Json | null
+          results_limit?: number
+          scrape_type?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competitor_scrapes_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_trends: {
         Row: {
           created_at: string | null
@@ -708,6 +764,63 @@ export type Database = {
           title?: string
         }
         Relationships: []
+      }
+      creative_ideas: {
+        Row: {
+          created_at: string
+          crm_client_id: string | null
+          format: string | null
+          id: string
+          manager_id: string
+          rationale: string | null
+          scrape_id: string | null
+          source: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          crm_client_id?: string | null
+          format?: string | null
+          id?: string
+          manager_id: string
+          rationale?: string | null
+          scrape_id?: string | null
+          source?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          crm_client_id?: string | null
+          format?: string | null
+          id?: string
+          manager_id?: string
+          rationale?: string | null
+          scrape_id?: string | null
+          source?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creative_ideas_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creative_ideas_scrape_id_fkey"
+            columns: ["scrape_id"]
+            isOneToOne: false
+            referencedRelation: "competitor_scrapes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       crm_client_refs: {
         Row: {
