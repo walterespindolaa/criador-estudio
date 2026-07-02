@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
-import { Loader2, Search, TrendingUp, Sparkles, Check, X, Trash2, Instagram, Heart, MessageCircle, Play } from "lucide-react";
+import { Loader2, Search, TrendingUp, Sparkles, Check, X, Trash2, Instagram, Heart, MessageCircle, Play, CalendarPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
-  useScrapes, useCreativeIdeas, useRunScrape, useUpdateIdeaStatus, useDeleteIdea,
+  useScrapes, useCreativeIdeas, useRunScrape, useUpdateIdeaStatus, useDeleteIdea, useGeneratePlanFromIdeas,
   type ScrapeType, type CreativeIdea,
 } from "@/hooks/useHubCria";
+import { useExternalClients } from "@/hooks/useCriaPost";
 
 const TYPES: { key: ScrapeType; label: string }[] = [
   { key: "posts", label: "Posts" },
@@ -36,6 +37,10 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
   const run = useRunScrape();
   const upd = useUpdateIdeaStatus();
   const del = useDeleteIdea();
+  const genPlan = useGeneratePlanFromIdeas();
+  const { clients: extClients } = useExternalClients();
+  const extClient = clientId ? extClients.find((c: { crm_client_id?: string | null }) => c.crm_client_id === clientId) : null;
+  const usarCount = ideas.filter((i) => i.status === "usar").length;
 
   const latest = scrapes.find((s) => s.status === "done");
   const analisar = () => {
@@ -105,12 +110,23 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
         <div className="flex items-center gap-2 mb-3 flex-wrap">
           <Sparkles className="h-4 w-4 text-primary" />
           <h3 className="text-sm font-display font-bold text-foreground">Ideias de conteúdo</h3>
-          <div className="flex gap-1 ml-auto">
-            {STATUS_FILTERS.map((f) => (
-              <button key={f} onClick={() => setFilter(f)} className={cn("px-2.5 py-1 rounded-full text-xs font-body border capitalize transition-colors", filter === f ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground")}>{f}</button>
-            ))}
+          <div className="flex items-center gap-2 ml-auto flex-wrap">
+            {clientId && extClient && (
+              <Button size="sm" onClick={() => genPlan.mutate({ externalClientId: (extClient as { id: string }).id, ideas })} disabled={genPlan.isPending || usarCount === 0} title={usarCount === 0 ? "Marque ideias como 'Usar' primeiro" : ""}>
+                {genPlan.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <CalendarPlus className="h-3.5 w-3.5 mr-1.5" />}
+                Gerar cronograma ({usarCount})
+              </Button>
+            )}
+            <div className="flex gap-1">
+              {STATUS_FILTERS.map((f) => (
+                <button key={f} onClick={() => setFilter(f)} className={cn("px-2.5 py-1 rounded-full text-xs font-body border capitalize transition-colors", filter === f ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground")}>{f}</button>
+              ))}
+            </div>
           </div>
         </div>
+        {clientId && !extClient && ideas.length > 0 && (
+          <p className="text-[11px] font-body text-muted-foreground mb-2 -mt-1">Ative o Cria Post neste cliente (aba Posts) pra gerar o cronograma a partir das ideias.</p>
+        )}
 
         {ideas.length === 0 ? (
           <div className="border border-dashed border-border rounded-2xl py-12 px-6 text-center">
