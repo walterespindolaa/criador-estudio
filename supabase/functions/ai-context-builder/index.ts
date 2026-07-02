@@ -73,6 +73,22 @@ const getNichePresets = (niche: string): string => {
 
 // Refresh do banco de tendências: pesquisa web (Perplexity) + formata (Gemini) + grava.
 // deno-lint-ignore no-explicit-any
+// Extrai JSON de uma resposta de IA mesmo com texto/markdown em volta.
+// Aceita objeto {..} ou array [..]. Em falha, joga o trecho cru pra diagnóstico.
+function parseAiJson(raw: string): any {
+  let s = String(raw || '').replace(/```json/gi, '').replace(/```/g, '').trim()
+  const starts = [s.indexOf('{'), s.indexOf('[')].filter((i) => i >= 0)
+  const start = starts.length ? Math.min(...starts) : -1
+  const end = Math.max(s.lastIndexOf('}'), s.lastIndexOf(']'))
+  if (start >= 0 && end > start) s = s.slice(start, end + 1)
+  try {
+    return JSON.parse(s)
+  } catch {
+    const snippet = String(raw || '').replace(/\s+/g, ' ').trim().slice(0, 160)
+    throw new Error(`Invalid JSON from AI: «${snippet || '(resposta vazia do modelo)'}»`)
+  }
+}
+
 async function runTrendRefresh(admin: any, lovableApiKey: string, corsHeaders: Record<string, string>, createdBy: string | null): Promise<Response> {
   const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
 
@@ -121,12 +137,10 @@ OBRIGATÓRIO variar os tipos — inclua PELO MENOS 2 de cada: "formato" (formato
   })
   if (!tr.ok) { console.error('trend refresh gateway error', tr.status, await tr.text()); throw new Error('AI gateway error') }
   const tj = await tr.json()
-  const tcleaned = String(tj.choices?.[0]?.message?.content || '').replace(/```json/gi, '').replace(/```/g, '').trim()
-  const tmatch = tcleaned.match(/\{[\s\S]*\}/)
-  let parsed: { trends?: Array<Record<string, unknown>> } = {}
-  try { parsed = JSON.parse(tmatch ? tmatch[0] : tcleaned) } catch { throw new Error('Invalid JSON from AI') }
+  const tparsed = parseAiJson(String(tj.choices?.[0]?.message?.content || ''))
+  const trendsArr = Array.isArray(tparsed) ? tparsed : (tparsed.trends || [])
   const allowed = new Set(['formato', 'tema', 'gancho', 'data'])
-  const rows = (parsed.trends || [])
+  const rows = (trendsArr || [])
     .filter((t) => t && typeof t.title === 'string')
     .slice(0, 16)
     .map((t) => ({
@@ -192,11 +206,9 @@ Seja específico e brasileiro. Nada genérico.`
   })
   if (!tr.ok) { console.error('story trend gateway error', tr.status, await tr.text()); throw new Error('AI gateway error') }
   const tj = await tr.json()
-  const cleaned = String(tj.choices?.[0]?.message?.content || '').replace(/```json/gi, '').replace(/```/g, '').trim()
-  const match = cleaned.match(/\{[\s\S]*\}/)
-  let parsed: { trends?: Array<Record<string, unknown>> } = {}
-  try { parsed = JSON.parse(match ? match[0] : cleaned) } catch { throw new Error('Invalid JSON from AI') }
-  const rows = (parsed.trends || [])
+  const sparsed = parseAiJson(String(tj.choices?.[0]?.message?.content || ''))
+  const trendsArr = Array.isArray(sparsed) ? sparsed : (sparsed.trends || [])
+  const rows = (trendsArr || [])
     .filter((t) => t && typeof t.title === 'string')
     .slice(0, 14)
     .map((t) => ({
