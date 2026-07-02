@@ -7,12 +7,14 @@ import { useCrmClient } from "@/hooks/useCrm";
 import { useExternalClients } from "@/hooks/useCriaPost";
 import { useFinRecords, useCreateFinRecord, type FinType } from "@/hooks/useFinance";
 import { ClientDetail } from "@/components/accounts/CriaPostBoard";
+import { CriativoTab } from "@/components/hubcria/CriativoTab";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const TABS = [
   { key: "visao-geral", label: "Visão geral" },
+  { key: "criativo", label: "Criativo" },
   { key: "posts", label: "Posts" },
   { key: "cronograma", label: "Cronograma" },
   { key: "relatorio", label: "Relatório" },
@@ -109,6 +111,8 @@ export default function ClienteHub() {
           </div>
         )
       )}
+
+      {activeTab === "criativo" && <CriativoTab clientId={id!} clientName={client.name} />}
 
       {activeTab === "financeiro" && <FinanceTab clientId={id!} clientName={client.name} />}
     </motion.div>
