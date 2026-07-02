@@ -12,6 +12,7 @@ export type StoryTrend = {
   format: string;
   title: string;
   description: string | null;
+  example: string | null;
   why_trending: string | null;
   created_at: string;
 };
@@ -23,7 +24,7 @@ export function useStoryTrends() {
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
       const { data, error } = await sbFrom("story_trends")
-        .select("id,format,title,description,why_trending,created_at")
+        .select("id,format,title,description,example,why_trending,created_at")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as StoryTrend[];

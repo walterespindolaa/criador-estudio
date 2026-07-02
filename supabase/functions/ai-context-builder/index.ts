@@ -190,9 +190,12 @@ async function runStoryTrendRefresh(admin: any, lovableApiKey: string, corsHeade
   }
 
   const sys = `Você é um analista de tendências de STORIES do Instagram no Brasil. Hoje é ${hoje}. Responda SOMENTE em JSON válido, sem markdown.`
-  const usr = `${webResearch ? `PESQUISA DA WEB (use como base, é atual):\n${webResearch}\n\n` : ''}Gere de 8 a 12 tendências de STORIES acionáveis no formato:
-{"trends":[{"format":"enquete|caixinha|bastidor|tutorial|antes-depois|dica-rapida|contagem|quiz|trend","title":"curto (max 8 palavras)","description":"1 frase prática de como usar no story","why_trending":"por que está em alta agora"}]}
-Seja específico e brasileiro. Nada genérico.`
+  const usr = `${webResearch ? `PESQUISA DA WEB (use como base, é atual):\n${webResearch}\n\n` : ''}Gere de 8 a 12 tendências de STORIES no formato JSON abaixo. Escreva pra um LEIGO conseguir executar SEM dúvida — proibido ser abstrato ou genérico.
+{"trends":[{"format":"enquete|caixinha|bastidor|tutorial|antes-depois|dica-rapida|contagem|quiz|trend","title":"nome curto e claro","description":"instrução direta de COMO fazer, em passo a passo curto","example":"um story PRONTO pra postar hoje, concreto: diga exatamente o que gravar, o TEXTO que vai na tela e a interação/sticker. Ex: 'Grave 10s mostrando sua mesa bagunçada e escreva na tela: \\'era isso ou desistir\\'. Coloque enquete: \\'você já pensou em desistir? Sim/Não\\''","why_trending":"por que engaja agora"}]}
+REGRAS OBRIGATÓRIAS:
+- "description" e "example" TÊM que ser concretos e específicos, como ensinando alguém que nunca postou um story.
+- PROIBIDO frases vagas tipo "utilize vídeos para demonstrações" ou "compartilhe bastidores". Sempre diga O QUÊ, COM QUE TEXTO e QUAL interação.
+- Português BR, informal.`
 
   const tr = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
@@ -215,6 +218,7 @@ Seja específico e brasileiro. Nada genérico.`
       format: t.format ? String(t.format).slice(0, 40) : 'trend',
       title: String(t.title).slice(0, 120),
       description: t.description ? String(t.description).slice(0, 300) : null,
+      example: t.example ? String(t.example).slice(0, 500) : null,
       why_trending: t.why_trending ? String(t.why_trending).slice(0, 300) : null,
     }))
   if (rows.length === 0) throw new Error('Nenhuma tendência de story gerada')

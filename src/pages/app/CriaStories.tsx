@@ -100,7 +100,7 @@ export default function CriaStories() {
   const goTab = (t: "criar" | "semana") => navigate(t === "semana" ? "/app/stories/semanastories" : "/app/stories");
 
   const adicionarNaSemana = (t: StoryTrend) => {
-    add.mutate({ slot_date: localIso(), title: t.title, format: t.format, script: t.description ?? null });
+    add.mutate({ slot_date: localIso(), title: t.title, format: t.format, script: t.example ?? t.description ?? null });
   };
   const gerarNoCriaAI = (t: StoryTrend) => {
     openCria(`Quero adaptar esta tendência de STORIES pro meu nicho: "${t.title}"${t.description ? ` — ${t.description}` : ""} (formato: ${t.format}). Me dá 3 sequências de stories prontas pra gravar, com o texto que vai na tela e a interação sugerida, no meu tom.`);
@@ -188,6 +188,11 @@ export default function CriaStories() {
                       <span className="text-[11px] font-body px-2 py-0.5 rounded-full self-start capitalize" style={{ background: st.bg, color: st.fg }}>{t.format}</span>
                       <p className="text-[15px] font-body font-semibold text-foreground mt-2 leading-snug">{t.title}</p>
                       {t.description && <p className="text-[13px] font-body text-muted-foreground mt-1.5 leading-relaxed">{t.description}</p>}
+                      {t.example && (
+                        <p className="text-[12.5px] font-body text-foreground/90 mt-2 bg-primary/[0.06] border border-primary/10 rounded-lg px-2.5 py-2 leading-relaxed">
+                          <span className="font-semibold text-primary">Exemplo:</span> {t.example}
+                        </p>
+                      )}
                       {t.why_trending && <p className="text-[12px] font-body text-primary/80 mt-1.5">↗ {t.why_trending}</p>}
                       <div className="mt-3 pt-2.5 border-t border-border/60">
                         <DropdownMenu>
