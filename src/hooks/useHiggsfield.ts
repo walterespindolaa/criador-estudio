@@ -51,7 +51,7 @@ async function invoke(body: Record<string, unknown>) {
   }
   const err = (data as { error?: string })?.error;
   if (err) throw new Error((data as { message?: string })?.message || err);
-  return data as { job_id: string; status: string; pages: HfPage[] };
+  return data as unknown as { job_id: string; status: string; pages: HfPage[] };
 }
 
 // Passo 1: só monta os textos dos slides + prompts (sem gastar crédito do Higgsfield).
