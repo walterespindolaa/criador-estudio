@@ -262,9 +262,9 @@ export default function CriaEstudio() {
               {pplxTab === "themes" ? (
                 <div className="space-y-2">
                   <Button variant="outline" size="sm" className="h-8 rounded-full text-xs"
-                    onClick={() => hot.mutate(undefined, { onSuccess: (r) => { setThemes(r.themes); setPplxTab("themes"); } })} disabled={hot.isPending}>
+                    onClick={() => hot.mutate({ topic: title.trim() || undefined }, { onSuccess: (r) => { setThemes(r.themes); setPplxTab("themes"); } })} disabled={hot.isPending}>
                     {hot.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <TrendingUp className="h-3.5 w-3.5 mr-1.5" />}
-                    {themes ? "Atualizar temas" : "Buscar temas em alta do meu nicho"}
+                    {themes ? "Atualizar temas" : title.trim() ? "Temas em alta ligados a esse assunto" : "Buscar temas em alta do meu nicho"}
                   </Button>
                   {themes && themes.length > 0 ? (
                     <div className="space-y-1">
@@ -282,9 +282,9 @@ export default function CriaEstudio() {
               ) : (
                 <div className="space-y-2">
                   <Button variant="outline" size="sm" className="h-8 rounded-full text-xs"
-                    onClick={() => newsHook.mutate(undefined, { onSuccess: (r) => { setNews(r.news); setPplxTab("news"); } })} disabled={newsHook.isPending}>
+                    onClick={() => newsHook.mutate({ topic: title.trim() || undefined }, { onSuccess: (r) => { setNews(r.news); setPplxTab("news"); } })} disabled={newsHook.isPending}>
                     {newsHook.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Newspaper className="h-3.5 w-3.5 mr-1.5" />}
-                    {news ? "Atualizar notícia" : "O que tá bombando hoje"}
+                    {news ? "Atualizar notícia" : title.trim() ? "Notícia ligada a esse assunto" : "O que tá bombando hoje"}
                   </Button>
                   {news && (news.titulo || news.resumo) ? (
                     <div className="rounded-lg border border-secondary/25 bg-secondary/[0.04] p-3">

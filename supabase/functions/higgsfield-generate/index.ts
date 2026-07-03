@@ -142,7 +142,8 @@ Deno.serve(async (req) => {
     // ── TEMAS EM ALTA (Perplexity) ────────────────────────
     if (action === "hot_themes") {
       const niche = (String(body?.niche ?? "").trim() || prof?.niche || "geral");
-      const raw = await pplx(`Liste 5 temas/ganchos de conteúdo EM ALTA agora (últimas 2 semanas) no nicho "${niche}" para Instagram (carrossel/estático). Para cada um: um título curto e chamativo + uma frase do porquê está quente agora. Responda SOMENTE JSON: {"themes":[{"titulo":"...","porque":"..."}]}`);
+      const topic = String(body?.topic ?? "").trim().slice(0, 200);
+      const raw = await pplx(`Liste 5 temas/ganchos de conteúdo EM ALTA agora (últimas 2 semanas) para Instagram (carrossel/estático)${topic ? `, todos DIRETAMENTE relacionados ao assunto "${topic}"` : ` no nicho "${niche}"`} (contexto do criador: nicho ${niche}). Cada um: um título curto e chamativo + uma frase do porquê está quente agora${topic ? ` e como conecta com "${topic}"` : ""}. Responda SOMENTE JSON: {"themes":[{"titulo":"...","porque":"..."}]}`);
       if (!raw) return json({ error: "pplx_unavailable", message: "Perplexity indisponível (sem chave ou erro)." }, 502);
       let themes: Array<{ titulo?: string; porque?: string }> = [];
       try { themes = (JSON.parse(extractJson(raw)).themes ?? []); } catch { /* fallback abaixo */ }
@@ -155,7 +156,8 @@ Deno.serve(async (req) => {
     // ── NEWSJACKING (Perplexity) ──────────────────────────
     if (action === "news") {
       const niche = (String(body?.niche ?? "").trim() || prof?.niche || "geral");
-      const raw = await pplx(`Traga UMA notícia ou acontecimento RECENTE (últimos 7 dias) relevante para o nicho "${niche}", que renda um carrossel de Instagram. Responda SOMENTE JSON: {"titulo":"manchete curta","resumo":"2 frases","angulo":"como transformar isso num carrossel (gancho)","fonte":"nome ou url"}`);
+      const topic = String(body?.topic ?? "").trim().slice(0, 200);
+      const raw = await pplx(`Traga UMA notícia ou acontecimento RECENTE (últimos 7 dias)${topic ? ` DIRETAMENTE relacionado ao assunto "${topic}"` : ` relevante para o nicho "${niche}"`} (contexto do criador: nicho ${niche}), que renda um carrossel de Instagram. Se não houver notícia ligada ao assunto, traga a mais próxima possível dele. Responda SOMENTE JSON: {"titulo":"manchete curta","resumo":"2 frases","angulo":"como transformar isso num carrossel conectado a ${topic || niche} (gancho)","fonte":"nome ou url"}`);
       if (!raw) return json({ error: "pplx_unavailable", message: "Perplexity indisponível." }, 502);
       let news: Record<string, string> = {};
       try { news = JSON.parse(extractJson(raw)); } catch { news = { titulo: raw.slice(0, 120), resumo: raw.slice(0, 400) }; }

@@ -68,7 +68,7 @@ export function useDraftArt() {
 export type HotTheme = { titulo: string; porque?: string };
 export function useHotThemes() {
   return useMutation({
-    mutationFn: (input?: { niche?: string }) =>
+    mutationFn: (input?: { niche?: string; topic?: string }) =>
       invoke({ action: "hot_themes", ...(input ?? {}) }) as unknown as Promise<{ themes: HotTheme[] }>,
     onError: (e) => toast.error(e instanceof Error ? `Perplexity: ${e.message}` : "Não consegui buscar temas."),
   });
@@ -87,7 +87,7 @@ export function useReelsScript() {
 export type NewsHook = { titulo?: string; resumo?: string; angulo?: string; fonte?: string };
 export function useNewsHook() {
   return useMutation({
-    mutationFn: (input?: { niche?: string }) =>
+    mutationFn: (input?: { niche?: string; topic?: string }) =>
       invoke({ action: "news", ...(input ?? {}) }) as unknown as Promise<{ news: NewsHook }>,
     onError: (e) => toast.error(e instanceof Error ? `Perplexity: ${e.message}` : "Não consegui buscar notícia."),
   });
