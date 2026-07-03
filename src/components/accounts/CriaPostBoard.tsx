@@ -151,6 +151,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   const { copyLink } = useExternalClients();
   const { profile } = useProfile();
   const [confirmMove, setConfirmMove] = useState<{ id: string; status: ApprovalKey } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const handleApprovalDragEnd = (r: DropResult) => {
     if (!r.destination) return;
@@ -260,7 +261,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                           </div>
                           <div className="flex flex-col gap-1 shrink-0">
                             <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEdit(p)} aria-label="Editar"><Pencil className="h-3.5 w-3.5" /></Button>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => remove.mutate(p.id)} aria-label="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => setConfirmDelete(p.id)} aria-label="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button>
                           </div>
                         </div>
                       </div>
@@ -324,6 +325,23 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={() => { if (confirmMove) moveStatus.mutate({ id: confirmMove.id, approval_status: confirmMove.status }); setConfirmMove(null); }}>
               Sim, avançar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!confirmDelete} onOpenChange={(o) => { if (!o) setConfirmDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir este post?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação é permanente e apaga o post do cliente. Não dá pra desfazer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { if (confirmDelete) remove.mutate(confirmDelete); setConfirmDelete(null); }}>
+              Sim, excluir
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

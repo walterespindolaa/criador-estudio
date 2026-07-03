@@ -266,7 +266,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   const [dontShowVideoTip, setDontShowVideoTip] = useState(false);
 
   // Auto-save indicator
-  const [autoSaveStatus, setAutoSaveStatus] = useState<null | "saving" | "saved">(null);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<null | "saving" | "saved" | "error">(null);
+  const [saving, setSaving] = useState(false);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialLoadCompleteRef = useRef(false);
 
@@ -483,7 +484,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
         setAutoSaveStatus("saved");
         setTimeout(() => setAutoSaveStatus(null), 1500);
       } catch {
-        setAutoSaveStatus(null);
+        // Falha do auto-save não pode sumir em silêncio (usuário perderia o texto ao fechar).
+        setAutoSaveStatus("error");
       }
     }, 1500);
     return () => {
@@ -841,7 +843,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
 
   const handleSave = async () => {
-    if (!title.trim()) return;
+    if (!title.trim() || saving) return; // trava double-submit (inclui a etapa de IA)
+    setSaving(true);
+    try {
     const wasPublished = status === "publicado" && post?.status !== "publicado";
     const data: Record<string, unknown> = { ...buildSavePayload() };
 
@@ -892,6 +896,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
       onOpenChange(false);
     }
     onSaved();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleStatusChange = (newStatus: string) => {
@@ -1130,10 +1137,10 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   <span
                     className={cn(
                       "text-[10px] font-body font-medium whitespace-nowrap transition-opacity",
-                      autoSaveStatus === "saving" ? "text-muted-foreground" : "text-secondary"
+                      autoSaveStatus === "saving" ? "text-muted-foreground" : autoSaveStatus === "error" ? "text-destructive" : "text-secondary"
                     )}
                   >
-                    {autoSaveStatus === "saving" ? "Salvando…" : "Salvo ✓"}
+                    {autoSaveStatus === "saving" ? "Salvando…" : autoSaveStatus === "error" ? "Não salvo — salve manualmente" : "Salvo ✓"}
                   </span>
                 )}
               </div>
@@ -1207,8 +1214,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     mediaType={mediaList.length > 0 ? (mediaList[0].file_type?.includes("video") ? "video" : "image") : "image"}
                   />
                 )}
-                <Button variant="hero" size="sm" onClick={handleSave} disabled={!title.trim()}>
-                  {isNew ? "Criar" : "Salvar"}
+                <Button variant="hero" size="sm" onClick={handleSave} disabled={!title.trim() || saving}>
+                  {saving ? "Salvando…" : isNew ? "Criar" : "Salvar"}
                 </Button>
               </div>
             </div>

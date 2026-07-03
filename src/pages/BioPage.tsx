@@ -521,6 +521,7 @@ function LeadForm({
   const [consent, setConsent] = useState(false);
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
   const showEmail = config.fields === "email" || config.fields === "both";
   const showPhone = config.fields === "phone" || config.fields === "both";
 
@@ -541,7 +542,7 @@ function LeadForm({
       if (error) throw error;
       setDone(true);
     } catch {
-      alert("Não foi possível enviar. Tente novamente.");
+      setErr("Não foi possível enviar. Tente novamente.");
     } finally {
       setSending(false);
     }
@@ -561,9 +562,9 @@ function LeadForm({
       <h2 className="font-display font-bold text-gray-900 text-center">{config.title}</h2>
       {config.subtitle && <p className="text-sm text-gray-600 text-center mt-1 mb-4">{config.subtitle}</p>}
       <div className="space-y-3">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm" />
-        {showEmail && <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Seu email" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm" />}
-        {showPhone && <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Seu telefone" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm" />}
+        <input aria-label="Seu nome" value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm" />
+        {showEmail && <input aria-label="Seu email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Seu email" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm" />}
+        {showPhone && <input aria-label="Seu telefone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Seu telefone" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm" />}
         <label className="flex items-start gap-2 text-[11px] text-gray-600 leading-snug">
           <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" />
           {config.consentText}
@@ -571,6 +572,7 @@ function LeadForm({
         <button type="button" onClick={submit} disabled={sending || !consent} className={cn("w-full font-body font-semibold py-3 shadow-md disabled:opacity-50 transition", radius)} style={{ backgroundColor: buttonColor, color: buttonTextColor }}>
           {sending ? "Enviando..." : config.buttonText}
         </button>
+        {err && <p role="alert" className="text-xs text-red-600 text-center">{err}</p>}
       </div>
     </div>
   );

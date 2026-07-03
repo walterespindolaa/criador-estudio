@@ -172,6 +172,7 @@ export function useExternalPosts(clientId: string | null) {
   const remove = useMutation({
     mutationFn: async (id: string) => { const { error } = await sbFrom("posts").delete().eq("id", id); if (error) throw error; },
     onSuccess: () => { toast.success("Post removido."); qc.invalidateQueries({ queryKey: key }); qc.invalidateQueries({ queryKey: ["external-pending", user?.id] }); },
+    onError: () => toast.error("Erro ao remover o post."),
   });
 
   // Move o status de aprovação manualmente (gestora arrastando no kanban).

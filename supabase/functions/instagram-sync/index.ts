@@ -67,13 +67,17 @@ Deno.serve(async (req) => {
     const until = Math.floor(Date.now() / 1000);
     const since = until - 29 * 86400;
     const reachSeries = await getJson(`${GRAPH}/me/insights?metric=reach&period=day&metric_type=time_series&since=${since}&until=${until}&access_token=${token}`);
+    // Junta a série toda num único upsert (antes: ~30 chamadas sequenciais por sync).
+    const reachRows: Array<Record<string, unknown>> = [];
+    const capturedAt = new Date().toISOString();
     for (const row of (reachSeries.data ?? []) as Array<{ values?: Array<{ value: number; end_time?: string }> }>) {
       for (const v of (row.values ?? [])) {
         const d = String(v.end_time ?? '').slice(0, 10);
-        if (d) await admin.from('social_metrics_daily').upsert({
-          user_id: userId, provider: 'instagram', date: d, reach: Number(v.value ?? 0), captured_at: new Date().toISOString(),
-        } as never, { onConflict: 'user_id,provider,date' });
+        if (d) reachRows.push({ user_id: userId, provider: 'instagram', date: d, reach: Number(v.value ?? 0), captured_at: capturedAt });
       }
+    }
+    if (reachRows.length) {
+      await admin.from('social_metrics_daily').upsert(reachRows as never, { onConflict: 'user_id,provider,date' });
     }
     const acctTotals = await getJson(`${GRAPH}/me/insights?metric=profile_views,accounts_engaged,total_interactions&period=day&metric_type=total&since=${since}&until=${until}&access_token=${token}`);
     const tot: Record<string, number> = {};
