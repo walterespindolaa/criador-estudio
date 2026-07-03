@@ -90,6 +90,7 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
   const [validity, setValidity] = useState<string>("lifetime");
+  const [plan, setPlan] = useState<string>("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmWipe, setConfirmWipe] = useState(false);
 
@@ -132,6 +133,31 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
       toast.success("Validade atualizada.");
       queryClient.invalidateQueries({ queryKey: ["admin-user-details", userId] });
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+    onError: (e: Error) => toast.error(`Falha: ${e.message}`),
+  });
+
+  const setPlanMutation = useMutation({
+    mutationFn: () => invokeAction({ user_id: userId, action: "set_plan", plan: plan || data?.plan }),
+    onSuccess: () => {
+      toast.success("Plano atualizado.");
+      queryClient.invalidateQueries({ queryKey: ["admin-user-details", userId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+    onError: (e: Error) => toast.error(`Falha: ${e.message}`),
+  });
+
+  const { data: modulesData } = useQuery<{ modules: { code: string; name: string; coming_soon?: boolean }[]; active: string[] }>({
+    queryKey: ["admin-user-modules", userId],
+    enabled: open && !!userId,
+    queryFn: () => invokeAction({ user_id: userId, action: "get_modules" }) as Promise<{ modules: { code: string; name: string }[]; active: string[] }>,
+  });
+
+  const setModuleMutation = useMutation({
+    mutationFn: (v: { code: string; enabled: boolean }) => invokeAction({ user_id: userId, action: "set_module", module_code: v.code, enabled: v.enabled }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-user-modules", userId] });
+      toast.success("Módulo atualizado.");
     },
     onError: (e: Error) => toast.error(`Falha: ${e.message}`),
   });
@@ -261,6 +287,46 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
                     </Button>
                   </div>
                 </FieldBox>
+
+                <FieldBox label="Plano">
+                  <div className="flex flex-wrap items-center gap-2 mt-1 min-w-0">
+                    <Select value={plan || data.plan || "free"} onValueChange={setPlan}>
+                      <SelectTrigger className="rounded-lg h-9 flex-1 min-w-[120px] text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="free">Free</SelectItem>
+                        <SelectItem value="trial">Trial</SelectItem>
+                        <SelectItem value="pro">Pro</SelectItem>
+                        <SelectItem value="studio">Studio</SelectItem>
+                        <SelectItem value="agency">Agência</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button size="sm" onClick={() => setPlanMutation.mutate()} disabled={setPlanMutation.isPending}>
+                      {setPlanMutation.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+                      Salvar
+                    </Button>
+                  </div>
+                </FieldBox>
+
+                {modulesData && modulesData.modules.length > 0 && (
+                  <FieldBox label="Módulos (add-ons)">
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {modulesData.modules.map((m) => {
+                        const on = modulesData.active.includes(m.code);
+                        return (
+                          <button
+                            key={m.code}
+                            onClick={() => setModuleMutation.mutate({ code: m.code, enabled: !on })}
+                            disabled={setModuleMutation.isPending}
+                            className={`px-2.5 py-1 rounded-full text-xs font-body border transition-colors ${on ? "bg-primary/10 border-primary text-primary" : "bg-card border-border text-muted-foreground hover:text-foreground"}`}
+                          >
+                            {on ? "✓ " : "+ "}{m.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[10px] font-body text-muted-foreground mt-1.5">Clique pra ligar/desligar cada módulo pra esta conta.</p>
+                  </FieldBox>
+                )}
 
                 <div className="flex flex-wrap gap-2 min-w-0">
                   <Button

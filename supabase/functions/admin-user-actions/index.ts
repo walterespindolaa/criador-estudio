@@ -152,6 +152,42 @@ serve(async (req) => {
       return json({ ok: true, result: wiped });
     }
 
+    // Muda o plano do usuário (upgrade PF) e ativa se for plano pago.
+    if (action === "set_plan") {
+      const plan = String((body as { plan?: string }).plan ?? "");
+      if (!["free", "trial", "pro", "studio", "agency"].includes(plan)) return json({ error: "invalid_plan" }, 400);
+      const patch: Record<string, unknown> = { plan };
+      if (["pro", "studio", "agency"].includes(plan)) patch.subscription_status = "active";
+      const { error } = await svc.from("profiles").update(patch).eq("id", user_id);
+      if (error) { console.error("[admin-user-actions] set_plan failed:", error); return json({ error: "update_failed" }, 500); }
+      return json({ ok: true, plan });
+    }
+
+    // Lista os módulos + os que o usuário já tem ativos (pros toggles do admin).
+    if (action === "get_modules") {
+      const [{ data: mods }, { data: ent }] = await Promise.all([
+        svc.from("modules").select("code, name, coming_soon").order("sort_order"),
+        svc.from("module_entitlements").select("module_code, status").eq("manager_id", user_id),
+      ]);
+      const active = (ent ?? []).filter((e: { status?: string }) => e.status === "active").map((e: { module_code: string }) => e.module_code);
+      return json({ modules: mods ?? [], active });
+    }
+
+    // Liga/desliga um módulo (add-on) pra conta.
+    if (action === "set_module") {
+      const moduleCode = String((body as { module_code?: string }).module_code ?? "");
+      const enabled = (body as { enabled?: boolean }).enabled === true;
+      if (!moduleCode) return json({ error: "missing_module" }, 400);
+      const { data: ex } = await svc.from("module_entitlements").select("id").eq("manager_id", user_id).eq("module_code", moduleCode).maybeSingle();
+      if (enabled) {
+        if (ex) await svc.from("module_entitlements").update({ status: "active", updated_at: new Date().toISOString() }).eq("id", (ex as { id: string }).id);
+        else await svc.from("module_entitlements").insert({ manager_id: user_id, module_code: moduleCode, status: "active" });
+      } else if (ex) {
+        await svc.from("module_entitlements").delete().eq("id", (ex as { id: string }).id);
+      }
+      return json({ ok: true, module_code: moduleCode, enabled });
+    }
+
     if (action === "resend_access") {
       const { data: userData, error: getErr } = await svc.auth.admin.getUserById(user_id);
       if (getErr || !userData?.user?.email) {
