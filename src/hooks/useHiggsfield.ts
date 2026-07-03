@@ -55,11 +55,32 @@ async function invoke(body: Record<string, unknown>) {
 }
 
 // Passo 1: só monta os textos dos slides + prompts (sem gastar crédito do Higgsfield).
+// enrich: puxa dados atuais do Perplexity pra dar autoridade aos slides.
 export function useDraftArt() {
   return useMutation({
-    mutationFn: (input: { title: string; format: "estatico" | "carrossel"; slides?: number; source_content?: string; post_id?: string }) =>
-      invoke({ action: "draft", ...input }) as Promise<{ pages: HfPage[]; format: string; slides: number }>,
+    mutationFn: (input: { title: string; format: "estatico" | "carrossel"; slides?: number; source_content?: string; post_id?: string; enrich?: boolean }) =>
+      invoke({ action: "draft", ...input }) as Promise<{ pages: HfPage[]; format: string; slides: number; enriched?: boolean }>,
     onError: (e) => toast.error(e instanceof Error ? `Falha ao montar: ${e.message}` : "Não consegui montar os textos."),
+  });
+}
+
+// Perplexity: 5 temas em alta do nicho (admin-only, mesmo edge gated).
+export type HotTheme = { titulo: string; porque?: string };
+export function useHotThemes() {
+  return useMutation({
+    mutationFn: (input?: { niche?: string }) =>
+      invoke({ action: "hot_themes", ...(input ?? {}) }) as Promise<{ themes: HotTheme[] }>,
+    onError: (e) => toast.error(e instanceof Error ? `Perplexity: ${e.message}` : "Não consegui buscar temas."),
+  });
+}
+
+// Perplexity: 1 notícia recente do nicho pra newsjacking.
+export type NewsHook = { titulo?: string; resumo?: string; angulo?: string; fonte?: string };
+export function useNewsHook() {
+  return useMutation({
+    mutationFn: (input?: { niche?: string }) =>
+      invoke({ action: "news", ...(input ?? {}) }) as Promise<{ news: NewsHook }>,
+    onError: (e) => toast.error(e instanceof Error ? `Perplexity: ${e.message}` : "Não consegui buscar notícia."),
   });
 }
 

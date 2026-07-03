@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useSearchParams } from "react-router-dom";
-import { Wand2, Loader2, Image as ImageIcon, Download, Trash2, Lock, Sparkles, Pencil, ArrowLeft, LayoutGrid, Type as TypeIcon } from "lucide-react";
+import { Wand2, Loader2, Image as ImageIcon, Download, Trash2, Lock, Sparkles, Pencil, ArrowLeft, LayoutGrid, Type as TypeIcon, TrendingUp, Newspaper, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useProfile } from "@/hooks/useProfile";
 import { usePosts, type Post } from "@/hooks/usePosts";
-import { useHiggsfieldJobs, useDraftArt, useGenerateArt, usePollJob, useDeleteJob, type HfJob, type HfPage } from "@/hooks/useHiggsfield";
+import { useHiggsfieldJobs, useDraftArt, useGenerateArt, usePollJob, useDeleteJob, useHotThemes, useNewsHook, type HfJob, type HfPage, type HotTheme, type NewsHook } from "@/hooks/useHiggsfield";
 
 const ASPECTS = [
   { v: "4:5", label: "4:5 (feed)" },
@@ -41,12 +41,19 @@ export default function CriaEstudio() {
 
   // Passo de revisão: textos dos slides antes de gerar as imagens.
   const [draftPages, setDraftPages] = useState<HfPage[] | null>(null);
+  const [enrich, setEnrich] = useState(false);
+
+  // Perplexity (admin-only).
+  const [themes, setThemes] = useState<HotTheme[] | null>(null);
+  const [news, setNews] = useState<NewsHook | null>(null);
 
   const { data: jobs = [] } = useHiggsfieldJobs();
   const draft = useDraftArt();
   const gen = useGenerateArt();
   const poll = usePollJob();
   const del = useDeleteJob();
+  const hot = useHotThemes();
+  const newsHook = useNewsHook();
 
   // Polling enquanto houver jobs em andamento.
   const runningIds = useMemo(() => jobs.filter((j) => j.status === "running").map((j) => j.id).join(","), [jobs]);
@@ -84,9 +91,23 @@ export default function CriaEstudio() {
   const montar = () => {
     if (!title.trim()) return;
     draft.mutate(
-      { title: title.trim(), format, slides, source_content: sourceContent || undefined, post_id: postId || undefined },
+      { title: title.trim(), format, slides, source_content: sourceContent || undefined, post_id: postId || undefined, enrich },
       { onSuccess: (res) => setDraftPages(res.pages) },
     );
+  };
+
+  const pickTheme = (t: HotTheme) => {
+    useFreeTheme();
+    setTitle(t.titulo);
+    setThemes(null);
+  };
+
+  const useNewsTheme = () => {
+    if (!news?.titulo) return;
+    useFreeTheme();
+    setTitle(news.titulo);
+    setSourceContent([news.resumo, news.angulo ? `Ângulo: ${news.angulo}` : "", news.fonte ? `Fonte: ${news.fonte}` : ""].filter(Boolean).join("\n"));
+    setNews(null);
   };
 
   const gerar = () => {
@@ -167,6 +188,47 @@ export default function CriaEstudio() {
               <Sparkles className="h-3 w-3" /> Usando o post selecionado (título + roteiro). Digite aqui pra soltar e criar avulso.
             </p>
           )}
+
+          {/* Perplexity: sugestões (admin) */}
+          <div className="flex flex-wrap items-center gap-2 mt-2.5">
+            <Button variant="outline" size="sm" className="h-8 rounded-full text-xs"
+              onClick={() => hot.mutate(undefined, { onSuccess: (r) => { setThemes(r.themes); setNews(null); } })} disabled={hot.isPending}>
+              {hot.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <TrendingUp className="h-3.5 w-3.5 mr-1.5" />}
+              Temas em alta do meu nicho
+            </Button>
+            <Button variant="outline" size="sm" className="h-8 rounded-full text-xs"
+              onClick={() => newsHook.mutate(undefined, { onSuccess: (r) => { setNews(r.news); setThemes(null); } })} disabled={newsHook.isPending}>
+              {newsHook.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Newspaper className="h-3.5 w-3.5 mr-1.5" />}
+              O que tá bombando hoje
+            </Button>
+            <span className="text-[10px] font-body text-muted-foreground">via Perplexity · interno</span>
+          </div>
+
+          {themes && themes.length > 0 && (
+            <div className="mt-2.5 rounded-xl border border-primary/20 bg-primary/[0.04] p-2.5 space-y-1.5">
+              <p className="text-[10px] font-body font-semibold text-primary uppercase tracking-wider">Temas quentes — clique pra usar</p>
+              {themes.map((t, i) => (
+                <button key={i} onClick={() => pickTheme(t)} className="w-full text-left rounded-lg px-2.5 py-1.5 hover:bg-primary/[0.06] transition-colors">
+                  <p className="text-xs font-body font-semibold text-foreground">{t.titulo}</p>
+                  {t.porque && <p className="text-[11px] font-body text-muted-foreground mt-0.5">{t.porque}</p>}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {news && (news.titulo || news.resumo) && (
+            <div className="mt-2.5 rounded-xl border border-secondary/25 bg-secondary/[0.04] p-3">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Zap className="h-3.5 w-3.5 text-secondary" />
+                <p className="text-[10px] font-body font-semibold text-secondary uppercase tracking-wider">Newsjacking</p>
+              </div>
+              {news.titulo && <p className="text-sm font-body font-semibold text-foreground">{news.titulo}</p>}
+              {news.resumo && <p className="text-[11px] font-body text-muted-foreground mt-0.5">{news.resumo}</p>}
+              {news.angulo && <p className="text-[11px] font-body text-foreground mt-1"><strong>Ângulo:</strong> {news.angulo}</p>}
+              {news.fonte && <p className="text-[10px] font-body text-muted-foreground mt-0.5">Fonte: {news.fonte}</p>}
+              <Button size="sm" className="h-8 mt-2 text-xs" onClick={useNewsTheme}><Sparkles className="h-3.5 w-3.5 mr-1.5" /> Usar como tema</Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -205,13 +267,21 @@ export default function CriaEstudio() {
             </div>
           </div>
           {!draftPages && (
-            <Button onClick={montar} disabled={draft.isPending || !title.trim()} className="h-9 ml-auto">
-              {draft.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Pencil className="h-4 w-4 mr-2" />}
-              Montar textos
-            </Button>
+            <div className="ml-auto flex items-center gap-3">
+              <button type="button" onClick={() => setEnrich((v) => !v)}
+                className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 h-9 text-xs font-body transition-colors",
+                  enrich ? "border-secondary bg-secondary/10 text-secondary" : "border-border text-muted-foreground hover:border-secondary/40")}>
+                <TrendingUp className="h-3.5 w-3.5" />
+                Enriquecer com dados atuais
+              </button>
+              <Button onClick={montar} disabled={draft.isPending || !title.trim()} className="h-9">
+                {draft.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Pencil className="h-4 w-4 mr-2" />}
+                Montar textos
+              </Button>
+            </div>
           )}
         </div>
-        <p className="text-[11px] font-body text-muted-foreground">A IA monta o texto de cada slide a partir do roteiro/legenda + sua marca (moodboard). Você revisa antes de gerar as imagens — o Higgsfield só é acionado depois que você aprovar.</p>
+        <p className="text-[11px] font-body text-muted-foreground">A IA monta o texto de cada slide a partir do roteiro/legenda + sua marca (moodboard). Com <strong>Enriquecer com dados atuais</strong> ligado, o Perplexity busca estatísticas e fatos recentes (com fonte) pra dar autoridade. Você revisa antes de gerar as imagens — o Higgsfield só é acionado depois que você aprovar.</p>
       </div>
 
       {/* ── Revisão dos slides ── */}

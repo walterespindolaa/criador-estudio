@@ -19,6 +19,36 @@ function hfAuth(): string {
   return `Key ${key}:${secret}`;
 }
 
+// Perplexity (sonar) — pesquisa web atual com fontes. Fail-soft: sem chave/erro → "".
+async function pplx(userPrompt: string): Promise<string> {
+  const key = Deno.env.get("PERPLEXITY_API_KEY");
+  if (!key) return "";
+  try {
+    const r = await fetch("https://api.perplexity.ai/chat/completions", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "sonar",
+        messages: [
+          { role: "system", content: "Você é um pesquisador de tendências de conteúdo para redes sociais no Brasil. Responda em português, com dados recentes e verificáveis, sempre citando a fonte." },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.3, max_tokens: 900,
+      }),
+    });
+    if (!r.ok) { console.error("[pplx] error", r.status, (await r.text()).slice(0, 200)); return ""; }
+    const j = await r.json();
+    return String(j.choices?.[0]?.message?.content || "");
+  } catch (e) { console.error("[pplx] fetch failed", e); return ""; }
+}
+
+function extractJson(raw: string): string {
+  let s = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
+  const st = s.indexOf("{"); const en = s.lastIndexOf("}");
+  if (st >= 0 && en > st) s = s.slice(st, en + 1);
+  return s;
+}
+
 type Page = { role: string; screen_text: string; prompt: string; request_id?: string; image_url?: string; status?: string };
 
 Deno.serve(async (req) => {
@@ -73,6 +103,29 @@ Deno.serve(async (req) => {
       return json({ job_id: jobId, status, pages });
     }
 
+    // ── TEMAS EM ALTA (Perplexity) ────────────────────────
+    if (action === "hot_themes") {
+      const niche = (String(body?.niche ?? "").trim() || prof?.niche || "geral");
+      const raw = await pplx(`Liste 5 temas/ganchos de conteúdo EM ALTA agora (últimas 2 semanas) no nicho "${niche}" para Instagram (carrossel/estático). Para cada um: um título curto e chamativo + uma frase do porquê está quente agora. Responda SOMENTE JSON: {"themes":[{"titulo":"...","porque":"..."}]}`);
+      if (!raw) return json({ error: "pplx_unavailable", message: "Perplexity indisponível (sem chave ou erro)." }, 502);
+      let themes: Array<{ titulo?: string; porque?: string }> = [];
+      try { themes = (JSON.parse(extractJson(raw)).themes ?? []); } catch { /* fallback abaixo */ }
+      if (themes.length === 0) {
+        themes = raw.split("\n").map((l) => l.replace(/^[\d\-\*\.\)\s]+/, "").trim()).filter(Boolean).slice(0, 5).map((t) => ({ titulo: t }));
+      }
+      return json({ ok: true, themes: themes.slice(0, 6) });
+    }
+
+    // ── NEWSJACKING (Perplexity) ──────────────────────────
+    if (action === "news") {
+      const niche = (String(body?.niche ?? "").trim() || prof?.niche || "geral");
+      const raw = await pplx(`Traga UMA notícia ou acontecimento RECENTE (últimos 7 dias) relevante para o nicho "${niche}", que renda um carrossel de Instagram. Responda SOMENTE JSON: {"titulo":"manchete curta","resumo":"2 frases","angulo":"como transformar isso num carrossel (gancho)","fonte":"nome ou url"}`);
+      if (!raw) return json({ error: "pplx_unavailable", message: "Perplexity indisponível." }, 502);
+      let news: Record<string, string> = {};
+      try { news = JSON.parse(extractJson(raw)); } catch { news = { titulo: raw.slice(0, 120), resumo: raw.slice(0, 400) }; }
+      return json({ ok: true, news });
+    }
+
     // ── Parâmetros comuns ─────────────────────────────────
     const title = String(body?.title ?? "").trim();
     const format = body?.format === "estatico" ? "estatico" : "carrossel";
@@ -82,6 +135,8 @@ Deno.serve(async (req) => {
     const postId = body?.post_id ? String(body.post_id) : null;
     // Conteúdo já escrito no Cria Plano (roteiro/legenda do post) — vira a espinha dorsal dos slides.
     const sourceContent = String(body?.source_content ?? "").trim().slice(0, 4000);
+    // Pesquisa atual do Perplexity (dados/estatísticas com fonte), preenchida sob demanda no draft.
+    let extraResearch = "";
 
     // Contexto de marca (moodboard) do usuário.
     const { data: brand } = await svc.from("brand_items").select("type, name").eq("user_id", user.id);
@@ -101,7 +156,7 @@ ${brandCtx}
 
 TEMA/IDEIA: ${title}
 FORMATO: ${format === "carrossel" ? `carrossel de ${slides} páginas` : "imagem estática única"}
-${sourceContent ? `\nCONTEÚDO JÁ ESCRITO (roteiro/legenda do post — USE ISSO como base do texto dos slides, apenas fatiando/enxugando; NÃO invente um tema diferente):\n${sourceContent}\n` : ""}
+${sourceContent ? `\nCONTEÚDO JÁ ESCRITO (roteiro/legenda do post — USE ISSO como base do texto dos slides, apenas fatiando/enxugando; NÃO invente um tema diferente):\n${sourceContent}\n` : ""}${extraResearch ? `\nPESQUISA ATUAL (dados/estatísticas reais e recentes com fonte — INCORPORE nos slides pra dar autoridade; cite o número no texto quando fizer sentido):\n${extraResearch}\n` : ""}
 REGRAS:
 - CAPA (página 1): visual CHAMATIVO e MODERNO, alto contraste, que para o scroll; espaço pro título grande.
 - Demais páginas: desenvolvem a ideia (desenvolvimento → prova/exemplo → CTA), no MESMO estilo/paleta da capa.
@@ -129,6 +184,12 @@ Gere EXATAMENTE ${slides} página(s).`;
     // Só monta os textos dos slides + prompts pra você revisar. NÃO dispara no Higgsfield.
     if (action === "draft") {
       if (!title) return json({ error: "missing_title", message: "Escolha um post ou digite um tema." }, 400);
+      // Enriquecimento opcional: puxa dados atuais do Perplexity pra dar autoridade aos slides.
+      if (body?.enrich) {
+        const niche = prof?.niche || "geral";
+        const research = await pplx(`Sobre o tema "${title}" (nicho ${niche}): traga dados, estatísticas, números e exemplos ATUAIS e verificáveis, cada um com a fonte, que dariam autoridade a um carrossel de Instagram. Responda em 4 a 6 bullets curtos.`);
+        if (research) extraResearch = research.slice(0, 2000);
+      }
       let drafted: Array<{ role?: string; screen_text?: string; prompt?: string }>;
       try { drafted = await writePages(); }
       catch (e) {
@@ -142,7 +203,7 @@ Gere EXATAMENTE ${slides} página(s).`;
         screen_text: p.screen_text || "",
         prompt: p.prompt || title,
       }));
-      return json({ ok: true, pages, format, slides, aspect_ratio: aspect, resolution });
+      return json({ ok: true, pages, format, slides, aspect_ratio: aspect, resolution, enriched: !!extraResearch });
     }
 
     // ── GENERATE ──────────────────────────────────────────
