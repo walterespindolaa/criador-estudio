@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import Stripe from "npm:stripe@14";
 
@@ -60,7 +59,7 @@ async function sendMetaPurchase(s: Stripe.Checkout.Session): Promise<void> {
   } catch (e) { console.error("[stripe-webhook] meta capi purchase failed", e); }
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const signature = req.headers.get("stripe-signature");
   const body = await req.text();
   const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET")!;
