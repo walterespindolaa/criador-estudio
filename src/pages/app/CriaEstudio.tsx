@@ -165,6 +165,19 @@ export default function CriaEstudio() {
     );
   };
 
+  // Gera UMA imagem só (o slide i) — vira um job próprio, sem apagar a revisão.
+  const [genOne, setGenOne] = useState<number | null>(null);
+  const gerarUm = (i: number) => {
+    if (!draftPages) return;
+    const pg = draftPages[i];
+    const label = i === 0 ? "capa" : `slide ${i + 1}`;
+    setGenOne(i);
+    gen.mutate(
+      { title: `${title.trim()} — ${label}`, format: "estatico", slides: 1, aspect_ratio: aspect, resolution, pages: [pg], post_id: postId || undefined },
+      { onSettled: () => setGenOne(null) },
+    );
+  };
+
   const editSlideText = (i: number, val: string) => {
     setDraftPages((prev) => prev ? prev.map((p, idx) => idx === i ? { ...p, screen_text: val } : p) : prev);
   };
@@ -432,13 +445,24 @@ export default function CriaEstudio() {
           </div>
           <div className="space-y-2.5">
             {draftPages.map((pg, i) => (
-              <div key={i} className="flex gap-2.5 items-start">
-                <span className="shrink-0 mt-2 text-[10px] font-body font-bold text-muted-foreground uppercase w-16">{i === 0 ? "capa" : pg.role || `slide ${i + 1}`}</span>
+              <div key={i} className="rounded-xl border border-border bg-muted/20 p-3">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-body font-bold text-primary uppercase tracking-wide">
+                    {i === 0 ? "Capa" : pg.role || `Slide ${i + 1}`} · {i + 1}/{draftPages.length}
+                  </span>
+                  {kind !== "foto" && (
+                    <Button size="sm" variant="outline" className="h-7 text-xs shrink-0"
+                      onClick={() => gerarUm(i)} disabled={gen.isPending}>
+                      {gen.isPending && genOne === i ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1" />}
+                      Gerar só este
+                    </Button>
+                  )}
+                </div>
                 <Textarea
                   value={pg.screen_text}
                   onChange={(e) => editSlideText(i, e.target.value)}
                   rows={2}
-                  className="flex-1 text-sm resize-none"
+                  className="w-full text-sm resize-none bg-card"
                   placeholder="Texto que vai na tela desse slide…"
                 />
               </div>
@@ -446,8 +470,8 @@ export default function CriaEstudio() {
           </div>
           <div className="flex flex-wrap items-center gap-2 mt-4">
             <Button onClick={gerar} disabled={gen.isPending} className="h-9">
-              {gen.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-              Gerar imagens no Higgsfield
+              {gen.isPending && genOne === null ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+              {kind === "foto" ? "Gerar imagem" : "Gerar todas de uma vez"}
             </Button>
             <Button variant="outline" onClick={montar} disabled={draft.isPending} className="h-9">
               {draft.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Pencil className="h-4 w-4 mr-2" />}
