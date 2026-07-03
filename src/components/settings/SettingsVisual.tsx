@@ -110,9 +110,9 @@ export function SettingsVisual() {
 
   return (
     <div className="w-full max-w-[1100px] mx-auto">
-      <div className="flex flex-col lg:flex-row gap-12">
+      <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
         {/* LEFT — Controls */}
-        <div className="flex-[0_0_45%] space-y-10">
+        <div className="w-full lg:flex-[0_0_45%] space-y-8 lg:space-y-10">
           {/* Idioma */}
           <section>
             <div className="mb-4">
@@ -154,7 +154,7 @@ export function SettingsVisual() {
                   key={preset.id}
                   onClick={() => handleThemeSelect(preset.id)}
                   className={cn(
-                    "group relative rounded-2xl border-2 transition-all text-left overflow-hidden flex flex-col min-w-[120px]",
+                    "group relative rounded-2xl border-2 transition-all text-left overflow-hidden flex flex-col min-w-0",
                     selectedTheme === preset.id
                       ? "border-[#1A2F21] ring-1 ring-[#1A2F21]"
                       : "border-border hover:border-[#1A2F21]/30"

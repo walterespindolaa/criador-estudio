@@ -22,7 +22,7 @@ const GROUPS: { group: string; items: TypeDef[] }[] = [
     items: [
       { key: "posts", label: "Posts do feed", icon: LayoutGrid, desc: "Os posts que mais engajaram — legenda, curtidas, comentários e formato. Base pras ideias.", inputKind: "handle" },
       { key: "reels", label: "Reels", icon: Play, desc: "Os reels dele — views, duração e o que performou.", inputKind: "handle" },
-      { key: "transcription", label: "Reels + transcrição", icon: FileText, desc: "Transcreve o áudio dos reels recentes pra ler o ROTEIRO do que viralizou.", inputKind: "handle", cost: "~US$0,015/reel" },
+      { key: "transcription", label: "Reels + transcrição", icon: FileText, desc: "Transcreve o áudio pra ler o ROTEIRO. Aceita o @ (reels recentes) OU o link de um/mais reels (separados por vírgula).", inputKind: "handle", cost: "~US$0,02/reel" },
       { key: "stories", label: "Stories", icon: CircleDashed, desc: "Os stories recentes (somem em 24h) — o que ele faz no dia a dia.", inputKind: "handle" },
     ],
   },

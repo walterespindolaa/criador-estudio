@@ -16,6 +16,21 @@ export interface ThemePreset {
 
 export const THEME_PRESETS: ThemePreset[] = [
   {
+    id: 'clean-white',
+    name: 'Clean White',
+    desc: 'Branco puro, minimalista',
+    group: 'essenciais',
+    mode: 'light',
+    vars: {
+      background: '#FFFFFF',
+      card: '#FFFFFF',
+      foreground: '#16161D',
+      border: '#E9EAEE',
+      muted: '#F4F5F7',
+      sidebar: '#FFFFFF',
+    },
+  },
+  {
     id: 'clean-warm',
     name: 'Clean Warm',
     desc: 'Claro e acolhedor',

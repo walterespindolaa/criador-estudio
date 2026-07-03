@@ -200,8 +200,15 @@ Deno.serve(async (req) => {
       let actor: string;
       let input: Record<string, unknown>;
       if (type === "transcription") {
-        actor = "makework36~instagram-reels-transcript-scraper";
-        input = { profiles: [cleanHandle(inputHandle)], maxPostsPerProfile: limit, onlyVideos: true, transcribe: true, language: "pt" };
+        // Aceita @ (reels recentes) OU link(s) de reel específicos (separados por vírgula/espaço).
+        actor = "linen_snack~instagram-reel-transcript-ai-extractor";
+        const isUrl = /instagram\.com|https?:\/\//i.test(inputHandle);
+        if (isUrl) {
+          const urls = inputHandle.split(/[\s,]+/).filter((u) => /instagram\.com/i.test(u)).slice(0, limit);
+          input = { reelUrls: urls, language: "pt", enableSummary: true };
+        } else {
+          input = { usernames: [cleanHandle(inputHandle)], maxReelsPerUsername: limit, language: "pt", enableSummary: true };
+        }
       } else if (type === "ads") {
         actor = "apify~facebook-ads-scraper";
         const adUrl = `https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=BR&q=${encodeURIComponent(cleanHandle(inputHandle))}&search_type=keyword_unordered`;

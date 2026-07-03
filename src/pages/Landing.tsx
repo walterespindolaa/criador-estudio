@@ -729,10 +729,7 @@ export default function Landing() {
           </div>
 
           <div className="flex items-center gap-4 text-muted-foreground">
-            <a href="#" className="hover:text-primary transition-colors"><Instagram className="w-5 h-5" /></a>
-            <a href="#" className="hover:text-primary transition-colors"><Play className="w-5 h-5" /></a>
-            <a href="#" className="hover:text-primary transition-colors"><Youtube className="w-5 h-5" /></a>
-            <a href="#" className="hover:text-primary transition-colors"><Link2 className="w-5 h-5" /></a>
+            <a href="https://www.instagram.com/criasocialclub/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="hover:text-primary transition-colors"><Instagram className="w-5 h-5" /></a>
           </div>
         </div>
         <div className="mt-8 text-center text-sm text-muted-foreground">
