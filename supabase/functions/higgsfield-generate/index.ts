@@ -55,7 +55,7 @@ async function aiText(sys: string, usr: string, maxTokens = 1200): Promise<strin
   if (!key) throw new Error("ai_not_configured");
   const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST", headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "google/gemini-2.5-flash-lite", messages: [{ role: "system", content: sys }, { role: "user", content: usr }], max_tokens: maxTokens, temperature: 0.6 }),
+    body: JSON.stringify({ model: "google/gemini-2.5-flash", messages: [{ role: "system", content: sys }, { role: "user", content: usr }], max_tokens: maxTokens, temperature: 0.5 }),
   });
   if (!r.ok) throw new Error(`ai_failed:IA ${r.status}`);
   const j = await r.json();
@@ -151,37 +151,64 @@ Deno.serve(async (req) => {
     // Pesquisa atual do Perplexity (dados/estatísticas com fonte), preenchida sob demanda no draft.
     let extraResearch = "";
 
-    // Contexto de marca (moodboard) do usuário.
-    const { data: brand } = await svc.from("brand_items").select("type, name").eq("user_id", user.id);
-    const bi = brand ?? [];
-    const cores = bi.filter((b: any) => b.type === "cor").map((b: any) => b.name).join(", ");
-    const fontes = bi.filter((b: any) => b.type === "fonte").map((b: any) => b.name).join(", ");
-    const tom = bi.filter((b: any) => b.type === "tom").map((b: any) => b.name).join(", ");
-    const brandCtx = `Nicho: ${prof?.niche || "geral"}. Paleta: ${cores || "(livre, moderna)"}. Fontes: ${fontes || "sans-serif moderna"}. Tom: ${tom || "direto e autêntico"}.`;
+    // Contexto RICO da marca — igual o Cria IA usa (perfil + pilares + persona + Brandbook).
+    // Sem isso o modelo alucina em títulos metafóricos (ex.: "Atlas" vira atlas geográfico).
+    const [brandRes, pillarsRes, personaRes, moodRes] = await Promise.all([
+      svc.from("brand_items").select("type, name").eq("user_id", user.id),
+      svc.from("pillars").select("name").eq("user_id", user.id).order("position"),
+      svc.from("personas").select("name, age_range, pain_points, interests").eq("user_id", user.id).limit(1),
+      svc.from("moodboard_entries").select("section, question_key, answer").eq("user_id", user.id),
+    ]);
+    const bi = brandRes.data ?? [];
+    const pick = (t: string) => bi.filter((b: any) => b.type === t).map((b: any) => b.name);
+    const cores = pick("cor").join(", ");
+    const fontes = pick("fonte").join(", ");
+    const tom = pick("tom").join(", ");
+    const arquetipo = pick("arquetipo").join(", ");
+    const expressoes = pick("expressao").join(", ");
+    const evitar = pick("evitar").join(", ");
+    const pilares = (pillarsRes.data ?? []).map((p: any) => p.name).join(", ");
+    const persona = (personaRes.data ?? [])[0] as any;
+    const brandbook = (moodRes.data ?? [])
+      .filter((e: any) => e.answer && String(e.answer).trim())
+      .map((e: any) => `- ${e.answer}`).join("\n").slice(0, 1400);
+
+    const brandCtx = `Criador: ${prof?.name || "-"} · Nicho: ${prof?.niche || "geral"}
+${pilares ? `Pilares de conteúdo: ${pilares}` : ""}
+Tom de voz: ${tom || "direto e autêntico"}${arquetipo ? ` · Arquétipo: ${arquetipo}` : ""}
+${expressoes ? `Expressões da marca: ${expressoes}` : ""}${evitar ? `\nEvitar: ${evitar}` : ""}
+Paleta (pro visual): ${cores || "(livre, moderna)"} · Fontes: ${fontes || "sans-serif moderna"}
+${persona ? `Público: ${persona.name || "principal"}${persona.pain_points?.length ? ` · Dores: ${persona.pain_points.join(", ")}` : ""}${persona.interests?.length ? ` · Interesses: ${persona.interests.join(", ")}` : ""}` : ""}
+${brandbook ? `\nO QUE A MARCA/PRODUTO REALMENTE É (Brandbook do criador — esta é a FONTE DA VERDADE sobre o produto; use pra entender o tema, não invente):\n${brandbook}` : ""}`.trim();
 
     // IA escreve os textos dos slides + prompts (capa forte + âncora de estilo).
     async function writePages(): Promise<Array<{ role?: string; screen_text?: string; prompt?: string }>> {
       const lovableKey = Deno.env.get("LOVABLE_API_KEY");
       if (!lovableKey) throw new Error("ai_not_configured");
-      const sys = `Você é diretor de arte especialista em carrosséis de Instagram. Escreve o texto de cada slide E o prompt de imagem pro Higgsfield (modelo Soul, text-to-image), mantendo IDENTIDADE VISUAL consistente entre as páginas. Responda SOMENTE JSON válido.`;
-      const usr = `MARCA (use a MESMA paleta e estilo em TODAS as páginas — "âncora de estilo"):
+      const sys = `Você é diretor de arte + copywriter especialista em carrosséis de Instagram no Brasil. Escreve o texto de cada slide E o prompt de imagem pro Higgsfield (modelo Soul, text-to-image), mantendo IDENTIDADE VISUAL consistente. Você NUNCA inventa fatos sobre a marca/produto: usa só o CONTEXTO DA MARCA, o roteiro e a pesquisa. Responda SOMENTE JSON válido.`;
+      const usr = `CONTEXTO DA MARCA (entenda o que a marca/produto É antes de escrever):
 ${brandCtx}
 
-TEMA/IDEIA: ${title}
+TEMA/IDEIA DO POST: ${title}
 FORMATO: ${format === "carrossel" ? `carrossel de ${slides} páginas` : "imagem estática única"}
-${sourceContent ? `\nCONTEÚDO JÁ ESCRITO (roteiro/legenda do post — USE ISSO como base do texto dos slides, apenas fatiando/enxugando; NÃO invente um tema diferente):\n${sourceContent}\n` : ""}${extraResearch ? `\nPESQUISA ATUAL (dados/estatísticas reais e recentes com fonte — INCORPORE nos slides pra dar autoridade; cite o número no texto quando fizer sentido):\n${extraResearch}\n` : ""}
-REGRAS:
-- CAPA (página 1): visual CHAMATIVO e MODERNO, alto contraste, que para o scroll; espaço pro título grande.
-- Demais páginas: desenvolvem a ideia (desenvolvimento → prova/exemplo → CTA), no MESMO estilo/paleta da capa.
-- "prompt": em INGLÊS (o modelo rende melhor). Inclua a paleta (cite as cores), o estilo, o mood, enquadramento e "clean space for text overlay".
-- "screen_text": o texto em PORTUGUÊS que vai na tela daquela página (curto).${sourceContent ? " Baseie-se no CONTEÚDO JÁ ESCRITO acima." : ""}
+${sourceContent ? `\nROTEIRO/LEGENDA JÁ ESCRITOS (FONTE DA VERDADE do conteúdo — fatie e enxugue ISSO; não troque de assunto):\n${sourceContent}\n` : ""}${extraResearch ? `\nPESQUISA ATUAL (dados/estatísticas reais com fonte — INCORPORE nos slides pra dar autoridade; cite o número no texto):\n${extraResearch}\n` : ""}
+ENTENDIMENTO DO TEMA (crítico):
+- O TÍTULO pode ser METAFÓRICO ou poético. NÃO interprete ao pé da letra. Ex.: se o título fala em "mapa/atlas" mas a marca é de finanças, o tema é FINANÇAS, não geografia.
+- Descubra o tema real cruzando o CONTEXTO DA MARCA + o ROTEIRO. Na dúvida, siga o roteiro e o que a marca vende.
+- Se faltar informação concreta, fique no que o roteiro/marca já dizem — NÃO invente estatística, história ou fato.
+
+REGRAS DE ESCRITA:
+- Cada "screen_text" tem que ser CONCRETO e específico ao produto/tema — nada de frase vaga tipo "alcance seus objetivos" ou "sem surpresas". Diga algo real e útil.
+- CAPA (página 1): gancho forte que para o scroll, conectado ao tema real.
+- Demais páginas: desenvolvem a ideia (contexto → benefício concreto → prova/exemplo → CTA claro), no mesmo estilo.
+- "prompt": em INGLÊS. Inclua a paleta (cite as cores), estilo, mood, enquadramento e "clean space for text overlay". Coerente com o tema REAL (ex.: finanças = interface/gráficos/organização, não mapas-múndi).
 
 Responda:
-{"pages":[{"role":"capa|desenvolvimento|prova|cta","screen_text":"texto PT curto","prompt":"image prompt in English"}]}
+{"pages":[{"role":"capa|desenvolvimento|prova|cta","screen_text":"texto PT curto e concreto","prompt":"image prompt in English"}]}
 Gere EXATAMENTE ${slides} página(s).`;
       const air = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST", headers: { "Authorization": `Bearer ${lovableKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "google/gemini-2.5-flash-lite", messages: [{ role: "system", content: sys }, { role: "user", content: usr }], max_tokens: 4096, temperature: 0.5 }),
+        body: JSON.stringify({ model: "google/gemini-2.5-flash", messages: [{ role: "system", content: sys }, { role: "user", content: usr }], max_tokens: 4096, temperature: 0.4 }),
       });
       if (!air.ok) { console.error("[higgsfield] prompt gen error", air.status); throw new Error(`prompt_gen_failed:IA ${air.status}`); }
       const aj = await air.json();
@@ -203,10 +230,15 @@ Gere EXATAMENTE ${slides} página(s).`;
         const research = await pplx(`Sobre "${title}" (nicho ${niche}): dados/fatos atuais e verificáveis com fonte pra citar num reels. 3 a 5 bullets curtos.`);
         if (research) extraResearch = research.slice(0, 1500);
       }
-      const sys = `Você é roteirista de Reels/Shorts para o Brasil. Escreve roteiros prontos pra gravar, com marcação de tempo, falas diretas e indicação do que mostrar na tela.`;
-      const usr = `TEMA: ${title}
+      const sys = `Você é roteirista de Reels/Shorts para o Brasil. Escreve roteiros prontos pra gravar, com marcação de tempo, falas diretas e indicação do que mostrar na tela. Você NUNCA inventa fatos sobre a marca/produto — usa só o contexto, o roteiro e a pesquisa.`;
+      const usr = `CONTEXTO DA MARCA (entenda o que a marca/produto É):
+${brandCtx}
+
+TEMA: ${title}
 DURAÇÃO ALVO: ${seconds} segundos
-${sourceContent ? `BASE (roteiro/legenda já escritos — use como espinha dorsal):\n${sourceContent}\n` : ""}${extraResearch ? `PESQUISA ATUAL (cite os dados no roteiro):\n${extraResearch}\n` : ""}
+${sourceContent ? `ROTEIRO/LEGENDA JÁ ESCRITOS (FONTE DA VERDADE — use como espinha dorsal, não troque de assunto):\n${sourceContent}\n` : ""}${extraResearch ? `PESQUISA ATUAL (cite os dados no roteiro):\n${extraResearch}\n` : ""}
+IMPORTANTE: o TÍTULO pode ser metafórico — NÃO interprete ao pé da letra. Descubra o tema real cruzando o contexto da marca + o roteiro. Não invente fatos.
+
 Entregue um ROTEIRO fatiado por blocos de tempo cobrindo ~${seconds}s:
 - Gancho (0-3s) forte que segura o scroll
 - Desenvolvimento em 2 a 4 blocos, cada um com faixa de tempo aproximada

@@ -29,7 +29,8 @@ type ContentBlocks = { tema?: string; roteiro?: string; midia?: string; legenda?
 
 function postSource(post: Post): string {
   const b = (post.content_blocks ?? null) as ContentBlocks | null;
-  return [b?.roteiro, b?.legenda].filter(Boolean).join("\n\n").trim();
+  const caption = (post as unknown as { caption?: string | null }).caption ?? null;
+  return [b?.tema, b?.roteiro, b?.legenda, caption].filter(Boolean).join("\n\n").trim();
 }
 
 export default function CriaEstudio() {
