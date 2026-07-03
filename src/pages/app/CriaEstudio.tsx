@@ -28,7 +28,7 @@ export default function CriaEstudio() {
   const isAdmin = profile?.role === "admin";
   const [sp] = useSearchParams();
 
-  const { data: posts = [] } = usePosts();
+  const { posts = [] } = usePosts();
   const producing = useMemo(() => posts.filter((p) => p.status === "gravando"), [posts]);
 
   const [postId, setPostId] = useState<string | null>(null);
