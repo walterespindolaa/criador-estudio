@@ -33,35 +33,42 @@ function postSource(post: Post): string {
   return [b?.tema, b?.roteiro, b?.legenda, caption].filter(Boolean).join("\n\n").trim();
 }
 
+// Persistência local (sobrevive ao F5). Só troca ao clicar em Atualizar/gerar de novo.
+const LS_KEY = "cria-estudio-v1";
+function loadLS(): Record<string, unknown> {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); } catch { return {}; }
+}
+
 export default function CriaEstudio() {
   const { profile } = useProfile();
   const isAdmin = profile?.role === "admin";
   const [sp] = useSearchParams();
+  const saved = useMemo(loadLS, []);
 
   const { posts, updatePost } = usePosts();
   const producing = useMemo(() => (posts ?? []).filter((p) => p.status === "gravando"), [posts]);
 
-  const [postId, setPostId] = useState<string | null>(null);
-  const [kind, setKind] = useState<Kind>("carrossel");
-  const [title, setTitle] = useState(sp.get("ideia") ?? "");
-  const [sourceContent, setSourceContent] = useState("");
-  const [format, setFormat] = useState<"carrossel" | "estatico">("carrossel");
-  const [slides, setSlides] = useState(6);
-  const [aspect, setAspect] = useState("4:5");
-  const [resolution, setResolution] = useState("1080p");
+  const [postId, setPostId] = useState<string | null>((saved.postId as string) ?? null);
+  const [kind, setKind] = useState<Kind>((saved.kind as Kind) ?? "carrossel");
+  const [title, setTitle] = useState(sp.get("ideia") ?? (saved.title as string) ?? "");
+  const [sourceContent, setSourceContent] = useState((saved.sourceContent as string) ?? "");
+  const [format, setFormat] = useState<"carrossel" | "estatico">((saved.format as "carrossel" | "estatico") ?? "carrossel");
+  const [slides, setSlides] = useState((saved.slides as number) ?? 6);
+  const [aspect, setAspect] = useState((saved.aspect as string) ?? "4:5");
+  const [resolution, setResolution] = useState((saved.resolution as string) ?? "1080p");
 
   // Passo de revisão: textos dos slides antes de gerar as imagens.
-  const [draftPages, setDraftPages] = useState<HfPage[] | null>(null);
-  const [enrich, setEnrich] = useState(false);
+  const [draftPages, setDraftPages] = useState<HfPage[] | null>((saved.draftPages as HfPage[]) ?? null);
+  const [enrich, setEnrich] = useState<boolean>((saved.enrich as boolean) ?? false);
 
   // Reels: roteiro por segundos.
-  const [reelSeconds, setReelSeconds] = useState(30);
-  const [reelScript, setReelScript] = useState<string | null>(null);
+  const [reelSeconds, setReelSeconds] = useState((saved.reelSeconds as number) ?? 30);
+  const [reelScript, setReelScript] = useState<string | null>((saved.reelScript as string) ?? null);
 
-  // Perplexity (admin-only) — duas abas fixas, cada uma guarda seu resultado.
-  const [themes, setThemes] = useState<HotTheme[] | null>(null);
-  const [news, setNews] = useState<NewsHook | null>(null);
-  const [pplxTab, setPplxTab] = useState<"themes" | "news">("themes");
+  // Perplexity (admin-only) — duas abas fixas, cada uma guarda seu resultado (persistido no F5).
+  const [themes, setThemes] = useState<HotTheme[] | null>((saved.themes as HotTheme[]) ?? null);
+  const [news, setNews] = useState<NewsHook | null>((saved.news as NewsHook) ?? null);
+  const [pplxTab, setPplxTab] = useState<"themes" | "news">((saved.pplxTab as "themes" | "news") ?? "themes");
 
   const { data: jobs = [] } = useHiggsfieldJobs();
   const draft = useDraftArt();
@@ -71,6 +78,16 @@ export default function CriaEstudio() {
   const hot = useHotThemes();
   const newsHook = useNewsHook();
   const reels = useReelsScript();
+
+  // Persiste o estado de trabalho no localStorage (sobrevive ao F5).
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify({
+        postId, kind, title, sourceContent, format, slides, aspect, resolution,
+        draftPages, enrich, reelSeconds, reelScript, themes, news, pplxTab,
+      }));
+    } catch { /* quota cheia / modo privado — ignora */ }
+  }, [postId, kind, title, sourceContent, format, slides, aspect, resolution, draftPages, enrich, reelSeconds, reelScript, themes, news, pplxTab]);
 
   // Polling enquanto houver jobs em andamento.
   const runningIds = useMemo(() => jobs.filter((j) => j.status === "running").map((j) => j.id).join(","), [jobs]);
@@ -141,6 +158,21 @@ export default function CriaEstudio() {
     if (!draftPages) return;
     const text = draftPages.map((p, i) => `${i === 0 ? "Capa" : `Slide ${i + 1}`}: ${p.screen_text}`).join("\n");
     saveRoteiro(text);
+  };
+
+  // Reabre um carrossel do histórico: recarrega os textos na revisão pra editar/regerar.
+  const reopenJob = (job: HfJob) => {
+    const k: Kind = job.format === "carrossel" ? "carrossel" : "foto";
+    setPostId((job as unknown as { post_id?: string | null }).post_id ?? null);
+    setKind(k);
+    setFormat(k === "carrossel" ? "carrossel" : "estatico");
+    setTitle(job.title);
+    setAspect(job.aspect_ratio || "4:5");
+    setResolution(job.resolution || "1080p");
+    setReelScript(null);
+    setDraftPages(job.pages.map((p) => ({ role: p.role, screen_text: p.screen_text, prompt: p.prompt })));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    toast.success("Carrossel reaberto pra edição.");
   };
 
   const pickTheme = (t: HotTheme) => {
@@ -266,7 +298,7 @@ export default function CriaEstudio() {
                 onClick={() => setPplxTab("news")}
                 className={cn("flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-body font-semibold transition-colors",
                   pplxTab === "news" ? "bg-card text-secondary border-b-2 border-secondary -mb-px" : "text-muted-foreground hover:text-foreground")}>
-                <Newspaper className="h-3.5 w-3.5" /> Newsjacking {news ? "•" : ""}
+                <Newspaper className="h-3.5 w-3.5" /> Notícia quente {news ? "•" : ""}
               </button>
             </div>
 
@@ -497,14 +529,14 @@ export default function CriaEstudio() {
             <p className="text-xs font-body text-muted-foreground mt-1">Escolha um post em Produzindo (ou digite um tema) e monte os textos.</p>
           </div>
         ) : (
-          jobs.map((job) => <JobCard key={job.id} job={job} onDelete={() => del.mutate(job.id)} />)
+          jobs.map((job) => <JobCard key={job.id} job={job} onDelete={() => del.mutate(job.id)} onReopen={() => reopenJob(job)} />)
         )}
       </div>
     </motion.div>
   );
 }
 
-function JobCard({ job, onDelete }: { job: HfJob; onDelete: () => void }) {
+function JobCard({ job, onDelete, onReopen }: { job: HfJob; onDelete: () => void; onReopen: () => void }) {
   return (
     <div className="bg-card border border-border rounded-2xl p-4">
       <div className="flex items-center gap-2 mb-3">
@@ -514,7 +546,10 @@ function JobCard({ job, onDelete }: { job: HfJob; onDelete: () => void }) {
           {job.status === "running" ? "gerando…" : job.status === "done" ? "pronto" : job.status === "partial" ? "parcial" : "erro"}
         </span>
         <span className="text-[11px] font-body text-muted-foreground">{job.format} · {job.aspect_ratio}</span>
-        <button onClick={onDelete} className="ml-auto text-muted-foreground hover:text-destructive" aria-label="Excluir"><Trash2 className="h-4 w-4" /></button>
+        <button onClick={onReopen} className="ml-auto text-[11px] font-body text-primary hover:underline inline-flex items-center gap-1" title="Reabrir os textos pra editar/regerar">
+          <Pencil className="h-3 w-3" /> Reabrir
+        </button>
+        <button onClick={onDelete} className="text-muted-foreground hover:text-destructive" aria-label="Excluir"><Trash2 className="h-4 w-4" /></button>
       </div>
       {job.error && <p className="text-xs font-body text-destructive mb-2">{job.error}</p>}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
