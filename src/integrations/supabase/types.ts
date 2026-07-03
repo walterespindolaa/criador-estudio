@@ -1851,6 +1851,7 @@ export type Database = {
           format: string
           id: string
           pages: Json
+          post_id: string | null
           resolution: string
           status: string
           title: string
@@ -1864,6 +1865,7 @@ export type Database = {
           format?: string
           id?: string
           pages?: Json
+          post_id?: string | null
           resolution?: string
           status?: string
           title: string
@@ -1877,12 +1879,21 @@ export type Database = {
           format?: string
           id?: string
           pages?: Json
+          post_id?: string | null
           resolution?: string
           status?: string
           title?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "higgsfield_jobs_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ideas: {
         Row: {
@@ -2397,6 +2408,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      oauth_states: {
+        Row: {
+          created_at: string
+          crm_client_id: string | null
+          expires_at: string
+          provider: string
+          state: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          crm_client_id?: string | null
+          expires_at?: string
+          provider?: string
+          state: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          crm_client_id?: string | null
+          expires_at?: string
+          provider?: string
+          state?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       partner_program_config: {
         Row: {
