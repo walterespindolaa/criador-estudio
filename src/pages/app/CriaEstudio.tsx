@@ -37,8 +37,13 @@ export default function CriaEstudio() {
   const isAdmin = profile?.role === "admin";
   const [sp] = useSearchParams();
 
+<<<<<<< HEAD
   const { posts, updatePost } = usePosts();
   const producing = useMemo(() => (posts ?? []).filter((p) => p.status === "gravando"), [posts]);
+=======
+  const { posts = [] } = usePosts();
+  const producing = useMemo(() => posts.filter((p) => p.status === "gravando"), [posts]);
+>>>>>>> 46fabe7b3c8ad7bb97f08f0115b325250ac1f54a
 
   const [postId, setPostId] = useState<string | null>(null);
   const [kind, setKind] = useState<Kind>("carrossel");
