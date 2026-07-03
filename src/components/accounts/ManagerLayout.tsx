@@ -66,6 +66,7 @@ export default function ManagerLayout() {
   const { allowed: hasHubCria } = useHasHubCria();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [railHovered, setRailHovered] = useState(false);
   const [selectedModule, setSelectedModule] = useState<ModuleWithStatus | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -93,32 +94,36 @@ export default function ManagerLayout() {
   const handleSignOut = async () => { await signOut(); navigate("/"); };
   const onNavComissoes = () => navigate(isPartner ? "/socialmidia/comissoes" : "/socialmidia/parceria");
 
-  // Item do rail flutuante (icon-only, com tooltip e cantinho de status opcional)
+  // Item do rail flutuante. Expande com o nome quando o rail está em hover.
   const railNode = (
     Icon: LucideIcon,
     label: string,
     opts: { active?: boolean; onClick: () => void; corner?: ReactNode; tipBadge?: ReactNode },
   ) => (
-    <div key={label} className="group relative flex w-full justify-center">
-      <button
-        type="button"
-        onClick={opts.onClick}
-        aria-label={label}
-        className={cn(
-          "relative grid h-10 w-10 place-items-center rounded-2xl transition-colors",
-          opts.active
-            ? "bg-primary/15 text-primary"
-            : "text-[hsl(var(--sidebar-foreground))] hover:bg-primary/10 hover:text-primary",
-        )}
-      >
+    <button
+      key={label}
+      type="button"
+      onClick={opts.onClick}
+      aria-label={label}
+      className={cn(
+        "relative flex h-10 w-full items-center rounded-2xl transition-colors",
+        railHovered ? "gap-3 px-2.5 justify-start" : "justify-center",
+        opts.active
+          ? "bg-primary/15 text-primary"
+          : "text-[hsl(var(--sidebar-foreground))] hover:bg-primary/10 hover:text-primary",
+      )}
+    >
+      <span className="relative grid h-6 w-6 shrink-0 place-items-center">
         <Icon className="h-[18px] w-[18px]" />
-        {opts.active && <span className="absolute -left-2 top-1/2 h-4 w-1 -translate-y-1/2 rounded bg-primary" />}
         {opts.corner}
-      </button>
-      <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 flex -translate-y-1/2 items-center gap-2 whitespace-nowrap rounded-lg bg-foreground px-2.5 py-1.5 text-xs font-medium text-background opacity-0 transition-opacity group-hover:opacity-100">
-        {label}{opts.tipBadge}
       </span>
-    </div>
+      {railHovered && (
+        <span className="flex items-center gap-2 overflow-hidden whitespace-nowrap text-sm font-body font-medium">
+          <span className="truncate">{label}</span>{opts.tipBadge}
+        </span>
+      )}
+      {opts.active && !railHovered && <span className="absolute -left-2 top-1/2 h-4 w-1 -translate-y-1/2 rounded bg-primary" />}
+    </button>
   );
 
   // Guards
@@ -147,13 +152,25 @@ export default function ManagerLayout() {
 
   return (
     <div className="min-h-screen app-canvas" style={{ ["--active-font-display" as string]: "'Bricolage Grotesque', 'Plus Jakarta Sans', sans-serif" }}>
-      {/* Rail flutuante (desktop) — substitui a sidebar w-64 */}
-      <nav className="fixed left-5 top-[calc(50%+0.75rem)] z-40 hidden w-[64px] -translate-y-1/2 flex-col items-center rounded-[24px] border border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar-background))] py-2.5 shadow-[0_22px_60px_-22px_rgba(35,25,70,0.3)] backdrop-blur-xl md:flex">
-        <div className="mb-2 grid h-[38px] w-[38px] place-items-center rounded-[12px] bg-primary font-display text-[17px] font-extrabold text-primary-foreground">c</div>
-        <div className="flex w-full flex-col items-center gap-1">
+      {/* Rail flutuante (desktop) — expande no hover mostrando os nomes */}
+      <nav
+        onMouseEnter={() => setRailHovered(true)}
+        onMouseLeave={() => setRailHovered(false)}
+        className={cn(
+          "fixed left-5 top-[calc(50%+0.75rem)] z-40 hidden -translate-y-1/2 flex-col rounded-[24px] border border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar-background))] px-2 py-2.5 shadow-[0_22px_60px_-22px_rgba(35,25,70,0.3)] backdrop-blur-xl transition-[width] duration-200 md:flex",
+          railHovered ? "w-[240px] items-stretch" : "w-[64px] items-stretch",
+        )}
+      >
+        <div className={cn("mb-2 flex items-center gap-2", railHovered ? "px-1" : "justify-center")}>
+          <div className="grid h-[38px] w-[38px] shrink-0 place-items-center rounded-[12px] bg-primary font-display text-[17px] font-extrabold text-primary-foreground">c</div>
+          {railHovered && <span className="font-display text-lg font-extrabold text-foreground">Cria</span>}
+        </div>
+        <div className="flex w-full flex-col items-stretch gap-1">
+          {railHovered && <p className="px-2 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Operação</p>}
           {railNode(Home, "Início", { active: isActive("/socialmidia/dashboard"), onClick: () => navigate("/socialmidia/dashboard") })}
           {railNode(Contact, "Clientes", { active: isActive("/socialmidia/clientes"), onClick: () => navigate("/socialmidia/clientes") })}
           {hasHubCria && railNode(Sparkles, "HUB CRIA", { active: isActive("/socialmidia/hubcria"), onClick: () => navigate("/socialmidia/hubcria") })}
+          {railHovered && modules.length > 0 && <p className="px-2 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Módulos</p>}
           {modules.map((m) => {
             const Icon = (MODICONS[m.code] ?? Boxes) as LucideIcon;
             const active = m.status === "active" || m.status === "past_due";
@@ -169,15 +186,16 @@ export default function ManagerLayout() {
             );
             return railNode(Icon, m.name, { active: !!route && isActive(route), onClick: () => openModule(m), corner, tipBadge });
           })}
-          <div className="my-2 h-px w-8 bg-border" />
+          <div className="my-2 h-px w-full bg-border" />
+          {railHovered && <p className="px-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Gestão</p>}
           {NAV.map((n) => {
             const onClick = n.to === "/socialmidia/comissoes" ? onNavComissoes : () => navigate(n.to);
             return railNode(n.icon as LucideIcon, n.label, { active: isActive(n.to), onClick });
           })}
         </div>
         <div className="flex-1" />
-        <div className="my-2 h-px w-8 bg-border" />
-        <div className="flex w-full flex-col items-center gap-1">
+        <div className="my-2 h-px w-full bg-border" />
+        <div className="flex w-full flex-col items-stretch gap-1">
           {railNode(SettingsIcon, "Configurações", { onClick: () => setSettingsOpen(true) })}
           {railNode(LogOut, "Sair", { onClick: handleSignOut })}
         </div>

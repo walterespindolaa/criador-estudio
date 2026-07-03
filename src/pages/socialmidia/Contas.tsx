@@ -194,6 +194,15 @@ export default function Contas() {
               <Input type="email" inputMode="email" value={addEmail} onChange={(e) => setAddEmail(e.target.value)} placeholder="cliente@email.com" disabled={adding} className="rounded-xl" />
             </div>
           </div>
+          <div className="mt-4 rounded-xl bg-primary/[0.05] border border-primary/15 p-3">
+            <p className="text-[11px] font-body font-semibold text-primary uppercase tracking-wider mb-1.5">Depois de adicionar</p>
+            <ol className="space-y-1 text-[12px] font-body text-foreground/80 list-decimal list-inside">
+              <li>O cliente recebe um e-mail pra criar a senha (conta Studio completa, grátis pra ele).</li>
+              <li>Você abre a ficha dele em <strong>Clientes</strong> e monta posts, cronograma e relatório.</li>
+              <li>Ele aprova o conteúdo por link (ou dentro do Cria) — acompanhe em <strong>Acompanhamento de Aprovações</strong>.</li>
+              <li>Tudo com a sua cara: relatórios e acesso white-label.</li>
+            </ol>
+          </div>
           <div className="flex justify-end gap-2 mt-6">
             <Button variant="outline" onClick={() => setAddOpen(false)} disabled={adding}>Cancelar</Button>
             <Button onClick={handleAddClient} disabled={adding || !addName.trim() || !addEmail.trim()}>{adding && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}Adicionar</Button>
