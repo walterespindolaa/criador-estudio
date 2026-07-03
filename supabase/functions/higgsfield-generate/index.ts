@@ -73,15 +73,17 @@ Deno.serve(async (req) => {
       return json({ job_id: jobId, status, pages });
     }
 
-    // ── GENERATE ──────────────────────────────────────────
+    // ── Parâmetros comuns ─────────────────────────────────
     const title = String(body?.title ?? "").trim();
     const format = body?.format === "estatico" ? "estatico" : "carrossel";
     const slides = format === "estatico" ? 1 : Math.max(2, Math.min(10, Number(body?.slides) || 6));
     const aspect = String(body?.aspect_ratio ?? "4:5");
     const resolution = String(body?.resolution ?? "1080p");
-    if (!title) return json({ error: "missing_title" }, 400);
+    const postId = body?.post_id ? String(body.post_id) : null;
+    // Conteúdo já escrito no Cria Plano (roteiro/legenda do post) — vira a espinha dorsal dos slides.
+    const sourceContent = String(body?.source_content ?? "").trim().slice(0, 4000);
 
-    // Contexto de marca do usuário.
+    // Contexto de marca (moodboard) do usuário.
     const { data: brand } = await svc.from("brand_items").select("type, name").eq("user_id", user.id);
     const bi = brand ?? [];
     const cores = bi.filter((b: any) => b.type === "cor").map((b: any) => b.name).join(", ");
@@ -89,38 +91,76 @@ Deno.serve(async (req) => {
     const tom = bi.filter((b: any) => b.type === "tom").map((b: any) => b.name).join(", ");
     const brandCtx = `Nicho: ${prof?.niche || "geral"}. Paleta: ${cores || "(livre, moderna)"}. Fontes: ${fontes || "sans-serif moderna"}. Tom: ${tom || "direto e autêntico"}.`;
 
-    // 1) IA escreve os prompts (capa forte + âncora de estilo).
-    const lovableKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!lovableKey) return json({ error: "ai_not_configured" }, 500);
-    const sys = `Você é diretor de arte especialista em carrosséis de Instagram. Gere prompts de imagem pro Higgsfield (modelo Soul, text-to-image), mantendo IDENTIDADE VISUAL consistente entre todas as páginas. Responda SOMENTE JSON válido.`;
-    const usr = `MARCA (use a MESMA paleta e estilo em TODAS as páginas — isso é o "âncora de estilo"):
+    // IA escreve os textos dos slides + prompts (capa forte + âncora de estilo).
+    async function writePages(): Promise<Array<{ role?: string; screen_text?: string; prompt?: string }>> {
+      const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+      if (!lovableKey) throw new Error("ai_not_configured");
+      const sys = `Você é diretor de arte especialista em carrosséis de Instagram. Escreve o texto de cada slide E o prompt de imagem pro Higgsfield (modelo Soul, text-to-image), mantendo IDENTIDADE VISUAL consistente entre as páginas. Responda SOMENTE JSON válido.`;
+      const usr = `MARCA (use a MESMA paleta e estilo em TODAS as páginas — "âncora de estilo"):
 ${brandCtx}
 
 TEMA/IDEIA: ${title}
 FORMATO: ${format === "carrossel" ? `carrossel de ${slides} páginas` : "imagem estática única"}
-
+${sourceContent ? `\nCONTEÚDO JÁ ESCRITO (roteiro/legenda do post — USE ISSO como base do texto dos slides, apenas fatiando/enxugando; NÃO invente um tema diferente):\n${sourceContent}\n` : ""}
 REGRAS:
 - CAPA (página 1): visual CHAMATIVO e MODERNO, alto contraste, que para o scroll; espaço pro título grande.
 - Demais páginas: desenvolvem a ideia (desenvolvimento → prova/exemplo → CTA), no MESMO estilo/paleta da capa.
 - "prompt": em INGLÊS (o modelo rende melhor). Inclua a paleta (cite as cores), o estilo, o mood, enquadramento e "clean space for text overlay".
-- "screen_text": o texto em PORTUGUÊS que vai na tela daquela página (curto).
+- "screen_text": o texto em PORTUGUÊS que vai na tela daquela página (curto).${sourceContent ? " Baseie-se no CONTEÚDO JÁ ESCRITO acima." : ""}
 
 Responda:
 {"pages":[{"role":"capa|desenvolvimento|prova|cta","screen_text":"texto PT curto","prompt":"image prompt in English"}]}
 Gere EXATAMENTE ${slides} página(s).`;
+      const air = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST", headers: { "Authorization": `Bearer ${lovableKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "google/gemini-2.5-flash-lite", messages: [{ role: "system", content: sys }, { role: "user", content: usr }], max_tokens: 4096, temperature: 0.5 }),
+      });
+      if (!air.ok) { console.error("[higgsfield] prompt gen error", air.status); throw new Error(`prompt_gen_failed:IA ${air.status}`); }
+      const aj = await air.json();
+      let s = String(aj.choices?.[0]?.message?.content || "").replace(/```json/gi, "").replace(/```/g, "").trim();
+      const st = s.indexOf("{"); const en = s.lastIndexOf("}");
+      if (st >= 0 && en > st) s = s.slice(st, en + 1);
+      let parsed: { pages?: Array<{ role?: string; screen_text?: string; prompt?: string }> } = {};
+      try { parsed = JSON.parse(s); } catch { throw new Error(`prompt_parse_failed:${s.slice(0, 120)}`); }
+      return (parsed.pages ?? []).slice(0, slides);
+    }
 
-    const air = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST", headers: { "Authorization": `Bearer ${lovableKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "google/gemini-2.5-flash-lite", messages: [{ role: "system", content: sys }, { role: "user", content: usr }], max_tokens: 4096, temperature: 0.5 }),
-    });
-    if (!air.ok) { console.error("[higgsfield] prompt gen error", air.status); return json({ error: "prompt_gen_failed", message: `IA ${air.status}` }, 502); }
-    const aj = await air.json();
-    let s = String(aj.choices?.[0]?.message?.content || "").replace(/```json/gi, "").replace(/```/g, "").trim();
-    const st = s.indexOf("{"); const en = s.lastIndexOf("}");
-    if (st >= 0 && en > st) s = s.slice(st, en + 1);
-    let parsed: { pages?: Array<{ role?: string; screen_text?: string; prompt?: string }> } = {};
-    try { parsed = JSON.parse(s); } catch { return json({ error: "prompt_parse_failed", message: s.slice(0, 160) }, 500); }
-    const rawPages = (parsed.pages ?? []).slice(0, slides);
+    // ── DRAFT ──────────────────────────────────────────────
+    // Só monta os textos dos slides + prompts pra você revisar. NÃO dispara no Higgsfield.
+    if (action === "draft") {
+      if (!title) return json({ error: "missing_title", message: "Escolha um post ou digite um tema." }, 400);
+      let drafted: Array<{ role?: string; screen_text?: string; prompt?: string }>;
+      try { drafted = await writePages(); }
+      catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        const [code, detail] = msg.split(":");
+        return json({ error: code || "draft_failed", message: detail || msg }, code === "ai_not_configured" ? 500 : 502);
+      }
+      if (drafted.length === 0) return json({ error: "no_prompts", message: "A IA não retornou páginas. Tente de novo." }, 500);
+      const pages = drafted.map((p, i) => ({
+        role: p.role || (i === 0 ? "capa" : "pagina"),
+        screen_text: p.screen_text || "",
+        prompt: p.prompt || title,
+      }));
+      return json({ ok: true, pages, format, slides, aspect_ratio: aspect, resolution });
+    }
+
+    // ── GENERATE ──────────────────────────────────────────
+    if (!title) return json({ error: "missing_title" }, 400);
+
+    // Se vieram páginas revisadas do front, usa elas. Senão, a IA escreve na hora (retrocompat).
+    const reviewed = Array.isArray(body?.pages) ? (body.pages as Array<{ role?: string; screen_text?: string; prompt?: string }>) : null;
+    let rawPages: Array<{ role?: string; screen_text?: string; prompt?: string }>;
+    if (reviewed && reviewed.length > 0) {
+      rawPages = reviewed.slice(0, slides);
+    } else {
+      try { rawPages = await writePages(); }
+      catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        const [code, detail] = msg.split(":");
+        return json({ error: code || "prompt_gen_failed", message: detail || msg }, code === "ai_not_configured" ? 500 : 502);
+      }
+    }
     if (rawPages.length === 0) return json({ error: "no_prompts" }, 500);
 
     // 2) Dispara cada página no Higgsfield.
@@ -150,7 +190,7 @@ Gere EXATAMENTE ${slides} página(s).`;
 
     const anyQueued = pages.some((p) => p.request_id);
     const { data: jobRow, error: insErr } = await svc.from("higgsfield_jobs").insert({
-      user_id: user.id, title, format, aspect_ratio: aspect, resolution,
+      user_id: user.id, title, format, aspect_ratio: aspect, resolution, post_id: postId,
       status: anyQueued ? "running" : "error", pages,
       error: anyQueued ? null : "Nenhuma página foi aceita pelo Higgsfield — confira a chave/plano.",
     }).select("id").single();

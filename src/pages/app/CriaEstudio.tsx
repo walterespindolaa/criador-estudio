@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useSearchParams } from "react-router-dom";
-import { Wand2, Loader2, Image as ImageIcon, Download, Trash2, Lock, Sparkles } from "lucide-react";
+import { Wand2, Loader2, Image as ImageIcon, Download, Trash2, Lock, Sparkles, Pencil, ArrowLeft, LayoutGrid, Type as TypeIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useProfile } from "@/hooks/useProfile";
-import { useHiggsfieldJobs, useGenerateArt, usePollJob, useDeleteJob, type HfJob } from "@/hooks/useHiggsfield";
+import { usePosts, type Post } from "@/hooks/usePosts";
+import { useHiggsfieldJobs, useDraftArt, useGenerateArt, usePollJob, useDeleteJob, type HfJob, type HfPage } from "@/hooks/useHiggsfield";
 
 const ASPECTS = [
   { v: "4:5", label: "4:5 (feed)" },
@@ -14,18 +16,34 @@ const ASPECTS = [
   { v: "9:16", label: "9:16 (story)" },
 ];
 
+type ContentBlocks = { tema?: string; roteiro?: string; midia?: string; legenda?: string };
+
+function postSource(post: Post): string {
+  const b = (post.content_blocks ?? null) as ContentBlocks | null;
+  return [b?.roteiro, b?.legenda].filter(Boolean).join("\n\n").trim();
+}
+
 export default function CriaEstudio() {
   const { profile } = useProfile();
   const isAdmin = profile?.role === "admin";
   const [sp] = useSearchParams();
 
+  const { data: posts = [] } = usePosts();
+  const producing = useMemo(() => posts.filter((p) => p.status === "gravando"), [posts]);
+
+  const [postId, setPostId] = useState<string | null>(null);
   const [title, setTitle] = useState(sp.get("ideia") ?? "");
+  const [sourceContent, setSourceContent] = useState("");
   const [format, setFormat] = useState<"carrossel" | "estatico">("carrossel");
   const [slides, setSlides] = useState(6);
   const [aspect, setAspect] = useState("4:5");
   const [resolution, setResolution] = useState("1080p");
 
+  // Passo de revisão: textos dos slides antes de gerar as imagens.
+  const [draftPages, setDraftPages] = useState<HfPage[] | null>(null);
+
   const { data: jobs = [] } = useHiggsfieldJobs();
+  const draft = useDraftArt();
   const gen = useGenerateArt();
   const poll = usePollJob();
   const del = useDeleteJob();
@@ -49,9 +67,38 @@ export default function CriaEstudio() {
     );
   }
 
-  const gerar = () => {
+  const selectPost = (post: Post) => {
+    setPostId(post.id);
+    setTitle(post.title || "");
+    setSourceContent(postSource(post));
+    setFormat(post.format === "carrossel" ? "carrossel" : "estatico");
+    setDraftPages(null);
+  };
+
+  const useFreeTheme = () => {
+    setPostId(null);
+    setSourceContent("");
+    setDraftPages(null);
+  };
+
+  const montar = () => {
     if (!title.trim()) return;
-    gen.mutate({ title: title.trim(), format, slides, aspect_ratio: aspect, resolution });
+    draft.mutate(
+      { title: title.trim(), format, slides, source_content: sourceContent || undefined, post_id: postId || undefined },
+      { onSuccess: (res) => setDraftPages(res.pages) },
+    );
+  };
+
+  const gerar = () => {
+    if (!draftPages || draftPages.length === 0) return;
+    gen.mutate(
+      { title: title.trim(), format, slides, aspect_ratio: aspect, resolution, pages: draftPages, post_id: postId || undefined },
+      { onSuccess: () => setDraftPages(null) },
+    );
+  };
+
+  const editSlideText = (i: number, val: string) => {
+    setDraftPages((prev) => prev ? prev.map((p, idx) => idx === i ? { ...p, screen_text: val } : p) : prev);
   };
 
   return (
@@ -62,19 +109,73 @@ export default function CriaEstudio() {
         </div>
         <div>
           <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Cria Estúdio</h1>
-          <p className="text-muted-foreground font-body text-sm mt-0.5">Gera carrosséis e estáticos no Higgsfield, no seu estilo. (interno)</p>
+          <p className="text-muted-foreground font-body text-sm mt-0.5">Pega os posts em Produzindo + seu moodboard e gera o carrossel no Higgsfield. (interno)</p>
         </div>
       </div>
 
-      {/* Config */}
+      {/* ── Origem do conteúdo ── */}
       <div className="bg-card border border-border rounded-2xl p-4 space-y-4">
+        <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider">1. De onde vem o conteúdo</p>
+
+        {/* Posts em Produzindo */}
         <div>
-          <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Ideia / tema</p>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: 5 erros que travam quem tá começando com IA" />
+          <div className="flex items-center gap-1.5 mb-2">
+            <LayoutGrid className="h-3.5 w-3.5 text-primary" />
+            <p className="text-xs font-body font-semibold text-foreground">Do meu Criando · coluna Produzindo</p>
+            <span className="text-[11px] font-body text-muted-foreground">({producing.length})</span>
+          </div>
+          {producing.length === 0 ? (
+            <p className="text-[11px] font-body text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
+              Nenhum post em Produzindo. Mova um post pra coluna <strong>Produzindo</strong> no Criando pra ele aparecer aqui.
+            </p>
+          ) : (
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+              {producing.map((p) => {
+                const sel = postId === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => selectPost(p)}
+                    className={cn("shrink-0 w-52 text-left rounded-xl border p-3 transition-colors",
+                      sel ? "border-primary bg-primary/[0.06] ring-1 ring-primary/30" : "border-border bg-card hover:border-primary/40")}
+                  >
+                    <p className="text-xs font-body font-semibold text-foreground line-clamp-2">{p.title || "Sem título"}</p>
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <span className="text-[10px] font-body px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground capitalize">{p.format}</span>
+                      {postSource(p) && <span className="text-[10px] font-body text-secondary">✓ roteiro pronto</span>}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
+
+        {/* Tema livre */}
+        <div>
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <TypeIcon className="h-3.5 w-3.5 text-muted-foreground" />
+            <p className="text-xs font-body font-semibold text-foreground">Ou tema livre (avulso)</p>
+          </div>
+          <Input
+            value={title}
+            onChange={(e) => { setTitle(e.target.value); if (postId) useFreeTheme(); }}
+            placeholder="Ex.: 5 erros que travam quem tá começando com IA"
+          />
+          {postId && (
+            <p className="text-[11px] font-body text-primary mt-1.5 flex items-center gap-1">
+              <Sparkles className="h-3 w-3" /> Usando o post selecionado (título + roteiro). Digite aqui pra soltar e criar avulso.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* ── Config ── */}
+      <div className="bg-card border border-border rounded-2xl p-4 space-y-4 mt-4">
+        <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider">2. Formato</p>
         <div className="flex flex-wrap items-end gap-4">
           <div>
-            <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Formato</p>
+            <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Tipo</p>
             <div className="flex rounded-lg border border-border overflow-hidden">
               {(["carrossel", "estatico"] as const).map((f) => (
                 <button key={f} onClick={() => setFormat(f)} className={cn("px-3 h-9 text-sm font-body", format === f ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>{f === "carrossel" ? "Carrossel" : "Estático"}</button>
@@ -103,21 +204,60 @@ export default function CriaEstudio() {
               ))}
             </div>
           </div>
-          <Button onClick={gerar} disabled={gen.isPending || !title.trim()} className="h-9 ml-auto">
-            {gen.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-            Gerar
-          </Button>
+          {!draftPages && (
+            <Button onClick={montar} disabled={draft.isPending || !title.trim()} className="h-9 ml-auto">
+              {draft.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Pencil className="h-4 w-4 mr-2" />}
+              Montar textos
+            </Button>
+          )}
         </div>
-        <p className="text-[11px] font-body text-muted-foreground">A IA escreve os prompts com a sua marca (paleta/estilo do Brandbook) e dispara no Higgsfield. A capa é otimizada pra ser chamativa; as demais páginas seguem o mesmo padrão visual.</p>
+        <p className="text-[11px] font-body text-muted-foreground">A IA monta o texto de cada slide a partir do roteiro/legenda + sua marca (moodboard). Você revisa antes de gerar as imagens — o Higgsfield só é acionado depois que você aprovar.</p>
       </div>
 
-      {/* Jobs */}
+      {/* ── Revisão dos slides ── */}
+      {draftPages && (
+        <div className="bg-card border border-primary/30 ring-1 ring-primary/10 rounded-2xl p-4 mt-4">
+          <div className="flex items-center gap-2 mb-3">
+            <p className="text-[10px] font-body font-semibold text-primary uppercase tracking-wider">3. Revise os textos dos slides</p>
+            <button onClick={() => setDraftPages(null)} className="ml-auto text-[11px] font-body text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
+              <ArrowLeft className="h-3 w-3" /> voltar
+            </button>
+          </div>
+          <div className="space-y-2.5">
+            {draftPages.map((pg, i) => (
+              <div key={i} className="flex gap-2.5 items-start">
+                <span className="shrink-0 mt-2 text-[10px] font-body font-bold text-muted-foreground uppercase w-16">{i === 0 ? "capa" : pg.role || `slide ${i + 1}`}</span>
+                <Textarea
+                  value={pg.screen_text}
+                  onChange={(e) => editSlideText(i, e.target.value)}
+                  rows={2}
+                  className="flex-1 text-sm resize-none"
+                  placeholder="Texto que vai na tela desse slide…"
+                />
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-2 mt-4">
+            <Button onClick={gerar} disabled={gen.isPending} className="h-9">
+              {gen.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+              Gerar imagens no Higgsfield
+            </Button>
+            <Button variant="outline" onClick={montar} disabled={draft.isPending} className="h-9">
+              {draft.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Pencil className="h-4 w-4 mr-2" />}
+              Refazer textos
+            </Button>
+            <span className="text-[11px] font-body text-muted-foreground">Só agora gasta crédito do Higgsfield.</span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Jobs ── */}
       <div className="mt-6 space-y-5">
         {jobs.length === 0 ? (
           <div className="border border-dashed border-border rounded-2xl py-14 text-center">
             <ImageIcon className="h-7 w-7 text-muted-foreground/40 mx-auto mb-2" strokeWidth={1.5} />
             <p className="text-sm font-body text-foreground font-medium">Nada gerado ainda</p>
-            <p className="text-xs font-body text-muted-foreground mt-1">Digite uma ideia acima e clique em Gerar.</p>
+            <p className="text-xs font-body text-muted-foreground mt-1">Escolha um post em Produzindo (ou digite um tema) e monte os textos.</p>
           </div>
         ) : (
           jobs.map((job) => <JobCard key={job.id} job={job} onDelete={() => del.mutate(job.id)} />)

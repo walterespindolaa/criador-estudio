@@ -54,10 +54,20 @@ async function invoke(body: Record<string, unknown>) {
   return data as { job_id: string; status: string; pages: HfPage[] };
 }
 
+// Passo 1: só monta os textos dos slides + prompts (sem gastar crédito do Higgsfield).
+export function useDraftArt() {
+  return useMutation({
+    mutationFn: (input: { title: string; format: "estatico" | "carrossel"; slides?: number; source_content?: string; post_id?: string }) =>
+      invoke({ action: "draft", ...input }) as Promise<{ pages: HfPage[]; format: string; slides: number }>,
+    onError: (e) => toast.error(e instanceof Error ? `Falha ao montar: ${e.message}` : "Não consegui montar os textos."),
+  });
+}
+
+// Passo 2: dispara as imagens no Higgsfield com as páginas já revisadas.
 export function useGenerateArt() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { title: string; format: "estatico" | "carrossel"; slides?: number; aspect_ratio?: string; resolution?: string }) =>
+    mutationFn: (input: { title: string; format: "estatico" | "carrossel"; slides?: number; aspect_ratio?: string; resolution?: string; pages?: HfPage[]; post_id?: string; source_content?: string }) =>
       invoke({ action: "generate", ...input }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["higgsfield-jobs"] });
