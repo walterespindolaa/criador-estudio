@@ -178,7 +178,7 @@ export function SettingsManagerDrawer({ open, onOpenChange }: Props) {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl w-[95vw] max-h-[92vh] overflow-y-auto sm:p-8">
           <DialogHeader>
             <DialogTitle className="font-display">Configurações da conta</DialogTitle>
             <DialogDescription className="font-body text-sm">

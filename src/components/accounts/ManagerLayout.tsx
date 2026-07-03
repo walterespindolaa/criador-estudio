@@ -176,18 +176,19 @@ export default function ManagerLayout() {
             const active = m.status === "active" || m.status === "past_due";
             const route = MODULE_ROUTE[m.code];
             const corner = active
-              ? <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-green-500 ring-2 ring-[hsl(var(--sidebar-background))]" />
+              ? <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-[hsl(var(--sidebar-background))]" />
               : <Lock className="absolute right-0.5 top-0.5 h-3 w-3 text-muted-foreground" />;
             const tipBadge = (
-              <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-bold",
-                active ? "bg-green-500/20 text-green-300" : m.coming_soon ? "bg-white/15 text-background/80" : "bg-white/15 text-background/90")}>
+              <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                active ? "bg-emerald-500/12 text-emerald-600 ring-1 ring-inset ring-emerald-500/25" : m.coming_soon ? "bg-foreground/[0.07] text-muted-foreground" : "bg-primary/12 text-primary ring-1 ring-inset ring-primary/20")}>
+                {active && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
                 {active ? "Ativo" : m.coming_soon ? "Em breve" : brl(m.price_cents)}
               </span>
             );
             return railNode(Icon, m.name, { active: !!route && isActive(route), onClick: () => openModule(m), corner, tipBadge });
           })}
           <div className="my-2 h-px w-full bg-border" />
-          {railHovered && <p className="px-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Gestão</p>}
+          {railHovered && <p className="px-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Gestão Cria</p>}
           {NAV.map((n) => {
             const onClick = n.to === "/socialmidia/comissoes" ? onNavComissoes : () => navigate(n.to);
             return railNode(n.icon as LucideIcon, n.label, { active: isActive(n.to), onClick });
