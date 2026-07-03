@@ -69,7 +69,7 @@ export type HotTheme = { titulo: string; porque?: string };
 export function useHotThemes() {
   return useMutation({
     mutationFn: (input?: { niche?: string }) =>
-      invoke({ action: "hot_themes", ...(input ?? {}) }) as Promise<{ themes: HotTheme[] }>,
+      invoke({ action: "hot_themes", ...(input ?? {}) }) as unknown as Promise<{ themes: HotTheme[] }>,
     onError: (e) => toast.error(e instanceof Error ? `Perplexity: ${e.message}` : "Não consegui buscar temas."),
   });
 }
