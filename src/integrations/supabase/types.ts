@@ -1842,6 +1842,48 @@ export type Database = {
           },
         ]
       }
+      higgsfield_jobs: {
+        Row: {
+          aspect_ratio: string
+          created_at: string
+          error: string | null
+          finished_at: string | null
+          format: string
+          id: string
+          pages: Json
+          resolution: string
+          status: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          aspect_ratio?: string
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          format?: string
+          id?: string
+          pages?: Json
+          resolution?: string
+          status?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          aspect_ratio?: string
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          format?: string
+          id?: string
+          pages?: Json
+          resolution?: string
+          status?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ideas: {
         Row: {
           created_at: string | null
