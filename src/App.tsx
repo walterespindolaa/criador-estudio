@@ -24,6 +24,7 @@ import Privacidade from "./pages/Privacidade";
 import ExcluirDados from "./pages/ExcluirDados";
 import { UpdatePrompt } from "@/components/UpdatePrompt";
 import { useProfile } from "@/hooks/useProfile";
+import { useActiveAccount } from "@/contexts/AccountContext";
 
 const Dashboard = lazy(() => import("./pages/app/Dashboard"));
 const Ideias = lazy(() => import("./pages/app/Ideias"));
@@ -69,12 +70,14 @@ const Clientes = lazy(() => import("./pages/socialmidia/Clientes"));
 const ClienteHub = lazy(() => import("./pages/socialmidia/ClienteHub"));
 const HubCria = lazy(() => import("./pages/socialmidia/HubCria"));
 
-// Landing do /app: gestor (account_type "manager") cai direto no dashboard dele;
-// criador cai no Dashboard normal.
+// Landing do /app: social mídia (gestor) cai direto no dashboard principal DELE
+// (/socialmidia/dashboard), não no /app do criador. Cobre os dois sinais de gestor:
+// account_type "manager" OU gerenciar ao menos uma conta.
 function AppHome() {
   const { profile, isLoading } = useProfile();
-  if (isLoading) return null;
-  if (profile?.account_type === "manager") return <Navigate to="/socialmidia/dashboard" replace />;
+  const { hasManagedAccounts, accountsLoading } = useActiveAccount();
+  if (isLoading || accountsLoading) return null;
+  if (profile?.account_type === "manager" || hasManagedAccounts) return <Navigate to="/socialmidia/dashboard" replace />;
   return <Dashboard />;
 }
 const Aprovacoes = lazy(() => import("./pages/socialmidia/Aprovacoes"));
