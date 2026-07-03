@@ -1,7 +1,6 @@
 // Cria Estúdio — gera prompts de imagem (com a marca do usuário) e dispara no
 // Higgsfield (modelo Soul). Assíncrono: action "generate" cria o job + envia à fila;
 // action "poll" consulta o status e traz as imagens prontas. Admin-only.
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 
 const cors = {
@@ -22,7 +21,7 @@ function hfAuth(): string {
 
 type Page = { role: string; screen_text: string; prompt: string; request_id?: string; image_url?: string; status?: string };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
     const authHeader = req.headers.get("Authorization");
