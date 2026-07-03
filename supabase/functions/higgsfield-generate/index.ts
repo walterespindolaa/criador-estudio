@@ -11,13 +11,34 @@ const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
 const HF_BASE = "https://platform.higgsfield.ai";
-const HF_MODEL = "higgsfield-ai/soul/standard";
+// API v1 do Higgsfield (Soul text-to-image). Endpoint e formato conforme SDK oficial
+// (github.com/higgsfield-ai/higgsfield-js). Antes usávamos endpoint/params inexistentes → 422.
+const HF_SOUL_ENDPOINT = "/v1/text2image/soul";
 
-function hfAuth(): string {
-  const key = Deno.env.get("HIGGSFIELD_API_KEY");
-  const secret = Deno.env.get("HIGGSFIELD_API_SECRET");
-  return `Key ${key}:${secret}`;
+// Autenticação oficial (SDK v2): "Authorization: Key KEY_ID:KEY_SECRET".
+function hfHeaders(): Record<string, string> {
+  const key = Deno.env.get("HIGGSFIELD_API_KEY") ?? "";
+  const secret = Deno.env.get("HIGGSFIELD_API_SECRET") ?? "";
+  return {
+    "Authorization": `Key ${key}:${secret}`,
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+    "User-Agent": "cria-studio/1.0",
+  };
 }
+
+// aspect_ratio da UI → width_and_height suportado pelo Soul (valores reais do SDK).
+const SOUL_SIZE: Record<string, string> = {
+  "1:1": "1536x1536",
+  "4:5": "1536x2048",
+  "9:16": "1152x2048",
+  "16:9": "2048x1152",
+  "2:3": "1344x2016",
+  "3:2": "2016x1344",
+};
+const soulSize = (aspect: string): string => SOUL_SIZE[aspect] ?? "1536x2048";
+// resolução da UI → quality do Soul (só 720p/1080p).
+const soulQuality = (res: string): string => (res.includes("720") ? "720p" : "1080p");
 
 // Perplexity (sonar) — pesquisa web atual com fontes. Fail-soft: sem chave/erro → "".
 async function pplx(userPrompt: string): Promise<string> {
@@ -98,18 +119,20 @@ Deno.serve(async (req) => {
       const pages: Page[] = ((job as any).pages ?? []) as Page[];
 
       for (const pg of pages) {
-        if (!pg.request_id || pg.image_url || pg.status === "failed" || pg.status === "nsfw") continue;
+        if (!pg.request_id || pg.image_url || pg.status === "failed" || pg.status === "nsfw" || pg.status === "canceled") continue;
         try {
-          const r = await fetch(`${HF_BASE}/requests/${pg.request_id}/status`, { headers: { "Authorization": hfAuth(), "Accept": "application/json" } });
+          // Oficial: GET /requests/{request_id}/status → { status, images:[{url}], video:{url} }.
+          const r = await fetch(`${HF_BASE}/requests/${pg.request_id}/status`, { headers: hfHeaders() });
           if (!r.ok) { pg.status = `err_${r.status}`; continue; }
           const j = await r.json();
           pg.status = j.status || pg.status;
-          const url = j.images?.[0]?.url || j.image?.url || j.video?.url || null;
+          const url = j.images?.[0]?.url || j.image?.url
+            || j.jobs?.[0]?.results?.raw?.url || j.jobs?.[0]?.results?.min?.url || null;
           if (url) pg.image_url = url;
         } catch (e) { console.error("[higgsfield] poll error", e); }
       }
 
-      const done = pages.every((p) => p.image_url || p.status === "failed" || p.status === "nsfw" || (p.status || "").startsWith("err_"));
+      const done = pages.every((p) => p.image_url || p.status === "failed" || p.status === "nsfw" || p.status === "canceled" || (p.status || "").startsWith("err_"));
       const anyImg = pages.some((p) => p.image_url);
       const status = done ? (anyImg ? "done" : "error") : "running";
       await svc.from("higgsfield_jobs").update({ pages, status, finished_at: done ? new Date().toISOString() : null }).eq("id", jobId);
@@ -300,27 +323,38 @@ Português, direto, sem enrolação, sem markdown pesado.`;
     }
     if (rawPages.length === 0) return json({ error: "no_prompts" }, 500);
 
-    // 2) Dispara cada página no Higgsfield.
+    // 2) Dispara cada página no Higgsfield. POST /v1/text2image/soul com o corpo PLANO (SDK oficial).
     const pages: Page[] = [];
+    let firstErrDetail = "";
     for (const rp of rawPages) {
       const prompt = String(rp.prompt || title).slice(0, 1500);
       try {
-        const r = await fetch(`${HF_BASE}/${HF_MODEL}`, {
+        const r = await fetch(`${HF_BASE}${HF_SOUL_ENDPOINT}`, {
           method: "POST",
-          headers: { "Authorization": hfAuth(), "Content-Type": "application/json", "Accept": "application/json" },
-          body: JSON.stringify({ prompt, aspect_ratio: aspect, resolution }),
+          headers: hfHeaders(),
+          body: JSON.stringify({
+            prompt,
+            width_and_height: soulSize(aspect),
+            quality: soulQuality(resolution),
+            batch_size: 1,
+            enhance_prompt: true,
+          }),
         });
         const txt = await r.text();
         let jr: any = {};
         try { jr = JSON.parse(txt); } catch { /* ignore */ }
         if (!r.ok) {
-          console.error("[higgsfield] submit error", r.status, txt.slice(0, 300));
+          console.error("[higgsfield] submit error", r.status, txt.slice(0, 400));
+          if (!firstErrDetail) firstErrDetail = `${r.status}: ${txt.slice(0, 300)}`;
           pages.push({ role: rp.role || "pagina", screen_text: rp.screen_text || "", prompt, status: `err_${r.status}`, image_url: undefined });
         } else {
-          pages.push({ role: rp.role || "pagina", screen_text: rp.screen_text || "", prompt, request_id: jr.request_id, status: jr.status || "queued" });
+          // Resposta oficial: { request_id, status, status_url, ... }.
+          const reqId = jr.request_id || jr.id || jr.jobs?.[0]?.id;
+          pages.push({ role: rp.role || "pagina", screen_text: rp.screen_text || "", prompt, request_id: reqId, status: jr.status || "queued" });
         }
       } catch (e) {
         console.error("[higgsfield] submit exception", e);
+        if (!firstErrDetail) firstErrDetail = String(e).slice(0, 200);
         pages.push({ role: rp.role || "pagina", screen_text: rp.screen_text || "", prompt, status: "err_exception" });
       }
     }
@@ -333,10 +367,15 @@ Português, direto, sem enrolação, sem markdown pesado.`;
     }).select("id").single();
     if (insErr || !jobRow) return json({ error: "job_create_failed" }, 500);
 
-    // Se nada foi pra fila, devolve o erro da primeira página pra diagnóstico.
+    // Se nada foi pra fila, devolve o erro real da API (inclui o corpo da resposta) pra diagnóstico.
     if (!anyQueued) {
       const firstErr = pages.find((p) => (p.status || "").startsWith("err_"))?.status;
-      return json({ error: "higgsfield_rejected", message: `Higgsfield recusou (${firstErr}). Verifique a chave/secret e o plano.`, job_id: jobRow.id }, 502);
+      const hint = firstErr === "err_401" || firstErr === "err_403"
+        ? "Chave/secret inválidos ou sem créditos."
+        : firstErr === "err_422"
+        ? "Parâmetros recusados pela API."
+        : "Erro na chamada.";
+      return json({ error: "higgsfield_rejected", message: `Higgsfield recusou (${firstErr}). ${hint}${firstErrDetail ? ` — Detalhe: ${firstErrDetail}` : ""}`, job_id: jobRow.id }, 502);
     }
 
     return json({ ok: true, job_id: jobRow.id, status: "running", pages });
