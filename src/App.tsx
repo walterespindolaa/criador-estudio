@@ -23,6 +23,7 @@ import Termos from "./pages/Termos";
 import Privacidade from "./pages/Privacidade";
 import ExcluirDados from "./pages/ExcluirDados";
 import { UpdatePrompt } from "@/components/UpdatePrompt";
+import { useProfile } from "@/hooks/useProfile";
 
 const Dashboard = lazy(() => import("./pages/app/Dashboard"));
 const Ideias = lazy(() => import("./pages/app/Ideias"));
@@ -67,6 +68,15 @@ const Contas = lazy(() => import("./pages/socialmidia/Contas"));
 const Clientes = lazy(() => import("./pages/socialmidia/Clientes"));
 const ClienteHub = lazy(() => import("./pages/socialmidia/ClienteHub"));
 const HubCria = lazy(() => import("./pages/socialmidia/HubCria"));
+
+// Landing do /app: gestor (account_type "manager") cai direto no dashboard dele;
+// criador cai no Dashboard normal.
+function AppHome() {
+  const { profile, isLoading } = useProfile();
+  if (isLoading) return null;
+  if (profile?.account_type === "manager") return <Navigate to="/socialmidia/dashboard" replace />;
+  return <Dashboard />;
+}
 const Aprovacoes = lazy(() => import("./pages/socialmidia/Aprovacoes"));
 
 // Avisa o usuário quando uma query falha (antes os erros eram engolidos →
@@ -130,7 +140,7 @@ const App = () => (
               <Route path="/app" element={
                 <ProtectedRoute><AppLayout /></ProtectedRoute>
               }>
-                <Route index element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
+                <Route index element={<ErrorBoundary><AppHome /></ErrorBoundary>} />
                 <Route path="ideias" element={<ErrorBoundary><Ideias /></ErrorBoundary>} />
                 <Route path="criando" element={<ErrorBoundary><Criando /></ErrorBoundary>} />
                 <Route path="autopilot" element={<ErrorBoundary><Autopilot /></ErrorBoundary>} />
