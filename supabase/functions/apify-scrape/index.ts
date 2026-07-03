@@ -1,6 +1,5 @@
 // HUB CRIA — dispara um scraper do Apify (Instagram), resume o resultado e gera
 // ideias de conteúdo por cliente. Gated: gestor com módulo hub_cria (ou admin).
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 
 const cors = {
