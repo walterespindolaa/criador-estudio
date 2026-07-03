@@ -2,8 +2,10 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// Fallback fixo (a URL e a chave anon são públicas) pra o app não quebrar caso a
+// env do build não seja injetada. A env, quando existe, tem prioridade.
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://exuxlwdnkgmhtnwoyvwo.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4dXhsd2Rua2dtaHRud295dndvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MTg1NzcsImV4cCI6MjA5MTA5NDU3N30.lvmr5UHfUq2euyJsvYvX2kHb-cJMltshUFBS9toi2rc";
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
