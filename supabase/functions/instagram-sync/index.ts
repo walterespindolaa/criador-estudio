@@ -32,7 +32,8 @@ Deno.serve(async (req) => {
     // conexão + token
     const { data: conn } = await admin.from('social_connections')
       .select('access_token,external_account_id')
-      .eq('user_id', userId).eq('provider', 'instagram').maybeSingle();
+      .eq('user_id', userId).eq('provider', 'instagram')
+      .is('crm_client_id', null).maybeSingle();
     const token = (conn as { access_token?: string } | null)?.access_token;
     if (!token) return json({ error: 'not_connected' }, 400);
 

@@ -64,6 +64,7 @@ export function useSocialConnection() {
         .select("id,user_id,provider,external_account_id,username,account_type,profile_picture_url,token_expires_at,connected_at,updated_at")
         .eq("user_id", user!.id)
         .eq("provider", "instagram")
+        .is("crm_client_id", null)
         .maybeSingle();
       if (error) throw error;
       return (data as unknown as SocialConnection) ?? null;
@@ -137,7 +138,8 @@ export function useDisconnectInstagram() {
       const { error } = await sbFrom("social_connections")
         .delete()
         .eq("user_id", user.id)
-        .eq("provider", "instagram");
+        .eq("provider", "instagram")
+        .is("crm_client_id", null);
       if (error) throw error;
     },
     onSuccess: () => {
