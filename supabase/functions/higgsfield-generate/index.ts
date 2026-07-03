@@ -334,13 +334,13 @@ Português, direto, sem enrolação, sem markdown pesado.`;
         const r = await fetch(`${HF_BASE}${HF_SOUL_ENDPOINT}`, {
           method: "POST",
           headers: hfHeaders(),
-          body: JSON.stringify({
+          body: JSON.stringify({ params: {
             prompt,
             width_and_height: soulSize(aspect),
             quality: soulQuality(resolution),
             batch_size: 1,
             enhance_prompt: true,
-          }),
+          } }),
         });
         const txt = await r.text();
         let jr: any = {};
