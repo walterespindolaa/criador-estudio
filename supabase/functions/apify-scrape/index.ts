@@ -135,7 +135,7 @@ function summarize(items: any[], type: string): { summary: Record<string, unknow
   };
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
     const authHeader = req.headers.get("Authorization");

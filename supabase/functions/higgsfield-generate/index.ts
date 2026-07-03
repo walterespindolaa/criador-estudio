@@ -1,7 +1,6 @@
 // Cria Estúdio — gera prompts de imagem (com a marca do usuário) e dispara no
 // Higgsfield (modelo Soul). Assíncrono: action "generate" cria o job + envia à fila;
 // action "poll" consulta o status e traz as imagens prontas. Admin-only.
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 
 const cors = {
