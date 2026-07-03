@@ -47,6 +47,7 @@ const Autopilot = lazy(() => import("./pages/app/Autopilot"));
 const MediaKit = lazy(() => import("./pages/app/MediaKit"));
 const Tendencias = lazy(() => import("./pages/app/Tendencias"));
 const CriaStories = lazy(() => import("./pages/app/CriaStories"));
+const CriaEstudio = lazy(() => import("./pages/app/CriaEstudio"));
 const TrocarSenha = lazy(() => import("./pages/app/TrocarSenha"));
 const Assinar = lazy(() => import("./pages/app/Assinar"));
 const BioPage = lazy(() => import("./pages/BioPage"));
@@ -137,6 +138,7 @@ const App = () => (
                 <Route path="tendencias" element={<ErrorBoundary><Tendencias /></ErrorBoundary>} />
                 <Route path="stories" element={<ErrorBoundary><CriaStories /></ErrorBoundary>} />
                 <Route path="stories/semanastories" element={<ErrorBoundary><CriaStories /></ErrorBoundary>} />
+                <Route path="estudio" element={<ErrorBoundary><CriaEstudio /></ErrorBoundary>} />
                 <Route path="aprovacao" element={<ErrorBoundary><Aprovacao /></ErrorBoundary>} />
                 <Route path="modulos" element={<ErrorBoundary><Modulos /></ErrorBoundary>} />
                 <Route path="feed" element={<ErrorBoundary><Feed /></ErrorBoundary>} />

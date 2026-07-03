@@ -53,3 +53,5 @@ project_id = "exuxlwdnkgmhtnwoyvwo"
     verify_jwt = false
   [functions.apify-scrape]
     verify_jwt = true
+  [functions.higgsfield-generate]
+    verify_jwt = true
