@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { GoalsTab } from "@/components/plano/GoalsTab";
+import { hojeBR } from "@/lib/date-br";
 
 const Metas = () => {
   const { user } = useAuth();
@@ -21,7 +22,7 @@ const Metas = () => {
   const [newMilestoneName, setNewMilestoneName] = useState("");
   const [expandedGoal, setExpandedGoal] = useState<string | null>(null);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = hojeBR();
 
   const {
     structuredGoals: goals,

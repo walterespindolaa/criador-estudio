@@ -55,3 +55,32 @@ project_id = "exuxlwdnkgmhtnwoyvwo"
     verify_jwt = true
   [functions.higgsfield-generate]
     verify_jwt = true
+  # Auth interna (cron/segredo, sem JWT de usuário) → precisa de verify_jwt = false
+  # senão o gateway barra a chamada com 401 antes de chegar na função.
+  [functions.daily-notifications]
+    verify_jwt = false
+  [functions.instagram-refresh]
+    verify_jwt = false
+  [functions.send-push]
+    verify_jwt = false
+  [functions.storage-cleanup]
+    verify_jwt = false
+  [functions.get-google-config]
+    verify_jwt = false
+  # Validam Authorization + getUser() internamente (mantém verify_jwt = true).
+  [functions.accept-terms]
+    verify_jwt = true
+  [functions.admin-billing]
+    verify_jwt = true
+  [functions.admin-create-manager]
+    verify_jwt = true
+  [functions.create-module-checkout]
+    verify_jwt = true
+  [functions.create-portal-session]
+    verify_jwt = true
+  [functions.delete-account]
+    verify_jwt = true
+  [functions.google-calendar-sync]
+    verify_jwt = true
+  [functions.google-drive-connect]
+    verify_jwt = true

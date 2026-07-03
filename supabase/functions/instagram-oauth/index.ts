@@ -51,11 +51,17 @@ Deno.serve(async (req) => {
     const shortToken = shortJson.access_token as string;
 
     // 2) token curto -> token longo (60 dias)
+    // Se a troca falhar, ABORTA — não salvar o token curto (~1h) como se estivesse
+    // "conectado", senão a conexão morre em 1h sem o usuário saber.
     const longRes = await fetch(
       `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${appSecret}&access_token=${shortToken}`,
     );
     const longJson = await longRes.json();
-    const longToken = (longJson.access_token as string) || shortToken;
+    if (!longRes.ok || !longJson.access_token) {
+      console.error('[instagram-oauth] long-lived exchange failed', longRes.status, longJson?.error);
+      return redirect('error', 'token_exchange_long', toClient);
+    }
+    const longToken = longJson.access_token as string;
     const expiresIn = Number(longJson.expires_in ?? 0);
     const expiresAt = expiresIn ? new Date(Date.now() + expiresIn * 1000).toISOString() : null;
 

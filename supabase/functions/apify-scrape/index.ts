@@ -23,14 +23,15 @@ async function rateOk(svc: SupabaseClient, userId: string, scope: string, limit:
 
 const cleanHandle = (s: string) => s.trim().replace(/^@/, "").replace(/\/+$/, "").split("/").pop() || "";
 
-function buildApifyInput(type: string, handle: string, limit: number): Record<string, unknown> {
+function buildApifyInput(type: string, handle: string, limit: number, since?: string): Record<string, unknown> {
   const h = cleanHandle(handle);
+  const period = since ? { onlyPostsNewerThan: since } : {};
   if (type === "profile") {
     return { directUrls: [`https://www.instagram.com/${h}/`], resultsType: "details", resultsLimit: 1, addParentData: false };
   }
   if (type === "hashtag") {
     const tag = h.replace(/^#/, "");
-    return { directUrls: [`https://www.instagram.com/explore/tags/${tag}/`], resultsType: "posts", resultsLimit: limit, addParentData: false };
+    return { directUrls: [`https://www.instagram.com/explore/tags/${tag}/`], resultsType: "posts", resultsLimit: limit, addParentData: false, ...period };
   }
   if (type === "comments") {
     // input_handle deve ser a URL do post
@@ -40,10 +41,10 @@ function buildApifyInput(type: string, handle: string, limit: number): Record<st
     return { directUrls: [`https://www.instagram.com/${h}/`], resultsType: "stories", resultsLimit: limit, addParentData: false };
   }
   if (type === "mentions") {
-    return { directUrls: [`https://www.instagram.com/${h}/`], resultsType: "mentions", resultsLimit: limit, addParentData: false };
+    return { directUrls: [`https://www.instagram.com/${h}/`], resultsType: "mentions", resultsLimit: limit, addParentData: false, ...period };
   }
   // posts | reels
-  return { directUrls: [`https://www.instagram.com/${h}/`], resultsType: "posts", resultsLimit: limit, addParentData: false };
+  return { directUrls: [`https://www.instagram.com/${h}/`], resultsType: "posts", resultsLimit: limit, addParentData: false, ...period };
 }
 
 // Resumo compacto do que voltou (top posts por engajamento + distribuição de formato).
@@ -170,6 +171,7 @@ serve(async (req) => {
     const inputHandle = String(body?.input ?? "").trim();
     const crmClientId = body?.crm_client_id ? String(body.crm_client_id) : null;
     const limit = Math.max(1, Math.min(20, Number(body?.limit) || 10));
+    const since = typeof body?.since === "string" && /^\d{4}-\d{2}-\d{2}/.test(body.since) ? body.since : undefined;
     if (!inputHandle) return json({ error: "missing_input" }, 400);
     if (!["posts", "reels", "profile", "hashtag", "comments", "transcription", "stories", "mentions", "ads"].includes(type)) return json({ error: "invalid_type" }, 400);
 
@@ -207,7 +209,7 @@ serve(async (req) => {
         input = { startUrls: [{ url: adUrl }], resultsLimit: limit, activeStatus: "active" };
       } else {
         actor = "apify~instagram-scraper";
-        input = buildApifyInput(type, inputHandle, limit);
+        input = buildApifyInput(type, inputHandle, limit, since);
       }
       const apifyUrl = `https://api.apify.com/v2/acts/${actor}/run-sync-get-dataset-items?token=${apifyToken}&maxItems=${limit}`;
       const resp = await fetch(apifyUrl, {

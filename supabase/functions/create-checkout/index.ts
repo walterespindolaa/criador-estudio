@@ -109,10 +109,13 @@ serve(async (req) => {
     let appliedPromotionCodeId: string | null = null;
     const rawCode = (typeof body?.partner_code === "string" ? body.partner_code : "").trim();
     if (rawCode) {
+      // Escapa curingas do ILIKE (% e _). Sem isto, partner_code = "%" casaria com
+      // QUALQUER parceiro aprovado e aplicaria um cupom que não é do usuário.
+      const escapedCode = rawCode.replace(/([\\%_])/g, "\\$1");
       const { data: partner } = await svc
         .from("partners")
         .select("id, user_id, status, coupon_type, stripe_promotion_code_id")
-        .ilike("coupon_code", rawCode) // match exato case-insensitive (sem %)
+        .ilike("coupon_code", escapedCode) // match exato case-insensitive
         .eq("status", "approved")
         .maybeSingle();
       if (partner) {

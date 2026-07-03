@@ -4,6 +4,7 @@ import { CalendarClock } from "lucide-react";
 import { usePosts } from "@/hooks/usePosts";
 import { usePillars } from "@/hooks/usePillars";
 import { statusRamp } from "@/lib/statusRamp";
+import { hojeBR } from "@/lib/date-br";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -28,7 +29,7 @@ export function UpcomingPosts() {
   const ramp = statusRamp();
 
   const upcoming = useMemo(() => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = hojeBR();
     return posts
       .filter((p) => p.scheduled_date && p.scheduled_date >= today && p.status !== "publicado")
       .sort((a, b) => (a.scheduled_date! < b.scheduled_date! ? -1 : 1))

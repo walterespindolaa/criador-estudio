@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { CalendarDays, Check, Flag, Milestone as MilestoneIcon, Plus, Target, Trash2, TrendingUp } from "lucide-react";
+import { parseDateOnly } from "@/lib/date-br";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -321,7 +322,7 @@ export function GoalsTab({
               const now = new Date();
               const monthPosts = posts.filter(p => {
                 if (!p.scheduled_date) return false;
-                const d = new Date(p.scheduled_date);
+                const d = parseDateOnly(p.scheduled_date);
                 return d.getMonth() === i && d.getFullYear() === now.getFullYear();
               });
               const count = monthPosts.length;
@@ -330,8 +331,8 @@ export function GoalsTab({
                 ...Array.from({ length: 12 }, (_, j) =>
                   posts.filter(p =>
                     p.scheduled_date &&
-                    new Date(p.scheduled_date).getMonth() === j &&
-                    new Date(p.scheduled_date).getFullYear() === now.getFullYear()
+                    parseDateOnly(p.scheduled_date).getMonth() === j &&
+                    parseDateOnly(p.scheduled_date).getFullYear() === now.getFullYear()
                   ).length
                 )
               );

@@ -201,8 +201,16 @@ const Criando = () => {
   const movePostStatus = async (postId: string, newStatus: string) => {
     if (!user) return;
     const updates: { status: string; published_at?: string } = { status: newStatus };
+    if (newStatus === "publicado") updates.published_at = new Date().toISOString();
+    // Salva PRIMEIRO. Confetti/audit só disparam depois do save confirmado —
+    // antes, um erro de rede deixava o card voltando sem aviso e com confetti falso.
+    try {
+      await updatePost.mutateAsync({ id: postId, updates });
+    } catch {
+      toast.error("Não foi possível mover o post. Tente de novo.");
+      return;
+    }
     if (newStatus === "publicado") {
-      updates.published_at = new Date().toISOString();
       const { fireConfetti } = await import("@/lib/confetti");
       fireConfetti();
       await supabase.from("audit_log").insert({
@@ -212,11 +220,14 @@ const Criando = () => {
         entity_id: postId,
       });
     }
-    await updatePost.mutateAsync({ id: postId, updates });
   };
 
   const reschedulePost = async (postId: string, dateKey: string) => {
-    await updatePost.mutateAsync({ id: postId, updates: { scheduled_date: dateKey } });
+    try {
+      await updatePost.mutateAsync({ id: postId, updates: { scheduled_date: dateKey } });
+    } catch {
+      toast.error("Não foi possível reagendar. Tente de novo.");
+    }
   };
 
   // Drag estilo Trello (@hello-pangea/dnd): solta o card e arrasta com o dedo.

@@ -103,9 +103,9 @@ export function useCreativeIdeas(crmClientId?: string) {
 export function useRunScrape() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { type: ScrapeType; input: string; crm_client_id?: string | null; limit?: number }) => {
+    mutationFn: async (input: { type: ScrapeType; input: string; crm_client_id?: string | null; limit?: number; since?: string }) => {
       const { data, error } = await supabase.functions.invoke("apify-scrape", {
-        body: { type: input.type, input: input.input, crm_client_id: input.crm_client_id ?? null, limit: input.limit ?? 10 },
+        body: { type: input.type, input: input.input, crm_client_id: input.crm_client_id ?? null, limit: input.limit ?? 10, since: input.since },
       });
       if (error) {
         // tenta extrair a mensagem real do corpo
@@ -155,6 +155,7 @@ export function useGeneratePlanFromIdeas() {
           status: "editando",
           approval_status: "pendente",
           approval_mode: "fast",
+          platform: "instagram",
           title: idea.title.slice(0, 200),
           caption: idea.rationale ?? null,
           format: (idea.format || "reels").toLowerCase(),
@@ -163,9 +164,10 @@ export function useGeneratePlanFromIdeas() {
         };
       });
       const { error } = await sbFrom("posts").insert(rows as never);
-      if (error) throw error;
+      if (error) throw new Error(error.message || "insert_failed");
       const ids = ideas.map((i) => i.id);
-      await sbFrom("creative_ideas").update({ status: "usada", updated_at: new Date().toISOString() } as never).in("id", ids);
+      const { error: updErr } = await sbFrom("creative_ideas").update({ status: "usada", updated_at: new Date().toISOString() } as never).in("id", ids);
+      if (updErr) throw new Error(updErr.message);
       return rows.length;
     },
     onSuccess: (n) => {

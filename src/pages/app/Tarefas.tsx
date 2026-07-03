@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { hojeBR, toISODateBR } from "@/lib/date-br";
 import { PostPreviewModal } from "@/components/kanban/PostPreviewModal";
 import { useProfile } from "@/hooks/useProfile";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -73,7 +74,7 @@ const Tarefas = () => {
     }
   });
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = hojeBR();
 
   const getWeekEnd = () => {
     const d = new Date();
@@ -81,7 +82,7 @@ const Tarefas = () => {
     const diff = 7 - (day === 0 ? 7 : day);
     const end = new Date(d);
     end.setDate(d.getDate() + diff);
-    return end.toISOString().split("T")[0];
+    return toISODateBR(end);
   };
 
   const filtered = tasks.filter(t => {

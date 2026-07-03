@@ -52,10 +52,16 @@ async function sendMetaPurchase(s: Stripe.Checkout.Session): Promise<void> {
         custom_data: { value, currency },
       }],
     };
-    const res = await fetch(`https://graph.facebook.com/v19.0/${PIXEL_ID}/events?access_token=${encodeURIComponent(TOKEN)}`, {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
-    });
-    if (!res.ok) console.error("[stripe-webhook] meta capi purchase error", res.status, await res.text());
+    // Timeout: o CAPI roda inline no handler; um hang do Graph não pode atrasar a
+    // resposta ao Stripe (senão o Stripe marca falha e reentrega o evento).
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), 8000);
+    try {
+      const res = await fetch(`https://graph.facebook.com/v19.0/${PIXEL_ID}/events?access_token=${encodeURIComponent(TOKEN)}`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: ac.signal,
+      });
+      if (!res.ok) console.error("[stripe-webhook] meta capi purchase error", res.status, await res.text());
+    } finally { clearTimeout(t); }
   } catch (e) { console.error("[stripe-webhook] meta capi purchase failed", e); }
 }
 

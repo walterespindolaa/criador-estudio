@@ -26,6 +26,7 @@ import { PostEditor } from "@/components/kanban/PostEditor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { sanitizeText } from "@/lib/sanitize";
 import { useIdeas, type Idea } from "@/hooks/useIdeas";
+import { hojeBR } from "@/lib/date-br";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
 import { usePillars } from "@/hooks/usePillars";
 import { useProfile } from "@/hooks/useProfile";
@@ -103,7 +104,7 @@ const Ideias = () => {
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = hojeBR();
   const resetAt = profile?.ai_ideas_reset_at ?? today;
   const resetMonth = String(resetAt).substring(0, 7);
   const currentMonth = today.substring(0, 7);

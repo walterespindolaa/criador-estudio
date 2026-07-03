@@ -17,6 +17,7 @@ import { getDailyInsight } from "@/lib/ai/claude";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, isWithinInterval, parseISO } from "date-fns";
+import { hojeBR, toISODateBR } from "@/lib/date-br";
 import { sanitizeText } from "@/lib/sanitize";
 import { useIdeas } from "@/hooks/useIdeas";
 import { usePosts } from "@/hooks/usePosts";
@@ -67,9 +68,9 @@ const getDaysOfWeek = () => {
     d.setDate(monday.getDate() + i);
     days.push({
       name: dayNames[i],
-      date: d.toISOString().split("T")[0],
+      date: toISODateBR(d),
       dayNum: d.getDate(),
-      isToday: d.toISOString().split("T")[0] === today.toISOString().split("T")[0],
+      isToday: toISODateBR(d) === toISODateBR(today),
     });
   }
   return days;
@@ -128,7 +129,7 @@ const Dashboard = () => {
   const { profile: activeProfile } = useActiveProfile();
   const navigate = useNavigate();
 
-  const today = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const today = useMemo(() => hojeBR(), []);
   const weekDays = useMemo(() => getDaysOfWeek(), []);
 
   const { ideas, createIdea } = useIdeas({ limit: 20 });

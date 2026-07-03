@@ -16,6 +16,7 @@ import { usePillars } from "@/hooks/usePillars";
 import { useHabits } from "@/hooks/useHabits";
 import { useGoals } from "@/hooks/useGoals";
 import { useReflections } from "@/hooks/useReflections";
+import { hojeBR, toISODateBR } from "@/lib/date-br";
 import { toast } from "sonner";
 import {
   Plus, Trash2, CalendarDays, Target, BarChart3, Check, ChevronLeft, ChevronRight,
@@ -38,7 +39,7 @@ const getDaysOfWeek = (offset = 0) => {
     d.setDate(monday.getDate() + i);
     days.push({
       name: dayNames[i],
-      date: d.toISOString().split("T")[0],
+      date: toISODateBR(d),
       dayNum: d.getDate(),
       label: d.toLocaleDateString("pt-BR", { day: "numeric", month: "short" }),
     });
@@ -94,7 +95,7 @@ const Plano = () => {
     biz_worked: "", biz_blocked: "", content_best: "", content_rhythm: "", focus_execution: "", focus_lessons: "",
   });
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = hojeBR();
   const weekDays = useMemo(() => getDaysOfWeek(weekOffset), [weekOffset]);
 
   const dateRange = useMemo(

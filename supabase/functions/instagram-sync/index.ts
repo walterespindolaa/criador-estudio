@@ -8,9 +8,23 @@ const corsHeaders = {
 };
 const GRAPH = 'https://graph.instagram.com';
 
-async function getJson(url: string) {
-  const r = await fetch(url);
-  return await r.json().catch(() => ({}));
+// Faz a chamada e reporta se a Graph API respondeu erro. A Graph devolve HTTP 4xx
+// com { error: {...} } quando o token expira/é revogado — sem checar isso, o corpo
+// de erro era tratado como dado e gravava null por cima das métricas do dia.
+async function fetchGraph(url: string): Promise<{ ok: boolean; status: number; body: Record<string, unknown> }> {
+  try {
+    const r = await fetch(url);
+    const body = (await r.json().catch(() => ({}))) as Record<string, unknown>;
+    return { ok: r.ok && !body?.error, status: r.status, body };
+  } catch (e) {
+    return { ok: false, status: 0, body: { error: { message: String(e) } } };
+  }
+}
+
+// Best-effort: para insights opcionais onde "ausente" = 0 e não vale abortar o sync.
+async function getJson(url: string): Promise<Record<string, unknown> & { data?: unknown }> {
+  const { body } = await fetchGraph(url);
+  return body;
 }
 
 Deno.serve(async (req) => {
@@ -38,8 +52,16 @@ Deno.serve(async (req) => {
     if (!token) return json({ error: 'not_connected' }, 400);
 
     // 1) conta -> métricas diárias + atualiza a conexão
-    const me = await getJson(`${GRAPH}/me?fields=username,account_type,followers_count,media_count,profile_picture_url&access_token=${token}`);
-    const today = new Date().toISOString().slice(0, 10);
+    // Se o token expirou/foi revogado, ABORTA aqui — não sobrescreve as métricas do
+    // dia com null e sinaliza pro frontend pedir reconexão.
+    const meRes = await fetchGraph(`${GRAPH}/me?fields=username,account_type,followers_count,media_count,profile_picture_url&access_token=${token}`);
+    if (!meRes.ok) {
+      console.error('[instagram-sync] graph /me error', meRes.status, meRes.body?.error);
+      return json({ error: 'ig_error', reconnect: true, detail: (meRes.body?.error as { message?: string } | undefined)?.message ?? 'graph_error' }, 502);
+    }
+    const me = meRes.body as Record<string, number | string | undefined>;
+    // Dia de calendário no fuso do Brasil (servidor roda em UTC).
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
 
     // Insights de conta (best-effort): série diária de alcance (gráfico) + visitas ao perfil
     const until = Math.floor(Date.now() / 1000);

@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { toISODateBR } from "@/lib/date-br";
 
 const TIPS = [
   { t: "Gancho do dia", d: "Abra o vídeo com: \"O erro que quase todo mundo comete sem perceber...\"" },
@@ -29,16 +30,16 @@ export async function generateNotifications(userId: string): Promise<void> {
 }
 
 async function runGenerate(userId: string) {
-  const today = new Date().toISOString().split("T")[0];
+  const today = toISODateBR();
 
-  // Get current week range
+  // Get current week range (dias de calendário no fuso BR)
   const now = new Date();
   const monday = new Date(now);
   monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6);
-  const weekStart = monday.toISOString().split("T")[0];
-  const weekEnd = sunday.toISOString().split("T")[0];
+  const weekStart = toISODateBR(monday);
+  const weekEnd = toISODateBR(sunday);
 
   const [postsRes, profileRes, existingRes] = await Promise.all([
     supabase.from("posts").select("id, status, scheduled_date, published_at").eq("user_id", userId),

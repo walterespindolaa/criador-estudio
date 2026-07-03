@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckSquare } from "lucide-react";
 import { useTasks } from "@/hooks/useTasks";
+import { hojeBR } from "@/lib/date-br";
 
 const PRIORITY_COLOR: Record<string, string> = {
   urgente: "#ef4444", alta: "#f59e0b", media: "var(--primary)", baixa: "#22c55e",
@@ -20,7 +21,7 @@ function dateLabel(iso: string) {
 export function UpcomingTasks() {
   const navigate = useNavigate();
   const { tasks } = useTasks({ limit: 50 });
-  const today = new Date().toISOString().split("T")[0];
+  const today = hojeBR();
 
   const upcoming = useMemo(() => {
     return tasks

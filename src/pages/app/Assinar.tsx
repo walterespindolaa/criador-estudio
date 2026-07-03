@@ -85,6 +85,7 @@ export default function Assinar() {
   }, [searchParams]);
 
   const handleSubscribe = async (planId: PlanId) => {
+    if (loadingPlan) return; // já tem um checkout em andamento
     setLoadingPlan(planId);
     // Guarda o valor pra disparar a conversão (Purchase) na página de obrigado + mede InitiateCheckout.
     const planValue = planId === "studio" ? 49.9 : 32.9;
@@ -163,6 +164,8 @@ export default function Assinar() {
       <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6">
         {PLANS.map((plan) => {
           const isLoading = loadingPlan === plan.id;
+          // Qualquer checkout em andamento trava os dois botões (evita 2 sessões Stripe).
+          const anyLoading = loadingPlan !== null;
           return (
             <div
               key={plan.id}
@@ -219,7 +222,7 @@ export default function Assinar() {
                 size="lg"
                 className="w-full text-base"
                 onClick={() => handleSubscribe(plan.id)}
-                disabled={isLoading}
+                disabled={anyLoading}
               >
                 {isLoading ? "Redirecionando..." : `Assinar ${plan.name}`}
               </Button>
