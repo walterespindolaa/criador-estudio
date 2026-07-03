@@ -21,7 +21,7 @@ function hfAuth(): string {
 
 type Page = { role: string; screen_text: string; prompt: string; request_id?: string; image_url?: string; status?: string };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
     const authHeader = req.headers.get("Authorization");
