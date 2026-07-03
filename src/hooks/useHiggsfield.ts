@@ -79,7 +79,7 @@ export type NewsHook = { titulo?: string; resumo?: string; angulo?: string; font
 export function useNewsHook() {
   return useMutation({
     mutationFn: (input?: { niche?: string }) =>
-      invoke({ action: "news", ...(input ?? {}) }) as Promise<{ news: NewsHook }>,
+      invoke({ action: "news", ...(input ?? {}) }) as unknown as Promise<{ news: NewsHook }>,
     onError: (e) => toast.error(e instanceof Error ? `Perplexity: ${e.message}` : "Não consegui buscar notícia."),
   });
 }
