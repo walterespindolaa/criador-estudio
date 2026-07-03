@@ -35,7 +35,9 @@ Deno.serve(async (req) => {
       allOk = (await bunnyDelete(`https://${host}/${zone}/${ref.external_file_id}`, { AccessKey: pass })) && allOk;
     }
     if (ref.bunny_video_id) {
-      const apiKey = Deno.env.get("BUNNY_CRIAPOST_API_KEY")!, lib = Deno.env.get("BUNNY_CRIAPOST_LIBRARY_ID");
+      // Os vídeos do Cria Post são criados na library BUNNY_STREAM (bunny-create-video).
+      // O delete PRECISA usar a MESMA library, senão apaga na errada e deixa órfão.
+      const apiKey = Deno.env.get("BUNNY_STREAM_API_KEY")!, lib = Deno.env.get("BUNNY_STREAM_LIBRARY_ID");
       allOk = (await bunnyDelete(`https://video.bunnycdn.com/library/${lib}/videos/${ref.bunny_video_id}`, { AccessKey: apiKey })) && allOk;
     }
     if (!allOk) {

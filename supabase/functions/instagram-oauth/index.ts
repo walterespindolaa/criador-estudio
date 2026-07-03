@@ -15,15 +15,10 @@ Deno.serve(async (req) => {
   try {
     const u = new URL(req.url);
     const code = u.searchParams.get('code');
-    const state = u.searchParams.get('state'); // "JWT" ou "JWT::crmClientId"
+    const state = u.searchParams.get('state'); // ticket de uso único (nonce)
     const err = u.searchParams.get('error');
     if (err) return redirect('error', err);
     if (!code || !state) return redirect('error', 'missing_code');
-
-    // state pode carregar o cliente: "JWT::clientId"
-    const [jwt, clientIdRaw] = state.split('::');
-    const crmClientId = clientIdRaw && clientIdRaw.length > 0 ? clientIdRaw : null;
-    const toClient = !!crmClientId;
 
     const appId = Deno.env.get('INSTAGRAM_APP_ID')!.trim();
     const appSecret = Deno.env.get('INSTAGRAM_APP_SECRET')!.trim();
@@ -33,10 +28,17 @@ Deno.serve(async (req) => {
 
     const admin = createClient(supabaseUrl, serviceKey);
 
-    // Identifica o usuário CRIA pelo JWT que veio no state
-    const { data: userData, error: userErr } = await admin.auth.getUser(jwt);
-    if (userErr || !userData?.user) return redirect('error', 'invalid_session', toClient);
-    const criaUserId = userData.user.id;
+    // Troca o ticket (state) pelo usuário. Uso único: apaga logo após ler.
+    const { data: st } = await admin.from('oauth_states')
+      .select('user_id, crm_client_id, expires_at').eq('state', state).maybeSingle();
+    await admin.from('oauth_states').delete().eq('state', state);
+    if (!st) return redirect('error', 'invalid_state');
+    if (new Date((st as { expires_at: string }).expires_at).getTime() < Date.now()) {
+      return redirect('error', 'state_expired');
+    }
+    const criaUserId = (st as { user_id: string }).user_id;
+    const crmClientId = (st as { crm_client_id: string | null }).crm_client_id ?? null;
+    const toClient = !!crmClientId;
 
     // 1) code -> token curto
     const form = new URLSearchParams({

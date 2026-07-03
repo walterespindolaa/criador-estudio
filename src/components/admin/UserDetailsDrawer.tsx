@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -91,11 +92,12 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
   const queryClient = useQueryClient();
   const [validity, setValidity] = useState<string>("lifetime");
   const [plan, setPlan] = useState<string>("");
+  const [seats, setSeats] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmWipe, setConfirmWipe] = useState(false);
 
   // Reset do estado local ao trocar de usuário (evita vazar seleção de um pro outro).
-  useEffect(() => { setPlan(""); setValidity("lifetime"); }, [userId]);
+  useEffect(() => { setPlan(""); setValidity("lifetime"); setSeats(null); }, [userId]);
 
   const { data, isLoading, error } = useQuery<UserDetails | null>({
     queryKey: ["admin-user-details", userId],
@@ -150,10 +152,11 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
     onError: (e: Error) => toast.error(`Falha: ${e.message}`),
   });
 
-  const { data: modulesData } = useQuery<{ modules: { code: string; name: string; coming_soon?: boolean }[]; active: string[]; account_type?: string | null; is_manager?: boolean }>({
+  type ModulesInfo = { modules: { code: string; name: string; coming_soon?: boolean }[]; active: string[]; account_type?: string | null; is_manager?: boolean; seat_limit?: number; seats_used?: number; agency_owner_id?: string | null; agency_owner_name?: string | null };
+  const { data: modulesData } = useQuery<ModulesInfo>({
     queryKey: ["admin-user-modules", userId],
     enabled: open && !!userId,
-    queryFn: () => invokeAction({ user_id: userId, action: "get_modules" }) as Promise<{ modules: { code: string; name: string }[]; active: string[]; account_type?: string | null; is_manager?: boolean }>,
+    queryFn: () => invokeAction({ user_id: userId, action: "get_modules" }) as Promise<ModulesInfo>,
   });
 
   const setModuleMutation = useMutation({
@@ -161,6 +164,16 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-user-modules", userId] });
       toast.success("Módulo atualizado.");
+    },
+    onError: (e: Error) => toast.error(`Falha: ${e.message}`),
+  });
+
+  const seatsValue = seats ?? modulesData?.seat_limit ?? 0;
+  const setSeatsMutation = useMutation({
+    mutationFn: () => invokeAction({ user_id: userId, action: "set_seats", seats: seatsValue }),
+    onSuccess: () => {
+      toast.success("Assentos atualizados.");
+      queryClient.invalidateQueries({ queryKey: ["admin-user-modules", userId] });
     },
     onError: (e: Error) => toast.error(`Falha: ${e.message}`),
   });
@@ -240,6 +253,11 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
                       {modulesData ? (modulesData.is_manager ? "🧑‍💼 Social mídia (gestor)" : "👤 Pessoa física (criador)") : "…"}
                     </p>
                   </FieldBox>
+                  {modulesData?.agency_owner_name && (
+                    <FieldBox label="Coberta pela agência">
+                      <p className="text-sm font-body text-foreground truncate">🏢 {modulesData.agency_owner_name}</p>
+                    </FieldBox>
+                  )}
                   <FieldBox label="Plano">
                     <p className="text-sm font-body text-foreground truncate">{data.plan ?? "—"}</p>
                   </FieldBox>
@@ -314,6 +332,27 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
                     </Button>
                   </div>
                 </FieldBox>
+
+                {(data.plan === "agency" || modulesData?.is_manager) && (
+                  <FieldBox label="Assentos de agência (clientes)">
+                    <div className="flex flex-wrap items-center gap-2 mt-1 min-w-0">
+                      <Input
+                        type="number" min={0} max={200}
+                        value={seatsValue}
+                        onChange={(e) => setSeats(Math.max(0, Math.min(200, Number(e.target.value) || 0)))}
+                        className="h-9 w-24"
+                      />
+                      <Button size="sm" onClick={() => setSeatsMutation.mutate()} disabled={setSeatsMutation.isPending}>
+                        {setSeatsMutation.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+                        Salvar
+                      </Button>
+                      {modulesData && (
+                        <span className="text-[11px] font-body text-muted-foreground">{modulesData.seats_used ?? 0} usados de {modulesData.seat_limit ?? 0}</span>
+                      )}
+                    </div>
+                    <p className="text-[10px] font-body text-muted-foreground mt-1.5">Nº de clientes que a agência pode cobrir. Precisa ser &gt; 0 pra ela sair do banner e adicionar clientes em "Suas contas".</p>
+                  </FieldBox>
+                )}
 
                 {modulesData && (
                   <FieldBox label="Módulos (add-ons de social mídia)">

@@ -192,16 +192,18 @@ export async function connectInstagram(clientId?: string | null) {
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
     if (!token) { toast.error("Faça login novamente."); return; }
-    const { data, error } = await supabase.functions.invoke("get-instagram-config");
-    if (error || !(data as { client_id?: string })?.client_id) {
+    // A função autentica pelo header e devolve um "ticket" (state) de uso único —
+    // o JWT NÃO vai mais na URL do OAuth.
+    const { data, error } = await supabase.functions.invoke("get-instagram-config", {
+      body: { crm_client_id: clientId ?? null },
+    });
+    if (error || !(data as { client_id?: string })?.client_id || !(data as { state?: string })?.state) {
       toast.error("Integração ainda não configurada. Tente novamente em breve.");
       return;
     }
-    const cfg = data as { client_id: string; redirect_uri: string; scope?: string };
+    const cfg = data as { client_id: string; redirect_uri: string; scope?: string; state: string };
     const scope = cfg.scope ?? "instagram_business_basic,instagram_business_manage_insights";
-    // state carrega o JWT (+ clientId quando conectando uma conta de cliente)
-    const stateValue = clientId ? `${token}::${clientId}` : token;
-    const url = `https://www.instagram.com/oauth/authorize?client_id=${encodeURIComponent(cfg.client_id)}&redirect_uri=${encodeURIComponent(cfg.redirect_uri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(stateValue)}`;
+    const url = `https://www.instagram.com/oauth/authorize?client_id=${encodeURIComponent(cfg.client_id)}&redirect_uri=${encodeURIComponent(cfg.redirect_uri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(cfg.state)}`;
     window.location.href = url;
   } catch {
     toast.error("Integração ainda não configurada.");

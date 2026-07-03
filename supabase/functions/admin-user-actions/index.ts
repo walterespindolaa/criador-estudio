@@ -163,16 +163,38 @@ serve(async (req) => {
       return json({ ok: true, plan });
     }
 
-    // Lista os módulos + os que o usuário já tem ativos + o tipo da conta (pros toggles do admin).
+    // Lista os módulos + ativos + tipo da conta + info de agência (pros controles do admin).
     if (action === "get_modules") {
-      const [{ data: mods }, { data: ent }, { data: tgt }] = await Promise.all([
+      const [{ data: mods }, { data: ent }, { data: tgt }, { count: seatsUsed }] = await Promise.all([
         svc.from("modules").select("code, name, coming_soon").order("sort_order"),
         svc.from("module_entitlements").select("module_code, status").eq("manager_id", user_id),
-        svc.from("profiles").select("account_type").eq("id", user_id).maybeSingle(),
+        svc.from("profiles").select("account_type, seat_limit, agency_owner_id").eq("id", user_id).maybeSingle(),
+        svc.from("profiles").select("id", { count: "exact", head: true }).eq("agency_owner_id", user_id),
       ]);
+      const t = (tgt ?? {}) as { account_type?: string; seat_limit?: number; agency_owner_id?: string };
       const active = (ent ?? []).filter((e: { status?: string }) => e.status === "active").map((e: { module_code: string }) => e.module_code);
-      const isManager = (tgt as { account_type?: string })?.account_type === "manager";
-      return json({ modules: mods ?? [], active, account_type: (tgt as { account_type?: string })?.account_type ?? null, is_manager: isManager });
+      let ownerName: string | null = null;
+      if (t.agency_owner_id) {
+        const { data: o } = await svc.from("profiles").select("name").eq("id", t.agency_owner_id).maybeSingle();
+        ownerName = (o as { name?: string })?.name ?? null;
+      }
+      return json({
+        modules: mods ?? [], active,
+        account_type: t.account_type ?? null,
+        is_manager: t.account_type === "manager",
+        seat_limit: t.seat_limit ?? 0,
+        seats_used: seatsUsed ?? 0,
+        agency_owner_id: t.agency_owner_id ?? null,
+        agency_owner_name: ownerName,
+      });
+    }
+
+    // Define os assentos de agência da conta (nº de clientes que ela pode cobrir).
+    if (action === "set_seats") {
+      const seats = Math.max(0, Math.min(200, Number((body as { seats?: number }).seats) || 0));
+      const { error } = await svc.from("profiles").update({ seat_limit: seats }).eq("id", user_id);
+      if (error) { console.error("[admin-user-actions] set_seats failed:", error); return json({ error: "update_failed" }, 500); }
+      return json({ ok: true, seat_limit: seats });
     }
 
     // Liga/desliga um módulo (add-on) pra conta.
