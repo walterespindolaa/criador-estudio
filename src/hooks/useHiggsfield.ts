@@ -59,7 +59,7 @@ async function invoke(body: Record<string, unknown>) {
 export function useDraftArt() {
   return useMutation({
     mutationFn: (input: { title: string; format: "estatico" | "carrossel"; slides?: number; source_content?: string; post_id?: string; enrich?: boolean }) =>
-      invoke({ action: "draft", ...input }) as unknown as Promise<{ pages: HfPage[]; format: string; slides: number; enriched?: boolean }>,
+      invoke({ action: "draft", ...input }) as unknown as Promise<{ pages: HfPage[]; master_prompt?: string; format: string; slides: number; enriched?: boolean }>,
     onError: (e) => toast.error(e instanceof Error ? `Falha ao montar: ${e.message}` : "Não consegui montar os textos."),
   });
 }

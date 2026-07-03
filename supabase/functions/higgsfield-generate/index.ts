@@ -206,11 +206,11 @@ Paleta (pro visual): ${cores || "(livre, moderna)"} · Fontes: ${fontes || "sans
 ${persona ? `Público: ${persona.name || "principal"}${persona.pain_points?.length ? ` · Dores: ${persona.pain_points.join(", ")}` : ""}${persona.interests?.length ? ` · Interesses: ${persona.interests.join(", ")}` : ""}` : ""}
 ${brandbook ? `\nO QUE A MARCA/PRODUTO REALMENTE É (Brandbook do criador — esta é a FONTE DA VERDADE sobre o produto; use pra entender o tema, não invente):\n${brandbook}` : ""}`.trim();
 
-    // IA escreve os textos dos slides + prompts (capa forte + âncora de estilo).
-    async function writePages(): Promise<Array<{ role?: string; screen_text?: string; prompt?: string }>> {
+    // IA escreve o PROMPT MASTER (linha editorial/estilo) + o texto e prompt de cada slide.
+    async function writePages(): Promise<{ master: string; pages: Array<{ role?: string; screen_text?: string; prompt?: string }> }> {
       const lovableKey = Deno.env.get("LOVABLE_API_KEY");
       if (!lovableKey) throw new Error("ai_not_configured");
-      const sys = `Você é diretor de arte + copywriter especialista em carrosséis de Instagram no Brasil. Escreve o texto de cada slide E o prompt de imagem pro Higgsfield (modelo Soul, text-to-image), mantendo IDENTIDADE VISUAL consistente. Você NUNCA inventa fatos sobre a marca/produto: usa só o CONTEXTO DA MARCA, o roteiro e a pesquisa. Responda SOMENTE JSON válido.`;
+      const sys = `Você é diretor de arte + copywriter especialista em carrosséis de Instagram no Brasil. Cria um PROMPT MASTER (linha editorial/visual que vale pra todas as páginas) E o texto + prompt de cada slide, mantendo IDENTIDADE VISUAL 100% consistente. Você NUNCA inventa fatos sobre a marca/produto: usa só o CONTEXTO DA MARCA, o roteiro e a pesquisa. Responda SOMENTE JSON válido.`;
       const usr = `CONTEXTO DA MARCA (entenda o que a marca/produto É antes de escrever):
 ${brandCtx}
 
@@ -222,14 +222,21 @@ ENTENDIMENTO DO TEMA (crítico):
 - Descubra o tema real cruzando o CONTEXTO DA MARCA + o ROTEIRO. Na dúvida, siga o roteiro e o que a marca vende.
 - Se faltar informação concreta, fique no que o roteiro/marca já dizem — NÃO invente estatística, história ou fato.
 
-REGRAS DE ESCRITA:
-- Cada "screen_text" tem que ser CONCRETO e específico ao produto/tema — nada de frase vaga tipo "alcance seus objetivos" ou "sem surpresas". Diga algo real e útil.
-- CAPA (página 1): gancho forte que para o scroll, conectado ao tema real.
-- Demais páginas: desenvolvem a ideia (contexto → benefício concreto → prova/exemplo → CTA claro), no mesmo estilo.
-- "prompt": em INGLÊS. Inclua a paleta (cite as cores), estilo, mood, enquadramento e "clean space for text overlay". Coerente com o tema REAL (ex.: finanças = interface/gráficos/organização, não mapas-múndi).
+O "master_prompt" (em INGLÊS) é a ÂNCORA que garante consistência entre todas as páginas. Deve definir:
+- Linha editorial/conceito visual do carrossel (o "pensamento" por trás).
+- Paleta de cores exata (cite as cores da marca) e como usá-las.
+- Estilo/tratamento visual, tipografia (vibe), mood, iluminação, tipo de composição.
+- Regras fixas: proporção, "clean space for text overlay", coerência de elementos entre slides.
+Escreva o master como um bloco reutilizável que pode ser colado ANTES de cada prompt de página.
 
-Responda:
-{"pages":[{"role":"capa|desenvolvimento|prova|cta","screen_text":"texto PT curto e concreto","prompt":"image prompt in English"}]}
+REGRAS DE ESCRITA:
+- Cada "screen_text" tem que ser CONCRETO e específico ao produto/tema — nada de frase vaga tipo "alcance seus objetivos". Diga algo real e útil.
+- CAPA (página 1): gancho forte que para o scroll, conectado ao tema real.
+- Demais páginas: desenvolvem a ideia (contexto → benefício concreto → prova/exemplo → CTA claro).
+- "prompt" de cada página: em INGLÊS, só o que MUDA naquele slide (a cena específica). NÃO repita todo o master — assuma o master como base e descreva a variação daquela página + "clean space for text overlay".
+
+Responda SOMENTE JSON:
+{"master_prompt":"editorial + style anchor in English","pages":[{"role":"capa|desenvolvimento|prova|cta","screen_text":"texto PT curto e concreto","prompt":"variação da cena em inglês"}]}
 Gere EXATAMENTE ${slides} página(s).`;
       const air = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST", headers: { "Authorization": `Bearer ${lovableKey}`, "Content-Type": "application/json" },
@@ -240,9 +247,9 @@ Gere EXATAMENTE ${slides} página(s).`;
       let s = String(aj.choices?.[0]?.message?.content || "").replace(/```json/gi, "").replace(/```/g, "").trim();
       const st = s.indexOf("{"); const en = s.lastIndexOf("}");
       if (st >= 0 && en > st) s = s.slice(st, en + 1);
-      let parsed: { pages?: Array<{ role?: string; screen_text?: string; prompt?: string }> } = {};
+      let parsed: { master_prompt?: string; pages?: Array<{ role?: string; screen_text?: string; prompt?: string }> } = {};
       try { parsed = JSON.parse(s); } catch { throw new Error(`prompt_parse_failed:${s.slice(0, 120)}`); }
-      return (parsed.pages ?? []).slice(0, slides);
+      return { master: String(parsed.master_prompt || ""), pages: (parsed.pages ?? []).slice(0, slides) };
     }
 
     // ── REELS SCRIPT ───────────────────────────────────────
@@ -291,20 +298,20 @@ Português, direto, sem enrolação, sem markdown pesado.`;
         const research = await pplx(`Sobre o tema "${title}" (nicho ${niche}): traga dados, estatísticas, números e exemplos ATUAIS e verificáveis, cada um com a fonte, que dariam autoridade a um carrossel de Instagram. Responda em 4 a 6 bullets curtos.`);
         if (research) extraResearch = research.slice(0, 2000);
       }
-      let drafted: Array<{ role?: string; screen_text?: string; prompt?: string }>;
+      let drafted: { master: string; pages: Array<{ role?: string; screen_text?: string; prompt?: string }> };
       try { drafted = await writePages(); }
       catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         const [code, detail] = msg.split(":");
         return json({ error: code || "draft_failed", message: detail || msg }, code === "ai_not_configured" ? 500 : 502);
       }
-      if (drafted.length === 0) return json({ error: "no_prompts", message: "A IA não retornou páginas. Tente de novo." }, 500);
-      const pages = drafted.map((p, i) => ({
+      if (drafted.pages.length === 0) return json({ error: "no_prompts", message: "A IA não retornou páginas. Tente de novo." }, 500);
+      const pages = drafted.pages.map((p, i) => ({
         role: p.role || (i === 0 ? "capa" : "pagina"),
         screen_text: p.screen_text || "",
         prompt: p.prompt || title,
       }));
-      return json({ ok: true, pages, format, slides, aspect_ratio: aspect, resolution, enriched: !!extraResearch });
+      return json({ ok: true, master_prompt: drafted.master, pages, format, slides, aspect_ratio: aspect, resolution, enriched: !!extraResearch });
     }
 
     // ── GENERATE ──────────────────────────────────────────
@@ -316,7 +323,7 @@ Português, direto, sem enrolação, sem markdown pesado.`;
     if (reviewed && reviewed.length > 0) {
       rawPages = reviewed.slice(0, slides);
     } else {
-      try { rawPages = await writePages(); }
+      try { rawPages = (await writePages()).pages; }
       catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         const [code, detail] = msg.split(":");

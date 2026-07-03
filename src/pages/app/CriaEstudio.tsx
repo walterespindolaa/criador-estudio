@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useSearchParams } from "react-router-dom";
-import { Wand2, Loader2, Image as ImageIcon, Download, Trash2, Lock, Sparkles, Pencil, ArrowLeft, LayoutGrid, Type as TypeIcon, TrendingUp, Newspaper, Zap, Film, Clock, Save } from "lucide-react";
+import { Wand2, Loader2, Image as ImageIcon, Download, Trash2, Lock, Sparkles, Pencil, ArrowLeft, LayoutGrid, Type as TypeIcon, TrendingUp, Newspaper, Zap, Film, Clock, Save, Copy, Palette } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,6 +59,7 @@ export default function CriaEstudio() {
 
   // Passo de revisão: textos dos slides antes de gerar as imagens.
   const [draftPages, setDraftPages] = useState<HfPage[] | null>((saved.draftPages as HfPage[]) ?? null);
+  const [draftMaster, setDraftMaster] = useState<string>((saved.draftMaster as string) ?? "");
   const [enrich, setEnrich] = useState<boolean>((saved.enrich as boolean) ?? false);
 
   // Reels: roteiro por segundos.
@@ -84,10 +85,10 @@ export default function CriaEstudio() {
     try {
       localStorage.setItem(LS_KEY, JSON.stringify({
         postId, kind, title, sourceContent, format, slides, aspect, resolution,
-        draftPages, enrich, reelSeconds, reelScript, themes, news, pplxTab,
+        draftPages, draftMaster, enrich, reelSeconds, reelScript, themes, news, pplxTab,
       }));
     } catch { /* quota cheia / modo privado — ignora */ }
-  }, [postId, kind, title, sourceContent, format, slides, aspect, resolution, draftPages, enrich, reelSeconds, reelScript, themes, news, pplxTab]);
+  }, [postId, kind, title, sourceContent, format, slides, aspect, resolution, draftPages, draftMaster, enrich, reelSeconds, reelScript, themes, news, pplxTab]);
 
   // Polling enquanto houver jobs em andamento.
   const runningIds = useMemo(() => jobs.filter((j) => j.status === "running").map((j) => j.id).join(","), [jobs]);
@@ -131,8 +132,20 @@ export default function CriaEstudio() {
     if (!title.trim()) return;
     draft.mutate(
       { title: title.trim(), format, slides, source_content: sourceContent || undefined, post_id: postId || undefined, enrich },
-      { onSuccess: (res) => setDraftPages(res.pages) },
+      { onSuccess: (res) => { setDraftPages(res.pages); setDraftMaster(res.master_prompt ?? ""); } },
     );
+  };
+
+  const copy = async (text: string, label = "Copiado!") => {
+    try { await navigator.clipboard.writeText(text); toast.success(label); }
+    catch { toast.error("Não consegui copiar — copie manualmente."); }
+  };
+
+  const copyAll = () => {
+    if (!draftPages) return;
+    const blocks = draftPages.map((p, i) => `# ${i === 0 ? "CAPA" : (p.role || `SLIDE ${i + 1}`)} (${i + 1}/${draftPages.length})\nTexto na tela: ${p.screen_text}\nPrompt da imagem: ${p.prompt}`);
+    const full = `=== PROMPT MASTER (linha editorial/estilo — cole antes de cada página) ===\n${draftMaster}\n\n${blocks.join("\n\n")}`;
+    copy(full, "Master + todos os prompts copiados!");
   };
 
   const gerarReels = () => {
@@ -170,6 +183,7 @@ export default function CriaEstudio() {
     setAspect(job.aspect_ratio || "4:5");
     setResolution(job.resolution || "1080p");
     setReelScript(null);
+    setDraftMaster("");
     setDraftPages(job.pages.map((p) => ({ role: p.role, screen_text: p.screen_text, prompt: p.prompt })));
     window.scrollTo({ top: 0, behavior: "smooth" });
     toast.success("Carrossel reaberto pra edição.");
@@ -212,6 +226,9 @@ export default function CriaEstudio() {
 
   const editSlideText = (i: number, val: string) => {
     setDraftPages((prev) => prev ? prev.map((p, idx) => idx === i ? { ...p, screen_text: val } : p) : prev);
+  };
+  const editSlidePrompt = (i: number, val: string) => {
+    setDraftPages((prev) => prev ? prev.map((p, idx) => idx === i ? { ...p, prompt: val } : p) : prev);
   };
 
   return (
@@ -470,11 +487,34 @@ export default function CriaEstudio() {
       {kind !== "reels" && draftPages && (
         <div className="bg-card border border-primary/30 ring-1 ring-primary/10 rounded-2xl p-4 mt-4">
           <div className="flex items-center gap-2 mb-3">
-            <p className="text-[10px] font-body font-semibold text-primary uppercase tracking-wider">3. Revise os textos dos slides</p>
-            <button onClick={() => setDraftPages(null)} className="ml-auto text-[11px] font-body text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
+            <p className="text-[10px] font-body font-semibold text-primary uppercase tracking-wider">3. Revise · textos + prompts pro Higgsfield</p>
+            <Button size="sm" variant="outline" className="ml-auto h-7 text-xs" onClick={copyAll}>
+              <Copy className="h-3.5 w-3.5 mr-1" /> Copiar tudo
+            </Button>
+            <button onClick={() => setDraftPages(null)} className="text-[11px] font-body text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
               <ArrowLeft className="h-3 w-3" /> voltar
             </button>
           </div>
+
+          {/* Prompt MASTER — linha editorial/paleta/estilo pra todos os slides */}
+          <div className="rounded-xl border border-secondary/30 bg-secondary/[0.04] p-3 mb-3">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Palette className="h-3.5 w-3.5 text-secondary" />
+              <span className="text-[10px] font-body font-bold text-secondary uppercase tracking-wide">Prompt master · linha editorial + cores + estilo</span>
+              <Button size="sm" variant="ghost" className="ml-auto h-6 text-[11px] px-2" onClick={() => copy(draftMaster, "Prompt master copiado!")}>
+                <Copy className="h-3 w-3 mr-1" /> copiar
+              </Button>
+            </div>
+            <Textarea
+              value={draftMaster}
+              onChange={(e) => setDraftMaster(e.target.value)}
+              rows={4}
+              className="w-full text-[13px] resize-none bg-card"
+              placeholder="Âncora de estilo (cole antes de cada prompt de página no Higgsfield)…"
+            />
+            <p className="text-[10px] font-body text-muted-foreground mt-1">Cole isto ANTES do prompt de cada página no Higgsfield pra manter o carrossel coerente.</p>
+          </div>
+
           <div className="space-y-2.5">
             {draftPages.map((pg, i) => (
               <div key={i} className="rounded-xl border border-border bg-muted/20 p-3">
@@ -482,13 +522,18 @@ export default function CriaEstudio() {
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-body font-bold text-primary uppercase tracking-wide">
                     {i === 0 ? "Capa" : pg.role || `Slide ${i + 1}`} · {i + 1}/{draftPages.length}
                   </span>
-                  {kind !== "foto" && (
-                    <Button size="sm" variant="outline" className="h-7 text-xs shrink-0"
-                      onClick={() => gerarUm(i)} disabled={gen.isPending}>
-                      {gen.isPending && genOne === i ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1" />}
-                      Gerar só este
+                  <div className="flex items-center gap-1.5">
+                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => copy(`${draftMaster}\n\n${pg.prompt}`, `Prompt do slide ${i + 1} copiado (com master)!`)}>
+                      <Copy className="h-3.5 w-3.5 mr-1" /> copiar prompt
                     </Button>
-                  )}
+                    {kind !== "foto" && (
+                      <Button size="sm" variant="outline" className="h-7 text-xs shrink-0"
+                        onClick={() => gerarUm(i)} disabled={gen.isPending}>
+                        {gen.isPending && genOne === i ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1" />}
+                        Gerar via API
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <Textarea
                   value={pg.screen_text}
@@ -497,13 +542,24 @@ export default function CriaEstudio() {
                   className="w-full text-sm resize-none bg-card"
                   placeholder="Texto que vai na tela desse slide…"
                 />
+                <details className="mt-1.5 group">
+                  <summary className="text-[10px] font-body text-muted-foreground cursor-pointer hover:text-foreground list-none inline-flex items-center gap-1">
+                    <ImageIcon className="h-3 w-3" /> ver/editar prompt da imagem
+                  </summary>
+                  <Textarea
+                    value={pg.prompt}
+                    onChange={(e) => editSlidePrompt(i, e.target.value)}
+                    rows={3}
+                    className="w-full text-[12px] resize-none bg-card mt-1.5 text-muted-foreground"
+                    placeholder="Prompt da imagem (inglês)…"
+                  />
+                </details>
               </div>
             ))}
           </div>
           <div className="flex flex-wrap items-center gap-2 mt-4">
-            <Button onClick={gerar} disabled={gen.isPending} className="h-9">
-              {gen.isPending && genOne === null ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-              {kind === "foto" ? "Gerar imagem" : "Gerar todas de uma vez"}
+            <Button onClick={copyAll} className="h-9">
+              <Copy className="h-4 w-4 mr-2" /> Copiar master + prompts
             </Button>
             <Button variant="outline" onClick={montar} disabled={draft.isPending} className="h-9">
               {draft.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Pencil className="h-4 w-4 mr-2" />}
@@ -515,8 +571,12 @@ export default function CriaEstudio() {
                 Salvar no post
               </Button>
             )}
-            <span className="text-[11px] font-body text-muted-foreground">Só agora gasta crédito do Higgsfield.</span>
+            <Button variant="ghost" onClick={gerar} disabled={gen.isPending} className="h-9 text-muted-foreground">
+              {gen.isPending && genOne === null ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+              Gerar via API (créditos separados)
+            </Button>
           </div>
+          <p className="text-[11px] font-body text-muted-foreground mt-2">Cole o <strong>prompt master</strong> + o prompt de cada slide no app do Higgsfield que você já assina (usa seus créditos do app). O botão "Gerar via API" só funciona se você tiver créditos de API no Higgsfield Cloud — é outro saldo.</p>
         </div>
       )}
 
