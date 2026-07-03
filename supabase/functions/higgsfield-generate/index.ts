@@ -49,6 +49,19 @@ function extractJson(raw: string): string {
   return s;
 }
 
+// Texto livre via Lovable AI (Gemini). Lança erro "ai_not_configured" / "ai_failed:...".
+async function aiText(sys: string, usr: string, maxTokens = 1200): Promise<string> {
+  const key = Deno.env.get("LOVABLE_API_KEY");
+  if (!key) throw new Error("ai_not_configured");
+  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST", headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "google/gemini-2.5-flash-lite", messages: [{ role: "system", content: sys }, { role: "user", content: usr }], max_tokens: maxTokens, temperature: 0.6 }),
+  });
+  if (!r.ok) throw new Error(`ai_failed:IA ${r.status}`);
+  const j = await r.json();
+  return String(j.choices?.[0]?.message?.content || "");
+}
+
 type Page = { role: string; screen_text: string; prompt: string; request_id?: string; image_url?: string; status?: string };
 
 Deno.serve(async (req) => {
@@ -178,6 +191,37 @@ Gere EXATAMENTE ${slides} página(s).`;
       let parsed: { pages?: Array<{ role?: string; screen_text?: string; prompt?: string }> } = {};
       try { parsed = JSON.parse(s); } catch { throw new Error(`prompt_parse_failed:${s.slice(0, 120)}`); }
       return (parsed.pages ?? []).slice(0, slides);
+    }
+
+    // ── REELS SCRIPT ───────────────────────────────────────
+    // Roteiro de reels/shorts marcado por tempo, pra você fatiar dentro do sistema. Não usa Higgsfield.
+    if (action === "reels_script") {
+      if (!title) return json({ error: "missing_title", message: "Escolha um post ou digite um tema." }, 400);
+      const seconds = Math.max(10, Math.min(180, Number(body?.seconds) || 30));
+      if (body?.enrich) {
+        const niche = prof?.niche || "geral";
+        const research = await pplx(`Sobre "${title}" (nicho ${niche}): dados/fatos atuais e verificáveis com fonte pra citar num reels. 3 a 5 bullets curtos.`);
+        if (research) extraResearch = research.slice(0, 1500);
+      }
+      const sys = `Você é roteirista de Reels/Shorts para o Brasil. Escreve roteiros prontos pra gravar, com marcação de tempo, falas diretas e indicação do que mostrar na tela.`;
+      const usr = `TEMA: ${title}
+DURAÇÃO ALVO: ${seconds} segundos
+${sourceContent ? `BASE (roteiro/legenda já escritos — use como espinha dorsal):\n${sourceContent}\n` : ""}${extraResearch ? `PESQUISA ATUAL (cite os dados no roteiro):\n${extraResearch}\n` : ""}
+Entregue um ROTEIRO fatiado por blocos de tempo cobrindo ~${seconds}s:
+- Gancho (0-3s) forte que segura o scroll
+- Desenvolvimento em 2 a 4 blocos, cada um com faixa de tempo aproximada
+- CTA no final
+Para cada bloco use o formato: [0-3s] FALA/AÇÃO — o que mostrar na tela.
+Português, direto, sem enrolação, sem markdown pesado.`;
+      let script: string;
+      try { script = await aiText(sys, usr, 1400); }
+      catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        const [code, detail] = msg.split(":");
+        return json({ error: code || "ai_failed", message: detail || msg }, code === "ai_not_configured" ? 500 : 502);
+      }
+      if (!script.trim()) return json({ error: "empty_script", message: "A IA não retornou roteiro. Tente de novo." }, 502);
+      return json({ ok: true, script: script.trim(), seconds, enriched: !!extraResearch });
     }
 
     // ── DRAFT ──────────────────────────────────────────────

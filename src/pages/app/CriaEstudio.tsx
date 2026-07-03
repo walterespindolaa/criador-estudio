@@ -1,14 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useSearchParams } from "react-router-dom";
-import { Wand2, Loader2, Image as ImageIcon, Download, Trash2, Lock, Sparkles, Pencil, ArrowLeft, LayoutGrid, Type as TypeIcon, TrendingUp, Newspaper, Zap } from "lucide-react";
+import { Wand2, Loader2, Image as ImageIcon, Download, Trash2, Lock, Sparkles, Pencil, ArrowLeft, LayoutGrid, Type as TypeIcon, TrendingUp, Newspaper, Zap, Film, Clock, Save } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useProfile } from "@/hooks/useProfile";
 import { usePosts, type Post } from "@/hooks/usePosts";
-import { useHiggsfieldJobs, useDraftArt, useGenerateArt, usePollJob, useDeleteJob, useHotThemes, useNewsHook, type HfJob, type HfPage, type HotTheme, type NewsHook } from "@/hooks/useHiggsfield";
+import { useHiggsfieldJobs, useDraftArt, useGenerateArt, usePollJob, useDeleteJob, useHotThemes, useNewsHook, useReelsScript, type HfJob, type HfPage, type HotTheme, type NewsHook } from "@/hooks/useHiggsfield";
+
+type Kind = "carrossel" | "foto" | "reels";
+function formatKind(fmt: string | null | undefined): Kind {
+  const f = (fmt || "").toLowerCase();
+  if (f === "reels" || f === "video" || f === "shorts") return "reels";
+  if (f === "carrossel") return "carrossel";
+  return "foto";
+}
 
 const ASPECTS = [
   { v: "4:5", label: "4:5 (feed)" },
@@ -28,10 +37,11 @@ export default function CriaEstudio() {
   const isAdmin = profile?.role === "admin";
   const [sp] = useSearchParams();
 
-  const { data: posts = [] } = usePosts();
-  const producing = useMemo(() => posts.filter((p) => p.status === "gravando"), [posts]);
+  const { posts, updatePost } = usePosts();
+  const producing = useMemo(() => (posts ?? []).filter((p) => p.status === "gravando"), [posts]);
 
   const [postId, setPostId] = useState<string | null>(null);
+  const [kind, setKind] = useState<Kind>("carrossel");
   const [title, setTitle] = useState(sp.get("ideia") ?? "");
   const [sourceContent, setSourceContent] = useState("");
   const [format, setFormat] = useState<"carrossel" | "estatico">("carrossel");
@@ -42,6 +52,10 @@ export default function CriaEstudio() {
   // Passo de revisão: textos dos slides antes de gerar as imagens.
   const [draftPages, setDraftPages] = useState<HfPage[] | null>(null);
   const [enrich, setEnrich] = useState(false);
+
+  // Reels: roteiro por segundos.
+  const [reelSeconds, setReelSeconds] = useState(30);
+  const [reelScript, setReelScript] = useState<string | null>(null);
 
   // Perplexity (admin-only).
   const [themes, setThemes] = useState<HotTheme[] | null>(null);
@@ -54,6 +68,7 @@ export default function CriaEstudio() {
   const del = useDeleteJob();
   const hot = useHotThemes();
   const newsHook = useNewsHook();
+  const reels = useReelsScript();
 
   // Polling enquanto houver jobs em andamento.
   const runningIds = useMemo(() => jobs.filter((j) => j.status === "running").map((j) => j.id).join(","), [jobs]);
@@ -75,17 +90,22 @@ export default function CriaEstudio() {
   }
 
   const selectPost = (post: Post) => {
+    const k = formatKind(post.format);
     setPostId(post.id);
+    setKind(k);
     setTitle(post.title || "");
     setSourceContent(postSource(post));
-    setFormat(post.format === "carrossel" ? "carrossel" : "estatico");
+    setFormat(k === "carrossel" ? "carrossel" : "estatico");
     setDraftPages(null);
+    setReelScript(null);
   };
 
   const useFreeTheme = () => {
     setPostId(null);
+    setKind(format === "carrossel" ? "carrossel" : "foto");
     setSourceContent("");
     setDraftPages(null);
+    setReelScript(null);
   };
 
   const montar = () => {
@@ -94,6 +114,31 @@ export default function CriaEstudio() {
       { title: title.trim(), format, slides, source_content: sourceContent || undefined, post_id: postId || undefined, enrich },
       { onSuccess: (res) => setDraftPages(res.pages) },
     );
+  };
+
+  const gerarReels = () => {
+    if (!title.trim()) return;
+    reels.mutate(
+      { title: title.trim(), seconds: reelSeconds, source_content: sourceContent || undefined, post_id: postId || undefined, enrich },
+      { onSuccess: (res) => setReelScript(res.script) },
+    );
+  };
+
+  // Salva o roteiro/conteúdo gerado de volta no card do post (content_blocks.roteiro).
+  const saveRoteiro = (text: string) => {
+    if (!postId) { toast.error("Selecione um post de Produzindo pra salvar no card."); return; }
+    const post = producing.find((p) => p.id === postId);
+    const blocks = { ...((post?.content_blocks as Record<string, unknown>) ?? {}), roteiro: text };
+    updatePost.mutate({ id: postId, updates: { content_blocks: blocks } }, {
+      onSuccess: () => toast.success("Roteiro salvo no post!"),
+      onError: () => toast.error("Não consegui salvar no post."),
+    });
+  };
+
+  const saveCarrosselRoteiro = () => {
+    if (!draftPages) return;
+    const text = draftPages.map((p, i) => `${i === 0 ? "Capa" : `Slide ${i + 1}`}: ${p.screen_text}`).join("\n");
+    saveRoteiro(text);
   };
 
   const pickTheme = (t: HotTheme) => {
@@ -232,15 +277,75 @@ export default function CriaEstudio() {
         </div>
       </div>
 
-      {/* ── Config ── */}
+      {/* ── Reels: roteiro por segundos ── */}
+      {kind === "reels" && (
+        <div className="bg-card border border-border rounded-2xl p-4 space-y-4 mt-4">
+          <div className="flex items-center gap-1.5">
+            <Film className="h-4 w-4 text-primary" />
+            <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider">2. Roteiro do Reels</p>
+          </div>
+          {!reelScript && (
+            <>
+              <div className="flex flex-wrap items-end gap-4">
+                <div>
+                  <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Duração (segundos)</p>
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <Input type="number" min={10} max={180} value={reelSeconds} onChange={(e) => setReelSeconds(Math.max(10, Math.min(180, Number(e.target.value) || 30)))} className="h-9 w-24" />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {[15, 30, 45, 60, 90].map((s) => (
+                    <button key={s} onClick={() => setReelSeconds(s)} className={cn("px-2.5 h-9 rounded-lg text-xs font-body border", reelSeconds === s ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground")}>{s}s</button>
+                  ))}
+                </div>
+                <div className="ml-auto flex items-center gap-3">
+                  <button type="button" onClick={() => setEnrich((v) => !v)}
+                    className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 h-9 text-xs font-body transition-colors",
+                      enrich ? "border-secondary bg-secondary/10 text-secondary" : "border-border text-muted-foreground hover:border-secondary/40")}>
+                    <TrendingUp className="h-3.5 w-3.5" /> Enriquecer com dados atuais
+                  </button>
+                  <Button onClick={gerarReels} disabled={reels.isPending || !title.trim()} className="h-9">
+                    {reels.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Film className="h-4 w-4 mr-2" />}
+                    Gerar roteiro
+                  </Button>
+                </div>
+              </div>
+              <p className="text-[11px] font-body text-muted-foreground">A IA entrega o roteiro marcado por tempo (gancho → desenvolvimento → CTA) a partir do seu roteiro/legenda. Você ajusta e fatia dentro do sistema. Reels não usa o Higgsfield.</p>
+            </>
+          )}
+          {reelScript && (
+            <div className="space-y-3">
+              <Textarea value={reelScript} onChange={(e) => setReelScript(e.target.value)} rows={12} className="text-sm leading-relaxed" />
+              <div className="flex flex-wrap items-center gap-2">
+                <Button onClick={() => saveRoteiro(reelScript)} disabled={updatePost.isPending || !postId} className="h-9">
+                  {updatePost.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                  Salvar no post
+                </Button>
+                <Button variant="outline" onClick={gerarReels} disabled={reels.isPending} className="h-9">
+                  {reels.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Film className="h-4 w-4 mr-2" />}
+                  Refazer
+                </Button>
+                <button onClick={() => setReelScript(null)} className="text-[11px] font-body text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
+                  <ArrowLeft className="h-3 w-3" /> voltar
+                </button>
+                {!postId && <span className="text-[11px] font-body text-muted-foreground">Selecione um post de Produzindo pra salvar no card.</span>}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Config (carrossel/foto) ── */}
+      {kind !== "reels" && (
       <div className="bg-card border border-border rounded-2xl p-4 space-y-4 mt-4">
-        <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider">2. Formato</p>
+        <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider">2. {kind === "foto" ? "Imagem" : "Formato"}</p>
         <div className="flex flex-wrap items-end gap-4">
           <div>
             <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Tipo</p>
             <div className="flex rounded-lg border border-border overflow-hidden">
               {(["carrossel", "estatico"] as const).map((f) => (
-                <button key={f} onClick={() => setFormat(f)} className={cn("px-3 h-9 text-sm font-body", format === f ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>{f === "carrossel" ? "Carrossel" : "Estático"}</button>
+                <button key={f} onClick={() => { setFormat(f); if (!postId) setKind(f === "carrossel" ? "carrossel" : "foto"); }} className={cn("px-3 h-9 text-sm font-body", format === f ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>{f === "carrossel" ? "Carrossel" : "Estático"}</button>
               ))}
             </div>
           </div>
@@ -276,16 +381,17 @@ export default function CriaEstudio() {
               </button>
               <Button onClick={montar} disabled={draft.isPending || !title.trim()} className="h-9">
                 {draft.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Pencil className="h-4 w-4 mr-2" />}
-                Montar textos
+                {kind === "foto" ? "Gerar ideia" : "Montar textos"}
               </Button>
             </div>
           )}
         </div>
-        <p className="text-[11px] font-body text-muted-foreground">A IA monta o texto de cada slide a partir do roteiro/legenda + sua marca (moodboard). Com <strong>Enriquecer com dados atuais</strong> ligado, o Perplexity busca estatísticas e fatos recentes (com fonte) pra dar autoridade. Você revisa antes de gerar as imagens — o Higgsfield só é acionado depois que você aprovar.</p>
+        <p className="text-[11px] font-body text-muted-foreground">A IA monta {kind === "foto" ? "a ideia de conteúdo" : "o texto de cada slide"} a partir do roteiro/legenda + sua marca (moodboard). Com <strong>Enriquecer com dados atuais</strong> ligado, o Perplexity busca estatísticas e fatos recentes (com fonte) pra dar autoridade. Você revisa antes de gerar {kind === "foto" ? "a imagem" : "as imagens"} — o Higgsfield só é acionado depois que você aprovar.</p>
       </div>
+      )}
 
       {/* ── Revisão dos slides ── */}
-      {draftPages && (
+      {kind !== "reels" && draftPages && (
         <div className="bg-card border border-primary/30 ring-1 ring-primary/10 rounded-2xl p-4 mt-4">
           <div className="flex items-center gap-2 mb-3">
             <p className="text-[10px] font-body font-semibold text-primary uppercase tracking-wider">3. Revise os textos dos slides</p>
@@ -316,6 +422,12 @@ export default function CriaEstudio() {
               {draft.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Pencil className="h-4 w-4 mr-2" />}
               Refazer textos
             </Button>
+            {postId && (
+              <Button variant="ghost" onClick={saveCarrosselRoteiro} disabled={updatePost.isPending} className="h-9">
+                {updatePost.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                Salvar no post
+              </Button>
+            )}
             <span className="text-[11px] font-body text-muted-foreground">Só agora gasta crédito do Higgsfield.</span>
           </div>
         </div>
