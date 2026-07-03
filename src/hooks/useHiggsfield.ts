@@ -51,7 +51,7 @@ async function invoke(body: Record<string, unknown>) {
   }
   const err = (data as { error?: string })?.error;
   if (err) throw new Error((data as { message?: string })?.message || err);
-  return data as { job_id: string; status: string; pages: HfPage[] };
+  return data as unknown as { job_id: string; status: string; pages: HfPage[] };
 }
 
 // Passo 1: só monta os textos dos slides + prompts (sem gastar crédito do Higgsfield).
@@ -59,7 +59,7 @@ async function invoke(body: Record<string, unknown>) {
 export function useDraftArt() {
   return useMutation({
     mutationFn: (input: { title: string; format: "estatico" | "carrossel"; slides?: number; source_content?: string; post_id?: string; enrich?: boolean }) =>
-      invoke({ action: "draft", ...input }) as Promise<{ pages: HfPage[]; format: string; slides: number; enriched?: boolean }>,
+      invoke({ action: "draft", ...input }) as unknown as Promise<{ pages: HfPage[]; format: string; slides: number; enriched?: boolean }>,
     onError: (e) => toast.error(e instanceof Error ? `Falha ao montar: ${e.message}` : "Não consegui montar os textos."),
   });
 }
@@ -69,7 +69,7 @@ export type HotTheme = { titulo: string; porque?: string };
 export function useHotThemes() {
   return useMutation({
     mutationFn: (input?: { niche?: string }) =>
-      invoke({ action: "hot_themes", ...(input ?? {}) }) as Promise<{ themes: HotTheme[] }>,
+      invoke({ action: "hot_themes", ...(input ?? {}) }) as unknown as Promise<{ themes: HotTheme[] }>,
     onError: (e) => toast.error(e instanceof Error ? `Perplexity: ${e.message}` : "Não consegui buscar temas."),
   });
 }
@@ -79,7 +79,7 @@ export type NewsHook = { titulo?: string; resumo?: string; angulo?: string; font
 export function useNewsHook() {
   return useMutation({
     mutationFn: (input?: { niche?: string }) =>
-      invoke({ action: "news", ...(input ?? {}) }) as Promise<{ news: NewsHook }>,
+      invoke({ action: "news", ...(input ?? {}) }) as unknown as Promise<{ news: NewsHook }>,
     onError: (e) => toast.error(e instanceof Error ? `Perplexity: ${e.message}` : "Não consegui buscar notícia."),
   });
 }
