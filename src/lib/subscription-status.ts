@@ -3,6 +3,7 @@ export type SubStatus =
   | "trial_expiring"
   | "trial_expired"
   | "active"
+  | "past_due"
   | "canceled"
   | "blocked";
 
@@ -18,13 +19,17 @@ export function deriveSubStatus(input: SubInput): SubStatus {
   const now = input.now ?? new Date();
 
   if (input.role === "admin") return "active";
-  if (input.subscriptionStatus === "active") {
+  // Stripe: assinatura em trial pago conta como ativa.
+  if (input.subscriptionStatus === "active" || input.subscriptionStatus === "trialing") {
     if (input.accessExpiresAt) {
       const exp = new Date(input.accessExpiresAt).getTime();
       if (exp <= now.getTime()) return "canceled"; // cortesia vencida → paywall
     }
     return "active";
   }
+  // Cartão recusado: o Stripe segue retentando por semanas. Mantém acesso (com aviso na UI)
+  // até o Stripe cancelar de fato (subscription.deleted → "canceled"). Não bloqueia pagante.
+  if (input.subscriptionStatus === "past_due" || input.subscriptionStatus === "unpaid") return "past_due";
   if (input.subscriptionStatus === "canceled") return "canceled";
 
   if (input.trialEndsAt) {
@@ -41,7 +46,7 @@ export function deriveSubStatus(input: SubInput): SubStatus {
 }
 
 export function canAccess(status: SubStatus): boolean {
-  return status === "trial_active" || status === "trial_expiring" || status === "active";
+  return status === "trial_active" || status === "trial_expiring" || status === "active" || status === "past_due";
 }
 
 export function daysLeftInTrial(trialEndsAt: string | null | undefined, now: Date = new Date()): number {

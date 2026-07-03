@@ -17,8 +17,12 @@ export function deriveTier(
 ): Tier {
   if (!profile) return "none";
   if (profile.role === "admin") return "studio";
-  if (profile.subscription_status === "active" && profile.plan === "studio") return "studio";
-  if (profile.subscription_status === "active" && profile.plan === "pro") return "pro";
+  // Assinatura vigente = active, trial pago do Stripe, ou em retentativa de cobrança
+  // (past_due/unpaid). Não derruba o tier de quem ainda está na janela de dunning.
+  const s = profile.subscription_status;
+  const hasSub = s === "active" || s === "trialing" || s === "past_due" || s === "unpaid";
+  if (hasSub && profile.plan === "studio") return "studio";
+  if (hasSub && profile.plan === "pro") return "pro";
   if (profile.trial_ends_at && new Date(profile.trial_ends_at) > now) return "studio";
   return "none";
 }

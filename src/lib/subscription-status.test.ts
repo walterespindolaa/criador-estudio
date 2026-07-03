@@ -74,13 +74,29 @@ describe("deriveSubStatus", () => {
       }),
     ).toBe("active");
   });
+
+  it("past_due/unpaid mantém acesso (não vira trial_expired) mesmo com trial vencido", () => {
+    expect(
+      deriveSubStatus({ subscriptionStatus: "past_due", trialEndsAt: daysFromFixed(-100), now: FIXED_NOW }),
+    ).toBe("past_due");
+    expect(
+      deriveSubStatus({ subscriptionStatus: "unpaid", trialEndsAt: null, now: FIXED_NOW }),
+    ).toBe("past_due");
+  });
+
+  it("trialing (trial pago do Stripe) conta como active", () => {
+    expect(
+      deriveSubStatus({ subscriptionStatus: "trialing", trialEndsAt: null, now: FIXED_NOW }),
+    ).toBe("active");
+  });
 });
 
 describe("canAccess", () => {
-  it("libera trial_active, trial_expiring e active", () => {
+  it("libera trial_active, trial_expiring, active e past_due", () => {
     expect(canAccess("trial_active")).toBe(true);
     expect(canAccess("trial_expiring")).toBe(true);
     expect(canAccess("active")).toBe(true);
+    expect(canAccess("past_due")).toBe(true);
   });
   it("bloqueia trial_expired, canceled e blocked", () => {
     expect(canAccess("trial_expired")).toBe(false);

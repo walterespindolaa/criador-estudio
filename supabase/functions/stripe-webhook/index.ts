@@ -22,6 +22,14 @@ async function sha256(input: string): Promise<string> {
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+// supabase-js NÃO lança em erro de DB (retorna { error }). Sem isto, uma gravação
+// que falha passa despercebida e o webhook responde 200 → cliente paga e não ativa.
+// Lançar aqui faz o handler retornar 500 e o Stripe reentregar o evento.
+function must<T>(res: { error: unknown; data?: T }, label: string): { error: unknown; data?: T } {
+  if (res.error) throw new Error(`${label}: ${JSON.stringify(res.error)}`);
+  return res;
+}
+
 // Purchase server-side no Meta CAPI (fonte da verdade: só dispara quando o Stripe confirma).
 // event_id = purchase-<session_id> → o Meta deduplica com o Purchase do navegador (/app/obrigado).
 async function sendMetaPurchase(s: Stripe.Checkout.Session): Promise<void> {
@@ -73,15 +81,22 @@ serve(async (req) => {
     return new Response(JSON.stringify({ received: true, ignored: true }), { status: 200 });
   }
 
-  // ── Idempotência: já processamos esse evento? ──
-  const { data: already } = await supabase
-    .from("billing_events")
-    .select("event_id")
-    .eq("gateway", "stripe")
-    .eq("event_id", event.id)
-    .maybeSingle();
-  if (already) {
-    return new Response(JSON.stringify({ received: true, duplicate: true }), { status: 200 });
+  // ── Idempotência ATÔMICA: reivindica o evento inserindo ANTES de processar.
+  // O UNIQUE(gateway, event_id) garante que duas entregas concorrentes do mesmo
+  // evento não sejam processadas em paralelo (a 2ª bate em 23505 e sai como duplicata).
+  const { error: claimErr } = await supabase.from("billing_events").insert({
+    gateway: "stripe",
+    event_id: event.id,
+    type: event.type,
+    payload: obj,
+  });
+  if (claimErr) {
+    // 23505 = unique_violation → já processado (ou processando agora). Idempotente.
+    if ((claimErr as { code?: string }).code === "23505") {
+      return new Response(JSON.stringify({ received: true, duplicate: true }), { status: 200 });
+    }
+    console.error("[stripe-webhook] billing_events claim error:", claimErr);
+    return new Response("Handler Error", { status: 500 }); // Stripe reentrega
   }
 
   try {
@@ -93,14 +108,14 @@ serve(async (req) => {
           const moduleCode = s.metadata?.module_code;
           const managerId = s.metadata?.manager_id;
           if (moduleCode && managerId) {
-            await supabase.from("module_entitlements").upsert({
+            must(await supabase.from("module_entitlements").upsert({
               manager_id: managerId,
               module_code: moduleCode,
               status: "active",
               stripe_customer_id: s.customer as string,
               stripe_subscription_id: s.subscription as string,
               updated_at: new Date().toISOString(),
-            }, { onConflict: "stripe_subscription_id" });
+            }, { onConflict: "stripe_subscription_id" }), "module_entitlements upsert");
           }
           break;
         }
@@ -111,23 +126,23 @@ serve(async (req) => {
         // Plano de agência: provisiona assentos (não mexe no plano pessoal de criação).
         if (plan === "agency") {
           const seats = Math.max(1, Math.floor(Number(s.metadata?.seats) || 1));
-          await supabase.from("profiles").update({
+          must(await supabase.from("profiles").update({
             subscription_status: "active",
             stripe_customer_id: s.customer as string,
             stripe_subscription_id: s.subscription as string,
             account_type: "manager",
             seat_limit: seats,
-          }).eq("id", userId);
+          }).eq("id", userId), "profiles agency activate");
           break;
         }
 
-        await supabase.from("profiles").update({
+        must(await supabase.from("profiles").update({
           subscription_status: "active",
           stripe_customer_id: s.customer as string,
           stripe_subscription_id: s.subscription as string,
           plan,
           storage_quota_bytes: STORAGE_BY_PLAN[plan] ?? 524288000,
-        }).eq("id", userId);
+        }).eq("id", userId), "profiles activate");
 
         // Purchase server-side no Meta (fonte da verdade da compra confirmada).
         await sendMetaPurchase(s);
@@ -186,10 +201,10 @@ serve(async (req) => {
           // Atualiza assentos pela quantidade atual da assinatura.
           const qty = Math.max(0, Math.floor(Number(sub.items?.data?.[0]?.quantity) || Number(sub.metadata?.seats) || 0));
           if (userId) {
-            await supabase.from("profiles").update({
+            must(await supabase.from("profiles").update({
               subscription_status: status,
               seat_limit: status === "active" ? qty : 0,
-            }).eq("id", userId);
+            }).eq("id", userId), "profiles agency update");
             // Se o limite caiu abaixo do uso, pausa os clientes excedentes (inventário).
             await supabase.rpc("reconcile_agency_seats", { _manager: userId });
           }
@@ -200,13 +215,13 @@ serve(async (req) => {
           const update: Record<string, string | number> = { subscription_status: status };
           if (plan) update.plan = plan;
           if (plan && status === "active") update.storage_quota_bytes = STORAGE_BY_PLAN[plan] ?? 524288000;
-          await supabase.from("profiles").update(update).eq("id", userId);
+          must(await supabase.from("profiles").update(update).eq("id", userId), "profiles status update");
         } else {
           // fallback: casa pelo stripe_subscription_id
           const { data: p } = await supabase.from("profiles")
             .select("id").eq("stripe_subscription_id", sub.id).maybeSingle();
-          if (p) await supabase.from("profiles")
-            .update({ subscription_status: status }).eq("id", p.id);
+          if (p) must(await supabase.from("profiles")
+            .update({ subscription_status: status }).eq("id", p.id), "profiles status update (fallback)");
         }
         break;
       }
@@ -358,19 +373,14 @@ serve(async (req) => {
       }
 
       default:
-        // outros eventos: ignora silenciosamente
+        // outros eventos: ignora silenciosamente (já registrados na reivindicação)
         break;
     }
-
-    // ── Registra o evento como processado (idempotência + auditoria) ──
-    await supabase.from("billing_events").insert({
-      gateway: "stripe",
-      event_id: event.id,
-      type: event.type,
-      payload: obj,
-    });
   } catch (err) {
     console.error("[stripe-webhook] handler error:", err);
+    // Desfaz a reivindicação para que o retry do Stripe possa reprocessar o evento.
+    await supabase.from("billing_events")
+      .delete().eq("gateway", "stripe").eq("event_id", event.id);
     return new Response("Handler Error", { status: 500 });
   }
 
