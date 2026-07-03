@@ -24,7 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Mail, ShieldOff, ShieldCheck, Trash2, Loader2, Eraser } from "lucide-react";
 
@@ -94,6 +94,9 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmWipe, setConfirmWipe] = useState(false);
 
+  // Reset do estado local ao trocar de usuário (evita vazar seleção de um pro outro).
+  useEffect(() => { setPlan(""); setValidity("lifetime"); }, [userId]);
+
   const { data, isLoading, error } = useQuery<UserDetails | null>({
     queryKey: ["admin-user-details", userId],
     enabled: open && !!userId,
@@ -147,10 +150,10 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
     onError: (e: Error) => toast.error(`Falha: ${e.message}`),
   });
 
-  const { data: modulesData } = useQuery<{ modules: { code: string; name: string; coming_soon?: boolean }[]; active: string[] }>({
+  const { data: modulesData } = useQuery<{ modules: { code: string; name: string; coming_soon?: boolean }[]; active: string[]; account_type?: string | null; is_manager?: boolean }>({
     queryKey: ["admin-user-modules", userId],
     enabled: open && !!userId,
-    queryFn: () => invokeAction({ user_id: userId, action: "get_modules" }) as Promise<{ modules: { code: string; name: string }[]; active: string[] }>,
+    queryFn: () => invokeAction({ user_id: userId, action: "get_modules" }) as Promise<{ modules: { code: string; name: string }[]; active: string[]; account_type?: string | null; is_manager?: boolean }>,
   });
 
   const setModuleMutation = useMutation({
@@ -232,6 +235,11 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
                       {data.email && <CopyButton text={data.email} />}
                     </div>
                   </FieldBox>
+                  <FieldBox label="Tipo de conta">
+                    <p className="text-sm font-body text-foreground truncate">
+                      {modulesData ? (modulesData.is_manager ? "🧑‍💼 Social mídia (gestor)" : "👤 Pessoa física (criador)") : "…"}
+                    </p>
+                  </FieldBox>
                   <FieldBox label="Plano">
                     <p className="text-sm font-body text-foreground truncate">{data.plan ?? "—"}</p>
                   </FieldBox>
@@ -307,24 +315,30 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
                   </div>
                 </FieldBox>
 
-                {modulesData && modulesData.modules.length > 0 && (
-                  <FieldBox label="Módulos (add-ons)">
-                    <div className="flex flex-wrap gap-1.5 mt-1">
-                      {modulesData.modules.map((m) => {
-                        const on = modulesData.active.includes(m.code);
-                        return (
-                          <button
-                            key={m.code}
-                            onClick={() => setModuleMutation.mutate({ code: m.code, enabled: !on })}
-                            disabled={setModuleMutation.isPending}
-                            className={`px-2.5 py-1 rounded-full text-xs font-body border transition-colors ${on ? "bg-primary/10 border-primary text-primary" : "bg-card border-border text-muted-foreground hover:text-foreground"}`}
-                          >
-                            {on ? "✓ " : "+ "}{m.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <p className="text-[10px] font-body text-muted-foreground mt-1.5">Clique pra ligar/desligar cada módulo pra esta conta.</p>
+                {modulesData && (
+                  <FieldBox label="Módulos (add-ons de social mídia)">
+                    {modulesData.is_manager ? (
+                      <>
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                          {modulesData.modules.map((m) => {
+                            const on = modulesData.active.includes(m.code);
+                            return (
+                              <button
+                                key={m.code}
+                                onClick={() => setModuleMutation.mutate({ code: m.code, enabled: !on })}
+                                disabled={setModuleMutation.isPending}
+                                className={`px-2.5 py-1 rounded-full text-xs font-body border transition-colors ${on ? "bg-primary/10 border-primary text-primary" : "bg-card border-border text-muted-foreground hover:text-foreground"}`}
+                              >
+                                {on ? "✓ " : "+ "}{m.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <p className="text-[10px] font-body text-muted-foreground mt-1.5">Clique pra ligar/desligar cada módulo pra esta conta de gestor.</p>
+                      </>
+                    ) : (
+                      <p className="text-[11px] font-body text-muted-foreground mt-1">Esta é uma conta <strong>pessoa física</strong> (criador). Os add-ons são só pra contas de social mídia — aqui, pra liberar recursos, use o <strong>Plano</strong> (ex.: Studio) acima.</p>
+                    )}
                   </FieldBox>
                 )}
 

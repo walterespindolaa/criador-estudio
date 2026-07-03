@@ -818,7 +818,12 @@ function AdminUserRow({ user, email, onRoleChange, onPlanChange, onAction, onSel
             )}
           </div>
           <div className="min-w-0">
-            <p className="font-body font-semibold text-foreground text-sm truncate">{user.name || "—"}</p>
+            <p className="font-body font-semibold text-foreground text-sm truncate flex items-center gap-1.5">
+              <span className="truncate">{user.name || "—"}</span>
+              {(user as { account_type?: string }).account_type === "manager"
+                ? <span className="shrink-0 text-[9px] font-body px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">Gestor</span>
+                : <span className="shrink-0 text-[9px] font-body px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">PF</span>}
+            </p>
             <p className="text-xs text-muted-foreground font-body truncate">
               {email ?? (user.instagram_handle ? `@${user.instagram_handle.replace(/^@/, "")}` : user.id.slice(0, 8))}
             </p>

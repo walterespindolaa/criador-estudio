@@ -163,14 +163,16 @@ serve(async (req) => {
       return json({ ok: true, plan });
     }
 
-    // Lista os módulos + os que o usuário já tem ativos (pros toggles do admin).
+    // Lista os módulos + os que o usuário já tem ativos + o tipo da conta (pros toggles do admin).
     if (action === "get_modules") {
-      const [{ data: mods }, { data: ent }] = await Promise.all([
+      const [{ data: mods }, { data: ent }, { data: tgt }] = await Promise.all([
         svc.from("modules").select("code, name, coming_soon").order("sort_order"),
         svc.from("module_entitlements").select("module_code, status").eq("manager_id", user_id),
+        svc.from("profiles").select("account_type").eq("id", user_id).maybeSingle(),
       ]);
       const active = (ent ?? []).filter((e: { status?: string }) => e.status === "active").map((e: { module_code: string }) => e.module_code);
-      return json({ modules: mods ?? [], active });
+      const isManager = (tgt as { account_type?: string })?.account_type === "manager";
+      return json({ modules: mods ?? [], active, account_type: (tgt as { account_type?: string })?.account_type ?? null, is_manager: isManager });
     }
 
     // Liga/desliga um módulo (add-on) pra conta.
