@@ -56,6 +56,7 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
   const [selected, setSelected] = useState<Record<string, boolean>>({ posts: true });
   const [handle, setHandle] = useState("");
   const [postUrl, setPostUrl] = useState("");
+  const [reelUrls, setReelUrls] = useState("");
   const [tag, setTag] = useState("");
   const [limit, setLimit] = useState(10);
   const [since, setSince] = useState("");
@@ -73,7 +74,9 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
   const usarCount = ideas.filter((i) => i.status === "usar").length;
 
   const selectedItems = ALL.filter((i) => selected[i.key]);
-  const needHandle = selectedItems.some((i) => i.inputKind === "handle");
+  const hasTranscription = selectedItems.some((i) => i.key === "transcription");
+  // Transcrição aceita @ OU link; só exige o @ quando NÃO tem link e há outro item que precise do @.
+  const needHandle = selectedItems.some((i) => i.inputKind === "handle" && !(i.key === "transcription" && reelUrls.trim()));
   const needUrl = selectedItems.some((i) => i.inputKind === "url");
   const needTag = selectedItems.some((i) => i.inputKind === "hashtag");
   const noPeriod = selectedItems.every((i) => ["profile", "comments", "stories"].includes(i.key));
@@ -85,12 +88,23 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
 
   const analisar = async () => {
     if (selectedItems.length === 0) { toast.error("Escolha ao menos uma análise."); return; }
+    // Transcrição: usa o link do reel se preenchido, senão o @.
+    const inputFor = (it: TypeDef) =>
+      it.key === "transcription" ? (reelUrls.trim() || handle.trim())
+      : it.inputKind === "url" ? postUrl
+      : it.inputKind === "hashtag" ? tag
+      : handle;
     for (const it of selectedItems) {
-      const inp = it.inputKind === "url" ? postUrl : it.inputKind === "hashtag" ? tag : handle;
-      if (!inp.trim()) { toast.error(`Falta preencher ${it.inputKind === "url" ? "a URL do post" : it.inputKind === "hashtag" ? "a hashtag" : "o @ do concorrente"} para "${it.label}".`); return; }
+      const inp = inputFor(it);
+      if (!inp.trim()) {
+        const what = it.key === "transcription" ? "o @ ou o link do reel"
+          : it.inputKind === "url" ? "a URL do post"
+          : it.inputKind === "hashtag" ? "a hashtag" : "o @ do concorrente";
+        toast.error(`Falta preencher ${what} para "${it.label}".`); return;
+      }
     }
     for (const it of selectedItems) {
-      const inp = it.inputKind === "url" ? postUrl : it.inputKind === "hashtag" ? tag : handle;
+      const inp = inputFor(it);
       setRunning(it.label);
       try { await run.mutateAsync({ type: it.key, input: inp.trim(), crm_client_id: clientId, limit, since: since || undefined }); } catch { /* toast já no hook */ }
     }
@@ -156,6 +170,11 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
               {needUrl && (
                 <Field label="URL do post (p/ comentários)">
                   <Input value={postUrl} onChange={(e) => setPostUrl(e.target.value)} placeholder="https://instagram.com/p/..." className="h-9" />
+                </Field>
+              )}
+              {hasTranscription && (
+                <Field label="Link(s) do(s) reel(s) — opcional, separados por vírgula">
+                  <Input value={reelUrls} onChange={(e) => setReelUrls(e.target.value)} placeholder="https://instagram.com/reel/... , https://..." className="h-9" />
                 </Field>
               )}
               {needTag && (
