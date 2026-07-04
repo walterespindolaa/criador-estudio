@@ -271,11 +271,20 @@ Pilares de conteúdo: ${pilares || "-"}
 Tom de voz: ${tom || "-"}${evitar ? `\nEvitar: ${evitar}` : ""}${persona ? `\nPersona: ${persona.name || ""} — dores: ${(persona.pain_points || []).join(", ")}; interesses: ${(persona.interests || []).join(", ")}` : ""}
 Conteúdo que o cliente JÁ fez (NÃO repita, complemente): ${recentes || "-"}`;
         } else {
-          // Cliente SEM conta no Cria → usa o que a social mídia cadastrou no CRM.
-          const personaTxt = client?.persona && typeof client.persona === "object" ? JSON.stringify(client.persona).slice(0, 400) : "";
-          const brandTxt = client?.brand_core && typeof client.brand_core === "object" ? JSON.stringify(client.brand_core).slice(0, 400) : "";
-          clientCtx = `O cliente NÃO tem conta no Cria — use SÓ o que a social mídia cadastrou no CRM.
-Nicho/segmento: ${nicho}${personaTxt ? `\nPersona (CRM): ${personaTxt}` : ""}${brandTxt ? `\nMarca (CRM): ${brandTxt}` : ""}`;
+          // Cliente SEM conta no Cria → usa o Brandbook que a social mídia cadastrou no CRM.
+          const bc = (client?.brand_core && typeof client.brand_core === "object" ? client.brand_core : {}) as Record<string, string>;
+          const brandLines = [
+            bc.offer && `O que vende: ${bc.offer}`,
+            bc.valueProp && `Proposta de valor/diferencial: ${bc.valueProp}`,
+            bc.audience && `Público-alvo: ${bc.audience}`,
+            bc.contentThemes && `Temas/pilares: ${bc.contentThemes}`,
+            bc.toneOfVoice && `Tom de voz: ${bc.toneOfVoice}`,
+            bc.personality && `Personalidade: ${bc.personality}`,
+            bc.avoid && `EVITAR: ${bc.avoid}`,
+          ].filter(Boolean).join("\n");
+          const personaTxt = client?.persona && typeof client.persona === "object" ? JSON.stringify(client.persona).slice(0, 600) : "";
+          clientCtx = `O cliente NÃO tem conta no Cria — use SÓ o Brandbook que a social mídia cadastrou no CRM.
+Nicho/segmento: ${nicho}${brandLines ? `\n${brandLines}` : ""}${personaTxt ? `\nPersona (CRM): ${personaTxt}` : ""}`;
         }
 
         const sys = `Você é estrategista de conteúdo brasileiro. Gere ideias PRONTAS pro cliente, SEMPRE dentro da marca e do nicho DELE. O concorrente serve só de inspiração de FORMATO/gancho/roteiro — nunca copie o assunto se for de outro nicho. Responda SOMENTE JSON válido.`;

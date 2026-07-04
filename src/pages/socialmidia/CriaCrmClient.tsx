@@ -3,11 +3,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, Save, Trash2, Plus, X, ImagePlus, Pencil, Camera, Upload, Download,
   Instagram, Mail, Phone, Palette, Type, MessageSquare, Image as ImageIcon,
-  Brain, HeartCrack, Heart, Lightbulb, Activity, NotebookPen, Target, Building2,
+  Brain, HeartCrack, Heart, Lightbulb, Activity, NotebookPen, Target, Building2, Mic,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useActiveAccount } from "@/contexts/AccountContext";
-import { useCrmClient, useUpdateCrmClient, useDeleteCrmClient, useCrmClientRefs, useAddCrmRef, useDeleteCrmRef, useUploadCrmAsset, type CrmClient } from "@/hooks/useCrm";
+import { useCrmClient, useUpdateCrmClient, useDeleteCrmClient, useCrmClientRefs, useAddCrmRef, useDeleteCrmRef, useUploadCrmAsset, useSyncCrmFromCria, type CrmClient } from "@/hooks/useCrm";
+import { useScrapes, useHasHubCria } from "@/hooks/useHubCria";
+import { SummaryCard } from "@/components/hubcria/CriativoTab";
 import { ClientTasks } from "@/components/accounts/crm/ClientTasks";
 import { ModuleGate } from "@/components/accounts/ModuleGate";
 import { Button } from "@/components/ui/button";
@@ -28,19 +30,68 @@ export default function CriaCrmClient() {
   return <ModuleGate code="crm"><ClientWorkspace /></ModuleGate>;
 }
 
+// Ditado por voz (Web Speech API — Chrome). Anexa o texto reconhecido ao campo.
+function MicButton({ onText }: { onText: (t: string) => void }) {
+  const recRef = useRef<any>(null);
+  const [on, setOn] = useState(false);
+  const start = () => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) { toast.error("Ditado por voz não suportado neste navegador (use o Chrome)."); return; }
+    const r = new SR();
+    r.lang = "pt-BR"; r.continuous = true; r.interimResults = false;
+    r.onresult = (e: any) => {
+      let t = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) t += e.results[i][0].transcript;
+      if (t.trim()) onText(t.trim());
+    };
+    r.onend = () => setOn(false);
+    r.onerror = () => setOn(false);
+    r.start(); recRef.current = r; setOn(true);
+  };
+  const stop = () => { try { recRef.current?.stop(); } catch { /* ignore */ } setOn(false); };
+  return (
+    <button type="button" onClick={() => (on ? stop() : start())} title={on ? "Parar" : "Ditar por voz"}
+      className={cn("shrink-0 h-8 w-8 grid place-items-center rounded-lg border transition-colors", on ? "bg-red-500 text-white border-red-500 animate-pulse" : "border-border text-muted-foreground hover:text-primary hover:border-primary/40")}>
+      <Mic className="h-4 w-4" />
+    </button>
+  );
+}
+function MicTextarea({ value, onChange, rows = 2, placeholder }: { value: string; onChange: (v: string) => void; rows?: number; placeholder?: string }) {
+  return (
+    <div className="relative">
+      <Textarea rows={rows} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="rounded-xl text-sm pr-11" />
+      <div className="absolute top-2 right-2"><MicButton onText={(t) => onChange((value ? value.trim() + " " : "") + t)} /></div>
+    </div>
+  );
+}
+
 function ClientWorkspace() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { setActiveAccount, managedAccounts } = useActiveAccount();
   const { data: client, isLoading } = useCrmClient(id);
+  const { allowed: hasHubCria } = useHasHubCria();
+  const { data: hubScrapes = [] } = useScrapes(id);
+  const hubDone = hubScrapes.filter((s) => s.status === "done" && s.result_summary);
   const update = useUpdateCrmClient();
   const del = useDeleteCrmClient();
   const uploadAsset = useUploadCrmAsset();
+  const sync = useSyncCrmFromCria();
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const fontInputRef = useRef<HTMLInputElement>(null);
+  const syncedOnce = useRef(false);
 
   const [form, setForm] = useState<CrmClient | null>(null);
   useEffect(() => { if (client) setForm(client); }, [client]);
+
+  // Auto-sync uma vez ao abrir um cliente que usa o Cria (puxa Brandbook/nome atualizados).
+  useEffect(() => {
+    if (client?.cria_owner_id && id && !syncedOnce.current) {
+      syncedOnce.current = true;
+      sync.mutate(id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client?.cria_owner_id, id]);
 
   if (isLoading || !form) {
     return <div className="space-y-4"><div className="h-32 rounded-3xl bg-muted animate-pulse" /><div className="h-72 rounded-3xl bg-muted animate-pulse" /></div>;
@@ -137,7 +188,7 @@ function ClientWorkspace() {
       {/* TABS */}
       <Tabs defaultValue="resumo" className="w-full">
         <TabsList className="bg-card border border-border rounded-2xl p-1.5 mb-6 flex-wrap h-auto shadow-sm">
-          {[["resumo", "Resumo"], ["tarefas", "Tarefas"], ["brand", "Brand Core"], ["persona", "Persona"], ["diag", "Diagnóstico"], ["conc", "Concorrência"]].map(([v, l]) => (
+          {[["resumo", "Resumo"], ["tarefas", "Tarefas"], ["brand", "Brandbook"], ["persona", "Persona"], ["diag", "Diagnóstico"], ["conc", "Concorrência"]].map(([v, l]) => (
             <TabsTrigger key={v} value={v} className="rounded-xl px-4 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none font-display">{l}</TabsTrigger>
           ))}
         </TabsList>
@@ -173,7 +224,30 @@ function ClientWorkspace() {
 
         {/* BRAND CORE */}
         <TabsContent value="brand" className="mt-0 space-y-4">
-          {isCria && <CriaHint />}
+          {isCria && (
+            <div className="flex items-center gap-2 rounded-2xl border border-primary/20 bg-primary/[0.05] px-4 py-3 flex-wrap">
+              <Instagram className="h-4 w-4 text-primary shrink-0" />
+              <p className="text-[12px] font-body text-foreground/80 flex-1 min-w-0">Este cliente usa o Cria — o Brandbook e o nome são sincronizados do que ele preenche na conta dele.</p>
+              <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => id && sync.mutate(id, { onSuccess: () => toast.success("Sincronizado do Cria!") })} disabled={sync.isPending}>
+                {sync.isPending ? <Save className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                Sincronizar do Cria
+              </Button>
+            </div>
+          )}
+          {/* Mensagem & estratégia — é isso que alimenta as ideias de post da IA */}
+          <Card icon={<Brain />} title="Mensagem & estratégia (alimenta as ideias de post)">
+            <p className="text-[11px] font-body text-muted-foreground mb-3 -mt-1">Quanto mais completo, melhores as ideias que a IA gera pra este cliente. Toque no 🎤 pra ditar por voz.</p>
+            <F label="O que a marca vende (produto/serviço)"><MicTextarea value={bc.offer ?? ""} onChange={(v) => setBc("offer", v)} placeholder="Ex.: consultoria financeira pra casais; app de organização..." /></F>
+            <F label="Proposta de valor / diferencial" className="mt-3"><MicTextarea value={bc.valueProp ?? ""} onChange={(v) => setBc("valueProp", v)} placeholder="Por que escolher essa marca e não outra?" /></F>
+            <F label="Público-alvo" className="mt-3"><MicTextarea value={bc.audience ?? ""} onChange={(v) => setBc("audience", v)} placeholder="Pra quem é? Dores, desejos, momento de vida..." /></F>
+            <F label="Temas / pilares de conteúdo" className="mt-3"><MicTextarea value={bc.contentThemes ?? ""} onChange={(v) => setBc("contentThemes", v)} placeholder="Sobre o que a marca posta? Ex.: educação financeira, bastidores, dicas..." /></F>
+            <F label="O que evitar" className="mt-3"><MicTextarea value={bc.avoid ?? ""} onChange={(v) => setBc("avoid", v)} placeholder="Assuntos, palavras ou tom que a marca não usa." /></F>
+          </Card>
+          {bc.criaBrandbook && (
+            <Card icon={<Instagram />} title="Brandbook do cliente (sincronizado do Cria)">
+              <p className="text-[13px] font-body text-muted-foreground whitespace-pre-wrap leading-relaxed">{bc.criaBrandbook}</p>
+            </Card>
+          )}
           {bc.archetype && (
             <div className="rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/10 to-card p-5 flex items-center gap-4">
               <span className="font-display font-extrabold text-sm text-primary-foreground bg-primary px-4 py-2 rounded-xl">{bc.archetype}</span>
@@ -261,6 +335,30 @@ function ClientWorkspace() {
 
         {/* CONCORRÊNCIA */}
         <TabsContent value="conc" className="mt-0 space-y-3">
+          {/* Análises do HUB (pesquisa real de concorrentes) */}
+          {hasHubCria && (
+            <div className="rounded-2xl border border-primary/20 bg-primary/[0.03] p-4 space-y-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Target className="h-4 w-4 text-primary" />
+                <p className="text-sm font-display font-bold text-foreground">Análises do HUB Criativo</p>
+                <span className="text-[11px] font-body text-muted-foreground">({hubDone.length})</span>
+                <Button variant="outline" size="sm" className="ml-auto h-8 text-xs" onClick={() => navigate(`/socialmidia/clientes/${id}/criativo`)}>
+                  <ArrowRight className="h-3.5 w-3.5 mr-1" /> Nova análise no Criativo
+                </Button>
+              </div>
+              {hubDone.length === 0 ? (
+                <p className="text-[12px] font-body text-muted-foreground">Nenhuma pesquisa ainda. Rode uma análise de concorrente na aba <strong>Criativo</strong> — os resultados aparecem aqui pra consulta.</p>
+              ) : (
+                <div className="space-y-2">
+                  {hubDone.map((s, i) => (
+                    <SummaryCard key={s.id} summary={s.result_summary as Record<string, unknown>} handle={s.input_handle} defaultOpen={i === 0} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider pt-1">Concorrentes acompanhados (manual)</p>
           {comps.map((c, i) => (
             <div key={i} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
               <div className="flex items-center gap-3 mb-3">

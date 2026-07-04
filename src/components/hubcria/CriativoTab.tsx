@@ -323,7 +323,7 @@ function IdeaBtn({ active, onClick, icon, children }: { active: boolean; onClick
   );
 }
 
-function SummaryCard({ summary, handle, defaultOpen = false }: { summary: Record<string, unknown>; handle: string; defaultOpen?: boolean }) {
+export function SummaryCard({ summary, handle, defaultOpen = false }: { summary: Record<string, unknown>; handle: string; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   const s = summary as Record<string, any>;
   const kind = s.kind;

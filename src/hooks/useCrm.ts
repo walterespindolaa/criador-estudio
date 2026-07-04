@@ -91,6 +91,24 @@ export function useUpdateCrmClient() {
   });
 }
 
+// Puxa o Brandbook/nome do cliente que usa o Cria pro CRM da agência (via edge, service role).
+export function useSyncCrmFromCria() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (crmClientId: string) => {
+      const { data, error } = await supabase.functions.invoke("crm-sync-from-cria", { body: { crm_client_id: crmClientId } });
+      if (error) throw new Error(error.message);
+      const err = (data as { error?: string })?.error;
+      if (err) throw new Error((data as { message?: string })?.message || err);
+      return data as { name: string; brand_core: Record<string, string>; synced_keys: string[] };
+    },
+    onSuccess: (_d, id) => {
+      qc.invalidateQueries({ queryKey: ["crm-client", id] });
+      qc.invalidateQueries({ queryKey: ["crm-clients"] });
+    },
+  });
+}
+
 export function useDeleteCrmClient() {
   const qc = useQueryClient();
   return useMutation({
