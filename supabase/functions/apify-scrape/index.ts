@@ -204,7 +204,8 @@ Deno.serve(async (req) => {
         actor = "linen_snack~instagram-reel-transcript-ai-extractor";
         const isUrl = /instagram\.com|https?:\/\//i.test(inputHandle);
         if (isUrl) {
-          const urls = inputHandle.split(/[\s,]+/).filter((u) => /instagram\.com/i.test(u)).slice(0, limit);
+          // Com links, transcreve exatamente os que vieram (cap de segurança 15), ignora "quantos posts".
+          const urls = inputHandle.split(/[\s,]+/).filter((u) => /instagram\.com/i.test(u)).slice(0, 15);
           input = { reelUrls: urls, language: "pt", enableSummary: true };
         } else {
           input = { usernames: [cleanHandle(inputHandle)], maxReelsPerUsername: limit, language: "pt", enableSummary: true };

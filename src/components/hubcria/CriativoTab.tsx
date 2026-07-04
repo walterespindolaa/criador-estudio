@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   Loader2, Sparkles, Check, X, Trash2, Instagram, Heart, MessageCircle, Play, CalendarPlus,
-  LayoutGrid, FileText, CircleDashed, User, AtSign, Hash, Megaphone, TrendingUp,
+  LayoutGrid, FileText, CircleDashed, User, AtSign, Hash, Megaphone, TrendingUp, Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -56,7 +56,7 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
   const [selected, setSelected] = useState<Record<string, boolean>>({ posts: true });
   const [handle, setHandle] = useState("");
   const [postUrl, setPostUrl] = useState("");
-  const [reelUrls, setReelUrls] = useState("");
+  const [reelLinks, setReelLinks] = useState<string[]>([""]);
   const [tag, setTag] = useState("");
   const [limit, setLimit] = useState(10);
   const [since, setSince] = useState("");
@@ -75,11 +75,20 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
 
   const selectedItems = ALL.filter((i) => selected[i.key]);
   const hasTranscription = selectedItems.some((i) => i.key === "transcription");
+  const validLinks = reelLinks.map((l) => l.trim()).filter(Boolean);
+  const hasLinks = validLinks.length > 0;
   // Transcrição aceita @ OU link; só exige o @ quando NÃO tem link e há outro item que precise do @.
-  const needHandle = selectedItems.some((i) => i.inputKind === "handle" && !(i.key === "transcription" && reelUrls.trim()));
+  const needHandle = selectedItems.some((i) => i.inputKind === "handle" && !(i.key === "transcription" && hasLinks));
   const needUrl = selectedItems.some((i) => i.inputKind === "url");
   const needTag = selectedItems.some((i) => i.inputKind === "hashtag");
   const noPeriod = selectedItems.every((i) => ["profile", "comments", "stories"].includes(i.key));
+  // "Quantos posts" só serve pros itens que puxam N recentes; transcrição por link não usa (a qtd é o nº de links).
+  const usesCount = (k: string) => !["profile", "comments", "stories"].includes(k);
+  const needCount = selectedItems.some((i) => usesCount(i.key) && !(i.key === "transcription" && hasLinks));
+
+  const addLink = () => setReelLinks((l) => [...l, ""]);
+  const setLinkAt = (i: number, v: string) => setReelLinks((l) => l.map((x, idx) => (idx === i ? v : x)));
+  const removeLink = (i: number) => setReelLinks((l) => (l.length <= 1 ? [""] : l.filter((_, idx) => idx !== i)));
 
   const doneScrapes = useMemo(() => scrapes.filter((s) => s.status === "done" && s.result_summary).slice(0, 8), [scrapes]);
   const filteredIdeas = useMemo(() => (filter === "todas" ? ideas : ideas.filter((i) => i.status === filter)), [ideas, filter]);
@@ -88,9 +97,9 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
 
   const analisar = async () => {
     if (selectedItems.length === 0) { toast.error("Escolha ao menos uma análise."); return; }
-    // Transcrição: usa o link do reel se preenchido, senão o @.
+    // Transcrição: usa os links do reel se preenchidos, senão o @.
     const inputFor = (it: TypeDef) =>
-      it.key === "transcription" ? (reelUrls.trim() || handle.trim())
+      it.key === "transcription" ? (hasLinks ? validLinks.join(",") : handle.trim())
       : it.inputKind === "url" ? postUrl
       : it.inputKind === "hashtag" ? tag
       : handle;
@@ -172,27 +181,47 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
                   <Input value={postUrl} onChange={(e) => setPostUrl(e.target.value)} placeholder="https://instagram.com/p/..." className="h-9" />
                 </Field>
               )}
-              {hasTranscription && (
-                <Field label="Link(s) do(s) reel(s) — opcional, separados por vírgula">
-                  <Input value={reelUrls} onChange={(e) => setReelUrls(e.target.value)} placeholder="https://instagram.com/reel/... , https://..." className="h-9" />
-                </Field>
-              )}
               {needTag && (
                 <Field label="Hashtag">
                   <Input value={tag} onChange={(e) => setTag(e.target.value)} placeholder="esteticafacial" className="h-9" />
                 </Field>
               )}
+              {needCount && (
+                <Field label="Quantos posts (mais recentes)">
+                  <Input type="number" min={1} max={20} value={limit} onChange={(e) => setLimit(Math.max(1, Math.min(20, Number(e.target.value) || 10)))} className="h-9" />
+                  {hasTranscription && <p className="text-[10px] font-body text-muted-foreground mt-1">Vale só no modo @ (quantos reels recentes puxar). Com links, transcreve os que você colar.</p>}
+                </Field>
+              )}
               {!noPeriod && (
-                <>
-                  <Field label="Quantos posts (mais recentes)">
-                    <Input type="number" min={1} max={20} value={limit} onChange={(e) => setLimit(Math.max(1, Math.min(20, Number(e.target.value) || 10)))} className="h-9" />
-                  </Field>
-                  <Field label="Ou desde a data (opcional)">
-                    <Input type="date" value={since} onChange={(e) => setSince(e.target.value)} className="h-9" />
-                  </Field>
-                </>
+                <Field label="Ou desde a data (opcional)">
+                  <Input type="date" value={since} onChange={(e) => setSince(e.target.value)} className="h-9" />
+                </Field>
               )}
             </div>
+            {/* Links de reel individuais (transcrição) — @ OU links */}
+            {hasTranscription && (
+              <div className="rounded-xl border border-border bg-muted/20 p-3">
+                <p className="text-[11px] font-body font-semibold text-foreground mb-1.5">Link(s) do(s) reel(s) — opcional (ou use o @ acima)</p>
+                <div className="space-y-2">
+                  {reelLinks.map((lnk, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <Input
+                        value={lnk}
+                        onChange={(e) => setLinkAt(i, e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (i === reelLinks.length - 1 && lnk.trim()) addLink(); } }}
+                        placeholder="https://instagram.com/reel/..."
+                        className="h-9 flex-1"
+                      />
+                      <button type="button" onClick={() => removeLink(i)} className="text-muted-foreground hover:text-destructive shrink-0" title="Remover" aria-label="Remover link"><X className="h-4 w-4" /></button>
+                    </div>
+                  ))}
+                </div>
+                <Button type="button" variant="outline" size="sm" className="h-8 mt-2 text-xs" onClick={addLink}>
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar link
+                </Button>
+                {hasLinks && <p className="text-[10px] font-body text-secondary mt-1.5">{validLinks.length} reel(s) — transcreve exatamente esses.</p>}
+              </div>
+            )}
             <div className="flex items-center gap-3">
               <Button onClick={analisar} disabled={!!running}>
                 {running ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
