@@ -75,6 +75,12 @@ Deno.serve(async (req) => {
     if (prof?.name && prof.name !== (cli as any).name) update.name = prof.name;
     if (prof?.niche && !(cli as any).segment) update.segment = prof.niche;
 
+    // Persona do Cria → persona do CRM (dores/desejos).
+    const personaPatch: Record<string, string> = {};
+    if ((persona?.pain_points || []).length) personaPatch.pains = (persona.pain_points || []).join("\n");
+    if ((persona?.interests || []).length) personaPatch.desires = (persona.interests || []).join("\n");
+    if (Object.keys(personaPatch).length) update.persona = { ...((cli as any).persona ?? {}), ...personaPatch };
+
     const { error: upErr } = await svc.from("crm_clients").update(update).eq("id", crmClientId);
     if (upErr) return json({ error: "update_failed", message: upErr.message }, 500);
 

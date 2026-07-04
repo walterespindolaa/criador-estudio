@@ -208,3 +208,16 @@ export function useDeleteIdea() {
     onError: () => toast.error("Não consegui excluir."),
   });
 }
+
+// Exclui uma análise (scrape) do concorrente.
+export function useDeleteScrape() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await sbFrom("competitor_scrapes").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["hubcria-scrapes"] }); toast.success("Análise excluída."); },
+    onError: () => toast.error("Não consegui excluir a análise."),
+  });
+}

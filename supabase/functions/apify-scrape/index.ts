@@ -232,6 +232,14 @@ Deno.serve(async (req) => {
         return json({ error: "apify_failed", message: `Apify retornou ${resp.status}.` }, 502);
       }
       const items = await resp.json() as any[];
+      const nItems = Array.isArray(items) ? items.length : 0;
+      // Transcrição vazia = reel privado/indisponível ou link inválido. Não deixa "0 itens" silencioso.
+      if (type === "transcription" && nItems === 0) {
+        await svc.from("competitor_scrapes").update({
+          status: "error", error: "Não consegui puxar esse reel (pode estar privado, indisponível ou o link tá com parâmetros). Tente colar o link limpo (sem ?igsh=...) ou usar o @ do perfil.", finished_at: new Date().toISOString(),
+        }).eq("id", scrapeId);
+        return json({ error: "transcription_empty", message: "Reel não retornou transcrição. Tente outro link (sem parâmetros) ou o @." }, 200);
+      }
       const { summary, top } = summarize(Array.isArray(items) ? items : [], type);
       const perItem = type === "transcription" ? 0.015 : type === "ads" ? 0.006 : 0.0025;
       const costUsd = Number(((Array.isArray(items) ? items.length : 0) * perItem).toFixed(4));

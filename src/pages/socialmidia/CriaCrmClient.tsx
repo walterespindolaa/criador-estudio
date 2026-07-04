@@ -8,7 +8,7 @@ import {
 import { toast } from "sonner";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useCrmClient, useUpdateCrmClient, useDeleteCrmClient, useCrmClientRefs, useAddCrmRef, useDeleteCrmRef, useUploadCrmAsset, useSyncCrmFromCria, type CrmClient } from "@/hooks/useCrm";
-import { useScrapes, useHasHubCria } from "@/hooks/useHubCria";
+import { useScrapes, useHasHubCria, useDeleteScrape } from "@/hooks/useHubCria";
 import { SummaryCard } from "@/components/hubcria/CriativoTab";
 import { ClientTasks } from "@/components/accounts/crm/ClientTasks";
 import { ModuleGate } from "@/components/accounts/ModuleGate";
@@ -73,6 +73,7 @@ function ClientWorkspace() {
   const { allowed: hasHubCria } = useHasHubCria();
   const { data: hubScrapes = [] } = useScrapes(id);
   const hubDone = hubScrapes.filter((s) => s.status === "done" && s.result_summary);
+  const delScrape = useDeleteScrape();
   const update = useUpdateCrmClient();
   const del = useDeleteCrmClient();
   const uploadAsset = useUploadCrmAsset();
@@ -351,7 +352,7 @@ function ClientWorkspace() {
               ) : (
                 <div className="space-y-2">
                   {hubDone.map((s, i) => (
-                    <SummaryCard key={s.id} summary={s.result_summary as Record<string, unknown>} handle={s.input_handle} defaultOpen={i === 0} />
+                    <SummaryCard key={s.id} summary={s.result_summary as Record<string, unknown>} handle={s.input_handle} defaultOpen={i === 0} onDelete={() => delScrape.mutate(s.id)} />
                   ))}
                 </div>
               )}

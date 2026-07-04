@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
-  useScrapes, useCreativeIdeas, useRunScrape, useUpdateIdeaStatus, useDeleteIdea, useGeneratePlanFromIdeas,
+  useScrapes, useCreativeIdeas, useRunScrape, useUpdateIdeaStatus, useDeleteIdea, useDeleteScrape, useGeneratePlanFromIdeas,
   type ScrapeType, type CreativeIdea,
 } from "@/hooks/useHubCria";
 import { useExternalClients } from "@/hooks/useCriaPost";
@@ -68,6 +68,7 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
   const run = useRunScrape();
   const upd = useUpdateIdeaStatus();
   const del = useDeleteIdea();
+  const delScrape = useDeleteScrape();
   const genPlan = useGeneratePlanFromIdeas();
   const { clients: extClients } = useExternalClients();
   const extClient = clientId ? extClients.find((c: { crm_client_id?: string | null }) => c.crm_client_id === clientId) : null;
@@ -238,7 +239,7 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
         <div className="space-y-3">
           <p className="text-sm font-display font-bold text-foreground">Análises</p>
           {doneScrapes.map((s, i) => (
-            <SummaryCard key={s.id} summary={s.result_summary as Record<string, unknown>} handle={s.input_handle} defaultOpen={i === 0} />
+            <SummaryCard key={s.id} summary={s.result_summary as Record<string, unknown>} handle={s.input_handle} defaultOpen={i === 0} onDelete={() => delScrape.mutate(s.id)} />
           ))}
         </div>
       )}
@@ -323,7 +324,7 @@ function IdeaBtn({ active, onClick, icon, children }: { active: boolean; onClick
   );
 }
 
-export function SummaryCard({ summary, handle, defaultOpen = false }: { summary: Record<string, unknown>; handle: string; defaultOpen?: boolean }) {
+export function SummaryCard({ summary, handle, defaultOpen = false, onDelete }: { summary: Record<string, unknown>; handle: string; defaultOpen?: boolean; onDelete?: () => void }) {
   const [open, setOpen] = useState(defaultOpen);
   const s = summary as Record<string, any>;
   const kind = s.kind;
@@ -339,6 +340,12 @@ export function SummaryCard({ summary, handle, defaultOpen = false }: { summary:
         <Instagram className="h-4 w-4 text-primary shrink-0" />
         <h3 className="text-sm font-display font-bold text-foreground truncate flex-1 min-w-0">{KIND_LABEL[kind] || "Análise"} · {shortHandle}</h3>
         {count != null && <span className="text-[11px] font-body text-muted-foreground shrink-0">{count} {count === 1 ? "item" : "itens"}</span>}
+        {onDelete && (
+          <span role="button" tabIndex={0}
+            onClick={(e) => { e.stopPropagation(); if (confirm("Excluir esta análise?")) onDelete(); }}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); if (confirm("Excluir esta análise?")) onDelete(); } }}
+            className="shrink-0 text-muted-foreground hover:text-destructive" title="Excluir análise" aria-label="Excluir análise"><Trash2 className="h-4 w-4" /></span>
+        )}
         <ChevronDown className={cn("h-4 w-4 text-muted-foreground shrink-0 transition-transform", open && "rotate-180")} />
       </button>
       {open && (
