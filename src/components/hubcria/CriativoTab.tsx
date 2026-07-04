@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   Loader2, Sparkles, Check, X, Trash2, Instagram, Heart, MessageCircle, Play, CalendarPlus,
-  LayoutGrid, FileText, CircleDashed, User, AtSign, Hash, Megaphone, TrendingUp, Plus,
+  LayoutGrid, FileText, CircleDashed, User, AtSign, Hash, Megaphone, TrendingUp, Plus, ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -237,8 +237,8 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
       {doneScrapes.length > 0 && (
         <div className="space-y-3">
           <p className="text-sm font-display font-bold text-foreground">Análises</p>
-          {doneScrapes.map((s) => (
-            <SummaryCard key={s.id} summary={s.result_summary as Record<string, unknown>} handle={s.input_handle} />
+          {doneScrapes.map((s, i) => (
+            <SummaryCard key={s.id} summary={s.result_summary as Record<string, unknown>} handle={s.input_handle} defaultOpen={i === 0} />
           ))}
         </div>
       )}
@@ -323,19 +323,25 @@ function IdeaBtn({ active, onClick, icon, children }: { active: boolean; onClick
   );
 }
 
-function SummaryCard({ summary, handle }: { summary: Record<string, unknown>; handle: string }) {
+function SummaryCard({ summary, handle, defaultOpen = false }: { summary: Record<string, unknown>; handle: string; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   const s = summary as Record<string, any>;
   const kind = s.kind;
   const KIND_LABEL: Record<string, string> = {
     profile: "Perfil", comments: "Comentários", ads: "Anúncios", stories: "Stories",
     posts: "Posts", reels: "Reels", hashtag: "Hashtag", mentions: "Menções", transcription: "Reels + transcrição",
   };
+  const count = typeof s.count === "number" ? s.count : (Array.isArray(s.top) ? s.top.length : null);
+  const shortHandle = handle.length > 40 ? handle.replace(/^https?:\/\/(www\.)?instagram\.com\//, "").slice(0, 30) + "…" : handle;
   return (
     <div className="bg-card border border-border rounded-2xl overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border/60 bg-background">
-        <Instagram className="h-4 w-4 text-primary" />
-        <h3 className="text-sm font-display font-bold text-foreground">{KIND_LABEL[kind] || "Análise"} · {handle}</h3>
-      </div>
+      <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 px-4 py-3 border-b border-border/60 bg-background text-left hover:bg-muted/30 transition-colors">
+        <Instagram className="h-4 w-4 text-primary shrink-0" />
+        <h3 className="text-sm font-display font-bold text-foreground truncate flex-1 min-w-0">{KIND_LABEL[kind] || "Análise"} · {shortHandle}</h3>
+        {count != null && <span className="text-[11px] font-body text-muted-foreground shrink-0">{count} {count === 1 ? "item" : "itens"}</span>}
+        <ChevronDown className={cn("h-4 w-4 text-muted-foreground shrink-0 transition-transform", open && "rotate-180")} />
+      </button>
+      {open && (
       <div className="p-4">
         {kind === "profile" ? (
           <div className="grid grid-cols-3 gap-3">
@@ -413,6 +419,7 @@ function SummaryCard({ summary, handle }: { summary: Record<string, unknown>; ha
           </>
         )}
       </div>
+      )}
     </div>
   );
 }
