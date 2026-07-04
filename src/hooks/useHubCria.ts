@@ -174,7 +174,7 @@ export function useGeneratePlanFromIdeas() {
       qc.invalidateQueries({ queryKey: ["hubcria-ideas"] });
       qc.invalidateQueries({ queryKey: ["external-posts"] });
       qc.invalidateQueries({ queryKey: ["external-pending"] });
-      toast.success(`${n} posts criados no cronograma do cliente.`);
+      toast.success(`${n} posts criados na aba Posts — monte e envie pra aprovação do cliente.`);
     },
     onError: (e) => {
       const m = e instanceof Error ? e.message : "";

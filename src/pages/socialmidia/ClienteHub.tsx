@@ -23,6 +23,19 @@ const TABS = [
   { key: "financeiro", label: "Financeiro" },
 ];
 const OPERACIONAIS = new Set(["posts", "cronograma", "relatorio", "instagram"]);
+const WORKFLOW = new Set(["criativo", "posts", "cronograma", "relatorio"]);
+const FLOW_STEPS = [
+  { key: "criativo", n: 1, label: "Pesquisa & ideias", gated: true },
+  { key: "posts", n: 2, label: "Montar & aprovar" },
+  { key: "cronograma", n: 3, label: "Calendário do mês" },
+  { key: "relatorio", n: 4, label: "Resultado" },
+];
+const FLOW_EXPLAIN: Record<string, string> = {
+  criativo: "De onde vem: você analisa concorrentes (HUB/Apify) e recebe ideias prontas. Pra onde vai: marque as boas como “Usar” e clique em “Criar posts” — elas viram posts na aba Posts.",
+  posts: "De onde vem: as ideias que você aprovou no Criativo (ou posts criados na mão). Aqui você monta cada post e manda o cliente aprovar por link: Aguardando cliente → Ajuste solicitado → Aprovado.",
+  cronograma: "É o calendário do mês pro cliente: datas comemorativas + link público com a visão geral do que vai sair. Serve pra alinhar o plano — a aprovação post a post acontece na aba Posts.",
+  relatorio: "O relatório white-label com o resultado do que foi publicado no mês.",
+};
 const initial = (n?: string | null) => (n ? n.trim().charAt(0).toUpperCase() : "?");
 const brl = (c: number) => `R$ ${(c / 100).toFixed(2).replace(".", ",")}`;
 
@@ -78,6 +91,30 @@ export default function ClienteHub() {
           );
         })}
       </div>
+
+      {/* Régua de fluxo (Criativo → Posts → Cronograma → Relatório) */}
+      {WORKFLOW.has(activeTab) && (
+        <div className="mb-5 rounded-2xl border border-border bg-card p-3">
+          <div className="flex items-center gap-1 overflow-x-auto pb-1">
+            {FLOW_STEPS.filter((s) => !s.gated || hasHubCria).map((s, idx, arr) => {
+              const on = activeTab === s.key;
+              return (
+                <div key={s.key} className="flex items-center shrink-0">
+                  <button onClick={() => goTab(s.key)}
+                    className={`flex items-center gap-2 rounded-xl px-3 py-1.5 transition-colors ${on ? "bg-primary/10" : "hover:bg-muted/50"}`}>
+                    <span className={`grid h-5 w-5 place-items-center rounded-full text-[11px] font-bold ${on ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{s.n}</span>
+                    <span className={`text-xs font-body font-semibold whitespace-nowrap ${on ? "text-primary" : "text-muted-foreground"}`}>{s.label}</span>
+                  </button>
+                  {idx < arr.length - 1 && <span className="mx-0.5 text-muted-foreground/50">›</span>}
+                </div>
+              );
+            })}
+          </div>
+          {FLOW_EXPLAIN[activeTab] && (
+            <p className="text-[12px] font-body text-muted-foreground leading-relaxed mt-1.5 px-1">{FLOW_EXPLAIN[activeTab]}</p>
+          )}
+        </div>
+      )}
 
       {/* Conteúdo */}
       {activeTab === "visao-geral" && (

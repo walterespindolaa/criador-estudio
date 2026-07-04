@@ -223,7 +223,7 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
             {clientId && extClient && (
               <Button size="sm" onClick={() => genPlan.mutate({ externalClientId: (extClient as { id: string }).id, ideas })} disabled={genPlan.isPending || usarCount === 0} title={usarCount === 0 ? "Marque ideias como 'Usar' primeiro" : ""}>
                 {genPlan.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <CalendarPlus className="h-3.5 w-3.5 mr-1.5" />}
-                Gerar cronograma ({usarCount})
+                Criar posts na aba Posts ({usarCount})
               </Button>
             )}
             <div className="flex gap-1">
@@ -234,7 +234,7 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
           </div>
         </div>
         {clientId && !extClient && ideas.length > 0 && (
-          <p className="text-[11px] font-body text-muted-foreground mb-2 -mt-1">Ative o Cria Post neste cliente (aba Posts) pra gerar o cronograma a partir das ideias.</p>
+          <p className="text-[11px] font-body text-muted-foreground mb-2 -mt-1">Ative o Cria Post neste cliente (aba Posts) pra transformar as ideias em posts.</p>
         )}
 
         {ideas.length === 0 ? (
