@@ -75,8 +75,10 @@ Deno.serve(async (req) => {
     if (prof?.name && prof.name !== (cli as any).name) update.name = prof.name;
     if (prof?.niche && !(cli as any).segment) update.segment = prof.niche;
 
-    // Persona do Cria → persona do CRM (dores/desejos).
+    // Persona do Cria → persona do CRM (nome, faixa, dores/desejos).
     const personaPatch: Record<string, string> = {};
+    if (persona?.name) personaPatch.name = persona.name;
+    if (persona?.age_range) personaPatch.ageRange = persona.age_range;
     if ((persona?.pain_points || []).length) personaPatch.pains = (persona.pain_points || []).join("\n");
     if ((persona?.interests || []).length) personaPatch.desires = (persona.interests || []).join("\n");
     if (Object.keys(personaPatch).length) update.persona = { ...((cli as any).persona ?? {}), ...personaPatch };

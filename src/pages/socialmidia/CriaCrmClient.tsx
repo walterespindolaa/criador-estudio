@@ -301,6 +301,12 @@ function ClientWorkspace() {
         {/* PERSONA */}
         <TabsContent value="persona" className="mt-0 space-y-4">
           {isCria && <CriaHint />}
+          <Card icon={<Target />} title="Quem é a persona">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <F label="Nome / apelido da persona"><Input value={pe.name ?? ""} onChange={(e) => setPe("name", e.target.value)} placeholder="Ex.: Ana, a empreendedora ocupada" className="rounded-xl" /></F>
+              <F label="Faixa etária"><Input value={pe.ageRange ?? ""} onChange={(e) => setPe("ageRange", e.target.value)} placeholder="Ex.: 28–40" className="rounded-xl" /></F>
+            </div>
+          </Card>
           <Card icon={<Brain />} title="Estado de consciência">
             <div className="flex gap-1.5 flex-wrap">
               {CONSCIOUSNESS.map((c) => (
@@ -310,15 +316,15 @@ function ClientWorkspace() {
             </div>
           </Card>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card icon={<HeartCrack />} title="Dores"><Textarea rows={4} value={pe.pains ?? ""} onChange={(e) => setPe("pains", e.target.value)} placeholder="Uma dor por linha..." className="rounded-xl text-sm" /></Card>
-            <Card icon={<Heart />} title="Desejos"><Textarea rows={4} value={pe.desires ?? ""} onChange={(e) => setPe("desires", e.target.value)} placeholder="Um desejo por linha..." className="rounded-xl text-sm" /></Card>
+            <Card icon={<HeartCrack />} title="Dores"><MicTextarea rows={4} value={pe.pains ?? ""} onChange={(v) => setPe("pains", v)} placeholder="Uma dor por linha... (🎤 pra ditar)" /></Card>
+            <Card icon={<Heart />} title="Desejos"><MicTextarea rows={4} value={pe.desires ?? ""} onChange={(v) => setPe("desires", v)} placeholder="Um desejo por linha... (🎤 pra ditar)" /></Card>
           </div>
           <Card icon={<Lightbulb />} title="Estratégia">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <F label="Objetivos"><Textarea rows={2} value={pe.objectives ?? ""} onChange={(e) => setPe("objectives", e.target.value)} className="rounded-xl text-sm" /></F>
-              <F label="Promessas"><Textarea rows={2} value={pe.promises ?? ""} onChange={(e) => setPe("promises", e.target.value)} className="rounded-xl text-sm" /></F>
-              <F label="Gatilhos"><Textarea rows={2} value={pe.triggers ?? ""} onChange={(e) => setPe("triggers", e.target.value)} className="rounded-xl text-sm" /></F>
-              <F label="Estratégia de conteúdo"><Textarea rows={2} value={pe.contentStrategy ?? ""} onChange={(e) => setPe("contentStrategy", e.target.value)} className="rounded-xl text-sm" /></F>
+              <F label="Objetivos"><MicTextarea value={pe.objectives ?? ""} onChange={(v) => setPe("objectives", v)} /></F>
+              <F label="Promessas"><MicTextarea value={pe.promises ?? ""} onChange={(v) => setPe("promises", v)} /></F>
+              <F label="Gatilhos"><MicTextarea value={pe.triggers ?? ""} onChange={(v) => setPe("triggers", v)} /></F>
+              <F label="Estratégia de conteúdo"><MicTextarea value={pe.contentStrategy ?? ""} onChange={(v) => setPe("contentStrategy", v)} /></F>
             </div>
           </Card>
         </TabsContent>

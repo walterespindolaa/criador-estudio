@@ -75,9 +75,11 @@ const HubCria = lazy(() => import("./pages/socialmidia/HubCria"));
 // account_type "manager" OU gerenciar ao menos uma conta.
 function AppHome() {
   const { profile, isLoading } = useProfile();
-  const { hasManagedAccounts, accountsLoading } = useActiveAccount();
+  const { hasManagedAccounts, isManaging, accountsLoading } = useActiveAccount();
   if (isLoading || accountsLoading) return null;
-  if (profile?.account_type === "manager" || hasManagedAccounts) return <Navigate to="/socialmidia/dashboard" replace />;
+  // Só manda pro dashboard da agência quando o gestor está na PRÓPRIA conta.
+  // Se ele entrou num cliente (isManaging), mostra o workspace do cliente.
+  if (!isManaging && (profile?.account_type === "manager" || hasManagedAccounts)) return <Navigate to="/socialmidia/dashboard" replace />;
   return <Dashboard />;
 }
 const Aprovacoes = lazy(() => import("./pages/socialmidia/Aprovacoes"));
