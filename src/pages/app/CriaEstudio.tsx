@@ -61,6 +61,7 @@ export default function CriaEstudio() {
   const [draftPages, setDraftPages] = useState<HfPage[] | null>((saved.draftPages as HfPage[]) ?? null);
   const [draftMaster, setDraftMaster] = useState<string>((saved.draftMaster as string) ?? "");
   const [enrich, setEnrich] = useState<boolean>((saved.enrich as boolean) ?? false);
+  const [withText, setWithText] = useState<boolean>((saved.withText as boolean) ?? false);
 
   // Reels: roteiro por segundos.
   const [reelSeconds, setReelSeconds] = useState((saved.reelSeconds as number) ?? 30);
@@ -68,7 +69,7 @@ export default function CriaEstudio() {
 
   // Perplexity (admin-only) — duas abas fixas, cada uma guarda seu resultado (persistido no F5).
   const [themes, setThemes] = useState<HotTheme[] | null>((saved.themes as HotTheme[]) ?? null);
-  const [news, setNews] = useState<NewsHook | null>((saved.news as NewsHook) ?? null);
+  const [news, setNews] = useState<NewsHook[] | null>((saved.news as NewsHook[]) ?? null);
   const [pplxTab, setPplxTab] = useState<"themes" | "news">((saved.pplxTab as "themes" | "news") ?? "themes");
 
   const { data: jobs = [] } = useHiggsfieldJobs();
@@ -85,10 +86,10 @@ export default function CriaEstudio() {
     try {
       localStorage.setItem(LS_KEY, JSON.stringify({
         postId, kind, title, sourceContent, format, slides, aspect, resolution,
-        draftPages, draftMaster, enrich, reelSeconds, reelScript, themes, news, pplxTab,
+        draftPages, draftMaster, enrich, withText, reelSeconds, reelScript, themes, news, pplxTab,
       }));
     } catch { /* quota cheia / modo privado — ignora */ }
-  }, [postId, kind, title, sourceContent, format, slides, aspect, resolution, draftPages, draftMaster, enrich, reelSeconds, reelScript, themes, news, pplxTab]);
+  }, [postId, kind, title, sourceContent, format, slides, aspect, resolution, draftPages, draftMaster, enrich, withText, reelSeconds, reelScript, themes, news, pplxTab]);
 
   // Polling enquanto houver jobs em andamento.
   const runningIds = useMemo(() => jobs.filter((j) => j.status === "running").map((j) => j.id).join(","), [jobs]);
@@ -131,7 +132,7 @@ export default function CriaEstudio() {
   const montar = () => {
     if (!title.trim()) return;
     draft.mutate(
-      { title: title.trim(), format, slides, source_content: sourceContent || undefined, post_id: postId || undefined, enrich },
+      { title: title.trim(), format, slides, source_content: sourceContent || undefined, post_id: postId || undefined, enrich, with_text: withText },
       { onSuccess: (res) => { setDraftPages(res.pages); setDraftMaster(res.master_prompt ?? ""); } },
     );
   };
@@ -195,12 +196,11 @@ export default function CriaEstudio() {
     setThemes(null);
   };
 
-  const useNewsTheme = () => {
-    if (!news?.titulo) return;
+  const useNewsTheme = (item: NewsHook) => {
+    if (!item.titulo) return;
     useFreeTheme();
-    setTitle(news.titulo);
-    setSourceContent([news.resumo, news.angulo ? `Ângulo: ${news.angulo}` : "", news.fonte ? `Fonte: ${news.fonte}` : ""].filter(Boolean).join("\n"));
-    setNews(null);
+    setTitle(item.titulo);
+    setSourceContent([item.resumo, item.angulo ? `Ângulo: ${item.angulo}` : "", item.fonte ? `Fonte: ${item.fonte}` : ""].filter(Boolean).join("\n"));
   };
 
   const gerar = () => {
@@ -315,7 +315,7 @@ export default function CriaEstudio() {
                 onClick={() => setPplxTab("news")}
                 className={cn("flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-body font-semibold transition-colors",
                   pplxTab === "news" ? "bg-card text-secondary border-b-2 border-secondary -mb-px" : "text-muted-foreground hover:text-foreground")}>
-                <Newspaper className="h-3.5 w-3.5" /> Notícia quente {news ? "•" : ""}
+                <Newspaper className="h-3.5 w-3.5" /> Notícia quente {news && news.length > 0 ? `(${news.length})` : ""}
               </button>
             </div>
 
@@ -344,24 +344,28 @@ export default function CriaEstudio() {
               ) : (
                 <div className="space-y-2">
                   <Button variant="outline" size="sm" className="h-8 rounded-full text-xs"
-                    onClick={() => newsHook.mutate({ topic: title.trim() || undefined }, { onSuccess: (r) => { setNews(r.news); setPplxTab("news"); } })} disabled={newsHook.isPending}>
+                    onClick={() => newsHook.mutate({ topic: title.trim() || undefined }, { onSuccess: (r) => { setNews(r.items); setPplxTab("news"); } })} disabled={newsHook.isPending}>
                     {newsHook.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Newspaper className="h-3.5 w-3.5 mr-1.5" />}
-                    {news ? "Atualizar notícia" : title.trim() ? "Notícia ligada a esse assunto" : "O que tá bombando hoje"}
+                    {news ? "Atualizar notícias" : title.trim() ? "Notícias ligadas a esse assunto" : "O que tá bombando hoje"}
                   </Button>
-                  {news && (news.titulo || news.resumo) ? (
-                    <div className="rounded-lg border border-secondary/25 bg-secondary/[0.04] p-3">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <Zap className="h-3.5 w-3.5 text-secondary" />
-                        <p className="text-[10px] font-body font-semibold text-secondary uppercase tracking-wider">Newsjacking</p>
-                      </div>
-                      {news.titulo && <p className="text-sm font-body font-semibold text-foreground">{news.titulo}</p>}
-                      {news.resumo && <p className="text-[11px] font-body text-muted-foreground mt-0.5">{news.resumo}</p>}
-                      {news.angulo && <p className="text-[11px] font-body text-foreground mt-1"><strong>Ângulo:</strong> {news.angulo}</p>}
-                      {news.fonte && <p className="text-[10px] font-body text-muted-foreground mt-0.5">Fonte: {news.fonte}</p>}
-                      <Button size="sm" className="h-8 mt-2 text-xs" onClick={useNewsTheme}><Sparkles className="h-3.5 w-3.5 mr-1.5" /> Usar como tema</Button>
+                  {news && news.length > 0 ? (
+                    <div className="space-y-2">
+                      {news.map((n, i) => (
+                        <div key={i} className="rounded-lg border border-secondary/25 bg-secondary/[0.04] p-3">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <Zap className="h-3.5 w-3.5 text-secondary" />
+                            {n.data && <span className="text-[10px] font-body font-semibold text-secondary uppercase tracking-wider">{n.data}</span>}
+                          </div>
+                          {n.titulo && <p className="text-sm font-body font-semibold text-foreground">{n.titulo}</p>}
+                          {n.resumo && <p className="text-[11px] font-body text-muted-foreground mt-0.5">{n.resumo}</p>}
+                          {n.angulo && <p className="text-[11px] font-body text-foreground mt-1"><strong>Ângulo:</strong> {n.angulo}</p>}
+                          {n.fonte && <p className="text-[10px] font-body text-muted-foreground mt-0.5">Fonte: {n.fonte}</p>}
+                          <Button size="sm" className="h-8 mt-2 text-xs" onClick={() => useNewsTheme(n)}><Sparkles className="h-3.5 w-3.5 mr-1.5" /> Usar como tema</Button>
+                        </div>
+                      ))}
                     </div>
                   ) : !newsHook.isPending && (
-                    <p className="text-[11px] font-body text-muted-foreground px-1">Clique acima pra pegar uma notícia fresca do nicho pra newsjacking.</p>
+                    <p className="text-[11px] font-body text-muted-foreground px-1">Clique acima pra pegar notícias frescas (últimos 7 dias) pro seu conteúdo.</p>
                   )}
                 </div>
               )}
@@ -465,7 +469,13 @@ export default function CriaEstudio() {
             </div>
           </div>
           {!draftPages && (
-            <div className="ml-auto flex items-center gap-3">
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              <button type="button" onClick={() => setWithText((v) => !v)}
+                className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 h-9 text-xs font-body transition-colors",
+                  withText ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40")}>
+                <TypeIcon className="h-3.5 w-3.5" />
+                {withText ? "Imagem com texto" : "Imagem sem texto"}
+              </button>
               <button type="button" onClick={() => setEnrich((v) => !v)}
                 className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 h-9 text-xs font-body transition-colors",
                   enrich ? "border-secondary bg-secondary/10 text-secondary" : "border-border text-muted-foreground hover:border-secondary/40")}>

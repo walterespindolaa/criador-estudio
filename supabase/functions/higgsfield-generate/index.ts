@@ -70,6 +70,29 @@ function extractJson(raw: string): string {
   return s;
 }
 
+// Remove marcação markdown (o Instagram não renderiza **negrito**, ##, `code`, etc.).
+function stripMd(t: string): string {
+  return String(t || "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")   // **negrito**
+    .replace(/(^|[^*])\*([^*]+)\*/g, "$1$2") // *itálico*
+    .replace(/__([^_]+)__/g, "$1")
+    .replace(/`{1,3}([^`]*)`{1,3}/g, "$1")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // [texto](link) → texto
+    .replace(/\[\d+\]/g, "")                  // citações [1][2]
+    .trim();
+}
+function stripMdDeep<T>(obj: T): T {
+  if (typeof obj === "string") return stripMd(obj) as unknown as T;
+  if (Array.isArray(obj)) return obj.map((x) => stripMdDeep(x)) as unknown as T;
+  if (obj && typeof obj === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj)) out[k] = stripMdDeep(v);
+    return out as T;
+  }
+  return obj;
+}
+
 // Texto livre via Lovable AI (Gemini). Lança erro "ai_not_configured" / "ai_failed:...".
 async function aiText(sys: string, usr: string, maxTokens = 1200): Promise<string> {
   const key = Deno.env.get("LOVABLE_API_KEY");
@@ -150,18 +173,23 @@ Deno.serve(async (req) => {
       if (themes.length === 0) {
         themes = raw.split("\n").map((l) => l.replace(/^[\d\-\*\.\)\s]+/, "").trim()).filter(Boolean).slice(0, 5).map((t) => ({ titulo: t }));
       }
-      return json({ ok: true, themes: themes.slice(0, 6) });
+      return json({ ok: true, themes: stripMdDeep(themes).slice(0, 6) });
     }
 
-    // ── NEWSJACKING (Perplexity) ──────────────────────────
+    // ── NOTÍCIAS QUENTES (Perplexity) ─────────────────────
     if (action === "news") {
       const niche = (String(body?.niche ?? "").trim() || prof?.niche || "geral");
       const topic = String(body?.topic ?? "").trim().slice(0, 200);
-      const raw = await pplx(`Traga UMA notícia ou acontecimento RECENTE (últimos 7 dias)${topic ? ` DIRETAMENTE relacionado ao assunto "${topic}"` : ` relevante para o nicho "${niche}"`} (contexto do criador: nicho ${niche}), que renda um carrossel de Instagram. Se não houver notícia ligada ao assunto, traga a mais próxima possível dele. Responda SOMENTE JSON: {"titulo":"manchete curta","resumo":"2 frases","angulo":"como transformar isso num carrossel conectado a ${topic || niche} (gancho)","fonte":"nome ou url"}`);
+      const hoje = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+      const raw = await pplx(`Hoje é ${hoje}. Traga de 3 a 4 notícias/acontecimentos REALMENTE RECENTES (publicados nos ÚLTIMOS 7 DIAS — NÃO traga nada com mais de 2 semanas; se não tiver certeza da data, descarte)${topic ? ` relacionados ao assunto "${topic}"` : ` relevantes para o nicho "${niche}"`} (contexto do criador: nicho ${niche}), que rendam carrossel/reels de Instagram. Para cada uma inclua a DATA de publicação. Responda SOMENTE JSON: {"items":[{"titulo":"manchete curta","resumo":"2 frases","angulo":"como transformar num carrossel (gancho)","fonte":"nome ou url","data":"quando saiu"}]}`);
       if (!raw) return json({ error: "pplx_unavailable", message: "Perplexity indisponível." }, 502);
-      let news: Record<string, string> = {};
-      try { news = JSON.parse(extractJson(raw)); } catch { news = { titulo: raw.slice(0, 120), resumo: raw.slice(0, 400) }; }
-      return json({ ok: true, news });
+      let items: Array<Record<string, string>> = [];
+      try {
+        const parsed = JSON.parse(extractJson(raw));
+        items = Array.isArray(parsed.items) ? parsed.items : (parsed.titulo ? [parsed] : []);
+      } catch { items = [{ titulo: raw.slice(0, 120), resumo: raw.slice(0, 400) }]; }
+      items = stripMdDeep(items).slice(0, 4);
+      return json({ ok: true, items, news: items[0] ?? null });
     }
 
     // ── Parâmetros comuns ─────────────────────────────────
@@ -175,6 +203,8 @@ Deno.serve(async (req) => {
     const sourceContent = String(body?.source_content ?? "").trim().slice(0, 4000);
     // Pesquisa atual do Perplexity (dados/estatísticas com fonte), preenchida sob demanda no draft.
     let extraResearch = "";
+    // Gerar a imagem COM o texto embutido (usando a tipografia da marca) ou só o fundo limpo.
+    const withText = body?.with_text === true;
 
     // Contexto RICO da marca — igual o Cria IA usa (perfil + pilares + persona + Brandbook).
     // Sem isso o modelo alucina em títulos metafóricos (ex.: "Atlas" vira atlas geográfico).
@@ -225,15 +255,17 @@ ENTENDIMENTO DO TEMA (crítico):
 O "master_prompt" (em INGLÊS) é a ÂNCORA que garante consistência entre todas as páginas. Deve definir:
 - Linha editorial/conceito visual do carrossel (o "pensamento" por trás).
 - Paleta de cores exata (cite as cores da marca) e como usá-las.
-- Estilo/tratamento visual, tipografia (vibe), mood, iluminação, tipo de composição.
-- Regras fixas: proporção, "clean space for text overlay", coerência de elementos entre slides.
+- Estilo/tratamento visual, TIPOGRAFIA${fontes ? ` (use as fontes da marca: ${fontes})` : " (uma fonte sans-serif moderna e legível)"}, mood, iluminação, tipo de composição.
+- Regras fixas: proporção, ${withText ? "tipografia grande e legível, hierarquia de título/apoio" : `"clean space for text overlay" (deixe área limpa pro texto ser colocado depois)`}, coerência de elementos entre slides.
 Escreva o master como um bloco reutilizável que pode ser colado ANTES de cada prompt de página.
 
 REGRAS DE ESCRITA:
 - Cada "screen_text" tem que ser CONCRETO e específico ao produto/tema — nada de frase vaga tipo "alcance seus objetivos". Diga algo real e útil.
-- CAPA (página 1): gancho forte que para o scroll, conectado ao tema real.
+- CAPA (página 1): gancho forte que para o scroll, conectado ao tema real. Capriche num TÍTULO curto e impactante (isso é o que vira a capa).
 - Demais páginas: desenvolvem a ideia (contexto → benefício concreto → prova/exemplo → CTA claro).
-- "prompt" de cada página: em INGLÊS, só o que MUDA naquele slide (a cena específica). NÃO repita todo o master — assuma o master como base e descreva a variação daquela página + "clean space for text overlay".
+${withText
+  ? `- "prompt" de cada página: em INGLÊS. IMPORTANTE: a imagem DEVE conter o texto do slide renderizado (o "screen_text"), com tipografia da marca, título grande e legível, boa hierarquia e contraste. Descreva onde o texto fica e o estilo tipográfico. Ex.: 'bold headline text reading "..." in the top third, brand font, high contrast'.`
+  : `- "prompt" de cada página: em INGLÊS, só a CENA/fundo (SEM texto — o texto entra depois por cima). Assuma o master como base e descreva só a variação daquela página + "clean empty space for text overlay".`}
 
 Responda SOMENTE JSON:
 {"master_prompt":"editorial + style anchor in English","pages":[{"role":"capa|desenvolvimento|prova|cta","screen_text":"texto PT curto e concreto","prompt":"variação da cena em inglês"}]}
@@ -262,7 +294,7 @@ Gere EXATAMENTE ${slides} página(s).`;
         const research = await pplx(`Sobre "${title}" (nicho ${niche}): dados/fatos atuais e verificáveis com fonte pra citar num reels. 3 a 5 bullets curtos.`);
         if (research) extraResearch = research.slice(0, 1500);
       }
-      const sys = `Você é roteirista de Reels/Shorts para o Brasil. Escreve roteiros prontos pra gravar, com marcação de tempo, falas diretas e indicação do que mostrar na tela. Você NUNCA inventa fatos sobre a marca/produto — usa só o contexto, o roteiro e a pesquisa.`;
+      const sys = `Você é um SOCIAL MEDIA SÊNIOR e roteirista de Reels no Brasil, especialista em retenção e viralização. Escreve roteiros PRONTOS pra gravar, densos e específicos — nada de conselho genérico ("seja consistente", "tenha foco"). Cada fala entrega algo concreto: um número, um exemplo real, um passo, uma comparação. Usa só o contexto da marca, o roteiro e a pesquisa — NUNCA inventa fatos. NUNCA usa markdown (nada de ** ou ##): texto puro.`;
       const usr = `CONTEXTO DA MARCA (entenda o que a marca/produto É):
 ${brandCtx}
 
@@ -271,21 +303,25 @@ DURAÇÃO ALVO: ${seconds} segundos
 ${sourceContent ? `ROTEIRO/LEGENDA JÁ ESCRITOS (FONTE DA VERDADE — use como espinha dorsal, não troque de assunto):\n${sourceContent}\n` : ""}${extraResearch ? `PESQUISA ATUAL (cite os dados no roteiro):\n${extraResearch}\n` : ""}
 IMPORTANTE: o TÍTULO pode ser metafórico — NÃO interprete ao pé da letra. Descubra o tema real cruzando o contexto da marca + o roteiro. Não invente fatos.
 
-Entregue um ROTEIRO fatiado por blocos de tempo cobrindo ~${seconds}s:
-- Gancho (0-3s) forte que segura o scroll
-- Desenvolvimento em 2 a 4 blocos, cada um com faixa de tempo aproximada
-- CTA no final
-Para cada bloco use o formato: [0-3s] FALA/AÇÃO — o que mostrar na tela.
-Português, direto, sem enrolação, sem markdown pesado.`;
+QUALIDADE (nível profissional):
+- GANCHO (0-3s): tem que ser específico e gerar tensão/curiosidade real. Traga uma das técnicas: número surpreendente, erro comum, promessa concreta, pergunta que incomoda, contra-intuição. Nada de "você sabia que...".
+- Cada bloco entrega VALOR REAL: exemplo prático, dado com fonte, passo acionável ou comparação. Se ficar vago, reescreva.
+- Fala natural de brasileiro, ritmo de Reels (frases curtas, direto no olho).
+- Indique também o B-ROLL / o que aparece na tela em cada bloco e a legenda/caption sugerida no final.
+- CTA final concreto e alinhado ao que a marca vende (não "curta e siga" genérico).
+
+Entregue o ROTEIRO fatiado por tempo cobrindo ~${seconds}s. Para cada bloco use:
+[0-3s] FALA (o que dizer) | NA TELA (b-roll/texto)
+Termine com uma sugestão de LEGENDA pro post. Texto puro, sem markdown.`;
       let script: string;
-      try { script = await aiText(sys, usr, 1400); }
+      try { script = await aiText(sys, usr, 1600); }
       catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         const [code, detail] = msg.split(":");
         return json({ error: code || "ai_failed", message: detail || msg }, code === "ai_not_configured" ? 500 : 502);
       }
       if (!script.trim()) return json({ error: "empty_script", message: "A IA não retornou roteiro. Tente de novo." }, 502);
-      return json({ ok: true, script: script.trim(), seconds, enriched: !!extraResearch });
+      return json({ ok: true, script: stripMd(script.trim()), seconds, enriched: !!extraResearch });
     }
 
     // ── DRAFT ──────────────────────────────────────────────
@@ -308,10 +344,10 @@ Português, direto, sem enrolação, sem markdown pesado.`;
       if (drafted.pages.length === 0) return json({ error: "no_prompts", message: "A IA não retornou páginas. Tente de novo." }, 500);
       const pages = drafted.pages.map((p, i) => ({
         role: p.role || (i === 0 ? "capa" : "pagina"),
-        screen_text: p.screen_text || "",
+        screen_text: stripMd(p.screen_text || ""),
         prompt: p.prompt || title,
       }));
-      return json({ ok: true, master_prompt: drafted.master, pages, format, slides, aspect_ratio: aspect, resolution, enriched: !!extraResearch });
+      return json({ ok: true, master_prompt: stripMd(drafted.master), pages, format, slides, aspect_ratio: aspect, resolution, enriched: !!extraResearch });
     }
 
     // ── GENERATE ──────────────────────────────────────────

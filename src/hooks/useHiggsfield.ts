@@ -58,7 +58,7 @@ async function invoke(body: Record<string, unknown>) {
 // enrich: puxa dados atuais do Perplexity pra dar autoridade aos slides.
 export function useDraftArt() {
   return useMutation({
-    mutationFn: (input: { title: string; format: "estatico" | "carrossel"; slides?: number; source_content?: string; post_id?: string; enrich?: boolean }) =>
+    mutationFn: (input: { title: string; format: "estatico" | "carrossel"; slides?: number; source_content?: string; post_id?: string; enrich?: boolean; with_text?: boolean }) =>
       invoke({ action: "draft", ...input }) as unknown as Promise<{ pages: HfPage[]; master_prompt?: string; format: string; slides: number; enriched?: boolean }>,
     onError: (e) => toast.error(e instanceof Error ? `Falha ao montar: ${e.message}` : "Não consegui montar os textos."),
   });
@@ -83,12 +83,12 @@ export function useReelsScript() {
   });
 }
 
-// Perplexity: 1 notícia recente do nicho pra newsjacking.
-export type NewsHook = { titulo?: string; resumo?: string; angulo?: string; fonte?: string };
+// Perplexity: notícias quentes (múltiplas, recentes) pro newsjacking.
+export type NewsHook = { titulo?: string; resumo?: string; angulo?: string; fonte?: string; data?: string };
 export function useNewsHook() {
   return useMutation({
     mutationFn: (input?: { niche?: string; topic?: string }) =>
-      invoke({ action: "news", ...(input ?? {}) }) as unknown as Promise<{ news: NewsHook }>,
+      invoke({ action: "news", ...(input ?? {}) }) as unknown as Promise<{ items: NewsHook[]; news: NewsHook | null }>,
     onError: (e) => toast.error(e instanceof Error ? `Perplexity: ${e.message}` : "Não consegui buscar notícia."),
   });
 }
