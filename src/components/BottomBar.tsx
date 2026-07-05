@@ -2,7 +2,7 @@ import { useState } from "react";
 import { NavLink, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Home, Lightbulb, Kanban, CalendarDays,
-  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, ChevronUp, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck, Handshake, Maximize2, Minimize2, Instagram, BarChart3, ShieldCheck, PlayCircle, Clapperboard
+  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, Menu, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck, Handshake, Maximize2, Minimize2, Instagram, BarChart3, ShieldCheck, PlayCircle, Clapperboard, Wand2, TrendingUp, IdCard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,7 +16,7 @@ const leftItems = [
 ];
 
 const rightItems = [
-  { title: "Calendário", url: "/app/metas", icon: CalendarDays },
+  { title: "Criando", url: "/app/criando", icon: Kanban },
 ];
 
 type MoreItem = { title: string; url: string; icon: typeof Home };
@@ -24,7 +24,9 @@ const MORE_SECTIONS: { title: string; items: MoreItem[] }[] = [
   { title: "Criar", items: [
     { title: "Ideias", url: "/app/ideias", icon: Lightbulb },
     { title: "Em produção", url: "/app/criando", icon: Kanban },
+    { title: "Cria Plano", url: "/app/autopilot", icon: Wand2 },
     { title: "Cria Stories", url: "/app/stories", icon: Clapperboard },
+    { title: "Tendências", url: "/app/tendencias", icon: TrendingUp },
     { title: "Aprovações", url: "/app/aprovacao", icon: ClipboardCheck },
     { title: "Meu Feed", url: "/app/feed", icon: Grid3X3 },
   ]},
@@ -36,6 +38,7 @@ const MORE_SECTIONS: { title: string; items: MoreItem[] }[] = [
   { title: "Minha marca", items: [
     { title: "Brandbook", url: "/app/brandbook", icon: BookMarked },
     { title: "Link na bio", url: "/app/linkinbio", icon: Link2 },
+    { title: "Media Kit", url: "/app/media-kit", icon: IdCard },
     { title: "Biblioteca", url: "/app/biblioteca", icon: BookOpen },
   ]},
   { title: "Resultados", items: [
@@ -62,7 +65,7 @@ export function BottomBar() {
   const { profile } = useProfile();
   const sections = profile?.role === "admin"
     ? MORE_SECTIONS.map((s) => s.title === "Mais"
-        ? { ...s, items: [...s.items, { title: "Admin", url: "/app/cf-admin-panel", icon: ShieldCheck }] }
+        ? { ...s, items: [...s.items, { title: "Cria Estúdio", url: "/app/estudio", icon: Wand2 }, { title: "Admin", url: "/app/cf-admin-panel", icon: ShieldCheck }] }
         : s)
     : MORE_SECTIONS;
   const allMoreItems = sections.flatMap((s) => s.items);
@@ -168,9 +171,9 @@ export function BottomBar() {
                         : <Maximize2 className="h-5 w-5 text-muted-foreground" strokeWidth={1.9} />}
             </button>
           )}
-          <button type="button" onClick={() => setMoreOpen(!moreOpen)} aria-label="Mais"
+          <button type="button" onClick={() => setMoreOpen(!moreOpen)} aria-label="Menu"
             className="dock-pill h-[52px] w-[52px] rounded-full flex items-center justify-center active:scale-95 transition-transform">
-            <ChevronUp className={cn("h-6 w-6 transition-transform", moreOpen ? "rotate-180 text-primary" : isMoreActive ? "text-primary" : "text-muted-foreground")} strokeWidth={1.8}/>
+            <Menu className={cn("h-6 w-6 transition-colors", moreOpen || isMoreActive ? "text-primary" : "text-muted-foreground")} strokeWidth={1.8}/>
           </button>
         </div>
       </div>
