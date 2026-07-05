@@ -83,6 +83,7 @@ function ClientWorkspace() {
   const syncedOnce = useRef(false);
 
   const [form, setForm] = useState<CrmClient | null>(null);
+  const [personaIdx, setPersonaIdx] = useState(0);
   useEffect(() => { if (client) setForm(client); }, [client]);
 
   // Auto-sync uma vez ao abrir um cliente que usa o Cria (puxa Brandbook/nome atualizados).
@@ -100,13 +101,31 @@ function ClientWorkspace() {
 
   const isCria = !!form.cria_owner_id;
   const bc = form.brand_core ?? {};
-  const pe = form.persona ?? {};
+  // Persona agora é uma LISTA (até 3). Compatível com o formato antigo (objeto único).
+  const rawPersona = form.persona as unknown;
+  const personas: Record<string, string>[] = Array.isArray(rawPersona)
+    ? (rawPersona as Record<string, string>[])
+    : (rawPersona && typeof rawPersona === "object" && Object.keys(rawPersona).length ? [rawPersona as Record<string, string>] : [{}]);
+  const idx = Math.min(personaIdx, personas.length - 1);
+  const pe = personas[idx] ?? {};
   const dg = form.diagnosis ?? {};
   const comps = form.competitors ?? [];
   const criaAvatar = form.cria_owner_id ? (managedAccounts.find((a) => a.owner_id === form.cria_owner_id)?.avatar_url ?? null) : null;
   const shownAvatar = form.logo && /^https?:\/\//.test(form.logo) ? form.logo : criaAvatar;
   const setBc = (k: string, v: string) => setForm({ ...form, brand_core: { ...bc, [k]: v } });
-  const setPe = (k: string, v: string) => setForm({ ...form, persona: { ...pe, [k]: v } });
+  const setPe = (k: string, v: string) => {
+    const arr = personas.slice(); arr[idx] = { ...(arr[idx] ?? {}), [k]: v };
+    setForm({ ...form, persona: arr as unknown as CrmClient["persona"] });
+  };
+  const addPersona = () => {
+    if (personas.length >= 3) return;
+    const arr = [...personas, {}]; setForm({ ...form, persona: arr as unknown as CrmClient["persona"] }); setPersonaIdx(arr.length - 1);
+  };
+  const delPersona = (i: number) => {
+    const arr = personas.filter((_, j) => j !== i);
+    setForm({ ...form, persona: (arr.length ? arr : [{}]) as unknown as CrmClient["persona"] });
+    setPersonaIdx(0);
+  };
   const setDg = (k: string, v: string) => setForm({ ...form, diagnosis: { ...dg, [k]: v } });
   const setComp = (i: number, patch: Partial<CrmClient["competitors"][number]>) => {
     const arr = comps.slice(); arr[i] = { ...arr[i], ...patch }; setForm({ ...form, competitors: arr });
@@ -301,7 +320,31 @@ function ClientWorkspace() {
         {/* PERSONA */}
         <TabsContent value="persona" className="mt-0 space-y-4">
           {isCria && <CriaHint />}
-          <Card icon={<Target />} title="Quem é a persona">
+          {/* Seletor de personas (até 3) */}
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
+              <Target className="h-4 w-4 text-primary" />
+              <p className="text-sm font-display font-bold text-foreground">Personas</p>
+              <span className="text-[11px] font-body text-muted-foreground">({personas.length}/3)</span>
+              <Button variant="outline" size="sm" className="ml-auto h-8 text-xs" onClick={addPersona} disabled={personas.length >= 3}>
+                <Plus className="h-3.5 w-3.5 mr-1" /> Nova persona
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {personas.map((p, i) => (
+                <button key={i} onClick={() => setPersonaIdx(i)}
+                  className={cn("text-left rounded-xl border p-3 transition-colors relative", i === idx ? "border-primary bg-primary/[0.06] ring-1 ring-primary/25" : "border-border bg-card hover:border-primary/40")}>
+                  <p className="text-[13px] font-body font-semibold text-foreground truncate pr-6">{p.name || `Persona ${i + 1}`}</p>
+                  <p className="text-[11px] font-body text-muted-foreground line-clamp-1 mt-0.5">{(p.pains || "").split("\n")[0] || "sem dor definida"}</p>
+                  {personas.length > 1 && (
+                    <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); delPersona(i); }}
+                      className="absolute top-2 right-2 text-muted-foreground hover:text-destructive" aria-label="Excluir persona"><Trash2 className="h-3.5 w-3.5" /></span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+          <Card icon={<Target />} title={`Editando: ${pe.name || `Persona ${idx + 1}`}`}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <F label="Nome / apelido da persona"><Input value={pe.name ?? ""} onChange={(e) => setPe("name", e.target.value)} placeholder="Ex.: Ana, a empreendedora ocupada" className="rounded-xl" /></F>
               <F label="Faixa etária"><Input value={pe.ageRange ?? ""} onChange={(e) => setPe("ageRange", e.target.value)} placeholder="Ex.: 28–40" className="rounded-xl" /></F>

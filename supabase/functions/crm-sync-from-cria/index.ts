@@ -81,7 +81,13 @@ Deno.serve(async (req) => {
     if (persona?.age_range) personaPatch.ageRange = persona.age_range;
     if ((persona?.pain_points || []).length) personaPatch.pains = (persona.pain_points || []).join("\n");
     if ((persona?.interests || []).length) personaPatch.desires = (persona.interests || []).join("\n");
-    if (Object.keys(personaPatch).length) update.persona = { ...((cli as any).persona ?? {}), ...personaPatch };
+    if (Object.keys(personaPatch).length) {
+      // Persona no CRM é uma LISTA (até 3). Mescla na primeira, preservando as demais.
+      const raw = (cli as any).persona;
+      const list: Record<string, unknown>[] = Array.isArray(raw) ? raw : (raw && typeof raw === "object" && Object.keys(raw).length ? [raw] : [{}]);
+      list[0] = { ...(list[0] ?? {}), ...personaPatch };
+      update.persona = list;
+    }
 
     const { error: upErr } = await svc.from("crm_clients").update(update).eq("id", crmClientId);
     if (upErr) return json({ error: "update_failed", message: upErr.message }, 500);
