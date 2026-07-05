@@ -2,7 +2,7 @@ import { useState } from "react";
 import { NavLink, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Home, Lightbulb, Kanban, CalendarDays,
-  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, Menu, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck, Handshake, Maximize2, Minimize2, Instagram, BarChart3, ShieldCheck, PlayCircle, Clapperboard, Wand2, TrendingUp, IdCard
+  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, Menu, ChevronRight, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck, Handshake, Maximize2, Minimize2, Instagram, BarChart3, ShieldCheck, PlayCircle, Clapperboard, Wand2, TrendingUp, IdCard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,26 +19,26 @@ const rightItems = [
   { title: "Criando", url: "/app/criando", icon: Kanban },
 ];
 
-type MoreItem = { title: string; url: string; icon: typeof Home };
+type MoreItem = { title: string; url: string; icon: typeof Home; pro?: boolean; hot?: boolean; desc?: string };
 const MORE_SECTIONS: { title: string; items: MoreItem[] }[] = [
   { title: "Criar", items: [
-    { title: "Ideias", url: "/app/ideias", icon: Lightbulb },
-    { title: "Em produção", url: "/app/criando", icon: Kanban },
-    { title: "Cria Plano", url: "/app/autopilot", icon: Wand2 },
-    { title: "Cria Stories", url: "/app/stories", icon: Clapperboard },
-    { title: "Tendências", url: "/app/tendencias", icon: TrendingUp },
-    { title: "Aprovações", url: "/app/aprovacao", icon: ClipboardCheck },
-    { title: "Meu Feed", url: "/app/feed", icon: Grid3X3 },
+    { title: "Ideias", url: "/app/ideias", icon: Lightbulb, desc: "Banco de ideias e ganchos" },
+    { title: "Em produção", url: "/app/criando", icon: Kanban, desc: "Seu kanban de posts" },
+    { title: "Cria Plano", url: "/app/autopilot", icon: Wand2, pro: true, hot: true, desc: "Cronograma do mês com IA" },
+    { title: "Cria Stories", url: "/app/stories", icon: Clapperboard, pro: true, desc: "Plano de stories da semana" },
+    { title: "Tendências", url: "/app/tendencias", icon: TrendingUp, hot: true, desc: "O que tá bombando no nicho" },
+    { title: "Aprovações", url: "/app/aprovacao", icon: ClipboardCheck, desc: "O que espera seu ok" },
+    { title: "Meu Feed", url: "/app/feed", icon: Grid3X3, desc: "Prévia do seu feed" },
   ]},
   { title: "Planejar", items: [
-    { title: "Calendário & Metas", url: "/app/metas", icon: CalendarDays },
+    { title: "Calendário & Metas", url: "/app/metas", icon: CalendarDays, desc: "Calendário e objetivos" },
     { title: "Tarefas", url: "/app/tarefas", icon: ListTodo },
     { title: "Arquivos", url: "/app/arquivos", icon: FolderOpen },
   ]},
   { title: "Minha marca", items: [
-    { title: "Brandbook", url: "/app/brandbook", icon: BookMarked },
+    { title: "Brandbook", url: "/app/brandbook", icon: BookMarked, desc: "Identidade, tom e persona" },
     { title: "Link na bio", url: "/app/linkinbio", icon: Link2 },
-    { title: "Media Kit", url: "/app/media-kit", icon: IdCard },
+    { title: "Media Kit", url: "/app/media-kit", icon: IdCard, hot: true, desc: "Seu portfólio pra marcas" },
     { title: "Biblioteca", url: "/app/biblioteca", icon: BookOpen },
   ]},
   { title: "Resultados", items: [
@@ -65,7 +65,7 @@ export function BottomBar() {
   const { profile } = useProfile();
   const sections = profile?.role === "admin"
     ? MORE_SECTIONS.map((s) => s.title === "Mais"
-        ? { ...s, items: [...s.items, { title: "Cria Estúdio", url: "/app/estudio", icon: Wand2 }, { title: "Admin", url: "/app/cf-admin-panel", icon: ShieldCheck }] }
+        ? { ...s, items: [...s.items, { title: "Cria Estúdio", url: "/app/estudio", icon: Wand2, pro: true, desc: "Carrosséis com IA" }, { title: "Admin", url: "/app/cf-admin-panel", icon: ShieldCheck }] }
         : s)
     : MORE_SECTIONS;
   const allMoreItems = sections.flatMap((s) => s.items);
@@ -122,33 +122,48 @@ export function BottomBar() {
       )}
       {moreOpen && (
         <div
-          className="fixed left-3 right-3 z-40 md:hidden bg-card/95 backdrop-blur-lg border border-border rounded-3xl shadow-warm-lg p-4 max-h-[68vh] overflow-y-auto"
-          style={{ bottom: 'calc(84px + env(safe-area-inset-bottom, 0px))' }}
+          className="fixed left-0 right-0 z-40 md:hidden bg-card border-t border-border rounded-t-[28px] shadow-warm-lg overflow-hidden flex flex-col"
+          style={{ bottom: 0, maxHeight: '82vh', paddingBottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' }}
         >
-          {sections.map((sec) => (
-            <div key={sec.title} className="mb-3.5 last:mb-0">
-              <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground/70 px-1 mb-1.5">{sec.title}</p>
-              <div className="grid grid-cols-4 gap-2.5">
-                {sec.items.map((item) => {
-                  const active = isActive(item.url);
-                  return (
-                    <NavLink key={item.url + item.title} to={item.url} onClick={() => setMoreOpen(false)}
-                      className={cn(
-                        "flex flex-col items-center gap-1.5 p-3 rounded-2xl transition-colors",
-                        active ? "bg-primary/10 text-primary" : "bg-muted/50 text-muted-foreground hover:text-foreground"
-                      )}>
-                      <item.icon className="h-5 w-5" strokeWidth={1.5} />
-                      <span className="text-[10px] font-body font-medium leading-tight text-center">{item.title}</span>
-                    </NavLink>
-                  );
-                })}
+          {/* Cabeçalho */}
+          <div className="px-5 pt-3 pb-2 shrink-0">
+            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/25" />
+            <h2 className="text-xl font-display font-extrabold text-foreground">Menu</h2>
+          </div>
+          <div className="overflow-y-auto px-3 pb-2">
+            {sections.map((sec) => (
+              <div key={sec.title} className="mb-2">
+                <p className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground/70 px-3 pt-2.5 pb-1">{sec.title}</p>
+                <div className="space-y-0.5">
+                  {sec.items.map((item) => {
+                    const active = isActive(item.url);
+                    return (
+                      <NavLink key={item.url + item.title} to={item.url} onClick={() => setMoreOpen(false)}
+                        className={cn("flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors", active ? "bg-primary/10" : "active:bg-muted/60")}>
+                        <span className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-xl", active ? "bg-primary/15 text-primary" : item.hot ? "bg-secondary/12 text-secondary" : "bg-muted text-muted-foreground")}>
+                          <item.icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className={cn("text-[15px] font-body font-semibold truncate", active ? "text-primary" : "text-foreground")}>{item.title}</span>
+                            {item.pro && <span className="shrink-0 rounded-full bg-amber-100 text-amber-700 text-[9px] font-bold px-1.5 py-0.5 leading-none">PRO</span>}
+                            {item.hot && !item.pro && <span className="shrink-0 rounded-full bg-secondary/15 text-secondary text-[9px] font-bold px-1.5 py-0.5 leading-none">EM ALTA</span>}
+                          </div>
+                          {item.desc && <p className="text-[11.5px] font-body text-muted-foreground truncate mt-0.5">{item.desc}</p>}
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" strokeWidth={2} />
+                      </NavLink>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
-          <button type="button" onClick={handleSignOut}
-            className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-destructive/10 text-destructive hover:bg-destructive/15 transition-colors text-sm font-body font-medium">
-            <LogOut className="h-4 w-4" strokeWidth={1.5} /> Sair
-          </button>
+            ))}
+            <button type="button" onClick={handleSignOut}
+              className="mt-2 mb-1 w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl active:bg-destructive/10 transition-colors">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-destructive/10 text-destructive"><LogOut className="h-[18px] w-[18px]" strokeWidth={1.8} /></span>
+              <span className="text-[15px] font-body font-semibold text-destructive">Sair</span>
+            </button>
+          </div>
         </div>
       )}
 
