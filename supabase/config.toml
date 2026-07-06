@@ -86,3 +86,5 @@ project_id = "exuxlwdnkgmhtnwoyvwo"
     verify_jwt = true
   [functions.crm-sync-from-cria]
     verify_jwt = true
+  [functions.story-notifications]
+    verify_jwt = false
