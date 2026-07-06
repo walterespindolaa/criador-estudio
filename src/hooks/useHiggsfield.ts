@@ -78,7 +78,7 @@ export function useHotThemes() {
 export function useReelsScript() {
   return useMutation({
     mutationFn: (input: { title: string; seconds: number; source_content?: string; post_id?: string; enrich?: boolean }) =>
-      invoke({ action: "reels_script", ...input }) as Promise<{ script: string; seconds: number; enriched?: boolean }>,
+      invoke({ action: "reels_script", ...input }) as unknown as Promise<{ script: string; seconds: number; enriched?: boolean }>,
     onError: (e) => toast.error(e instanceof Error ? `Falha: ${e.message}` : "Não consegui gerar o roteiro."),
   });
 }
