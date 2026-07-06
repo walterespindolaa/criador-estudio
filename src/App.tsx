@@ -5,13 +5,12 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { AccountProvider } from "@/contexts/AccountContext";
 import { AuthOnlyRoute, ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import MetaPixelTracker from "@/components/MetaPixelTracker";
-import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ResetPassword from "./pages/ResetPassword";
@@ -106,6 +105,14 @@ const queryClient = new QueryClient({
   },
 });
 
+/** Raiz do app: a LP pública agora vive em criasocialclub.com.br.
+ *  Logado → /app · Deslogado → /login */
+const RootRedirect = () => {
+  const { user, loading } = useAuth();
+  if (loading) return <LoadingScreen />;
+  return <Navigate to={user ? "/app" : "/login"} replace />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -118,7 +125,7 @@ const App = () => (
           <MetaPixelTracker />
           <Suspense fallback={<LoadingScreen />}>
             <Routes>
-              <Route path="/" element={<Landing />} />
+              <Route path="/" element={<RootRedirect />} />
               <Route path="/bio/:slug" element={<BioPage />} />
               <Route path="/aprovar/:token" element={<AprovarPortal />} />
               <Route path="/proposta/:token" element={<PropostaPublica />} />

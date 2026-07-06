@@ -75,63 +75,74 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
-      <div className="hidden lg:flex lg:w-1/2 bg-card items-center justify-center p-12">
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }} className="max-w-md">
-          <Logo className="h-14 w-auto mb-8" />
-          <h2 className="text-4xl font-display font-extrabold text-foreground tracking-tight mb-4">{t("auth.welcomeBack")}</h2>
-          <p className="text-muted-foreground font-body text-lg leading-relaxed">{t("auth.welcomeBackDesc")}</p>
-        </motion.div>
-      </div>
-      <div className="flex-1 flex items-center justify-center p-8">
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-sm">
-          <Link to="/" className="mb-8 flex justify-center lg:justify-start">
-            <Logo className="h-16 lg:h-10 w-auto" />
-          </Link>
-          <h3 className="text-2xl font-display font-extrabold text-foreground mb-2">{t("auth.signIn")}</h3>
-          <p className="text-muted-foreground font-body mb-8">{t("auth.signInDesc")}</p>
+    <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-[#F4EFE3]">
+      {/* blobs decorativos — identidade da LP */}
+      <div aria-hidden className="pointer-events-none absolute -top-28 -right-24 w-80 h-80 bg-[#F27EB5] rounded-[38%_62%_55%_45%/48%_42%_58%_52%]" />
+      <div aria-hidden className="pointer-events-none absolute -bottom-20 -left-24 w-64 h-64 bg-[#F2C21E] rounded-[55%_45%_40%_60%/50%_60%_40%_50%]" />
+      <div aria-hidden className="pointer-events-none absolute top-[18%] left-[8%] w-16 h-16 bg-[#2A4BDF] rounded-full hidden md:block" />
+      <div aria-hidden className="pointer-events-none absolute bottom-[20%] right-[9%] w-10 h-10 bg-[#3E9152] rounded-full hidden md:block" />
 
-          <form onSubmit={handleSubmit(onSubmitLogin)} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="font-body">{t("auth.email")}</Label>
-              <Input id="email" type="email" placeholder="seu@email.com" {...register("email")} className="rounded-xl h-12" />
-              {errors.email && <p className="text-xs text-destructive mt-1">{errors.email.message}</p>}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="relative z-10 w-full max-w-md bg-[#FDFBF5] border-2 border-[#151412] rounded-[28px] shadow-[0_10px_0_rgba(21,20,18,0.9)] p-8 sm:p-10"
+      >
+        <Link to="/" className="mb-6 flex justify-center">
+          <Logo className="h-12 w-auto" />
+        </Link>
+        <h3 className="text-3xl text-center text-[#151412] mb-1 [font-family:'Baloo_2',sans-serif] font-extrabold">{t("auth.signIn")}</h3>
+        <p className="text-center text-[#151412]/60 font-body mb-1">{t("auth.signInDesc")}</p>
+        <p className="text-center text-2xl text-[#CE4A1D] mb-7 -rotate-2 [font-family:'Grand_Hotel',cursive]">bom te ver de novo!</p>
+
+        <form onSubmit={handleSubmit(onSubmitLogin)} className="space-y-5">
+          <div className="space-y-2">
+            <Label htmlFor="email" className="[font-family:'Baloo_2',sans-serif] font-bold text-[#151412]">{t("auth.email")}</Label>
+            <Input id="email" type="email" placeholder="seu@email.com" {...register("email")} className="rounded-2xl h-12 bg-[#FDFBF5] border-2 border-[#151412]/25 focus-visible:border-[#2A4BDF] focus-visible:ring-0 text-[#151412]" />
+            {errors.email && <p className="text-xs text-[#CE4A1D] mt-1">{errors.email.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password" className="[font-family:'Baloo_2',sans-serif] font-bold text-[#151412]">{t("auth.password")}</Label>
+              <button
+                type="button"
+                onClick={() => { setForgotOpen(true); setForgotSent(false); }}
+                className="text-xs text-[#2A4BDF] font-body underline underline-offset-2 hover:opacity-80"
+              >
+                {t("auth.forgot")}
+              </button>
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="font-body">{t("auth.password")}</Label>
-                <button
-                  type="button"
-                  onClick={() => { setForgotOpen(true); setForgotSent(false); }}
-                  className="text-xs text-primary font-body hover:underline"
-                >
-                  {t("auth.forgot")}
-                </button>
-              </div>
-              <div className="relative">
-                <Input id="password" type={showPassword ? "text" : "password"} placeholder="••••••••" {...register("password")} className="rounded-xl h-12 pr-10" />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
-                  tabIndex={-1}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-              {errors.password && <p className="text-xs text-destructive mt-1">{errors.password.message}</p>}
+            <div className="relative">
+              <Input id="password" type={showPassword ? "text" : "password"} placeholder="••••••••" {...register("password")} className="rounded-2xl h-12 pr-10 bg-[#FDFBF5] border-2 border-[#151412]/25 focus-visible:border-[#2A4BDF] focus-visible:ring-0 text-[#151412]" />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#151412]/50 hover:text-[#151412] transition-colors"
+                aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
-            <Button type="submit" variant="hero" size="lg" className="w-full" disabled={loading}>
-              {loading ? t("auth.signingIn") : t("auth.signIn")}
-            </Button>
-          </form>
-          <p className="text-sm text-muted-foreground font-body mt-6 text-center">
-            {t("auth.noAccount")}{" "}
-            <Link to="/signup" className="text-primary font-medium hover:underline">{t("auth.createAccount")}</Link>
-          </p>
-        </motion.div>
-      </div>
+            {errors.password && <p className="text-xs text-[#CE4A1D] mt-1">{errors.password.message}</p>}
+          </div>
+          <Button
+            type="submit"
+            size="lg"
+            disabled={loading}
+            className="w-full h-[52px] rounded-full bg-[#CE4A1D] hover:bg-[#E2551F] text-white text-base [font-family:'Baloo_2',sans-serif] font-bold shadow-[0_6px_0_rgba(21,20,18,0.9)] hover:-translate-y-0.5 hover:shadow-[0_8px_0_rgba(21,20,18,0.9)] active:translate-y-0.5 active:shadow-[0_3px_0_rgba(21,20,18,0.9)] transition-all"
+          >
+            {loading ? t("auth.signingIn") : t("auth.signIn")}
+          </Button>
+        </form>
+        <p className="text-sm text-[#151412]/60 font-body mt-6 text-center">
+          {t("auth.noAccount")}{" "}
+          <Link to="/signup" className="text-[#2A4BDF] font-medium underline underline-offset-2 hover:opacity-80">{t("auth.createAccount")}</Link>
+        </p>
+        <p className="text-xs text-[#151412]/40 font-body mt-4 text-center">
+          <a href="https://criasocialclub.com.br" className="hover:underline">← voltar pro site</a>
+        </p>
+      </motion.div>
 
       <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
         <DialogContent className="sm:max-w-md">
