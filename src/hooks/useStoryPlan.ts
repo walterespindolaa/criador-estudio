@@ -18,6 +18,9 @@ export type StorySlot = {
   status: "pendente" | "feito";
   sort_order: number;
   source: string;
+  notify_title?: string | null;
+  notify_body?: string | null;
+  notified_at?: string | null;
   created_at: string;
 };
 
@@ -143,12 +146,16 @@ export function useGenerateStoryPlan() {
   });
 }
 
+function ymd(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export function useUpdateStorySlot() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, patch }: {
       id: string;
-      patch: Partial<Pick<StorySlot, "title" | "script" | "format" | "slot_time" | "slot_date" | "status">>;
+      patch: Partial<Pick<StorySlot, "title" | "script" | "format" | "slot_time" | "slot_date" | "status">> & { notify_title?: string | null; notify_body?: string | null };
     }) => {
       const { error } = await sbFrom("story_slots")
         .update({ ...patch, updated_at: new Date().toISOString() } as never)
@@ -183,24 +190,53 @@ export function useAddStorySlot() {
       slot_time?: string | null;
       script?: string | null;
       format?: string | null;
-    }) => {
+      notify_title?: string | null;
+      notify_body?: string | null;
+      weekdays?: number[];   // 0=Dom .. 6=Sáb — quando recorrente
+      weeks?: number;        // repetir por N semanas
+      source?: string;
+    }): Promise<number> => {
       if (!userId) throw new Error("Not authenticated");
-      const { error } = await sbFrom("story_slots").insert({
+
+      // Datas: recorrência (dias da semana × N semanas) ou dia único.
+      let dates: string[] = [input.slot_date];
+      if (input.weekdays && input.weekdays.length) {
+        const weeks = Math.max(1, Math.min(12, input.weeks || 4));
+        const base = new Date(input.slot_date + "T00:00:00");
+        const weekStart = new Date(base);
+        weekStart.setDate(base.getDate() - base.getDay()); // domingo da semana
+        const out: string[] = [];
+        for (let w = 0; w < weeks; w++) {
+          for (const wd of input.weekdays) {
+            const d = new Date(weekStart);
+            d.setDate(weekStart.getDate() + w * 7 + wd);
+            const iso = ymd(d);
+            if (iso >= input.slot_date) out.push(iso); // nada no passado
+          }
+        }
+        dates = [...new Set(out)];
+      }
+
+      const rows = dates.map((iso, i) => ({
         user_id: userId,
-        slot_date: input.slot_date,
+        slot_date: iso,
         title: input.title.slice(0, 200),
         slot_time: input.slot_time ?? null,
         script: input.script ?? null,
         format: input.format ?? null,
+        notify_title: input.notify_title ?? null,
+        notify_body: input.notify_body ?? null,
         status: "pendente",
-        source: "manual",
-        sort_order: 99,
-      } as never);
+        source: input.source ?? (input.weekdays?.length ? "manual-recorrente" : "manual"),
+        sort_order: 99 + i,
+      }));
+      const { error } = await sbFrom("story_slots").insert(rows as never);
       if (error) throw error;
+      return rows.length;
     },
-    onSuccess: () => {
+    onSuccess: (n) => {
       qc.invalidateQueries({ queryKey: ["story-slots"] });
-      toast.success("Story adicionado.");
+      toast.success(n > 1 ? `${n} stories adicionados.` : "Story adicionado.");
     },
     onError: () => toast.error("Não consegui adicionar."),
   });

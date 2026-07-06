@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRIA | Seu estúdio de social media inteiro. Numa aba só.</title>
+<meta name="description" content="O CRIA junta ideias, planejamento, IA, aprovação de clientes, relatórios e financeiro no mesmo lugar. Feito pro criador e social media brasileiro. 7 dias grátis.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="CRIA | Seu estúdio de social media inteiro. Numa aba só.">
+<meta property="og:description" content="Ideia → planejar → produzir → aprovar → publicar → cobrar. Tudo num lugar. 7 dias grátis.">
+<meta property="og:url" content="https://app.criasocialclub.com.br/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Roboto:wght@300;400;500;700&family=Grand+Hotel&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+<style>
+/* ============ CRIA LP — Direção 01 (creme + cores chapadas) ============
+   Tipografia: quando a "Fleur Porta" chegar, troque a var --font-display
+   e adicione o @font-face — todo o site atualiza sozinho.            */
+:root{
+  --creme:#F4EFE3;
+  --creme-2:#EEE8D8;
+  --ink:#151412;
+  --laranja:#CE4A1D;
+  --laranja-2:#E2551F;
+  --azul:#2A4BDF;
+  --rosa:#F27EB5;
+  --amarelo:#F2C21E;
+  --verde:#3E9152;
+  --branco:#FDFBF5;
+  --font-display:'Baloo 2', sans-serif;
+  --font-body:'Roboto', sans-serif;
+  --font-script:'Grand Hotel', cursive;
+  --radius-lg:32px;
+  --radius-md:22px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:var(--font-body);background:var(--creme);color:var(--ink);overflow-x:hidden;line-height:1.6}
+h1,h2,h3,.display{font-family:var(--font-display);font-weight:800;line-height:1.05;letter-spacing:-.01em}
+img{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+.container{width:min(1180px,92%);margin:0 auto}
+.script{font-family:var(--font-script);font-weight:400;letter-spacing:0}
+
+/* ---------- botões ---------- */
+.btn{display:inline-flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:700;font-size:1.05rem;padding:16px 32px;border-radius:999px;border:none;cursor:pointer;transition:transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s;position:relative}
+.btn-laranja{background:var(--laranja);color:#fff;box-shadow:0 6px 0 rgba(21,20,18,.9)}
+.btn-laranja:hover{transform:translateY(-4px);box-shadow:0 10px 0 rgba(21,20,18,.9)}
+.btn-laranja:active{transform:translateY(2px);box-shadow:0 3px 0 rgba(21,20,18,.9)}
+.btn-ghost{background:transparent;color:var(--ink);border:2px solid var(--ink);box-shadow:none}
+.btn-ghost:hover{background:var(--ink);color:var(--creme)}
+.micro{font-size:.82rem;opacity:.75;margin-top:12px}
+
+/* ---------- navbar ---------- */
+nav{position:fixed;top:18px;left:50%;transform:translateX(-50%);width:min(1120px,94%);z-index:100;background:rgba(253,251,245,.85);backdrop-filter:blur(14px);border-radius:999px;padding:10px 14px 10px 26px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 24px rgba(21,20,18,.10);border:1.5px solid rgba(21,20,18,.08)}
+.logo{font-family:var(--font-display);font-weight:800;font-size:1.5rem;letter-spacing:.02em}
+.logo span{color:var(--laranja)}
+.nav-links{display:flex;gap:28px;font-weight:500;font-size:.95rem}
+.nav-links a{opacity:.8;transition:opacity .2s}
+.nav-links a:hover{opacity:1}
+.nav-cta{padding:11px 22px;font-size:.95rem}
+@media(max-width:820px){.nav-links{display:none}}
+
+/* ---------- hero ---------- */
+#hero{min-height:100svh;display:flex;flex-direction:column;justify-content:center;position:relative;padding:140px 0 60px;overflow:hidden}
+.hero-blob{position:absolute;border-radius:50%;z-index:0;will-change:transform}
+.blob-rosa{width:420px;height:420px;background:var(--rosa);top:-140px;right:-120px;border-radius:38% 62% 55% 45%/48% 42% 58% 52%}
+.blob-amarelo{width:300px;height:300px;background:var(--amarelo);bottom:-80px;left:-100px;border-radius:55% 45% 40% 60%/50% 60% 40% 50%}
+.blob-azul{width:120px;height:120px;background:var(--azul);top:24%;left:6%;border-radius:50%}
+.blob-verde{width:70px;height:70px;background:var(--verde);bottom:22%;right:10%;border-radius:50%}
+.hero-inner{position:relative;z-index:2;text-align:center}
+.hero-tag{display:inline-flex;align-items:center;gap:8px;background:var(--branco);border:1.5px solid rgba(21,20,18,.12);padding:8px 18px;border-radius:999px;font-size:.85rem;font-weight:500;margin-bottom:28px}
+.hero-tag .dot{width:8px;height:8px;border-radius:50%;background:var(--verde);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+h1{font-size:clamp(2.6rem,7vw,5.4rem);max-width:15ch;margin:0 auto 8px}
+h1 .hl{color:var(--laranja);position:relative;display:inline-block}
+.hero-script{font-family:var(--font-script);font-size:clamp(1.6rem,3.4vw,2.6rem);color:var(--azul);display:block;margin-top:6px;transform:rotate(-2deg)}
+.hero-sub{max-width:56ch;margin:22px auto 34px;font-size:clamp(1rem,1.4vw,1.2rem);font-weight:300;opacity:.85}
+.hero-ctas{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+.hero-mock{position:relative;z-index:2;margin:64px auto 0;width:min(940px,94%);border-radius:var(--radius-lg);background:var(--branco);border:2px solid var(--ink);box-shadow:0 14px 0 rgba(21,20,18,.9);overflow:hidden}
+.mock-bar{display:flex;gap:8px;padding:14px 18px;border-bottom:2px solid var(--ink);background:var(--creme-2)}
+.mock-bar i{width:12px;height:12px;border-radius:50%}
+.mock-placeholder{aspect-ratio:16/9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:rgba(21,20,18,.45);font-weight:500;background:repeating-linear-gradient(45deg,transparent,transparent 18px,rgba(21,20,18,.03) 18px,rgba(21,20,18,.03) 36px)}
+.mock-placeholder strong{font-family:var(--font-display);font-size:1.1rem}
+
+/* ---------- marquee ---------- */
+.marquee-wrap{background:var(--ink);color:var(--creme);padding:20px 0;transform:rotate(-1.2deg) scale(1.02);margin:70px 0 -20px;overflow:hidden}
+.marquee{display:flex;width:max-content;gap:0;animation:scroll 28s linear infinite}
+.marquee span{font-family:var(--font-display);font-weight:700;font-size:1.15rem;white-space:nowrap;padding:0 26px;display:flex;align-items:center;gap:26px}
+.marquee .x{color:var(--laranja-2);font-size:1.3rem}
+@keyframes scroll{to{transform:translateX(-50%)}}
+
+/* ---------- seção dor (amarelo + formas rosa, ref. Direção 01) ---------- */
+#dor{background:var(--amarelo);padding:130px 0 120px;position:relative;overflow:hidden}
+.shape{position:absolute;z-index:0}
+.shape-rosa-1{width:520px;height:340px;background:var(--rosa);border-radius:60% 40% 55% 45%/55% 60% 40% 45%;top:-120px;left:-160px;transform:rotate(15deg)}
+.shape-rosa-2{width:420px;height:300px;background:var(--rosa);border-radius:45% 55% 40% 60%/50% 45% 55% 50%;bottom:-110px;right:-120px;transform:rotate(-12deg)}
+.dor-card{position:relative;z-index:2;background:var(--branco);border-radius:40px;padding:clamp(36px,6vw,72px);max-width:880px;margin:0 auto;box-shadow:0 12px 0 rgba(21,20,18,.15)}
+.kicker{display:inline-block;font-family:var(--font-display);font-weight:700;font-size:.85rem;letter-spacing:.08em;text-transform:uppercase;padding:8px 18px;border-radius:999px;margin-bottom:22px;color:#fff}
+h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
+.dor-list{list-style:none;margin-top:30px;display:flex;flex-direction:column;gap:0}
+.dor-item{display:flex;gap:16px;align-items:flex-start;padding:18px 0;border-bottom:1.5px dashed rgba(21,20,18,.15);opacity:0}
+.dor-item:last-child{border-bottom:none}
+.dor-emoji{flex-shrink:0;width:42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.2rem}
+.dor-item p{font-size:1.02rem}
+.dor-punch{margin-top:28px;font-family:var(--font-display);font-weight:700;font-size:1.25rem}
+.dor-punch em{font-family:var(--font-script);font-style:normal;font-size:1.6rem;color:var(--laranja)}
+</style>
+</head>
+<body>
+
+<!-- ==================== NAVBAR ==================== -->
+<nav id="navbar">
+  <a class="logo" href="#hero">CRIA<span>.</span></a>
+  <div class="nav-links">
+    <a href="#ciclo">Como funciona</a>
+    <a href="#func">Funcionalidades</a>
+    <a href="#planos">Planos</a>
+    <a href="#faq">Dúvidas</a>
+  </div>
+  <a href="https://app.criasocialclub.com.br/auth" class="btn btn-laranja nav-cta">Testar grátis</a>
+</nav>
+
+<!-- ==================== HERO ==================== -->
+<section id="hero">
+  <div class="hero-blob blob-rosa"></div>
+  <div class="hero-blob blob-amarelo"></div>
+  <div class="hero-blob blob-azul"></div>
+  <div class="hero-blob blob-verde"></div>
+
+  <div class="hero-inner container">
+    <div class="hero-tag"><span class="dot"></span> Feito pro criador brasileiro 🇧🇷</div>
+    <h1>Seu estúdio de social media inteiro. <span class="hl">Numa aba só.</span>
+      <span class="hero-script">ufa, agora faz sentido!</span>
+    </h1>
+    <p class="hero-sub">O CRIA junta ideias, planejamento, IA, aprovação de clientes, relatórios e financeiro no mesmo lugar — pra você parar de viver pulando de planilha em planilha.</p>
+    <div class="hero-ctas">
+      <a href="https://app.criasocialclub.com.br/auth" class="btn btn-laranja">Começar meus 7 dias grátis</a>
+      <a href="#ciclo" class="btn btn-ghost">Ver como funciona ↓</a>
+    </div>
+    <p class="micro">7 dias grátis · Cancela quando quiser · Sem burocracia</p>
+  </div>
+
+  <div class="hero-mock" id="hero-mock">
+    <div class="mock-bar">
+      <i style="background:var(--laranja)"></i><i style="background:var(--amarelo)"></i><i style="background:var(--verde)"></i>
+    </div>
+    <div class="mock-placeholder">
+      <strong>[ SUA IMAGEM AQUI ]</strong>
+      <span>Print do dashboard do CRIA (ideal: 1600×900)</span>
+    </div>
+  </div>
+
+  <div class="marquee-wrap">
+    <div class="marquee" id="marquee">
+      <span>ADEUS PLANILHA <b class="x">✕</b></span><span>ADEUS 6 ABAS ABERTAS <b class="x">✕</b></span><span>ADEUS ÁUDIO DE APROVAÇÃO <b class="x">✕</b></span><span>ADEUS RELATÓRIO DE MADRUGADA <b class="x">✕</b></span><span>ADEUS IDEIA PERDIDA <b class="x">✕</b></span>
+      <span>ADEUS PLANILHA <b class="x">✕</b></span><span>ADEUS 6 ABAS ABERTAS <b class="x">✕</b></span><span>ADEUS ÁUDIO DE APROVAÇÃO <b class="x">✕</b></span><span>ADEUS RELATÓRIO DE MADRUGADA <b class="x">✕</b></span><span>ADEUS IDEIA PERDIDA <b class="x">✕</b></span>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== DOR ==================== -->
+<section id="dor">
+  <div class="shape shape-rosa-1"></div>
+  <div class="shape shape-rosa-2"></div>
+  <div class="dor-card reveal">
+    <span class="kicker" style="background:var(--laranja)">A gente sabe como é</span>
+    <h2>Essa semana já aconteceu pelo menos <em class="script" style="font-size:1.2em;color:var(--laranja)">um</em> desses?</h2>
+    <ul class="dor-list">
+      <li class="dor-item"><span class="dor-emoji" style="background:#FBE9E1">💀</span><p>Uma ideia boa morreu num print perdido na galeria ou numa nota que você nunca mais abriu.</p></li>
+      <li class="dor-item"><span class="dor-emoji" style="background:#E8ECFB">🎙️</span><p>O cliente pediu alteração <strong>por áudio no WhatsApp</strong>… no post que já estava agendado.</p></li>
+      <li class="dor-item"><span class="dor-emoji" style="background:#FDF3D6">🌙</span><p>Você montou relatório na mão, de madrugada, colando print por print.</p></li>
+      <li class="dor-item"><span class="dor-emoji" style="background:#FCE8F2">💸</span><p>Pagou agendador + Notion + planilha + Canva Pro e mesmo assim nada conversa entre si.</p></li>
+      <li class="dor-item"><span class="dor-emoji" style="background:#E5F2E9">🫠</span><p>Esqueceu de cobrar (ou reajustar) um cliente porque o financeiro vive numa aba que você evita abrir.</p></li>
+      <li class="dor-item"><span class="dor-emoji" style="background:#FBE9E1">🧱</span><p>Sentou pra criar e travou: sem banco de ideias, sem referência, começando do zero de novo.</p></li>
+    </ul>
+    <p class="dor-punch">Não é desorganização sua. É que ninguém fez uma ferramenta pro <em>seu</em> fluxo de trabalho. <em>Até agora.</em></p>
+  </div>
+</section>
+
+</body>
+</html>

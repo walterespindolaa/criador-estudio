@@ -282,8 +282,8 @@ function StorySlotDialog({
 }: {
   state: EditorState;
   onClose: () => void;
-  onSaveEdit: (id: string, patch: Partial<Pick<StorySlot, "title" | "script" | "format" | "slot_time">>) => void;
-  onCreate: (input: { slot_date: string; title: string; slot_time?: string | null; script?: string | null; format?: string | null }) => void;
+  onSaveEdit: (id: string, patch: Partial<Pick<StorySlot, "title" | "script" | "format" | "slot_time">> & { notify_title?: string | null; notify_body?: string | null }) => void;
+  onCreate: (input: { slot_date: string; title: string; slot_time?: string | null; script?: string | null; format?: string | null; notify_title?: string | null; notify_body?: string | null; weekdays?: number[]; weeks?: number }) => void;
 }) {
   const open = state.mode !== "closed";
   const editing = state.mode === "edit" ? state.slot : null;
@@ -292,6 +292,11 @@ function StorySlotDialog({
   const [script, setScript] = useState("");
   const [format, setFormat] = useState("");
   const [time, setTime] = useState("");
+  const [notifyOn, setNotifyOn] = useState(false);
+  const [notifyBody, setNotifyBody] = useState("");
+  const [recurOn, setRecurOn] = useState(false);
+  const [weekdays, setWeekdays] = useState<number[]>([]);
+  const [weeks, setWeeks] = useState(4);
   const [seededKey, setSeededKey] = useState<string>("");
 
   const key = state.mode === "edit" ? `e:${state.slot.id}` : state.mode === "create" ? `c:${state.date}` : "";
@@ -301,18 +306,43 @@ function StorySlotDialog({
     setScript(editing?.script ?? "");
     setFormat(editing?.format ?? "");
     setTime(editing?.slot_time ? editing.slot_time.slice(0, 5) : "");
+    setNotifyOn(!!editing?.notify_title);
+    setNotifyBody(editing?.notify_body ?? "");
+    setRecurOn(false);
+    setWeekdays([]);
+    setWeeks(4);
   }
+
+  const WD = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+  const toggleWd = (i: number) => setWeekdays((w) => (w.includes(i) ? w.filter((x) => x !== i) : [...w, i]));
 
   const save = () => {
     if (!title.trim()) return;
     const slot_time = /^\d{1,2}:\d{2}$/.test(time) ? time : null;
-    if (state.mode === "edit") onSaveEdit(state.slot.id, { title: title.trim(), script: script.trim() || null, format: format.trim() || null, slot_time });
-    else if (state.mode === "create") onCreate({ slot_date: state.date, title: title.trim(), script: script.trim() || null, format: format.trim() || null, slot_time });
+    const notify_title = notifyOn ? (title.trim().slice(0, 160)) : null;
+    const notify_body = notifyOn ? (notifyBody.trim() || null) : null;
+    if (state.mode === "edit") {
+      onSaveEdit(state.slot.id, { title: title.trim(), script: script.trim() || null, format: format.trim() || null, slot_time, notify_title, notify_body });
+      // "Repetir esse story em mais dias" — cria cópias sem mexer no original.
+      if (recurOn && weekdays.length) {
+        onCreate({
+          slot_date: state.slot.slot_date, title: title.trim(), script: script.trim() || null, format: format.trim() || null, slot_time,
+          notify_title, notify_body, weekdays, weeks,
+        });
+      }
+    } else if (state.mode === "create") {
+      onCreate({
+        slot_date: state.date, title: title.trim(), script: script.trim() || null, format: format.trim() || null, slot_time,
+        notify_title, notify_body,
+        weekdays: recurOn && weekdays.length ? weekdays : undefined,
+        weeks: recurOn ? weeks : undefined,
+      });
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-md rounded-2xl">
+      <DialogContent className="sm:max-w-md rounded-2xl max-h-[88vh] overflow-y-auto">
         <DialogHeader><DialogTitle className="font-display">{editing ? "Editar story" : "Novo story"}</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div>
@@ -320,8 +350,8 @@ function StorySlotDialog({
             <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Caixinha de perguntas sobre bastidores" />
           </div>
           <div>
-            <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1">Roteiro</p>
-            <Textarea value={script} onChange={(e) => setScript(e.target.value)} rows={4} placeholder="O que gravar e o texto que vai na tela…" />
+            <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1">Roteiro / ideia</p>
+            <Textarea value={script} onChange={(e) => setScript(e.target.value)} rows={3} placeholder="O que gravar e o texto que vai na tela…" />
           </div>
           <div className="flex gap-3">
             <div className="flex-1">
@@ -333,6 +363,47 @@ function StorySlotDialog({
               <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
             </div>
           </div>
+
+          {/* Notificação */}
+          <div className="rounded-xl border border-border p-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={notifyOn} onChange={(e) => setNotifyOn(e.target.checked)} className="h-4 w-4 accent-primary" />
+              <span className="text-sm font-body font-semibold text-foreground">Me lembrar no horário</span>
+            </label>
+            {notifyOn && (
+              <div className="mt-2 space-y-2">
+                {!time && <p className="text-[11px] font-body text-amber-600">Defina um horário acima pra receber o lembrete.</p>}
+                <div>
+                  <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1">Texto do lembrete (opcional)</p>
+                  <Textarea value={notifyBody} onChange={(e) => setNotifyBody(e.target.value)} rows={2} placeholder="Ex.: Grava a caixinha de perguntas dos bastidores!" />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Recorrência: criar repetindo, ou repetir um story existente em mais dias */}
+          <div className="rounded-xl border border-border p-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={recurOn} onChange={(e) => setRecurOn(e.target.checked)} className="h-4 w-4 accent-primary" />
+                <span className="text-sm font-body font-semibold text-foreground">{editing ? "Repetir esse story em mais dias" : "Repetir toda semana"}</span>
+              </label>
+              {recurOn && (
+                <div className="mt-2 space-y-2">
+                  <p className="text-[11px] font-body text-muted-foreground">Em quais dias? ({weekdays.length}x por semana)</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {WD.map((d, i) => (
+                      <button key={i} type="button" onClick={() => toggleWd(i)}
+                        className={cn("h-8 px-2.5 rounded-lg text-xs font-body border transition-colors", weekdays.includes(i) ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground")}>{d}</button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-body text-muted-foreground">Por</span>
+                    <Input type="number" min={1} max={12} value={weeks} onChange={(e) => setWeeks(Math.max(1, Math.min(12, Number(e.target.value) || 4)))} className="h-8 w-16" />
+                    <span className="text-[11px] font-body text-muted-foreground">semanas</span>
+                  </div>
+                </div>
+              )}
+            </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
