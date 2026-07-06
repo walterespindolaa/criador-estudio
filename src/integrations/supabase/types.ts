@@ -3457,6 +3457,9 @@ export type Database = {
           created_at: string
           format: string | null
           id: string
+          notified_at: string | null
+          notify_body: string | null
+          notify_title: string | null
           script: string | null
           slot_date: string
           slot_time: string | null
@@ -3472,6 +3475,9 @@ export type Database = {
           created_at?: string
           format?: string | null
           id?: string
+          notified_at?: string | null
+          notify_body?: string | null
+          notify_title?: string | null
           script?: string | null
           slot_date: string
           slot_time?: string | null
@@ -3487,6 +3493,9 @@ export type Database = {
           created_at?: string
           format?: string | null
           id?: string
+          notified_at?: string | null
+          notify_body?: string | null
+          notify_title?: string | null
           script?: string | null
           slot_date?: string
           slot_time?: string | null
