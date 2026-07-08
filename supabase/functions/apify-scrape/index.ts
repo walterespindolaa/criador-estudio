@@ -81,13 +81,23 @@ function summarize(items: any[], type: string): { summary: Record<string, unknow
       summary: {
         kind: "ads",
         count: ads.length,
-        top: ads.slice(0, 12).map((a: any) => ({
-          text: String(a.adText || a.snapshot?.body?.text || a.body || a.text || a.adCreativeBody || "").replace(/\s+/g, " ").slice(0, 240),
-          page: a.pageName || a.snapshot?.page_name || a.pageId || null,
-          since: a.startDate || a.adDeliveryStartTime || a.ad_delivery_start_time || a.startDateFormatted || null,
-          active: a.isActive ?? a.active ?? null,
-          link: a.linkUrl || a.snapshot?.link_url || a.link || null,
-        })),
+        top: ads.slice(0, 12).map((a: any) => {
+          const archiveId = a.adArchiveID || a.ad_archive_id || a.adid || a.snapshot?.ad_archive_id || null;
+          const pageId = a.pageId || a.snapshot?.page_id || a.page_id || null;
+          const media = a.snapshot?.images?.[0]?.original_image_url || a.snapshot?.images?.[0]?.resized_image_url
+            || a.snapshot?.videos?.[0]?.video_preview_image_url || a.imageUrl || a.thumbnailUrl || null;
+          return {
+            text: String(a.adText || a.snapshot?.body?.text || a.body || a.text || a.adCreativeBody || "").replace(/\s+/g, " ").slice(0, 240),
+            page: a.pageName || a.snapshot?.page_name || a.pageId || null,
+            since: a.startDate || a.adDeliveryStartTime || a.ad_delivery_start_time || a.startDateFormatted || null,
+            active: a.isActive ?? a.active ?? null,
+            link: a.linkUrl || a.snapshot?.link_url || a.link || null,
+            // Link pra VER o anúncio (imagem/vídeo) na Biblioteca de Anúncios do Facebook.
+            library_link: archiveId ? `https://www.facebook.com/ads/library/?id=${archiveId}`
+              : (pageId ? `https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=BR&view_all_page_id=${pageId}` : null),
+            thumbnail: media,
+          };
+        }),
       },
       top: ads.slice(0, 12),
     };

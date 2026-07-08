@@ -82,17 +82,40 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
   const needHandle = selectedItems.some((i) => i.inputKind === "handle" && !(i.key === "transcription" && hasLinks));
   const needUrl = selectedItems.some((i) => i.inputKind === "url");
   const needTag = selectedItems.some((i) => i.inputKind === "hashtag");
-  const noPeriod = selectedItems.every((i) => ["profile", "comments", "stories"].includes(i.key));
+  // Período (desde a data) não faz sentido p/ perfil, comentários, stories e anúncios (Meta não filtra por data assim).
+  const noPeriod = selectedItems.every((i) => ["profile", "comments", "stories", "ads"].includes(i.key));
   // "Quantos posts" só serve pros itens que puxam N recentes; transcrição por link não usa (a qtd é o nº de links).
   const usesCount = (k: string) => !["profile", "comments", "stories"].includes(k);
   const needCount = selectedItems.some((i) => usesCount(i.key) && !(i.key === "transcription" && hasLinks));
+  // Rótulo do campo de quantidade — adapta ao tipo de análise selecionado.
+  const countLabel = (() => {
+    const uniq = Array.from(new Set(selectedItems.filter((i) => usesCount(i.key) && !(i.key === "transcription" && hasLinks)).map((i) => i.key)));
+    if (uniq.length === 1) {
+      const k = uniq[0];
+      if (k === "ads") return "Quantos anúncios";
+      if (k === "reels" || k === "transcription") return "Quantos reels";
+      if (k === "mentions") return "Quantas menções";
+      if (k === "hashtag") return "Quantos posts (hashtag)";
+    }
+    return "Quantos posts (mais recentes)";
+  })();
 
   const addLink = () => setReelLinks((l) => [...l, ""]);
   const setLinkAt = (i: number, v: string) => setReelLinks((l) => l.map((x, idx) => (idx === i ? v : x)));
   const removeLink = (i: number) => setReelLinks((l) => (l.length <= 1 ? [""] : l.filter((_, idx) => idx !== i)));
 
   const doneScrapes = useMemo(() => scrapes.filter((s) => s.status === "done" && s.result_summary).slice(0, 8), [scrapes]);
-  const filteredIdeas = useMemo(() => (filter === "todas" ? ideas : ideas.filter((i) => i.status === filter)), [ideas, filter]);
+  const matchesFilter = (i: CreativeIdea) => filter === "todas" || i.status === filter;
+  // Agrupa as ideias por análise (scrape_id) — cada pesquisa mostra as SUAS ideias, não um banco global.
+  const ideasByScrape = useMemo(() => {
+    const m: Record<string, CreativeIdea[]> = {};
+    for (const idea of ideas) {
+      const k = (idea as { scrape_id?: string | null }).scrape_id || "__orphan__";
+      (m[k] ||= []).push(idea);
+    }
+    return m;
+  }, [ideas]);
+  const orphanIdeas = useMemo(() => (ideasByScrape["__orphan__"] || []).filter(matchesFilter), [ideasByScrape, filter]);
 
   const toggle = (k: string) => setSelected((s) => ({ ...s, [k]: !s[k] }));
 
@@ -188,7 +211,7 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
                 </Field>
               )}
               {needCount && (
-                <Field label="Quantos posts (mais recentes)">
+                <Field label={countLabel}>
                   <Input type="number" min={1} max={20} value={limit} onChange={(e) => setLimit(Math.max(1, Math.min(20, Number(e.target.value) || 10)))} className="h-9" />
                   {hasTranscription && <p className="text-[10px] font-body text-muted-foreground mt-1">Vale só no modo @ (quantos reels recentes puxar). Com links, transcreve os que você colar.</p>}
                 </Field>
@@ -239,14 +262,23 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
         <div className="space-y-3">
           <p className="text-sm font-display font-bold text-foreground">Análises</p>
           {doneScrapes.map((s, i) => (
-            <SummaryCard key={s.id} summary={s.result_summary as Record<string, unknown>} handle={s.input_handle} defaultOpen={i === 0} onDelete={() => delScrape.mutate(s.id)} />
+            <SummaryCard
+              key={s.id}
+              summary={s.result_summary as Record<string, unknown>}
+              handle={s.input_handle}
+              defaultOpen={i === 0}
+              onDelete={() => delScrape.mutate(s.id)}
+              ideas={(ideasByScrape[s.id] || []).filter(matchesFilter)}
+              onIdeaStatus={(id, status) => upd.mutate({ id, status })}
+              onIdeaDelete={(id) => del.mutate(id)}
+            />
           ))}
         </div>
       )}
 
-      {/* Ideias */}
+      {/* Ideias — hub de ação. As ideias em si aparecem dentro de cada análise acima. */}
       <div>
-        <div className="flex items-center gap-2 mb-3 flex-wrap">
+        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
           <Sparkles className="h-4 w-4 text-primary" />
           <h3 className="text-sm font-display font-bold text-foreground">Ideias de conteúdo</h3>
           <div className="flex items-center gap-2 ml-auto flex-wrap">
@@ -256,15 +288,17 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
                 Criar posts na aba Posts ({usarCount})
               </Button>
             )}
-            <div className="flex gap-1">
-              {STATUS_FILTERS.map((f) => (
-                <button key={f} onClick={() => setFilter(f)} className={cn("px-2.5 py-1 rounded-full text-xs font-body border capitalize transition-colors", filter === f ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground")}>{f}</button>
-              ))}
-            </div>
+            {ideas.length > 0 && (
+              <div className="flex gap-1">
+                {STATUS_FILTERS.map((f) => (
+                  <button key={f} onClick={() => setFilter(f)} className={cn("px-2.5 py-1 rounded-full text-xs font-body border capitalize transition-colors", filter === f ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground")}>{f}</button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         {clientId && !extClient && ideas.length > 0 && (
-          <p className="text-[11px] font-body text-muted-foreground mb-2 -mt-1">Ative o Cria Post neste cliente (aba Posts) pra transformar as ideias em posts.</p>
+          <p className="text-[11px] font-body text-muted-foreground mb-2">Ative o Cria Post neste cliente (aba Posts) pra transformar as ideias em posts.</p>
         )}
 
         {ideas.length === 0 ? (
@@ -273,35 +307,45 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
             <p className="text-sm font-body text-foreground font-medium">Nenhuma ideia ainda</p>
             <p className="text-xs font-body text-muted-foreground mt-1">Rode uma análise acima pra gerar ideias.</p>
           </div>
-        ) : filteredIdeas.length === 0 ? (
-          <p className="text-sm font-body text-muted-foreground text-center py-8">Nenhuma ideia com esse status.</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {filteredIdeas.map((idea) => {
-              const sm = STATUS_META[idea.status];
-              return (
-                <div key={idea.id} className="bg-card border border-border rounded-xl p-3.5 flex flex-col">
-                  <div className="flex items-start gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                        {idea.format && <span className="text-[10px] font-body px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground capitalize">{idea.format}</span>}
-                        <span className={cn("text-[10px] font-body px-1.5 py-0.5 rounded-full", sm.cls)}>{sm.label}</span>
-                      </div>
-                      <p className="text-sm font-body font-semibold text-foreground leading-snug">{idea.title}</p>
-                      {idea.rationale && <p className="text-[12px] font-body text-muted-foreground mt-1 leading-relaxed">{idea.rationale}</p>}
-                    </div>
-                    <button onClick={() => del.mutate(idea.id)} className="text-muted-foreground hover:text-destructive shrink-0" aria-label="Excluir"><Trash2 className="h-3.5 w-3.5" /></button>
-                  </div>
-                  <div className="flex gap-1.5 mt-3 pt-2.5 border-t border-border/60">
-                    <IdeaBtn active={idea.status === "usar"} onClick={() => upd.mutate({ id: idea.id, status: "usar" })} icon={<Check className="h-3 w-3" />}>Usar</IdeaBtn>
-                    <IdeaBtn active={idea.status === "usada"} onClick={() => upd.mutate({ id: idea.id, status: "usada" })}>Usada</IdeaBtn>
-                    <IdeaBtn active={idea.status === "descartada"} onClick={() => upd.mutate({ id: idea.id, status: "descartada" })} icon={<X className="h-3 w-3" />}>Descartar</IdeaBtn>
-                  </div>
+          <>
+            <p className="text-[12px] font-body text-muted-foreground mb-3">As ideias aparecem <strong>dentro de cada análise</strong> acima — cada pesquisa gera as suas. Marque como "Usar" e clique em "Criar posts na aba Posts".</p>
+            {orphanIdeas.length > 0 && (
+              <>
+                <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-2">Ideias sem análise vinculada</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {orphanIdeas.map((idea) => (
+                    <IdeaCard key={idea.id} idea={idea} onStatus={(id, status) => upd.mutate({ id, status })} onDelete={(id) => del.mutate(id)} />
+                  ))}
                 </div>
-              );
-            })}
-          </div>
+              </>
+            )}
+          </>
         )}
+      </div>
+    </div>
+  );
+}
+
+function IdeaCard({ idea, onStatus, onDelete }: { idea: CreativeIdea; onStatus: (id: string, status: CreativeIdea["status"]) => void; onDelete: (id: string) => void }) {
+  const sm = STATUS_META[idea.status];
+  return (
+    <div className="bg-card border border-border rounded-xl p-3.5 flex flex-col">
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap mb-1">
+            {idea.format && <span className="text-[10px] font-body px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground capitalize">{idea.format}</span>}
+            <span className={cn("text-[10px] font-body px-1.5 py-0.5 rounded-full", sm.cls)}>{sm.label}</span>
+          </div>
+          <p className="text-sm font-body font-semibold text-foreground leading-snug">{idea.title}</p>
+          {idea.rationale && <p className="text-[12px] font-body text-muted-foreground mt-1 leading-relaxed">{idea.rationale}</p>}
+        </div>
+        <button onClick={() => onDelete(idea.id)} className="text-muted-foreground hover:text-destructive shrink-0" aria-label="Excluir"><Trash2 className="h-3.5 w-3.5" /></button>
+      </div>
+      <div className="flex gap-1.5 mt-3 pt-2.5 border-t border-border/60">
+        <IdeaBtn active={idea.status === "usar"} onClick={() => onStatus(idea.id, "usar")} icon={<Check className="h-3 w-3" />}>Usar</IdeaBtn>
+        <IdeaBtn active={idea.status === "usada"} onClick={() => onStatus(idea.id, "usada")}>Usada</IdeaBtn>
+        <IdeaBtn active={idea.status === "descartada"} onClick={() => onStatus(idea.id, "descartada")} icon={<X className="h-3 w-3" />}>Descartar</IdeaBtn>
       </div>
     </div>
   );
@@ -324,7 +368,7 @@ function IdeaBtn({ active, onClick, icon, children }: { active: boolean; onClick
   );
 }
 
-export function SummaryCard({ summary, handle, defaultOpen = false, onDelete }: { summary: Record<string, unknown>; handle: string; defaultOpen?: boolean; onDelete?: () => void }) {
+export function SummaryCard({ summary, handle, defaultOpen = false, onDelete, ideas, onIdeaStatus, onIdeaDelete }: { summary: Record<string, unknown>; handle: string; defaultOpen?: boolean; onDelete?: () => void; ideas?: CreativeIdea[]; onIdeaStatus?: (id: string, status: CreativeIdea["status"]) => void; onIdeaDelete?: (id: string) => void }) {
   const [open, setOpen] = useState(defaultOpen);
   const s = summary as Record<string, any>;
   const kind = s.kind;
@@ -366,14 +410,24 @@ export function SummaryCard({ summary, handle, defaultOpen = false, onDelete }: 
         ) : kind === "ads" ? (
           <ListWrap title={`${fmtNum(s.count)} anúncios ativos — a oferta que ele paga pra promover`}>
             {Array.isArray(s.top) && s.top.slice(0, 10).map((a: any, i: number) => (
-              <div key={i} className="rounded-lg border border-border/60 px-2.5 py-2">
-                <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                  {a.active && <span className="text-[9px] font-body px-1.5 py-0.5 rounded-full bg-secondary/15 text-secondary">ativo</span>}
-                  {a.page && <span className="text-[10px] font-body text-muted-foreground">{a.page}</span>}
-                  {a.since && <span className="text-[10px] font-body text-muted-foreground">· desde {String(a.since).slice(0, 10)}</span>}
+              <div key={i} className="flex gap-2.5 rounded-lg border border-border/60 px-2.5 py-2">
+                {a.thumbnail && (
+                  <a href={a.library_link || a.link || a.thumbnail} target="_blank" rel="noreferrer" className="shrink-0">
+                    <img src={a.thumbnail} alt="" loading="lazy" className="h-16 w-16 rounded-md object-cover border border-border/60 bg-muted" />
+                  </a>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                    {a.active && <span className="text-[9px] font-body px-1.5 py-0.5 rounded-full bg-secondary/15 text-secondary">ativo</span>}
+                    {a.page && <span className="text-[10px] font-body text-muted-foreground">{a.page}</span>}
+                    {a.since && <span className="text-[10px] font-body text-muted-foreground">· desde {String(a.since).slice(0, 10)}</span>}
+                  </div>
+                  <p className="text-[12px] font-body text-foreground leading-snug">{a.text || "(sem texto)"}</p>
+                  <div className="flex items-center gap-3 mt-1">
+                    {a.library_link && <a href={a.library_link} target="_blank" rel="noreferrer" className="text-[11px] font-body text-primary hover:underline">ver na Ads Library →</a>}
+                    {a.link && <a href={a.link} target="_blank" rel="noreferrer" className="text-[11px] font-body text-muted-foreground hover:underline">destino →</a>}
+                  </div>
                 </div>
-                <p className="text-[12px] font-body text-foreground leading-snug">{a.text || "(sem texto)"}</p>
-                {a.link && <a href={a.link} target="_blank" rel="noreferrer" className="text-[11px] font-body text-primary hover:underline">ver anúncio →</a>}
               </div>
             ))}
           </ListWrap>
@@ -424,6 +478,18 @@ export function SummaryCard({ summary, handle, defaultOpen = false, onDelete }: 
               </ListWrap>
             )}
           </>
+        )}
+        {ideas && ideas.length > 0 && onIdeaStatus && onIdeaDelete && (
+          <div className="mt-4 pt-3 border-t border-border/60">
+            <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-primary" /> Ideias desta análise ({ideas.length})
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+              {ideas.map((idea) => (
+                <IdeaCard key={idea.id} idea={idea} onStatus={onIdeaStatus} onDelete={onIdeaDelete} />
+              ))}
+            </div>
+          </div>
         )}
       </div>
       )}
