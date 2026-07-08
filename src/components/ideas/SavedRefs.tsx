@@ -149,20 +149,17 @@ function SavedCard({ r, open, onToggleMenu, onOpen, onCriar, onMove, onDelete }:
         {r.caption && <p className="text-[10.5px] font-body text-muted-foreground line-clamp-2 mt-0.5">{r.caption}</p>}
         {r.folder && <span className="inline-block mt-1 text-[9px] font-body px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">{r.folder}</span>}
       </div>
-      <button onClick={onToggleMenu} className="absolute top-1.5 right-1.5 grid h-7 w-7 place-items-center rounded-full bg-black/35 text-white opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Opções">
-        <MoreVertical className="h-4 w-4" />
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={onToggleMenu} />
-          <div className="absolute z-20 top-9 right-2 w-44 rounded-xl border border-border bg-card shadow-warm-lg overflow-hidden">
-            <button onClick={onCriar} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-body text-foreground hover:bg-muted/60 text-left"><PenLine className="h-4 w-4 text-primary" /> Criar post disso</button>
-            <button onClick={onOpen} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-body text-foreground hover:bg-muted/60 text-left"><ExternalLink className="h-4 w-4" /> Abrir original</button>
-            <button onClick={onMove} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-body text-foreground hover:bg-muted/60 text-left"><FolderInput className="h-4 w-4" /> Mover de pasta</button>
-            <button onClick={onDelete} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-body text-destructive hover:bg-destructive/10 text-left"><Trash2 className="h-4 w-4" /> Excluir</button>
-          </div>
-        </>
-      )}
+      {/* Ações visíveis abaixo do post */}
+      <div className="px-2 pb-2 space-y-1.5">
+        <Button size="sm" className="w-full h-8 text-xs" onClick={onCriar}>
+          <PenLine className="h-3.5 w-3.5 mr-1" /> Criar post disso
+        </Button>
+        <div className="flex items-center gap-1">
+          <button onClick={onOpen} title="Abrir original" className="flex-1 h-7 grid place-items-center rounded-lg bg-muted/60 text-muted-foreground hover:text-foreground"><ExternalLink className="h-3.5 w-3.5" /></button>
+          <button onClick={onMove} title="Mover de pasta" className="flex-1 h-7 grid place-items-center rounded-lg bg-muted/60 text-muted-foreground hover:text-foreground"><FolderInput className="h-3.5 w-3.5" /></button>
+          <button onClick={onDelete} title="Excluir" className="flex-1 h-7 grid place-items-center rounded-lg bg-muted/60 text-muted-foreground hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
+        </div>
+      </div>
     </div>
   );
 }
