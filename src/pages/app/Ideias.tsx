@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AnimatePresence, motion } from "framer-motion";
-import { Plus, Trash2, Edit2, Sparkles, Loader2, Lightbulb, List, LayoutGrid, Clapperboard } from "lucide-react";
+import { Plus, Trash2, Edit2, Sparkles, Loader2, Lightbulb, List, LayoutGrid, Clapperboard, Bookmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -32,6 +32,7 @@ import { usePillars } from "@/hooks/usePillars";
 import { useProfile } from "@/hooks/useProfile";
 import { usePosts, type Post } from "@/hooks/usePosts";
 import { getIdeaSuggestions } from "@/lib/ai/claude";
+import { SavedRefs } from "@/components/ideas/SavedRefs";
 
 const ideaSchema = z.object({
   title: z.string().min(1, "Título é obrigatório").max(100, "Máximo 100 caracteres").trim(),
@@ -90,6 +91,10 @@ const Ideias = () => {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingIdea, setEditingIdea] = useState<Idea | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "gallery">("list");
+  // Vem do "compartilhar → Cria" (Android PWA): o link pode chegar em url ou dentro de text.
+  const _shareRaw = (() => { const sp = new URLSearchParams(window.location.search); return sp.get("url") || sp.get("text") || ""; })();
+  const sharedUrl = _shareRaw ? (_shareRaw.match(/https?:\/\/\S+/)?.[0] ?? _shareRaw) : undefined;
+  const [mainTab, setMainTab] = useState<"ideias" | "salvos">(sharedUrl ? "salvos" : "ideias");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<IdeaFormData>({
@@ -276,7 +281,17 @@ const Ideias = () => {
               <p className="text-muted-foreground font-body mt-0.5 text-sm whitespace-nowrap">Seu banco de inspirações.</p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center justify-end gap-2 ml-auto">
+          <div className="flex items-center gap-0.5 bg-muted/50 rounded-full p-1">
+            <button type="button" onClick={() => setMainTab("ideias")}
+              className={cn("px-3 py-1.5 rounded-full text-xs font-body font-semibold transition-all", mainTab === "ideias" ? "bg-card shadow-warm-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
+              <Lightbulb className="h-3.5 w-3.5 mr-1 inline" /> Ideias
+            </button>
+            <button type="button" onClick={() => setMainTab("salvos")}
+              className={cn("px-3 py-1.5 rounded-full text-xs font-body font-semibold transition-all", mainTab === "salvos" ? "bg-card shadow-warm-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
+              <Bookmark className="h-3.5 w-3.5 mr-1 inline" /> Salvos
+            </button>
+          </div>
+          <div className={cn("flex flex-wrap items-center justify-end gap-2 ml-auto", mainTab !== "ideias" && "hidden")}>
             {aiUsed > 0 && (
               <span className="hidden sm:inline text-[10px] text-muted-foreground/50 font-body">
                 {AI_LIMIT - aiUsed}/{AI_LIMIT} sugestões restantes
@@ -314,7 +329,9 @@ const Ideias = () => {
           </div>
         </div>
 
-        {viewMode === "gallery" && (
+        {mainTab === "salvos" && <SavedRefs initialUrl={sharedUrl} />}
+
+        {mainTab === "ideias" && viewMode === "gallery" && (
           <div className="columns-2 sm:columns-3 lg:columns-4 gap-3 [&>*]:mb-3">
             {filtered.map((idea) => {
               const pillar = idea.pillar_id ? pillars.find((p) => p.id === idea.pillar_id) : null;
@@ -475,7 +492,7 @@ const Ideias = () => {
           </div>
         )}
 
-        {viewMode === "list" && (
+        {mainTab === "ideias" && viewMode === "list" && (
         <div className="bg-card border border-border rounded-xl divide-y divide-border/30 overflow-hidden">
           {filtered.map(idea => {
             const isExpanded = expandedIdeaId === idea.id;
