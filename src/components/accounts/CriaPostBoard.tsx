@@ -348,8 +348,14 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
       </AlertDialog>
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="max-w-md md:max-w-4xl bg-white rounded-2xl max-h-[88vh] overflow-y-auto">
-          <DialogHeader><DialogTitle className="font-display">{editing ? "Editar post" : "Novo post"}</DialogTitle></DialogHeader>
+        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="max-w-md md:max-w-5xl bg-white rounded-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="flex flex-row items-center justify-between gap-3 pr-8">
+            <DialogTitle className="font-display">{editing ? "Editar post" : "Novo post"}</DialogTitle>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button variant="outline" size="sm" onClick={() => setFormOpen(false)}>Cancelar</Button>
+              <Button size="sm" onClick={submit} disabled={create.isPending || update.isPending || !f.title.trim()}>{(create.isPending || update.isPending) ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? (editing.approval_status === "ajuste_solicitado" ? <><RotateCcw className="h-4 w-4 mr-1.5" /> Salvar e reenviar</> : "Salvar") : "Criar e enviar"}</Button>
+            </div>
+          </DialogHeader>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-[1.1fr_0.9fr] md:gap-5">
 
             {/* 1 — Título */}
@@ -420,10 +426,6 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               </div>
             )}
           </div>
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setFormOpen(false)}>Cancelar</Button>
-            <Button onClick={submit} disabled={create.isPending || update.isPending || !f.title.trim()}>{(create.isPending || update.isPending) ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? (editing.approval_status === "ajuste_solicitado" ? <><RotateCcw className="h-4 w-4 mr-1.5" /> Salvar e reenviar</> : "Salvar") : "Criar e enviar"}</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
