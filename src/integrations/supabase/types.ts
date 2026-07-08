@@ -960,6 +960,7 @@ export type Database = {
           created_at: string
           cria_owner_id: string | null
           crm_lead_id: string | null
+          deleted_at: string | null
           diagnosis: Json
           email: string | null
           id: string
@@ -984,6 +985,7 @@ export type Database = {
           created_at?: string
           cria_owner_id?: string | null
           crm_lead_id?: string | null
+          deleted_at?: string | null
           diagnosis?: Json
           email?: string | null
           id?: string
@@ -1008,6 +1010,7 @@ export type Database = {
           created_at?: string
           cria_owner_id?: string | null
           crm_lead_id?: string | null
+          deleted_at?: string | null
           diagnosis?: Json
           email?: string | null
           id?: string
@@ -2910,6 +2913,7 @@ export type Database = {
           content_blocks: Json | null
           created_at: string | null
           cta: string | null
+          deleted_at: string | null
           external_client_id: string | null
           format: string
           google_event_id: string | null
@@ -2948,6 +2952,7 @@ export type Database = {
           content_blocks?: Json | null
           created_at?: string | null
           cta?: string | null
+          deleted_at?: string | null
           external_client_id?: string | null
           format: string
           google_event_id?: string | null
@@ -2986,6 +2991,7 @@ export type Database = {
           content_blocks?: Json | null
           created_at?: string | null
           cta?: string | null
+          deleted_at?: string | null
           external_client_id?: string | null
           format?: string
           google_event_id?: string | null
