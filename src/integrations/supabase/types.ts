@@ -134,6 +134,97 @@ export type Database = {
           },
         ]
       }
+      agenda_captures: {
+        Row: {
+          capture_date: string
+          capture_time: string | null
+          client_name: string | null
+          created_at: string | null
+          crm_client_id: string | null
+          id: string
+          location: string | null
+          manager_id: string
+          note: string | null
+          status: string | null
+          team: string | null
+        }
+        Insert: {
+          capture_date: string
+          capture_time?: string | null
+          client_name?: string | null
+          created_at?: string | null
+          crm_client_id?: string | null
+          id?: string
+          location?: string | null
+          manager_id: string
+          note?: string | null
+          status?: string | null
+          team?: string | null
+        }
+        Update: {
+          capture_date?: string
+          capture_time?: string | null
+          client_name?: string | null
+          created_at?: string | null
+          crm_client_id?: string | null
+          id?: string
+          location?: string | null
+          manager_id?: string
+          note?: string | null
+          status?: string | null
+          team?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agenda_captures_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agenda_creations: {
+        Row: {
+          client_name: string | null
+          created_at: string | null
+          crm_client_id: string | null
+          day: string
+          id: string
+          manager_id: string
+          note: string | null
+          team: string | null
+        }
+        Insert: {
+          client_name?: string | null
+          created_at?: string | null
+          crm_client_id?: string | null
+          day: string
+          id?: string
+          manager_id: string
+          note?: string | null
+          team?: string | null
+        }
+        Update: {
+          client_name?: string | null
+          created_at?: string | null
+          crm_client_id?: string | null
+          day?: string
+          id?: string
+          manager_id?: string
+          note?: string | null
+          team?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agenda_creations_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_rate_limit: {
         Row: {
           call_count: number
@@ -1959,6 +2050,71 @@ export type Database = {
           },
         ]
       }
+      manager_member_permissions: {
+        Row: {
+          all_clients: boolean | null
+          client_ids: string[] | null
+          created_at: string | null
+          id: string
+          member_row_id: string
+          module_code: string
+        }
+        Insert: {
+          all_clients?: boolean | null
+          client_ids?: string[] | null
+          created_at?: string | null
+          id?: string
+          member_row_id: string
+          module_code: string
+        }
+        Update: {
+          all_clients?: boolean | null
+          client_ids?: string[] | null
+          created_at?: string | null
+          id?: string
+          member_row_id?: string
+          module_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manager_member_permissions_member_row_id_fkey"
+            columns: ["member_row_id"]
+            isOneToOne: false
+            referencedRelation: "manager_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manager_members: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string
+          manager_id: string
+          member_id: string
+          name: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          manager_id: string
+          member_id: string
+          name?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          manager_id?: string
+          member_id?: string
+          name?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
       manager_profiles: {
         Row: {
           billing_email: string | null
@@ -2911,6 +3067,7 @@ export type Database = {
           name: string
           niche: string | null
           onboarding_completed: boolean | null
+          paid_collab_seats: number
           parked_at: string | null
           parked_until: string | null
           phone: string | null
@@ -2962,6 +3119,7 @@ export type Database = {
           name: string
           niche?: string | null
           onboarding_completed?: boolean | null
+          paid_collab_seats?: number
           parked_at?: string | null
           parked_until?: string | null
           phone?: string | null
@@ -3013,6 +3171,7 @@ export type Database = {
           name?: string
           niche?: string | null
           onboarding_completed?: boolean | null
+          paid_collab_seats?: number
           parked_at?: string | null
           parked_until?: string | null
           phone?: string | null
@@ -4116,6 +4275,10 @@ export type Database = {
           client_name: string
           manager_name: string
         }[]
+      }
+      get_external_handle_by_token: {
+        Args: { _token: string }
+        Returns: string
       }
       get_manager_notes: { Args: { _owner_id: string }; Returns: string }
       get_my_partner_referrals: {
