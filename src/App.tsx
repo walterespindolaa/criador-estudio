@@ -83,6 +83,7 @@ function AppHome() {
 }
 const Aprovacoes = lazy(() => import("./pages/socialmidia/Aprovacoes"));
 const AgendaCriacao = lazy(() => import("./pages/socialmidia/AgendaCriacao"));
+const Lixeira = lazy(() => import("./pages/app/Lixeira"));
 
 // Avisa o usuário quando uma query falha (antes os erros eram engolidos →
 // skeleton infinito / tela vazia). Throttle pra não floodar com vários toasts.
@@ -165,6 +166,7 @@ const App = () => (
                 <Route path="aprovacao" element={<ErrorBoundary><Aprovacao /></ErrorBoundary>} />
                 <Route path="modulos" element={<ErrorBoundary><Modulos /></ErrorBoundary>} />
                 <Route path="feed" element={<ErrorBoundary><Feed /></ErrorBoundary>} />
+                <Route path="lixeira" element={<ErrorBoundary><Lixeira /></ErrorBoundary>} />
                 <Route path="relatorios" element={<ErrorBoundary><Relatorios /></ErrorBoundary>} />
                 <Route path="cf-admin-panel" element={<ErrorBoundary><Admin /></ErrorBoundary>} />
                 <Route path="tarefas" element={<ErrorBoundary><Tarefas /></ErrorBoundary>} />
@@ -205,6 +207,7 @@ const App = () => (
                 <Route path="clientes/:id/:tab" element={<ErrorBoundary><ClienteHub /></ErrorBoundary>} />
                 <Route path="aprovacoes" element={<ErrorBoundary><Aprovacoes /></ErrorBoundary>} />
                 <Route path="agenda" element={<ErrorBoundary><AgendaCriacao /></ErrorBoundary>} />
+                <Route path="lixeira" element={<ErrorBoundary><Lixeira /></ErrorBoundary>} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

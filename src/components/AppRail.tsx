@@ -4,7 +4,7 @@ import {
   LayoutDashboard, PenLine, Lightbulb, ClipboardCheck, Grid3X3, ListTodo,
   CalendarRange, Kanban, Target, FolderOpen, Palette, BookOpen, BookMarked,
   Link2, Sparkles, BadgeDollarSign, BarChart3, Archive, GraduationCap,
-  PlayCircle, Settings, LogOut, Instagram, ShieldCheck, ChevronDown, Wand2, IdCard, TrendingUp, Clapperboard, type LucideIcon,
+  PlayCircle, Settings, LogOut, Instagram, ShieldCheck, ChevronDown, Wand2, IdCard, TrendingUp, Clapperboard, Trash2, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCriaAI } from "@/contexts/CriaAIContext";
@@ -57,6 +57,7 @@ const TOP: NavNode[] = [
 ];
 
 const BOTTOM: NavNode[] = [
+  { id: "lixeira", label: "Lixeira", icon: Trash2, to: "/app/lixeira" },
   { id: "cfg", label: "Configurações", icon: Settings, to: "/app/configuracoes" },
   { id: "out", label: "Sair", icon: LogOut, action: "logout" },
 ];

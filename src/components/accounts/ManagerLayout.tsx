@@ -6,7 +6,7 @@ import { NotificationNudge } from "@/components/NotificationNudge";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import {
   Home, Boxes, Handshake, DollarSign, Users, ListChecks, ChevronUp,
-  Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, Sparkles, CalendarDays, type LucideIcon,
+  Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, Sparkles, CalendarDays, Trash2, type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -37,6 +37,7 @@ const NAV = [
   { to: "/socialmidia/comissoes", label: "Comissões", icon: DollarSign },
   { to: "/socialmidia/contas", label: "Suas contas", icon: Users },
   { to: "/socialmidia/aprovacoes", label: "Acompanhamento de Aprovações", icon: ListChecks },
+  { to: "/socialmidia/lixeira", label: "Lixeira", icon: Trash2 },
 ] as const;
 
 // Títulos do HeroBand por rota (gestão)

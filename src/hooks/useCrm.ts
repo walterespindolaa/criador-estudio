@@ -44,7 +44,7 @@ export function useCrmClients() {
     queryKey: ["crm-clients", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
-      const { data, error } = await sbFrom("crm_clients").select("*").eq("manager_id", user!.id).order("created_at", { ascending: false });
+      const { data, error } = await sbFrom("crm_clients").select("*").eq("manager_id", user!.id).is("deleted_at", null).order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as CrmClient[];
     },
@@ -113,10 +113,11 @@ export function useDeleteCrmClient() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await sbFrom("crm_clients").delete().eq("id", id);
+      // Soft-delete: vai pra Lixeira (recuperável por 30 dias).
+      const { error } = await sbFrom("crm_clients").update({ deleted_at: new Date().toISOString() } as never).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-clients"] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["crm-clients"] }); toast.success("Cliente movido pra Lixeira (recuperável por 30 dias)."); },
     onError: () => toast.error("Erro ao excluir."),
   });
 }

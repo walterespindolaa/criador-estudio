@@ -33,6 +33,7 @@ export function usePosts(options?: { limit?: number }) {
         .from("posts")
         .select("*")
         .eq("user_id", userId!)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .limit(limit);
       if (error) throw error;
@@ -71,7 +72,8 @@ export function usePosts(options?: { limit?: number }) {
 
   const deletePost = useMutation({
     mutationFn: async (id: string): Promise<void> => {
-      const { error } = await supabase.from("posts").delete().eq("id", id);
+      // Soft-delete: vai pra Lixeira (recuperável por 30 dias).
+      const { error } = await supabase.from("posts").update({ deleted_at: new Date().toISOString() } as never).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["posts", userId] }),
