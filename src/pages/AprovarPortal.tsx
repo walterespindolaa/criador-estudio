@@ -24,7 +24,7 @@ type PortalPost = {
   scheduled_date: string | null; media: MediaItem[];
   last_comment: string | null; last_comment_role: string | null;
 };
-type ClientHeader = { client_name: string; client_logo: string | null; manager_name: string | null };
+type ClientHeader = { client_name: string; client_logo: string | null; manager_name: string | null; instagram_handle?: string | null };
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   pendente: { label: "Aguardando você", cls: "bg-amber-100 text-amber-700" },
@@ -38,7 +38,7 @@ const STAGE_ICON: Record<Stage, string> = { tema: "💡", conteudo: "📝", midi
 
 function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
   const media = Array.isArray(post.media) ? post.media : [];
-  const handle = (client.client_name || "perfil").toLowerCase().replace(/\s+/g, "");
+  const handle = client.instagram_handle ? client.instagram_handle.replace(/^@/, "") : (client.client_name || "perfil").toLowerCase().replace(/\s+/g, "");
   const aspect = postAspect(post.platform, post.format);
   const vertical = aspect === "9 / 16";
   return (
@@ -72,7 +72,7 @@ function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
           <div className="flex items-center gap-4 px-3.5 pt-3 pb-1.5 text-foreground">
             <Heart className="h-6 w-6" /><MessageCircle className="h-6 w-6" /><Send className="h-6 w-6" /><Bookmark className="h-6 w-6 ml-auto" />
           </div>
-          {post.caption && <p className="px-3.5 pb-4 text-[13.5px] leading-snug text-foreground"><span className="font-bold mr-1.5">{handle}</span>{post.caption}</p>}
+          {post.caption && <p className="px-3.5 pb-4 text-[13.5px] leading-snug text-foreground whitespace-pre-wrap"><span className="font-bold mr-1.5">{handle}</span>{post.caption}</p>}
         </>
       )}
     </article>
@@ -219,6 +219,13 @@ export default function AprovarPortal() {
       return ((data as ClientHeader[]) ?? [])[0] ?? null;
     },
   });
+  const handleQ = useQuery({
+    queryKey: ["portal-handle", token], enabled: !!token,
+    queryFn: async () => {
+      const { data } = await sbRpc("get_external_handle_by_token", { _token: token });
+      return (typeof data === "string" ? data : null) as string | null;
+    },
+  });
   const postsQ = useQuery({
     queryKey: ["portal-posts", token], enabled: !!token && !!clientQ.data,
     queryFn: async () => {
@@ -248,7 +255,7 @@ export default function AprovarPortal() {
     );
   }
 
-  const c = clientQ.data;
+  const c: ClientHeader = { ...clientQ.data, instagram_handle: handleQ.data ?? null };
   const posts = postsQ.data ?? [];
 
   return (

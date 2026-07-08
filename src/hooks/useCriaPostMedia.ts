@@ -117,7 +117,7 @@ export function useCriaPostMedia(postId: string | null) {
         p_post_id: postId, p_provider: "gdrive", p_external_file_id: fileId,
         p_file_name: "Google Drive", p_file_type: null, p_file_size: null,
         p_view_url: `https://drive.google.com/file/d/${fileId}/preview`,
-        p_thumbnail_url: `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`,
+        p_thumbnail_url: `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`,
         p_download_url: url, p_bunny_video_id: null,
       });
       if (error) throw new Error(error.message);

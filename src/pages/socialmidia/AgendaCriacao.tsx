@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useCrmClients } from "@/hooks/useCrm";
 import {
   useCreations, useAddCreation, useDeleteCreation,
-  useCaptures, useAddCapture, useUpdateCapture, useDeleteCapture, type Capture,
+  useCaptures, useAddCapture, useUpdateCapture, useDeleteCapture, useCollaboratorNames, type Capture,
 } from "@/hooks/useAgenda";
 
 const WD = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
@@ -28,6 +28,7 @@ export default function AgendaCriacao() {
   const today = ymd(new Date());
 
   const { data: clients = [] } = useCrmClients();
+  const { data: teamNames = [] } = useCollaboratorNames();
   const { data: creations = [] } = useCreations(from, to);
   const addCreation = useAddCreation();
   const delCreation = useDeleteCreation();
@@ -140,9 +141,9 @@ export default function AgendaCriacao() {
         )}
       </div>
 
-      <AddCreationDialog open={!!addDay} day={addDay} clients={clients} onClose={() => setAddDay(null)}
+      <AddCreationDialog open={!!addDay} day={addDay} clients={clients} teamNames={teamNames} onClose={() => setAddDay(null)}
         onSave={(crm, name, team) => { if (addDay) addCreation.mutate({ day: addDay, crm_client_id: crm, client_name: name, team }); setAddDay(null); }} />
-      <CaptureDialog open={capOpen} clients={clients} onClose={() => setCapOpen(false)}
+      <CaptureDialog open={capOpen} clients={clients} teamNames={teamNames} onClose={() => setCapOpen(false)}
         onSave={(v) => { addCapture.mutate(v); setCapOpen(false); }} pending={addCapture.isPending} />
     </motion.div>
   );
@@ -162,7 +163,11 @@ function ClientPicker({ clients, crm, name, onCrm, onName }: { clients: Client[]
   );
 }
 
-function AddCreationDialog({ open, day, clients, onClose, onSave }: { open: boolean; day: string | null; clients: Client[]; onClose: () => void; onSave: (crm: string | null, name: string | null, team: string | null) => void }) {
+function TeamDatalist({ names }: { names: string[] }) {
+  return <datalist id="agenda-team-names">{names.map((n) => <option key={n} value={n} />)}</datalist>;
+}
+
+function AddCreationDialog({ open, day, clients, teamNames, onClose, onSave }: { open: boolean; day: string | null; clients: Client[]; teamNames: string[]; onClose: () => void; onSave: (crm: string | null, name: string | null, team: string | null) => void }) {
   const [crm, setCrm] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [team, setTeam] = useState("");
@@ -178,7 +183,8 @@ function AddCreationDialog({ open, day, clients, onClose, onSave }: { open: bool
           <ClientPicker clients={clients} crm={crm} name={name} onCrm={setCrm} onName={setName} />
           <div>
             <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1">Equipe (opcional)</p>
-            <Input value={team} onChange={(e) => setTeam(e.target.value)} placeholder="Ex.: Higor, Franz" />
+            <Input value={team} onChange={(e) => setTeam(e.target.value)} placeholder="Ex.: Ana, Bruno" list="agenda-team-names" />
+            <TeamDatalist names={teamNames} />
           </div>
         </div>
         <DialogFooter>
@@ -190,7 +196,7 @@ function AddCreationDialog({ open, day, clients, onClose, onSave }: { open: bool
   );
 }
 
-function CaptureDialog({ open, clients, onClose, onSave, pending }: { open: boolean; clients: Client[]; onClose: () => void; onSave: (v: { capture_date: string; capture_time?: string | null; location?: string | null; crm_client_id?: string | null; client_name?: string | null; team?: string | null }) => void; pending: boolean }) {
+function CaptureDialog({ open, clients, teamNames, onClose, onSave, pending }: { open: boolean; clients: Client[]; teamNames: string[]; onClose: () => void; onSave: (v: { capture_date: string; capture_time?: string | null; location?: string | null; crm_client_id?: string | null; client_name?: string | null; team?: string | null }) => void; pending: boolean }) {
   const [crm, setCrm] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
@@ -211,8 +217,8 @@ function CaptureDialog({ open, clients, onClose, onSave, pending }: { open: bool
             <div className="flex-1"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Data</p><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
             <div className="w-28"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Hora</p><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} /></div>
           </div>
-          <div><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Local (opcional)</p><Input value={loc} onChange={(e) => setLoc(e.target.value)} placeholder="Ex.: Estúdio, restaurante do cliente" /></div>
-          <div><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Equipe (opcional)</p><Input value={team} onChange={(e) => setTeam(e.target.value)} placeholder="Ex.: Higor, Franz" /></div>
+          <div><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Local (opcional)</p><Input value={loc} onChange={(e) => setLoc(e.target.value)} placeholder="Ex.: Estúdio, coworking, local externo" /></div>
+          <div><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Equipe (opcional)</p><Input value={team} onChange={(e) => setTeam(e.target.value)} placeholder="Ex.: Ana, Bruno" list="agenda-team-names" /><TeamDatalist names={teamNames} /></div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>

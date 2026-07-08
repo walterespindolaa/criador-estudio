@@ -31,6 +31,21 @@ export type Capture = {
   created_at: string;
 };
 
+// Nomes dos colaboradores ativos da agência (pra sugerir no campo Equipe). Vazio até ter colaborador.
+export function useCollaboratorNames() {
+  const { user } = useAuth();
+  return useQuery<string[]>({
+    queryKey: ["collab-names", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("manager_members")
+        .select("name").eq("manager_id", user!.id).eq("status", "ativo");
+      if (error) return [];
+      return ((data ?? []) as { name: string | null }[]).map((m) => m.name).filter((n): n is string => !!n && n.trim().length > 0);
+    },
+  });
+}
+
 export function useCreations(fromDate: string, toDate: string) {
   const { user } = useAuth();
   return useQuery<Creation[]>({

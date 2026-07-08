@@ -17,9 +17,19 @@ const isVid = (f: File) => f.type.startsWith("video/") || /\.(mp4|mov|webm|m4v)$
 function Thumb({ m }: { m: CriaMedia }) {
   const video = m.file_type?.startsWith("video") || !!m.bunny_video_id || m.provider === "bunny_stream";
   const src = m.thumbnail_url || m.view_url || "";
+  // Fallback pro Drive: se o thumbnail falhar, tenta o lh3.
+  const onImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    if (m.provider === "gdrive" && m.external_file_id && !img.dataset.fb) {
+      img.dataset.fb = "1";
+      img.src = `https://lh3.googleusercontent.com/d/${m.external_file_id}=w1000`;
+      return;
+    }
+    img.style.display = "none";
+  };
   return (
     <div className="relative w-full h-full bg-muted">
-      {src ? <img src={src} alt="" draggable={false} loading="lazy" className="w-full h-full object-cover select-none" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+      {src ? <img src={src} alt="" draggable={false} loading="lazy" className="w-full h-full object-cover select-none" onError={onImgError} />
         : <div className="w-full h-full flex items-center justify-center text-muted-foreground"><FileImage className="h-5 w-5" /></div>}
       {video && <span className="absolute inset-0 flex items-center justify-center pointer-events-none"><Play className="h-5 w-5 text-white [filter:drop-shadow(0_1px_2px_rgba(0,0,0,.7))]" /></span>}
     </div>
@@ -116,9 +126,12 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
       </div>
 
       {showDrive && (
-        <div className="flex items-center gap-2">
-          <Input value={driveUrl} onChange={(e) => setDriveUrl(e.target.value)} placeholder="Cole o link do Google Drive" className="h-9 rounded-xl" />
-          <Button type="button" size="sm" onClick={onDrive} disabled={addDriveLink.isPending}>Adicionar</Button>
+        <div>
+          <div className="flex items-center gap-2">
+            <Input value={driveUrl} onChange={(e) => setDriveUrl(e.target.value)} placeholder="Cole o link do Google Drive" className="h-9 rounded-xl" />
+            <Button type="button" size="sm" onClick={onDrive} disabled={addDriveLink.isPending}>Adicionar</Button>
+          </div>
+          <p className="text-[11px] font-body text-muted-foreground mt-1.5">Deixe o arquivo como <strong>"Qualquer pessoa com o link"</strong> no Drive — senão a prévia não aparece.</p>
         </div>
       )}
 
@@ -139,7 +152,7 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
         </div>
       )}
 
-      <div className={`bg-white border border-border rounded-2xl overflow-hidden ${vertical ? "max-w-[300px]" : ""}`}>
+      <div className={`bg-white border border-border rounded-2xl overflow-hidden mx-auto ${vertical ? "max-w-[360px]" : "max-w-[440px]"}`}>
         {vertical ? (
           <div className="relative">
             <PostMediaCarousel media={ordered} aspect={aspect} onRemove={onRemoveMedia} onVideoReady={onReady} />
