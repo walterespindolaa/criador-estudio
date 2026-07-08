@@ -90,3 +90,5 @@ project_id = "exuxlwdnkgmhtnwoyvwo"
     verify_jwt = true
   [functions.story-notifications]
     verify_jwt = false
+  [functions.trash-purge]
+    verify_jwt = false
