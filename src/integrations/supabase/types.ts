@@ -134,6 +134,97 @@ export type Database = {
           },
         ]
       }
+      agenda_captures: {
+        Row: {
+          capture_date: string
+          capture_time: string | null
+          client_name: string | null
+          created_at: string | null
+          crm_client_id: string | null
+          id: string
+          location: string | null
+          manager_id: string
+          note: string | null
+          status: string | null
+          team: string | null
+        }
+        Insert: {
+          capture_date: string
+          capture_time?: string | null
+          client_name?: string | null
+          created_at?: string | null
+          crm_client_id?: string | null
+          id?: string
+          location?: string | null
+          manager_id: string
+          note?: string | null
+          status?: string | null
+          team?: string | null
+        }
+        Update: {
+          capture_date?: string
+          capture_time?: string | null
+          client_name?: string | null
+          created_at?: string | null
+          crm_client_id?: string | null
+          id?: string
+          location?: string | null
+          manager_id?: string
+          note?: string | null
+          status?: string | null
+          team?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agenda_captures_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agenda_creations: {
+        Row: {
+          client_name: string | null
+          created_at: string | null
+          crm_client_id: string | null
+          day: string
+          id: string
+          manager_id: string
+          note: string | null
+          team: string | null
+        }
+        Insert: {
+          client_name?: string | null
+          created_at?: string | null
+          crm_client_id?: string | null
+          day: string
+          id?: string
+          manager_id: string
+          note?: string | null
+          team?: string | null
+        }
+        Update: {
+          client_name?: string | null
+          created_at?: string | null
+          crm_client_id?: string | null
+          day?: string
+          id?: string
+          manager_id?: string
+          note?: string | null
+          team?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agenda_creations_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_rate_limit: {
         Row: {
           call_count: number
