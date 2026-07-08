@@ -1,0 +1,142 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+
+type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
+const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
+
+export type Creation = {
+  id: string;
+  manager_id: string;
+  day: string;
+  crm_client_id: string | null;
+  client_name: string | null;
+  team: string | null;
+  note: string | null;
+  created_at: string;
+};
+
+export type Capture = {
+  id: string;
+  manager_id: string;
+  capture_date: string;
+  capture_time: string | null;
+  location: string | null;
+  crm_client_id: string | null;
+  client_name: string | null;
+  team: string | null;
+  status: "agendada" | "concluida" | "cancelada";
+  note: string | null;
+  created_at: string;
+};
+
+export function useCreations(fromDate: string, toDate: string) {
+  const { user } = useAuth();
+  return useQuery<Creation[]>({
+    queryKey: ["agenda-creations", user?.id, fromDate, toDate],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("agenda_creations")
+        .select("*").eq("manager_id", user!.id)
+        .gte("day", fromDate).lte("day", toDate)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as Creation[];
+    },
+  });
+}
+
+export function useAddCreation() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { day: string; crm_client_id?: string | null; client_name?: string | null; team?: string | null }) => {
+      if (!user?.id) throw new Error("Not authenticated");
+      const { error } = await sbFrom("agenda_creations").insert({
+        manager_id: user.id, day: input.day,
+        crm_client_id: input.crm_client_id ?? null, client_name: input.client_name ?? null, team: input.team ?? null,
+      } as never);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["agenda-creations"] }),
+    onError: () => toast.error("Não consegui adicionar."),
+  });
+}
+
+export function useUpdateCreation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<Creation, "day" | "team" | "note">> }) => {
+      const { error } = await sbFrom("agenda_creations").update(patch as never).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["agenda-creations"] }),
+  });
+}
+
+export function useDeleteCreation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await sbFrom("agenda_creations").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["agenda-creations"] }),
+    onError: () => toast.error("Não consegui remover."),
+  });
+}
+
+export function useCaptures() {
+  const { user } = useAuth();
+  return useQuery<Capture[]>({
+    queryKey: ["agenda-captures", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("agenda_captures")
+        .select("*").eq("manager_id", user!.id)
+        .order("capture_date", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as Capture[];
+    },
+  });
+}
+
+export function useAddCapture() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { capture_date: string; capture_time?: string | null; location?: string | null; crm_client_id?: string | null; client_name?: string | null; team?: string | null; note?: string | null }) => {
+      if (!user?.id) throw new Error("Not authenticated");
+      const { error } = await sbFrom("agenda_captures").insert({
+        manager_id: user.id, status: "agendada", ...input,
+      } as never);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["agenda-captures"] }); toast.success("Captação agendada."); },
+    onError: () => toast.error("Não consegui agendar."),
+  });
+}
+
+export function useUpdateCapture() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<Capture, "status" | "capture_date" | "capture_time" | "location" | "team" | "note">> }) => {
+      const { error } = await sbFrom("agenda_captures").update(patch as never).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["agenda-captures"] }),
+  });
+}
+
+export function useDeleteCapture() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await sbFrom("agenda_captures").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["agenda-captures"] }),
+    onError: () => toast.error("Não consegui excluir."),
+  });
+}

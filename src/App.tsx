@@ -82,6 +82,7 @@ function AppHome() {
   return <Dashboard />;
 }
 const Aprovacoes = lazy(() => import("./pages/socialmidia/Aprovacoes"));
+const AgendaCriacao = lazy(() => import("./pages/socialmidia/AgendaCriacao"));
 
 // Avisa o usuário quando uma query falha (antes os erros eram engolidos →
 // skeleton infinito / tela vazia). Throttle pra não floodar com vários toasts.
@@ -203,6 +204,7 @@ const App = () => (
                 <Route path="clientes/:id" element={<ErrorBoundary><ClienteHub /></ErrorBoundary>} />
                 <Route path="clientes/:id/:tab" element={<ErrorBoundary><ClienteHub /></ErrorBoundary>} />
                 <Route path="aprovacoes" element={<ErrorBoundary><Aprovacoes /></ErrorBoundary>} />
+                <Route path="agenda" element={<ErrorBoundary><AgendaCriacao /></ErrorBoundary>} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
