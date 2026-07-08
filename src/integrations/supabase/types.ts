@@ -3223,6 +3223,54 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_refs: {
+        Row: {
+          author: string | null
+          caption: string | null
+          created_at: string | null
+          folder: string | null
+          id: string
+          media_type: string | null
+          note: string | null
+          platform: string | null
+          status: string | null
+          thumbnail_url: string | null
+          url: string
+          used_post_id: string | null
+          user_id: string
+        }
+        Insert: {
+          author?: string | null
+          caption?: string | null
+          created_at?: string | null
+          folder?: string | null
+          id?: string
+          media_type?: string | null
+          note?: string | null
+          platform?: string | null
+          status?: string | null
+          thumbnail_url?: string | null
+          url: string
+          used_post_id?: string | null
+          user_id: string
+        }
+        Update: {
+          author?: string | null
+          caption?: string | null
+          created_at?: string | null
+          folder?: string | null
+          id?: string
+          media_type?: string | null
+          note?: string | null
+          platform?: string | null
+          status?: string | null
+          thumbnail_url?: string | null
+          url?: string
+          used_post_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       social_connections: {
         Row: {
           access_token: string
