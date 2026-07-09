@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { useProfile } from "@/hooks/useProfile";
 import { bestTimes } from "@/lib/bestTimes";
 import { toast } from "sonner";
@@ -10,16 +10,16 @@ const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 
 // Acesso ao HUB CRIA: admin OU módulo hub_cria liberado (module_entitlements).
 export function useHasHubCria(): { allowed: boolean; isLoading: boolean } {
-  const { user } = useAuth();
+  const { agencyOwnerId } = useActiveAccount();
   const { profile } = useProfile();
   const isAdmin = profile?.role === "admin";
   const q = useQuery<boolean>({
-    queryKey: ["hubcria-entitlement", user?.id],
-    enabled: !!user?.id && !isAdmin,
+    queryKey: ["hubcria-entitlement", agencyOwnerId],
+    enabled: !!agencyOwnerId && !isAdmin,
     queryFn: async () => {
       const { data, error } = await sbFrom("module_entitlements")
         .select("id")
-        .eq("manager_id", user!.id)
+        .eq("manager_id", agencyOwnerId!)
         .eq("module_code", "hub_cria")
         .eq("status", "active")
         .maybeSingle();
@@ -102,10 +102,11 @@ export function useCreativeIdeas(crmClientId?: string) {
 
 export function useRunScrape() {
   const qc = useQueryClient();
+  const { agencyOwnerId } = useActiveAccount();
   return useMutation({
     mutationFn: async (input: { type: ScrapeType; input: string; crm_client_id?: string | null; limit?: number; since?: string }) => {
       const { data, error } = await supabase.functions.invoke("apify-scrape", {
-        body: { type: input.type, input: input.input, crm_client_id: input.crm_client_id ?? null, limit: input.limit ?? 10, since: input.since },
+        body: { type: input.type, input: input.input, crm_client_id: input.crm_client_id ?? null, limit: input.limit ?? 10, since: input.since, manager_id: agencyOwnerId },
       });
       if (error) {
         // tenta extrair a mensagem real do corpo
@@ -137,11 +138,11 @@ export function useRunScrape() {
 // "Gerar plano a partir da análise": transforma as ideias marcadas "usar" em posts
 // no cronograma do cliente (Cria Post) e marca as ideias como "usada".
 export function useGeneratePlanFromIdeas() {
-  const { user } = useAuth();
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { externalClientId: string; ideas: CreativeIdea[]; nicho?: string }): Promise<number> => {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!agencyOwnerId) throw new Error("Not authenticated");
       const ideas = input.ideas.filter((i) => i.status === "usar");
       if (ideas.length === 0) throw new Error("Marque ao menos uma ideia como 'Usar' primeiro.");
       const slots = bestTimes("instagram", input.nicho).slots;
@@ -150,7 +151,7 @@ export function useGeneratePlanFromIdeas() {
         const d = new Date(start);
         d.setDate(d.getDate() + 1 + Math.floor((i * 21) / Math.max(1, ideas.length)));
         return {
-          user_id: user.id,
+          user_id: agencyOwnerId,
           external_client_id: input.externalClientId,
           status: "editando",
           approval_status: "pendente",

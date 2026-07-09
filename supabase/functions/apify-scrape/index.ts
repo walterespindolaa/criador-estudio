@@ -165,17 +165,29 @@ Deno.serve(async (req) => {
       return json({ error: "rate_limited", message: "Muitos scrapes seguidos. Aguarde um minuto." }, 429);
     }
 
-    // Gate: admin OU módulo hub_cria ativo.
-    const { data: prof } = await svc.from("profiles").select("role, niche").eq("id", user.id).single();
+    const body = await req.json().catch(() => ({}));
+
+    // Tenant efetivo: colaborador atua no gestor. Se veio manager_id no body e o usuário
+    // é o próprio gestor OU colaborador ativo dele, grava no tenant do gestor.
+    let mgr = user.id;
+    const reqMgr = body?.manager_id ? String(body.manager_id) : null;
+    if (reqMgr && reqMgr !== user.id) {
+      const { data: link } = await svc.from("manager_members")
+        .select("id").eq("manager_id", reqMgr).eq("member_id", user.id).eq("status", "ativo").maybeSingle();
+      if (!link) return json({ error: "forbidden_team" }, 403);
+      mgr = reqMgr;
+    }
+
+    // Gate: admin OU módulo hub_cria ativo (no tenant efetivo).
+    const { data: prof } = await svc.from("profiles").select("role, niche").eq("id", mgr).single();
     let allowed = prof?.role === "admin";
     if (!allowed) {
       const { data: ent } = await svc.from("module_entitlements")
-        .select("id").eq("manager_id", user.id).eq("module_code", "hub_cria").eq("status", "active").maybeSingle();
+        .select("id").eq("manager_id", mgr).eq("module_code", "hub_cria").eq("status", "active").maybeSingle();
       allowed = !!ent;
     }
     if (!allowed) return json({ error: "forbidden", message: "Módulo HUB CRIA não liberado para esta conta." }, 403);
 
-    const body = await req.json().catch(() => ({}));
     const type = String(body?.type ?? "posts");
     const inputHandle = String(body?.input ?? "").trim();
     const crmClientId = body?.crm_client_id ? String(body.crm_client_id) : null;
@@ -190,7 +202,7 @@ Deno.serve(async (req) => {
       const { data: c } = await svc.from("crm_clients")
         .select("id, manager_id, segment, name, persona, brand_core, cria_owner_id")
         .eq("id", crmClientId).maybeSingle();
-      if (!c || (c as { manager_id?: string }).manager_id !== user.id) return json({ error: "forbidden_client" }, 403);
+      if (!c || (c as { manager_id?: string }).manager_id !== mgr) return json({ error: "forbidden_client" }, 403);
       client = c as Record<string, any>;
     }
 
@@ -199,7 +211,7 @@ Deno.serve(async (req) => {
 
     // Cria o job.
     const { data: scrapeRow, error: insErr } = await svc.from("competitor_scrapes").insert({
-      manager_id: user.id, crm_client_id: crmClientId, scrape_type: type,
+      manager_id: mgr, crm_client_id: crmClientId, scrape_type: type,
       input_handle: inputHandle, results_limit: limit, status: "running",
     }).select("id").single();
     if (insErr || !scrapeRow) return json({ error: "job_create_failed" }, 500);
@@ -363,7 +375,7 @@ REGRAS: 100% no nicho ${nicho}; se a fonte for de outro nicho, use SÓ a estrutu
 
       if (ideas.length > 0) {
         const rows = ideas.slice(0, 10).map((i) => ({
-          manager_id: user.id, crm_client_id: crmClientId, scrape_id: scrapeId, source: "scrape",
+          manager_id: mgr, crm_client_id: crmClientId, scrape_id: scrapeId, source: "scrape",
           title: String(i.title || "Ideia").slice(0, 200),
           format: i.format ? String(i.format).slice(0, 40) : null,
           rationale: i.rationale ? String(i.rationale).slice(0, 400) : null,

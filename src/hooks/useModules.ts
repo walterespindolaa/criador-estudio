@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { toast } from "sonner";
 
 export type ModuleStatus = "active" | "past_due" | "canceled" | "none";
@@ -68,16 +69,16 @@ type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 
 export function useModules() {
-  const { user } = useAuth();
+  const { agencyOwnerId } = useActiveAccount();
   const { data, isLoading } = useQuery<ModuleWithStatus[]>({
-    queryKey: ["modules", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["modules", agencyOwnerId],
+    enabled: !!agencyOwnerId,
     queryFn: async () => {
       const [catRes, entRes] = await Promise.all([
         sbFrom("modules").select("*").eq("active", true).order("sort_order"),
         sbFrom("module_entitlements")
           .select("module_code, status, current_period_end")
-          .eq("manager_id", user!.id),
+          .eq("manager_id", agencyOwnerId!),
       ]);
       if (catRes.error) throw catRes.error;
       if (entRes.error) throw entRes.error;

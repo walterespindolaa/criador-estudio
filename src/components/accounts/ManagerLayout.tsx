@@ -6,7 +6,7 @@ import { NotificationNudge } from "@/components/NotificationNudge";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import {
   Home, Boxes, Handshake, DollarSign, Users, ListChecks, ChevronUp,
-  Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, Sparkles, CalendarDays, Trash2, type LucideIcon,
+  Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, Sparkles, CalendarDays, Trash2, UserPlus, type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -14,6 +14,7 @@ import { useActiveAccount } from "@/contexts/AccountContext";
 import { usePartner } from "@/hooks/usePartner";
 import { useModules, type ModuleWithStatus } from "@/hooks/useModules";
 import { useHasHubCria } from "@/hooks/useHubCria";
+import { useMyTeamPermissions } from "@/hooks/useTeam";
 import { cn } from "@/lib/utils";
 import { ModulePopup } from "@/components/accounts/ModulePopup";
 import { SettingsManagerDrawer } from "@/components/accounts/SettingsManagerDrawer";
@@ -30,6 +31,11 @@ const MODULE_ROUTE: Record<string, string> = {
   aprovapost_externo: "/socialmidia/criapost",
   crm: "/socialmidia/criacrm",
   financeiro: "/socialmidia/criacaixa",
+};
+// Mapeia o código do módulo (catálogo) → código de permissão de time.
+const MODULE_TEAM_CODE: Record<string, string> = {
+  aprovapost_externo: "cria_post",
+  crm: "cria_gestao",
 };
 
 const NAV = [
@@ -61,10 +67,20 @@ export default function ManagerLayout() {
   const location = useLocation();
   const { signOut } = useAuth();
   const { profile, isLoading } = useProfile();
-  const { hasManagedAccounts } = useActiveAccount();
+  const { hasManagedAccounts, actingAsTeam, agencyOwnerId } = useActiveAccount();
   const { isPartner } = usePartner();
-  const { modules } = useModules();
-  const { allowed: hasHubCria } = useHasHubCria();
+  const { modules: allModules } = useModules();
+  const { allowed: hasHubCriaRaw } = useHasHubCria();
+  const { data: teamPerms } = useMyTeamPermissions(actingAsTeam ? agencyOwnerId : null);
+
+  // Gate de módulo pro colaborador: só vê o que o gestor liberou. Gestor vê tudo.
+  const canTeam = (code: string) => !actingAsTeam || (teamPerms?.has(code) ?? false);
+  const modules = actingAsTeam
+    ? allModules.filter((m) => MODULE_TEAM_CODE[m.code] && canTeam(MODULE_TEAM_CODE[m.code]))
+    : allModules;
+  const hasHubCria = hasHubCriaRaw && canTeam("hub_cria");
+  const canAgenda = canTeam("agenda");
+  const canClients = !actingAsTeam || canTeam("cria_gestao") || canTeam("cria_post");
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [railHovered, setRailHovered] = useState(false);
@@ -130,8 +146,8 @@ export default function ManagerLayout() {
   // Guards
   if (isLoading) return <LoadingScreen />;
   if (profile?.must_change_password === true) return <Navigate to="/app/trocar-senha" replace />;
-  // criadores (não-manager) não entram no hub
-  if (profile && profile.account_type !== "manager" && !hasManagedAccounts) return <Navigate to="/app" replace />;
+  // criadores (não-manager) não entram no hub — exceto colaboradores atuando no time.
+  if (profile && profile.account_type !== "manager" && !hasManagedAccounts && !actingAsTeam) return <Navigate to="/app" replace />;
 
   const ctx: ManagerOutletContext = { openModule, openSettings: () => setSettingsOpen(true) };
 
@@ -169,8 +185,8 @@ export default function ManagerLayout() {
         <div className="flex w-full flex-col items-stretch gap-1">
           {railHovered && <p className="px-2 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Operação</p>}
           {railNode(Home, "Início", { active: isActive("/socialmidia/dashboard"), onClick: () => navigate("/socialmidia/dashboard") })}
-          {railNode(Contact, "Clientes", { active: isActive("/socialmidia/clientes"), onClick: () => navigate("/socialmidia/clientes") })}
-          {railNode(CalendarDays, "Agenda", { active: isActive("/socialmidia/agenda"), onClick: () => navigate("/socialmidia/agenda") })}
+          {canClients && railNode(Contact, "Clientes", { active: isActive("/socialmidia/clientes"), onClick: () => navigate("/socialmidia/clientes") })}
+          {canAgenda && railNode(CalendarDays, "Agenda", { active: isActive("/socialmidia/agenda"), onClick: () => navigate("/socialmidia/agenda") })}
           {hasHubCria && railNode(Sparkles, "HUB CRIA", { active: isActive("/socialmidia/hubcria"), onClick: () => navigate("/socialmidia/hubcria") })}
           {railHovered && modules.length > 0 && <p className="px-2 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Módulos</p>}
           {modules.map((m) => {
@@ -191,6 +207,7 @@ export default function ManagerLayout() {
           })}
           <div className="my-2 h-px w-full bg-border" />
           {railHovered && <p className="px-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Gestão Cria</p>}
+          {!actingAsTeam && railNode(UserPlus, "Equipe", { active: isActive("/socialmidia/equipe"), onClick: () => navigate("/socialmidia/equipe") })}
           {NAV.map((n) => {
             const onClick = n.to === "/socialmidia/comissoes" ? onNavComissoes : () => navigate(n.to);
             return railNode(n.icon as LucideIcon, n.label, { active: isActive(n.to), onClick });
@@ -237,9 +254,10 @@ export default function ManagerLayout() {
         );
         const fin = modules.find((m) => m.code === "financeiro");
         const moreNav = [
-          { label: "Clientes", icon: Contact, onClick: () => navigate("/socialmidia/clientes") },
-          { label: "Agenda", icon: CalendarDays, onClick: () => navigate("/socialmidia/agenda") },
+          ...(canClients ? [{ label: "Clientes", icon: Contact, onClick: () => navigate("/socialmidia/clientes") }] : []),
+          ...(canAgenda ? [{ label: "Agenda", icon: CalendarDays, onClick: () => navigate("/socialmidia/agenda") }] : []),
           ...(hasHubCria ? [{ label: "HUB CRIA", icon: Sparkles, onClick: () => navigate("/socialmidia/hubcria") }] : []),
+          ...(!actingAsTeam ? [{ label: "Equipe", icon: UserPlus, onClick: () => navigate("/socialmidia/equipe") }] : []),
           { label: "Parceria", icon: Handshake, onClick: () => navigate("/socialmidia/parceria") },
           { label: "Comissões", icon: DollarSign, onClick: onNavComissoes },
           { label: "Suas contas", icon: Users, onClick: () => navigate("/socialmidia/contas") },
@@ -273,7 +291,7 @@ export default function ManagerLayout() {
               <div className="flex items-center justify-center gap-2.5 px-3 pointer-events-auto">
                 <div className="dock-pill flex items-center gap-0.5 rounded-[30px] p-1.5">
                   {dockItem(isActive("/socialmidia/dashboard"), Home, "Início", () => navigate("/socialmidia/dashboard"))}
-                  {dockItem(isActive("/socialmidia/clientes"), Contact, "Clientes", () => navigate("/socialmidia/clientes"))}
+                  {canClients && dockItem(isActive("/socialmidia/clientes"), Contact, "Clientes", () => navigate("/socialmidia/clientes"))}
                   {fin && dockItem(isActive("/socialmidia/criacaixa"), Wallet, "Caixa", () => openModule(fin))}
                   {dockItem(isActive("/socialmidia/aprovacoes"), ListChecks, "Aprov.", () => navigate("/socialmidia/aprovacoes"))}
                 </div>

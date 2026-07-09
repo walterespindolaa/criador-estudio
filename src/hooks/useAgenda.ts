@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { toast } from "sonner";
 
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
@@ -33,13 +33,13 @@ export type Capture = {
 
 // Nomes dos colaboradores ativos da agência (pra sugerir no campo Equipe). Vazio até ter colaborador.
 export function useCollaboratorNames() {
-  const { user } = useAuth();
+  const { agencyOwnerId } = useActiveAccount();
   return useQuery<string[]>({
-    queryKey: ["collab-names", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["collab-names", agencyOwnerId],
+    enabled: !!agencyOwnerId,
     queryFn: async () => {
       const { data, error } = await sbFrom("manager_members")
-        .select("name").eq("manager_id", user!.id).eq("status", "ativo");
+        .select("name").eq("manager_id", agencyOwnerId!).eq("status", "ativo");
       if (error) return [];
       return ((data ?? []) as { name: string | null }[]).map((m) => m.name).filter((n): n is string => !!n && n.trim().length > 0);
     },
@@ -47,13 +47,13 @@ export function useCollaboratorNames() {
 }
 
 export function useCreations(fromDate: string, toDate: string) {
-  const { user } = useAuth();
+  const { agencyOwnerId } = useActiveAccount();
   return useQuery<Creation[]>({
-    queryKey: ["agenda-creations", user?.id, fromDate, toDate],
-    enabled: !!user?.id,
+    queryKey: ["agenda-creations", agencyOwnerId, fromDate, toDate],
+    enabled: !!agencyOwnerId,
     queryFn: async () => {
       const { data, error } = await sbFrom("agenda_creations")
-        .select("*").eq("manager_id", user!.id)
+        .select("*").eq("manager_id", agencyOwnerId!)
         .gte("day", fromDate).lte("day", toDate)
         .order("created_at", { ascending: true });
       if (error) throw error;
@@ -63,13 +63,13 @@ export function useCreations(fromDate: string, toDate: string) {
 }
 
 export function useAddCreation() {
-  const { user } = useAuth();
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { day: string; crm_client_id?: string | null; client_name?: string | null; team?: string | null }) => {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!agencyOwnerId) throw new Error("Not authenticated");
       const { error } = await sbFrom("agenda_creations").insert({
-        manager_id: user.id, day: input.day,
+        manager_id: agencyOwnerId, day: input.day,
         crm_client_id: input.crm_client_id ?? null, client_name: input.client_name ?? null, team: input.team ?? null,
       } as never);
       if (error) throw error;
@@ -103,13 +103,13 @@ export function useDeleteCreation() {
 }
 
 export function useCaptures() {
-  const { user } = useAuth();
+  const { agencyOwnerId } = useActiveAccount();
   return useQuery<Capture[]>({
-    queryKey: ["agenda-captures", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["agenda-captures", agencyOwnerId],
+    enabled: !!agencyOwnerId,
     queryFn: async () => {
       const { data, error } = await sbFrom("agenda_captures")
-        .select("*").eq("manager_id", user!.id)
+        .select("*").eq("manager_id", agencyOwnerId!)
         .order("capture_date", { ascending: true });
       if (error) throw error;
       return (data ?? []) as unknown as Capture[];
@@ -118,13 +118,13 @@ export function useCaptures() {
 }
 
 export function useAddCapture() {
-  const { user } = useAuth();
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { capture_date: string; capture_time?: string | null; location?: string | null; crm_client_id?: string | null; client_name?: string | null; team?: string | null; note?: string | null }) => {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!agencyOwnerId) throw new Error("Not authenticated");
       const { error } = await sbFrom("agenda_captures").insert({
-        manager_id: user.id, status: "agendada", ...input,
+        manager_id: agencyOwnerId, status: "agendada", ...input,
       } as never);
       if (error) throw error;
     },

@@ -39,12 +39,12 @@ type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 
 export function useCrmClients() {
-  const { user } = useAuth();
+  const { agencyOwnerId } = useActiveAccount();
   return useQuery<CrmClient[]>({
-    queryKey: ["crm-clients", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["crm-clients", agencyOwnerId],
+    enabled: !!agencyOwnerId,
     queryFn: async () => {
-      const { data, error } = await sbFrom("crm_clients").select("*").eq("manager_id", user!.id).is("deleted_at", null).order("created_at", { ascending: false });
+      const { data, error } = await sbFrom("crm_clients").select("*").eq("manager_id", agencyOwnerId!).is("deleted_at", null).order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as CrmClient[];
     },
@@ -65,12 +65,12 @@ export function useCrmClient(id: string | undefined) {
 }
 
 export function useCreateCrmClient() {
-  const { user } = useAuth();
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: CrmClientInput): Promise<CrmClient> => {
-      if (!user?.id) throw new Error("Sem sessão");
-      const { data, error } = await sbFrom("crm_clients").insert({ ...input, manager_id: user.id } as never).select().single();
+      if (!agencyOwnerId) throw new Error("Sem sessão");
+      const { data, error } = await sbFrom("crm_clients").insert({ ...input, manager_id: agencyOwnerId } as never).select().single();
       if (error) throw error;
       return data as unknown as CrmClient;
     },
@@ -124,21 +124,20 @@ export function useDeleteCrmClient() {
 
 // Importa as contas que a gestora já gerencia no cria (dedup por cria_owner_id)
 export function useImportCriaClients() {
-  const { user } = useAuth();
-  const { managedAccounts } = useActiveAccount();
+  const { managedAccounts, agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (): Promise<{ imported: number }> => {
-      if (!user?.id) throw new Error("Sem sessão");
+      if (!agencyOwnerId) throw new Error("Sem sessão");
       if (managedAccounts.length === 0) return { imported: 0 };
       const { data: existing, error: exErr } = await sbFrom("crm_clients")
-        .select("cria_owner_id").eq("manager_id", user.id).not("cria_owner_id", "is", null);
+        .select("cria_owner_id").eq("manager_id", agencyOwnerId).not("cria_owner_id", "is", null);
       if (exErr) throw exErr;
       const have = new Set((existing ?? []).map((r: { cria_owner_id: string }) => r.cria_owner_id));
       const toInsert = managedAccounts
         .filter((a) => !have.has(a.owner_id))
         .map((a) => ({
-          manager_id: user.id,
+          manager_id: agencyOwnerId,
           cria_owner_id: a.owner_id,
           name: a.name || "Sem nome",
           instagram: a.instagram_handle ?? null,
@@ -171,10 +170,11 @@ export function useCrmClientRefs(crmClientId: string | null) {
 
 export function useAddCrmRef() {
   const { user } = useAuth();
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ crmClientId, file }: { crmClientId: string; file: File }) => {
-      if (!user?.id) throw new Error("Sem sessão");
+      if (!user?.id || !agencyOwnerId) throw new Error("Sem sessão");
       if (!file.type.startsWith("image/")) throw new Error("Selecione uma imagem.");
       if (file.size > 5 * 1024 * 1024) throw new Error("Imagem máx. 5MB.");
       const ext = file.name.split(".").pop() || "jpg";
@@ -183,7 +183,7 @@ export function useAddCrmRef() {
       if (upErr) throw upErr;
       const { data: signed, error: sErr } = await supabase.storage.from("crm").createSignedUrl(path, 60 * 60 * 24 * 365);
       if (sErr) throw sErr;
-      const { error } = await sbFrom("crm_client_refs").insert({ manager_id: user.id, crm_client_id: crmClientId, image_url: signed.signedUrl } as never);
+      const { error } = await sbFrom("crm_client_refs").insert({ manager_id: agencyOwnerId, crm_client_id: crmClientId, image_url: signed.signedUrl } as never);
       if (error) throw error;
     },
     onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: ["crm-refs", v.crmClientId] }),
@@ -222,22 +222,22 @@ export type CrmLead = {
 export type CrmLeadInput = Partial<Omit<CrmLead, "id" | "manager_id" | "created_at" | "updated_at">> & { name: string };
 
 export function useCrmLeads() {
-  const { user } = useAuth();
+  const { agencyOwnerId } = useActiveAccount();
   return useQuery<CrmLead[]>({
-    queryKey: ["crm-leads", user?.id], enabled: !!user?.id,
+    queryKey: ["crm-leads", agencyOwnerId], enabled: !!agencyOwnerId,
     queryFn: async () => {
-      const { data, error } = await sbFrom("crm_leads").select("*").eq("manager_id", user!.id).order("created_at", { ascending: false });
+      const { data, error } = await sbFrom("crm_leads").select("*").eq("manager_id", agencyOwnerId!).order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as CrmLead[];
     },
   });
 }
 export function useCreateCrmLead() {
-  const { user } = useAuth(); const qc = useQueryClient();
+  const { agencyOwnerId } = useActiveAccount(); const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: CrmLeadInput) => {
-      if (!user?.id) throw new Error("Sem sessão");
-      const { error } = await sbFrom("crm_leads").insert({ ...input, manager_id: user.id } as never);
+      if (!agencyOwnerId) throw new Error("Sem sessão");
+      const { error } = await sbFrom("crm_leads").insert({ ...input, manager_id: agencyOwnerId } as never);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-leads"] }),
@@ -273,22 +273,22 @@ export type CrmContract = {
 export type CrmContractInput = Partial<Omit<CrmContract, "id" | "manager_id" | "created_at">> & { title: string };
 
 export function useCrmContracts() {
-  const { user } = useAuth();
+  const { agencyOwnerId } = useActiveAccount();
   return useQuery<CrmContract[]>({
-    queryKey: ["crm-contracts", user?.id], enabled: !!user?.id,
+    queryKey: ["crm-contracts", agencyOwnerId], enabled: !!agencyOwnerId,
     queryFn: async () => {
-      const { data, error } = await sbFrom("crm_contracts").select("*").eq("manager_id", user!.id).order("created_at", { ascending: false });
+      const { data, error } = await sbFrom("crm_contracts").select("*").eq("manager_id", agencyOwnerId!).order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as CrmContract[];
     },
   });
 }
 export function useCreateCrmContract() {
-  const { user } = useAuth(); const qc = useQueryClient();
+  const { agencyOwnerId } = useActiveAccount(); const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: CrmContractInput) => {
-      if (!user?.id) throw new Error("Sem sessão");
-      const { error } = await sbFrom("crm_contracts").insert({ ...input, manager_id: user.id } as never);
+      if (!agencyOwnerId) throw new Error("Sem sessão");
+      const { error } = await sbFrom("crm_contracts").insert({ ...input, manager_id: agencyOwnerId } as never);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-contracts"] }),
@@ -362,13 +362,13 @@ export type CrmTask = {
 export type CrmTaskInput = Partial<Omit<CrmTask, "id" | "manager_id" | "created_at" | "updated_at">> & { title: string };
 
 export function useCrmTasks() {
-  const { user } = useAuth();
+  const { agencyOwnerId } = useActiveAccount();
   return useQuery<CrmTask[]>({
-    queryKey: ["crm-tasks", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["crm-tasks", agencyOwnerId],
+    enabled: !!agencyOwnerId,
     queryFn: async () => {
       const { data, error } = await sbFrom("crm_tasks")
-        .select("*").eq("manager_id", user!.id)
+        .select("*").eq("manager_id", agencyOwnerId!)
         .order("due_date", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -377,11 +377,11 @@ export function useCrmTasks() {
   });
 }
 export function useCreateCrmTask() {
-  const { user } = useAuth(); const qc = useQueryClient();
+  const { agencyOwnerId } = useActiveAccount(); const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: CrmTaskInput) => {
-      if (!user?.id) throw new Error("Sem sessão");
-      const { error } = await sbFrom("crm_tasks").insert({ ...input, manager_id: user.id } as never);
+      if (!agencyOwnerId) throw new Error("Sem sessão");
+      const { error } = await sbFrom("crm_tasks").insert({ ...input, manager_id: agencyOwnerId } as never);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-tasks"] }),

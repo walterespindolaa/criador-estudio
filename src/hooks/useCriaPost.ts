@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { toast } from "sonner";
 
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
@@ -29,25 +29,25 @@ export type ExternalPost = {
 export type ExternalPostInput = { title: string; platform: string; format: string; caption?: string | null; hook?: string | null; script?: string | null; approval_mode?: "fast" | "flow" | "both" };
 
 export function useExternalClients() {
-  const { user } = useAuth();
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
 
   const clientsQ = useQuery({
-    queryKey: ["external-clients", user?.id],
-    enabled: !!user,
+    queryKey: ["external-clients", agencyOwnerId],
+    enabled: !!agencyOwnerId,
     queryFn: async () => {
-      const { data, error } = await sbFrom("external_clients").select("*").eq("manager_id", user!.id).order("created_at", { ascending: false });
+      const { data, error } = await sbFrom("external_clients").select("*").eq("manager_id", agencyOwnerId!).order("created_at", { ascending: false });
       if (error) throw error;
       return (data as ExternalClient[]) ?? [];
     },
   });
 
   const pendingQ = useQuery({
-    queryKey: ["external-pending", user?.id],
-    enabled: !!user,
+    queryKey: ["external-pending", agencyOwnerId],
+    enabled: !!agencyOwnerId,
     queryFn: async () => {
       const { data, error } = await sbFrom("posts").select("external_client_id, approval_status")
-        .eq("user_id", user!.id).not("external_client_id", "is", null).in("approval_status", ["pendente", "ajuste_solicitado"]);
+        .eq("user_id", agencyOwnerId!).not("external_client_id", "is", null).in("approval_status", ["pendente", "ajuste_solicitado"]);
       if (error) throw error;
       const map: Record<string, number> = {};
       for (const r of (data as { external_client_id: string }[]) ?? []) map[r.external_client_id] = (map[r.external_client_id] ?? 0) + 1;
@@ -62,20 +62,20 @@ export function useExternalClients() {
       let crmId = linkId ?? null;
       if (!crmId) {
         const { data: crm, error: e0 } = await sbFrom("crm_clients").insert({
-          manager_id: user!.id, name: rest.name,
+          manager_id: agencyOwnerId!, name: rest.name,
           instagram: rest.instagram_handle ?? null, notes: rest.notes ?? null,
         }).select("id").single();
         if (e0) throw e0;
         crmId = (crm as { id: string }).id;
       }
       const { data, error } = await sbFrom("external_clients")
-        .insert({ manager_id: user!.id, ...rest, crm_client_id: crmId }).select().single();
+        .insert({ manager_id: agencyOwnerId!, ...rest, crm_client_id: crmId }).select().single();
       if (error) throw error; return data as ExternalClient;
     },
     onSuccess: () => {
       toast.success("Cliente criado!");
-      qc.invalidateQueries({ queryKey: ["external-clients", user?.id] });
-      qc.invalidateQueries({ queryKey: ["crm-clients", user?.id] });
+      qc.invalidateQueries({ queryKey: ["external-clients", agencyOwnerId] });
+      qc.invalidateQueries({ queryKey: ["crm-clients", agencyOwnerId] });
     },
     onError: () => toast.error("Erro ao criar cliente."),
   });
@@ -93,8 +93,8 @@ export function useExternalClients() {
     },
     onSuccess: () => {
       toast.success("Cliente atualizado!");
-      qc.invalidateQueries({ queryKey: ["external-clients", user?.id] });
-      qc.invalidateQueries({ queryKey: ["crm-clients", user?.id] });
+      qc.invalidateQueries({ queryKey: ["external-clients", agencyOwnerId] });
+      qc.invalidateQueries({ queryKey: ["crm-clients", agencyOwnerId] });
     },
     onError: () => toast.error("Erro ao atualizar."),
   });
@@ -103,7 +103,7 @@ export function useExternalClients() {
     mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
       const { error } = await sbFrom("external_clients").update({ active }).eq("id", id); if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["external-clients", user?.id] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["external-clients", agencyOwnerId] }),
   });
 
   const copyLink = async (clientId: string) => {
@@ -112,7 +112,7 @@ export function useExternalClients() {
     if (e1) { toast.error("Erro ao gerar link."); return; }
     let token = (existing as { token: string }[] | null)?.[0]?.token;
     if (!token) {
-      const { data: created, error: e2 } = await sbFrom("approval_tokens").insert({ manager_id: user!.id, external_client_id: clientId }).select("token").single();
+      const { data: created, error: e2 } = await sbFrom("approval_tokens").insert({ manager_id: agencyOwnerId!, external_client_id: clientId }).select("token").single();
       if (e2 || !created) { toast.error("Erro ao gerar link."); return; }
       token = (created as { token: string }).token;
     }
@@ -125,13 +125,13 @@ export function useExternalClients() {
 }
 
 export function useExternalPosts(clientId: string | null) {
-  const { user } = useAuth();
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   const key = ["cria-posts", clientId];
 
   const postsQ = useQuery({
     queryKey: key,
-    enabled: !!user && !!clientId,
+    enabled: !!agencyOwnerId && !!clientId,
     queryFn: async () => {
       const { data, error } = await sbFrom("posts").select("*").eq("external_client_id", clientId!).order("created_at", { ascending: false });
       if (error) throw error;
@@ -150,12 +150,12 @@ export function useExternalPosts(clientId: string | null) {
     mutationFn: async (input: ExternalPostInput) => {
       const { approval_mode, ...rest } = input;
       const { error } = await sbFrom("posts").insert({
-        user_id: user!.id, external_client_id: clientId, status: "editando",
+        user_id: agencyOwnerId!, external_client_id: clientId, status: "editando",
         approval_status: "pendente", approval_mode: approval_mode ?? "fast", ...rest,
       });
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Post enviado pra aprovação!"); qc.invalidateQueries({ queryKey: key }); qc.invalidateQueries({ queryKey: ["external-pending", user?.id] }); },
+    onSuccess: () => { toast.success("Post enviado pra aprovação!"); qc.invalidateQueries({ queryKey: key }); qc.invalidateQueries({ queryKey: ["external-pending", agencyOwnerId] }); },
     onError: () => toast.error("Erro ao criar post."),
   });
 
@@ -165,13 +165,13 @@ export function useExternalPosts(clientId: string | null) {
       if (resend) { patch.approval_status = "pendente"; patch.approval_updated_at = new Date().toISOString(); }
       const { error } = await sbFrom("posts").update(patch).eq("id", id); if (error) throw error;
     },
-    onSuccess: () => { toast.success("Post atualizado!"); qc.invalidateQueries({ queryKey: key }); qc.invalidateQueries({ queryKey: ["external-pending", user?.id] }); },
+    onSuccess: () => { toast.success("Post atualizado!"); qc.invalidateQueries({ queryKey: key }); qc.invalidateQueries({ queryKey: ["external-pending", agencyOwnerId] }); },
     onError: () => toast.error("Erro ao atualizar."),
   });
 
   const remove = useMutation({
     mutationFn: async (id: string) => { const { error } = await sbFrom("posts").delete().eq("id", id); if (error) throw error; },
-    onSuccess: () => { toast.success("Post removido."); qc.invalidateQueries({ queryKey: key }); qc.invalidateQueries({ queryKey: ["external-pending", user?.id] }); },
+    onSuccess: () => { toast.success("Post removido."); qc.invalidateQueries({ queryKey: key }); qc.invalidateQueries({ queryKey: ["external-pending", agencyOwnerId] }); },
     onError: () => toast.error("Erro ao remover o post."),
   });
 
@@ -183,7 +183,7 @@ export function useExternalPosts(clientId: string | null) {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); qc.invalidateQueries({ queryKey: ["external-pending", user?.id] }); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); qc.invalidateQueries({ queryKey: ["external-pending", agencyOwnerId] }); },
     onError: () => toast.error("Erro ao mover o post."),
   });
 

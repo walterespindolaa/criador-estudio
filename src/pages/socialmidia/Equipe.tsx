@@ -1,0 +1,150 @@
+import { useState } from "react";
+import { Loader2, UserPlus, Users, Plus, Trash2, Pause, Play, Check, CreditCard, Info } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import {
+  useTeamMembers, useCollabSeats, useInviteMember, useUpdateMemberStatus, useRemoveMember,
+  useSetMemberModule, useBuySeats, TEAM_MODULES,
+} from "@/hooks/useTeam";
+
+export default function Equipe() {
+  const { data: members = [], isLoading } = useTeamMembers();
+  const { data: seats } = useCollabSeats();
+  const invite = useInviteMember();
+  const setStatus = useUpdateMemberStatus();
+  const removeMember = useRemoveMember();
+  const setModule = useSetMemberModule();
+  const buySeats = useBuySeats();
+
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [showInvite, setShowInvite] = useState(false);
+
+  const used = members.filter((m) => m.status === "ativo").length;
+  const total = seats?.total ?? 1;
+  const full = used >= total;
+
+  const doInvite = () => {
+    const e = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { toast.error("Informe um e-mail válido."); return; }
+    invite.mutate({ email: e, name: name.trim() || undefined }, {
+      onSuccess: () => { setEmail(""); setName(""); setShowInvite(false); },
+    });
+  };
+
+  return (
+    <div className="space-y-5">
+      {/* Explicação */}
+      <div className="flex items-start gap-2 rounded-xl bg-primary/[0.04] border border-primary/15 px-4 py-3">
+        <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+        <p className="text-[13px] font-body text-foreground/80 leading-relaxed">
+          Convide colaboradores pra trabalhar <strong>dentro da sua conta</strong> — eles acessam os clientes e módulos que você liberar. O <strong>1º colaborador é grátis</strong>; a partir do 2º, R$ 29,90/mês por pessoa.
+        </p>
+      </div>
+
+      {/* Assentos */}
+      <div className="bg-card border border-border rounded-2xl p-4 flex items-center gap-4 flex-wrap">
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><Users className="h-5 w-5" /></div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-display font-bold text-foreground">Assentos: {used} de {total} em uso</p>
+          <p className="text-[12px] font-body text-muted-foreground">1 grátis + {seats?.paid ?? 0} pago(s). Cada assento extra é R$ 29,90/mês.</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => buySeats.mutate((seats?.paid ?? 0) + 1)} disabled={buySeats.isPending}>
+          {buySeats.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <CreditCard className="h-4 w-4 mr-1.5" />}
+          Adicionar assento
+        </Button>
+      </div>
+
+      {/* Convidar */}
+      {!showInvite ? (
+        <Button onClick={() => full ? toast.error("Sem assentos livres. Adicione um assento primeiro.") : setShowInvite(true)} disabled={full && (seats?.paid ?? 0) === 0}>
+          <UserPlus className="h-4 w-4 mr-2" /> Convidar colaborador
+        </Button>
+      ) : (
+        <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+          <p className="text-sm font-display font-bold text-foreground">Novo colaborador</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1">Nome (opcional)</p>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Ana Souza" className="h-9" />
+            </div>
+            <div>
+              <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1">E-mail</p>
+              <Input value={email} type="email" onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") doInvite(); }} placeholder="colaborador@email.com" className="h-9" />
+            </div>
+          </div>
+          <p className="text-[11px] font-body text-muted-foreground">Ele recebe um e-mail pra definir a senha e já entra na sua conta. Por padrão libera todos os módulos — você ajusta abaixo depois.</p>
+          <div className="flex gap-2">
+            <Button onClick={doInvite} disabled={invite.isPending}>
+              {invite.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+              Enviar convite
+            </Button>
+            <Button variant="ghost" onClick={() => setShowInvite(false)}>Cancelar</Button>
+          </div>
+        </div>
+      )}
+
+      {/* Lista */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+      ) : members.length === 0 ? (
+        <div className="border border-dashed border-border rounded-2xl py-12 px-6 text-center">
+          <Users className="h-6 w-6 text-muted-foreground/40 mx-auto mb-2" strokeWidth={1.5} />
+          <p className="text-sm font-body text-foreground font-medium">Nenhum colaborador ainda</p>
+          <p className="text-xs font-body text-muted-foreground mt-1">Convide alguém pra trabalhar com você.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {members.map((m) => {
+            const enabled = new Set(m.permissions.map((p) => p.module_code));
+            const paused = m.status === "pausado";
+            return (
+              <div key={m.id} className={cn("bg-card border border-border rounded-2xl p-4", paused && "opacity-70")}>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary font-display font-bold">
+                    {(m.name || m.email || "?").charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-body font-semibold text-foreground truncate">{m.name || "(sem nome)"}</p>
+                    <p className="text-[12px] font-body text-muted-foreground truncate">{m.email}</p>
+                  </div>
+                  <span className={cn("text-[10px] font-body px-2 py-0.5 rounded-full", paused ? "bg-muted text-muted-foreground" : "bg-emerald-500/12 text-emerald-600")}>
+                    {paused ? "Pausado" : "Ativo"}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => setStatus.mutate({ id: m.id, status: paused ? "ativo" : "pausado" })}
+                      className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title={paused ? "Reativar" : "Pausar"}>
+                      {paused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                    </button>
+                    <button onClick={() => { if (confirm("Remover este colaborador? Ele perde o acesso à sua conta.")) removeMember.mutate(m.id); }}
+                      className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" title="Remover">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+                <div className="mt-3 pt-3 border-t border-border/60">
+                  <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-2">Módulos liberados</p>
+                  <div className="flex flex-wrap gap-2">
+                    {TEAM_MODULES.map((mod) => {
+                      const on = enabled.has(mod.code);
+                      return (
+                        <button key={mod.code}
+                          onClick={() => setModule.mutate({ memberRowId: m.id, moduleCode: mod.code, enabled: !on })}
+                          className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[12px] font-body border transition-colors",
+                            on ? "bg-primary/10 border-primary text-primary" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
+                          {on && <Check className="h-3 w-3" />} {mod.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

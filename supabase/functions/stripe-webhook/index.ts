@@ -108,6 +108,18 @@ Deno.serve(async (req) => {
     switch (event.type) {
       case "checkout.session.completed": {
         const s = event.data.object as Stripe.Checkout.Session;
+        // ── ASSENTOS DE COLABORADOR: provisiona paid_collab_seats ──
+        if (s.metadata?.kind === "collab_seats") {
+          const managerId = s.metadata?.manager_id;
+          const seats = Math.max(0, Math.floor(Number(s.metadata?.seats) || 0));
+          if (managerId) {
+            must(await supabase.from("profiles").update({
+              paid_collab_seats: seats,
+              collab_seats_subscription_id: s.subscription as string,
+            }).eq("id", managerId), "profiles collab_seats activate");
+          }
+          break;
+        }
         // ── MÓDULO PAGO: cria o entitlement e NÃO toca na assinatura-base ──
         if (s.metadata?.kind === "module") {
           const moduleCode = s.metadata?.module_code;
@@ -167,6 +179,19 @@ Deno.serve(async (req) => {
 
       case "customer.subscription.updated": {
         const sub = event.data.object as Stripe.Subscription;
+        // ── ASSENTOS DE COLABORADOR: sincroniza a quantidade paga ──
+        if (sub.metadata?.kind === "collab_seats") {
+          const managerId = sub.metadata?.manager_id;
+          const qty = Math.max(0, Math.floor(Number(sub.items?.data?.[0]?.quantity) || Number(sub.metadata?.seats) || 0));
+          const active = sub.status === "active" || sub.status === "trialing";
+          if (managerId) {
+            await supabase.from("profiles").update({
+              paid_collab_seats: active ? qty : 0,
+              collab_seats_subscription_id: sub.id,
+            }).eq("id", managerId);
+          }
+          break;
+        }
         // ── MÓDULO PAGO: sincroniza status do entitlement ──
         if (sub.metadata?.kind === "module") {
           const moduleCode = sub.metadata?.module_code;
@@ -233,6 +258,15 @@ Deno.serve(async (req) => {
 
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
+        // ── ASSENTOS DE COLABORADOR: zera os assentos pagos ──
+        if (sub.metadata?.kind === "collab_seats") {
+          const managerId = sub.metadata?.manager_id;
+          if (managerId) {
+            await supabase.from("profiles")
+              .update({ paid_collab_seats: 0, collab_seats_subscription_id: null }).eq("id", managerId);
+          }
+          break;
+        }
         // ── MÓDULO PAGO: revoga o entitlement ──
         if (sub.metadata?.kind === "module") {
           await supabase.from("module_entitlements")

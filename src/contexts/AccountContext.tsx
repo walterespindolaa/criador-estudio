@@ -15,6 +15,12 @@ type Ctx = {
   hasManagedAccounts: boolean;
   accountsLoading: boolean;
   setActiveAccount: (ownerId: string | null) => void; // null => volta pra própria conta
+  // Colaboradores (acesso de equipe): contas de gestor onde o usuário atua como time.
+  teamAccounts: ManagedAccount[];
+  isCollaborator: boolean;          // o usuário é colaborador de alguma agência
+  actingAsTeam: boolean;            // a conta ativa é uma conta de time (gestor)
+  // Dono do tenant da AGÊNCIA para as queries: o próprio user, ou o gestor quando é colaborador atuando no time.
+  agencyOwnerId: string | null;
 };
 
 const AccountContext = createContext<Ctx | undefined>(undefined);
@@ -44,21 +50,38 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  // Restaura seleção salva (só se ainda for um cliente válido)
+  // Contas de gestor onde o usuário atua como COLABORADOR (acesso de equipe).
+  const { data: teamAccounts = [] } = useQuery<ManagedAccount[]>({
+    queryKey: ["team-accounts", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as unknown as (fn: string) => Promise<{ data: unknown; error: unknown }>)("my_team_accounts");
+      if (error) throw error;
+      return (data ?? []) as ManagedAccount[];
+    },
+  });
+
+  const selectable = useMemo(() => [...managedAccounts, ...teamAccounts], [managedAccounts, teamAccounts]);
+
+  // Restaura seleção salva; se for colaborador sem conta própria de gestão, entra direto na agência.
   useEffect(() => {
     if (!user?.id) { setActive(null); return; }
     const saved = localStorage.getItem(LS_KEY);
-    if (saved && managedAccounts.some((m) => m.owner_id === saved)) setActive(saved);
-  }, [user?.id, managedAccounts]);
+    if (saved && selectable.some((m) => m.owner_id === saved)) { setActive(saved); return; }
+    if (!saved && managedAccounts.length === 0 && teamAccounts.length > 0) {
+      setActive(teamAccounts[0].owner_id); // colaborador cai na conta do gestor ao logar
+    }
+  }, [user?.id, selectable, managedAccounts.length, teamAccounts]);
 
   const setActiveAccount = (ownerId: string | null) => {
-    const next = ownerId && managedAccounts.some((m) => m.owner_id === ownerId) ? ownerId : null;
+    const next = ownerId && selectable.some((m) => m.owner_id === ownerId) ? ownerId : null;
     if (next) localStorage.setItem(LS_KEY, next); else localStorage.removeItem(LS_KEY);
     setActive(next);
     queryClient.clear(); // evita vazamento de dados entre contas
   };
 
   const effectiveId = activeAccountId ?? user?.id ?? null;
+  const actingAsTeam = !!activeAccountId && teamAccounts.some((m) => m.owner_id === activeAccountId);
   const value = useMemo<Ctx>(() => ({
     activeAccountId: effectiveId,
     isManaging: !!activeAccountId && activeAccountId !== user?.id,
@@ -66,7 +89,12 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     hasManagedAccounts: managedAccounts.length > 0,
     accountsLoading,
     setActiveAccount,
-  }), [effectiveId, activeAccountId, user?.id, managedAccounts, accountsLoading]);
+    teamAccounts,
+    isCollaborator: teamAccounts.length > 0,
+    actingAsTeam,
+    // Na agência: se atuo como time, o dono é o gestor (activeAccountId); senão, sou eu.
+    agencyOwnerId: actingAsTeam ? activeAccountId : (user?.id ?? null),
+  }), [effectiveId, activeAccountId, user?.id, managedAccounts, accountsLoading, teamAccounts, actingAsTeam]);
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
 }
