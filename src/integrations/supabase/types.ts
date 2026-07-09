@@ -3063,6 +3063,7 @@ export type Database = {
           bio_slug: string | null
           bio_views: number | null
           brand_logo_url: string | null
+          collab_seats_subscription_id: string | null
           created_at: string | null
           editorial_line: Json | null
           id: string
@@ -3115,6 +3116,7 @@ export type Database = {
           bio_slug?: string | null
           bio_views?: number | null
           brand_logo_url?: string | null
+          collab_seats_subscription_id?: string | null
           created_at?: string | null
           editorial_line?: Json | null
           id: string
@@ -3167,6 +3169,7 @@ export type Database = {
           bio_slug?: string | null
           bio_views?: number | null
           brand_logo_url?: string | null
+          collab_seats_subscription_id?: string | null
           created_at?: string | null
           editorial_line?: Json | null
           id?: string
@@ -4141,6 +4144,7 @@ export type Database = {
     }
     Functions: {
       accept_proposal_by_token: { Args: { _token: string }; Returns: undefined }
+      acts_for: { Args: { target: string }; Returns: boolean }
       admin_list_referrals: {
         Args: never
         Returns: {
@@ -4343,6 +4347,7 @@ export type Database = {
       }
       is_account_manager: { Args: { _owner: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
+      is_team_member: { Args: { target: string }; Returns: boolean }
       list_posts_by_token: {
         Args: { _token: string }
         Returns: {
@@ -4410,6 +4415,24 @@ export type Database = {
         Returns: number
       }
       my_managed_accounts: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          instagram_handle: string
+          name: string
+          niche: string
+          owner_id: string
+        }[]
+      }
+      my_member_permissions: {
+        Args: { target: string }
+        Returns: {
+          all_clients: boolean
+          client_ids: string[]
+          module_code: string
+        }[]
+      }
+      my_team_accounts: {
         Args: never
         Returns: {
           avatar_url: string
