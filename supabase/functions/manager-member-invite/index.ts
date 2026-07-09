@@ -50,7 +50,9 @@ serve(async (req) => {
     const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const body = await req.json().catch(() => ({}));
-    const { email, name, modules } = body as { email?: string; name?: string; modules?: string[] };
+    const { email, name, modules, all_clients, client_ids } = body as {
+      email?: string; name?: string; modules?: string[]; all_clients?: boolean; client_ids?: string[];
+    };
     if (!email) return json({ error: "missing_email" }, 400);
 
     const normEmail = String(email).trim().toLowerCase();
@@ -95,8 +97,11 @@ serve(async (req) => {
       return json({ error: "member_link_failed" }, 500);
     }
     const mods = Array.isArray(modules) && modules.length ? modules : DEFAULT_MODULES;
+    // Escopo de clientes: "todos" (all_clients) ou lista específica (client_ids). Mesmo escopo p/ todos os módulos.
+    const allCli = all_clients !== false; // default = todos
+    const cliIds = !allCli && Array.isArray(client_ids) ? client_ids.filter((x) => typeof x === "string") : [];
     const perms = mods.map((code) => ({
-      member_row_id: (memberRow as { id: string }).id, module_code: code, all_clients: true, client_ids: [],
+      member_row_id: (memberRow as { id: string }).id, module_code: code, all_clients: allCli, client_ids: cliIds,
     }));
     await svc.from("manager_member_permissions").upsert(perms, { onConflict: "member_row_id,module_code" });
 

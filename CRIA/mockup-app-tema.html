@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOCKUP — Tema CRIA dentro do app</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito+Sans:wght@400;600;700&family=Grand+Hotel&display=swap" rel="stylesheet">
+<style>
+/* ===== MOCKUP: identidade da LP adaptada pro produto =====
+   Regra: 90% calmo (creme+branco+ink), 10% cor (ação e estado) */
+:root{
+  --creme:#F6F2E8;      /* fundo do app: creme mais claro que a LP */
+  --branco:#FDFCF8;
+  --ink:#1B1A17;
+  --ink-60:rgba(27,26,23,.6);
+  --ink-12:rgba(27,26,23,.12);
+  --laranja:#CE4A1D;    /* AÇÃO: botão primário, ativo, alerta de atenção */
+  --azul:#2A4BDF;       /* módulo planejamento */
+  --rosa:#F27EB5;       /* módulo criação/IA */
+  --amarelo:#F2C21E;    /* avisos, destaques suaves */
+  --verde:#3E9152;      /* sucesso, publicado, dinheiro */
+  --d:'Baloo 2',sans-serif;
+  --b:'Nunito Sans',sans-serif;
+  --script:'Grand Hotel',cursive;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--b);background:var(--creme);color:var(--ink);font-size:14px;line-height:1.5}
+.app{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+
+/* ---- sidebar: branca, calma, ativo em laranja suave ---- */
+aside{background:var(--branco);border-right:1.5px solid var(--ink-12);padding:22px 14px;display:flex;flex-direction:column;gap:4px}
+.logo{font-family:var(--d);font-weight:800;font-size:1.4rem;padding:0 12px;margin-bottom:18px}
+.logo span{color:var(--laranja)}
+.nav-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:12px;font-weight:600;color:var(--ink-60);cursor:pointer;transition:all .18s}
+.nav-item:hover{background:var(--creme);color:var(--ink);transform:translateX(2px)}
+.nav-item.ativo{background:#FBE9E1;color:var(--laranja)}
+.nav-item .ic{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.nav-sep{font-size:.68rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-60);opacity:.6;padding:16px 12px 6px}
+.upgrade{margin-top:auto;background:var(--ink);color:var(--creme);border-radius:16px;padding:16px;font-size:.8rem}
+.upgrade b{font-family:var(--d);display:block;margin-bottom:4px}
+.upgrade .mini-btn{display:inline-block;margin-top:10px;background:var(--laranja);color:#fff;font-family:var(--d);font-weight:700;font-size:.78rem;padding:7px 14px;border-radius:999px;box-shadow:0 3px 0 rgba(0,0,0,.55);cursor:pointer;transition:transform .18s}
+.upgrade .mini-btn:hover{transform:translateY(-2px)}
+
+/* ---- main ---- */
+main{padding:26px 30px}
+.topo{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;gap:16px}
+h1{font-family:var(--d);font-weight:800;font-size:1.65rem;line-height:1.15}
+h1 .script{font-family:var(--script);font-weight:400;color:var(--laranja);font-size:1.15em;margin-left:6px}
+.sub{color:var(--ink-60);margin-top:2px}
+.btn{display:inline-flex;align-items:center;gap:8px;font-family:var(--d);font-weight:700;font-size:.9rem;padding:11px 20px;border-radius:999px;border:none;cursor:pointer;transition:all .18s}
+.btn-p{background:var(--laranja);color:#fff;box-shadow:0 4px 0 rgba(27,26,23,.75)}
+.btn-p:hover{transform:translateY(-2px);box-shadow:0 6px 0 rgba(27,26,23,.75)}
+.btn-p:active{transform:translateY(1px);box-shadow:0 2px 0 rgba(27,26,23,.75)}
+.btn-g{background:transparent;color:var(--ink);border:1.5px solid var(--ink-12)}
+.btn-g:hover{border-color:var(--ink);background:var(--branco)}
+
+/* ---- cards de stats: brancos, número em Baloo, acento fino ---- */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.stat{background:var(--branco);border:1.5px solid var(--ink-12);border-radius:18px;padding:16px 18px;transition:all .18s;position:relative;overflow:hidden}
+.stat:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(27,26,23,.07)}
+.stat::before{content:"";position:absolute;top:0;left:0;right:0;height:4px}
+.stat.s-az::before{background:var(--azul)} .stat.s-ro::before{background:var(--rosa)}
+.stat.s-am::before{background:var(--amarelo)} .stat.s-ve::before{background:var(--verde)}
+.stat .n{font-family:var(--d);font-weight:800;font-size:1.7rem}
+.stat .l{color:var(--ink-60);font-size:.8rem;font-weight:600}
+.stat .up{color:var(--verde);font-size:.75rem;font-weight:700}
+
+/* ---- grid principal ---- */
+.grid{display:grid;grid-template-columns:1.6fr 1fr;gap:16px}
+.card{background:var(--branco);border:1.5px solid var(--ink-12);border-radius:20px;padding:20px}
+.card h2{font-family:var(--d);font-weight:700;font-size:1.05rem;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+.ver{font-size:.78rem;color:var(--azul);font-weight:700;cursor:pointer}
+
+/* kanban compacto */
+.kb{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.kb-col .kb-h{font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-60);margin-bottom:8px;display:flex;gap:6px;align-items:center}
+.dot{width:8px;height:8px;border-radius:50%}
+.kb-card{background:var(--creme);border:1.5px solid var(--ink-12);border-radius:12px;padding:10px 12px;margin-bottom:8px;font-size:.8rem;font-weight:600;cursor:grab;transition:all .18s}
+.kb-card:hover{transform:translateY(-2px) rotate(-.5deg);box-shadow:0 5px 12px rgba(27,26,23,.08)}
+.tag{display:inline-block;font-size:.62rem;font-weight:800;padding:2px 8px;border-radius:999px;margin-top:6px}
+
+/* tarefas */
+.task{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1.5px dashed var(--ink-12)}
+.task:last-child{border:none}
+.chk{width:19px;height:19px;border:2px solid var(--ink-12);border-radius:7px;flex-shrink:0;cursor:pointer;transition:all .15s}
+.chk.ok{background:var(--verde);border-color:var(--verde);position:relative}
+.chk.ok::after{content:"✓";color:#fff;font-size:.7rem;position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.task.done span{text-decoration:line-through;opacity:.5}
+.task small{margin-left:auto;color:var(--ink-60);font-size:.72rem;font-weight:700;flex-shrink:0}
+
+/* cria ia box — único card "loud" da tela */
+.ia{background:var(--ink);color:var(--creme);border-radius:20px;padding:20px;margin-top:16px;position:relative;overflow:hidden}
+.ia::after{content:"";position:absolute;width:120px;height:120px;background:var(--rosa);border-radius:55% 45% 40% 60%/50% 60% 40% 50%;right:-40px;bottom:-50px;opacity:.9}
+.ia h2{font-family:var(--d);font-size:1rem;margin-bottom:6px;color:var(--creme)}
+.ia p{font-size:.82rem;opacity:.8;max-width:32ch}
+.ia .btn{margin-top:12px;background:var(--rosa);color:var(--ink);box-shadow:0 3px 0 rgba(0,0,0,.5);font-size:.82rem;padding:9px 16px;position:relative;z-index:1}
+
+/* faixa de aviso (exemplo de amarelo em dose certa) */
+.aviso{display:flex;align-items:center;gap:10px;background:#FDF3D6;border:1.5px solid rgba(166,124,0,.25);color:#6B5200;border-radius:14px;padding:10px 14px;font-size:.82rem;font-weight:600;margin-bottom:18px}
+
+.nota{max-width:1100px;margin:26px auto 40px;padding:0 30px;color:var(--ink-60);font-size:.8rem;text-align:center}
+@media(max-width:900px){.app{grid-template-columns:1fr}aside{display:none}.stats{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="logo">CRIA<span>.</span></div>
+    <div class="nav-item ativo"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg> Dashboard</div>
+    <div class="nav-item"><svg class="ic" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1.3.5 2.6 1.5 3.5.8.8 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg> Ideias</div>
+    <div class="nav-item"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 7v10"/><path d="M12 7v6"/><path d="M16 7v8"/></svg> Criando</div>
+    <div class="nav-item"><svg class="ic" viewBox="0 0 24 24"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Tarefas</div>
+    <div class="nav-item"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Collabs</div>
+    <div class="nav-sep">Estúdio</div>
+    <div class="nav-item"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg> Cria Estúdio</div>
+    <div class="nav-item"><svg class="ic" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3"/><path d="M12 18h.01"/></svg> Cria Stories</div>
+    <div class="upgrade">
+      <b>Vire Studio ✦</b>
+      Desbloqueie collabs, cursos e mais.
+      <span class="mini-btn">Fazer upgrade</span>
+    </div>
+  </aside>
+
+  <main>
+    <div class="topo">
+      <div>
+        <h1>Bom dia, Walter <span class="script">bora criar?</span></h1>
+        <p class="sub">Terça, 3 posts planejados pra essa semana · 1 collab em andamento</p>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-g">+ Nova ideia</button>
+        <button class="btn btn-p">Criar post</button>
+      </div>
+    </div>
+
+    <div class="aviso">⚠ Seu story de hoje ainda não foi postado — o plano semanal sugere "bastidores do projeto".</div>
+
+    <div class="stats">
+      <div class="stat s-az"><div class="n">12</div><div class="l">posts planejados</div><div class="up">↑ 4 essa semana</div></div>
+      <div class="stat s-ro"><div class="n">37</div><div class="l">ideias no banco</div><div class="up">↑ 5 novas</div></div>
+      <div class="stat s-ve"><div class="n">+18%</div><div class="l">alcance (30d)</div><div class="up">↑ melhor mês</div></div>
+      <div class="stat s-am"><div class="n">2</div><div class="l">collabs ativas</div><div class="up">1 entrega sexta</div></div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Criando <span class="ver">ver kanban →</span></h2>
+        <div class="kb">
+          <div class="kb-col">
+            <div class="kb-h"><span class="dot" style="background:var(--rosa)"></span> Rascunho</div>
+            <div class="kb-card">Reels: 3 erros de quem começa<span class="tag" style="background:#FCE8F2;color:#C74B8E">reels</span></div>
+            <div class="kb-card">Carrossel: rotina de criação<span class="tag" style="background:#E8ECFB;color:var(--azul)">carrossel</span></div>
+          </div>
+          <div class="kb-col">
+            <div class="kb-h"><span class="dot" style="background:var(--amarelo)"></span> Produzindo</div>
+            <div class="kb-card">Post collab @marca<span class="tag" style="background:#FDF3D6;color:#6B5200">publi</span></div>
+          </div>
+          <div class="kb-col">
+            <div class="kb-h"><span class="dot" style="background:var(--verde)"></span> Pronto</div>
+            <div class="kb-card">Story: enquete de pauta<span class="tag" style="background:#E5F2E9;color:var(--verde)">story</span></div>
+            <div class="kb-card">Reels: antes e depois<span class="tag" style="background:#FCE8F2;color:#C74B8E">reels</span></div>
+          </div>
+        </div>
+        <div class="ia">
+          <h2>✦ Cria IA</h2>
+          <p>Sua legenda do post de quinta tá pronta pra revisar. Quer que eu sugira 3 ganchos pro Reels?</p>
+          <button class="btn">Abrir Cria IA</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Hoje <span class="ver">todas →</span></h2>
+        <div class="task done"><div class="chk ok"></div><span>Postar carrossel "bastidores"</span><small>9h</small></div>
+        <div class="task"><div class="chk"></div><span>Gravar Reels da collab</span><small>14h</small></div>
+        <div class="task"><div class="chk"></div><span>Responder comentários</span><small>17h</small></div>
+        <div class="task"><div class="chk"></div><span>Story: enquete de pauta</span><small>19h</small></div>
+      </div>
+    </div>
+  </main>
+</div>
+<p class="nota">MOCKUP de aprovação — tema da LP adaptado pro produto: fundo creme claro, cards brancos com borda fina, laranja só em ação, cores por módulo em doses pequenas, Baloo 2 em títulos/números, Grand Hotel só na saudação, micro-motions de hover. Nada disso está no código do app ainda.</p>
+</body>
+</html>
