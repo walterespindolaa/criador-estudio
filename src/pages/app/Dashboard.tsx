@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
-import { statusRamp } from "@/lib/statusRamp";
 import {
   Lightbulb, FileText, CheckCircle2, Sparkles, Copy, Check,
   ListChecks, Pencil, Trash2, Clock, Flame, ArrowRight
@@ -266,8 +265,9 @@ const Dashboard = () => {
   const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000);
   const dailyHook = HOOKS_VIRAL[dayOfYear % HOOKS_VIRAL.length];
 
-  const ramp = statusRamp();
-  const RAMP_ORDER = ["ideia","roteiro","gravando","editando","agendado","publicado"] as const;
+  /* Rebranding fase 3: cada tile tem uma cor fixa da paleta CRIA
+     (laranja só em ação — os módulos ganham suas próprias cores) */
+  const TILE_COLORS = ["#CE4A1D", "#D4508F", "#3E9152", "#2A4BDF", "#C99000", "#E2551F"];
   const stats = [
     { label: "Ideias", value: ideas.length, icon: Lightbulb, link: "/app/ideias" },
     { label: "Em criação", value: inCreationFiltered.length, icon: FileText, link: "/app/criando" },
@@ -275,7 +275,7 @@ const Dashboard = () => {
     { label: "Agendados", value: scheduledFiltered.length, icon: Clock, link: "/app/criando" },
     { label: "Tarefas abertas", value: pendingTasks.length + inProgressTasks.length, icon: ListChecks, link: "/app/tarefas" },
     { label: "Hábitos hoje", value: `${habitsToday}/${habits.length}`, icon: Flame, link: "/app" },
-  ].map((s, i) => ({ ...s, accent: ramp[RAMP_ORDER[i]] }));
+  ].map((s, i) => ({ ...s, accent: { line: TILE_COLORS[i] } }));
 
   const [heroSlot, setHeroSlot] = useState<HTMLElement | null>(null);
   useEffect(() => { setHeroSlot(document.getElementById("cria-hero-slot")); }, []);
@@ -344,7 +344,7 @@ const Dashboard = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
                   className={cn(
-                    "relative overflow-hidden px-3 py-2.5 sm:px-4 sm:py-3 rounded-2xl border border-primary/10 bg-primary/[0.05]",
+                    "relative overflow-hidden px-3 py-2.5 sm:px-4 sm:py-3 rounded-2xl border border-border bg-card",
                     "hover:shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all duration-200",
                     "text-left w-full group cursor-pointer"
                   )}
@@ -432,7 +432,7 @@ const Dashboard = () => {
               )}
             </section>
 
-            <DCard className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-transparent to-primary/10 border-primary/15 group">
+            <DCard className="relative overflow-hidden bg-card border-border group">
               <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
                 <Sparkles className="h-24 w-24 text-primary" />
               </div>

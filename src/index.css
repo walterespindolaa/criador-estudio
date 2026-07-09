@@ -216,10 +216,11 @@ html, body {
 
 /* Canvas global — brilho radial seguindo o accent do tema (--primary) */
 .app-canvas{
+  /* Rebranding fase 3: brilho do accent bem mais discreto — a tela de trabalho fica neutra */
   background:
     radial-gradient(120% 80% at 18% 0%, hsl(var(--card)) 0%, transparent 40%),
-    radial-gradient(150% 95% at 85% 10%, hsl(var(--primary) / 0.12) 0%, transparent 48%),
-    radial-gradient(110% 70% at 50% 105%, hsl(var(--primary) / 0.06) 0%, transparent 52%),
+    radial-gradient(150% 95% at 85% 10%, hsl(var(--primary) / 0.04) 0%, transparent 48%),
+    radial-gradient(110% 70% at 50% 105%, hsl(var(--primary) / 0.02) 0%, transparent 52%),
     hsl(var(--background));
   background-attachment: fixed;
 }
