@@ -17,10 +17,11 @@ import { useT } from "@/lib/i18n";
 
 type SignupFormData = { name: string; email: string; password: string; confirmPassword: string };
 
-const Signup = () => {
+const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
   const navigate = useNavigate();
   const t = useT();
   const { signUp } = useAuth();
+  const [accountType, setAccountType] = useState<"creator" | "manager">(defaultManager ? "manager" : "creator");
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [emailValue, setEmailValue] = useState("");
@@ -57,7 +58,8 @@ const Signup = () => {
     setEmailValue(data.email);
     setFormError(null);
     setLoading(true);
-    const { error } = await signUp(data.email, data.password, data.name);
+    const meta = accountType === "manager" ? { account_intent: "manager" } : undefined;
+    const { error } = await signUp(data.email, data.password, data.name, meta);
     setLoading(false);
     if (error) {
       console.warn("[signup] error:", error.message);
@@ -66,7 +68,7 @@ const Signup = () => {
       setFormError(mapped.text);
       toast.error(mapped.text);
     } else {
-      track("CompleteRegistration", { content_name: "signup_email" });
+      track("CompleteRegistration", { content_name: accountType === "manager" ? "signup_agency" : "signup_email" });
       setEmailSent(true);
     }
   };
@@ -111,7 +113,24 @@ const Signup = () => {
           ) : (
             <>
               <h3 className="text-2xl font-display font-extrabold text-foreground mb-2">{t("signup.title")}</h3>
-              <p className="text-muted-foreground font-body mb-8">{t("signup.subtitle")}</p>
+              <p className="text-muted-foreground font-body mb-5">{t("signup.subtitle")}</p>
+
+              {/* Tipo de conta */}
+              <div className="mb-6">
+                <p className="text-xs font-body font-semibold text-muted-foreground uppercase tracking-wider mb-2">Você é</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => setAccountType("creator")}
+                    className={`rounded-xl border p-3 text-left transition-colors ${accountType === "creator" ? "border-primary bg-primary/[0.06]" : "border-border hover:border-primary/40"}`}>
+                    <span className="block text-sm font-body font-bold text-foreground">Criador de conteúdo</span>
+                    <span className="block text-[11px] font-body text-muted-foreground leading-snug mt-0.5">Crio pro meu próprio perfil</span>
+                  </button>
+                  <button type="button" onClick={() => setAccountType("manager")}
+                    className={`rounded-xl border p-3 text-left transition-colors ${accountType === "manager" ? "border-primary bg-primary/[0.06]" : "border-border hover:border-primary/40"}`}>
+                    <span className="block text-sm font-body font-bold text-foreground">Social mídia / agência</span>
+                    <span className="block text-[11px] font-body text-muted-foreground leading-snug mt-0.5">Gerencio clientes e equipe</span>
+                  </button>
+                </div>
+              </div>
 
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
                 <div className="space-y-2">

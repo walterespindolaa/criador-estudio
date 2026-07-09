@@ -7,7 +7,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string, name: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, name: string, meta?: Record<string, unknown>) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
@@ -36,13 +36,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, name: string) => {
+  const signUp = async (email: string, password: string, name: string, meta?: Record<string, unknown>) => {
+    const isManager = meta?.account_intent === "manager";
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { name },
-        emailRedirectTo: `${window.location.origin}/onboarding`,
+        data: { name, ...(meta ?? {}) },
+        // Social mídia cai no onboarding da agência; criador no onboarding normal.
+        emailRedirectTo: `${window.location.origin}${isManager ? "/comecar-agencia" : "/onboarding"}`,
       },
     });
     return { error };

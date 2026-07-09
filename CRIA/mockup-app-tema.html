@@ -3,183 +3,278 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MOCKUP — Tema CRIA dentro do app</title>
+<title>MOCKUP v3 — Rebranding CRIA (estrutura atual, pele nova)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito+Sans:wght@400;600;700&family=Grand+Hotel&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito+Sans:wght@400;600;700;800&family=Grand+Hotel&display=swap" rel="stylesheet">
 <style>
-/* ===== MOCKUP: identidade da LP adaptada pro produto =====
-   Regra: 90% calmo (creme+branco+ink), 10% cor (ação e estado) */
+/* ===== MOCKUP v3 =====
+   REGRA DE OURO: estrutura idêntica ao dashboard atual do CRIA.
+   Menu flutuante igual, faixa superior igual, cards nos mesmos lugares.
+   Só a PELE muda: paleta, fontes, raios, sombras.                    */
 :root{
-  --creme:#F6F2E8;      /* fundo do app: creme mais claro que a LP */
-  --branco:#FDFCF8;
-  --ink:#1B1A17;
-  --ink-60:rgba(27,26,23,.6);
-  --ink-12:rgba(27,26,23,.12);
-  --laranja:#CE4A1D;    /* AÇÃO: botão primário, ativo, alerta de atenção */
-  --azul:#2A4BDF;       /* módulo planejamento */
-  --rosa:#F27EB5;       /* módulo criação/IA */
-  --amarelo:#F2C21E;    /* avisos, destaques suaves */
-  --verde:#3E9152;      /* sucesso, publicado, dinheiro */
-  --d:'Baloo 2',sans-serif;
-  --b:'Nunito Sans',sans-serif;
-  --script:'Grand Hotel',cursive;
+  --creme:#F6F2E8; --branco:#FDFCF8; --ink:#1B1A17;
+  --ink-60:rgba(27,26,23,.6); --ink-12:rgba(27,26,23,.12);
+  --laranja:#CE4A1D; --laranja-2:#E2551F;
+  --azul:#2A4BDF; --rosa:#F27EB5; --amarelo:#F2C21E; --verde:#3E9152;
+  --d:'Baloo 2',sans-serif; --b:'Nunito Sans',sans-serif; --script:'Grand Hotel',cursive;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:var(--b);background:var(--creme);color:var(--ink);font-size:14px;line-height:1.5}
-.app{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
 
-/* ---- sidebar: branca, calma, ativo em laranja suave ---- */
-aside{background:var(--branco);border-right:1.5px solid var(--ink-12);padding:22px 14px;display:flex;flex-direction:column;gap:4px}
-.logo{font-family:var(--d);font-weight:800;font-size:1.4rem;padding:0 12px;margin-bottom:18px}
-.logo span{color:var(--laranja)}
-.nav-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:12px;font-weight:600;color:var(--ink-60);cursor:pointer;transition:all .18s}
-.nav-item:hover{background:var(--creme);color:var(--ink);transform:translateX(2px)}
-.nav-item.ativo{background:#FBE9E1;color:var(--laranja)}
-.nav-item .ic{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.nav-sep{font-size:.68rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-60);opacity:.6;padding:16px 12px 6px}
-.upgrade{margin-top:auto;background:var(--ink);color:var(--creme);border-radius:16px;padding:16px;font-size:.8rem}
-.upgrade b{font-family:var(--d);display:block;margin-bottom:4px}
-.upgrade .mini-btn{display:inline-block;margin-top:10px;background:var(--laranja);color:#fff;font-family:var(--d);font-weight:700;font-size:.78rem;padding:7px 14px;border-radius:999px;box-shadow:0 3px 0 rgba(0,0,0,.55);cursor:pointer;transition:transform .18s}
-.upgrade .mini-btn:hover{transform:translateY(-2px)}
+/* ---------- FAIXA SUPERIOR: fica! só troca a pintura (era teal → vira ink com blob) ---------- */
+.banda{background:var(--ink);color:var(--creme);padding:26px 32px 66px;position:relative;overflow:hidden}
+.banda::before{content:"";position:absolute;width:340px;height:340px;background:var(--laranja);opacity:.28;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;top:-160px;right:-80px;animation:flutua 16s ease-in-out infinite}
+.banda::after{content:"";position:absolute;width:180px;height:180px;background:var(--rosa);opacity:.2;border-radius:55% 45% 40% 60%/50% 60% 40% 50%;bottom:-90px;right:22%;animation:flutua 20s ease-in-out infinite reverse}
+@keyframes flutua{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-16px) rotate(4deg)}}
+@media (prefers-reduced-motion:reduce){.banda::before,.banda::after{animation:none}}
+.banda-top{display:flex;align-items:center;gap:14px;position:relative;z-index:2;padding-left:76px}
+.avatar{width:52px;height:52px;border-radius:50%;background:var(--rosa);border:2.5px solid var(--creme);display:flex;align-items:center;justify-content:center;font-family:var(--d);font-weight:800;color:var(--ink);font-size:1.2rem}
+.sauda small{display:block;font-size:.82rem;opacity:.75}
+.sauda .nome{font-family:var(--d);font-weight:800;font-size:1.7rem;line-height:1.1}
+.sauda .nome .script{font-family:var(--script);font-weight:400;font-size:.75em;color:var(--amarelo);margin-left:8px}
+.banda-acoes{display:flex;gap:10px;margin-left:18px}
+.chip-btn{display:inline-flex;align-items:center;gap:7px;font-family:var(--d);font-weight:700;font-size:.85rem;padding:9px 18px;border-radius:999px;cursor:pointer;transition:all .18s;border:1.5px solid rgba(244,239,227,.35);background:transparent;color:var(--creme)}
+.chip-btn:hover{background:rgba(244,239,227,.12)}
+.chip-btn.cheio{background:var(--laranja);border-color:var(--laranja);box-shadow:0 3px 0 rgba(0,0,0,.5)}
+.chip-btn.cheio:hover{transform:translateY(-2px);box-shadow:0 5px 0 rgba(0,0,0,.5)}
+.banda-icones{margin-left:auto;display:flex;gap:10px}
+.ico-btn{width:38px;height:38px;border-radius:12px;background:rgba(244,239,227,.12);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:background .2s}
+.ico-btn:hover{background:rgba(244,239,227,.22)}
+.ico-btn .num{position:absolute;top:-6px;right:-6px;background:var(--laranja);color:#fff;font-size:.62rem;font-weight:800;border-radius:999px;padding:1px 6px}
+.periodos{display:flex;gap:6px;justify-content:flex-end;margin-top:18px;position:relative;z-index:2;flex-wrap:wrap}
+.per{font-weight:700;font-size:.8rem;color:rgba(244,239,227,.65);padding:6px 14px;border-radius:999px;cursor:pointer;transition:all .18s}
+.per:hover{color:var(--creme)}
+.per.on{background:var(--creme);color:var(--ink)}
 
-/* ---- main ---- */
-main{padding:26px 30px}
-.topo{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;gap:16px}
-h1{font-family:var(--d);font-weight:800;font-size:1.65rem;line-height:1.15}
-h1 .script{font-family:var(--script);font-weight:400;color:var(--laranja);font-size:1.15em;margin-left:6px}
-.sub{color:var(--ink-60);margin-top:2px}
-.btn{display:inline-flex;align-items:center;gap:8px;font-family:var(--d);font-weight:700;font-size:.9rem;padding:11px 20px;border-radius:999px;border:none;cursor:pointer;transition:all .18s}
-.btn-p{background:var(--laranja);color:#fff;box-shadow:0 4px 0 rgba(27,26,23,.75)}
-.btn-p:hover{transform:translateY(-2px);box-shadow:0 6px 0 rgba(27,26,23,.75)}
-.btn-p:active{transform:translateY(1px);box-shadow:0 2px 0 rgba(27,26,23,.75)}
-.btn-g{background:transparent;color:var(--ink);border:1.5px solid var(--ink-12)}
-.btn-g:hover{border-color:var(--ink);background:var(--branco)}
+/* ---------- MENU FLUTUANTE: igual ao atual (destacado, arredondado, ícones) ---------- */
+.rail{position:fixed;left:14px;top:120px;z-index:40;background:var(--branco);border:1.5px solid var(--ink-12);border-radius:26px;padding:12px 9px;display:flex;flex-direction:column;gap:6px;box-shadow:0 10px 30px rgba(27,26,23,.12)}
+.rail .logo-badge{width:36px;height:36px;border-radius:12px;background:var(--ink);color:var(--creme);font-family:var(--d);font-weight:800;display:flex;align-items:center;justify-content:center;margin-bottom:6px}
+.rail .logo-badge i{font-style:normal;color:var(--laranja)}
+.r-item{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--ink-60);cursor:pointer;transition:all .18s;position:relative}
+.r-item:hover{background:var(--creme);color:var(--ink);transform:scale(1.08)}
+.r-item.on{background:#FBE9E1;color:var(--laranja)}
+.r-item.on::before{content:"";position:absolute;left:-9px;top:22%;bottom:22%;width:3.5px;border-radius:99px;background:var(--laranja)}
+.r-sep{height:1.5px;background:var(--ink-12);margin:4px 6px}
+.ic{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
-/* ---- cards de stats: brancos, número em Baloo, acento fino ---- */
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
-.stat{background:var(--branco);border:1.5px solid var(--ink-12);border-radius:18px;padding:16px 18px;transition:all .18s;position:relative;overflow:hidden}
-.stat:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(27,26,23,.07)}
-.stat::before{content:"";position:absolute;top:0;left:0;right:0;height:4px}
-.stat.s-az::before{background:var(--azul)} .stat.s-ro::before{background:var(--rosa)}
-.stat.s-am::before{background:var(--amarelo)} .stat.s-ve::before{background:var(--verde)}
-.stat .n{font-family:var(--d);font-weight:800;font-size:1.7rem}
-.stat .l{color:var(--ink-60);font-size:.8rem;font-weight:600}
-.stat .up{color:var(--verde);font-size:.75rem;font-weight:700}
+/* ---------- conteúdo (mesma ordem de cards do dashboard atual) ---------- */
+main{max-width:1240px;margin:-42px auto 60px;padding:0 24px 0 96px;position:relative;z-index:3}
+.card{background:var(--branco);border:1.5px solid var(--ink-12);border-radius:20px;padding:20px 22px;transition:all .18s}
+.card:hover{box-shadow:0 8px 22px rgba(27,26,23,.06)}
+.card h2{font-family:var(--d);font-weight:700;font-size:1.02rem;display:flex;align-items:center;gap:9px}
+.mini{font-size:.8rem;color:var(--ink-60)}
 
-/* ---- grid principal ---- */
-.grid{display:grid;grid-template-columns:1.6fr 1fr;gap:16px}
-.card{background:var(--branco);border:1.5px solid var(--ink-12);border-radius:20px;padding:20px}
-.card h2{font-family:var(--d);font-weight:700;font-size:1.05rem;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
-.ver{font-size:.78rem;color:var(--azul);font-weight:700;cursor:pointer}
+/* primeiros passos */
+.passos{margin-bottom:16px}
+.prog{height:7px;background:var(--creme);border-radius:99px;margin:12px 0 14px;overflow:hidden}
+.prog i{display:block;height:100%;width:50%;background:var(--laranja);border-radius:99px}
+.passos-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.passo{display:flex;align-items:center;gap:10px;border:1.5px solid var(--ink-12);border-radius:999px;padding:9px 16px;font-weight:700;font-size:.85rem;cursor:pointer;transition:all .18s}
+.passo:hover{border-color:var(--ink);transform:translateX(2px)}
+.passo.ok{opacity:.5;text-decoration:line-through}
+.passo .ck{width:18px;height:18px;border-radius:50%;background:var(--verde);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.65rem;flex-shrink:0}
+.passo .seta{margin-left:auto;color:var(--ink-60)}
 
-/* kanban compacto */
-.kb{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-.kb-col .kb-h{font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-60);margin-bottom:8px;display:flex;gap:6px;align-items:center}
-.dot{width:8px;height:8px;border-radius:50%}
-.kb-card{background:var(--creme);border:1.5px solid var(--ink-12);border-radius:12px;padding:10px 12px;margin-bottom:8px;font-size:.8rem;font-weight:600;cursor:grab;transition:all .18s}
-.kb-card:hover{transform:translateY(-2px) rotate(-.5deg);box-shadow:0 5px 12px rgba(27,26,23,.08)}
-.tag{display:inline-block;font-size:.62rem;font-weight:800;padding:2px 8px;border-radius:999px;margin-top:6px}
+/* próxima melhor ação */
+.acao{display:flex;align-items:center;gap:16px;background:var(--ink);color:var(--creme);border:none;margin-bottom:16px;position:relative;overflow:hidden}
+.acao::after{content:"";position:absolute;width:110px;height:110px;background:var(--amarelo);opacity:.9;border-radius:55% 45% 40% 60%/50% 60% 40% 50%;right:-45px;bottom:-55px}
+.acao .raio{width:44px;height:44px;border-radius:14px;background:var(--laranja);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.acao small{display:block;font-size:.68rem;font-weight:800;letter-spacing:.09em;opacity:.7;text-transform:uppercase}
+.acao b{font-family:var(--d);font-size:1.05rem}
+.acao p{font-size:.8rem;opacity:.75}
+.btn-p{margin-left:auto;position:relative;z-index:2;display:inline-flex;align-items:center;gap:8px;font-family:var(--d);font-weight:700;font-size:.88rem;padding:11px 20px;border-radius:999px;border:none;cursor:pointer;background:var(--laranja);color:#fff;box-shadow:0 4px 0 rgba(0,0,0,.5);transition:all .18s;flex-shrink:0}
+.btn-p:hover{transform:translateY(-2px);box-shadow:0 6px 0 rgba(0,0,0,.5)}
 
-/* tarefas */
-.task{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1.5px dashed var(--ink-12)}
-.task:last-child{border:none}
-.chk{width:19px;height:19px;border:2px solid var(--ink-12);border-radius:7px;flex-shrink:0;cursor:pointer;transition:all .15s}
-.chk.ok{background:var(--verde);border-color:var(--verde);position:relative}
-.chk.ok::after{content:"✓";color:#fff;font-size:.7rem;position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
-.task.done span{text-decoration:line-through;opacity:.5}
-.task small{margin-left:auto;color:var(--ink-60);font-size:.72rem;font-weight:700;flex-shrink:0}
+/* layout: coluna esquerda (tiles+listas) + coluna direita */
+.duas{display:grid;grid-template-columns:1.75fr 1fr;gap:16px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:16px}
+.tile{display:flex;align-items:center;gap:12px;background:var(--branco);border:1.5px solid var(--ink-12);border-radius:999px;padding:12px 18px;cursor:pointer;transition:all .18s}
+.tile:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(27,26,23,.07)}
+.tile .tico{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tile .n{font-family:var(--d);font-weight:800;font-size:1.25rem}
+.tile .l{font-size:.68rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-60)}
+.tile .seta{margin-left:auto;color:var(--ink-60)}
+.col-d{display:flex;flex-direction:column;gap:14px}
+.linha2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+.post-item{display:flex;gap:11px;align-items:flex-start;padding:10px 0;border-bottom:1.5px dashed var(--ink-12)}
+.post-item:last-child{border:none}
+.post-item .pico{width:30px;height:30px;border-radius:10px;background:var(--creme);border:1.5px solid var(--ink-12);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.post-item b{font-size:.83rem;font-weight:700;display:block;line-height:1.35}
+.post-item small{margin-left:auto;color:var(--ink-60);font-size:.72rem;font-weight:800;flex-shrink:0}
+.st{display:inline-block;font-size:.6rem;font-weight:800;padding:2px 9px;border-radius:999px;margin-top:4px}
+.st-prod{background:#FDF3D6;color:#6B5200}
+.st-ideia{background:#E8ECFB;color:var(--azul)}
 
-/* cria ia box — único card "loud" da tela */
-.ia{background:var(--ink);color:var(--creme);border-radius:20px;padding:20px;margin-top:16px;position:relative;overflow:hidden}
-.ia::after{content:"";position:absolute;width:120px;height:120px;background:var(--rosa);border-radius:55% 45% 40% 60%/50% 60% 40% 50%;right:-40px;bottom:-50px;opacity:.9}
-.ia h2{font-family:var(--d);font-size:1rem;margin-bottom:6px;color:var(--creme)}
-.ia p{font-size:.82rem;opacity:.8;max-width:32ch}
-.ia .btn{margin-top:12px;background:var(--rosa);color:var(--ink);box-shadow:0 3px 0 rgba(0,0,0,.5);font-size:.82rem;padding:9px 16px;position:relative;z-index:1}
+/* coluna direita */
+.brand-tags .tg{display:inline-block;font-size:.68rem;font-weight:800;border:1.5px solid var(--ink-12);border-radius:999px;padding:3px 10px;margin:2px 2px 0 0}
+.ia-uso .barra{height:7px;background:var(--creme);border-radius:99px;margin:10px 0 8px;overflow:hidden}
+.ia-uso .barra i{display:block;height:100%;width:4%;background:var(--rosa);border-radius:99px}
+.notif{border-left:3.5px solid var(--laranja);padding:8px 0 8px 12px;margin-top:10px}
+.notif b{font-size:.83rem}
+.notif p{font-size:.76rem;color:var(--ink-60)}
+.notif .lk{font-size:.76rem;font-weight:800;color:var(--azul);cursor:pointer}
+.notif.n2{border-color:var(--azul)}
+.hor{display:flex;align-items:center;gap:10px;padding:7px 0;font-weight:700;font-size:.85rem}
+.hor .pt{width:9px;height:9px;border-radius:50%}
+.hor .estrelas{color:var(--amarelo);letter-spacing:2px;font-size:.8rem}
+.hor .tag-h{margin-left:auto;font-size:.62rem;font-weight:800;padding:2px 9px;border-radius:999px}
 
-/* faixa de aviso (exemplo de amarelo em dose certa) */
-.aviso{display:flex;align-items:center;gap:10px;background:#FDF3D6;border:1.5px solid rgba(166,124,0,.25);color:#6B5200;border-radius:14px;padding:10px 14px;font-size:.82rem;font-weight:600;margin-bottom:18px}
+/* captura rápida + gancho */
+.captura{display:flex;gap:12px;align-items:center;margin-top:16px}
+.captura input{flex:1;border:1.5px solid var(--ink-12);border-radius:999px;padding:13px 20px;font-family:var(--b);font-size:.9rem;background:var(--branco);transition:border .2s}
+.captura input:focus{outline:none;border-color:var(--azul)}
+.gancho{margin-top:16px;background:#FDF3D6;border:1.5px solid rgba(166,124,0,.25)}
+.gancho h2{color:#6B5200}
+.gancho .frase{font-family:var(--d);font-weight:700;font-size:1.05rem;margin:8px 0 12px}
+.gancho .copiar{display:block;text-align:center;border:1.5px dashed rgba(166,124,0,.4);border-radius:999px;padding:9px;font-weight:800;font-size:.82rem;color:#6B5200;cursor:pointer;transition:background .2s}
+.gancho .copiar:hover{background:rgba(255,255,255,.5)}
 
-.nota{max-width:1100px;margin:26px auto 40px;padding:0 30px;color:var(--ink-60);font-size:.8rem;text-align:center}
-@media(max-width:900px){.app{grid-template-columns:1fr}aside{display:none}.stats{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}}
+.nota{max-width:900px;margin:30px auto 50px;padding:0 24px;color:var(--ink-60);font-size:.8rem;text-align:center}
+@media(max-width:980px){.duas,.linha2,.passos-grid{grid-template-columns:1fr}.rail{display:none}main{padding-left:24px}.banda-top{padding-left:0;flex-wrap:wrap}.banda-acoes{margin-left:0}}
 </style>
 </head>
 <body>
-<div class="app">
-  <aside>
-    <div class="logo">CRIA<span>.</span></div>
-    <div class="nav-item ativo"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg> Dashboard</div>
-    <div class="nav-item"><svg class="ic" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1.3.5 2.6 1.5 3.5.8.8 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg> Ideias</div>
-    <div class="nav-item"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 7v10"/><path d="M12 7v6"/><path d="M16 7v8"/></svg> Criando</div>
-    <div class="nav-item"><svg class="ic" viewBox="0 0 24 24"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Tarefas</div>
-    <div class="nav-item"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Collabs</div>
-    <div class="nav-sep">Estúdio</div>
-    <div class="nav-item"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg> Cria Estúdio</div>
-    <div class="nav-item"><svg class="ic" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3"/><path d="M12 18h.01"/></svg> Cria Stories</div>
-    <div class="upgrade">
-      <b>Vire Studio ✦</b>
-      Desbloqueie collabs, cursos e mais.
-      <span class="mini-btn">Fazer upgrade</span>
+
+<!-- FAIXA SUPERIOR (mesma estrutura de hoje, pintura nova) -->
+<div class="banda">
+  <div class="banda-top">
+    <div class="avatar">W</div>
+    <div class="sauda">
+      <small>Boa noite,</small>
+      <div class="nome">Walter <span class="script">bora criar?</span></div>
     </div>
-  </aside>
-
-  <main>
-    <div class="topo">
-      <div>
-        <h1>Bom dia, Walter <span class="script">bora criar?</span></h1>
-        <p class="sub">Terça, 3 posts planejados pra essa semana · 1 collab em andamento</p>
-      </div>
-      <div style="display:flex;gap:10px">
-        <button class="btn btn-g">+ Nova ideia</button>
-        <button class="btn btn-p">Criar post</button>
-      </div>
+    <div class="banda-acoes">
+      <button class="chip-btn"><svg class="ic" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1.3.5 2.6 1.5 3.5.8.8 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/></svg> Nova ideia</button>
+      <button class="chip-btn cheio">+ Novo post</button>
     </div>
-
-    <div class="aviso">⚠ Seu story de hoje ainda não foi postado — o plano semanal sugere "bastidores do projeto".</div>
-
-    <div class="stats">
-      <div class="stat s-az"><div class="n">12</div><div class="l">posts planejados</div><div class="up">↑ 4 essa semana</div></div>
-      <div class="stat s-ro"><div class="n">37</div><div class="l">ideias no banco</div><div class="up">↑ 5 novas</div></div>
-      <div class="stat s-ve"><div class="n">+18%</div><div class="l">alcance (30d)</div><div class="up">↑ melhor mês</div></div>
-      <div class="stat s-am"><div class="n">2</div><div class="l">collabs ativas</div><div class="up">1 entrega sexta</div></div>
+    <div class="banda-icones">
+      <div class="ico-btn"><svg class="ic" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+      <div class="ico-btn"><svg class="ic" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="num">23</span></div>
     </div>
-
-    <div class="grid">
-      <div class="card">
-        <h2>Criando <span class="ver">ver kanban →</span></h2>
-        <div class="kb">
-          <div class="kb-col">
-            <div class="kb-h"><span class="dot" style="background:var(--rosa)"></span> Rascunho</div>
-            <div class="kb-card">Reels: 3 erros de quem começa<span class="tag" style="background:#FCE8F2;color:#C74B8E">reels</span></div>
-            <div class="kb-card">Carrossel: rotina de criação<span class="tag" style="background:#E8ECFB;color:var(--azul)">carrossel</span></div>
-          </div>
-          <div class="kb-col">
-            <div class="kb-h"><span class="dot" style="background:var(--amarelo)"></span> Produzindo</div>
-            <div class="kb-card">Post collab @marca<span class="tag" style="background:#FDF3D6;color:#6B5200">publi</span></div>
-          </div>
-          <div class="kb-col">
-            <div class="kb-h"><span class="dot" style="background:var(--verde)"></span> Pronto</div>
-            <div class="kb-card">Story: enquete de pauta<span class="tag" style="background:#E5F2E9;color:var(--verde)">story</span></div>
-            <div class="kb-card">Reels: antes e depois<span class="tag" style="background:#FCE8F2;color:#C74B8E">reels</span></div>
-          </div>
-        </div>
-        <div class="ia">
-          <h2>✦ Cria IA</h2>
-          <p>Sua legenda do post de quinta tá pronta pra revisar. Quer que eu sugira 3 ganchos pro Reels?</p>
-          <button class="btn">Abrir Cria IA</button>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>Hoje <span class="ver">todas →</span></h2>
-        <div class="task done"><div class="chk ok"></div><span>Postar carrossel "bastidores"</span><small>9h</small></div>
-        <div class="task"><div class="chk"></div><span>Gravar Reels da collab</span><small>14h</small></div>
-        <div class="task"><div class="chk"></div><span>Responder comentários</span><small>17h</small></div>
-        <div class="task"><div class="chk"></div><span>Story: enquete de pauta</span><small>19h</small></div>
-      </div>
-    </div>
-  </main>
+  </div>
+  <div class="periodos">
+    <span class="per">Tudo</span><span class="per">Hoje</span><span class="per on">Semana</span><span class="per">Quinzenal</span><span class="per">Mês</span><span class="per">Ano</span><span class="per">Personalizado</span>
+  </div>
 </div>
-<p class="nota">MOCKUP de aprovação — tema da LP adaptado pro produto: fundo creme claro, cards brancos com borda fina, laranja só em ação, cores por módulo em doses pequenas, Baloo 2 em títulos/números, Grand Hotel só na saudação, micro-motions de hover. Nada disso está no código do app ainda.</p>
+
+<!-- MENU FLUTUANTE (estrutura intacta: destacado da lateral, arredondado, ícones) -->
+<div class="rail">
+  <div class="logo-badge">c<i>.</i></div>
+  <div class="r-item on"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></div>
+  <div class="r-item"><svg class="ic" viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg></div>
+  <div class="r-item"><svg class="ic" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></div>
+  <div class="r-item"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg></div>
+  <div class="r-item"><svg class="ic" viewBox="0 0 24 24"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg></div>
+  <div class="r-item"><svg class="ic" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg></div>
+  <div class="r-sep"></div>
+  <div class="r-item"><svg class="ic" viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></div>
+  <div class="r-item"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+  <div class="r-sep"></div>
+  <div class="r-item"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.2 4.2l2.8 2.8M17 17l2.8 2.8M1 12h4M19 12h4M4.2 19.8 7 17M17 7l2.8-2.8"/></svg></div>
+  <div class="r-item"><svg class="ic" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></div>
+</div>
+
+<main>
+  <!-- Primeiros passos (mesmo card, pele nova) -->
+  <div class="card passos">
+    <h2><svg class="ic" viewBox="0 0 24 24" style="color:var(--laranja)"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg> Primeiros passos no Cria</h2>
+    <p class="mini">3 de 6 concluídos · destrave todo o potencial</p>
+    <div class="prog"><i></i></div>
+    <div class="passos-grid">
+      <div class="passo ok"><span class="ck">✓</span> Montar minha primeira semana</div>
+      <div class="passo ok"><span class="ck">✓</span> Conectar meu Instagram</div>
+      <div class="passo ok"><span class="ck">✓</span> Preencher meu moodboard</div>
+      <div class="passo">Publicar meu 1º post <span class="seta">→</span></div>
+      <div class="passo">Montar meu link in bio <span class="seta">→</span></div>
+      <div class="passo">Definir minhas metas <span class="seta">→</span></div>
+    </div>
+  </div>
+
+  <!-- Próxima melhor ação (mesmo lugar; vira o card "loud" da tela) -->
+  <div class="card acao">
+    <div class="raio"><svg class="ic" viewBox="0 0 24 24" style="color:#fff"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+    <div>
+      <small>Sua próxima melhor ação</small>
+      <b>Faltam 4 posts pra meta</b>
+      <p>Já é qui e faltam 4 posts.</p>
+    </div>
+    <button class="btn-p">Criar post →</button>
+  </div>
+
+  <div class="duas">
+    <div>
+      <!-- tiles de contagem (mesmos 6) -->
+      <div class="tiles">
+        <div class="tile"><span class="tico" style="background:#FBE9E1;color:var(--laranja)"><svg class="ic" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1.3.5 2.6 1.5 3.5.8.8 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/></svg></span><div><span class="n">2</span> <span class="l">ideias</span></div><span class="seta">→</span></div>
+        <div class="tile"><span class="tico" style="background:#FCE8F2;color:#C74B8E"><svg class="ic" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span><div><span class="n">3</span> <span class="l">em criação</span></div><span class="seta">→</span></div>
+        <div class="tile"><span class="tico" style="background:#E5F2E9;color:var(--verde)"><svg class="ic" viewBox="0 0 24 24"><path d="M22 11.1V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg></span><div><span class="n">0</span> <span class="l">publicados</span></div><span class="seta">→</span></div>
+        <div class="tile"><span class="tico" style="background:#E8ECFB;color:var(--azul)"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span><div><span class="n">3</span> <span class="l">agendados</span></div><span class="seta">→</span></div>
+        <div class="tile"><span class="tico" style="background:#FDF3D6;color:#A67C00"><svg class="ic" viewBox="0 0 24 24"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><div><span class="n">0</span> <span class="l">tarefas abertas</span></div><span class="seta">→</span></div>
+        <div class="tile"><span class="tico" style="background:#FBE9E1;color:var(--laranja)"><svg class="ic" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></span><div><span class="n">0/0</span> <span class="l">hábitos hoje</span></div><span class="seta">→</span></div>
+      </div>
+
+      <!-- próximos posts + próximas tarefas -->
+      <div class="linha2" style="margin-top:0">
+        <div class="card">
+          <h2>Próximos posts</h2>
+          <p class="mini" style="margin-bottom:8px">Agendados pela frente</p>
+          <div class="post-item"><span class="pico">◫</span><div><b>IA na prática: como eu uso pra escalar meus negócios</b><span class="st st-prod">Produzindo</span></div><small>hoje</small></div>
+          <div class="post-item"><span class="pico">◫</span><div><b>A verdade sobre construir do zero: não é sorte…</b><span class="st st-prod">Produzindo</span></div><small>11 jul</small></div>
+          <div class="post-item"><span class="pico">◫</span><div><b>Bastidores: o dia a dia na construção da Pejota</b><span class="st st-ideia">Ideia</span></div><small>14 jul</small></div>
+          <div class="post-item"><span class="pico">◫</span><div><b>Planejamento financeiro: o que ninguém te conta</b><span class="st st-prod">Produzindo</span></div><small>16 jul</small></div>
+        </div>
+        <div class="card">
+          <h2>Próximas tarefas</h2>
+          <p class="mini" style="margin-bottom:8px">Por vencimento</p>
+          <p class="mini" style="padding:20px 0;text-align:center">Nenhuma tarefa com prazo. <span style="color:var(--azul);font-weight:800;cursor:pointer">Criar tarefa →</span></p>
+        </div>
+      </div>
+
+      <!-- captura rápida -->
+      <div class="card captura" style="display:flex">
+        <svg class="ic" viewBox="0 0 24 24" style="color:var(--laranja);flex-shrink:0"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1.3.5 2.6 1.5 3.5.8.8 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/></svg>
+        <input placeholder="O que você está pensando?">
+        <button class="btn-p" style="margin-left:0">Capturar</button>
+      </div>
+
+      <!-- gancho do dia -->
+      <div class="card gancho">
+        <h2>✦ Gancho do Dia</h2>
+        <p class="frase">"Você está fazendo [ação] errado. Veja porquê."</p>
+        <span class="copiar">⧉ Copiar hook</span>
+      </div>
+    </div>
+
+    <!-- coluna direita (mesmos cards) -->
+    <div class="col-d">
+      <div class="card brand-tags">
+        <h2><svg class="ic" viewBox="0 0 24 24" style="color:var(--azul)"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg> Quem é você</h2>
+        <p class="mini">Resumo do seu Brandbook</p>
+        <p class="mini" style="margin-top:10px"><b style="color:var(--ink)">Nicho</b><br>Tecnologia, Negócios, Software, Organização Financeira</p>
+        <p class="mini" style="margin-top:8px"><b style="color:var(--ink)">Tom</b><br><span class="tg">Direto</span><span class="tg">Confiante</span><span class="tg">Didático</span></p>
+      </div>
+      <div class="card ia-uso">
+        <h2><span style="color:var(--rosa)">✦</span> Uso da IA este mês <span style="margin-left:auto;font-family:var(--d)">19<span style="opacity:.5">/500</span></span></h2>
+        <div class="barra"><i></i></div>
+        <p class="mini">Restam 481 gerações este mês. A cota zera no dia 1º.</p>
+      </div>
+      <div class="card">
+        <h2><svg class="ic" viewBox="0 0 24 24" style="color:var(--laranja)"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/></svg> Notificações <span style="margin-left:auto;background:var(--creme);border-radius:999px;padding:2px 10px;font-size:.75rem">2</span></h2>
+        <div class="notif"><b>Faltam 4 posts pra meta</b> <span class="st" style="background:#FBE9E1;color:var(--laranja)">AVISO</span><p>Já é qui e faltam 4 posts.</p><span class="lk">Criar post →</span></div>
+        <div class="notif n2"><b>14 posts em andamento</b> <span class="st st-ideia">LEMBRETE</span><p>Muitos posts no pipeline sem publicar.</p><span class="lk">Ver pipeline →</span></div>
+      </div>
+      <div class="card">
+        <h2><svg class="ic" viewBox="0 0 24 24" style="color:var(--verde)"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Melhores Horários</h2>
+        <p class="mini" style="margin-bottom:6px">Sugestão para o Instagram BR</p>
+        <div class="hor"><span class="pt" style="background:var(--verde)"></span>11:30 <span class="estrelas">★★★★★</span><span class="tag-h" style="background:#E5F2E9;color:var(--verde)">Ótimo</span></div>
+        <div class="hor"><span class="pt" style="background:var(--amarelo)"></span>18:00 <span class="estrelas">★★★★☆</span><span class="tag-h" style="background:#FDF3D6;color:#6B5200">Bom</span></div>
+        <div class="hor"><span class="pt" style="background:var(--ink-12)"></span>20:30 <span class="estrelas">★★★☆☆</span><span class="tag-h" style="background:var(--creme);color:var(--ink-60)">Regular</span></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<p class="nota">MOCKUP v3 — estrutura 100% igual ao dashboard atual (faixa superior, menu flutuante, mesmos cards nos mesmos lugares). Só a pele mudou: faixa teal → ink com formas orgânicas suaves, roxo → laranja de ação, cores por estado, Baloo 2 nos títulos e números, Grand Hotel na saudação.</p>
 </body>
 </html>

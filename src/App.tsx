@@ -15,6 +15,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ResetPassword from "./pages/ResetPassword";
 import Onboarding from "./pages/Onboarding";
+import ComecarAgencia from "./pages/ComecarAgencia";
 import Obrigado from "./pages/Obrigado";
 import AppLayout from "./components/AppLayout";
 import NotFound from "./pages/NotFound";
@@ -74,13 +75,19 @@ const HubCria = lazy(() => import("./pages/socialmidia/HubCria"));
 // account_type "manager" OU gerenciar ao menos uma conta.
 function AppHome() {
   const { profile, isLoading } = useProfile();
+  const { user } = useAuth();
   const { hasManagedAccounts, isManaging, accountsLoading, isCollaborator, actingAsTeam } = useActiveAccount();
   if (isLoading || accountsLoading) return null;
   // Colaborador atuando na conta do gestor → cai na agência.
   if (actingAsTeam) return <Navigate to="/socialmidia/dashboard" replace />;
+  const isManagerAccount = profile?.account_type === "manager" || (profile?.seat_limit ?? 0) > 0 || hasManagedAccounts || isCollaborator;
   // Só manda pro dashboard da agência quando o gestor está na PRÓPRIA conta.
   // Se ele entrou num cliente (isManaging), mostra o workspace do cliente.
-  if (!isManaging && (profile?.account_type === "manager" || hasManagedAccounts || isCollaborator)) return <Navigate to="/socialmidia/dashboard" replace />;
+  if (!isManaging && isManagerAccount) return <Navigate to="/socialmidia/dashboard" replace />;
+  // Cadastrou como social mídia mas ainda não ativou a agência → onboarding da agência.
+  if (!isManagerAccount && (user?.user_metadata as { account_intent?: string } | undefined)?.account_intent === "manager") {
+    return <Navigate to="/comecar-agencia" replace />;
+  }
   return <Dashboard />;
 }
 const Aprovacoes = lazy(() => import("./pages/socialmidia/Aprovacoes"));
@@ -138,12 +145,16 @@ const App = () => (
               <Route path="/ativar" element={<Ativar />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/cadastro/agencia" element={<Signup defaultManager />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/termos" element={<Termos />} />
               <Route path="/privacidade" element={<Privacidade />} />
               <Route path="/excluir-dados" element={<ExcluirDados />} />
               <Route path="/onboarding" element={
                 <AuthOnlyRoute><Onboarding /></AuthOnlyRoute>
+              } />
+              <Route path="/comecar-agencia" element={
+                <AuthOnlyRoute><ComecarAgencia /></AuthOnlyRoute>
               } />
               <Route path="/app/assinar" element={
                 <AuthOnlyRoute><Assinar /></AuthOnlyRoute>
