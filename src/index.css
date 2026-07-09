@@ -157,6 +157,16 @@ html, body {
   font-family: var(--active-font-body, var(--font-body)) !important;
 }
 
+/* Formas orgânicas do rebranding (auth/empty states) */
+@keyframes cria-float {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+  50% { transform: translateY(-18px) rotate(6deg) scale(1.04); }
+}
+.cria-blob { animation: cria-float 12s ease-in-out infinite; will-change: transform; }
+.cria-blob-slow { animation-duration: 17s; animation-direction: reverse; }
+.cria-blob-fast { animation-duration: 9s; animation-delay: 1.2s; }
+@media (prefers-reduced-motion: reduce) { .cria-blob, .cria-blob-slow, .cria-blob-fast { animation: none; } }
+
 /* Tabular nums for stat/interface numbers */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
