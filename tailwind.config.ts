@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['Plus Jakarta Sans', 'sans-serif'],
+        display: ['Baloo 2', 'Plus Jakarta Sans', 'sans-serif'],
         body: ['Nunito Sans', 'sans-serif'],
         sans: ['Nunito Sans', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],

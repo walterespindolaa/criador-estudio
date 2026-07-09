@@ -13,89 +13,93 @@ html, body {
 
 @layer base {
   :root {
-    --background: 38 30% 97%;
-    --foreground: 234 33% 14%;
+    /* ===== Rebranding CRIA (Fase 1) — paleta da LP =====
+       creme #F6F2E8 · ink #1B1A17 · laranja #CE4A1D
+       verde #3E9152 · azul #2A4BDF · rosa #F27EB5 · amarelo #F2C21E */
+    --background: 43 44% 94%;          /* creme */
+    --foreground: 45 8% 10%;           /* ink */
 
-    --card: 0 0% 100%;
-    --card-foreground: 234 33% 14%;
+    --card: 48 56% 98%;                /* branco quente */
+    --card-foreground: 45 8% 10%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 234 33% 14%;
+    --popover: 48 56% 98%;
+    --popover-foreground: 45 8% 10%;
 
-    --primary: 254 97% 67%;
+    --primary: 15 75% 46%;             /* laranja CRIA */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 174 70% 41%;
+    --secondary: 134 40% 41%;          /* verde */
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 34 14% 94%;
-    --muted-foreground: 220 9% 46%;
+    --muted: 44 39% 89%;               /* creme-2 */
+    --muted-foreground: 45 6% 40%;
 
-    --accent: 254 60% 96%;
-    --accent-foreground: 254 97% 40%;
+    --accent: 18 76% 93%;              /* laranja bem suave (fundo do ativo) */
+    --accent-foreground: 15 75% 38%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 34 14% 90%;
-    --input: 34 14% 90%;
-    --ring: 254 97% 67%;
+    --border: 43 20% 84%;
+    --input: 43 20% 84%;
+    --ring: 15 75% 46%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
 
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 234 33% 14%;
-    --sidebar-primary: 254 97% 67%;
+    --sidebar-background: 48 56% 98%;
+    --sidebar-foreground: 45 8% 10%;
+    --sidebar-primary: 15 75% 46%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 254 60% 96%;
-    --sidebar-accent-foreground: 254 97% 40%;
-    --sidebar-border: 34 14% 90%;
-    --sidebar-ring: 254 97% 67%;
+    --sidebar-accent: 18 76% 93%;
+    --sidebar-accent-foreground: 15 75% 38%;
+    --sidebar-border: 43 20% 84%;
+    --sidebar-ring: 15 75% 46%;
 
     --shadow-warm: 0 2px 12px rgba(28, 28, 26, 0.06);
     --shadow-warm-lg: 0 8px 30px rgba(28, 28, 26, 0.08);
 
-    --font-display: 'Plus Jakarta Sans', sans-serif;
+    --font-display: 'Baloo 2', 'Plus Jakarta Sans', sans-serif;
     --font-body: 'Nunito Sans', sans-serif;
   }
 
   .dark {
-    --background: 28 15% 8%;
-    --foreground: 35 20% 90%;
+    /* dark = ink quente com o mesmo laranja de ação */
+    --background: 45 8% 8%;
+    --foreground: 43 30% 90%;
 
-    --card: 28 15% 12%;
-    --card-foreground: 35 20% 90%;
+    --card: 45 8% 12%;
+    --card-foreground: 43 30% 90%;
 
-    --popover: 28 15% 10%;
-    --popover-foreground: 35 20% 90%;
+    --popover: 45 8% 10%;
+    --popover-foreground: 43 30% 90%;
 
-    --primary: 254 97% 67%;
+    --primary: 16 78% 55%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 152 20% 35%;
-    --secondary-foreground: 35 20% 95%;
+    --secondary: 134 30% 40%;
+    --secondary-foreground: 43 30% 95%;
 
-    --muted: 28 15% 18%;
-    --muted-foreground: 35 10% 60%;
+    --muted: 45 8% 18%;
+    --muted-foreground: 43 12% 60%;
 
-    --accent: 28 15% 20%;
-    --accent-foreground: 35 20% 90%;
+    --accent: 16 40% 18%;
+    --accent-foreground: 43 30% 90%;
 
     --destructive: 0 84% 60%;
-    --destructive-foreground: 35 20% 95%;
+    --destructive-foreground: 43 30% 95%;
 
-    --border: 35 20% 90% / 0.08;
-    --input: 35 20% 90% / 0.12;
-    --ring: 254 97% 67%;
+    --border: 43 30% 90% / 0.08;
+    --input: 43 30% 90% / 0.12;
+    --ring: 16 78% 55%;
 
-    --sidebar-background: 28 15% 10%;
-    --sidebar-foreground: 35 20% 90%;
-    --sidebar-primary: 254 97% 67%;
+    --sidebar-background: 45 8% 10%;
+    --sidebar-foreground: 43 30% 90%;
+    --sidebar-primary: 16 78% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 28 15% 18%;
-    --sidebar-accent-foreground: 35 20% 90%;
-    --sidebar-border: 35 20% 90% / 0.08;
-    --sidebar-ring: 254 97% 67%;
+    --sidebar-accent: 45 8% 18%;
+    --sidebar-accent-foreground: 43 30% 90%;
+    --sidebar-border: 43 30% 90% / 0.08;
+    --sidebar-ring: 16 78% 55%;
 
     --shadow-warm: 0 2px 12px rgba(0, 0, 0, 0.3);
     --shadow-warm-lg: 0 8px 30px rgba(0, 0, 0, 0.4);
