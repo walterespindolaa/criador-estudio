@@ -16,6 +16,21 @@ export interface ThemePreset {
 
 export const THEME_PRESETS: ThemePreset[] = [
   {
+    id: 'cria',
+    name: 'CRIA',
+    desc: 'A identidade oficial — creme e quente',
+    group: 'essenciais',
+    mode: 'light',
+    vars: {
+      background: '#F6F2E8',
+      card: '#FDFCF8',
+      foreground: '#1B1A17',
+      border: 'rgba(27,26,23,0.12)',
+      muted: '#EEE8D8',
+      sidebar: '#FDFCF8',
+    },
+  },
+  {
     id: 'clean-white',
     name: 'Clean White',
     desc: 'Branco puro, minimalista',
@@ -207,6 +222,7 @@ export const ACCENT_GROUPS = [
     { key: "lilas", label: "Lilás", value: "#D7B8E8" },
   ]},
   { group: "Vibrantes", colors: [
+    { key: "laranja-cria", label: "Laranja CRIA", value: "#CE4A1D" },
     { key: "rosa", label: "Rosa", value: "#EC4899" },
     { key: "roxo", label: "Roxo", value: "#8B5CF6" },
     { key: "coral", label: "Coral", value: "#F2683C" },
@@ -225,6 +241,7 @@ export const ACCENT_GROUPS = [
 ];
 
 export const ACCENT_COLORS = [
+  { key: 'laranja-cria', label: 'Laranja CRIA', value: '#CE4A1D' },
   { key: 'roxo', label: 'Roxo', value: '#7C5CFC' },
   { key: 'coral', label: 'Coral', value: '#FF6B6B' },
   { key: 'rosa', label: 'Rosa', value: '#FF69B4' },
