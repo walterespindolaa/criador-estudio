@@ -69,15 +69,18 @@ export function TourProvider({ children }: { children: ReactNode }) {
     setStep(-1);
   }, []);
 
-  // Modo treinamento: quando a navegação chega na rota do próximo tour da fila, inicia
+  // Modo treinamento: quando a navegação chega na rota do próximo tour da fila, inicia.
+  // IMPORTANTE: o pendingId só é limpo DENTRO do timer. Limpar antes re-dispara o efeito
+  // e o cleanup cancela o próprio timer (bug que travava o tour completo na 2ª tela).
   useEffect(() => {
     if (!pendingId) return;
     const tour = findTourById(pendingId);
-    if (tour && tour.route === location.pathname) {
+    if (!tour || tour.route !== location.pathname) return;
+    const id = window.setTimeout(() => {
       setPendingId(null);
-      const id = window.setTimeout(() => begin(tour), 400);
-      return () => window.clearTimeout(id);
-    }
+      begin(tour);
+    }, 400);
+    return () => window.clearTimeout(id);
   }, [pendingId, location.pathname, begin]);
 
   // Auto-start: primeira visita da tela (depois que soubermos o que já foi visto)
