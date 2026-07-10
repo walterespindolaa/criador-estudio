@@ -630,7 +630,7 @@ const Configuracoes = () => {
                               onChange={(e) => setEditorialLine(prev => ({ ...prev, [day]: e.target.value }))}
                               className="rounded-lg border border-border bg-card text-xs font-body p-1.5"
                             >
-                              <option value="">—</option>
+                              <option value="">-</option>
                               {pillars.map(p => (
                                 <option key={p.id} value={p.id}>{p.name}</option>
                               ))}
@@ -680,7 +680,7 @@ const Configuracoes = () => {
                 <AiUsageCard />
                 <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
                   <h3 className="font-display font-semibold text-foreground flex items-center gap-2"><Instagram className="h-5 w-5 text-primary" /> Instagram</h3>
-                  <p className="text-sm text-muted-foreground font-body leading-relaxed">Conecte sua conta Business ou Creator pra ver seus insights (alcance, seguidores, desempenho) na página de Insights. Só leitura — o CRIA não publica por você.</p>
+                  <p className="text-sm text-muted-foreground font-body leading-relaxed">Conecte sua conta Business ou Creator pra ver seus insights (alcance, seguidores, desempenho) na página de Insights. Só leitura, o CRIA não publica por você.</p>
                   {igConnection ? (
                     <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-primary/5 rounded-xl border border-primary/20">
                       <div className="flex items-center gap-3 min-w-0">
@@ -858,7 +858,7 @@ const Configuracoes = () => {
                   <Button variant="outline" onClick={() => setLogoutOpen(true)} className="text-destructive hover:bg-destructive/10 border-destructive/20">Sair da conta</Button>
                   <div className="pt-4 border-t border-destructive/10">
                     <p className="text-sm text-muted-foreground font-body mb-3">
-                      Esta ação é permanente. Todos os seus dados — posts, ideias, brandbook, hábitos, arquivos — serão apagados e não podem ser recuperados.
+                      Esta ação é permanente. Todos os seus dados, posts, ideias, brandbook, hábitos, arquivos, serão apagados e não podem ser recuperados.
                     </p>
                     <Button
                       variant="outline"
@@ -874,7 +874,7 @@ const Configuracoes = () => {
                   </div>
                 </div>
 
-                {/* Disclaimer de exclusão de dados — compliance Meta/Google */}
+                {/* Disclaimer de exclusão de dados, compliance Meta/Google */}
                 <div className="mt-4 rounded-2xl border border-border bg-card/50 p-5">
                   <h4 className="font-display text-sm font-semibold text-foreground mb-2">
                     Exclusão de dados

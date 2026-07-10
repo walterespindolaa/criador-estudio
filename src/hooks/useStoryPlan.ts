@@ -136,7 +136,7 @@ export function useGenerateStoryPlan() {
     },
     onSuccess: (n) => {
       qc.invalidateQueries({ queryKey: ["story-slots"] });
-      toast.success(`Plano criado — ${n} stories.`);
+      toast.success(`Plano criado, ${n} stories.`);
     },
     onError: (e) => {
       const m = e instanceof Error ? e.message : "";
@@ -192,7 +192,7 @@ export function useAddStorySlot() {
       format?: string | null;
       notify_title?: string | null;
       notify_body?: string | null;
-      weekdays?: number[];   // 0=Dom .. 6=Sáb — quando recorrente
+      weekdays?: number[];   // 0=Dom .. 6=Sáb, quando recorrente
       weeks?: number;        // repetir por N semanas
       source?: string;
     }): Promise<number> => {

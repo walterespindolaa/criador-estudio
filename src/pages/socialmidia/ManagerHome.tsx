@@ -127,7 +127,7 @@ export default function ManagerHome() {
             <h3 className="font-display font-extrabold text-lg">Vire uma agência no CRIA</h3>
           </div>
           <p className="text-sm font-body text-white/90 max-w-2xl leading-relaxed">
-            Você gerencia todos os clientes num painel só e cobra quanto quiser deles. Paga só pelos assentos (a partir de <strong>R$ 36,90</strong> vs R$ 49,90 avulso) — e cada cliente entra com a conta <strong>Studio completa</strong>, sem custo pra ele.
+            Você gerencia todos os clientes num painel só e cobra quanto quiser deles. Paga só pelos assentos (a partir de <strong>R$ 36,90</strong> vs R$ 49,90 avulso), e cada cliente entra com a conta <strong>Studio completa</strong>, sem custo pra ele.
           </p>
 
           <div className="grid sm:grid-cols-2 gap-x-8 gap-y-4 mt-5">

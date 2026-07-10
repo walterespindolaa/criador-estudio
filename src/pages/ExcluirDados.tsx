@@ -17,7 +17,7 @@ export default function ExcluirDados() {
 
       <article className="max-w-3xl mx-auto px-6 py-12 font-body">
         <h1 className="text-3xl font-display font-bold text-foreground mb-2">
-          Exclusão de dados — Cria Social Club
+          Exclusão de dados, Cria Social Club
         </h1>
         <p className="text-muted-foreground text-sm mb-10">
           Como excluir seus dados, incluindo os dados conectados do Instagram e do Google.

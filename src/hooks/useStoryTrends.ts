@@ -36,7 +36,7 @@ export function useStoryTrends() {
 export function storyTrendsToContext(trends: StoryTrend[], max = 10): string {
   return trends
     .slice(0, max)
-    .map((t) => `[${t.format}] ${t.title}${t.description ? ` — ${t.description}` : ""}`)
+    .map((t) => `[${t.format}] ${t.title}${t.description ? `, ${t.description}` : ""}`)
     .join("; ");
 }
 
@@ -50,7 +50,7 @@ export function useRefreshStoryTrends() {
     },
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["story-trends"] });
-      toast.success(`Banco de stories atualizado — ${res?.count ?? 0} tendências.`);
+      toast.success(`Banco de stories atualizado, ${res?.count ?? 0} tendências.`);
     },
     onError: (e) => {
       const msg = e instanceof Error ? e.message : "";

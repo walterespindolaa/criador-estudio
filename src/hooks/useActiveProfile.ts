@@ -7,7 +7,7 @@ import { useProfile, type Profile } from "@/hooks/useProfile";
 /**
  * Subset PÚBLICO do profile usado em telas de conteúdo (Dashboard, Tarefas,
  * Brandbook, Relatorios, Arquivos). NÃO inclui billing/gate
- * (subscription_status, plan, access_expires_at) — esses são da SESSÃO e
+ * (subscription_status, plan, access_expires_at), esses são da SESSÃO e
  * continuam vindo de useProfile() onde a tela faz gate.
  *
  * Storage fields são da CONTA ATIVA (a barra de cota em Arquivos reflete
@@ -40,7 +40,7 @@ export type UseActiveProfileResult = {
  *
  * NÃO usar pra:
  *   - auth/gate/tema da sessão (use useProfile direto)
- *   - billing/plan/role-de-admin (use useProfile — esses são da sessão)
+ *   - billing/plan/role-de-admin (use useProfile, esses são da sessão)
  */
 export function useActiveProfile(): UseActiveProfileResult {
   const { user } = useAuth();

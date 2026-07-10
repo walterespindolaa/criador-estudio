@@ -1,6 +1,6 @@
 /**
  * Fundo decorativo escolhível (rebranding CRIA).
- * Estilos config-driven — adicionar um estilo = adicionar uma entrada em BG_STYLES.
+ * Estilos config-driven, adicionar um estilo = adicionar uma entrada em BG_STYLES.
  * Renderizado atrás do conteúdo (o wrapper do layout fica com z-[1]).
  */
 export const BG_STYLES = [

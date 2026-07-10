@@ -20,25 +20,25 @@ const GROUPS: { group: string; items: TypeDef[] }[] = [
   {
     group: "Conteúdo do concorrente",
     items: [
-      { key: "posts", label: "Posts do feed", icon: LayoutGrid, desc: "Os posts que mais engajaram — legenda, curtidas, comentários e formato. Base pras ideias.", inputKind: "handle" },
-      { key: "reels", label: "Reels", icon: Play, desc: "Os reels dele — views, duração e o que performou.", inputKind: "handle" },
+      { key: "posts", label: "Posts do feed", icon: LayoutGrid, desc: "Os posts que mais engajaram, legenda, curtidas, comentários e formato. Base pras ideias.", inputKind: "handle" },
+      { key: "reels", label: "Reels", icon: Play, desc: "Os reels dele, views, duração e o que performou.", inputKind: "handle" },
       { key: "transcription", label: "Reels + transcrição", icon: FileText, desc: "Transcreve o áudio pra ler o ROTEIRO. Aceita o @ (reels recentes) OU o link de um/mais reels (separados por vírgula).", inputKind: "handle", cost: "~US$0,02/reel" },
-      { key: "stories", label: "Stories", icon: CircleDashed, desc: "Os stories recentes (somem em 24h) — o que ele faz no dia a dia.", inputKind: "handle" },
+      { key: "stories", label: "Stories", icon: CircleDashed, desc: "Os stories recentes (somem em 24h), o que ele faz no dia a dia.", inputKind: "handle" },
     ],
   },
   {
     group: "Público e mercado",
     items: [
-      { key: "profile", label: "Perfil (raio-x)", icon: User, desc: "Seguidores, bio, categoria e link. Só panorama — não gera ideias.", inputKind: "handle" },
+      { key: "profile", label: "Perfil (raio-x)", icon: User, desc: "Seguidores, bio, categoria e link. Só panorama, não gera ideias.", inputKind: "handle" },
       { key: "comments", label: "Comentários", icon: MessageCircle, desc: "Os comentários de UM post → as dúvidas do público viram pauta. Precisa da URL do post.", inputKind: "url" },
-      { key: "mentions", label: "Menções / UGC", icon: AtSign, desc: "Posts que marcam o @ — UGC, parceiros e oportunidades.", inputKind: "handle" },
+      { key: "mentions", label: "Menções / UGC", icon: AtSign, desc: "Posts que marcam o @, UGC, parceiros e oportunidades.", inputKind: "handle" },
       { key: "hashtag", label: "Hashtag", icon: Hash, desc: "O que está bombando numa hashtag do nicho.", inputKind: "hashtag" },
     ],
   },
   {
     group: "Estratégia",
     items: [
-      { key: "ads", label: "Anúncios (Meta)", icon: Megaphone, desc: "Os anúncios ATIVOS dele — a oferta e o ângulo que ele PAGA pra promover.", inputKind: "handle", cost: "~US$0,006/anúncio" },
+      { key: "ads", label: "Anúncios (Meta)", icon: Megaphone, desc: "Os anúncios ATIVOS dele, a oferta e o ângulo que ele PAGA pra promover.", inputKind: "handle", cost: "~US$0,006/anúncio" },
     ],
   },
 ];
@@ -87,7 +87,7 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
   // "Quantos posts" só serve pros itens que puxam N recentes; transcrição por link não usa (a qtd é o nº de links).
   const usesCount = (k: string) => !["profile", "comments", "stories"].includes(k);
   const needCount = selectedItems.some((i) => usesCount(i.key) && !(i.key === "transcription" && hasLinks));
-  // Rótulo do campo de quantidade — adapta ao tipo de análise selecionado.
+  // Rótulo do campo de quantidade, adapta ao tipo de análise selecionado.
   const countLabel = (() => {
     const uniq = Array.from(new Set(selectedItems.filter((i) => usesCount(i.key) && !(i.key === "transcription" && hasLinks)).map((i) => i.key)));
     if (uniq.length === 1) {
@@ -106,7 +106,7 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
 
   const doneScrapes = useMemo(() => scrapes.filter((s) => s.status === "done" && s.result_summary).slice(0, 8), [scrapes]);
   const matchesFilter = (i: CreativeIdea) => filter === "todas" || i.status === filter;
-  // Agrupa as ideias por análise (scrape_id) — cada pesquisa mostra as SUAS ideias, não um banco global.
+  // Agrupa as ideias por análise (scrape_id), cada pesquisa mostra as SUAS ideias, não um banco global.
   const ideasByScrape = useMemo(() => {
     const m: Record<string, CreativeIdea[]> = {};
     for (const idea of ideas) {
@@ -150,7 +150,7 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
       <div className="flex items-start gap-2 rounded-xl bg-primary/[0.04] border border-primary/15 px-4 py-3">
         <TrendingUp className="h-4 w-4 text-primary mt-0.5 shrink-0" />
         <p className="text-[13px] font-body text-foreground/80 leading-relaxed">
-          Escolha <strong>uma ou mais</strong> análises, informe o concorrente e rode. O CRIA lê os dados reais e transforma no que engajou em <strong>ideias prontas</strong> pro cliente — que você marca como "usar" e manda pro cronograma.
+          Escolha <strong>uma ou mais</strong> análises, informe o concorrente e rode. O CRIA lê os dados reais e transforma no que engajou em <strong>ideias prontas</strong> pro cliente, que você marca como "usar" e manda pro cronograma.
         </p>
       </div>
 
@@ -222,10 +222,10 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
                 </Field>
               )}
             </div>
-            {/* Links de reel individuais (transcrição) — @ OU links */}
+            {/* Links de reel individuais (transcrição), @ OU links */}
             {hasTranscription && (
               <div className="rounded-xl border border-border bg-muted/20 p-3">
-                <p className="text-[11px] font-body font-semibold text-foreground mb-1.5">Link(s) do(s) reel(s) — opcional (ou use o @ acima)</p>
+                <p className="text-[11px] font-body font-semibold text-foreground mb-1.5">Link(s) do(s) reel(s), opcional (ou use o @ acima)</p>
                 <div className="space-y-2">
                   {reelLinks.map((lnk, i) => (
                     <div key={i} className="flex items-center gap-2">
@@ -243,7 +243,7 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
                 <Button type="button" variant="outline" size="sm" className="h-8 mt-2 text-xs" onClick={addLink}>
                   <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar link
                 </Button>
-                {hasLinks && <p className="text-[10px] font-body text-secondary mt-1.5">{validLinks.length} reel(s) — transcreve exatamente esses.</p>}
+                {hasLinks && <p className="text-[10px] font-body text-secondary mt-1.5">{validLinks.length} reel(s), transcreve exatamente esses.</p>}
               </div>
             )}
             <div className="flex items-center gap-3">
@@ -276,7 +276,7 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
         </div>
       )}
 
-      {/* Ideias — hub de ação. As ideias em si aparecem dentro de cada análise acima. */}
+      {/* Ideias, hub de ação. As ideias em si aparecem dentro de cada análise acima. */}
       <div>
         <div className="flex items-center gap-2 mb-1.5 flex-wrap">
           <Sparkles className="h-4 w-4 text-primary" />
@@ -309,7 +309,7 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
           </div>
         ) : (
           <>
-            <p className="text-[12px] font-body text-muted-foreground mb-3">As ideias aparecem <strong>dentro de cada análise</strong> acima — cada pesquisa gera as suas. Marque como "Usar" e clique em "Criar posts na aba Posts".</p>
+            <p className="text-[12px] font-body text-muted-foreground mb-3">As ideias aparecem <strong>dentro de cada análise</strong> acima, cada pesquisa gera as suas. Marque como "Usar" e clique em "Criar posts na aba Posts".</p>
             {orphanIdeas.length > 0 && (
               <>
                 <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-2">Ideias sem análise vinculada</p>
@@ -408,7 +408,7 @@ export function SummaryCard({ summary, handle, defaultOpen = false, onDelete, id
             </div>
           </div>
         ) : kind === "ads" ? (
-          <ListWrap title={`${fmtNum(s.count)} anúncios ativos — a oferta que ele paga pra promover`}>
+          <ListWrap title={`${fmtNum(s.count)} anúncios ativos, a oferta que ele paga pra promover`}>
             {Array.isArray(s.top) && s.top.slice(0, 10).map((a: any, i: number) => (
               <div key={i} className="flex gap-2.5 rounded-lg border border-border/60 px-2.5 py-2">
                 {a.thumbnail && (
@@ -442,7 +442,7 @@ export function SummaryCard({ summary, handle, defaultOpen = false, onDelete, id
             ))}
           </ListWrap>
         ) : kind === "comments" ? (
-          <ListWrap title={`${fmtNum(s.count)} comentários — as dúvidas viram pauta`}>
+          <ListWrap title={`${fmtNum(s.count)} comentários, as dúvidas viram pauta`}>
             {Array.isArray(s.top) && s.top.slice(0, 12).map((c: any, i: number) => (
               <div key={i} className="flex items-start gap-2 rounded-lg border border-border/60 px-2.5 py-2">
                 <MessageCircle className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
@@ -457,7 +457,7 @@ export function SummaryCard({ summary, handle, defaultOpen = false, onDelete, id
               <Stat label="Posts lidos" value={fmtNum(s.count)} />
               <Stat label="Média curtidas" value={fmtNum(s.avg_likes)} />
               <Stat label="Média coment." value={fmtNum(s.avg_comments)} />
-              <Stat label="Formatos" value={Object.keys(s.formats || {}).length ? `${Object.keys(s.formats).length} tipos` : "—"} />
+              <Stat label="Formatos" value={Object.keys(s.formats || {}).length ? `${Object.keys(s.formats).length} tipos` : "-"} />
             </div>
             {Array.isArray(s.top) && s.top.length > 0 && (
               <ListWrap title="Top posts (o que mais engajou)">
@@ -517,7 +517,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 function fmtNum(n: unknown): string {
   const v = Number(n);
-  if (!Number.isFinite(v)) return "—";
+  if (!Number.isFinite(v)) return "-";
   if (v >= 1000000) return (v / 1000000).toFixed(1).replace(".0", "") + "M";
   if (v >= 1000) return (v / 1000).toFixed(1).replace(".0", "") + "k";
   return String(v);

@@ -33,7 +33,7 @@ export function CriaPostPublishButton({ caption, media }: { caption: string; med
       const file = await buildShareFile(imgUrl, "image");
       if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], text: caption || "" });
-        toast.success("Legenda copiada — é só colar no Instagram");
+        toast.success("Legenda copiada, é só colar no Instagram");
       } else { await shareText(); toast.info("Legenda copiada. Anexe a mídia no app."); }
     } catch { /* cancelado pelo usuário */ }
     finally { setLoading(false); }

@@ -68,7 +68,7 @@ export default function Termos() {
 
           <div>
             <h2 className="text-xl font-display font-semibold mb-3">
-              4. Inteligência Artificial — natureza orientativa
+              4. Inteligência Artificial, natureza orientativa
             </h2>
             <p className="text-muted-foreground leading-relaxed">
               O cria utiliza modelos de inteligência artificial para gerar
@@ -104,7 +104,7 @@ export default function Termos() {
             </p>
             <p className="text-muted-foreground leading-relaxed mt-2">
               Você concede ao cria apenas a licença técnica necessária para
-              operar o serviço — armazenar, processar e exibir seu conteúdo
+              operar o serviço, armazenar, processar e exibir seu conteúdo
               para você mesmo, dentro da plataforma.
             </p>
             <p className="text-muted-foreground leading-relaxed mt-2">
@@ -143,7 +143,7 @@ export default function Termos() {
               Código de Defesa do Consumidor (art. 49), você tem direito a
               arrependimento em até 7 dias da contratação, com reembolso
               integral. Após esse prazo, não realizamos reembolsos proporcionais
-              — o cancelamento simplesmente impede a próxima cobrança.
+             , o cancelamento simplesmente impede a próxima cobrança.
             </p>
           </div>
 

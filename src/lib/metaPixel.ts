@@ -1,4 +1,4 @@
-// Meta (Facebook) Pixel — client-side + espelho no CAPI server-side.
+// Meta (Facebook) Pixel, client-side + espelho no CAPI server-side.
 // O ID vem da env VITE_META_PIXEL_ID (configurar no Lovable). Sem ID, tudo vira no-op.
 // Cada track() também é enviado pro CAPI (edge meta-capi) com o mesmo event_id → o Meta deduplica.
 

@@ -1,7 +1,7 @@
 // Datas "de calendário" no fuso do Brasil (America/Sao_Paulo).
 //
 // Por que existe: `new Date().toISOString().split("T")[0]` devolve a data em UTC.
-// Como o Brasil é UTC-3, das 21h à meia-noite o "hoje" em UTC já é o dia seguinte —
+// Como o Brasil é UTC-3, das 21h à meia-noite o "hoje" em UTC já é o dia seguinte
 // o que fazia lembretes, cronograma e tarefas aparecerem no dia errado à noite.
 // Colunas como `scheduled_date`/`due_date` são DATE (dia de calendário local), então
 // a comparação tem que ser feita no fuso BR, não em UTC.

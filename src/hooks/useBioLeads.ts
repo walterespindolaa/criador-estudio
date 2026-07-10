@@ -13,7 +13,7 @@ export type BioLead = {
   created_at: string;
 };
 
-// types.ts não tem bio_leads — cast (padrão usePartner/useModules).
+// types.ts não tem bio_leads, cast (padrão usePartner/useModules).
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 

@@ -256,7 +256,7 @@ export function useGoogleDrive() {
     for (const f of files) {
       try {
         if (isVideoMime(f.mimeType)) {
-          // VÍDEO: SEMPRE fica no Drive (codec/tamanho variam — player do Drive transcodifica).
+          // VÍDEO: SEMPRE fica no Drive (codec/tamanho variam, player do Drive transcodifica).
           // Storage não é usado pra vídeo: HEVC/.mov não toca em <video> e estoura quota.
           const ok = await confirmVideoPublic();
           if (!ok) { failed++; continue; }
@@ -277,7 +277,7 @@ export function useGoogleDrive() {
             const errText = await permRes.text().catch(() => "");
             console.error(`[drive-import] permissions.create failed for ${f.name}:`, status, errText);
 
-            // Classifica o 403 — scope/auth NÃO é igual a policy de Workspace
+            // Classifica o 403, scope/auth NÃO é igual a policy de Workspace
             const isScopeError =
               (status === 401 || status === 403) &&
               /scope|insufficient[_ ]?authentication|access[_ ]?token[_ ]?scope|insufficientpermissions/i.test(errText);
@@ -286,7 +286,7 @@ export function useGoogleDrive() {
               /sharingratelimitexceeded|domainpolicy|cannotshare|domain/i.test(errText);
 
             if (isScopeError) {
-              // Token velho (drive.readonly) ainda em cache — derruba e força re-consent na próxima.
+              // Token velho (drive.readonly) ainda em cache, derruba e força re-consent na próxima.
               clearStoredToken();
               scopeIssue++;
               continue;

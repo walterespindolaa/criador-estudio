@@ -107,7 +107,7 @@ export function GuidedSection({
             </div>
             <div className="bg-amber-500/8 border border-amber-500/20 rounded-xl px-4 py-3 mb-3">
               <p className="text-xs font-body text-amber-700 leading-relaxed">
-                💡 <strong>Lembre-se:</strong> o guia gerado é um ponto de partida para destravar suas ideias e dar o primeiro passo. A sua essência, experiências e conhecimento são insubstituíveis — use o guia como bússola, não como roteiro fechado.
+                💡 <strong>Lembre-se:</strong> o guia gerado é um ponto de partida para destravar suas ideias e dar o primeiro passo. A sua essência, experiências e conhecimento são insubstituíveis, use o guia como bússola, não como roteiro fechado.
               </p>
             </div>
             <CopyButton text={chatPrompt} />

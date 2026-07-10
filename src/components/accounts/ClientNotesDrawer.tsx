@@ -12,7 +12,7 @@ import DOMPurify from "dompurify";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
-// Sanitiza HTML das notas (só formatação básica) — protege contra HTML/JS injetado.
+// Sanitiza HTML das notas (só formatação básica), protege contra HTML/JS injetado.
 const NOTE_SANITIZE = { ALLOWED_TAGS: ["b", "i", "u", "strong", "em", "br", "p", "div", "span", "ul", "ol", "li"], ALLOWED_ATTR: [] };
 const cleanNote = (html: string) => DOMPurify.sanitize(html, NOTE_SANITIZE);
 

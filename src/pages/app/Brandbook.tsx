@@ -123,7 +123,7 @@ RESPOSTAS DO CRIADOR:
 `,
   },
   "persona-brand": {
-    title: "Persona — Perguntas Guiadas",
+    title: "Persona, Perguntas Guiadas",
     questions: [
       { key: "quem-e", label: "Quem é a pessoa que te segue?", placeholder: "Ex: Mulher, 25-35 anos, mora em cidade grande, trabalha com CLT mas sonha em empreender." },
       { key: "dores", label: "Quais são as dores dela?", placeholder: "Ex: Sente que não tem estilo próprio, gasta mal com roupas, não se sente bonita no dia a dia." },
@@ -195,7 +195,7 @@ const Brandbook = () => {
   } = usePersonas();
   const { pillars } = usePillars();
   const { profile } = useProfile();
-  // Brandbook é da CONTA ATIVA — nome/nicho no PDF e no slug refletem ela.
+  // Brandbook é da CONTA ATIVA, nome/nicho no PDF e no slug refletem ela.
   const { profile: activeProfile } = useActiveProfile();
   const { exportPdf } = usePdfExport();
   const pdfRef = useRef<HTMLDivElement>(null);
@@ -661,12 +661,12 @@ const Brandbook = () => {
                 </div>
               )}
 
-              {/* Insights de audiência (compartilhados — persona-brand do moodboard) */}
+              {/* Insights de audiência (compartilhados, persona-brand do moodboard) */}
               <div className="bg-primary/5 border border-primary/15 rounded-xl px-4 py-3 mb-4">
                 <p className="text-sm font-body text-foreground/80 leading-relaxed">
                   💡 <strong className="text-foreground">Não sabe quem é a sua persona?</strong>{" "}
                   Preencha as informações abaixo com o que você sabe até agora e peça ajuda
-                  ao ChatGPT ou Claude — eles vão te ajudar a construir sua persona ideal
+                  ao ChatGPT ou Claude, eles vão te ajudar a construir sua persona ideal
                   com base nas suas respostas.
                 </p>
               </div>

@@ -1,5 +1,5 @@
 /**
- * Tour guiado do CRIA — registry config-driven.
+ * Tour guiado do CRIA, registry config-driven.
  * Adicionar um tour novo = adicionar um config aqui (ou num arquivo de área) e
  * marcar os alvos com data-tour="chave" na tela. Zero acoplamento com as páginas.
  */
@@ -21,7 +21,7 @@ export type TourConfig = {
   /** Rota exata que ativa o tour (pathname). */
   route: string;
   title: string;
-  /** Por que a tela existe / que problema resolve — mostrado no card de abertura. */
+  /** Por que a tela existe / que problema resolve, mostrado no card de abertura. */
   valueProp: string;
   benefits: string[];
   steps: TourStep[];
@@ -39,7 +39,26 @@ export function findTourById(id: string): TourConfig | undefined {
 
 /** Sequência do "tour completo" (modo treinamento) por área. */
 export const TRAINING_SEQUENCES: Record<"criador" | "gestor", string[]> = {
-  criador: ["dashboard", "ideias", "criando", "tarefas", "stories", "brandbook", "insights"],
+  criador: [
+    "dashboard",
+    "ideias",
+    "criando",
+    "tarefas",
+    "metas",
+    "stories",
+    "tendencias",
+    "feed",
+    "brandbook",
+    "linkinbio",
+    "media-kit",
+    "biblioteca",
+    "estudio",
+    "collabs",
+    "aprovacao",
+    "historico",
+    "insights",
+    "configuracoes",
+  ],
   gestor: [
     "gestor-dashboard",
     "gestor-clientes",

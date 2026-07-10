@@ -31,7 +31,7 @@ export default function Privacidade() {
               Blumenau, Santa Catarina, Brasil. Esta Política de Privacidade
               explica como coletamos, usamos, armazenamos e protegemos seus
               dados pessoais, em conformidade com a Lei Geral de Proteção de
-              Dados (LGPD — Lei nº 13.709/2018).
+              Dados (LGPD, Lei nº 13.709/2018).
             </p>
           </div>
 
@@ -50,7 +50,7 @@ export default function Privacidade() {
             </p>
             <p className="text-muted-foreground leading-relaxed mb-2">
               <strong className="text-foreground">Dados de pagamento:</strong>{" "}
-              processados exclusivamente pela Stripe — não armazenamos números
+              processados exclusivamente pela Stripe, não armazenamos números
               de cartão. Recebemos apenas identificadores não-sensíveis
               (stripe_customer_id, stripe_subscription_id).
             </p>
@@ -65,7 +65,7 @@ export default function Privacidade() {
               se você conectar sua conta profissional do Instagram, coletamos métricas
               (alcance, interações, salvos, visualizações), informações básicas do perfil
               (nome de usuário, número de seguidores) e dados das suas publicações (legenda,
-              tipo de mídia, miniatura, data). Acesso somente leitura — não publicamos nada por você.
+              tipo de mídia, miniatura, data). Acesso somente leitura, não publicamos nada por você.
             </p>
           </div>
 

@@ -39,7 +39,7 @@ const HOOKS_VIRAL = [
   { text: "3 coisas que eu faria diferente se começasse hoje", category: "storytelling" },
   { text: "Pare de [ação comum] se quiser [resultado]", category: "contraste" },
   { text: "A verdade que ninguém fala sobre [tema]", category: "polêmica" },
-  { text: "Eu gastei [tempo] pra aprender isso — te conto em 60s", category: "curiosidade" },
+  { text: "Eu gastei [tempo] pra aprender isso, te conto em 60s", category: "curiosidade" },
   { text: "Se você [dor do público], esse vídeo é pra você", category: "identificação" },
   { text: "O segredo que [referência] não te conta", category: "promessa" },
   { text: "Todo mundo fala pra fazer X, mas ninguém fala que...", category: "contraste" },
@@ -267,7 +267,7 @@ const Dashboard = () => {
   const dailyHook = HOOKS_VIRAL[dayOfYear % HOOKS_VIRAL.length];
 
   /* Rebranding fase 3: cada tile tem uma cor fixa da paleta CRIA
-     (laranja só em ação — os módulos ganham suas próprias cores) */
+     (laranja só em ação, os módulos ganham suas próprias cores) */
   const TILE_COLORS = ["#CE4A1D", "#D4508F", "#3E9152", "#2A4BDF", "#C99000", "#E2551F"];
   const stats = [
     { label: "Ideias", value: ideas.length, icon: Lightbulb, link: "/app/ideias" },
@@ -415,7 +415,7 @@ const Dashboard = () => {
                             isToday ? "text-foreground font-medium" : "text-muted-foreground"
                           )}
                         >
-                          {pilar?.name || "—"}
+                          {pilar?.name || "-"}
                         </span>
                       </div>
                     );

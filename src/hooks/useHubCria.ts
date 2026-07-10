@@ -72,7 +72,7 @@ export function useScrapes(crmClientId?: string) {
   });
 }
 
-// Todas as ideias do gestor (todos os clientes) — pro overview do HUB.
+// Todas as ideias do gestor (todos os clientes), pro overview do HUB.
 export function useAllCreativeIdeas() {
   return useQuery<CreativeIdea[]>({
     queryKey: ["hubcria-ideas-all"],
@@ -126,7 +126,7 @@ export function useRunScrape() {
       qc.invalidateQueries({ queryKey: ["hubcria-scrapes", key] });
       qc.invalidateQueries({ queryKey: ["hubcria-ideas", key] });
       qc.invalidateQueries({ queryKey: ["hubcria-ideas-all"] });
-      toast.success(`Análise pronta — ${res.ideas_count} ideias geradas.`);
+      toast.success(`Análise pronta, ${res.ideas_count} ideias geradas.`);
     },
     onError: (e) => {
       const m = e instanceof Error ? e.message : "";
@@ -175,7 +175,7 @@ export function useGeneratePlanFromIdeas() {
       qc.invalidateQueries({ queryKey: ["hubcria-ideas"] });
       qc.invalidateQueries({ queryKey: ["external-posts"] });
       qc.invalidateQueries({ queryKey: ["external-pending"] });
-      toast.success(`${n} posts criados na aba Posts — monte e envie pra aprovação do cliente.`);
+      toast.success(`${n} posts criados na aba Posts, monte e envie pra aprovação do cliente.`);
     },
     onError: (e) => {
       const m = e instanceof Error ? e.message : "";

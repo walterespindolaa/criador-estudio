@@ -89,7 +89,7 @@ export const RoteiroPdfTemplate = forwardRef<HTMLDivElement, RoteiroPdfProps>(
             </div>
           )}
 
-          {/* Scenes — vertical layout per block */}
+          {/* Scenes, vertical layout per block */}
           {filledSections.length > 0 && (
             <div style={{ marginBottom: 24 }}>
               <div style={{ display: "flex", marginBottom: 0 }}>
@@ -120,7 +120,7 @@ export const RoteiroPdfTemplate = forwardRef<HTMLDivElement, RoteiroPdfProps>(
                       wordBreak: "break-word",
                       whiteSpace: "pre-wrap",
                     }}>
-                      {sec.text || "—"}
+                      {sec.text || "-"}
                     </div>
                     {/* Vertical separator */}
                     <div style={{ width: 1, background: "#e5e5e5", flexShrink: 0 }} />
@@ -134,7 +134,7 @@ export const RoteiroPdfTemplate = forwardRef<HTMLDivElement, RoteiroPdfProps>(
                       wordBreak: "break-word",
                       whiteSpace: "pre-wrap",
                     }}>
-                      {sec.captacao || "—"}
+                      {sec.captacao || "-"}
                     </div>
                   </div>
                 </div>

@@ -286,7 +286,7 @@ const Ideias = () => {
               className={cn("px-3 py-1.5 rounded-full text-xs font-body font-semibold transition-all", mainTab === "ideias" ? "bg-card shadow-warm-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
               <Lightbulb className="h-3.5 w-3.5 mr-1 inline" /> Ideias
             </button>
-            <button type="button" onClick={() => setMainTab("salvos")}
+            <button data-tour="ideias-salvos" type="button" onClick={() => setMainTab("salvos")}
               className={cn("px-3 py-1.5 rounded-full text-xs font-body font-semibold transition-all", mainTab === "salvos" ? "bg-card shadow-warm-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
               <Bookmark className="h-3.5 w-3.5 mr-1 inline" /> Salvos
             </button>
@@ -297,7 +297,7 @@ const Ideias = () => {
                 {AI_LIMIT - aiUsed}/{AI_LIMIT} sugestões restantes
               </span>
             )}
-            <div className="flex items-center gap-0.5 bg-muted/50 rounded-full p-1">
+            <div data-tour="ideias-visualizacao" className="flex items-center gap-0.5 bg-muted/50 rounded-full p-1">
               <button
                 type="button"
                 onClick={() => setViewMode("list")}
@@ -321,7 +321,7 @@ const Ideias = () => {
                 <LayoutGrid className="h-3.5 w-3.5 sm:mr-1 inline" /> <span className="hidden sm:inline">Galeria</span>
               </button>
             </div>
-            <Button variant="hero" onClick={openNew} className="shrink-0" size="sm">
+            <Button data-tour="ideias-nova" variant="hero" onClick={openNew} className="shrink-0" size="sm">
               <Plus className="h-4 w-4 mr-1" />
               <span className="hidden sm:inline">Nova Ideia</span>
               <span className="sm:hidden">Nova</span>

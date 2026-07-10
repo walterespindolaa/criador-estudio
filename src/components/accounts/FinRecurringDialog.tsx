@@ -51,7 +51,7 @@ export function FinRecurringDialog({ open, onOpenChange, ctx, defaultCats, custo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[88vh] overflow-y-auto rounded-2xl">
         <DialogHeader>
-          <DialogTitle className="font-display flex items-center gap-2"><Repeat className="h-4 w-4" /> Recorrentes — {ctx === "pj" ? "Empresa" : "Pessoal"}</DialogTitle>
+          <DialogTitle className="font-display flex items-center gap-2"><Repeat className="h-4 w-4" /> Recorrentes, {ctx === "pj" ? "Empresa" : "Pessoal"}</DialogTitle>
           <DialogDescription className="font-body text-sm">Custos e receitas fixos que se repetem todo mês. Você lança o mês com um clique no Caixa.</DialogDescription>
         </DialogHeader>
 

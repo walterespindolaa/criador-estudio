@@ -57,7 +57,7 @@ export function VideoPublicConfirmProvider({ children }: { children: ReactNode }
           <AlertDialogHeader>
             <AlertDialogTitle className="font-display">Tornar vídeo acessível?</AlertDialogTitle>
             <AlertDialogDescription className="font-body">
-              Pra esse vídeo aparecer dentro do cria, ele vai ficar com link público no Google Drive — qualquer pessoa com o link consegue ver. Pode ser?
+              Pra esse vídeo aparecer dentro do cria, ele vai ficar com link público no Google Drive, qualquer pessoa com o link consegue ver. Pode ser?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex items-start gap-2 pt-1">

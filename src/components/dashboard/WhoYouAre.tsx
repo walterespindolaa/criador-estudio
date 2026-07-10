@@ -39,7 +39,7 @@ export function WhoYouAre() {
             </div>
           )}
           {persona && (
-            <div className="flex gap-2"><span className="min-w-[58px] shrink-0 text-xs text-muted-foreground">Para quem</span><span>{persona.name}{persona.how_you_help ? ` — ${persona.how_you_help}` : ""}</span></div>
+            <div className="flex gap-2"><span className="min-w-[58px] shrink-0 text-xs text-muted-foreground">Para quem</span><span>{persona.name}{persona.how_you_help ? `, ${persona.how_you_help}` : ""}</span></div>
           )}
         </div>
       )}

@@ -235,7 +235,7 @@ function LeadDialog({ lead, onClose, onCreate, onUpdate, onDelete, saving }: {
           <L label="Potencial">
             <select value={f.closing_potential ?? ""} onChange={(e) => set({ closing_potential: (e.target.value || null) as CrmLeadInput["closing_potential"] })}
               className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
-              <option value="">—</option><option value="alto">🟢 Alto</option><option value="medio">🟡 Médio</option><option value="baixo">🔴 Baixo</option>
+              <option value="">-</option><option value="alto">🟢 Alto</option><option value="medio">🟡 Médio</option><option value="baixo">🔴 Baixo</option>
             </select>
           </L>
           <L label="Próxima ação (data)"><Input type="date" value={f.next_interaction_date ?? ""} onChange={(e) => set({ next_interaction_date: e.target.value || null })} className="rounded-xl" /></L>

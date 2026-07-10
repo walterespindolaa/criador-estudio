@@ -693,7 +693,7 @@ const AdminInner = () => {
 
                 {(() => {
                   const msg = result.creator
-                    ? `Oi! Criei seus acessos no CRIA. 🎉\n\n🔧 Painel de gestão (social mídia)\nE-mail: ${result.email}\n1º acesso: ${result.inviteLink}\n\n✨ Conta de criadora (${result.creator.email})\n1º acesso: ${result.creator.inviteLink}\n\nÉ só abrir cada link, criar sua senha e começar — cada um leva pra uma área. Qualquer dúvida, me chama!`
+                    ? `Oi! Criei seus acessos no CRIA. 🎉\n\n🔧 Painel de gestão (social mídia)\nE-mail: ${result.email}\n1º acesso: ${result.inviteLink}\n\n✨ Conta de criadora (${result.creator.email})\n1º acesso: ${result.creator.inviteLink}\n\nÉ só abrir cada link, criar sua senha e começar, cada um leva pra uma área. Qualquer dúvida, me chama!`
                     : `Oi! Criei seu acesso no CRIA. 🎉\n\nE-mail: ${result.email}\n1º acesso: ${result.inviteLink}\n\nÉ só abrir o link, criar sua senha e pronto. Qualquer dúvida, me chama!`;
                   return (
                     <div className="rounded-xl border border-border bg-card px-3 py-2.5 min-w-0 mt-1">
@@ -742,7 +742,7 @@ function TrendBankAdminCard() {
         <div>
           <p className="font-display font-bold text-foreground text-sm">Banco de Tendências</p>
           <p className="text-xs text-muted-foreground font-body">
-            {last ? `Pesquisa na web · atualizado em ${last.toLocaleDateString("pt-BR")} · vale pra todas as contas` : "Nunca atualizado — gere a primeira leva"}
+            {last ? `Pesquisa na web · atualizado em ${last.toLocaleDateString("pt-BR")} · vale pra todas as contas` : "Nunca atualizado, gere a primeira leva"}
           </p>
         </div>
       </div>
@@ -764,7 +764,7 @@ function StoryBankAdminCard() {
         <div>
           <p className="font-display font-bold text-foreground text-sm">Banco de Stories</p>
           <p className="text-xs text-muted-foreground font-body">
-            {last ? `Pesquisa na web · atualizado em ${last.toLocaleDateString("pt-BR")} · vale pra todas as contas` : "Nunca atualizado — gere a primeira leva"}
+            {last ? `Pesquisa na web · atualizado em ${last.toLocaleDateString("pt-BR")} · vale pra todas as contas` : "Nunca atualizado, gere a primeira leva"}
           </p>
         </div>
       </div>
@@ -819,7 +819,7 @@ function AdminUserRow({ user, email, onRoleChange, onPlanChange, onAction, onSel
           </div>
           <div className="min-w-0">
             <p className="font-body font-semibold text-foreground text-sm truncate flex items-center gap-1.5">
-              <span className="truncate">{user.name || "—"}</span>
+              <span className="truncate">{user.name || "-"}</span>
               {(user as { account_type?: string }).account_type === "manager"
                 ? <span className="shrink-0 text-[9px] font-body px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">Gestor</span>
                 : <span className="shrink-0 text-[9px] font-body px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">PF</span>}
@@ -834,7 +834,7 @@ function AdminUserRow({ user, email, onRoleChange, onPlanChange, onAction, onSel
         </div>
       </td>
       <td className="px-4 py-3 hidden md:table-cell">
-        <span className="text-xs font-body text-muted-foreground">{user.niche ?? "—"}</span>
+        <span className="text-xs font-body text-muted-foreground">{user.niche ?? "-"}</span>
       </td>
       <td className="px-4 py-3">
         <span
@@ -858,7 +858,7 @@ function AdminUserRow({ user, email, onRoleChange, onPlanChange, onAction, onSel
       </td>
       <td className="px-4 py-3 hidden lg:table-cell">
         <span className="text-xs font-body text-muted-foreground">
-          {created ? formatDistanceToNow(created, { locale: ptBR, addSuffix: true }) : "—"}
+          {created ? formatDistanceToNow(created, { locale: ptBR, addSuffix: true }) : "-"}
         </span>
       </td>
       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>

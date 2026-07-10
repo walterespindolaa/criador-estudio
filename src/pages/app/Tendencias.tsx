@@ -20,7 +20,7 @@ export default function Tendencias() {
   const { data: trends = [], isLoading } = useTrends();
 
   const gerarIdeia = (t: Trend) => {
-    openCria(`Quero ideias de conteúdo pra minha marca sobre esta tendência: "${t.title}"${t.description ? ` — ${t.description}` : ""}. Me dá 3 ideias prontas (gancho + formato), no meu tom e nicho, com uma legenda curta em cada.`);
+    openCria(`Quero ideias de conteúdo pra minha marca sobre esta tendência: "${t.title}"${t.description ? `, ${t.description}` : ""}. Me dá 3 ideias prontas (gancho + formato), no meu tom e nicho, com uma legenda curta em cada.`);
   };
 
   const lastUpdated = trends[0]?.created_at ? new Date(trends[0].created_at) : null;
@@ -63,7 +63,7 @@ export default function Tendencias() {
                     <button onClick={() => gerarIdeia(t)} className="text-[12px] font-medium text-primary flex items-center gap-1 hover:underline">
                       <Wand2 className="h-3.5 w-3.5" /> Gerar ideia
                     </button>
-                    <CopyButton text={`${t.title}${t.description ? ` — ${t.description}` : ""}`} className="ml-auto" />
+                    <CopyButton text={`${t.title}${t.description ? `, ${t.description}` : ""}`} className="ml-auto" />
                   </div>
                 </div>
               );

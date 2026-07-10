@@ -148,7 +148,7 @@ export default function Contas() {
             <div className="mt-3 h-2 rounded-full bg-muted overflow-hidden">
               <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${seatPct}%` }} />
             </div>
-            {seatsFree <= 0 && <p className="text-[11px] font-body text-muted-foreground mt-2">Assentos esgotados — expanda o plano ou pause um cliente pra liberar assento.</p>}
+            {seatsFree <= 0 && <p className="text-[11px] font-body text-muted-foreground mt-2">Assentos esgotados, expanda o plano ou pause um cliente pra liberar assento.</p>}
             <AgencyClients seatsFree={seatsFree} />
           </>
         ) : (
@@ -157,7 +157,7 @@ export default function Contas() {
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Users className="h-5 w-5 text-primary" /></div>
               <div>
                 <p className="text-sm font-display font-semibold text-foreground">Plano de Agência</p>
-                <p className="text-xs font-body text-muted-foreground">Assine assentos e gerencie vários clientes — eles entram sem pagar nada, por sua conta.</p>
+                <p className="text-xs font-body text-muted-foreground">Assine assentos e gerencie vários clientes, eles entram sem pagar nada, por sua conta.</p>
               </div>
             </div>
             <Button size="sm" onClick={() => setExpandOpen(true)}>Assinar assentos</Button>
@@ -199,7 +199,7 @@ export default function Contas() {
             <ol className="space-y-1 text-[12px] font-body text-foreground/80 list-decimal list-inside">
               <li>O cliente recebe um e-mail pra criar a senha (conta Studio completa, grátis pra ele).</li>
               <li>Você abre a ficha dele em <strong>Clientes</strong> e monta posts, cronograma e relatório.</li>
-              <li>Ele aprova o conteúdo por link (ou dentro do Cria) — acompanhe em <strong>Acompanhamento de Aprovações</strong>.</li>
+              <li>Ele aprova o conteúdo por link (ou dentro do Cria), acompanhe em <strong>Acompanhamento de Aprovações</strong>.</li>
               <li>Tudo com a sua cara: relatórios e acesso white-label.</li>
             </ol>
           </div>

@@ -121,7 +121,7 @@ export default function CronogramaPublica() {
               </p>
               <span style={{ fontSize: 11, fontWeight: 800, color: onAccent, background: accent, padding: "3px 10px", borderRadius: 999 }}>{selectedCount} marcadas</span>
             </div>
-            <p style={{ fontSize: 12, color: "#857F9C", margin: "0 0 12px" }}>Marque as que você quer trabalhar — eu monto o conteúdo em cima delas.</p>
+            <p style={{ fontSize: 12, color: "#857F9C", margin: "0 0 12px" }}>Marque as que você quer trabalhar, eu monto o conteúdo em cima delas.</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
               {datas.map((d) => (
                 <button

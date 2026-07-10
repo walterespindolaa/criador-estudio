@@ -39,7 +39,7 @@ export function PublishButton({ caption, mediaUrl, mediaType }: PublishButtonPro
   const handlePublish = async () => {
     if (!mobile) {
       await copyCaption();
-      toast.info("Publicação direta só pelo app do celular. Legenda copiada — abra o CRIA no celular.");
+      toast.info("Publicação direta só pelo app do celular. Legenda copiada, abra o CRIA no celular.");
       return;
     }
     if (origin === "drive") { setDriveWarnOpen(true); return; }
@@ -55,7 +55,7 @@ export function PublishButton({ caption, mediaUrl, mediaType }: PublishButtonPro
       if (!file) file = await buildShareFile(fileUrl, mediaType);
       if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], text: caption || "" });
-        toast.success("Legenda copiada — é só colar no app");
+        toast.success("Legenda copiada, é só colar no app");
       } else {
         await openAppFallback();
         toast.info("Legenda copiada. Anexe a mídia no app.");

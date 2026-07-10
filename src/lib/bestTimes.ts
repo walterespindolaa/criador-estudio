@@ -1,4 +1,4 @@
-// Melhor horário pra postar — heurística por plataforma + nicho (padrão Brasil).
+// Melhor horário pra postar, heurística por plataforma + nicho (padrão Brasil).
 // Quando a integração com o Instagram (insights) for aprovada, dá pra trocar
 // esta heurística por dados reais de quando a audiência da pessoa está online.
 

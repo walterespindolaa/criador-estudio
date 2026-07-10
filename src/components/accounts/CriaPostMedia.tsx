@@ -108,7 +108,7 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
     <div className="space-y-3">
       {approved && (
         <div className="rounded-2xl border border-green-200 bg-green-50 p-3 space-y-2">
-          <p className="text-xs font-body font-bold text-green-800">Aprovado pelo cliente — pronto pra publicar.</p>
+          <p className="text-xs font-body font-bold text-green-800">Aprovado pelo cliente, pronto pra publicar.</p>
           <CriaPostPublishButton caption={caption ?? ""} media={ordered} />
         </div>
       )}
@@ -131,7 +131,7 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
             <Input value={driveUrl} onChange={(e) => setDriveUrl(e.target.value)} placeholder="Cole o link do Google Drive" className="h-9 rounded-xl" />
             <Button type="button" size="sm" onClick={onDrive} disabled={addDriveLink.isPending}>Adicionar</Button>
           </div>
-          <p className="text-[11px] font-body text-muted-foreground mt-1.5">Deixe o arquivo como <strong>"Qualquer pessoa com o link"</strong> no Drive — senão a prévia não aparece.</p>
+          <p className="text-[11px] font-body text-muted-foreground mt-1.5">Deixe o arquivo como <strong>"Qualquer pessoa com o link"</strong> no Drive, senão a prévia não aparece.</p>
         </div>
       )}
 

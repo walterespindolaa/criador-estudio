@@ -17,7 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const brl = (v?: number | null) =>
-  v == null ? "—" : `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+  v == null ? "-" : `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 const fmtDate = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 const STATUS_DOT: Record<CollabStatus, string> = {
   lead: "#9b97ad", negociando: "#d97706", fechado: "#8B5CF6", entregue: "#16a34a", pago: "#9b97ad",
@@ -52,7 +52,7 @@ export default function Collabs() {
       <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
         <div className="md:hidden">
           <h1 className="text-2xl font-display font-extrabold text-foreground tracking-tight">Collabs</h1>
-          <p className="text-sm text-muted-foreground font-body mt-1">Suas parcerias com marcas — do primeiro contato ao pagamento.</p>
+          <p className="text-sm text-muted-foreground font-body mt-1">Suas parcerias com marcas, do primeiro contato ao pagamento.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" onClick={() => setKitOpen(true)} className="rounded-xl gap-2"><FileText className="h-4 w-4" />Mídia Kit</Button>

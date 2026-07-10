@@ -82,7 +82,7 @@ export type DeliverableInput = {
   sort_order?: number;
 };
 
-// types.ts não tem collabs/collab_deliverables — cast (padrão useBioLeads/usePartner).
+// types.ts não tem collabs/collab_deliverables, cast (padrão useBioLeads/usePartner).
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 
@@ -251,7 +251,7 @@ export function collabReminders(list: CollabWithDeliverables[]): CollabReminder[
 
     if (c.total > 0 && pending === 0 && c.status !== "pago") {
       out.push({ id: c.id + "-obj", kind: "objetivo", collab: c,
-        title: `${c.brand} — objetivo atingido`,
+        title: `${c.brand}, objetivo atingido`,
         meta: `${c.done}/${c.total} publicações feitas · hora de enviar o relatório e cobrar` });
       continue;
     }
@@ -259,11 +259,11 @@ export function collabReminders(list: CollabWithDeliverables[]): CollabReminder[
       const dd = daysUntil(c.deadline);
       if (dd < 0) {
         out.push({ id: c.id + "-late", kind: "atrasado", collab: c,
-          title: `${c.brand} — ${pending} ${pending === 1 ? "entrega atrasada" : "entregas atrasadas"}`,
+          title: `${c.brand}, ${pending} ${pending === 1 ? "entrega atrasada" : "entregas atrasadas"}`,
           meta: `Venceu em ${formatBR(c.deadline)} · ${c.done}/${c.total} feitas` });
       } else if (dd <= 5) {
         out.push({ id: c.id + "-soon", kind: "pendente", collab: c,
-          title: `${c.brand} — faltam ${pending} ${pending === 1 ? "publicação" : "publicações"}`,
+          title: `${c.brand}, faltam ${pending} ${pending === 1 ? "publicação" : "publicações"}`,
           meta: `Prazo ${dd === 0 ? "hoje" : `em ${dd} ${dd === 1 ? "dia" : "dias"}`} (${formatBR(c.deadline)}) · ${c.done}/${c.total} feitas` });
       }
     }

@@ -45,7 +45,7 @@ export function AdminFaturamento() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground font-body">Dados ao vivo do Stripe — só assinaturas pagas.</p>
+        <p className="text-sm text-muted-foreground font-body">Dados ao vivo do Stripe, só assinaturas pagas.</p>
         <button onClick={() => refetch()} className="shrink-0 inline-flex items-center gap-1.5 text-xs font-body font-medium rounded-lg border border-border px-3 py-1.5 hover:bg-muted transition-colors">
           <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} /> Atualizar
         </button>

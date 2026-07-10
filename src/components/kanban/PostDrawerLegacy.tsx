@@ -86,7 +86,7 @@ const FALLBACK_HOOKS = [
   { text: "3 coisas que eu faria diferente se começasse hoje", category: "identificação" },
   { text: "A verdade que ninguém fala sobre [tema]", category: "polêmica" },
   { text: "Pare de [ação comum] se quiser [resultado]", category: "contraste" },
-  { text: "Eu gastei [tempo] pra aprender isso — te conto em 60s", category: "curiosidade" },
+  { text: "Eu gastei [tempo] pra aprender isso, te conto em 60s", category: "curiosidade" },
   { text: "Se você [dor do público], esse vídeo é pra você", category: "identificação" },
   { text: "O segredo que [referência] não te conta", category: "promessa" },
 ];
@@ -499,7 +499,7 @@ export function PostDrawerLegacy({ open, onOpenChange, post, pillars, userId, on
                 onScheduledTimeChange={setScheduledTime}
               />
 
-              {/* Google Drive media — only for formats without dynamic sections */}
+              {/* Google Drive media, only for formats without dynamic sections */}
               {!getFormatStructure(format).hasDynamicSections && (
               <div className="space-y-2">
                 <Label className="font-body text-sm">Mídia</Label>

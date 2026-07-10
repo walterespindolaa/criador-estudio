@@ -187,7 +187,7 @@ export function AdminReferrals() {
                 return (
                   <tr key={r.id} className={cn("border-b border-border/40 last:border-0", r.status === "payable" && "bg-emerald-50/30 dark:bg-emerald-500/5")}>
                     <td className="px-4 py-3">
-                      <p className="font-body font-semibold text-foreground truncate max-w-[160px]">{r.partner_name || "—"}</p>
+                      <p className="font-body font-semibold text-foreground truncate max-w-[160px]">{r.partner_name || "-"}</p>
                       {r.partner_pix && (
                         <div className="flex items-center gap-1 mt-0.5 min-w-0">
                           <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[120px]">{r.partner_pix}</span>
@@ -196,7 +196,7 @@ export function AdminReferrals() {
                       )}
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell">
-                      <span className="text-xs text-muted-foreground font-body truncate block max-w-[180px]">{r.referred_email || "—"}</span>
+                      <span className="text-xs text-muted-foreground font-body truncate block max-w-[180px]">{r.referred_email || "-"}</span>
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground font-body">{formatBRL(r.gross_amount_cents)}</td>
                     <td className="px-4 py-3 text-sm font-display font-bold text-foreground">{formatBRL(r.net_amount_cents)}</td>
@@ -219,7 +219,7 @@ export function AdminReferrals() {
                           Comprovante
                         </a>
                       ) : (
-                        <span className="text-[10px] text-muted-foreground font-body">—</span>
+                        <span className="text-[10px] text-muted-foreground font-body">-</span>
                       )}
                     </td>
                   </tr>

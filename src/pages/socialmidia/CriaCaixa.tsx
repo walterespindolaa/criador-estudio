@@ -127,7 +127,7 @@ function CaixaInner() {
   const markReceived = async (c: { id: string; name: string; monthly_value: number | null }) => {
     try {
       await createRec.mutateAsync({
-        context: "pj", type: "entrada", description: `Mensalidade — ${c.name}`,
+        context: "pj", type: "entrada", description: `Mensalidade, ${c.name}`,
         amount: Number(c.monthly_value) || 0, status: "pago", crm_client_id: c.id, category: "Mensalidade", date: monthDate,
       });
       toast.success("Recebimento registrado!");
@@ -189,7 +189,7 @@ function CaixaInner() {
   return (
     <div>
       <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
-        <ManagerSectionTitle t="Cria Caixa" s="O financeiro da sua operação — empresa e pessoal, separados." />
+        <ManagerSectionTitle t="Cria Caixa" s="O financeiro da sua operação, empresa e pessoal, separados." />
         <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto scrollbar-none justify-start sm:justify-end">
           {isPj && <Button variant="outline" size="sm" onClick={() => setTransferOpen(true)} className="shrink-0"><ArrowLeftRight className="h-3.5 w-3.5 mr-1.5" /> Transferir p/ PF</Button>}
           <Button variant="outline" size="sm" onClick={() => setRecurringOpen(true)} className="shrink-0"><Repeat className="h-3.5 w-3.5 mr-1.5" /> Recorrentes</Button>
@@ -468,7 +468,7 @@ function RecordDialog({ record, context, clients, defaultDate, defaultCats, cust
               ) : (
                 <select value={f.category ?? ""} onChange={(e) => { if (e.target.value === "__add__") { setAddingCat(true); return; } set({ category: e.target.value, subcategory: "" }); }}
                   className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
-                  <option value="">— sem categoria —</option>
+                  <option value="">sem categoria</option>
                   {cats.map((c) => <option key={c} value={c}>{c}</option>)}
                   <option value="__add__">＋ Adicionar categoria…</option>
                 </select>
@@ -491,7 +491,7 @@ function RecordDialog({ record, context, clients, defaultDate, defaultCats, cust
               ) : (
                 <select value={f.subcategory ?? ""} onChange={(e) => { if (e.target.value === "__add__") { setAddingSub(true); return; } set({ subcategory: e.target.value }); }}
                   className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
-                  <option value="">— sem subcategoria —</option>
+                  <option value="">sem subcategoria</option>
                   {subs.map((s) => <option key={s} value={s}>{s}</option>)}
                   <option value="__add__">＋ Adicionar subcategoria…</option>
                 </select>
@@ -501,7 +501,7 @@ function RecordDialog({ record, context, clients, defaultDate, defaultCats, cust
           {context === "pj" && (
             <div className="space-y-1.5"><Label className="text-xs">Cliente (opcional)</Label>
               <select value={f.crm_client_id ?? ""} onChange={(e) => set({ crm_client_id: e.target.value || null })} className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
-                <option value="">—</option>{clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                <option value="">-</option>{clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
           )}

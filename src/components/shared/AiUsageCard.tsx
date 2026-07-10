@@ -10,7 +10,7 @@ export function AiUsageCard({ className = "" }: { className?: string }) {
   const { used, quota, remaining, pct, isLoading } = useAiUsage();
 
   if (isLoading) return null;
-  if (quota === 0) return null; // sem cota definida (ex.: admin ilimitado) — não mostra
+  if (quota === 0) return null; // sem cota definida (ex.: admin ilimitado), não mostra
 
   const nearLimit = pct >= 80;
   const maxed = remaining === 0;

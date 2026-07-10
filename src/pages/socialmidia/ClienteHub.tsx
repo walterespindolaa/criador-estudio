@@ -31,9 +31,9 @@ const FLOW_STEPS = [
   { key: "relatorio", n: 4, label: "Resultado" },
 ];
 const FLOW_EXPLAIN: Record<string, string> = {
-  criativo: "De onde vem: você analisa concorrentes (HUB/Apify) e recebe ideias prontas. Pra onde vai: marque as boas como “Usar” e clique em “Criar posts” — elas viram posts na aba Posts.",
+  criativo: "De onde vem: você analisa concorrentes (HUB/Apify) e recebe ideias prontas. Pra onde vai: marque as boas como “Usar” e clique em “Criar posts”, elas viram posts na aba Posts.",
   posts: "De onde vem: as ideias que você aprovou no Criativo (ou posts criados na mão). Aqui você monta cada post e manda o cliente aprovar por link: Aguardando cliente → Ajuste solicitado → Aprovado.",
-  cronograma: "É o calendário do mês pro cliente: datas comemorativas + link público com a visão geral do que vai sair. Serve pra alinhar o plano — a aprovação post a post acontece na aba Posts.",
+  cronograma: "É o calendário do mês pro cliente: datas comemorativas + link público com a visão geral do que vai sair. Serve pra alinhar o plano, a aprovação post a post acontece na aba Posts.",
   relatorio: "O relatório white-label com o resultado do que foi publicado no mês.",
 };
 const initial = (n?: string | null) => (n ? n.trim().charAt(0).toUpperCase() : "?");
@@ -120,10 +120,10 @@ export default function ClienteHub() {
       {activeTab === "visao-geral" && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <Info label="Segmento" value={client.segment || "—"} />
-            <Info label="Contato" value={client.email || client.phone || "—"} />
-            <Info label="Mensalidade" value={client.monthly_value ? brl(client.monthly_value) : "—"} />
-            <Info label="Renovação" value={client.renewal_date ? new Date(client.renewal_date).toLocaleDateString("pt-BR") : "—"} />
+            <Info label="Segmento" value={client.segment || "-"} />
+            <Info label="Contato" value={client.email || client.phone || "-"} />
+            <Info label="Mensalidade" value={client.monthly_value ? brl(client.monthly_value) : "-"} />
+            <Info label="Renovação" value={client.renewal_date ? new Date(client.renewal_date).toLocaleDateString("pt-BR") : "-"} />
           </div>
           {client.notes && (
             <div className="bg-card border border-border rounded-2xl p-4">
@@ -184,7 +184,7 @@ function FinanceTab({ clientId, clientName }: { clientId: string; clientName: st
     if (!desc.trim() || !cents || cents <= 0) { toast.error("Preencha descrição e valor."); return; }
     await create.mutateAsync({ crm_client_id: clientId, context: "pj", type, description: desc.trim(), amount: cents, status: "pendente", date: new Date().toISOString().slice(0, 10) });
     setDesc(""); setValor("");
-    toast.success("Lançamento criado — aparece no Cria Caixa.");
+    toast.success("Lançamento criado, aparece no Cria Caixa.");
   };
 
   return (

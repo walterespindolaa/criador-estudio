@@ -1,5 +1,5 @@
 /**
- * TourOverlay — spotlight + tooltip do tour guiado.
+ * TourOverlay, spotlight + tooltip do tour guiado.
  * - step -1: card de abertura centrado (valueProp + benefícios)
  * - steps: recorte no elemento-alvo (box-shadow gigante) + card "passo X de N"
  * - Mobile: o card vira bottom-sheet; desktop: posiciona perto do alvo
@@ -35,7 +35,7 @@ export function TourOverlay({
     setRect({ top: r.top - 6, left: r.left - 6, width: r.width + 12, height: r.height + 12 });
   }, []);
 
-  // Encontra o alvo do passo e mede IMEDIATAMENTE — o spotlight desliza da posição
+  // Encontra o alvo do passo e mede IMEDIATAMENTE, o spotlight desliza da posição
   // anterior pra nova (transição CSS) e o listener de scroll o mantém colado ao alvo
   // durante o smooth-scroll. Zero espera fixa = zero delay visual.
   useEffect(() => {
@@ -54,7 +54,7 @@ export function TourOverlay({
       const el = document.querySelector(current.target);
       if (el) attach(el);
       else if (tries++ < 40) window.setTimeout(find, 50); // páginas lazy montando
-      else onNext(); // alvo não existe nesta condição (plano/estado) — pula o passo
+      else onNext(); // alvo não existe nesta condição (plano/estado), pula o passo
     };
     find();
     return () => { cancelled = true; };

@@ -1,5 +1,5 @@
 /**
- * TourProvider — cérebro do tour guiado.
+ * TourProvider, cérebro do tour guiado.
  * - Auto-start na primeira visita de cada tela (persistido; nunca repete sozinho)
  * - startTour manual via botão "?" (HelpButton)
  * - step -1 = card de abertura (valueProp + benefícios); 0..N-1 = passos com spotlight
@@ -22,6 +22,8 @@ type TourContextValue = {
   step: number;
   hasTourForRoute: (pathname: string) => boolean;
   startTour: (routeOrId?: string) => void;
+  /** Inicia um tour uma única vez (pra tours de modal, ex: editor de post). */
+  startTourOnce: (id: string) => void;
   /** Tour completo da área atual (criador ou gestor), tela por tela. */
   startTraining: () => void;
   next: () => void;
@@ -127,6 +129,15 @@ export function TourProvider({ children }: { children: ReactNode }) {
     [location.pathname, begin],
   );
 
+  const startTourOnce = useCallback(
+    (id: string) => {
+      if (!seenLoaded || active || seenRef.current.has(id)) return;
+      const tour = findTourById(id);
+      if (tour) begin(tour);
+    },
+    [seenLoaded, active, begin],
+  );
+
   const startTraining = useCallback(() => {
     const area = areaForPath(location.pathname);
     const ids = [...TRAINING_SEQUENCES[area]];
@@ -155,7 +166,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
   const hasTourForRoute = useCallback((p: string) => Boolean(findTourByRoute(p)), []);
 
   return (
-    <TourContext.Provider value={{ active, step, hasTourForRoute, startTour, startTraining, next, prev, skip }}>
+    <TourContext.Provider value={{ active, step, hasTourForRoute, startTour, startTourOnce, startTraining, next, prev, skip }}>
       {children}
       {active && <TourOverlay tour={active} step={step} onNext={next} onPrev={prev} onSkip={skip} />}
     </TourContext.Provider>

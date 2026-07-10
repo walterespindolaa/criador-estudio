@@ -256,7 +256,7 @@ export default function Assinar() {
           <p className="text-xs font-body text-primary mt-2">
             Código da {partnerInfo.name} aplicado
             {partnerInfo.discountPct
-              ? ` — ${partnerInfo.discountPct}% off ${
+              ? `, ${partnerInfo.discountPct}% off ${
                   partnerInfo.durationMonths && partnerInfo.durationMonths > 1
                     ? `por ${partnerInfo.durationMonths} meses`
                     : "na 1ª fatura"

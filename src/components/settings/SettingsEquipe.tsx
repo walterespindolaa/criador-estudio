@@ -70,7 +70,7 @@ export function SettingsEquipe() {
       <div>
         <h3 className="font-display font-bold text-foreground mb-1">Convidar social media</h3>
         <p className="text-sm text-muted-foreground font-body mb-3">
-          Dê acesso a quem gerencia seu conteúdo. A pessoa entra, vê sua conta e pode mexer nos cards — mas nunca no seu plano, billing ou dados pessoais.
+          Dê acesso a quem gerencia seu conteúdo. A pessoa entra, vê sua conta e pode mexer nos cards, mas nunca no seu plano, billing ou dados pessoais.
         </p>
         <div className="flex flex-col sm:flex-row gap-2">
           <Input placeholder="Nome (opcional)" value={name} onChange={(e) => setName(e.target.value)} className="rounded-xl sm:w-48" />

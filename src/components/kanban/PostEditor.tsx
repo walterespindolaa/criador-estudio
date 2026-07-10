@@ -44,7 +44,7 @@ import heic2any from "heic2any";
 
 const VIDEO_EXTS = ["mov", "mp4", "m4v", "webm", "avi", "mkv", "hevc", "3gp"];
 const HEIC_EXTS = ["heic", "heif"];
-const VIDEO_MAX_BYTES = 2 * 1024 * 1024 * 1024; // 2 GB — teto de sanidade pro Bunny
+const VIDEO_MAX_BYTES = 2 * 1024 * 1024 * 1024; // 2 GB, teto de sanidade pro Bunny
 
 /**
  * Decode HEIC nativamente via <img> + canvas. Funciona em iPhone/Safari/WebKit
@@ -190,7 +190,7 @@ const FALLBACK_HOOKS = [
   { text: "3 coisas que eu faria diferente se começasse hoje", category: "identificação" },
   { text: "A verdade que ninguém fala sobre [tema]", category: "polêmica" },
   { text: "Pare de [ação comum] se quiser [resultado]", category: "contraste" },
-  { text: "Eu gastei [tempo] pra aprender isso — te conto em 60s", category: "curiosidade" },
+  { text: "Eu gastei [tempo] pra aprender isso, te conto em 60s", category: "curiosidade" },
   { text: "Se você [dor do público], esse vídeo é pra você", category: "identificação" },
   { text: "O segredo que [referência] não te conta", category: "promessa" },
 ];
@@ -337,7 +337,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
       }
 
       // Vídeos do Bunny: tentar deletar no Bunny PRIMEIRO (a edge confere a ref antes de deletar).
-      // Se o invoke falhar, ainda removemos a row localmente — o purge de 30 dias é a rede de segurança.
+      // Se o invoke falhar, ainda removemos a row localmente, o purge de 30 dias é a rede de segurança.
       if (ref.provider === "bunny" && ref.external_file_id) {
         try {
           const { error } = await supabase.functions.invoke("bunny-delete-video", {
@@ -360,7 +360,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
         queryClient.invalidateQueries({ queryKey: ["profile"] });
       }
     } finally {
-      // Sempre limpar UI local — em ambos os arrays — e liberar o lock.
+      // Sempre limpar UI local, em ambos os arrays, e liberar o lock.
       setPendingDriveFiles((prev) => prev.filter((f) => f.id !== ref.id));
       setDriveMedia((prev) => prev.filter((m) => m.id !== ref.id));
       setRemovingIds((prev) => {
@@ -513,11 +513,11 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
   const handleLocalUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     // CRÍTICO: snapshot dos arquivos como Array ANTES de qualquer manipulação.
-    // FileList é live — `e.target.value = ""` esvazia o FileList referenciado, então
+    // FileList é live, `e.target.value = ""` esvazia o FileList referenciado, então
     // precisamos copiar para um Array primeiro.
     const fileList = e.target.files;
     const files: File[] = fileList ? Array.from(fileList) : [];
-    e.target.value = ""; // agora seguro — `files` já é snapshot independente
+    e.target.value = ""; // agora seguro, `files` já é snapshot independente
     const hasVideo = files.some((f) => {
       const ext = (f.name.split(".").pop() || "").toLowerCase();
       return (f.type || "").toLowerCase().startsWith("video/") || VIDEO_EXTS.includes(ext);
@@ -697,7 +697,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
             converted = await heicToJpegNative(raw);
           } catch (errNative) {
             console.warn("[upload] heic native decode failed, trying heic2any", { name: initialRaw.name, errNative });
-            // Fallback: heic2any (libheif WASM) — funciona em Chrome/Firefox/Windows.
+            // Fallback: heic2any (libheif WASM), funciona em Chrome/Firefox/Windows.
             try {
               const out = await heic2any({ blob: raw, toType: "image/jpeg", quality: 0.85 });
               const blob = Array.isArray(out) ? out[0] : out;
@@ -785,7 +785,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
     input.type = "file";
     input.accept = "image/*,video/*";
     input.multiple = true;
-    // Off-screen mas no DOM — garante que o input não seja GC'd antes do change event
+    // Off-screen mas no DOM, garante que o input não seja GC'd antes do change event
     input.style.cssText = "position:fixed;left:-9999px;top:-9999px;opacity:0;pointer-events:none";
 
     const cleanup = () => {
@@ -1094,7 +1094,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
         open={open}
         onOpenChange={(o) => {
           if (!o && hasActiveUpload) {
-            // Confirma fechar enquanto há upload rolando — TUS continua via context, mas
+            // Confirma fechar enquanto há upload rolando, TUS continua via context, mas
             // o ref insert do vídeo depende deste componente estar montado. Melhor avisar.
             const ok = window.confirm(
               "Há um upload de vídeo em andamento. Se fechar agora, ele pode ser perdido. Fechar mesmo assim?",
@@ -1108,7 +1108,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
           onOpenAutoFocus={(e) => e.preventDefault()}
           onPointerDownOutside={(e) => e.preventDefault()}
           onInteractOutside={(e) => {
-            // Permite fechar via ESC, mas bloqueia "clique fora" — que é falsamente
+            // Permite fechar via ESC, mas bloqueia "clique fora", que é falsamente
             // disparado pelo file picker nativo do SO ao abrir <input type="file">.
             // Issue conhecida: radix-ui/primitives#1280.
             e.preventDefault();
@@ -1140,7 +1140,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                       autoSaveStatus === "saving" ? "text-muted-foreground" : autoSaveStatus === "error" ? "text-destructive" : "text-secondary"
                     )}
                   >
-                    {autoSaveStatus === "saving" ? "Salvando…" : autoSaveStatus === "error" ? "Não salvo — salve manualmente" : "Salvo ✓"}
+                    {autoSaveStatus === "saving" ? "Salvando…" : autoSaveStatus === "error" ? "Não salvo, salve manualmente" : "Salvo ✓"}
                   </span>
                 )}
               </div>
@@ -1378,7 +1378,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 </section>
 
                 {/* Schedule */}
-                <section className="rounded-2xl bg-card border border-border p-4 space-y-3">
+                <section data-tour="editor-agendamento" className="rounded-2xl bg-card border border-border p-4 space-y-3">
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-display font-semibold">Agendamento</span>
@@ -1410,7 +1410,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 </section>
 
                 {/* Content Assistant */}
-                <section className="rounded-2xl bg-card border border-border p-4 space-y-3">
+                <section data-tour="editor-ia" className="rounded-2xl bg-card border border-border p-4 space-y-3">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-sm">
                       <Sparkles className="h-4 w-4 text-white" />
@@ -1571,7 +1571,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               )}
             >
               <Tabs defaultValue="legenda" className="h-full flex flex-col">
-                <TabsList className="bg-transparent border-b border-border rounded-none px-4 sm:px-6 h-12 shrink-0 justify-start gap-0 max-w-full overflow-x-auto flex-nowrap whitespace-nowrap">
+                <TabsList data-tour="editor-abas" className="bg-transparent border-b border-border rounded-none px-4 sm:px-6 h-12 shrink-0 justify-start gap-0 max-w-full overflow-x-auto flex-nowrap whitespace-nowrap">
                   <TabsTrigger
                     value="legenda"
                     className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-body text-sm px-3"
@@ -1807,7 +1807,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     </div>
                   )}
 
-                  {/* Mídia final do post — todos os formatos exceto carrossel (que usa as lâminas) */}
+                  {/* Mídia final do post, todos os formatos exceto carrossel (que usa as lâminas) */}
                   {format !== "carrossel" && (
                     <div className="space-y-2">
                       <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
@@ -2390,7 +2390,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
           <AlertDialogHeader>
             <AlertDialogTitle>Vídeo adicionado 🎬</AlertDialogTitle>
             <AlertDialogDescription>
-              Você não precisa esperar: já pode tocar em Publicar que o vídeo vai direto pro app na hora. O envio pra pré-visualização leva de 1 a 3 minutos e roda em segundo plano — pode salvar o post e seguir usando o sistema normalmente.
+              Você não precisa esperar: já pode tocar em Publicar que o vídeo vai direto pro app na hora. O envio pra pré-visualização leva de 1 a 3 minutos e roda em segundo plano, pode salvar o post e seguir usando o sistema normalmente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <label className="flex items-center gap-2 text-sm text-muted-foreground font-body cursor-pointer px-1">

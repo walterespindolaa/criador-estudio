@@ -20,11 +20,11 @@ type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 
 const fmt = (n: number | null | undefined) =>
-  n == null ? "—" : n >= 1000 ? `${(n / 1000).toFixed(1).replace(".0", "")}k` : String(n);
+  n == null ? "-" : n >= 1000 ? `${(n / 1000).toFixed(1).replace(".0", "")}k` : String(n);
 const m = (mi: MediaInsight, k: string) => Number(mi.metrics?.[k] ?? 0);
 const MEDIA_ICON = (t: string | null) => (t === "VIDEO" || t === "REELS" ? Play : t === "CAROUSEL_ALBUM" ? Images : ImageIcon);
 const MEDIA_LABEL: Record<string, string> = { IMAGE: "Imagem", VIDEO: "Vídeo", REELS: "Reels", CAROUSEL_ALBUM: "Carrossel" };
-const fmtType = (t: string | null) => (t ? MEDIA_LABEL[t] ?? t : "—");
+const fmtType = (t: string | null) => (t ? MEDIA_LABEL[t] ?? t : "-");
 const isVideo = (t: string | null) => t === "VIDEO" || t === "REELS";
 
 export default function Insights() {
@@ -45,7 +45,7 @@ export default function Insights() {
     try {
       const fmtAvg: Record<string, { sum: number; n: number }> = {};
       media.forEach((mi) => {
-        const t = mi.media_type ?? "—";
+        const t = mi.media_type ?? "-";
         fmtAvg[t] = fmtAvg[t] || { sum: 0, n: 0 };
         fmtAvg[t].sum += m(mi, "reach"); fmtAvg[t].n += 1;
       });
@@ -62,8 +62,8 @@ export default function Insights() {
         mediaCount: media.length,
         bestFormat: fmts[0] ? `${fmtType(fmts[0].t)} (${Math.round(fmts[0].avg)} alcance médio)` : undefined,
         worstFormat: fmts.length > 1 ? `${fmtType(fmts[fmts.length - 1].t)} (${Math.round(fmts[fmts.length - 1].avg)} alcance médio)` : undefined,
-        topPost: byReachL[0]?.caption ? `${byReachL[0].caption.slice(0, 60)} — ${m(byReachL[0], "reach")} alcance` : undefined,
-        topSaved: bySavedL[0]?.caption ? `${bySavedL[0].caption.slice(0, 60)} — ${m(bySavedL[0], "saved") + m(bySavedL[0], "saves")} salvos` : undefined,
+        topPost: byReachL[0]?.caption ? `${byReachL[0].caption.slice(0, 60)}, ${m(byReachL[0], "reach")} alcance` : undefined,
+        topSaved: bySavedL[0]?.caption ? `${bySavedL[0].caption.slice(0, 60)}, ${m(bySavedL[0], "saved") + m(bySavedL[0], "saves")} salvos` : undefined,
       }, user?.id);
       if (res?.leituras?.length) setAiRead(res);
       else throw new Error("formato inesperado");
@@ -111,7 +111,7 @@ export default function Insights() {
           <div className="flex-1">
             <h3 className="font-display font-bold text-foreground">Conecte seu Instagram</h3>
             <p className="text-sm text-muted-foreground font-body mt-1">
-              Conta <b>Business</b> ou <b>Creator</b>. Puxamos alcance, seguidores e desempenho dos posts — só leitura, o CRIA não publica nada por você.
+              Conta <b>Business</b> ou <b>Creator</b>. Puxamos alcance, seguidores e desempenho dos posts, só leitura, o CRIA não publica nada por você.
             </p>
           </div>
           <Button onClick={() => connectInstagram()} className="gap-2 shrink-0 bg-gradient-to-r from-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90">
@@ -123,7 +123,7 @@ export default function Insights() {
   }
 
   // ---- Conectado ----
-  const lastSync = conn.updated_at ? new Date(conn.updated_at).toLocaleString("pt-BR") : "—";
+  const lastSync = conn.updated_at ? new Date(conn.updated_at).toLocaleString("pt-BR") : "-";
   const followerSeries = daily.filter((d) => d.followers != null).map((d) => ({ date: d.date.slice(5), v: d.followers ?? 0 }));
   const reachSeries = daily.filter((d) => d.reach != null).map((d) => ({ date: d.date.slice(5), v: d.reach ?? 0 }));
 
@@ -132,7 +132,7 @@ export default function Insights() {
   const bySaves = [...media].sort((a, b) => (m(b, "saved") + m(b, "saves")) - (m(a, "saved") + m(a, "saves")));
   const fmtAvgReach: Record<string, { sum: number; n: number }> = {};
   media.forEach((mi) => {
-    const t = mi.media_type ?? "—";
+    const t = mi.media_type ?? "-";
     fmtAvgReach[t] = fmtAvgReach[t] || { sum: 0, n: 0 };
     fmtAvgReach[t].sum += m(mi, "reach"); fmtAvgReach[t].n += 1;
   });
@@ -224,8 +224,8 @@ export default function Insights() {
             O que mais gerou crescimento <span className="text-[10px] font-extrabold text-primary bg-primary/10 px-2 py-0.5 rounded-full">IA</span>
           </h2>
           <div className="grid sm:grid-cols-3 gap-3">
-            <Driver icon={Eye} t="Mais alcance" big={byReach[0]?.caption?.slice(0, 40) ?? "—"} s={`${fmt(m(byReach[0], "reach"))} de alcance`} />
-            <Driver icon={Bookmark} t="Mais salvos" big={bySaves[0]?.caption?.slice(0, 40) ?? "—"} s={`${fmt(m(bySaves[0], "saved") + m(bySaves[0], "saves"))} salvos`} />
+            <Driver icon={Eye} t="Mais alcance" big={byReach[0]?.caption?.slice(0, 40) ?? "-"} s={`${fmt(m(byReach[0], "reach"))} de alcance`} />
+            <Driver icon={Bookmark} t="Mais salvos" big={bySaves[0]?.caption?.slice(0, 40) ?? "-"} s={`${fmt(m(bySaves[0], "saved") + m(bySaves[0], "saves"))} salvos`} />
             <Driver icon={BarChart3} t="Melhor formato" big={fmtType(bestFormat?.t ?? null)} s={`média de ${fmt(Math.round(bestFormat?.avg ?? 0))} de alcance`} />
           </div>
         </>

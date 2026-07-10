@@ -305,7 +305,7 @@ function getInitial(name?: string | null): string {
   return name?.trim().charAt(0).toUpperCase() || "C";
 }
 
-// RPC nova ainda não está nos tipos gerados — cast (padrão do projeto).
+// RPC nova ainda não está nos tipos gerados, cast (padrão do projeto).
 type AnyRpc = (fn: string, args?: Record<string, unknown>) => ReturnType<typeof supabase.rpc>;
 const sbRpc = supabase.rpc.bind(supabase) as unknown as AnyRpc;
 
@@ -710,7 +710,7 @@ const LinkInBio = () => {
                     <span className="text-emerald-600 flex items-center gap-1"><Check className="h-3 w-3" /> disponível</span>
                   )}
                   {slugStatus === "taken" && (
-                    <span className="text-destructive flex items-center gap-1"><X className="h-3 w-3" /> já está em uso — escolha outro</span>
+                    <span className="text-destructive flex items-center gap-1"><X className="h-3 w-3" /> já está em uso, escolha outro</span>
                   )}
                 </p>
               )}
@@ -1236,7 +1236,7 @@ function LinkCard({
     if (next && next !== "https://") {
       if (!/^https?:\/\//i.test(next)) next = "https://" + next;
       const safe = sanitizeUrl(next);
-      if (!safe) { toast.error("Link inválido — confira o endereço."); return; }
+      if (!safe) { toast.error("Link inválido, confira o endereço."); return; }
       next = safe;
     }
     if (next !== link.url) onUpdate(link.id, { url: next });

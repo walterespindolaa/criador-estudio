@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
-// Tabelas de time não estão no types.ts — cast (igual useCrm/useHubCria).
+// Tabelas de time não estão no types.ts, cast (igual useCrm/useHubCria).
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 

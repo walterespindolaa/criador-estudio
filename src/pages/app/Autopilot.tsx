@@ -147,13 +147,13 @@ export default function Autopilot() {
           status: "ideia",
           scheduled_date: it.date || null,
           scheduled_time: it.time || null,
-          notes: review ? "⚠️ Revisar — gerado pelo Autopilot" : null,
+          notes: review ? "⚠️ Revisar, gerado pelo Autopilot" : null,
         });
       }
       await sbFrom("autopilot_runs").insert({ user_id: user!.id, periodo, foco: foco || null, qtd, posts: items });
       qc.invalidateQueries({ queryKey: ["autopilot-runs", user?.id] });
       qc.invalidateQueries({ queryKey: ["posts"] });
-      toast.success(`${sel.length} post(s) enviados pro Criando${review ? " — marcados pra revisar" : ""}! 🎬`);
+      toast.success(`${sel.length} post(s) enviados pro Criando${review ? ", marcados pra revisar" : ""}! 🎬`);
       setItems([]);
     } catch (e) {
       console.error("autopilot send failed", e);
@@ -250,7 +250,7 @@ export default function Autopilot() {
                   ? `Distribui nos seus horários: ${activeSlots.join(", ")}.`
                   : userSlots
                   ? `Padrão do nicho: ${activeSlots.join(", ")}.`
-                  : `Sem dados suficientes ainda — usando o recomendado (${activeSlots.join(", ")}). Publique mais pra liberar "da minha conta".`}
+                  : `Sem dados suficientes ainda, usando o recomendado (${activeSlots.join(", ")}). Publique mais pra liberar "da minha conta".`}
               </p>
             </div>
             <div>
@@ -332,7 +332,7 @@ export default function Autopilot() {
                       <textarea value={it.legenda} onClick={(e) => e.stopPropagation()} onChange={(e) => patch(i, { legenda: e.target.value })} onBlur={() => setEditingCap((p) => ({ ...p, [i]: false }))} autoFocus rows={4} className="w-full mt-2 bg-muted/30 rounded-md p-2 text-[13px] leading-relaxed font-body text-foreground outline-none resize-none focus:ring-1 focus:ring-primary/30 cursor-text" />
                     ) : (
                       <button type="button" onClick={(e) => { e.stopPropagation(); setEditingCap((p) => ({ ...p, [i]: true })); }} className="w-full text-left mt-2 text-[13px] leading-relaxed font-body text-muted-foreground line-clamp-3 hover:text-foreground" title="Clique pra editar a legenda">
-                        {it.legenda || "Sem legenda — clique pra escrever"}
+                        {it.legenda || "Sem legenda, clique pra escrever"}
                       </button>
                     )}
                     {it.porque && <p className="text-xs font-body text-muted-foreground/80 mt-2.5 line-clamp-2 flex items-start gap-1.5"><Sparkles className="h-3 w-3 mt-0.5 text-primary shrink-0" /> {it.porque}</p>}

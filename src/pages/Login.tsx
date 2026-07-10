@@ -76,7 +76,7 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-[#F4EFE3]">
-      {/* blobs decorativos — identidade da LP */}
+      {/* blobs decorativos, identidade da LP */}
       <div aria-hidden className="pointer-events-none absolute -top-28 -right-24 w-80 h-80 bg-[#F27EB5] rounded-[38%_62%_55%_45%/48%_42%_58%_52%]" />
       <div aria-hidden className="pointer-events-none absolute -bottom-20 -left-24 w-64 h-64 bg-[#F2C21E] rounded-[55%_45%_40%_60%/50%_60%_40%_50%]" />
       <div aria-hidden className="pointer-events-none absolute top-[18%] left-[8%] w-16 h-16 bg-[#2A4BDF] rounded-full hidden md:block" />

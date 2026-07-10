@@ -46,7 +46,7 @@ export function useRefreshTrends() {
     },
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["content-trends"] });
-      toast.success(`Banco atualizado — ${res?.count ?? 0} tendências.`);
+      toast.success(`Banco atualizado, ${res?.count ?? 0} tendências.`);
     },
     onError: (e) => {
       const msg = e instanceof Error ? e.message : "";

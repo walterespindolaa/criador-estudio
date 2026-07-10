@@ -149,7 +149,7 @@ export default function ManagerLayout() {
   // Guards
   if (isLoading) return <LoadingScreen />;
   if (profile?.must_change_password === true) return <Navigate to="/app/trocar-senha" replace />;
-  // criadores (não-manager) não entram no hub — exceto colaboradores atuando no time.
+  // criadores (não-manager) não entram no hub, exceto colaboradores atuando no time.
   if (profile && profile.account_type !== "manager" && !hasManagedAccounts && !actingAsTeam) return <Navigate to="/app" replace />;
 
   const ctx: ManagerOutletContext = { openModule, openSettings: () => setSettingsOpen(true) };
@@ -174,7 +174,7 @@ export default function ManagerLayout() {
     <TourProvider>
     <div className="min-h-screen app-canvas relative" style={{ ["--active-font-display" as string]: "'Bricolage Grotesque', 'Plus Jakarta Sans', sans-serif" }}>
       <BgShapes styleKey={(profile as { theme_bg?: string | null } | null | undefined)?.theme_bg} />
-      {/* Rail flutuante (desktop) — expande no hover mostrando os nomes */}
+      {/* Rail flutuante (desktop), expande no hover mostrando os nomes */}
       <nav
         onMouseEnter={() => setRailHovered(true)}
         onMouseLeave={() => setRailHovered(false)}
@@ -227,7 +227,7 @@ export default function ManagerLayout() {
       </nav>
 
       <div className="flex min-h-screen flex-col md:pl-[104px]">
-        {/* HeroBand (desktop) — sangra full-width por trás do rail */}
+        {/* HeroBand (desktop), sangra full-width por trás do rail */}
         <div className="hidden md:block md:-ml-[104px] md:w-[calc(100%+104px)]">
           <HeroBand eyebrow={isDash ? `${greet},` : undefined} title={heroTitle} avatar={avatarNode}>
             <div className="flex items-center gap-2 rounded-2xl bg-white/15 px-2 py-1 backdrop-blur">
@@ -249,7 +249,7 @@ export default function ManagerLayout() {
         </main>
       </div>
 
-      {/* Dock flutuante mobile — estilo pessoa física */}
+      {/* Dock flutuante mobile, estilo pessoa física */}
       {(() => {
         const dockItem = (active: boolean, Icon: typeof Home, label: string, onClick: () => void) => (
           <button key={label} type="button" onClick={onClick}

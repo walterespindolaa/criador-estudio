@@ -49,11 +49,11 @@ type UserDetails = {
 };
 
 function formatDate(value: string | null | undefined): string {
-  if (!value) return "—";
+  if (!value) return "-";
   try {
     return format(new Date(value), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
   } catch {
-    return "—";
+    return "-";
   }
 }
 
@@ -68,7 +68,7 @@ function formatValidity(accessExpiresAt: string | null | undefined): string {
     if (diff <= 0) return `${formatted} (expirado)`;
     return `${formatted} (${days} dia${days === 1 ? "" : "s"})`;
   } catch {
-    return "—";
+    return "-";
   }
 }
 
@@ -240,11 +240,11 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
                 <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Conta</h3>
                 <div className="space-y-2 min-w-0">
                   <FieldBox label="Nome">
-                    <p className="text-sm font-body text-foreground break-words">{data.name || "—"}</p>
+                    <p className="text-sm font-body text-foreground break-words">{data.name || "-"}</p>
                   </FieldBox>
                   <FieldBox label="E-mail">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="flex-1 min-w-0 truncate text-sm font-body text-foreground">{data.email || "—"}</span>
+                      <span className="flex-1 min-w-0 truncate text-sm font-body text-foreground">{data.email || "-"}</span>
                       {data.email && <CopyButton text={data.email} />}
                     </div>
                   </FieldBox>
@@ -259,13 +259,13 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
                     </FieldBox>
                   )}
                   <FieldBox label="Plano">
-                    <p className="text-sm font-body text-foreground truncate">{data.plan ?? "—"}</p>
+                    <p className="text-sm font-body text-foreground truncate">{data.plan ?? "-"}</p>
                   </FieldBox>
                   <FieldBox label="Role">
-                    <p className="text-sm font-body text-foreground truncate">{data.role ?? "—"}</p>
+                    <p className="text-sm font-body text-foreground truncate">{data.role ?? "-"}</p>
                   </FieldBox>
                   <FieldBox label="Status de acesso">
-                    <p className="text-sm font-body text-foreground truncate">{data.subscription_status ?? "—"}</p>
+                    <p className="text-sm font-body text-foreground truncate">{data.subscription_status ?? "-"}</p>
                   </FieldBox>
                   <FieldBox label="Validade do acesso">
                     <p className="text-sm font-body text-foreground break-words">{formatValidity(data.access_expires_at)}</p>
@@ -277,7 +277,7 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
                 <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Perfil</h3>
                 <div className="space-y-2 min-w-0">
                   <FieldBox label="Nicho">
-                    <p className="text-sm font-body text-foreground break-words">{data.niche || "—"}</p>
+                    <p className="text-sm font-body text-foreground break-words">{data.niche || "-"}</p>
                   </FieldBox>
                   <FieldBox label="Cadastro">
                     <p className="text-sm font-body text-foreground truncate">{formatDate(data.created_at)}</p>
@@ -376,7 +376,7 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
                         <p className="text-[10px] font-body text-muted-foreground mt-1.5">Clique pra ligar/desligar cada módulo pra esta conta de gestor.</p>
                       </>
                     ) : (
-                      <p className="text-[11px] font-body text-muted-foreground mt-1">Esta é uma conta <strong>pessoa física</strong> (criador). Os add-ons são só pra contas de social mídia — aqui, pra liberar recursos, use o <strong>Plano</strong> (ex.: Studio) acima.</p>
+                      <p className="text-[11px] font-body text-muted-foreground mt-1">Esta é uma conta <strong>pessoa física</strong> (criador). Os add-ons são só pra contas de social mídia, aqui, pra liberar recursos, use o <strong>Plano</strong> (ex.: Studio) acima.</p>
                     )}
                   </FieldBox>
                 )}
@@ -449,7 +449,7 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
           <AlertDialogHeader>
             <AlertDialogTitle className="font-display">Limpar dados da conta?</AlertDialogTitle>
             <AlertDialogDescription className="font-body">
-              Apaga <strong>todo o conteúdo</strong> deste usuário — posts, ideias, CRM, clientes,
+              Apaga <strong>todo o conteúdo</strong> deste usuário, posts, ideias, CRM, clientes,
               cronograma, media kit, bio, hábitos, metas, personas, pilares e arquivos.
               <br /><br />
               <strong>Mantém:</strong> login, plano, assinatura, cobrança, conexões (Instagram/Drive),

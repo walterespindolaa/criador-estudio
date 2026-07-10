@@ -57,7 +57,7 @@ export function applySidebarColor(hex: string | null | undefined) {
   }
 
   if (!hex) {
-    // Reset — let the theme preset handle sidebar vars
+    // Reset, let the theme preset handle sidebar vars
     root.style.removeProperty('--sidebar-background');
     root.style.removeProperty('--sidebar-foreground');
     root.style.removeProperty('--sidebar-accent');

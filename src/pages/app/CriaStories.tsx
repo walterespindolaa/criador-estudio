@@ -103,7 +103,7 @@ export default function CriaStories() {
     add.mutate({ slot_date: localIso(), title: t.title, format: t.format, script: t.example ?? t.description ?? null });
   };
   const gerarNoCriaAI = (t: StoryTrend) => {
-    openCria(`Quero adaptar esta tendência de STORIES pro meu nicho: "${t.title}"${t.description ? ` — ${t.description}` : ""} (formato: ${t.format}). Me dá 3 sequências de stories prontas pra gravar, com o texto que vai na tela e a interação sugerida, no meu tom.`);
+    openCria(`Quero adaptar esta tendência de STORIES pro meu nicho: "${t.title}"${t.description ? `, ${t.description}` : ""} (formato: ${t.format}). Me dá 3 sequências de stories prontas pra gravar, com o texto que vai na tela e a interação sugerida, no meu tom.`);
   };
 
   // ── Guard Studio ───────────────────────────────────────────────
@@ -170,7 +170,7 @@ export default function CriaStories() {
             <div className="flex items-center gap-2 mb-3">
               <Globe className="h-4 w-4 text-primary" />
               <h2 className="text-sm font-display font-bold text-foreground">Stories em alta</h2>
-              <span className="text-xs font-body text-muted-foreground">— puxe as que quiser pra sua semana</span>
+              <span className="text-xs font-body text-muted-foreground">puxe as que quiser pra sua semana</span>
             </div>
             {trendsLoading ? (
               <div className="py-8 text-center"><Loader2 className="h-5 w-5 text-primary mx-auto animate-spin" /></div>
@@ -323,7 +323,7 @@ function StorySlotDialog({
     const notify_body = notifyOn ? (notifyBody.trim() || null) : null;
     if (state.mode === "edit") {
       onSaveEdit(state.slot.id, { title: title.trim(), script: script.trim() || null, format: format.trim() || null, slot_time, notify_title, notify_body });
-      // "Repetir esse story em mais dias" — cria cópias sem mexer no original.
+      // "Repetir esse story em mais dias", cria cópias sem mexer no original.
       if (recurOn && weekdays.length) {
         onCreate({
           slot_date: state.slot.slot_date, title: title.trim(), script: script.trim() || null, format: format.trim() || null, slot_time,

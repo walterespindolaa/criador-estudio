@@ -58,7 +58,7 @@ export default function Equipe() {
       <div className="flex items-start gap-2 rounded-xl bg-primary/[0.04] border border-primary/15 px-4 py-3">
         <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
         <p className="text-[13px] font-body text-foreground/80 leading-relaxed">
-          Convide colaboradores pra trabalhar <strong>dentro da sua conta</strong> — você escolhe, no convite, <strong>quais módulos e clientes</strong> cada um acessa. O <strong>1º colaborador é grátis</strong>; a partir do 2º, R$ 29,90/mês por pessoa.
+          Convide colaboradores pra trabalhar <strong>dentro da sua conta</strong>, você escolhe, no convite, <strong>quais módulos e clientes</strong> cada um acessa. O <strong>1º colaborador é grátis</strong>; a partir do 2º, R$ 29,90/mês por pessoa.
         </p>
       </div>
 

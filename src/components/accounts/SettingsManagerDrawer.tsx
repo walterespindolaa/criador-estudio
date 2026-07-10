@@ -287,7 +287,7 @@ export function SettingsManagerDrawer({ open, onOpenChange }: Props) {
                 <h3 className="font-display font-semibold text-sm text-foreground flex items-center gap-2">
                   <ImageIcon className="h-4 w-4" /> Logo da marca
                 </h3>
-                <p className="text-xs text-muted-foreground font-body">Aparece no cabeçalho do cronograma que o cliente recebe. Opcional — sem logo, mostramos só o nome e a cor.</p>
+                <p className="text-xs text-muted-foreground font-body">Aparece no cabeçalho do cronograma que o cliente recebe. Opcional, sem logo, mostramos só o nome e a cor.</p>
                 <div className="flex items-center gap-3">
                   <div className="w-20 h-20 rounded-xl border border-border bg-muted/30 grid place-items-center overflow-hidden shrink-0">
                     {profile?.brand_logo_url

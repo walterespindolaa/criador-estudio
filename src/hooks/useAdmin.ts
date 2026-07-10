@@ -138,7 +138,7 @@ export function useAdmin(filters: AdminFilters) {
     },
   });
 
-  // Emails (vêm do auth, não do profiles) — busca em lote via edge function
+  // Emails (vêm do auth, não do profiles), busca em lote via edge function
   const userIds = (usersQuery.data?.rows ?? []).map((r) => r.id);
   const emailsQuery = useQuery<Record<string, string>>({
     queryKey: ["admin-emails", userIds],

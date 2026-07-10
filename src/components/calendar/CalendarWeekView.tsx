@@ -65,7 +65,7 @@ export function CalendarWeekView({ posts, pillars, weekDays, weekOffset, onWeekC
           <Button variant="outline" size="sm" onClick={() => onWeekChange(1)} aria-label="Próxima semana"><ChevronRight className="h-4 w-4" /></Button>
           {weekOffset !== 0 && (<Button variant="ghost" size="sm" onClick={() => onWeekChange(-weekOffset)}>Esta semana</Button>)}
         </div>
-        <p className="text-sm font-body text-muted-foreground">{firstLabel} — {lastLabel}</p>
+        <p className="text-sm font-body text-muted-foreground">{firstLabel}, {lastLabel}</p>
       </div>
 
       <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-border bg-card sticky top-0 z-10">

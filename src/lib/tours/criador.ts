@@ -1,6 +1,6 @@
 /**
  * Tours da área do criador (/app/*).
- * Regra pedagógica: contexto → benefício → passos curtos → gancho de IA.
+ * Regra pedagógica: contexto, benefício, passos curtos, gancho de IA.
  * Texto em PT-BR centralizado aqui (i18n-ready: basta trocar por chaves depois).
  */
 import type { TourConfig } from "./registry";
@@ -11,7 +11,7 @@ export const TOURS_CRIADOR: TourConfig[] = [
     route: "/app",
     title: "Seu dia começa aqui",
     valueProp:
-      "O Dashboard é o seu quartel-general: em 10 segundos você sabe o que tem pra hoje, o que tá travado e qual o próximo passo — sem abrir 6 abas.",
+      "O Dashboard é o seu quartel-general: em 10 segundos você sabe o que tem pra hoje, o que tá travado e qual o próximo passo. Sem abrir 6 abas.",
     benefits: [
       "Veja tudo que importa do seu conteúdo num lugar só",
       "Saiba sempre qual é a próxima melhor ação",
@@ -21,13 +21,13 @@ export const TOURS_CRIADOR: TourConfig[] = [
       {
         target: '[data-tour="dash-primeiros-passos"]',
         title: "Primeiros passos",
-        body: "Esse checklist te guia pela configuração inicial. Cada item concluído destrava mais valor do CRIA — vale completar os 6.",
+        body: "Esse checklist te guia pela configuração inicial. Cada item concluído destrava mais valor do CRIA. Vale completar os 6!",
         placement: "bottom",
       },
       {
         target: '[data-tour="dash-acao"]',
         title: "Sua próxima melhor ação",
-        body: "O CRIA analisa seu fluxo e te diz o que fazer AGORA pra manter a constância. Se bater dúvida do que fazer, é aqui que você olha.",
+        body: "O CRIA analisa seu fluxo e te diz o que fazer AGORA pra manter a constância. Bateu dúvida do que fazer? Olha aqui primeiro.",
         placement: "bottom",
       },
       {
@@ -45,7 +45,7 @@ export const TOURS_CRIADOR: TourConfig[] = [
       {
         target: '[data-tour="dash-captura"]',
         title: "Captura Rápida",
-        body: "Ideia boa não espera. Digitou, capturou — ela vai direto pro seu banco de ideias, e você organiza depois.",
+        body: "Ideia boa não espera. Digitou, capturou: ela vai direto pro seu banco de ideias, e você organiza depois.",
         placement: "top",
         aiPrompt:
           "Me sugira 5 ideias de post no tom da minha marca, usando meu brandbook como referência.",
@@ -57,37 +57,136 @@ export const TOURS_CRIADOR: TourConfig[] = [
     route: "/app/ideias",
     title: "Banco de Ideias",
     valueProp:
-      "Chega de ideia morrendo em print perdido. Aqui vive o seu estoque criativo: tudo que você pensar fica guardado, organizado e pronto pra virar post.",
+      "Chega de ideia morrendo em print perdido. Aqui vive o seu estoque criativo: temas, ganchos, referências, links e rascunhos. Tudo que você pensar fica guardado, organizado por pilar e pronto pra virar post.",
     benefits: [
       "Nunca mais comece um post do zero",
-      "A Cria IA sugere ideias no tom da SUA marca",
+      "Guarde tema, gancho, referência e link numa ideia só",
+      "A Cria IA sugere ideias e desdobra as suas em pautas",
       "Da ideia pro kanban de criação em 1 clique",
     ],
-    steps: [],
+    steps: [
+      {
+        target: '[data-tour="ideias-nova"]',
+        title: "Criar uma ideia",
+        body: "Clique aqui pra registrar qualquer faísca: um tema (\"3 erros de quem começa\"), um gancho que você ouviu, um formato que quer testar. Dá pra escolher o pilar de conteúdo, anotar detalhes e anexar referência. Quanto mais contexto, mais fácil produzir depois.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="ideias-visualizacao"]',
+        title: "Lista ou Galeria",
+        body: "Alterne como enxerga seu banco: Lista pra varrer rápido título por título, Galeria pra bater o olho em tudo como um mural de inspiração.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="ideias-salvos"]',
+        title: "Aba Salvos",
+        body: "Viu um post inspirador no Instagram ou TikTok? Cole o link aqui e ele fica guardado como referência, junto das suas ideias. Seu \"salvos\" espalhado em 3 apps vira um lugar só.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="ideias-nova"]',
+        title: "O atalho da IA",
+        body: "Em cada card de ideia existe um botão de faísca (✦): a Cria IA desdobra a ideia em ganchos, ângulos e formatos usando o seu brandbook. E quando a ideia estiver madura, o botão de promover manda ela direto pro kanban Criando.",
+        placement: "bottom",
+        aiPrompt: "Me sugira 5 ideias de post novas no tom da minha marca, baseadas nos meus pilares de conteúdo.",
+      },
+    ],
   },
   {
     id: "criando",
     route: "/app/criando",
-    title: "Kanban Criando",
+    title: "Kanban Criando: o coração do CRIA",
     valueProp:
-      "Cada post é um card que anda: rascunho → produzindo → pronto → publicado. Bateu o olho, você sabe exatamente onde cada conteúdo parou.",
+      "É aqui que ideia vira post publicado. Cada conteúdo é um card que atravessa 6 etapas, e você bate o olho e sabe exatamente onde cada post parou. Este é o fluxo que acaba com o \"postava quando dava\".",
     benefits: [
-      "Nada se perde entre a ideia e o post publicado",
-      "Arraste os cards conforme avança — simples assim",
-      "Agende a data e acompanhe pelo calendário",
+      "Nada se perde entre a ideia e o post no ar",
+      "6 etapas claras: da faísca à publicação",
+      "Board, Tabela ou Calendário: você escolhe como ver",
+      "Estrutura pronta por formato (Reels, carrossel, story...)",
     ],
-    steps: [],
+    steps: [
+      {
+        target: '[data-tour="criando-board"]',
+        title: "As 6 etapas do seu conteúdo",
+        body: "Ideia: o que você quer criar. Planejamento: escreva gancho, roteiro e legenda. Produzindo: gravação e criação da mídia. Pronto: gravado, em finalização. Agendado: com data e hora marcadas. Publicado: no ar! Arraste os cards entre as colunas conforme avança.",
+        placement: "top",
+      },
+      {
+        target: '[data-tour="criando-novo"]',
+        title: "Novo Post",
+        body: "Clique aqui e escolha o formato (Reels, carrossel, foto, story...). O CRIA já monta a estrutura certa daquele formato: gancho, cenas, legenda e CTA. Você só preenche.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="criando-filtros"]',
+        title: "Filtros",
+        body: "Busque por título e filtre por período, plataforma, pilar, semana ou formato. Com muitos posts no pipeline, os filtros te mostram só o que interessa agora.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="criando-views"]',
+        title: "Board, Tabela e Calendário",
+        body: "O mesmo conteúdo, três visões: Board pra gerenciar o fluxo, Tabela pra editar em massa e ordenar, Calendário pra enxergar a semana como ela vai ao ar. Experimenta as três!",
+        placement: "bottom",
+      },
+    ],
+  },
+  {
+    id: "post-editor",
+    route: "/app/criando#editor",
+    title: "Anatomia de um post",
+    valueProp:
+      "Este é o editor onde o post nasce. Tudo que um conteúdo precisa mora aqui dentro: legenda, roteiro, mídia, tarefas, agendamento e a IA do seu lado o tempo todo.",
+    benefits: [
+      "Estrutura guiada: é só preencher os campos",
+      "Melhor horário de postagem sugerido pra você",
+      "Content Assistant escreve e avalia com o seu tom",
+    ],
+    steps: [
+      {
+        target: '[data-tour="editor-abas"]',
+        title: "As abas do post",
+        body: "Legenda: o texto que vai no post. Roteiro: cena a cena do vídeo. Tarefas: o que falta fazer pra esse post sair. Notas: anotações livres. Refs: referências e links de inspiração. Um post completo mora nessas 5 abas.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="editor-agendamento"]',
+        title: "Agendamento e melhor horário",
+        body: "Defina data e hora, e repare na sugestão de melhores horários: ela é baseada no seu nicho e na plataforma. Post com data marcada aparece no calendário e no seu Dashboard.",
+        placement: "right",
+      },
+      {
+        target: '[data-tour="editor-ia"]',
+        title: "Content Assistant",
+        body: "Escolha o tom (descontraído, profissional, provocativo...) e a IA escreve legenda e roteiro no estilo da sua marca, ou avalia o gancho que você escreveu. É o seu copywriter de plantão.",
+        placement: "right",
+        aiPrompt: "Escreva uma legenda pra este post no tom da minha marca, com gancho forte e CTA.",
+      },
+    ],
   },
   {
     id: "tarefas",
     route: "/app/tarefas",
     title: "Tarefas",
     valueProp:
-      "Gravar, editar, responder, entregar: a vida de criador é cheia de micro-tarefas. Aqui elas têm prazo e dono — e param de morar na sua cabeça.",
+      "Gravar, editar, responder comentário, entregar collab: a vida de criador é cheia de micro-tarefas. Aqui elas ganham prazo e param de morar na sua cabeça (e de escapar).",
     benefits: [
-      "Tudo que precisa ser feito, com data",
-      "Conectado ao seu conteúdo e collabs",
+      "Tudo que precisa ser feito, com data e status",
+      "Tarefas ligadas aos seus posts e collabs",
       "O resumo diário te lembra do que vence hoje",
+    ],
+    steps: [],
+  },
+  {
+    id: "metas",
+    route: "/app/metas",
+    title: "Cria Plano: suas metas",
+    valueProp:
+      "Constância sem meta é sorte. Aqui você define quantos posts quer publicar por semana ou mês, e o CRIA acompanha: te avisa quando está atrasado e comemora quando você bate a meta.",
+    benefits: [
+      "Meta de publicação clara, do seu tamanho",
+      "O Dashboard te cobra a meta com carinho",
+      "Progresso visível: quanto falta pra fechar a semana",
     ],
     steps: [],
   },
@@ -96,37 +195,170 @@ export const TOURS_CRIADOR: TourConfig[] = [
     route: "/app/stories",
     title: "Cria Stories",
     valueProp:
-      "O plano semanal de stories pronto pra você nunca mais abrir o Instagram sem saber o que postar. Uma semana inteira de pauta, gerada pra sua marca.",
+      "O plano semanal de stories pronto pra você nunca mais abrir o Instagram sem saber o que postar. O CRIA gera a pauta da semana inteira alinhada ao seu nicho: enquetes, bastidores, conexão e venda, dia a dia.",
     benefits: [
-      "Pauta de stories da semana inteira de uma vez",
-      "Sugestões alinhadas ao seu nicho e tom",
-      "Constância nos stories sem esforço criativo diário",
+      "Semana inteira de stories gerada de uma vez",
+      "Mistura certa: conexão, autoridade e venda",
+      "Marque como feito e acompanhe a constância",
+    ],
+    steps: [],
+  },
+  {
+    id: "tendencias",
+    route: "/app/tendencias",
+    title: "Tendências",
+    valueProp:
+      "O que está bombando agora no seu nicho: formatos, sons e assuntos em alta. Surfe a onda enquanto ela está de pé, adaptando pro seu tom em vez de copiar.",
+    benefits: [
+      "Tendências filtradas pro seu universo",
+      "Ideia em alta + seu brandbook = post com cara sua",
+      "Menos tempo caçando referência, mais tempo criando",
+    ],
+    steps: [],
+  },
+  {
+    id: "feed",
+    route: "/app/feed",
+    title: "Meu Feed",
+    valueProp:
+      "Veja como seu feed vai ficar ANTES de postar. Organize a ordem visual dos próximos posts, teste combinações e garanta aquele perfil bonito de rolar.",
+    benefits: [
+      "Prévia real do seu grid do Instagram",
+      "Arraste e reordene antes de publicar",
+      "Harmonia visual sem app de terceiro",
+    ],
+    steps: [],
+  },
+  {
+    id: "aprovacao",
+    route: "/app/aprovacao",
+    title: "Aprovações",
+    valueProp:
+      "Quando um post precisa do OK de alguém (marca, agência, sócio), ele passa por aqui. Você envia por link, a pessoa aprova ou comenta, e tudo fica registrado.",
+    benefits: [
+      "Aprovação por link, sem prints no WhatsApp",
+      "Comentários no lugar certo, com histórico",
+      "Você sabe o que está aprovado e o que travou",
     ],
     steps: [],
   },
   {
     id: "brandbook",
     route: "/app/brandbook",
-    title: "Brandbook",
+    title: "Brandbook e Moodboard",
     valueProp:
-      "Aqui mora a alma da sua marca: nicho, tom de voz, público. É daqui que a Cria IA aprende a escrever COMO VOCÊ — quanto mais completo, melhor ela fica.",
+      "Aqui mora a alma da sua marca: nicho, tom de voz, público e o moodboard com as imagens que definem sua estética. É daqui que a Cria IA aprende a escrever COMO VOCÊ. Preencheu bem, toda legenda e roteiro saem com a sua cara.",
     benefits: [
       "A IA escreve no seu tom, não no tom de robô",
-      "Decisões de conteúdo mais rápidas e coerentes",
+      "Moodboard: sua estética visual num mural de referências",
       "Base pra tudo: legendas, roteiros, stories e ideias",
+      "Decisões de conteúdo mais rápidas e coerentes",
+    ],
+    steps: [],
+  },
+  {
+    id: "linkinbio",
+    route: "/app/linkinbio",
+    title: "Link in bio",
+    valueProp:
+      "Sua vitrine oficial: uma página com seus links, produtos e destaques pra colocar na bio. Feita no CRIA, com a sua identidade, sem pagar mais uma assinatura de Linktree.",
+    benefits: [
+      "Página de links com a cara da sua marca",
+      "Atualize na hora, sem depender de ninguém",
+      "Capture contatos e direcione seu público",
+    ],
+    steps: [],
+  },
+  {
+    id: "media-kit",
+    route: "/app/media-kit",
+    title: "Media Kit",
+    valueProp:
+      "Seu cartão de visitas pra fechar publi: números, nichos, formatos e cases numa página profissional pra mandar pra marcas. Quem apresenta media kit bonito negocia cachê melhor.",
+    benefits: [
+      "Media kit profissional sem designer",
+      "Seus números sempre atualizados",
+      "Link pronto pra enviar em qualquer negociação",
+    ],
+    steps: [],
+  },
+  {
+    id: "biblioteca",
+    route: "/app/biblioteca",
+    title: "Biblioteca",
+    valueProp:
+      "Seu acervo de mídia num lugar só: vídeos, fotos e artes que você usa nos posts. Suba uma vez, reaproveite sempre, sem caçar arquivo na galeria ou no Drive.",
+    benefits: [
+      "Assets organizados e fáceis de achar",
+      "Reaproveite mídia entre posts",
+      "Integração com Google Drive pra arquivos pesados",
+    ],
+    steps: [],
+  },
+  {
+    id: "estudio",
+    route: "/app/estudio",
+    title: "Cria Estúdio",
+    valueProp:
+      "Crie imagens com IA no estilo da sua marca, direto no CRIA. Nunca mais trave um post por falta de arte: descreva a cena e o Estúdio gera a imagem pra você.",
+    benefits: [
+      "Imagens únicas sem banco de imagem genérico",
+      "Estilo consistente com a sua estética",
+      "Da ideia à arte publicável em minutos",
+    ],
+    steps: [],
+  },
+  {
+    id: "collabs",
+    route: "/app/collabs",
+    title: "Collabs",
+    valueProp:
+      "Publis e parcerias organizadas: briefing, combinados, entregas, prazos e cachê de cada collab registrados. A marca elogia sua organização e você nunca esquece uma entrega (nem um pagamento).",
+    benefits: [
+      "Cada collab com prazo, briefing e valor",
+      "Entregas conectadas ao seu kanban",
+      "Histórico pra renegociar com base em resultado",
+    ],
+    steps: [],
+  },
+  {
+    id: "historico",
+    route: "/app/historico",
+    title: "Histórico",
+    valueProp:
+      "Tudo que você já publicou, em ordem. É o seu acervo: revisite o que funcionou, encontre posts antigos pra reciclar e acompanhe a evolução da sua produção.",
+    benefits: [
+      "Linha do tempo de tudo que foi ao ar",
+      "Recicle conteúdo que já deu certo",
+      "Prova concreta da sua constância",
     ],
     steps: [],
   },
   {
     id: "insights",
     route: "/app/insights",
-    title: "Insights",
+    title: "Insights do Instagram",
     valueProp:
-      "Dados reais do seu Instagram, sem achismo: o que cresceu, o que engajou, o que repetir. Feche o ciclo — analise, aprenda e comece a próxima semana na frente.",
+      "Dados reais do seu perfil, sem achismo: alcance, engajamento, crescimento e o desempenho de cada post, dentro do CRIA. Feche o ciclo: analise, aprenda o que funciona e comece a próxima semana na frente.",
     benefits: [
-      "Métricas reais do seu perfil dentro do CRIA",
-      "Descubra o que funciona e recicle o que deu certo",
-      "Pare de decidir conteúdo no escuro",
+      "Métricas reais conectadas do seu Instagram",
+      "Veja quais posts performaram e por quê",
+      "Decida o próximo conteúdo com base em dados",
+      "Melhores horários cada vez mais precisos",
+    ],
+    steps: [],
+  },
+  {
+    id: "configuracoes",
+    route: "/app/configuracoes",
+    title: "Configurações",
+    valueProp:
+      "Deixe o CRIA com a sua cara e do seu jeito: tema e cores, fonte, fundo decorativo, conexão com o Instagram, notificações, pilares de conteúdo e seu plano. Vale visitar cada aba uma vez.",
+    benefits: [
+      "Visual: tema CRIA, cores, fontes e fundos",
+      "Conecte o Instagram pra liberar os Insights",
+      "Pilares de conteúdo alimentam sua linha editorial",
+      "Notificações e resumo diário do seu jeito",
     ],
     steps: [],
   },

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { CoverHeader } from "@/components/shared/CoverHeader";
 import { useStatusCovers } from "@/hooks/useStatusCovers";
 import { FormatPicker } from "@/components/kanban/FormatPicker";
+import { useTour } from "@/components/tour/TourProvider";
 import { statusRamp } from "@/lib/statusRamp";
 import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, X, Kanban, Pencil, Table, Search, SlidersHorizontal, ArrowLeftRight, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import {
@@ -74,7 +75,7 @@ const COLUMN_TOOLTIPS: Record<string, string> = {
   roteiro: "Escreva o roteiro, hook e legenda antes de gravar.",
   gravando: "Em processo de gravação ou criação da mídia.",
   editando: "Arquivo gravado, agora em edição ou finalização.",
-  agendado: "Pronto para publicar — com data e hora definidos.",
+  agendado: "Pronto para publicar, com data e hora definidos.",
   publicado: "Já publicado! Use o Histórico para acompanhar resultados.",
 };
 type ContentBlocks = { tema?: string; roteiro?: string; midia?: string; legenda?: string };
@@ -87,6 +88,14 @@ const Criando = () => {
   const { tasks } = useTasks();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Tour do editor: dispara uma única vez, na primeira vez que a pessoa abre um post
+  const { startTourOnce } = useTour();
+  useEffect(() => {
+    if (drawerOpen) {
+      const id = window.setTimeout(() => startTourOnce("post-editor"), 600);
+      return () => window.clearTimeout(id);
+    }
+  }, [drawerOpen, startTourOnce]);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
 
@@ -202,7 +211,7 @@ const Criando = () => {
     if (!user) return;
     const updates: { status: string; published_at?: string } = { status: newStatus };
     if (newStatus === "publicado") updates.published_at = new Date().toISOString();
-    // Salva PRIMEIRO. Confetti/audit só disparam depois do save confirmado —
+    // Salva PRIMEIRO. Confetti/audit só disparam depois do save confirmado
     // antes, um erro de rede deixava o card voltando sem aviso e com confetti falso.
     try {
       await updatePost.mutateAsync({ id: postId, updates });
@@ -275,10 +284,10 @@ const Criando = () => {
               <p className="text-muted-foreground font-body mt-0.5 text-sm hidden sm:block">Seu pipeline de criação. Arraste entre colunas.</p>
             </div>
           </div>
-          <Button variant="hero" size="sm" onClick={openNew} className="shrink-0"><Plus className="h-4 w-4 mr-1" /> Novo Post</Button>
+          <Button data-tour="criando-novo" variant="hero" size="sm" onClick={openNew} className="shrink-0"><Plus className="h-4 w-4 mr-1" /> Novo Post</Button>
         </div>
 
-        {/* Filtros — mobile: busca + botão Filtros + chips ativos (gaveta) */}
+        {/* Filtros, mobile: busca + botão Filtros + chips ativos (gaveta) */}
         <div className="md:hidden mb-3">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
@@ -377,7 +386,7 @@ const Criando = () => {
           </SheetContent>
         </Sheet>
 
-        <div className="hidden md:block overflow-x-auto scrollbar-none -mx-4 px-4 mb-4">
+        <div data-tour="criando-filtros" className="hidden md:block overflow-x-auto scrollbar-none -mx-4 px-4 mb-4">
           <div className="flex items-center gap-3 min-w-max">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
@@ -502,7 +511,7 @@ const Criando = () => {
           )}
         </div>
 
-        <div className="hidden md:flex items-center gap-1 bg-card rounded-xl border border-border p-1 w-max mb-4">
+        <div data-tour="criando-views" className="hidden md:flex items-center gap-1 bg-card rounded-xl border border-border p-1 w-max mb-4">
           {([
             { key: "board", label: "Board", icon: Kanban },
             { key: "tabela", label: "Tabela", icon: Table },
@@ -520,7 +529,7 @@ const Criando = () => {
 
         {view === "board" && (
         <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="hidden md:flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-proximity kanban-scroll">
+        <div data-tour="criando-board" className="hidden md:flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-proximity kanban-scroll">
           {COLUMNS.map(col => {
             const colPosts = filteredPosts.filter(p => p.status === col.key);
             const isPublished = col.key === "publicado";
@@ -671,7 +680,7 @@ const Criando = () => {
                       })
                       .map(post => {
                         const st = ramp[post.status ?? "ideia"];
-                        const stLabel = COLUMNS.find(c => c.key === (post.status ?? "ideia"))?.label ?? (post.status ?? "—");
+                        const stLabel = COLUMNS.find(c => c.key === (post.status ?? "ideia"))?.label ?? (post.status ?? "-");
                         const pil = getPillar(post.pillar_id);
                         return (
                           <tr key={post.id} onClick={() => openEdit(post)}
@@ -691,10 +700,10 @@ const Criando = () => {
                                   <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: pil.color }} />
                                   {pil.name}
                                 </span>
-                              ) : <span className="text-muted-foreground/50">—</span>}
+                              ) : <span className="text-muted-foreground/50">-</span>}
                             </td>
                             <td className="px-4 py-2.5 text-muted-foreground whitespace-nowrap">
-                              {post.scheduled_date ? parseISO(post.scheduled_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "—"}
+                              {post.scheduled_date ? parseISO(post.scheduled_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "-"}
                             </td>
                           </tr>
                         );
@@ -843,7 +852,7 @@ const Criando = () => {
                                   </button>
                                 );
                               })}
-                              {dayPosts.length === 0 && <div className="text-[10px] text-muted-foreground/50 text-center py-4">—</div>}
+                              {dayPosts.length === 0 && <div className="text-[10px] text-muted-foreground/50 text-center py-4">-</div>}
                             </div>
                           );
                         })}
@@ -1025,7 +1034,7 @@ const Criando = () => {
       <Sheet open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
         <SheetContent side="bottom" className="rounded-t-2xl">
           <SheetHeader className="text-left">
-            <SheetTitle className="font-display">Editar capa{editColumn ? ` — ${editColumn.label}` : ""}</SheetTitle>
+            <SheetTitle className="font-display">Editar capa{editColumn ? `, ${editColumn.label}` : ""}</SheetTitle>
           </SheetHeader>
 
           <div className="mt-4 space-y-4">

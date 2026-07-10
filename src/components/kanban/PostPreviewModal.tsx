@@ -68,7 +68,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
   const isCarousel = format === "carrossel" && sections && sections.length > 0;
   const carouselSlides = isCarousel ? sections!.slice(0, 10) : [];
   const currentSlide = carouselSlides[carouselIdx];
-  // driveThumbnail (URL pronta — vem do Storage do upload local OU do Drive)
+  // driveThumbnail (URL pronta, vem do Storage do upload local OU do Drive)
   // tem prioridade. driveFileId só vira URL lh3 quando é um ID real do Drive,
   // não um path do Storage (que tem "/").
   const currentCarouselMedia = currentSlide?.driveThumbnail

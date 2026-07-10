@@ -118,7 +118,7 @@ export function SettingsVisual() {
   return (
     <div className="w-full max-w-[1100px] mx-auto">
       <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
-        {/* LEFT — Controls */}
+        {/* LEFT, Controls */}
         <div className="w-full lg:flex-[0_0_45%] space-y-8 lg:space-y-10">
           {/* Idioma */}
           <section>
@@ -307,7 +307,7 @@ export function SettingsVisual() {
                 <Palette className="h-5 w-5 text-primary" />
                 <h3 className="text-base font-body font-bold text-foreground">Fundo</h3>
               </div>
-              <p className="text-sm text-muted-foreground font-body">Formas decorativas atrás do conteúdo — sutileza que dá vida</p>
+              <p className="text-sm text-muted-foreground font-body">Formas decorativas atrás do conteúdo, sutileza que dá vida</p>
             </div>
             <div className="grid grid-cols-2 gap-2">
               {BG_STYLES.map(bg => (
@@ -340,7 +340,7 @@ export function SettingsVisual() {
           </Button>
         </div>
 
-        {/* RIGHT — Live Preview */}
+        {/* RIGHT, Live Preview */}
         <div className="hidden lg:block flex-1 sticky top-6 self-start">
           <div className="mb-6">
             <h3 className="text-xl font-body font-bold text-foreground mb-1">Preview ao vivo</h3>

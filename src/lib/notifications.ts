@@ -4,7 +4,7 @@ import { toISODateBR } from "@/lib/date-br";
 const TIPS = [
   { t: "Gancho do dia", d: "Abra o vídeo com: \"O erro que quase todo mundo comete sem perceber...\"" },
   { t: "Dica de conteúdo", d: "Transforme uma dúvida frequente do seu cliente num carrossel." },
-  { t: "Ideia rápida", d: "Mostre os bastidores de algo que você fez hoje — gera conexão." },
+  { t: "Ideia rápida", d: "Mostre os bastidores de algo que você fez hoje, gera conexão." },
   { t: "Gancho do dia", d: "\"3 coisas que eu faria diferente se começasse hoje.\"" },
   { t: "Dica de alcance", d: "Poste nos horários de pico do seu público (veja em Insights)." },
   { t: "Ideia rápida", d: "Pegue um comentário recente e responda em vídeo." },
@@ -12,7 +12,7 @@ const TIPS = [
 ];
 
 // O sininho é montado 2x (cabeçalho desktop + mobile) e o StrictMode duplica
-// o efeito em dev — sem isso, duas execuções simultâneas furam a checagem de
+// o efeito em dev, sem isso, duas execuções simultâneas furam a checagem de
 // duplicata e geram notificações repetidas. Colapsa tudo numa só execução e
 // limita a 1x a cada 5 min por carregamento.
 let inFlight: Promise<void> | null = null;

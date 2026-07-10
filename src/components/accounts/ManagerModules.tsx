@@ -59,7 +59,7 @@ export function ManagerModules() {
     <div>
       <header className="mb-6">
         <h1 className="text-2xl font-display font-extrabold text-foreground tracking-tight">Módulos</h1>
-        <p className="text-sm text-muted-foreground font-body mt-1">Ferramentas extras pra sua operação. Cada uma é uma assinatura mensal separada — contrate só o que usar.</p>
+        <p className="text-sm text-muted-foreground font-body mt-1">Ferramentas extras pra sua operação. Cada uma é uma assinatura mensal separada, contrate só o que usar.</p>
       </header>
 
       {isLoading ? (

@@ -82,7 +82,7 @@ export function useFiles() {
         await supabase.storage.from(STORAGE_BUCKET).remove([path]);
         throw error;
       }
-      // Atualiza a cota (não bloqueia se falhar — log e segue).
+      // Atualiza a cota (não bloqueia se falhar, log e segue).
       const { error: incErr } = await (supabase.rpc as unknown as (
         fn: string, args: unknown,
       ) => Promise<{ error: unknown }>)("increment_storage", { _user: userId, _delta: file.size });

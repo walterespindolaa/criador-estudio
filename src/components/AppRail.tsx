@@ -187,7 +187,7 @@ export function AppRail() {
             </div>
             <DialogTitle className="text-xl font-display font-extrabold">Cria Plano é do Cria Studio</DialogTitle>
             <DialogDescription className="text-sm leading-relaxed pt-1">
-              Uma IA treinada na <strong>sua marca</strong> que monta um mês inteiro (ou uma semana) de conteúdo estratégico de uma vez: ideias, formatos, legendas e o melhor horário pra postar — sem repetir o que você já fez.
+              Uma IA treinada na <strong>sua marca</strong> que monta um mês inteiro (ou uma semana) de conteúdo estratégico de uma vez: ideias, formatos, legendas e o melhor horário pra postar, sem repetir o que você já fez.
             </DialogDescription>
           </DialogHeader>
           <ul className="space-y-2 text-sm font-body text-foreground/80 py-1">

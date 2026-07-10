@@ -88,7 +88,7 @@ function startOfWeekIso(d: Date) {
 }
 
 function formatPercent(n: number) {
-  if (!Number.isFinite(n)) return "—";
+  if (!Number.isFinite(n)) return "-";
   const rounded = Math.round(n);
   return `${rounded > 0 ? "+" : ""}${rounded}%`;
 }
@@ -100,16 +100,16 @@ function mean(nums: number[]) {
   return nums.reduce((acc, n) => acc + n, 0) / nums.length;
 }
 
-// 1.2k / 980 — número compacto para views/alcance
+// 1.2k / 980, número compacto para views/alcance
 function formatCompact(n: number) {
-  if (!Number.isFinite(n)) return "—";
+  if (!Number.isFinite(n)) return "-";
   if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k`;
   return Math.round(n).toString();
 }
 
 // eng% já vem em pontos percentuais (ex.: 3.4 -> "3,4%")
 function formatEngagement(n: number) {
-  if (!Number.isFinite(n)) return "—";
+  if (!Number.isFinite(n)) return "-";
   const rounded = n >= 10 ? Math.round(n).toString() : n.toFixed(1);
   return `${rounded.replace(".", ",")}%`;
 }
@@ -321,7 +321,7 @@ const Relatorios = () => {
   const avgViewsDelta =
     prevAvgViews === 0 ? (avgViews > 0 ? 100 : 0) : ((avgViews - prevAvgViews) / prevAvgViews) * 100;
 
-  // Média de views por formato (desc) — topo = "Formato que mais rende"
+  // Média de views por formato (desc), topo = "Formato que mais rende"
   const byFormat = useMemo(() => {
     const groups = new Map<string, number[]>();
     performancePosts.forEach((p) => {
@@ -343,7 +343,7 @@ const Relatorios = () => {
   const topFormatDelta =
     byFormat.length > 0 && avgViews > 0 ? ((byFormat[0].avg - avgViews) / avgViews) * 100 : 0;
 
-  // Média de saves por pilar (desc) — topo = "Pilar que gera saves"
+  // Média de saves por pilar (desc), topo = "Pilar que gera saves"
   const byPillar = useMemo(() => {
     const groups = new Map<string, number[]>();
     performancePosts.forEach((p) => {
@@ -366,7 +366,7 @@ const Relatorios = () => {
       .sort((a, b) => b.avg - a.avg);
   }, [performancePosts, pillars]);
 
-  // Média de views por dia da semana (desc) — topo = "Melhor dia (por resultado)"
+  // Média de views por dia da semana (desc), topo = "Melhor dia (por resultado)"
   const byWeekday = useMemo(() => {
     const groups = new Map<number, number[]>();
     performancePosts.forEach((p) => {
@@ -641,7 +641,7 @@ const Relatorios = () => {
           </div>
 
           {!hasPerformance ? (
-            /* Estado vazio — menos de 3 posts com result_views */
+            /* Estado vazio, menos de 3 posts com result_views */
             <div className="rounded-2xl bg-card border border-border shadow-warm-sm p-8 text-center">
               <div className="w-12 h-12 rounded-2xl bg-muted/60 flex items-center justify-center mx-auto mb-4">
                 <Trophy className="h-6 w-6 text-foreground/70" strokeWidth={1.75} />
@@ -665,7 +665,7 @@ const Relatorios = () => {
                   icon={<Flame className="h-4 w-4 text-white" strokeWidth={1.75} />}
                   iconBg="bg-gradient-to-br from-rose-500 to-red-500"
                   label="Formato que mais rende"
-                  value={byFormat[0]?.label ?? "—"}
+                  value={byFormat[0]?.label ?? "-"}
                   sub={`${formatCompact(byFormat[0]?.avg ?? 0)} views médios`}
                   delta={topFormatDelta}
                   deltaLabel="vs média geral"
@@ -674,7 +674,7 @@ const Relatorios = () => {
                   icon={<Bookmark className="h-4 w-4 text-white" strokeWidth={1.75} />}
                   iconBg="bg-gradient-to-br from-violet-500 to-purple-600"
                   label="Pilar que gera saves"
-                  value={byPillar[0]?.name ?? "—"}
+                  value={byPillar[0]?.name ?? "-"}
                   valueColor={byPillar[0]?.color}
                   sub={`${formatCompact(byPillar[0]?.avg ?? 0)} salvos médios`}
                 />
@@ -682,7 +682,7 @@ const Relatorios = () => {
                   icon={<CalendarDays className="h-4 w-4 text-white" strokeWidth={1.75} />}
                   iconBg="bg-gradient-to-br from-sky-500 to-blue-600"
                   label="Melhor dia (por resultado)"
-                  value={byWeekday[0]?.label ?? "—"}
+                  value={byWeekday[0]?.label ?? "-"}
                   sub={`${formatCompact(byWeekday[0]?.avg ?? 0)} views médios`}
                 />
               </div>

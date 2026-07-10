@@ -1,6 +1,6 @@
 // Cache em memória dos vídeos subidos nesta sessão (confiável no Safari iOS).
 // Guarda o File e um object URL pronto, criado uma única vez no upload.
-// Some ao recarregar a página — aí o Bunny já terminou de processar.
+// Some ao recarregar a página, aí o Bunny já terminou de processar.
 type LocalVideo = { file: File; objectUrl: string };
 const sessionVideos = new Map<string, LocalVideo>();
 

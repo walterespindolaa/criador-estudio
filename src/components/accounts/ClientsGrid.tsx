@@ -17,7 +17,7 @@ export function ClientsGrid({ defaultLimit = 5 }: { defaultLimit?: number }) {
   const [limit, setLimit] = useState(defaultLimit);
   const [notesAccount, setNotesAccount] = useState<ManagedAccount | null>(null);
 
-  // IDs de clientes em inventário (pausados) — escondidos daqui.
+  // IDs de clientes em inventário (pausados), escondidos daqui.
   const { data: parkedIds } = useQuery<Set<string>>({
     queryKey: ["agency-parked-ids"],
     queryFn: async () => {

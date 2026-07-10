@@ -64,7 +64,7 @@ export type ManagerProfile = {
 
 export type ManagerProfileInput = Omit<ManagerProfile, "id" | "user_id">;
 
-// types.ts ainda não tem essas tabelas — cast (igual usePartner/useApprovals).
+// types.ts ainda não tem essas tabelas, cast (igual usePartner/useApprovals).
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 

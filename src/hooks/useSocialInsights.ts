@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
-// types.ts é travado — essas tabelas ainda não estão tipadas. Padrão de cast (igual useModules/useFinance).
+// types.ts é travado, essas tabelas ainda não estão tipadas. Padrão de cast (igual useModules/useFinance).
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 
@@ -192,7 +192,7 @@ export async function connectInstagram(clientId?: string | null) {
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
     if (!token) { toast.error("Faça login novamente."); return; }
-    // A função autentica pelo header e devolve um "ticket" (state) de uso único —
+    // A função autentica pelo header e devolve um "ticket" (state) de uso único
     // o JWT NÃO vai mais na URL do OAuth.
     const { data, error } = await supabase.functions.invoke("get-instagram-config", {
       body: { crm_client_id: clientId ?? null },

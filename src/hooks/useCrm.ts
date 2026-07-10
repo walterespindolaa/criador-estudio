@@ -34,7 +34,7 @@ export type CrmClientRef = {
   image_url: string; note: string | null; sort_order: number; created_at: string;
 };
 
-// types.ts não tem as tabelas crm_* — cast (igual useModules/usePartner)
+// types.ts não tem as tabelas crm_*, cast (igual useModules/usePartner)
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 

@@ -26,7 +26,7 @@ export const FORMAT_STRUCTURES: Record<string, FormatStructure> = {
   },
   shorts: {
     fields: [
-      { key: "hook", label: "Hook (gancho)", placeholder: "Primeiros 3 segundos — o que vai prender?", rows: 2, icon: "Anchor" },
+      { key: "hook", label: "Hook (gancho)", placeholder: "Primeiros 3 segundos, o que vai prender?", rows: 2, icon: "Anchor" },
       { key: "caption", label: "Legenda", placeholder: "Descrição curta com hashtags...", rows: 2, icon: "MessageSquare" },
       { key: "cta", label: "CTA", placeholder: "Ex: Segue pra mais!", rows: 1, icon: "MousePointerClick" },
     ],

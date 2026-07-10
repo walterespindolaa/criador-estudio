@@ -37,7 +37,7 @@ export function ManagerProfileForm({ open, initial, saving, onClose, onSave }: {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle className="font-display">Complete seu cadastro</DialogTitle></DialogHeader>
-        <p className="text-sm text-muted-foreground font-body -mt-2 mb-2">Preenchido uma vez só — usamos nos próximos módulos também.</p>
+        <p className="text-sm text-muted-foreground font-body -mt-2 mb-2">Preenchido uma vez só, usamos nos próximos módulos também.</p>
         <div className="space-y-3">
           <Field label="Nome completo *"><Input value={f.full_name ?? ""} onChange={(e) => set("full_name", e.target.value)} /></Field>
           <Field label="Nome profissional / marca"><Input value={f.business_name ?? ""} onChange={(e) => set("business_name", e.target.value)} /></Field>

@@ -26,7 +26,7 @@ export function ContractsTab() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<CrmContract | null>(null);
 
-  const clientName = (id: string | null) => clients.find((c) => c.id === id)?.name ?? "—";
+  const clientName = (id: string | null) => clients.find((c) => c.id === id)?.name ?? "-";
   const openNew = () => { setEditing(null); setDialogOpen(true); };
   const openEdit = (c: CrmContract) => { setEditing(c); setDialogOpen(true); };
 
@@ -128,7 +128,7 @@ function ContractDialog({ contract, clients, saving, onClose, onCreate, onUpdate
           <div className="space-y-1.5"><Label className="text-xs">Título *</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Contrato - Café Aroma" className="rounded-xl" /></div>
           <div className="space-y-1.5"><Label className="text-xs">Cliente</Label>
             <select value={clientId} onChange={(e) => setClientId(e.target.value)} className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
-              <option value="">—</option>{clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              <option value="">-</option>{clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-3">

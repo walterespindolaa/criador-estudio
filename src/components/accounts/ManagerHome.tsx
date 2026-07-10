@@ -332,7 +332,7 @@ export function ManagerHome({ embedded = false }: { embedded?: boolean }) {
             )}
           </section>
 
-          {/* Minha conta — manager assina o cria pra si */}
+          {/* Minha conta, manager assina o cria pra si */}
           <section className="rounded-2xl border border-border bg-card/50 px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-4">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
               <Sparkles className="h-4 w-4 text-primary" />
@@ -342,7 +342,7 @@ export function ManagerHome({ embedded = false }: { embedded?: boolean }) {
                 Quer usar o cria pro seu conteúdo também?
               </p>
               <p className="text-xs text-muted-foreground font-body mt-0.5">
-                Crie uma conta de criadora pra você (com e-mail PF) e ganhe ideias, calendário e IA — sem sair daqui.
+                Crie uma conta de criadora pra você (com e-mail PF) e ganhe ideias, calendário e IA, sem sair daqui.
               </p>
             </div>
             <Button

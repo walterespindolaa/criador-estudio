@@ -18,7 +18,7 @@ export const THEME_PRESETS: ThemePreset[] = [
   {
     id: 'cria',
     name: 'CRIA',
-    desc: 'A identidade oficial — creme e quente',
+    desc: 'A identidade oficial, creme e quente',
     group: 'essenciais',
     mode: 'light',
     vars: {

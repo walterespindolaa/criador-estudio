@@ -7,7 +7,7 @@ type OtpType = "invite" | "magiclink" | "recovery" | "email";
 
 /**
  * Página de 1º acesso "branded". Recebe um token_hash (th) gerado pelo admin,
- * autentica via verifyOtp e leva o usuário pra área certa — sem expor o supabase.co.
+ * autentica via verifyOtp e leva o usuário pra área certa, sem expor o supabase.co.
  */
 export default function Ativar() {
   const [params] = useSearchParams();
@@ -31,7 +31,7 @@ export default function Ativar() {
         setError("Este link expirou ou já foi usado. Peça um novo acesso a quem te convidou.");
         return;
       }
-      // logado — segue pro destino (o app cuida da troca de senha se necessário)
+      // logado, segue pro destino (o app cuida da troca de senha se necessário)
       navigate(to.startsWith("/") ? to : "/app", { replace: true });
     })();
   }, [params, navigate]);

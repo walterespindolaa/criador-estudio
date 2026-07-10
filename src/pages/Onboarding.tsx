@@ -391,7 +391,7 @@ const Onboarding = () => {
                   Quem é você?
                 </h1>
                 <p className="text-base text-muted-foreground font-body">
-                  Vamos começar pelo básico — assim podemos personalizar tudo pra você.
+                  Vamos começar pelo básico, assim podemos personalizar tudo pra você.
                 </p>
               </header>
 
@@ -788,7 +788,7 @@ const Onboarding = () => {
                   </div>
                   <div>
                     <h1 className="text-3xl sm:text-4xl font-display font-extrabold text-foreground tracking-tight mb-2">
-                      Pronto{name.trim() ? `, ${name.trim()}` : ""} — montei sua primeira semana
+                      Pronto{name.trim() ? `, ${name.trim()}` : ""}, montei sua primeira semana
                     </h1>
                     <p className="text-base text-muted-foreground font-body max-w-md mx-auto">
                       {generatedIdeas.length > 0
@@ -821,7 +821,7 @@ const Onboarding = () => {
                   <div className="max-w-md mx-auto rounded-xl border border-primary/20 bg-primary/[0.04] px-4 py-3 flex items-start gap-3 text-left">
                     <Palette className="h-5 w-5 text-primary shrink-0 mt-0.5" strokeWidth={1.75} />
                     <p className="text-xs text-muted-foreground font-body leading-relaxed">
-                      <span className="font-semibold text-foreground">Próximo passo importante:</span> preencha seu moodboard no Brandbook — é de lá que a Cria IA aprende o seu estilo pra gerar ideias e textos com a sua cara.
+                      <span className="font-semibold text-foreground">Próximo passo importante:</span> preencha seu moodboard no Brandbook, é de lá que a Cria IA aprende o seu estilo pra gerar ideias e textos com a sua cara.
                     </p>
                   </div>
 

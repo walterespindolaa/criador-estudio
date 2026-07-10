@@ -3,7 +3,7 @@
  * getBoundingClientRect().right ultrapasse a largura do <html>. Ajuda a
  * achar exatamente quem empurra o layout horizontal.
  *
- * Uso: chamar installOverflowDetector() uma vez no AppLayout — só roda
+ * Uso: chamar installOverflowDetector() uma vez no AppLayout, só roda
  * em import.meta.env.DEV; em produção é no-op.
  */
 

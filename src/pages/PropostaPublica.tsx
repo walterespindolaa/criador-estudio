@@ -107,7 +107,7 @@ export default function PropostaPublica() {
                 <span className="text-sm font-semibold flex-1 break-all">{p.creator.pix_key}</span>
                 <button type="button" onClick={copyPix} className="text-xs font-bold text-primary-foreground bg-primary hover:opacity-90 rounded-lg px-3 py-2 flex-shrink-0">Copiar</button>
               </div>
-              <p className="text-xs text-muted-foreground mt-2.5">Depois de pagar, avise {p.creator?.name ?? "o criador"} — ele confirma o recebimento.</p>
+              <p className="text-xs text-muted-foreground mt-2.5">Depois de pagar, avise {p.creator?.name ?? "o criador"}, ele confirma o recebimento.</p>
             </div>
           </div>
         )}
@@ -142,7 +142,7 @@ export default function PropostaPublica() {
               <Download className="h-4 w-4 text-primary ml-auto flex-shrink-0" />
             </a>
           )}
-          {p.status === "ajuste" && <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 mt-3 text-center">Alteração solicitada — aguardando o criador.</p>}
+          {p.status === "ajuste" && <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 mt-3 text-center">Alteração solicitada, aguardando o criador.</p>}
         </div>
 
         {!decided && p.status !== "ajuste" && (

@@ -4,7 +4,7 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 
-// Tabela nova não está no types.ts (que é travado) — cast padrão do projeto:
+// Tabela nova não está no types.ts (que é travado), cast padrão do projeto:
 const sbFrom = supabase.from.bind(supabase) as unknown as (t: string) => ReturnType<typeof supabase.from>;
 
 const lsKey = (userId: string) => `cria_tour_${userId}`;
@@ -21,7 +21,7 @@ function writeLocal(userId: string, ids: string[]) {
   try {
     localStorage.setItem(lsKey(userId), JSON.stringify(Array.from(new Set(ids))));
   } catch {
-    /* quota/priv mode — segue o jogo */
+    /* quota/priv mode, segue o jogo */
   }
 }
 

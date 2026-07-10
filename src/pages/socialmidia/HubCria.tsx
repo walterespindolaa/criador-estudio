@@ -75,7 +75,7 @@ export default function HubCria() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-body font-semibold text-foreground truncate">{c.name}</p>
-                      <p className="text-xs text-muted-foreground font-body truncate">{c.instagram ? `@${c.instagram.replace(/^@/, "")}` : c.segment || "—"}</p>
+                      <p className="text-xs text-muted-foreground font-body truncate">{c.instagram ? `@${c.instagram.replace(/^@/, "")}` : c.segment || "-"}</p>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                   </div>
@@ -100,7 +100,7 @@ export default function HubCria() {
           <TrendingUp className="h-4 w-4 text-primary" /> Análise avulsa (sem cliente)
           <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${avulsa ? "rotate-180" : ""}`} />
         </button>
-        <p className="text-xs font-body text-muted-foreground mt-1">Rode um scrape exploratório sem amarrar a um cliente — as ideias ficam guardadas aqui no HUB.</p>
+        <p className="text-xs font-body text-muted-foreground mt-1">Rode um scrape exploratório sem amarrar a um cliente, as ideias ficam guardadas aqui no HUB.</p>
         {avulsa && <div className="mt-4"><CriativoTab /></div>}
       </div>
     </motion.div>

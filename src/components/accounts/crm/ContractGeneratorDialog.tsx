@@ -50,7 +50,7 @@ export function ContractGeneratorDialog({ open, onOpenChange }: Props) {
   const generate = async () => {
     setBusy(true);
     try {
-      // Captura em tamanho natural (zoom 1) — o html2canvas quebra o texto com zoom != 1.
+      // Captura em tamanho natural (zoom 1), o html2canvas quebra o texto com zoom != 1.
       setCapturing(true);
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
       await new Promise((r) => setTimeout(r, 60));
@@ -90,7 +90,7 @@ export function ContractGeneratorDialog({ open, onOpenChange }: Props) {
             <Sec title="Cliente (CONTRATANTE)">
               <Fld label="Selecionar cliente da carteira (opcional)" full>
                 <select value={clientId} onChange={(e) => setClientId(e.target.value)} className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
-                  <option value="">— preencher manualmente —</option>
+                  <option value="">preencher manualmente</option>
                   {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </Fld>
@@ -143,8 +143,8 @@ export function ContractGeneratorDialog({ open, onOpenChange }: Props) {
 
             <Sec title="Foro, assinatura e testemunhas">
               <Grid>
-                <Fld label="Foro — cidade"><Input value={d.foroCity} onChange={(e) => set({ foroCity: e.target.value })} className="rounded-xl" /></Fld>
-                <Fld label="Foro — UF"><Input value={d.foroUf} maxLength={2} onChange={(e) => set({ foroUf: e.target.value })} className="rounded-xl" /></Fld>
+                <Fld label="Foro, cidade"><Input value={d.foroCity} onChange={(e) => set({ foroCity: e.target.value })} className="rounded-xl" /></Fld>
+                <Fld label="Foro, UF"><Input value={d.foroUf} maxLength={2} onChange={(e) => set({ foroUf: e.target.value })} className="rounded-xl" /></Fld>
                 <Fld label="Cidade da assinatura"><Input value={d.signCity} onChange={(e) => set({ signCity: e.target.value })} className="rounded-xl" /></Fld>
                 <Fld label="Data da assinatura"><Input type="date" value={d.signDate} onChange={(e) => set({ signDate: e.target.value })} className="rounded-xl" /></Fld>
                 <Fld label="Testemunha 1 (nome)"><Input value={d.witness1} onChange={(e) => set({ witness1: e.target.value })} className="rounded-xl" /></Fld>
@@ -153,7 +153,7 @@ export function ContractGeneratorDialog({ open, onOpenChange }: Props) {
             </Sec>
           </div>
 
-          {/* Pré-visualização — também é a FONTE do PDF (precisa ficar em fluxo e visível) */}
+          {/* Pré-visualização, também é a FONTE do PDF (precisa ficar em fluxo e visível) */}
           <div className="mt-6">
             <p className="text-xs font-medium text-muted-foreground mb-2">Pré-visualização do contrato</p>
             <div className="rounded-xl border border-border bg-muted/30 overflow-auto" style={{ maxHeight: "55vh" }}>

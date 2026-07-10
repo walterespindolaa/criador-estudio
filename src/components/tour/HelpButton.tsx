@@ -1,5 +1,5 @@
 /**
- * Botão "?" da barra superior — reabre o tour da tela atual quando quiser.
+ * Botão "?" da barra superior, reabre o tour da tela atual quando quiser.
  */
 import { CircleHelp, PlayCircle, Route } from "lucide-react";
 import { useLocation } from "react-router-dom";

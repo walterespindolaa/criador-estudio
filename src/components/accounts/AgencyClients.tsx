@@ -47,7 +47,7 @@ export function AgencyClients({ seatsFree }: { seatsFree: number }) {
       const { data, error } = await supabase.functions.invoke("manager-client-actions", { body: { action: act, clientId, ...extra } });
       const err = (data as { error?: string })?.error;
       if (error || err) {
-        toast.error(err === "seats_full" ? "Sem assento livre pra reativar — pause outro ou expanda."
+        toast.error(err === "seats_full" ? "Sem assento livre pra reativar, pause outro ou expanda."
           : err === "email_update_failed" ? "Não consegui trocar o e-mail (já em uso?)."
           : err === "rate_limited" ? "Muitas ações em sequência. Aguarde um minuto."
           : "Não consegui concluir a ação.");

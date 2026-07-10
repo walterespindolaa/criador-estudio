@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-// RPC nova ainda não está nos tipos gerados — cast.
+// RPC nova ainda não está nos tipos gerados, cast.
 const sbRpc = supabase.rpc.bind(supabase) as unknown as (
   fn: string,
   args?: Record<string, unknown>,

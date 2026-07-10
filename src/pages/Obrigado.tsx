@@ -38,7 +38,7 @@ export default function Obrigado() {
         </div>
         <h1 className="font-display text-3xl font-extrabold tracking-tight text-foreground">Assinatura confirmada! 🎉</h1>
         <p className="mt-3 text-sm font-body text-muted-foreground">
-          Pagamento aprovado. Bem-vindo ao Cria Social Club — agora é só criar.
+          Pagamento aprovado. Bem-vindo ao Cria Social Club, agora é só criar.
         </p>
         <Button onClick={() => navigate("/app")} className="mt-7 h-12 w-full text-base">
           Ir pro app <ArrowRight className="ml-2 h-4 w-4" />

@@ -27,7 +27,7 @@ export function HeroBand({
         className="pointer-events-none absolute inset-0"
         style={{ background: "radial-gradient(60% 120% at 88% -10%, rgba(255,255,255,.18), transparent 60%)" }}
       />
-      {/* Formas orgânicas da identidade CRIA — flutuam suave dentro da faixa */}
+      {/* Formas orgânicas da identidade CRIA, flutuam suave dentro da faixa */}
       <div aria-hidden className="cria-blob pointer-events-none absolute -top-24 -right-16 h-56 w-56 rounded-[38%_62%_55%_45%/48%_42%_58%_52%] bg-[#F2C21E] opacity-70" />
       <div aria-hidden className="cria-blob cria-blob-slow pointer-events-none absolute -bottom-20 right-[18%] h-40 w-40 rounded-[55%_45%_40%_60%/50%_60%_40%_50%] bg-[#F27EB5] opacity-60" />
       <div aria-hidden className="cria-blob cria-blob-fast pointer-events-none absolute top-[26%] right-[40%] hidden h-10 w-10 rounded-full bg-[#FDFBF5] opacity-70 md:block" />

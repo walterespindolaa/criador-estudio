@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 const CONSCIOUSNESS = ["Inconsciente do problema", "Consciente do problema", "Consciente da solução", "Consciente do produto", "Totalmente consciente"];
 const brl = (v?: number | null) => `R$ ${Number(v ?? 0).toLocaleString("pt-BR")}`;
 const initial = (n?: string | null) => (n ? n.trim().charAt(0).toUpperCase() : "?");
-const monthYear = (d?: string | null) => d ? new Date(d + "T00:00:00").toLocaleDateString("pt-BR", { month: "short", year: "numeric" }) : "—";
+const monthYear = (d?: string | null) => d ? new Date(d + "T00:00:00").toLocaleDateString("pt-BR", { month: "short", year: "numeric" }) : "-";
 const parseHex = (s?: string) => (s ?? "").split(/[\s,;]+/).filter((x) => /^#([0-9a-f]{3,8})$/i.test(x)).slice(0, 8);
 const DIAG = { baixo: { l: "Baixo", c: "text-red-600" }, medio: { l: "Médio", c: "text-amber-600" }, alto: { l: "Alto", c: "text-green-600" } } as const;
 
@@ -30,7 +30,7 @@ export default function CriaCrmClient() {
   return <ModuleGate code="crm"><ClientWorkspace /></ModuleGate>;
 }
 
-// Ditado por voz (Web Speech API — Chrome). Anexa o texto reconhecido ao campo.
+// Ditado por voz (Web Speech API, Chrome). Anexa o texto reconhecido ao campo.
 function MicButton({ onText }: { onText: (t: string) => void }) {
   const recRef = useRef<any>(null);
   const [on, setOn] = useState(false);
@@ -201,7 +201,7 @@ function ClientWorkspace() {
           <Stat k="Valor mensal" v={brl(form.monthly_value)} s="por mês" accent />
           <Stat k="Cliente desde" v={monthYear(form.contract_date)} />
           <Stat k="Renovação" v={monthYear(form.renewal_date)} />
-          <Stat k="Diagnóstico" v={diagOverall ? diagOverall.l : "—"} cls={diagOverall ? diagOverall.c : ""} />
+          <Stat k="Diagnóstico" v={diagOverall ? diagOverall.l : "-"} cls={diagOverall ? diagOverall.c : ""} />
         </div>
       </div>
 
@@ -247,14 +247,14 @@ function ClientWorkspace() {
           {isCria && (
             <div className="flex items-center gap-2 rounded-2xl border border-primary/20 bg-primary/[0.05] px-4 py-3 flex-wrap">
               <Instagram className="h-4 w-4 text-primary shrink-0" />
-              <p className="text-[12px] font-body text-foreground/80 flex-1 min-w-0">Este cliente usa o Cria — o Brandbook e o nome são sincronizados do que ele preenche na conta dele.</p>
+              <p className="text-[12px] font-body text-foreground/80 flex-1 min-w-0">Este cliente usa o Cria, o Brandbook e o nome são sincronizados do que ele preenche na conta dele.</p>
               <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => id && sync.mutate(id, { onSuccess: () => toast.success("Sincronizado do Cria!") })} disabled={sync.isPending}>
                 {sync.isPending ? <Save className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
                 Sincronizar do Cria
               </Button>
             </div>
           )}
-          {/* Mensagem & estratégia — é isso que alimenta as ideias de post da IA */}
+          {/* Mensagem & estratégia, é isso que alimenta as ideias de post da IA */}
           <Card icon={<Brain />} title="Mensagem & estratégia (alimenta as ideias de post)">
             <p className="text-[11px] font-body text-muted-foreground mb-3 -mt-1">Quanto mais completo, melhores as ideias que a IA gera pra este cliente. Toque no 🎤 pra ditar por voz.</p>
             <F label="O que a marca vende (produto/serviço)"><MicTextarea value={bc.offer ?? ""} onChange={(v) => setBc("offer", v)} placeholder="Ex.: consultoria financeira pra casais; app de organização..." /></F>
@@ -397,7 +397,7 @@ function ClientWorkspace() {
                 </Button>
               </div>
               {hubDone.length === 0 ? (
-                <p className="text-[12px] font-body text-muted-foreground">Nenhuma pesquisa ainda. Rode uma análise de concorrente na aba <strong>Criativo</strong> — os resultados aparecem aqui pra consulta.</p>
+                <p className="text-[12px] font-body text-muted-foreground">Nenhuma pesquisa ainda. Rode uma análise de concorrente na aba <strong>Criativo</strong>, os resultados aparecem aqui pra consulta.</p>
               ) : (
                 <div className="space-y-2">
                   {hubDone.map((s, i) => (
@@ -473,7 +473,7 @@ function Rating({ label, value, on, bold }: { label: string; value: string; on: 
   );
 }
 function CriaHint() {
-  return <div className="rounded-2xl border border-primary/15 bg-primary/5 px-4 py-3 text-xs text-foreground/80 flex items-center gap-2.5"><Pencil className="h-4 w-4 text-primary shrink-0" /> Esse cliente tem brandbook no cria — o conteúdo "oficial" vive lá. Use "Abrir no cria".</div>;
+  return <div className="rounded-2xl border border-primary/15 bg-primary/5 px-4 py-3 text-xs text-foreground/80 flex items-center gap-2.5"><Pencil className="h-4 w-4 text-primary shrink-0" /> Esse cliente tem brandbook no cria, o conteúdo "oficial" vive lá. Use "Abrir no cria".</div>;
 }
 function Moodboard({ clientId }: { clientId: string }) {
   const { data: refs = [] } = useCrmClientRefs(clientId);
@@ -484,7 +484,7 @@ function Moodboard({ clientId }: { clientId: string }) {
       <div className="flex items-start justify-between gap-3 mb-4">
         <div>
           <h3 className="font-display font-bold text-base text-foreground flex items-center gap-2.5"><ImageIcon className="h-[18px] w-[18px] text-primary" /> Moodboard</h3>
-          <p className="text-xs text-muted-foreground mt-1">Imagens de referência do cliente — prints, paleta, inspirações visuais.</p>
+          <p className="text-xs text-muted-foreground mt-1">Imagens de referência do cliente, prints, paleta, inspirações visuais.</p>
         </div>
         <Button variant="outline" size="sm" className="rounded-xl shrink-0" onClick={() => fileRef.current?.click()} disabled={addRef.isPending}><ImagePlus className="h-3.5 w-3.5 mr-1.5" /> Adicionar imagem</Button>
       </div>

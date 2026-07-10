@@ -86,7 +86,7 @@ const Arquivos = () => {
   const ownerId = activeAccountId || user?.id || "";
   const queryClient = useQueryClient();
   // Barra de cota reflete a CONTA ATIVA (o dono dos arquivos).
-  // NÃO usar pra gate de billing — só exibição.
+  // NÃO usar pra gate de billing, só exibição.
   const { profile: activeProfile } = useActiveProfile();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -321,7 +321,7 @@ const Arquivos = () => {
           <p className="text-xs text-muted-foreground font-body mt-1">Máximo 50MB por arquivo</p>
         </div>
         <p className="text-xs text-muted-foreground font-body text-center mb-6">
-          💡 Arquivos temporários somem em {retentionDays} dias. Escolha "Permanente" no upload pra manter — ocupa sua cota.
+          💡 Arquivos temporários somem em {retentionDays} dias. Escolha "Permanente" no upload pra manter, ocupa sua cota.
         </p>
 
         {/* Filters */}
@@ -408,7 +408,7 @@ const Arquivos = () => {
               };
               return (
                 <>
-                  {/* Seção 1 — Permanentes (expires_at = null) */}
+                  {/* Seção 1, Permanentes (expires_at = null) */}
                   {filteredPermanent.length > 0 && (
                     <div className="mb-6">
                       <p className="text-sm font-body font-semibold text-foreground mb-3 flex items-center gap-2">
@@ -422,7 +422,7 @@ const Arquivos = () => {
                     </div>
                   )}
 
-                  {/* Seção 2 — Temporárias (expires_at preenchido) */}
+                  {/* Seção 2, Temporárias (expires_at preenchido) */}
                   {filteredTemporary.length > 0 && (
                     <div className="mb-6">
                       <p className="text-sm font-body font-semibold text-foreground mb-3 flex items-center gap-2">
@@ -439,7 +439,7 @@ const Arquivos = () => {
               );
             })()}
 
-            {/* Seção 2 — Mídias vinculadas (Drive + Bunny + outros providers) */}
+            {/* Seção 2, Mídias vinculadas (Drive + Bunny + outros providers) */}
             {filteredDrive.length > 0 && (
               <div className="mb-6">
                 <p className="text-sm font-body font-semibold text-foreground mb-3 flex items-center gap-2">

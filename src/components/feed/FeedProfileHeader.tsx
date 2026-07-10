@@ -32,11 +32,11 @@ export function FeedProfileHeader({ profile, postCount }: Props) {
               <p className="text-xs text-muted-foreground font-body">{postCount === 1 ? "post" : "posts"}</p>
             </div>
             <div className="text-center">
-              <p className="text-xl font-display font-extrabold text-foreground">—</p>
+              <p className="text-xl font-display font-extrabold text-foreground">-</p>
               <p className="text-xs text-muted-foreground font-body">seguidores</p>
             </div>
             <div className="text-center">
-              <p className="text-xl font-display font-extrabold text-foreground">—</p>
+              <p className="text-xl font-display font-extrabold text-foreground">-</p>
               <p className="text-xs text-muted-foreground font-body">seguindo</p>
             </div>
           </div>

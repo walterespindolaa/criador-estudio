@@ -165,7 +165,7 @@ const Historico = () => {
           </div>
         )}
 
-        {/* Filters — barra organizada por grupo */}
+        {/* Filters, barra organizada por grupo */}
         {posts.length > 0 && (
           <div className="bg-card border border-border rounded-2xl p-3 mb-6 flex flex-col gap-3 md:flex-row md:items-center md:flex-wrap md:gap-x-6 md:gap-y-3">
             {/* Plataforma */}
@@ -277,7 +277,7 @@ const Historico = () => {
                                     </span>
                                   )}
                                   <span className="text-xs text-muted-foreground font-body">
-                                    {post.published_at ? new Date(post.published_at).toLocaleDateString("pt-BR") : "—"}
+                                    {post.published_at ? new Date(post.published_at).toLocaleDateString("pt-BR") : "-"}
                                   </span>
                                 </div>
                               </div>

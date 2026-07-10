@@ -67,7 +67,7 @@ export default function CriaEstudio() {
   const [reelSeconds, setReelSeconds] = useState((saved.reelSeconds as number) ?? 30);
   const [reelScript, setReelScript] = useState<string | null>((saved.reelScript as string) ?? null);
 
-  // Perplexity (admin-only) — duas abas fixas, cada uma guarda seu resultado (persistido no F5).
+  // Perplexity (admin-only), duas abas fixas, cada uma guarda seu resultado (persistido no F5).
   const [themes, setThemes] = useState<HotTheme[] | null>((saved.themes as HotTheme[]) ?? null);
   const [news, setNews] = useState<NewsHook[] | null>((saved.news as NewsHook[]) ?? null);
   const [pplxTab, setPplxTab] = useState<"themes" | "news">((saved.pplxTab as "themes" | "news") ?? "themes");
@@ -88,7 +88,7 @@ export default function CriaEstudio() {
         postId, kind, title, sourceContent, format, slides, aspect, resolution,
         draftPages, draftMaster, enrich, withText, reelSeconds, reelScript, themes, news, pplxTab,
       }));
-    } catch { /* quota cheia / modo privado — ignora */ }
+    } catch { /* quota cheia / modo privado, ignora */ }
   }, [postId, kind, title, sourceContent, format, slides, aspect, resolution, draftPages, draftMaster, enrich, withText, reelSeconds, reelScript, themes, news, pplxTab]);
 
   // Polling enquanto houver jobs em andamento.
@@ -139,13 +139,13 @@ export default function CriaEstudio() {
 
   const copy = async (text: string, label = "Copiado!") => {
     try { await navigator.clipboard.writeText(text); toast.success(label); }
-    catch { toast.error("Não consegui copiar — copie manualmente."); }
+    catch { toast.error("Não consegui copiar, copie manualmente."); }
   };
 
   const copyAll = () => {
     if (!draftPages) return;
     const blocks = draftPages.map((p, i) => `# ${i === 0 ? "CAPA" : (p.role || `SLIDE ${i + 1}`)} (${i + 1}/${draftPages.length})\nTexto na tela: ${p.screen_text}\nPrompt da imagem: ${p.prompt}`);
-    const full = `=== PROMPT MASTER (linha editorial/estilo — cole antes de cada página) ===\n${draftMaster}\n\n${blocks.join("\n\n")}`;
+    const full = `=== PROMPT MASTER (linha editorial/estilo, cole antes de cada página) ===\n${draftMaster}\n\n${blocks.join("\n\n")}`;
     copy(full, "Master + todos os prompts copiados!");
   };
 
@@ -211,7 +211,7 @@ export default function CriaEstudio() {
     );
   };
 
-  // Gera UMA imagem só (o slide i) — vira um job próprio, sem apagar a revisão.
+  // Gera UMA imagem só (o slide i), vira um job próprio, sem apagar a revisão.
   const [genOne, setGenOne] = useState<number | null>(null);
   const gerarUm = (i: number) => {
     if (!draftPages) return;
@@ -219,7 +219,7 @@ export default function CriaEstudio() {
     const label = i === 0 ? "capa" : `slide ${i + 1}`;
     setGenOne(i);
     gen.mutate(
-      { title: `${title.trim()} — ${label}`, format: "estatico", slides: 1, aspect_ratio: aspect, resolution, pages: [pg], post_id: postId || undefined },
+      { title: `${title.trim()}, ${label}`, format: "estatico", slides: 1, aspect_ratio: aspect, resolution, pages: [pg], post_id: postId || undefined },
       { onSettled: () => setGenOne(null) },
     );
   };
@@ -298,7 +298,7 @@ export default function CriaEstudio() {
             </p>
           )}
 
-          {/* Perplexity: sugestões (admin) — duas abas fixas */}
+          {/* Perplexity: sugestões (admin), duas abas fixas */}
           <div className="flex items-center gap-2 mt-2.5">
             <span className="text-[10px] font-body text-muted-foreground">Sugestões via Perplexity · interno</span>
           </div>
@@ -489,7 +489,7 @@ export default function CriaEstudio() {
             </div>
           )}
         </div>
-        <p className="text-[11px] font-body text-muted-foreground">A IA monta {kind === "foto" ? "a ideia de conteúdo" : "o texto de cada slide"} a partir do roteiro/legenda + sua marca (moodboard). Com <strong>Enriquecer com dados atuais</strong> ligado, o Perplexity busca estatísticas e fatos recentes (com fonte) pra dar autoridade. Você revisa antes de gerar {kind === "foto" ? "a imagem" : "as imagens"} — o Higgsfield só é acionado depois que você aprovar.</p>
+        <p className="text-[11px] font-body text-muted-foreground">A IA monta {kind === "foto" ? "a ideia de conteúdo" : "o texto de cada slide"} a partir do roteiro/legenda + sua marca (moodboard). Com <strong>Enriquecer com dados atuais</strong> ligado, o Perplexity busca estatísticas e fatos recentes (com fonte) pra dar autoridade. Você revisa antes de gerar {kind === "foto" ? "a imagem" : "as imagens"}, o Higgsfield só é acionado depois que você aprovar.</p>
       </div>
       )}
 
@@ -506,7 +506,7 @@ export default function CriaEstudio() {
             </button>
           </div>
 
-          {/* Prompt MASTER — linha editorial/paleta/estilo pra todos os slides */}
+          {/* Prompt MASTER, linha editorial/paleta/estilo pra todos os slides */}
           <div className="rounded-xl border border-secondary/30 bg-secondary/[0.04] p-3 mb-3">
             <div className="flex items-center gap-1.5 mb-1.5">
               <Palette className="h-3.5 w-3.5 text-secondary" />
@@ -586,7 +586,7 @@ export default function CriaEstudio() {
               Gerar via API (créditos separados)
             </Button>
           </div>
-          <p className="text-[11px] font-body text-muted-foreground mt-2">Cole o <strong>prompt master</strong> + o prompt de cada slide no app do Higgsfield que você já assina (usa seus créditos do app). O botão "Gerar via API" só funciona se você tiver créditos de API no Higgsfield Cloud — é outro saldo.</p>
+          <p className="text-[11px] font-body text-muted-foreground mt-2">Cole o <strong>prompt master</strong> + o prompt de cada slide no app do Higgsfield que você já assina (usa seus créditos do app). O botão "Gerar via API" só funciona se você tiver créditos de API no Higgsfield Cloud, é outro saldo.</p>
         </div>
       )}
 

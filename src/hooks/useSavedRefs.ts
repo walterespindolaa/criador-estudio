@@ -49,7 +49,7 @@ export function useSavedFolders() {
   }, [refs]);
 }
 
-// Busca capa/legenda/@ do link via edge (Apify) — best-effort.
+// Busca capa/legenda/@ do link via edge (Apify), best-effort.
 async function fetchPreview(url: string): Promise<Partial<SavedRef>> {
   try {
     const { data, error } = await supabase.functions.invoke("saved-fetch", { body: { url } });

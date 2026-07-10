@@ -114,7 +114,7 @@ const Feed = () => {
     try {
       localStorage.setItem("feed_grid_order", JSON.stringify(gridPosts.map((p) => p.id)));
     } catch {
-      /* localStorage unavailable — ignore */
+      /* localStorage unavailable, ignore */
     }
   }, [gridPosts]);
 

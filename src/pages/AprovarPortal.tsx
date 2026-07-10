@@ -81,10 +81,10 @@ function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
 
 function StageContent({ post, stage }: { post: PortalPost; stage: Stage }) {
   const map: Record<Stage, { label: string; value: string; box: boolean }> = {
-    tema: { label: "Tema · ideia do post", value: post.title || "—", box: false },
-    conteudo: { label: "Conteúdo · roteiro", value: post.script || post.hook || "—", box: true },
+    tema: { label: "Tema · ideia do post", value: post.title || "-", box: false },
+    conteudo: { label: "Conteúdo · roteiro", value: post.script || post.hook || "-", box: true },
     midia: { label: "Mídia", value: "Revise a mídia exibida no post ao lado.", box: false },
-    legenda: { label: "Legenda", value: post.caption || "—", box: true },
+    legenda: { label: "Legenda", value: post.caption || "-", box: true },
   };
   const c = map[stage];
   return (
@@ -141,7 +141,7 @@ function PostApproval({ client, post, busy, onApproveFast, onAdjustFast, onAppro
                   <div className="text-xs font-body text-orange-700 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2.5 mb-4">Você pediu: "{post.last_comment}"</div>
                 )}
                 {fullyApproved ? (
-                  <div className="flex items-center gap-2 text-sm font-body font-bold text-green-700 bg-green-50 rounded-2xl px-4 py-3.5"><Check className="h-5 w-5" /> Aprovado — obrigada!</div>
+                  <div className="flex items-center gap-2 text-sm font-body font-bold text-green-700 bg-green-50 rounded-2xl px-4 py-3.5"><Check className="h-5 w-5" /> Aprovado, obrigada!</div>
                 ) : !adjOpen ? (
                   <div className="flex gap-3">
                     <Button className="flex-1 h-14 rounded-2xl text-base font-bold shadow-lg shadow-primary/25" onClick={() => onApproveFast(post.post_id)} disabled={busy}>{busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Check className="h-5 w-5 mr-1.5" /> Aprovar</>}</Button>
@@ -196,7 +196,7 @@ function PostApproval({ client, post, busy, onApproveFast, onAdjustFast, onAppro
                     </div>
                   </div>
                 )}
-                {fullyApproved && <div className="mt-5 flex items-center gap-2 text-sm font-body font-bold text-green-700 bg-green-50 rounded-2xl px-4 py-3.5"><Check className="h-5 w-5" /> Tudo aprovado — obrigada!</div>}
+                {fullyApproved && <div className="mt-5 flex items-center gap-2 text-sm font-body font-bold text-green-700 bg-green-50 rounded-2xl px-4 py-3.5"><Check className="h-5 w-5" /> Tudo aprovado, obrigada!</div>}
               </>
             )}
           </div>

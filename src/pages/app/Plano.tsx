@@ -299,7 +299,7 @@ const Plano = () => {
   const weekLabel = (() => {
     const start = new Date(weekDays[0].date + "T12:00:00");
     const end = new Date(weekDays[6].date + "T12:00:00");
-    return `${start.toLocaleDateString("pt-BR", { day: "numeric", month: "short" })} — ${end.toLocaleDateString("pt-BR", { day: "numeric", month: "short" })}`;
+    return `${start.toLocaleDateString("pt-BR", { day: "numeric", month: "short" })}, ${end.toLocaleDateString("pt-BR", { day: "numeric", month: "short" })}`;
   })();
 
   return (

@@ -82,7 +82,7 @@ export function usePosts(options?: { limit?: number }) {
   return { posts, isLoading, error, createPost, updatePost, deletePost };
 }
 
-// Lista paginada de posts publicados (Histórico) — carrega em lotes com "Carregar mais".
+// Lista paginada de posts publicados (Histórico), carrega em lotes com "Carregar mais".
 export function usePublishedPostsInfinite(pageSize = 40) {
   const { activeAccountId } = useActiveAccount();
   const userId = activeAccountId;

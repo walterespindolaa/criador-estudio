@@ -30,7 +30,7 @@ export type ApprovalOverviewRow = {
   aprovados: number;
 };
 
-// types.ts ainda não tem post_approval_comments nem as RPCs novas — cast (igual usePartner.ts).
+// types.ts ainda não tem post_approval_comments nem as RPCs novas, cast (igual usePartner.ts).
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 type RpcFn = (fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
@@ -149,7 +149,7 @@ export type ApprovalItem = {
   last_comment_role: string | null;
 };
 
-/** Lista compilada (todos os clientes) de posts pendentes/em ajuste — visão da social media. */
+/** Lista compilada (todos os clientes) de posts pendentes/em ajuste, visão da social media. */
 export function useManagerApprovalItems() {
   const { data = [], isLoading } = useQuery<ApprovalItem[]>({
     queryKey: ["approval-items"],

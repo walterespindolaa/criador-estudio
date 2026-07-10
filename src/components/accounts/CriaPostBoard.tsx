@@ -288,7 +288,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
         <TabsContent value="relatorio">
           <div className="rounded-2xl border border-border bg-card p-6 text-center">
             <p className="text-sm font-body text-foreground font-medium mb-1">Relatório mensal do cliente</p>
-            <p className="text-xs text-muted-foreground font-body mb-4">Produção, desempenho do Instagram e análise da IA — pronto pra enviar em PDF.</p>
+            <p className="text-xs text-muted-foreground font-body mb-4">Produção, desempenho do Instagram e análise da IA, pronto pra enviar em PDF.</p>
             <Button onClick={() => setReportOpen(true)}><FileText className="h-4 w-4 mr-1.5" /> Abrir relatório</Button>
           </div>
         </TabsContent>
@@ -358,13 +358,13 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
           </DialogHeader>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-[1.1fr_0.9fr] md:gap-5">
 
-            {/* 1 — Título */}
+            {/* 1, Título */}
             <div className="order-1 md:col-start-1 md:row-start-1 space-y-1.5">
               <Label className="text-xs font-body">Título *</Label>
               <Input value={f.title} onChange={(e) => setF((p) => ({ ...p, title: e.target.value }))} className="rounded-xl" />
             </div>
 
-            {/* 2 — Plataforma + Formato */}
+            {/* 2, Plataforma + Formato */}
             <div className="order-2 md:col-start-1 md:row-start-2 space-y-3">
               <div>
                 <label className="text-xs font-semibold mb-1.5 block">Plataforma</label>
@@ -386,7 +386,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               </div>
             </div>
 
-            {/* 3 — Tipo de aprovação */}
+            {/* 3, Tipo de aprovação */}
             <div className="order-3 md:col-start-1 md:row-start-3">
               <label className="text-xs font-semibold mb-1.5 block">Tipo de aprovação</label>
               <div className="grid grid-cols-3 gap-2">
@@ -400,7 +400,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               </p>
             </div>
 
-            {/* 4 — Mídia (direita no desktop, posição 4 no mobile) */}
+            {/* 4, Mídia (direita no desktop, posição 4 no mobile) */}
             <div className="order-4 md:col-start-2 md:row-start-1 md:row-span-5">
               <label className="text-xs font-semibold mb-1.5 block">Mídia</label>
               {editing?.id ? (
@@ -412,13 +412,13 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               )}
             </div>
 
-            {/* 5 — Legenda */}
+            {/* 5, Legenda */}
             <div className="order-5 md:col-start-1 md:row-start-4 space-y-1.5">
               <Label className="text-xs font-body">Legenda</Label>
               <Textarea value={f.caption ?? ""} onChange={(e) => setF((p) => ({ ...p, caption: e.target.value }))} rows={4} className="rounded-xl" />
             </div>
 
-            {/* 6 — Roteiro / conteúdo */}
+            {/* 6, Roteiro / conteúdo */}
             {f.approval_mode !== "fast" && (
               <div className="order-6 md:col-start-1 md:row-start-5 space-y-1.5">
                 <Label className="text-xs font-body">Roteiro / conteúdo (etapa "Conteúdo")</Label>

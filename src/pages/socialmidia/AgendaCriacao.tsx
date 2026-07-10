@@ -155,7 +155,7 @@ function ClientPicker({ clients, crm, name, onCrm, onName }: { clients: Client[]
   return (
     <>
       <select value={crm ?? ""} onChange={(e) => onCrm(e.target.value || null)} className="w-full h-10 rounded-xl border border-border bg-card px-3 text-sm font-body">
-        <option value="">— Cliente do CRM —</option>
+        <option value="">Cliente do CRM</option>
         {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
       </select>
       {!crm && <Input value={name} onChange={(e) => onName(e.target.value)} placeholder="Ou nome livre" className="mt-2" />}

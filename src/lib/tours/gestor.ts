@@ -9,7 +9,7 @@ export const TOURS_GESTOR: TourConfig[] = [
     route: "/socialmidia/dashboard",
     title: "O QG da sua operação",
     valueProp:
-      "Aqui você enxerga a operação inteira: clientes, aprovações pendentes, o que está travado e o dinheiro entrando. É a visão de dono — não de operador.",
+      "Aqui você enxerga a operação inteira: clientes, aprovações pendentes, o que está travado e o dinheiro entrando. É a visão de dono, não de operador.",
     benefits: [
       "Status de todos os clientes num olhar",
       "Aprovações e entregas pendentes em destaque",
@@ -59,7 +59,7 @@ export const TOURS_GESTOR: TourConfig[] = [
   {
     id: "gestor-criapost",
     route: "/socialmidia/criapost",
-    title: "Cria Post — aprovação por link",
+    title: "Cria Post, aprovação por link",
     valueProp:
       "O cliente recebe um link, vê o post como vai ficar, aprova ou comenta. Com histórico. Cabou áudio de 4 minutos e print riscado no WhatsApp.",
     benefits: [
@@ -72,7 +72,7 @@ export const TOURS_GESTOR: TourConfig[] = [
   {
     id: "gestor-criacrm",
     route: "/socialmidia/criacrm",
-    title: "Cria Gestão — seu CRM",
+    title: "Cria Gestão, seu CRM",
     valueProp:
       "Do lead ao contrato assinado: pipeline de prospecção, ficha do cliente, propostas e contratos. Sua operação comercial sai do improviso.",
     benefits: [
@@ -85,9 +85,9 @@ export const TOURS_GESTOR: TourConfig[] = [
   {
     id: "gestor-criacaixa",
     route: "/socialmidia/criacaixa",
-    title: "Cria Caixa — seu financeiro",
+    title: "Cria Caixa, seu financeiro",
     valueProp:
-      "Cachês, mensalidades, MRR e inadimplência num painel. Você sabe quanto entra, quando entra e quem está atrasado — sem abrir planilha.",
+      "Cachês, mensalidades, MRR e inadimplência num painel. Você sabe quanto entra, quando entra e quem está atrasado, sem abrir planilha.",
     benefits: [
       "MRR e previsão de faturamento",
       "Alerta de cobrança e reajuste esquecidos",

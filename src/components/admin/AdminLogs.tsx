@@ -36,7 +36,7 @@ export function AdminLogs() {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground font-body">Erros capturados automaticamente do app — mais recentes primeiro.</p>
+        <p className="text-sm text-muted-foreground font-body">Erros capturados automaticamente do app, mais recentes primeiro.</p>
         <button
           onClick={() => refetch()}
           className="shrink-0 inline-flex items-center gap-1.5 text-xs font-body font-medium rounded-lg border border-border px-3 py-1.5 hover:bg-muted transition-colors"

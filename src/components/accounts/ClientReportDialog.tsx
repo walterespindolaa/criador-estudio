@@ -46,7 +46,7 @@ type Props = {
   managerName?: string;
 };
 
-// Cores fixas (hex) — html2canvas não lê variáveis CSS em oklch.
+// Cores fixas (hex), html2canvas não lê variáveis CSS em oklch.
 const C = {
   ink: "#1a1a2e", sub: "#6b7280", line: "#e5e7eb", soft: "#f3f4f6",
   brand: "#8B5CF6", green: "#16a34a", amber: "#d97706", orange: "#ea580c",
@@ -179,7 +179,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       const persona = linked?.persona
         ? Object.entries(linked.persona).filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join("; ").slice(0, 400)
         : undefined;
-      // Destaques: top 3 por engajamento, com formato, horário e números — pra IA comentar.
+      // Destaques: top 3 por engajamento, com formato, horário e números, pra IA comentar.
       const igDestaques = ranking
         .slice(0, 3)
         .map((r) => `${MEDIA_PT[r.media_type ?? ""] ?? r.media_type ?? "post"} (${dtFmt(r.posted_at)}): ${Number(r.metrics?.reach) || 0} alcance, ${engOf(r.metrics)} interações`)
@@ -209,12 +209,12 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       const aprov = stats.byStatus.aprovado ?? 0;
       const fallback =
         `<p><strong>Resumo.</strong> Em ${escapeHtml(monthLabel)}, foram produzidos ${stats.total} post(s) para ${escapeHtml(client.name)}` +
-        (fmtList ? ` — ${escapeHtml(fmtList)}` : "") +
+        (fmtList ? `, ${escapeHtml(fmtList)}` : "") +
         `. ${aprov} aprovado(s) pelo cliente.</p>` +
         `<p><strong>Recomendações</strong></p><ul><li>Manter a constância de publicações no próximo mês.</li><li>Priorizar os formatos com melhor desempenho.</li></ul>`;
       if (editorRef.current) editorRef.current.innerHTML = fallback;
       toast.message(
-        msg && !/non-2xx/i.test(msg) ? `IA indisponível (${msg}). Gerei um resumo automático — você pode editar.` : "IA indisponível agora. Gerei um resumo automático — você pode editar.",
+        msg && !/non-2xx/i.test(msg) ? `IA indisponível (${msg}). Gerei um resumo automático, você pode editar.` : "IA indisponível agora. Gerei um resumo automático, você pode editar.",
       );
     } finally {
       setAiLoading(false);
@@ -369,7 +369,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
               )}
             </div>
 
-            {/* Análise do mês — editável (Word-like) */}
+            {/* Análise do mês, editável (Word-like) */}
             <div style={{ marginTop: 24 }}>
               <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: C.sub, marginBottom: 10 }}>Análise do mês</div>
               <div
@@ -385,7 +385,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
               />
             </div>
 
-            {/* Desempenho — números reais do Instagram quando os posts estão vinculados */}
+            {/* Desempenho, números reais do Instagram quando os posts estão vinculados */}
             {perf.has ? (
               <div style={{ marginTop: 24 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: C.sub, marginBottom: 10 }}>

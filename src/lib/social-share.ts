@@ -22,7 +22,7 @@ export async function cacheShareFile(shareUrl: string, file: Blob): Promise<void
     headers.set("x-cria-cached-at", String(Date.now()));
     headers.set("Content-Type", file.type || "application/octet-stream");
     await cache.put(shareUrl, new Response(file, { headers }));
-  } catch { /* storage cheio/indisponível — segue pro fetch */ }
+  } catch { /* storage cheio/indisponível, segue pro fetch */ }
 }
 
 async function readCachedShareFile(shareUrl: string): Promise<Blob | null> {
@@ -58,7 +58,7 @@ export function isMobileDevice(): boolean {
 
 export async function buildShareFile(fileUrl: string, mediaType?: string | null): Promise<File | null> {
   try {
-    // 1) Arquivo local recém-subido (cache) — instantâneo, sem rede, sem esperar transcodificação.
+    // 1) Arquivo local recém-subido (cache), instantâneo, sem rede, sem esperar transcodificação.
     let blob = await readCachedShareFile(fileUrl);
 
     // 2) Fallback: baixa do Bunny/Storage COM timeout, pra nunca travar em "Preparando mídia…".

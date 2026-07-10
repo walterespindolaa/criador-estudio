@@ -33,7 +33,7 @@ const maskDay = (v: string) => {
   return d.length <= 2 ? d : `${d.slice(0, 2)}/${d.slice(2)}`;
 };
 
-// posts (Cria Post) ainda via cast — padrão do projeto.
+// posts (Cria Post) ainda via cast, padrão do projeto.
 const sbFrom = supabase.from.bind(supabase) as unknown as (t: string) => ReturnType<typeof supabase.from>;
 
 export function CronogramaBoard({ fixedClientId }: { fixedClientId?: string }) {
@@ -49,7 +49,7 @@ export function CronogramaBoard({ fixedClientId }: { fixedClientId?: string }) {
   const clientCronos = cronogramas.filter((c) => c.external_client_id === clientId);
   const countFor = (cid: string) => cronogramas.filter((c) => c.external_client_id === cid).length;
 
-  // Nível 3 — detalhe do cronograma
+  // Nível 3, detalhe do cronograma
   if (selected) {
     return <CronogramaDetail c={selected} onBack={() => setSelectedId(null)} onUpdate={update.mutate} onDelete={async (id) => { await remove.mutateAsync(id); setSelectedId(null); }} />;
   }
@@ -61,7 +61,7 @@ export function CronogramaBoard({ fixedClientId }: { fixedClientId?: string }) {
     setSelectedId(c.id);
   };
 
-  // Nível 2 — cronogramas do cliente (histórico)
+  // Nível 2, cronogramas do cliente (histórico)
   if (clientId && selectedClient) {
     return (
       <div>
@@ -110,7 +110,7 @@ export function CronogramaBoard({ fixedClientId }: { fixedClientId?: string }) {
     );
   }
 
-  // Nível 1 — lista de clientes
+  // Nível 1, lista de clientes
   const activeClients = clients.filter((c) => c.active);
   return (
     <div>
@@ -250,9 +250,9 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
               {items.map((it, i) => (
                 <tr key={it.id} className="border-b border-border/40 last:border-0 hover:bg-accent/30 group">
                   <td className="px-3 py-2.5 font-bold text-muted-foreground">#{i + 1}</td>
-                  <td className="px-3 py-2.5 font-semibold">{it.copy || "—"}</td>
+                  <td className="px-3 py-2.5 font-semibold">{it.copy || "-"}</td>
                   <td className="px-3 py-2.5 text-xs text-muted-foreground max-w-[280px]">{it.description}</td>
-                  <td className="px-3 py-2.5 whitespace-nowrap">{it.date ? it.date.split("-").reverse().slice(0, 2).join("/") : "—"}</td>
+                  <td className="px-3 py-2.5 whitespace-nowrap">{it.date ? it.date.split("-").reverse().slice(0, 2).join("/") : "-"}</td>
                   <td className="px-3 py-2.5">{it.type && <span className={cn("text-[11px] font-bold text-white px-2 py-0.5 rounded-full whitespace-nowrap", TYPE_COLOR[it.type] ?? "bg-gray-500")}>{it.type}</span>}</td>
                   <td className="px-3 py-2.5">
                     <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", ST_CLASS[it.approval_status])}>{ST_LABEL[it.approval_status]}</span>
