@@ -4,6 +4,7 @@ import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/hooks/useProfile";
 import { THEME_PRESETS, ACCENT_GROUPS, type ThemePreset } from "@/lib/themes";
+import { BG_STYLES } from "@/components/BgShapes";
 import { applyTheme, applyAccent } from "@/lib/applyTheme";
 import { applySidebarColor } from "@/lib/sidebarTheme";
 import { toast } from "sonner";
@@ -57,6 +58,7 @@ export function SettingsVisual() {
   const [selectedAccent, setSelectedAccent] = useState(profile?.theme_accent || "#CE4A1D");
   const [sidebarColor, setSidebarColor] = useState(profile?.theme_sidebar || "");
   const [selectedFont, setSelectedFont] = useState(profile?.theme_font || "moderno");
+  const [selectedBg, setSelectedBg] = useState((profile as { theme_bg?: string | null } | null | undefined)?.theme_bg || "nenhum");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -65,6 +67,7 @@ export function SettingsVisual() {
       setSelectedAccent(profile.theme_accent || "#CE4A1D");
       setSidebarColor(profile.theme_sidebar || "");
       setSelectedFont(profile.theme_font || "moderno");
+      setSelectedBg((profile as { theme_bg?: string | null }).theme_bg || "nenhum");
     }
   }, [profile]);
 
@@ -98,7 +101,8 @@ export function SettingsVisual() {
       theme_mode: preset?.mode || "light",
       theme_sidebar: sidebarColor || null,
       theme_font: selectedFont,
-    });
+      theme_bg: selectedBg === "nenhum" ? null : selectedBg,
+    } as never);
     toast.success("Visual salvo!");
     setSaving(false);
   };
@@ -296,9 +300,40 @@ export function SettingsVisual() {
             </div>
           </section>
 
-          <Button 
-            onClick={handleSave} 
-            disabled={saving} 
+          {/* Fundo decorativo (rebranding CRIA) */}
+          <section>
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Palette className="h-5 w-5 text-primary" />
+                <h3 className="text-base font-body font-bold text-foreground">Fundo</h3>
+              </div>
+              <p className="text-sm text-muted-foreground font-body">Formas decorativas atrás do conteúdo — sutileza que dá vida</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {BG_STYLES.map(bg => (
+                <button
+                  key={bg.key}
+                  onClick={() => setSelectedBg(bg.key)}
+                  className={cn(
+                    "rounded-xl border-2 p-3 text-left transition-all relative",
+                    selectedBg === bg.key ? "border-primary bg-primary/[0.06]" : "border-border hover:border-primary/40"
+                  )}
+                >
+                  <span className="block text-sm font-body font-bold text-foreground">{bg.label}</span>
+                  <span className="block text-[11px] font-body text-muted-foreground leading-snug mt-0.5">{bg.desc}</span>
+                  {selectedBg === bg.key && (
+                    <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                      <Check className="h-3 w-3 text-white" />
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <Button
+            onClick={handleSave}
+            disabled={saving}
             className="w-full h-[52px] bg-[#1A2F21] hover:bg-[#1A2F21]/90 text-white rounded-xl font-semibold text-lg transition-all"
           >
             {saving ? "Salvando..." : "Salvar visual"}

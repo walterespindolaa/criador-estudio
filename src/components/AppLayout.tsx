@@ -12,6 +12,7 @@ import { AppFooter } from "@/components/shared/AppFooter";
 import { Settings, Lightbulb, Plus } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { applyTheme } from "@/lib/applyTheme";
+import { BgShapes } from "@/components/BgShapes";
 import { applySidebarColor } from "@/lib/sidebarTheme";
 import { applyThemeFont } from "@/components/settings/SettingsVisual";
 import ContaPausada from "@/pages/ContaPausada";
@@ -125,8 +126,9 @@ const AppLayout = () => {
     <VideoPublicConfirmProvider>
     <UploadProgressProvider>
     <SidebarProvider>
-      <div className="min-h-screen flex w-full app-canvas">
-        <div className="flex flex-1 w-full min-h-0">
+      <div className="min-h-screen flex w-full app-canvas relative">
+        <BgShapes styleKey={(profile as { theme_bg?: string | null } | null | undefined)?.theme_bg} />
+        <div className="flex flex-1 w-full min-h-0 relative z-[1]">
           <PWAInstallBanner />
           <CriaAIPanel />
 

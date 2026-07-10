@@ -22,6 +22,7 @@ import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { HeroBand } from "@/components/HeroBand";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { applyTheme } from "@/lib/applyTheme";
+import { BgShapes } from "@/components/BgShapes";
 import { applySidebarColor } from "@/lib/sidebarTheme";
 import { applyThemeFont } from "@/components/settings/SettingsVisual";
 
@@ -168,7 +169,8 @@ export default function ManagerLayout() {
   ) : null;
 
   return (
-    <div className="min-h-screen app-canvas" style={{ ["--active-font-display" as string]: "'Bricolage Grotesque', 'Plus Jakarta Sans', sans-serif" }}>
+    <div className="min-h-screen app-canvas relative" style={{ ["--active-font-display" as string]: "'Bricolage Grotesque', 'Plus Jakarta Sans', sans-serif" }}>
+      <BgShapes styleKey={(profile as { theme_bg?: string | null } | null | undefined)?.theme_bg} />
       {/* Rail flutuante (desktop) — expande no hover mostrando os nomes */}
       <nav
         onMouseEnter={() => setRailHovered(true)}
@@ -232,7 +234,7 @@ export default function ManagerLayout() {
           </HeroBand>
         </div>
 
-        <main className="flex-1 px-4 py-7 pb-[96px] sm:px-8 sm:py-10 md:pb-10 overflow-x-hidden">
+        <main className="relative z-[1] flex-1 px-4 py-7 pb-[96px] sm:px-8 sm:py-10 md:pb-10 overflow-x-hidden">
           <div className="mx-auto w-full max-w-6xl">
             <BroadcastBanner audience="social" />
             <NotificationNudge />
