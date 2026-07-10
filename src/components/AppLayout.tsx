@@ -13,6 +13,8 @@ import { Settings, Lightbulb, Plus } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { applyTheme } from "@/lib/applyTheme";
 import { BgShapes } from "@/components/BgShapes";
+import { TourProvider } from "@/components/tour/TourProvider";
+import { HelpButton } from "@/components/tour/HelpButton";
 import { applySidebarColor } from "@/lib/sidebarTheme";
 import { applyThemeFont } from "@/components/settings/SettingsVisual";
 import ContaPausada from "@/pages/ContaPausada";
@@ -122,6 +124,7 @@ const AppLayout = () => {
   ) : null;
 
   return (
+    <TourProvider>
     <CriaAIProvider>
     <VideoPublicConfirmProvider>
     <UploadProgressProvider>
@@ -146,6 +149,7 @@ const AppLayout = () => {
                 <div className="flex items-center gap-2 rounded-2xl bg-white/15 px-2 py-1 backdrop-blur">
                   <PlanBadge />
                   <UploadProgressIndicator />
+                  <HelpButton light />
                   <FeedbackButton />
                   <NotificationsBell />
                 </div>
@@ -165,6 +169,7 @@ const AppLayout = () => {
                 <AccountSwitcher compact />
                 <PlanBadge />
                 <UploadProgressIndicator />
+                <HelpButton />
                 <FeedbackButton />
                 <NotificationsBell />
                 <NavLink to="/app/configuracoes" aria-label="Configurações" className="p-2 hover:bg-accent/60 rounded-xl transition-colors">
@@ -192,6 +197,7 @@ const AppLayout = () => {
     </UploadProgressProvider>
     </VideoPublicConfirmProvider>
     </CriaAIProvider>
+    </TourProvider>
   );
 };
 

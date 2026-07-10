@@ -110,11 +110,12 @@ function isInRange(dateStr: string | null, range: { start: Date; end: Date } | n
   } catch { return false; }
 }
 
-function DCard({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) {
+function DCard({ children, className, onClick, ...rest }: { children: React.ReactNode; className?: string; onClick?: () => void } & React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       onClick={onClick}
       className={cn("bg-card rounded-xl p-5 shadow-[var(--shadow-warm)] border border-border", className, onClick && "cursor-pointer hover:border-primary/30 transition-all")}
+      {...rest}
     >
       {children}
     </div>
@@ -326,16 +327,18 @@ const Dashboard = () => {
         </div>
         {heroSlot && createPortal(renderPeriodFilter(true), heroSlot)}
 
-        <FirstStepsPanel />
+        <div data-tour="dash-primeiros-passos">
+          <FirstStepsPanel />
+        </div>
 
-        <div className="mb-4">
+        <div className="mb-4" data-tour="dash-acao">
           <NextBestAction />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
           <div className="lg:col-span-8 space-y-6">
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4" data-tour="dash-tiles">
               {stats.map((s, i) => (
                 <motion.button
                   key={i}
@@ -364,7 +367,7 @@ const Dashboard = () => {
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-              <UpcomingPosts />
+              <div data-tour="dash-posts"><UpcomingPosts /></div>
               <UpcomingTasks />
             </div>
 
@@ -432,7 +435,7 @@ const Dashboard = () => {
               )}
             </section>
 
-            <DCard className="relative overflow-hidden bg-card border-border group">
+            <DCard data-tour="dash-captura" className="relative overflow-hidden bg-card border-border group">
               <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
                 <Sparkles className="h-24 w-24 text-primary" />
               </div>
