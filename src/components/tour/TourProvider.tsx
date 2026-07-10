@@ -5,9 +5,15 @@
  * - step -1 = card de abertura (valueProp + benefícios); 0..N-1 = passos com spotlight
  */
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { findTourByRoute, findTourById, type TourConfig } from "@/lib/tours/registry";
+import {
+  areaForPath,
+  findTourByRoute,
+  findTourById,
+  TRAINING_SEQUENCES,
+  type TourConfig,
+} from "@/lib/tours/registry";
 import { loadSeenTours, markTourSeen } from "@/lib/tours/progress";
 import { TourOverlay } from "./TourOverlay";
 
@@ -16,6 +22,8 @@ type TourContextValue = {
   step: number;
   hasTourForRoute: (pathname: string) => boolean;
   startTour: (routeOrId?: string) => void;
+  /** Tour completo da área atual (criador ou gestor), tela por tela. */
+  startTraining: () => void;
   next: () => void;
   prev: () => void;
   skip: () => void;
@@ -31,11 +39,15 @@ export function useTour() {
 
 export function TourProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [active, setActive] = useState<TourConfig | null>(null);
   const [step, setStep] = useState(-1);
   const seenRef = useRef<Set<string>>(new Set());
   const [seenLoaded, setSeenLoaded] = useState(false);
+  /** fila do modo treinamento: ids que ainda faltam */
+  const trainingRef = useRef<string[] | null>(null);
+  const [pendingId, setPendingId] = useState<string | null>(null);
 
   // Carrega o progresso uma vez por sessão
   useEffect(() => {
@@ -55,15 +67,26 @@ export function TourProvider({ children }: { children: ReactNode }) {
     setStep(-1);
   }, []);
 
-  // Auto-start: primeira visita da tela (depois que soubermos o que já foi visto)
+  // Modo treinamento: quando a navegação chega na rota do próximo tour da fila, inicia
   useEffect(() => {
-    if (!seenLoaded || active) return;
-    const tour = findTourByRoute(location.pathname);
-    if (tour && !seenRef.current.has(tour.id)) {
-      const id = window.setTimeout(() => begin(tour), 700); // deixa a tela montar
+    if (!pendingId) return;
+    const tour = findTourById(pendingId);
+    if (tour && tour.route === location.pathname) {
+      setPendingId(null);
+      const id = window.setTimeout(() => begin(tour), 400);
       return () => window.clearTimeout(id);
     }
-  }, [location.pathname, seenLoaded, active, begin]);
+  }, [pendingId, location.pathname, begin]);
+
+  // Auto-start: primeira visita da tela (depois que soubermos o que já foi visto)
+  useEffect(() => {
+    if (!seenLoaded || active || pendingId) return;
+    const tour = findTourByRoute(location.pathname);
+    if (tour && !seenRef.current.has(tour.id)) {
+      const id = window.setTimeout(() => begin(tour), 400); // deixa a tela montar
+      return () => window.clearTimeout(id);
+    }
+  }, [location.pathname, seenLoaded, active, pendingId, begin]);
 
   const finish = useCallback(
     (completed: boolean) => {
@@ -72,8 +95,26 @@ export function TourProvider({ children }: { children: ReactNode }) {
       if (user?.id) markTourSeen(user.id, active.id, completed, step);
       setActive(null);
       setStep(-1);
+
+      // Treinamento: pulou = sai do modo; concluiu = avança pra próxima tela
+      if (!completed) {
+        trainingRef.current = null;
+        return;
+      }
+      const queue = trainingRef.current;
+      if (queue && queue.length > 0) {
+        const nextId = queue.shift()!;
+        const nextTour = findTourById(nextId);
+        if (nextTour) {
+          setPendingId(nextId);
+          navigate(nextTour.route);
+        } else {
+          trainingRef.current = null;
+        }
+        if (queue.length === 0) trainingRef.current = null;
+      }
     },
-    [active, step, user?.id],
+    [active, step, user?.id, navigate],
   );
 
   const startTour = useCallback(
@@ -85,6 +126,22 @@ export function TourProvider({ children }: { children: ReactNode }) {
     },
     [location.pathname, begin],
   );
+
+  const startTraining = useCallback(() => {
+    const area = areaForPath(location.pathname);
+    const ids = [...TRAINING_SEQUENCES[area]];
+    const firstId = ids.shift();
+    if (!firstId) return;
+    const first = findTourById(firstId);
+    if (!first) return;
+    trainingRef.current = ids;
+    if (first.route === location.pathname) {
+      begin(first);
+    } else {
+      setPendingId(firstId);
+      navigate(first.route);
+    }
+  }, [location.pathname, navigate, begin]);
 
   const next = useCallback(() => {
     if (!active) return;
@@ -98,7 +155,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
   const hasTourForRoute = useCallback((p: string) => Boolean(findTourByRoute(p)), []);
 
   return (
-    <TourContext.Provider value={{ active, step, hasTourForRoute, startTour, next, prev, skip }}>
+    <TourContext.Provider value={{ active, step, hasTourForRoute, startTour, startTraining, next, prev, skip }}>
       {children}
       {active && <TourOverlay tour={active} step={step} onNext={next} onPrev={prev} onSkip={skip} />}
     </TourContext.Provider>

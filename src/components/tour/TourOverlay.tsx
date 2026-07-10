@@ -35,23 +35,26 @@ export function TourOverlay({
     setRect({ top: r.top - 6, left: r.left - 6, width: r.width + 12, height: r.height + 12 });
   }, []);
 
-  // Encontra o alvo do passo (com retry curto — páginas são lazy), centraliza e mede
+  // Encontra o alvo do passo e mede IMEDIATAMENTE — o spotlight desliza da posição
+  // anterior pra nova (transição CSS) e o listener de scroll o mantém colado ao alvo
+  // durante o smooth-scroll. Zero espera fixa = zero delay visual.
   useEffect(() => {
     if (!current) { setRect(null); elRef.current = null; return; }
     let tries = 0;
     let cancelled = false;
+    const attach = (el: Element) => {
+      elRef.current = el;
+      measure();
+      const r = el.getBoundingClientRect();
+      const foraDeVista = r.top < 72 || r.bottom > window.innerHeight - 140;
+      if (foraDeVista) el.scrollIntoView({ block: "center", behavior: "smooth" });
+    };
     const find = () => {
       if (cancelled) return;
       const el = document.querySelector(current.target);
-      if (el) {
-        elRef.current = el;
-        el.scrollIntoView({ block: "center", behavior: "smooth" });
-        window.setTimeout(() => !cancelled && measure(), 350);
-      } else if (tries++ < 20) {
-        window.setTimeout(find, 100);
-      } else {
-        onNext(); // alvo não existe nesta condição (plano/estado) — pula o passo
-      }
+      if (el) attach(el);
+      else if (tries++ < 40) window.setTimeout(find, 50); // páginas lazy montando
+      else onNext(); // alvo não existe nesta condição (plano/estado) — pula o passo
     };
     find();
     return () => { cancelled = true; };
@@ -130,11 +133,14 @@ export function TourOverlay({
         </div>
       )}
 
+      {/* Dim de segurança enquanto o alvo do passo ainda não foi medido (evita flash) */}
+      {current && !rect && <div className="absolute inset-0 bg-[#1B1A17]/55" />}
+
       {/* ===== Spotlight + tooltip dos passos ===== */}
       {current && rect && (
         <>
           <div
-            className="fixed rounded-xl transition-all duration-300 pointer-events-none"
+            className="fixed rounded-xl transition-all duration-200 ease-out pointer-events-none will-change-[top,left,width,height]"
             style={{
               top: rect.top, left: rect.left, width: rect.width, height: rect.height,
               boxShadow: "0 0 0 9999px rgba(27,26,23,0.55)",
@@ -145,7 +151,7 @@ export function TourOverlay({
             className={
               isMobile
                 ? "fixed inset-x-0 bottom-0 rounded-t-3xl border-t-2 border-x-2 border-[#151412] bg-card p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
-                : "fixed w-[380px] rounded-2xl border-2 border-[#151412] bg-card p-5 shadow-[0_8px_0_rgba(21,20,18,0.9)]"
+                : "fixed w-[380px] rounded-2xl border-2 border-[#151412] bg-card p-5 shadow-[0_8px_0_rgba(21,20,18,0.9)] transition-[top,left,bottom] duration-200 ease-out"
             }
             style={isMobile ? undefined : cardStyle}
           >

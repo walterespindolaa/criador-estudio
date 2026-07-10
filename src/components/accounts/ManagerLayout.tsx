@@ -23,6 +23,8 @@ import { HeroBand } from "@/components/HeroBand";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { applyTheme } from "@/lib/applyTheme";
 import { BgShapes } from "@/components/BgShapes";
+import { TourProvider } from "@/components/tour/TourProvider";
+import { HelpButton } from "@/components/tour/HelpButton";
 import { applySidebarColor } from "@/lib/sidebarTheme";
 import { applyThemeFont } from "@/components/settings/SettingsVisual";
 
@@ -169,6 +171,7 @@ export default function ManagerLayout() {
   ) : null;
 
   return (
+    <TourProvider>
     <div className="min-h-screen app-canvas relative" style={{ ["--active-font-display" as string]: "'Bricolage Grotesque', 'Plus Jakarta Sans', sans-serif" }}>
       <BgShapes styleKey={(profile as { theme_bg?: string | null } | null | undefined)?.theme_bg} />
       {/* Rail flutuante (desktop) — expande no hover mostrando os nomes */}
@@ -228,6 +231,7 @@ export default function ManagerLayout() {
         <div className="hidden md:block md:-ml-[104px] md:w-[calc(100%+104px)]">
           <HeroBand eyebrow={isDash ? `${greet},` : undefined} title={heroTitle} avatar={avatarNode}>
             <div className="flex items-center gap-2 rounded-2xl bg-white/15 px-2 py-1 backdrop-blur">
+              <HelpButton light />
               <FeedbackButton />
               <NotificationsBell />
             </div>
@@ -310,5 +314,6 @@ export default function ManagerLayout() {
       <ModulePopup module={selectedModule} onClose={() => setSelectedModule(null)} />
       <SettingsManagerDrawer open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
+    </TourProvider>
   );
 }
