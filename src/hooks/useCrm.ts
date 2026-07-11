@@ -325,10 +325,11 @@ export function useCrmLeads() {
 export function useCreateCrmLead() {
   const { agencyOwnerId } = useActiveAccount(); const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: CrmLeadInput) => {
+    mutationFn: async (input: CrmLeadInput): Promise<CrmLead> => {
       if (!agencyOwnerId) throw new Error("Sem sessão");
-      const { error } = await sbFrom("crm_leads").insert({ ...input, manager_id: agencyOwnerId } as never);
+      const { data, error } = await sbFrom("crm_leads").insert({ ...input, manager_id: agencyOwnerId } as never).select().single();
       if (error) throw error;
+      return data as unknown as CrmLead;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-leads"] }),
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao criar lead."),

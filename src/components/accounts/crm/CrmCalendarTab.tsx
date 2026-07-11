@@ -5,16 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-type Kind = "task" | "lead" | "renewal";
+type Kind = "task" | "lead" | "renewal" | "birthday";
 type CalEvent = { id: string; date: string; kind: Kind; title: string; meta: string; done?: boolean };
 
-const KIND_DOT: Record<Kind, string> = { task: "bg-primary", lead: "bg-blue-500", renewal: "bg-amber-500" };
+const KIND_DOT: Record<Kind, string> = { task: "bg-primary", lead: "bg-blue-500", renewal: "bg-amber-500", birthday: "bg-pink-500" };
 const KIND_CHIP: Record<Kind, string> = {
   task: "bg-primary/10 text-primary",
   lead: "bg-blue-500/10 text-blue-600",
   renewal: "bg-amber-500/10 text-amber-600",
+  birthday: "bg-pink-500/10 text-pink-600",
 };
-const KIND_LABEL: Record<Kind, string> = { task: "Tarefa", lead: "Lead", renewal: "Renovação" };
+const KIND_LABEL: Record<Kind, string> = { task: "Tarefa", lead: "Lead", renewal: "Renovação", birthday: "Aniversário" };
 const MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const DOW = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const ymd = (y: number, m: number, d: number) => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
@@ -31,8 +32,15 @@ export function CrmCalendarTab() {
     tasks.forEach((t) => { if (t.due_date) out.push({ id: "t-" + t.id, date: t.due_date, kind: "task", title: t.title, meta: KIND_LABEL.task, done: t.status === "concluida" }); });
     leads.forEach((l) => { if (l.next_interaction_date && l.stage !== "fechado" && l.stage !== "perdido") out.push({ id: "l-" + l.id, date: l.next_interaction_date, kind: "lead", title: l.name, meta: "Próxima ação" }); });
     clients.forEach((c) => { if (c.renewal_date && c.active) out.push({ id: "r-" + c.id, date: c.renewal_date, kind: "renewal", title: c.name, meta: "Renovação de contrato" }); });
+    // Aniversário do cliente: repete todo ano — projeta no ano que o calendário está mostrando.
+    clients.forEach((c) => {
+      if (!c.birthday || c.status === "inativo") return;
+      const [, mm, dd] = c.birthday.split("-");
+      if (!mm || !dd) return;
+      out.push({ id: "b-" + c.id, date: `${cursor.y}-${mm}-${dd}`, kind: "birthday", title: c.name, meta: "Aniversário 🎂" });
+    });
     return out;
-  }, [tasks, leads, clients]);
+  }, [tasks, leads, clients, cursor.y]);
 
   const byDate = useMemo(() => {
     const m = new Map<string, CalEvent[]>();
@@ -61,6 +69,7 @@ export function CrmCalendarTab() {
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-primary" /> Tarefa</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" /> Lead</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" /> Renovação</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-pink-500" /> Aniversário</span>
           </div>
         </div>
         <div className="flex items-center gap-2">

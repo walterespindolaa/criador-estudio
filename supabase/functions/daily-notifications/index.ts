@@ -51,6 +51,37 @@ serve(async (req) => {
       rows.push({ user_id: id, type: "acesso_vencendo", title: "Seu acesso vence em breve", description: "Renove pra não perder seus conteúdos e o acesso à Cria IA.", link: "/app/configuracoes" });
     }
 
+    // ── Aniversário de cliente: avisa o social mídia no dia (e 3 dias antes, pra dar tempo de preparar) ──
+    const brNow = new Date(Date.now() - 3 * 60 * 60 * 1000); // UTC-3
+    const mmdd = (d: Date) => `${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const in3 = new Date(brNow); in3.setDate(in3.getDate() + 3);
+    const alvos = new Map<string, "hoje" | "em3">([[mmdd(brNow), "hoje"], [mmdd(in3), "em3"]]);
+
+    const { data: bdays } = await svc.from("crm_clients")
+      .select("id, manager_id, name, birthday, status")
+      .not("birthday", "is", null)
+      .neq("status", "inativo")
+      .is("deleted_at", null);
+
+    // Não repete no mesmo dia.
+    const { data: sentToday } = await svc.from("notifications")
+      .select("user_id, link").eq("type", "aniversario_cliente").gte("created_at", iso(now - dayMs));
+    const already2 = new Set((sentToday ?? []).map((r: { user_id: string; link: string }) => `${r.user_id}:${r.link}`));
+
+    for (const c of (bdays ?? []) as { id: string; manager_id: string; name: string; birthday: string }[]) {
+      const quando = alvos.get(c.birthday.slice(5)); // "MM-DD"
+      if (!quando) continue;
+      const link = `/socialmidia/criacrm/${c.id}`;
+      if (already2.has(`${c.manager_id}:${link}`)) continue;
+      rows.push({
+        user_id: c.manager_id,
+        type: "aniversario_cliente",
+        title: quando === "hoje" ? `🎂 Hoje é aniversário de ${c.name}` : `🎂 ${c.name} faz aniversário em 3 dias`,
+        description: quando === "hoje" ? "Mande uma mensagem ou um post de parabéns." : "Dá tempo de preparar um conteúdo especial.",
+        link,
+      });
+    }
+
     // Insert em lote (1 chamada) — o trigger de push dispara por linha.
     if (rows.length) await svc.from("notifications").insert(rows);
 

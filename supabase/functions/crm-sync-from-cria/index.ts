@@ -31,15 +31,22 @@ Deno.serve(async (req) => {
 
     // O crm_client precisa ser do gestor e apontar pra uma conta Cria.
     const { data: cli } = await svc.from("crm_clients")
-      .select("id, manager_id, cria_owner_id, name, segment, brand_core, persona")
+      .select("id, manager_id, cria_owner_id, name, segment, brand_core, persona, logo")
       .eq("id", crmClientId).maybeSingle();
-    if (!cli || (cli as any).manager_id !== user.id) return json({ error: "forbidden_client" }, 403);
+    // Dono OU colaborador ativo do time podem sincronizar.
+    if (!cli) return json({ error: "forbidden_client" }, 403);
+    const mgrId = (cli as any).manager_id as string;
+    if (mgrId !== user.id) {
+      const { data: link } = await svc.from("manager_members")
+        .select("id").eq("manager_id", mgrId).eq("member_id", user.id).eq("status", "ativo").maybeSingle();
+      if (!link) return json({ error: "forbidden_client" }, 403);
+    }
     const ownerId = (cli as any).cria_owner_id as string | null;
     if (!ownerId) return json({ error: "not_cria_client", message: "Este cliente não usa o Cria." }, 400);
 
     // Dados que o cliente preencheu na conta Cria dele.
     const [profRes, pillarsRes, brandRes, persRes, moodRes] = await Promise.all([
-      svc.from("profiles").select("name, niche").eq("id", ownerId).maybeSingle(),
+      svc.from("profiles").select("name, niche, avatar_url").eq("id", ownerId).maybeSingle(),
       svc.from("pillars").select("name").eq("user_id", ownerId).order("position"),
       svc.from("brand_items").select("type, name").eq("user_id", ownerId),
       svc.from("personas").select("name, age_range, pain_points, interests").eq("user_id", ownerId).limit(1),
@@ -74,6 +81,11 @@ Deno.serve(async (req) => {
     const update: Record<string, unknown> = { brand_core: newBrandCore };
     if (prof?.name && prof.name !== (cli as any).name) update.name = prof.name;
     if (prof?.niche && !(cli as any).segment) update.segment = prof.niche;
+    // Foto: a do Cria é a fonte da verdade pro cliente que usa o app.
+    // (Antes ela não vinha — trocava no Cria e o Cria Gestão continuava com a antiga.)
+    if ((prof as any)?.avatar_url && (prof as any).avatar_url !== (cli as any).logo) {
+      update.logo = (prof as any).avatar_url;
+    }
 
     // Persona do Cria → persona do CRM (nome, faixa, dores/desejos).
     const personaPatch: Record<string, string> = {};

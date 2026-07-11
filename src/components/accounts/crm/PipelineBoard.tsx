@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Plus, DollarSign, Trash2, Target, ListTodo, CheckCircle2, Circle, Pencil } from "lucide-react";
+import { Plus, DollarSign, Trash2, Target, ListTodo, CheckCircle2, Circle, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   useCrmLeads, useCreateCrmLead, useUpdateCrmLead, useDeleteCrmLead,
@@ -32,6 +32,7 @@ export function PipelineBoard() {
   const { data: clients = [] } = useCrmClients();
   const { data: tasks = [] } = useCrmTasks();
   const createLead = useCreateCrmLead();
+  const createTaskTop = useCreateCrmTask();   // tarefas adicionadas junto com o lead novo
   const updateLead = useUpdateCrmLead();
   const delLead = useDeleteCrmLead();
   const createClient = useCreateCrmClient();
@@ -200,7 +201,14 @@ export function PipelineBoard() {
           key={editLead?.id ?? "new"}
           lead={editLead}
           onClose={() => { setDialogOpen(false); setEditLead(null); }}
-          onCreate={async (input) => { await createLead.mutateAsync(input); setDialogOpen(false); }}
+          onCreate={async (input, tasks) => {
+            const novo = await createLead.mutateAsync(input);
+            // Cria as tarefas que o usuário adicionou antes de salvar o lead.
+            for (const t of tasks) {
+              await createTaskTop.mutateAsync({ title: t.title, crm_lead_id: novo.id, due_date: t.due, status: "pendente", priority: "media" });
+            }
+            setDialogOpen(false);
+          }}
           onUpdate={async (id, updates) => { await updateLead.mutateAsync({ id, ...updates }); setDialogOpen(false); setEditLead(null); }}
           onDelete={async (id) => { if (confirm("Excluir este lead?")) { await delLead.mutateAsync(id); setDialogOpen(false); setEditLead(null); } }}
           saving={createLead.isPending || updateLead.isPending}
@@ -214,14 +222,17 @@ export function PipelineBoard() {
 
 function LeadDialog({ lead, onClose, onCreate, onUpdate, onDelete, saving }: {
   lead: CrmLead | null; onClose: () => void;
-  onCreate: (i: CrmLeadInput) => void; onUpdate: (id: string, u: Partial<CrmLeadInput>) => void;
+  onCreate: (i: CrmLeadInput, tasks: { title: string; due: string | null }[]) => void;
+  onUpdate: (id: string, u: Partial<CrmLeadInput>) => void;
   onDelete: (id: string) => void; saving: boolean;
 }) {
   const [f, setF] = useState<CrmLeadInput>(() => (lead ? { ...lead } : { name: "" }));
+  // Lead novo ainda não tem id — as tarefas ficam pendentes e são criadas junto com ele.
+  const [pending, setPending] = useState<{ title: string; due: string | null }[]>([]);
   const set = (patch: Partial<CrmLeadInput>) => setF((p) => ({ ...p, ...patch }));
   const submit = () => {
     if (!f.name?.trim()) { toast.error("Nome é obrigatório."); return; }
-    if (lead) onUpdate(lead.id, f); else onCreate(f);
+    if (lead) onUpdate(lead.id, f); else onCreate(f, pending);
   };
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -240,11 +251,12 @@ function LeadDialog({ lead, onClose, onCreate, onUpdate, onDelete, saving }: {
               <option value="">-</option><option value="alto">🟢 Alto</option><option value="medio">🟡 Médio</option><option value="baixo">🔴 Baixo</option>
             </select>
           </L>
-          <L label="Próxima ação (data)"><Input type="date" value={f.next_interaction_date ?? ""} onChange={(e) => set({ next_interaction_date: e.target.value || null })} className="rounded-xl" /></L>
-          <L label="Próximos passos" full><Input value={f.next_steps ?? ""} onChange={(e) => set({ next_steps: e.target.value })} className="rounded-xl" /></L>
           <L label="Principal dor" full><Textarea rows={2} value={f.main_pain ?? ""} onChange={(e) => set({ main_pain: e.target.value })} className="rounded-xl text-sm" /></L>
           <L label="Notas" full><Textarea rows={2} value={f.notes ?? ""} onChange={(e) => set({ notes: e.target.value })} className="rounded-xl text-sm" /></L>
-          {lead && <LeadTasks leadId={lead.id} />}
+          {/* Tarefas do lead: substituem "próxima ação / próximos passos". Aparecem já no cadastro. */}
+          {lead
+            ? <LeadTasks leadId={lead.id} />
+            : <NewLeadTasks tasks={pending} onAdd={(t) => setPending((p) => [...p, t])} onRemove={(i) => setPending((p) => p.filter((_, j) => j !== i))} />}
         </div>
         <div className="flex items-center justify-between gap-2 mt-5">
           {lead ? <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={() => onDelete(lead.id)}><Trash2 className="h-4 w-4 mr-1.5" /> Excluir</Button> : <span />}
@@ -252,6 +264,40 @@ function LeadDialog({ lead, onClose, onCreate, onUpdate, onDelete, saving }: {
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// Lead ainda não salvo: as tarefas ficam em memória e são criadas junto com o lead.
+function NewLeadTasks({ tasks, onAdd, onRemove }: {
+  tasks: { title: string; due: string | null }[];
+  onAdd: (t: { title: string; due: string | null }) => void;
+  onRemove: (i: number) => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [due, setDue] = useState("");
+  const add = () => { if (!title.trim()) return; onAdd({ title: title.trim(), due: due || null }); setTitle(""); setDue(""); };
+  return (
+    <div className="sm:col-span-2 rounded-xl border border-border bg-muted/20 p-3">
+      <Label className="text-xs flex items-center gap-1.5 mb-2"><ListTodo className="h-3.5 w-3.5" /> Tarefas deste lead</Label>
+      {tasks.length > 0 && (
+        <div className="space-y-1 mb-2">
+          {tasks.map((t, i) => (
+            <div key={i} className="flex items-center gap-2 rounded-lg bg-card border border-border px-2.5 py-1.5">
+              <span className="text-[13px] font-body text-foreground flex-1 min-w-0 truncate">{t.title}</span>
+              {t.due && <span className="text-[11px] font-body text-muted-foreground shrink-0">{t.due.split("-").reverse().slice(0, 2).join("/")}</span>}
+              <button type="button" onClick={() => onRemove(i)} className="text-muted-foreground hover:text-destructive shrink-0"><X className="h-3.5 w-3.5" /></button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex items-center gap-2">
+        <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nova tarefa…" className="h-9 rounded-xl flex-1"
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
+        <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="h-9 rounded-xl w-36" />
+        <Button type="button" size="sm" className="h-9 px-3" onClick={add} disabled={!title.trim()}><Plus className="h-4 w-4" /></Button>
+      </div>
+      <p className="text-[11px] font-body text-muted-foreground mt-1.5">Elas são criadas junto com o lead.</p>
+    </div>
   );
 }
 
