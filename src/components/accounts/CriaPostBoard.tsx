@@ -223,7 +223,15 @@ function ClientsList({ onOpen }: { onOpen: (c: ExternalClient) => void }) {
 }
 
 export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange }: { client: ExternalClient; onBack?: () => void; embedded?: boolean; activeTab?: string; onTabChange?: (t: string) => void }) {
-  const { posts, isLoading, create, update, remove, moveStatus } = useExternalPosts(client.id);
+  const { posts, isLoading, create, update, remove, moveStatus, setDate } = useExternalPosts(client.id);
+  // Kanban (padrão) ou Calendário. Preferência salva por dispositivo.
+  const [view, setView] = useState<"kanban" | "calendario">(() => {
+    try { return (localStorage.getItem("criapost_view") as "kanban" | "calendario") || "kanban"; } catch { return "kanban"; }
+  });
+  const setViewPersist = (v: "kanban" | "calendario") => {
+    setView(v);
+    try { localStorage.setItem("criapost_view", v); } catch { /* segue */ }
+  };
   const { copyLink } = useExternalClients();
   const { profile } = useProfile();
   const { data: portalViewedAt } = usePortalActivity(client.id);
@@ -247,11 +255,11 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   const [importOpen, setImportOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [editing, setEditing] = useState<ExternalPost | null>(null);
-  const [f, setF] = useState<ExternalPostInput>({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "" });
+  const [f, setF] = useState<ExternalPostInput>({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", scheduled_date: null, scheduled_time: null });
   const [copying, setCopying] = useState(false);
 
-  const openNew = () => { setEditing(null); setF({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "" }); setFormOpen(true); };
-  const openEdit = (p: ExternalPost) => { setEditing(p); setF({ title: p.title, platform: p.platform, format: p.format, caption: p.caption ?? "", hook: p.hook ?? "", approval_mode: (p.approval_mode as "fast"|"flow"|"both") ?? "fast", script: p.script ?? "" }); setFormOpen(true); };
+  const openNew = (day?: string) => { setEditing(null); setF({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", scheduled_date: day ?? null, scheduled_time: null }); setFormOpen(true); };
+  const openEdit = (p: ExternalPost) => { setEditing(p); setF({ title: p.title, platform: p.platform, format: p.format, caption: p.caption ?? "", hook: p.hook ?? "", approval_mode: (p.approval_mode as "fast"|"flow"|"both") ?? "fast", script: p.script ?? "", scheduled_date: p.scheduled_date ?? null, scheduled_time: (p as { scheduled_time?: string | null }).scheduled_time ?? null }); setFormOpen(true); };
   const submit = async () => {
     if (!f.title.trim()) return;
     if (editing) await update.mutateAsync({ id: editing.id, resend: editing.approval_status === "ajuste_solicitado", ...f });
@@ -299,11 +307,25 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
         )}
 
         <TabsContent value="posts">
-          <div className="flex justify-end gap-2 mb-3 flex-wrap">
-            <Button variant="outline" onClick={() => setImportOpen(true)}><KanbanSquare className="h-4 w-4 mr-1.5" /> Importar do kanban</Button>
-            <Button onClick={openNew}><Plus className="h-4 w-4 mr-1.5" /> Novo post</Button>
+          <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+            {/* Kanban (padrão) / Calendário — as duas visões conversam: mudar a data reflete no card. */}
+            <div className="inline-flex rounded-lg border border-border overflow-hidden">
+              {(["kanban", "calendario"] as const).map((v) => (
+                <button key={v} onClick={() => setViewPersist(v)}
+                  className={`px-3 py-1.5 text-xs font-body font-semibold transition-colors ${view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+                  {v === "kanban" ? "Kanban" : "Calendário"}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <Button variant="outline" onClick={() => setImportOpen(true)}><KanbanSquare className="h-4 w-4 mr-1.5" /> Importar do kanban</Button>
+              <Button onClick={() => openNew()}><Plus className="h-4 w-4 mr-1.5" /> Novo post</Button>
+            </div>
           </div>
-      {isLoading ? (
+      {view === "calendario" ? (
+        <PostsCalendar posts={posts} onOpen={openEdit} onNewAt={(d) => openNew(d)}
+          onMove={(id, d) => setDate.mutate({ id, scheduled_date: d })} />
+      ) : isLoading ? (
         <div className="space-y-3">{[0, 1].map((i) => <div key={i} className="h-20 rounded-2xl bg-muted animate-pulse" />)}</div>
       ) : posts.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border p-10 text-center">
@@ -335,6 +357,11 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                           <div className="flex-1 min-w-0">
                             <span className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wide">{cap(p.format)} · {cap(p.platform)}</span>
                             <p className="font-display font-bold text-sm text-foreground truncate mt-1">{p.title}</p>
+                            {/* Data direto no card — sem abrir o post. Reflete no calendário na hora. */}
+                            <input type="date" value={p.scheduled_date ?? ""}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => { e.stopPropagation(); setDate.mutate({ id: p.id, scheduled_date: e.target.value || null }); }}
+                              className="mt-1 h-6 w-full rounded-md border border-border bg-background px-1.5 text-[11px] font-body text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
                             {p.caption && <p className="text-xs text-muted-foreground font-body line-clamp-2 mt-0.5">{p.caption}</p>}
                             {p.approval_status === "ajuste_solicitado" && p.last_comment && p.last_comment_role === "cliente_externo" && (
                               <div className="mt-2 text-xs font-body text-orange-700 bg-orange-50 border border-orange-100 rounded-lg px-2.5 py-1.5">Cliente pediu: "{p.last_comment}"</div>
@@ -510,8 +537,23 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               )}
             </div>
 
+            {/* 4b, Cronograma: data + hora da publicação */}
+            <div className="order-[4] md:col-start-1 md:row-start-4">
+              <label className="text-xs font-semibold mb-1.5 block">Cronograma</label>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Label className="text-[11px] font-body text-muted-foreground">Data de publicação</Label>
+                  <Input type="date" value={f.scheduled_date ?? ""} onChange={(e) => setF((p) => ({ ...p, scheduled_date: e.target.value || null }))} className="rounded-xl" />
+                </div>
+                <div className="w-28">
+                  <Label className="text-[11px] font-body text-muted-foreground">Horário</Label>
+                  <Input type="time" value={f.scheduled_time ?? ""} onChange={(e) => setF((p) => ({ ...p, scheduled_time: e.target.value || null }))} className="rounded-xl" />
+                </div>
+              </div>
+            </div>
+
             {/* 5, Legenda */}
-            <div className="order-5 md:col-start-1 md:row-start-4 space-y-1.5">
+            <div className="order-5 md:col-start-1 md:row-start-5 space-y-1.5">
               <Label className="text-xs font-body">Legenda</Label>
               <Textarea value={f.caption ?? ""} onChange={(e) => setF((p) => ({ ...p, caption: e.target.value }))} rows={4} className="rounded-xl" />
               {f.format === "story" && (f.caption ?? "").trim() !== "" && (
@@ -530,5 +572,130 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// ── Visão CALENDÁRIO dos posts (mês). Arrastar entre dias muda scheduled_date na hora.
+// Conversa com o kanban: a mesma data aparece no card e aqui.
+const CAL_WD = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+function calYmd(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+function calMonday(d: Date) { const x = new Date(d); const wd = (x.getDay() + 6) % 7; x.setDate(x.getDate() - wd); x.setHours(0, 0, 0, 0); return x; }
+
+function PostsCalendar({ posts, onOpen, onNewAt, onMove }: {
+  posts: ExternalPost[];
+  onOpen: (p: ExternalPost) => void;
+  onNewAt: (day: string) => void;
+  onMove: (id: string, day: string) => void;
+}) {
+  const [anchor, setAnchor] = useState(() => new Date());
+
+  const days = (() => {
+    const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+    const start = calMonday(first);
+    const last = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
+    const end = calMonday(last); end.setDate(end.getDate() + 6);
+    const n = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+    return Array.from({ length: n }, (_, i) => { const d = new Date(start); d.setDate(d.getDate() + i); return d; });
+  })();
+
+  const byDay = new Map<string, ExternalPost[]>();
+  const semData: ExternalPost[] = [];
+  for (const p of posts) {
+    if (!p.scheduled_date) { semData.push(p); continue; }
+    const arr = byDay.get(p.scheduled_date) ?? [];
+    arr.push(p); byDay.set(p.scheduled_date, arr);
+  }
+
+  const today = calYmd(new Date());
+  const onDragEnd = (r: DropResult) => {
+    if (!r.destination) return;
+    const day = r.destination.droppableId;
+    if (day === "sem-data" || day === r.source.droppableId) return;
+    onMove(r.draggableId, day);
+  };
+
+  return (
+    <DragDropContext onDragEnd={onDragEnd}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-1">
+          <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setAnchor((a) => { const n = new Date(a); n.setMonth(n.getMonth() - 1); return n; })}>‹</Button>
+          <span className="text-sm font-display font-bold text-foreground px-2 capitalize">{anchor.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</span>
+          <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setAnchor((a) => { const n = new Date(a); n.setMonth(n.getMonth() + 1); return n; })}>›</Button>
+          <Button variant="outline" size="sm" className="h-8 px-2 text-xs ml-1" onClick={() => setAnchor(new Date())}>Hoje</Button>
+        </div>
+      </div>
+
+      <div className="hidden lg:grid lg:grid-cols-7 gap-2 mb-1">
+        {CAL_WD.map((w) => <p key={w} className="text-[10px] uppercase tracking-wider font-body font-semibold text-muted-foreground text-center">{w}</p>)}
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+        {days.map((d) => {
+          const iso = calYmd(d);
+          const list = byDay.get(iso) ?? [];
+          const isToday = iso === today;
+          const outMonth = d.getMonth() !== anchor.getMonth();
+          return (
+            <Droppable droppableId={iso} key={iso}>
+              {(dropP, dropS) => (
+                <div ref={dropP.innerRef} {...dropP.droppableProps}
+                  className={`min-h-[104px] rounded-xl border p-2 flex flex-col gap-1.5 transition-colors
+                    ${isToday ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-background"}
+                    ${outMonth ? "opacity-45" : ""}
+                    ${dropS.isDraggingOver ? "ring-2 ring-primary/40 border-primary/60 bg-primary/5" : ""}`}>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm font-display font-bold ${isToday ? "text-primary" : "text-foreground"}`}>{d.getDate()}</span>
+                    <button onClick={() => onNewAt(iso)} className="text-muted-foreground hover:text-primary" aria-label="Novo post neste dia"><Plus className="h-3.5 w-3.5" /></button>
+                  </div>
+                  {list.map((p, idx) => {
+                    const st = STATUS[(p.approval_status ?? "pendente") as ApprovalKey];
+                    return (
+                      <Draggable key={p.id} draggableId={p.id} index={idx}>
+                        {(dragP, dragS) => (
+                          <button ref={dragP.innerRef} {...dragP.draggableProps} {...dragP.dragHandleProps}
+                            type="button" onClick={() => onOpen(p)}
+                            className={`rounded-lg border border-border bg-card px-1.5 py-1 text-left hover:bg-muted/40 transition-colors ${dragS.isDragging ? "shadow-lg ring-2 ring-primary/40" : ""}`}>
+                            <span className={`text-[9px] font-body font-bold px-1.5 py-0.5 rounded-full ${st?.cls ?? ""}`}>{st?.label ?? "Pendente"}</span>
+                            <p className="text-[11px] font-body font-semibold text-foreground leading-tight truncate mt-0.5">{p.title}</p>
+                            <p className="text-[9px] font-body text-muted-foreground uppercase">{cap(p.format)}</p>
+                          </button>
+                        )}
+                      </Draggable>
+                    );
+                  })}
+                  {dropP.placeholder}
+                </div>
+              )}
+            </Droppable>
+          );
+        })}
+      </div>
+
+      {/* Posts ainda sem data: arraste pra um dia do calendário. */}
+      {semData.length > 0 && (
+        <div className="mt-4 rounded-xl border border-dashed border-border p-3">
+          <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-2">Sem data ({semData.length}) — arraste pra um dia</p>
+          <Droppable droppableId="sem-data" direction="horizontal">
+            {(dropP) => (
+              <div ref={dropP.innerRef} {...dropP.droppableProps} className="flex gap-2 flex-wrap">
+                {semData.map((p, idx) => (
+                  <Draggable key={p.id} draggableId={p.id} index={idx}>
+                    {(dragP, dragS) => (
+                      <button ref={dragP.innerRef} {...dragP.draggableProps} {...dragP.dragHandleProps}
+                        type="button" onClick={() => onOpen(p)}
+                        className={`rounded-lg border border-border bg-card px-2 py-1.5 text-left hover:bg-muted/40 transition-colors ${dragS.isDragging ? "shadow-lg ring-2 ring-primary/40" : ""}`}>
+                        <p className="text-[11px] font-body font-semibold text-foreground truncate max-w-[160px]">{p.title}</p>
+                        <p className="text-[9px] font-body text-muted-foreground uppercase">{cap(p.format)}</p>
+                      </button>
+                    )}
+                  </Draggable>
+                ))}
+                {dropP.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </div>
+      )}
+    </DragDropContext>
   );
 }

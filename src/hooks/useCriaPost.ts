@@ -28,7 +28,7 @@ export type ExternalPost = {
   approval_updated_at: string | null;
   last_comment: string | null; last_comment_role: string | null;
 };
-export type ExternalPostInput = { title: string; platform: string; format: string; caption?: string | null; hook?: string | null; script?: string | null; approval_mode?: "fast" | "flow" | "both" };
+export type ExternalPostInput = { title: string; platform: string; format: string; caption?: string | null; hook?: string | null; script?: string | null; approval_mode?: "fast" | "flow" | "both"; scheduled_date?: string | null; scheduled_time?: string | null };
 
 export function useExternalClients() {
   const { agencyOwnerId } = useActiveAccount();
@@ -189,7 +189,28 @@ export function useExternalPosts(clientId: string | null) {
     onError: () => toast.error("Erro ao mover o post."),
   });
 
-  return { posts: postsQ.data ?? [], isLoading: postsQ.isLoading, create, update, remove, moveStatus };
+  // Muda a DATA do post (arrastar no calendário / escolher no card). Otimista pra ser instantâneo.
+  const setDate = useMutation({
+    mutationFn: async ({ id, scheduled_date }: { id: string; scheduled_date: string | null }) => {
+      const { error } = await sbFrom("posts").update({ scheduled_date }).eq("id", id);
+      if (error) throw error;
+    },
+    onMutate: async ({ id, scheduled_date }: { id: string; scheduled_date: string | null }) => {
+      await qc.cancelQueries({ queryKey: key });
+      const prev = qc.getQueryData<ExternalPost[]>(key);
+      qc.setQueryData<ExternalPost[]>(key, (old) =>
+        Array.isArray(old) ? old.map((p) => (p.id === id ? { ...p, scheduled_date } : p)) : old);
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      const c = ctx as { prev?: ExternalPost[] } | undefined;
+      if (c?.prev) qc.setQueryData(key, c.prev);
+      toast.error("Não consegui mudar a data.");
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: key, refetchType: "none" }),
+  });
+
+  return { posts: postsQ.data ?? [], isLoading: postsQ.isLoading, create, update, remove, moveStatus, setDate };
 }
 
 // Última vez que o cliente abriu o portal de aprovação (last_viewed_at do token ativo).

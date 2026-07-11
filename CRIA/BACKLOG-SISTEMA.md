@@ -31,12 +31,15 @@ Documento vivo. Marcar `[x]` conforme entrega. Ordem de ataque definida: **Agend
 
 ---
 
-## 🔨 PRÓXIMO — Bloco 2: Cria Post
+## 🔨 Bloco 2: Cria Post — PARCIAL
 
-- [ ] Anexar **mídia já na criação** do post (hoje só depois de salvar)
-- [ ] Campo de **data/hora** no formulário de novo post
-- [ ] **Visão de calendário** dos posts (além do kanban)
-- [ ] Definir **data no card** "Aguardando cliente"
+- [x] Campo de **data/hora** (Cronograma) no formulário de post
+- [x] **Visão de calendário** (mês) arrastável, alternando com o Kanban; preferência salva
+- [x] Arrastar post entre dias muda a data na hora (otimista); área "Sem data" pra jogar no calendário
+- [x] **Data direto no card** do kanban (input de data, sem abrir o post)
+- [x] "+" no dia do calendário já abre o Novo post com a data preenchida
+- [ ] **Mídia já na criação** — bloqueado: o upload precisa do `post.id`. Solução: criar o post como rascunho ao abrir o modal (ou upload em memória + commit no salvar). Requer refactor do `CriaPostMedia`.
+- [ ] **Enviar pro cliente por período** (link de aprovação filtrado por intervalo de datas, além de "tudo")
 
 ## Bloco 3: Cronograma
 
