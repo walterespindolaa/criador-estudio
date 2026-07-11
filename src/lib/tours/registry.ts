@@ -7,10 +7,17 @@ import { TOURS_CRIADOR } from "./criador";
 import { TOURS_GESTOR } from "./gestor";
 
 export type TourStep = {
-  /** Seletor do alvo: '[data-tour="chave"]'. Se o elemento não existir, o passo é pulado. */
+  /** Seletor do alvo: '[data-tour="chave"]'. Se o elemento não existir, o card aparece centrado. */
   target: string;
+  /** Alvo alternativo no mobile (quando o layout mobile tem outro elemento). */
+  mobileTarget?: string;
   title: string;
   body: string;
+  /** Texto alternativo no mobile (quando a instrução muda, ex: gesto em vez de clique). */
+  mobileBody?: string;
+  /** Passo só existe numa das versões (elemento não existe na outra). */
+  skipOnMobile?: boolean;
+  skipOnDesktop?: boolean;
   placement?: "top" | "bottom" | "left" | "right";
   /** Se presente, mostra o botão "Fazer com a Cria IA" que abre o painel com esse prompt. */
   aiPrompt?: string;

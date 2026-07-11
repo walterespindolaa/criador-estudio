@@ -65,7 +65,17 @@ export function TourProvider({ children }: { children: ReactNode }) {
   }, [user?.id]);
 
   const begin = useCallback((tour: TourConfig) => {
-    setActive(tour);
+    // Resolve os passos pro dispositivo atual: alvos/textos mobile e passos exclusivos.
+    // Assim o tour NUNCA aponta pra um elemento que não existe nesta versão do layout.
+    const isMobile = window.innerWidth < 768;
+    const steps = tour.steps
+      .filter(s => !(isMobile && s.skipOnMobile) && !(!isMobile && s.skipOnDesktop))
+      .map(s => ({
+        ...s,
+        target: isMobile && s.mobileTarget ? s.mobileTarget : s.target,
+        body: isMobile && s.mobileBody ? s.mobileBody : s.body,
+      }));
+    setActive({ ...tour, steps });
     setStep(-1);
   }, []);
 
