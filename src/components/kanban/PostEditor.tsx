@@ -8,12 +8,13 @@ import { CopyButton } from "@/components/shared/CopyButton";
 import {
   Sparkles, MessageSquareText, FileCode2, Anchor, PenLine, MessageSquare,
   ClipboardList, BarChart3, Eye, Bookmark, Target, Clock, Cloud, Image as ImageIcon, X, Trash2,
-  Layers, Type, Radio, MousePointerClick, Link as LinkIcon, Download, BookOpen,
+  Layers, Type, Radio, MousePointerClick, Link as LinkIcon, Download, BookOpen, CircleHelp,
   Loader2, Hash, Copy, Repeat2, FileText, ListChecks, Calendar, ChevronDown,
   RefreshCw, Minus, Plus, SmilePlus, Briefcase, StickyNote,
   
   Play, Video, ExternalLink,
 } from "lucide-react";
+import { useTour } from "@/components/tour/TourProvider";
 import { cn } from "@/lib/utils";
 import { validateUpload } from "@/lib/upload-validation";
 import { getFormatStructure } from "@/lib/format-structures";
@@ -204,6 +205,7 @@ const FALLBACK_PROMPTS = [
 ];
 
 export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved, initialFormat }: PostEditorProps) {
+  const { startTour } = useTour();
   const isNew = !post;
   const [title, setTitle] = useState("");
   const [platform, setPlatform] = useState("instagram");
@@ -1159,6 +1161,15 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 <Button
                   variant="outline"
                   size="sm"
+                  className="gap-1.5 px-2.5"
+                  aria-label="Ver tutorial do editor"
+                  onClick={() => startTour("post-editor")}
+                >
+                  <CircleHelp className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="gap-1.5"
                   onClick={() => exportPdf(pdfRef, `roteiro-${title.slice(0, 20).replace(/\s+/g, "-").toLowerCase() || "post"}`)}
                 >
@@ -1259,7 +1270,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               <div className="p-4 sm:p-5 space-y-5 pb-[calc(2rem+env(safe-area-inset-bottom))]">
                 {/* Metadata */}
                 <section className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div data-tour="editor-plataforma" className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
                         Plataforma
@@ -1326,7 +1337,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     </div>
                   )}
 
-                  <div className="space-y-1.5">
+                  <div data-tour="editor-status" className="space-y-1.5">
                     <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
                       Status
                     </Label>

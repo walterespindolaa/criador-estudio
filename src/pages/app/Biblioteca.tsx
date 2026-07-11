@@ -248,7 +248,7 @@ const Biblioteca = () => {
 
         <Tabs defaultValue="hooks">
           <div className="overflow-x-auto scrollbar-none -mx-4 px-4 mb-6">
-            <TabsList className="bg-card border border-border rounded-xl flex-nowrap whitespace-nowrap h-auto gap-1 p-1 w-max">
+            <TabsList data-tour="biblioteca-abas" className="bg-card border border-border rounded-xl flex-nowrap whitespace-nowrap h-auto gap-1 p-1 w-max">
               <TabsTrigger value="hooks" className="shrink-0 rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
                 <Sparkles className="h-3.5 w-3.5 mr-1" /> Hooks <InfoTooltip text="Primeiras frases que capturam atenção. Use como ponto de partida do seu roteiro ou legenda." className="ml-1" />
               </TabsTrigger>

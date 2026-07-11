@@ -144,21 +144,33 @@ export const TOURS_CRIADOR: TourConfig[] = [
     ],
     steps: [
       {
+        target: '[data-tour="editor-plataforma"]',
+        title: "Plataforma e formato",
+        body: "Comece dizendo ONDE esse post vai viver (Instagram, TikTok, YouTube) e em que formato (Reels, carrossel, foto...). O CRIA adapta a estrutura do editor pra esse formato: um Reels ganha cenas, um carrossel ganha lâminas.",
+        placement: "right",
+      },
+      {
+        target: '[data-tour="editor-status"]',
+        title: "Status: onde esse post está no fluxo",
+        body: "Esses chips são as mesmas colunas do kanban. Mudou o status aqui, o card anda lá no board. Ideia é a faísca; Planejamento é escrever; Produzindo é gravar; Pronto é finalizado; Agendado tem data; Publicado está no ar.",
+        placement: "right",
+      },
+      {
+        target: '[data-tour="editor-agendamento"]',
+        title: "Agendamento e melhor horário",
+        body: "Defina data e hora, e repare na sugestão de melhores horários: ela é baseada no seu nicho e na plataforma (e fica mais precisa com o Instagram conectado). Post com data aparece no calendário e no Dashboard.",
+        placement: "right",
+      },
+      {
         target: '[data-tour="editor-abas"]',
         title: "As abas do post",
         body: "Legenda: o texto que vai no post. Roteiro: cena a cena do vídeo. Tarefas: o que falta fazer pra esse post sair. Notas: anotações livres. Refs: referências e links de inspiração. Um post completo mora nessas 5 abas.",
         placement: "bottom",
       },
       {
-        target: '[data-tour="editor-agendamento"]',
-        title: "Agendamento e melhor horário",
-        body: "Defina data e hora, e repare na sugestão de melhores horários: ela é baseada no seu nicho e na plataforma. Post com data marcada aparece no calendário e no seu Dashboard.",
-        placement: "right",
-      },
-      {
         target: '[data-tour="editor-ia"]',
         title: "Content Assistant",
-        body: "Escolha o tom (descontraído, profissional, provocativo...) e a IA escreve legenda e roteiro no estilo da sua marca, ou avalia o gancho que você escreveu. É o seu copywriter de plantão.",
+        body: "Escolha o tom (descontraído, profissional, provocativo...) e a IA escreve legenda e roteiro no estilo da sua marca, ou avalia o gancho que você escreveu. É o seu copywriter de plantão. E o botão ? aqui em cima reabre este tutorial quando quiser.",
         placement: "right",
         aiPrompt: "Escreva uma legenda pra este post no tom da minha marca, com gancho forte e CTA.",
       },
@@ -175,7 +187,14 @@ export const TOURS_CRIADOR: TourConfig[] = [
       "Tarefas ligadas aos seus posts e collabs",
       "O resumo diário te lembra do que vence hoje",
     ],
-    steps: [],
+    steps: [
+      {
+        target: '[data-tour="tarefas-nova"]',
+        title: "Criar uma tarefa",
+        body: "Clique aqui e registre qualquer pendência: gravar o Reels de quinta, responder a marca da collab, editar o vídeo. Defina prazo e pronto: ela aparece no Dashboard no dia certo, e você esvazia a cabeça.",
+        placement: "bottom",
+      },
+    ],
   },
   {
     id: "metas",
@@ -254,7 +273,15 @@ export const TOURS_CRIADOR: TourConfig[] = [
       "Base pra tudo: legendas, roteiros, stories e ideias",
       "Decisões de conteúdo mais rápidas e coerentes",
     ],
-    steps: [],
+    steps: [
+      {
+        target: '[data-tour="brandbook-abas"]',
+        title: "As áreas da sua marca",
+        body: "Navegue pelas abas e preencha cada uma: quem você é, seu nicho, tom de voz, público e o Moodboard, que é o mural visual da sua estética (cores, referências, vibe). Reserve 15 minutos pra isso: é o investimento com maior retorno do CRIA, porque TUDO que a IA gerar daqui pra frente usa essas respostas.",
+        placement: "bottom",
+        aiPrompt: "Me ajude a definir meu tom de voz e público ideal com base no meu nicho.",
+      },
+    ],
   },
   {
     id: "linkinbio",
@@ -293,7 +320,14 @@ export const TOURS_CRIADOR: TourConfig[] = [
       "Reaproveite mídia entre posts",
       "Integração com Google Drive pra arquivos pesados",
     ],
-    steps: [],
+    steps: [
+      {
+        target: '[data-tour="biblioteca-abas"]',
+        title: "Os acervos da Biblioteca",
+        body: "Explore as abas: cada uma é um tipo de recurso pro seu conteúdo, de hooks prontos pra capturar atenção a materiais seus. Quando estiver criando um post e travar, é aqui que você abastece.",
+        placement: "bottom",
+      },
+    ],
   },
   {
     id: "estudio",
@@ -319,7 +353,14 @@ export const TOURS_CRIADOR: TourConfig[] = [
       "Entregas conectadas ao seu kanban",
       "Histórico pra renegociar com base em resultado",
     ],
-    steps: [],
+    steps: [
+      {
+        target: '[data-tour="collabs-abas"]',
+        title: "Pipeline e Lista",
+        body: "Pipeline mostra suas parcerias como um funil: da conversa inicial ao contrato fechado e entregue. Lista é a visão corrida de tudo. Cada collab guarda briefing, prazo e cachê, então nada se perde entre o DM e a entrega.",
+        placement: "bottom",
+      },
+    ],
   },
   {
     id: "historico",

@@ -162,7 +162,7 @@ const Tarefas = () => {
               <p className="text-muted-foreground font-body mt-0.5 text-sm">Tudo o que você precisa executar.</p>
             </div>
           </div>
-          <Button variant="hero" onClick={openNew}><Plus className="h-4 w-4 mr-2" /> Nova Tarefa</Button>
+          <Button data-tour="tarefas-nova" variant="hero" onClick={openNew}><Plus className="h-4 w-4 mr-2" /> Nova Tarefa</Button>
         </div>
 
         <div className="flex gap-2 mb-8 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-none">

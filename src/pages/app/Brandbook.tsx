@@ -490,7 +490,7 @@ const Brandbook = () => {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div className="overflow-x-auto mb-6">
-            <TabsList className="inline-flex h-auto bg-card border border-border rounded-2xl p-1.5 gap-1 min-w-max">
+            <TabsList data-tour="brandbook-abas" className="inline-flex h-auto bg-card border border-border rounded-2xl p-1.5 gap-1 min-w-max">
               <TabsTrigger value="visao-geral" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap">
                 <Eye className="h-3.5 w-3.5" /> Visão Geral
               </TabsTrigger>

@@ -77,7 +77,7 @@ export default function Collabs() {
       )}
 
       <Tabs defaultValue="pipeline" className="w-full">
-        <TabsList className="bg-card border border-border rounded-2xl p-1.5 mb-5 flex-wrap h-auto">
+        <TabsList data-tour="collabs-abas" className="bg-card border border-border rounded-2xl p-1.5 mb-5 flex-wrap h-auto">
           <TabsTrigger value="pipeline" className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Pipeline</TabsTrigger>
           <TabsTrigger value="lista" className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Lista</TabsTrigger>
           <TabsTrigger value="historico" className="rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Histórico</TabsTrigger>
