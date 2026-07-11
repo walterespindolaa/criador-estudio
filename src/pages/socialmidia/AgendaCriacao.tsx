@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users } from "lucide-react";
+import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useCrmClients } from "@/hooks/useCrm";
+import { useCrmClients, useCrmTasks, type CrmTask } from "@/hooks/useCrm";
 import {
   useCreations, useAddCreation, useDeleteCreation,
   useCaptures, useAddCapture, useUpdateCapture, useDeleteCapture, useCollaboratorNames, type Capture,
@@ -25,7 +27,16 @@ const STATUS: Record<Capture["status"], { label: string; cls: string }> = {
 };
 
 export default function AgendaCriacao() {
+  const navigate = useNavigate();
   const [weekStart, setWeekStart] = useState(() => mondayOf(parseDateOnly(hojeBR())));
+  // Toggle: mostrar as tarefas dos clientes (CRM) na grade, persistido por dispositivo
+  const [showTasks, setShowTasks] = useState(() => {
+    try { return localStorage.getItem("agenda_show_tasks") === "1"; } catch { return false; }
+  });
+  const toggleTasks = (v: boolean) => {
+    setShowTasks(v);
+    try { localStorage.setItem("agenda_show_tasks", v ? "1" : "0"); } catch { /* segue */ }
+  };
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d; }), [weekStart]);
   const from = ymd(days[0]); const to = ymd(days[6]);
   const today = hojeBR();
@@ -36,6 +47,7 @@ export default function AgendaCriacao() {
   const addCreation = useAddCreation();
   const delCreation = useDeleteCreation();
   const { data: captures = [] } = useCaptures();
+  const { data: crmTasks = [] } = useCrmTasks();
   const addCapture = useAddCapture();
   const updCapture = useUpdateCapture();
   const delCapture = useDeleteCapture();
@@ -64,6 +76,21 @@ export default function AgendaCriacao() {
   const nameOf = (crmId: string | null, fallback: string | null) =>
     (crmId ? clients.find((c) => c.id === crmId)?.name : null) || fallback || "Cliente";
 
+  // Tarefas dos clientes (CRM) com vencimento na semana exibida, por dia.
+  // Concluídas ficam de fora: a grade é sobre o que ainda precisa acontecer.
+  const tasksByDay = useMemo(() => {
+    const m = new Map<string, CrmTask[]>();
+    if (!showTasks) return m;
+    const prioOrder: Record<string, number> = { urgente: 0, alta: 1, media: 2, baixa: 3 };
+    for (const t of crmTasks) {
+      if (!t.due_date || t.status === "concluida") continue;
+      if (t.due_date < from || t.due_date > to) continue;
+      (m.get(t.due_date) ?? m.set(t.due_date, []).get(t.due_date)!).push(t);
+    }
+    for (const arr of m.values()) arr.sort((a, b) => (prioOrder[a.priority] ?? 9) - (prioOrder[b.priority] ?? 9));
+    return m;
+  }, [crmTasks, from, to, showTasks]);
+
   const upcoming = useMemo(() => captures.filter((c) => c.status !== "cancelada" && c.capture_date >= today).slice(0, 30), [captures, today]);
 
   return (
@@ -81,7 +108,13 @@ export default function AgendaCriacao() {
       {/* Agenda de criação */}
       <div className="rounded-2xl border border-border bg-card p-4">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <p className="text-sm font-display font-bold text-foreground">Agenda de criação</p>
+          <div className="flex items-center gap-4 flex-wrap">
+            <p className="text-sm font-display font-bold text-foreground">Agenda de criação</p>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <Switch checked={showTasks} onCheckedChange={toggleTasks} aria-label="Mostrar tarefas dos clientes" />
+              <span className="text-xs font-body font-semibold text-muted-foreground">Tarefas dos clientes</span>
+            </label>
+          </div>
           <div className="flex items-center gap-1">
             <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setWeekStart((w) => { const n = new Date(w); n.setDate(n.getDate() - 7); return n; })}>‹</Button>
             <span className="text-xs font-body text-muted-foreground px-1">{shortDate(days[0])} – {shortDate(days[6])}</span>
@@ -91,9 +124,9 @@ export default function AgendaCriacao() {
         </div>
         <div className="flex gap-2 overflow-x-auto pb-2 lg:grid lg:grid-cols-7 lg:overflow-visible lg:pb-0">
           {days.map((d, i) => {
-            const iso = ymd(d); const list = byDay.get(iso) ?? []; const caps = capturesByDay.get(iso) ?? []; const isToday = iso === today;
+            const iso = ymd(d); const list = byDay.get(iso) ?? []; const caps = capturesByDay.get(iso) ?? []; const dayTasks = tasksByDay.get(iso) ?? []; const isToday = iso === today;
             return (
-              <div key={iso} className={cn("w-[150px] shrink-0 lg:w-auto min-h-[180px] lg:min-h-[220px] rounded-xl border p-2 flex flex-col gap-1.5", isToday ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-background")}>
+              <div key={iso} className={cn("w-[170px] shrink-0 lg:w-auto min-h-[220px] lg:min-h-[280px] rounded-xl border p-2.5 flex flex-col gap-1.5", isToday ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-background")}>
                 <div className="flex items-center justify-between px-0.5">
                   <div><span className={cn("text-[11px] uppercase tracking-wider font-body font-semibold", isToday ? "text-primary" : "text-muted-foreground")}>{WD[i]}</span> <span className={cn("text-base font-display font-bold", isToday ? "text-primary" : "text-foreground")}>{d.getDate()}</span></div>
                   <button onClick={() => setAddDay(iso)} className="text-muted-foreground hover:text-primary" aria-label="Adicionar"><Plus className="h-3.5 w-3.5" /></button>
@@ -109,6 +142,20 @@ export default function AgendaCriacao() {
                     <p className="text-[12px] font-body font-semibold text-foreground leading-tight truncate">{nameOf(c.crm_client_id, c.client_name)}</p>
                   </button>
                 ))}
+                {dayTasks.map((t) => (
+                  <button key={t.id} type="button" title={t.description ?? undefined}
+                    onClick={() => navigate("/socialmidia/criacrm/tarefas")}
+                    className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors",
+                      t.priority === "urgente" || t.priority === "alta"
+                        ? "border-amber-500/50 bg-amber-500/15 hover:bg-amber-500/20"
+                        : "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10")}>
+                    <div className="flex items-center gap-1 text-amber-700 dark:text-amber-300">
+                      <ListChecks className="h-3 w-3 shrink-0" />
+                      <span className="text-[10px] font-body font-bold truncate">{nameOf(t.crm_client_id, null)}</span>
+                    </div>
+                    <p className="text-[12px] font-body font-semibold text-foreground leading-tight truncate">{t.title}</p>
+                  </button>
+                ))}
                 {list.map((c) => (
                   <div key={c.id} className="group rounded-lg border border-border bg-card px-2 py-1.5">
                     <div className="flex items-start gap-1">
@@ -118,7 +165,7 @@ export default function AgendaCriacao() {
                     {c.team && <p className="text-[10px] font-body text-muted-foreground truncate">{c.team}</p>}
                   </div>
                 ))}
-                {list.length === 0 && caps.length === 0 && <button onClick={() => setAddDay(iso)} className="text-[11px] font-body text-muted-foreground/60 hover:text-primary py-1">+ cliente</button>}
+                {list.length === 0 && caps.length === 0 && dayTasks.length === 0 && <button onClick={() => setAddDay(iso)} className="text-[11px] font-body text-muted-foreground/60 hover:text-primary py-1">+ cliente</button>}
               </div>
             );
           })}
