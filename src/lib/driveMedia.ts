@@ -1,0 +1,76 @@
+// Helper único pra exibir mídia do Cria Post, com tratamento especial pro Google Drive.
+// O view_url do Drive (drive.google.com/file/d/ID/view ou /preview) é uma PÁGINA,
+// não serve como src de <img>. Aqui convertemos a referência numa URL exibível.
+
+export type MediaLike = {
+  provider?: string | null;
+  external_file_id?: string | null;
+  view_url?: string | null;
+  thumbnail_url?: string | null;
+  download_url?: string | null;
+  file_type?: string | null;
+  bunny_video_id?: string | null;
+};
+
+// Valor real usado no banco é "gdrive" (useCriaPostMedia.addDriveLink).
+// Aceitamos variações por segurança, sem afetar storage/bunny.
+const DRIVE_PROVIDERS = new Set(["gdrive", "drive", "google_drive"]);
+
+export function isDriveMedia(m: MediaLike): boolean {
+  return DRIVE_PROVIDERS.has((m.provider ?? "").toLowerCase());
+}
+
+export function isVideoMedia(m: MediaLike): boolean {
+  return !!m.file_type?.startsWith("video") || !!m.bunny_video_id || m.provider === "bunny_stream";
+}
+
+export function isDriveVideo(m: MediaLike): boolean {
+  return isDriveMedia(m) && !!m.file_type?.startsWith("video");
+}
+
+/** Extrai o FILE_ID do Drive: primeiro do external_file_id, depois das URLs salvas. */
+export function getDriveFileId(m: MediaLike): string | null {
+  const direct = m.external_file_id?.trim();
+  if (direct && /^[-\w]{20,}$/.test(direct)) return direct;
+  for (const url of [m.view_url, m.download_url, m.thumbnail_url]) {
+    if (!url) continue;
+    const byPath = url.match(/\/(?:file\/)?d\/([-\w]{25,})/);
+    if (byPath) return byPath[1];
+    const byParam = url.match(/[?&]id=([-\w]{25,})/);
+    if (byParam) return byParam[1];
+  }
+  return direct || null;
+}
+
+/**
+ * URL de imagem exibível (src de <img>) pra qualquer mídia do Cria Post.
+ * Drive: usa https://drive.google.com/thumbnail?id=ID&sz=wN (funciona pra arquivos
+ * com "qualquer pessoa com o link", inclusive frame de vídeos), com fallback pro
+ * thumbnail_url salvo. Outros providers seguem como antes.
+ */
+export function getDisplayImageUrl(m: MediaLike, size = 1600): string | null {
+  if (isDriveMedia(m)) {
+    const id = getDriveFileId(m);
+    if (id) return `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${size}`;
+    return m.thumbnail_url || null;
+  }
+  if (isVideoMedia(m)) return m.thumbnail_url || null;
+  return m.view_url || m.thumbnail_url || m.download_url || null;
+}
+
+/** Fallback (lh3.googleusercontent.com) pra quando o thumbnail do Drive falhar. */
+export function getDriveImageFallbackUrl(m: MediaLike, size = 1600): string | null {
+  if (!isDriveMedia(m)) return null;
+  const id = getDriveFileId(m);
+  if (!id) return null;
+  return `https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w${size}`;
+}
+
+/** URL de embed (iframe) pra vídeo: Drive usa /preview, Bunny já vem pronto no view_url. */
+export function getVideoEmbedUrl(m: MediaLike): string | null {
+  if (isDriveVideo(m)) {
+    const id = getDriveFileId(m);
+    if (id) return `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`;
+  }
+  return m.view_url || null;
+}

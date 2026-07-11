@@ -10,8 +10,11 @@ import {
   useCreations, useAddCreation, useDeleteCreation,
   useCaptures, useAddCapture, useUpdateCapture, useDeleteCapture, useCollaboratorNames, type Capture,
 } from "@/hooks/useAgenda";
+import { hojeBR, parseDateOnly } from "@/lib/date-br";
 
 const WD = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+// Inverso de parseDateOnly: formata um Date de meia-noite LOCAL de volta para YYYY-MM-DD.
+// Só usar com Dates construídos via parseDateOnly/mondayOf (aritmética de calendário).
 function ymd(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
 function mondayOf(d: Date) { const x = new Date(d); const wd = (x.getDay() + 6) % 7; x.setDate(x.getDate() - wd); x.setHours(0, 0, 0, 0); return x; }
 const shortDate = (d: Date) => d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
@@ -22,10 +25,10 @@ const STATUS: Record<Capture["status"], { label: string; cls: string }> = {
 };
 
 export default function AgendaCriacao() {
-  const [weekStart, setWeekStart] = useState(() => mondayOf(new Date()));
+  const [weekStart, setWeekStart] = useState(() => mondayOf(parseDateOnly(hojeBR())));
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d; }), [weekStart]);
   const from = ymd(days[0]); const to = ymd(days[6]);
-  const today = ymd(new Date());
+  const today = hojeBR();
 
   const { data: clients = [] } = useCrmClients();
   const { data: teamNames = [] } = useCollaboratorNames();
@@ -45,6 +48,18 @@ export default function AgendaCriacao() {
     for (const c of creations) (m.get(c.day) ?? m.set(c.day, []).get(c.day)!).push(c);
     return m;
   }, [creations]);
+
+  // Captações da semana exibida, indexadas por dia (YYYY-MM-DD), para aparecerem na grade.
+  const capturesByDay = useMemo(() => {
+    const m = new Map<string, Capture[]>();
+    for (const c of captures) {
+      if (c.status === "cancelada") continue;
+      if (c.capture_date < from || c.capture_date > to) continue;
+      (m.get(c.capture_date) ?? m.set(c.capture_date, []).get(c.capture_date)!).push(c);
+    }
+    for (const arr of m.values()) arr.sort((a, b) => (a.capture_time ?? "99:99").localeCompare(b.capture_time ?? "99:99"));
+    return m;
+  }, [captures, from, to]);
 
   const nameOf = (crmId: string | null, fallback: string | null) =>
     (crmId ? clients.find((c) => c.id === crmId)?.name : null) || fallback || "Cliente";
@@ -70,19 +85,30 @@ export default function AgendaCriacao() {
           <div className="flex items-center gap-1">
             <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setWeekStart((w) => { const n = new Date(w); n.setDate(n.getDate() - 7); return n; })}>‹</Button>
             <span className="text-xs font-body text-muted-foreground px-1">{shortDate(days[0])} – {shortDate(days[6])}</span>
-            <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={() => setWeekStart(mondayOf(new Date()))}>Hoje</Button>
+            <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={() => setWeekStart(mondayOf(parseDateOnly(hojeBR())))}>Hoje</Button>
             <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setWeekStart((w) => { const n = new Date(w); n.setDate(n.getDate() + 7); return n; })}>›</Button>
           </div>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+        <div className="flex gap-2 overflow-x-auto pb-2 lg:grid lg:grid-cols-7 lg:overflow-visible lg:pb-0">
           {days.map((d, i) => {
-            const iso = ymd(d); const list = byDay.get(iso) ?? []; const isToday = iso === today;
+            const iso = ymd(d); const list = byDay.get(iso) ?? []; const caps = capturesByDay.get(iso) ?? []; const isToday = iso === today;
             return (
-              <div key={iso} className={cn("min-h-[130px] rounded-xl border p-2 bg-background flex flex-col gap-1.5", isToday ? "border-primary" : "border-border")}>
+              <div key={iso} className={cn("w-[150px] shrink-0 lg:w-auto min-h-[180px] lg:min-h-[220px] rounded-xl border p-2 flex flex-col gap-1.5", isToday ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-background")}>
                 <div className="flex items-center justify-between px-0.5">
-                  <div><span className="text-[10px] uppercase tracking-wider font-body font-semibold text-muted-foreground">{WD[i]}</span> <span className={cn("text-sm font-display font-bold", isToday ? "text-primary" : "text-foreground")}>{d.getDate()}</span></div>
+                  <div><span className={cn("text-[11px] uppercase tracking-wider font-body font-semibold", isToday ? "text-primary" : "text-muted-foreground")}>{WD[i]}</span> <span className={cn("text-base font-display font-bold", isToday ? "text-primary" : "text-foreground")}>{d.getDate()}</span></div>
                   <button onClick={() => setAddDay(iso)} className="text-muted-foreground hover:text-primary" aria-label="Adicionar"><Plus className="h-3.5 w-3.5" /></button>
                 </div>
+                {caps.map((c) => (
+                  <button key={c.id} type="button" title={c.location ?? undefined}
+                    onClick={() => document.getElementById("captacoes-section")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                    className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors", c.status === "concluida" ? "border-teal-500/25 bg-teal-500/5 opacity-70" : "border-teal-500/40 bg-teal-500/10 hover:bg-teal-500/15")}>
+                    <div className="flex items-center gap-1 text-teal-700 dark:text-teal-300">
+                      <Video className="h-3 w-3 shrink-0" />
+                      <span className="text-[10px] font-body font-bold">{c.capture_time ? c.capture_time.slice(0, 5) : "Captação"}</span>
+                    </div>
+                    <p className="text-[12px] font-body font-semibold text-foreground leading-tight truncate">{nameOf(c.crm_client_id, c.client_name)}</p>
+                  </button>
+                ))}
                 {list.map((c) => (
                   <div key={c.id} className="group rounded-lg border border-border bg-card px-2 py-1.5">
                     <div className="flex items-start gap-1">
@@ -92,7 +118,7 @@ export default function AgendaCriacao() {
                     {c.team && <p className="text-[10px] font-body text-muted-foreground truncate">{c.team}</p>}
                   </div>
                 ))}
-                {list.length === 0 && <button onClick={() => setAddDay(iso)} className="text-[11px] font-body text-muted-foreground/60 hover:text-primary py-1">+ cliente</button>}
+                {list.length === 0 && caps.length === 0 && <button onClick={() => setAddDay(iso)} className="text-[11px] font-body text-muted-foreground/60 hover:text-primary py-1">+ cliente</button>}
               </div>
             );
           })}
@@ -100,7 +126,7 @@ export default function AgendaCriacao() {
       </div>
 
       {/* Captações */}
-      <div className="rounded-2xl border border-border bg-card p-4 mt-4">
+      <div id="captacoes-section" className="rounded-2xl border border-border bg-card p-4 mt-4 scroll-mt-20">
         <div className="flex items-center justify-between mb-3">
           <p className="text-sm font-display font-bold text-foreground">Captações</p>
           <Button size="sm" className="h-8" onClick={() => setCapOpen(true)}><Plus className="h-3.5 w-3.5 mr-1" /> Nova captação</Button>
@@ -111,7 +137,7 @@ export default function AgendaCriacao() {
           <div className="space-y-2">
             {upcoming.map((c) => {
               const st = STATUS[c.status];
-              const d = new Date(c.capture_date + "T00:00:00");
+              const d = parseDateOnly(c.capture_date);
               return (
                 <div key={c.id} className="flex items-center gap-3 rounded-xl border border-border p-3 flex-wrap">
                   <div className="text-center shrink-0 w-11">

@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { Reorder } from "framer-motion";
 import { useCriaPostMedia, type CriaMedia } from "@/hooks/useCriaPostMedia";
 import { PostMediaCarousel } from "@/components/shared/PostMediaCarousel";
+import { StoryPreview } from "@/components/accounts/StoryPreview";
 import { CriaPostPublishButton } from "@/components/accounts/CriaPostPublishButton";
 import { postAspect } from "@/lib/post-aspect";
+import { getDisplayImageUrl, getDriveImageFallbackUrl, isDriveMedia, isVideoMedia } from "@/lib/driveMedia";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ImagePlus, Video, FileImage, Link2, Loader2, Heart, MessageCircle, Send, Bookmark, GripVertical, X, Play } from "lucide-react";
@@ -15,14 +17,16 @@ const isImg = (f: File) => f.type.startsWith("image/") || /\.(jpe?g|png|webp|gif
 const isVid = (f: File) => f.type.startsWith("video/") || /\.(mp4|mov|webm|m4v)$/i.test(f.name);
 
 function Thumb({ m }: { m: CriaMedia }) {
-  const video = m.file_type?.startsWith("video") || !!m.bunny_video_id || m.provider === "bunny_stream";
-  const src = m.thumbnail_url || m.view_url || "";
+  const video = isVideoMedia(m);
+  // Drive: view_url é página, não imagem. O helper monta o thumbnail exibível.
+  const src = (isDriveMedia(m) ? getDisplayImageUrl(m, 400) : m.thumbnail_url || m.view_url) || "";
   // Fallback pro Drive: se o thumbnail falhar, tenta o lh3.
   const onImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
-    if (m.provider === "gdrive" && m.external_file_id && !img.dataset.fb) {
+    const fb = getDriveImageFallbackUrl(m, 1000);
+    if (fb && !img.dataset.fb) {
       img.dataset.fb = "1";
-      img.src = `https://lh3.googleusercontent.com/d/${m.external_file_id}=w1000`;
+      img.src = fb;
       return;
     }
     img.style.display = "none";
@@ -100,6 +104,7 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
 
   const aspect = postAspect(platform, format);
   const vertical = aspect === "9 / 16";
+  const isStory = (format || "").toLowerCase() === "story";
   const h = handle ? (handle.startsWith("@") ? handle : "@" + handle) : "@cliente";
   const onReady = () => toast.success("Vídeo pronto!");
 
@@ -149,6 +154,11 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
         </div>
       )}
 
+      {isStory ? (
+        <div className="mx-auto w-full max-w-[300px]">
+          <StoryPreview media={ordered} handle={handle} onRemove={onRemoveMedia} />
+        </div>
+      ) : (
       <div className={`bg-white border border-border rounded-2xl overflow-hidden mx-auto ${vertical ? "max-w-[360px]" : "max-w-[440px]"}`}>
         {vertical ? (
           <div className="relative">
@@ -175,6 +185,7 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
           </>
         )}
       </div>
+      )}
     </div>
   );
 }

@@ -4,12 +4,12 @@ import { Loader2, Send, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import { buildShareFile, isMobileDevice } from "@/lib/social-share";
 import type { CarouselMedia } from "@/components/shared/PostMediaCarousel";
+import { isDriveMedia, isVideoMedia } from "@/lib/driveMedia";
 
 function firstDirectImage(media: CarouselMedia[]): string | null {
   for (const m of media) {
-    const isVideo = m.file_type?.startsWith("video") || !!m.bunny_video_id || m.provider === "bunny_stream";
-    if (isVideo) continue;
-    if (m.provider === "drive") continue; // Drive não compartilha arquivo direto
+    if (isVideoMedia(m)) continue;
+    if (isDriveMedia(m)) continue; // Drive não compartilha arquivo direto (o provider real é "gdrive")
     const url = m.view_url || m.download_url || "";
     if (/^https?:\/\//.test(url)) return url;
   }

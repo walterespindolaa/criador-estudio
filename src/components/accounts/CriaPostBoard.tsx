@@ -9,8 +9,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CronogramaBoard } from "@/components/accounts/CronogramaBoard";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
-import { Plus, Link2, Pencil, Loader2, Users, ArrowRight, ArrowLeft, Trash2, RotateCcw, FileText, Instagram } from "lucide-react";
+import { Plus, Link2, Pencil, Loader2, Users, ArrowRight, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare } from "lucide-react";
 import { CriaPostMedia } from "@/components/accounts/CriaPostMedia";
+import { ImportKanbanDialog } from "@/components/accounts/ImportKanbanDialog";
 import { ClientReportDialog } from "@/components/accounts/ClientReportDialog";
 import { useProfile } from "@/hooks/useProfile";
 import { useCrmClients } from "@/hooks/useCrm";
@@ -163,9 +164,11 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
     else moveStatus.mutate({ id: r.draggableId, approval_status: dest });
   };
   const { data: crmClients = [] } = useCrmClients();
-  const hasCriaAccount = !!crmClients.find((c) => c.id === client.crm_client_id)?.cria_owner_id;
+  const criaOwnerId = crmClients.find((c) => c.id === client.crm_client_id)?.cria_owner_id ?? null;
+  const hasCriaAccount = !!criaOwnerId;
   const { data: igConn } = useClientSocialConnection(client.crm_client_id);
   const [formOpen, setFormOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [editing, setEditing] = useState<ExternalPost | null>(null);
   const [f, setF] = useState<ExternalPostInput>({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "" });
@@ -206,6 +209,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
       )}
 
       <ClientReportDialog open={reportOpen} onOpenChange={setReportOpen} client={client} posts={posts} managerName={profile?.name ?? undefined} />
+      <ImportKanbanDialog open={importOpen} onOpenChange={setImportOpen} externalClientId={client.id} criaOwnerId={criaOwnerId} existingTitles={new Set(posts.map((p) => p.title))} />
 
       <Tabs value={embedded ? activeTab : undefined} defaultValue={embedded ? undefined : "posts"} onValueChange={embedded ? onTabChange : undefined} className="w-full">
         {!embedded && (
@@ -218,7 +222,8 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
         )}
 
         <TabsContent value="posts">
-          <div className="flex justify-end mb-3">
+          <div className="flex justify-end gap-2 mb-3 flex-wrap">
+            <Button variant="outline" onClick={() => setImportOpen(true)}><KanbanSquare className="h-4 w-4 mr-1.5" /> Importar do kanban</Button>
             <Button onClick={openNew}><Plus className="h-4 w-4 mr-1.5" /> Novo post</Button>
           </div>
       {isLoading ? (
@@ -416,6 +421,9 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
             <div className="order-5 md:col-start-1 md:row-start-4 space-y-1.5">
               <Label className="text-xs font-body">Legenda</Label>
               <Textarea value={f.caption ?? ""} onChange={(e) => setF((p) => ({ ...p, caption: e.target.value }))} rows={4} className="rounded-xl" />
+              {f.format === "story" && (f.caption ?? "").trim() !== "" && (
+                <p className="text-[11px] text-muted-foreground font-body">Story não exibe legenda. Esse texto não aparece no preview.</p>
+              )}
             </div>
 
             {/* 6, Roteiro / conteúdo */}

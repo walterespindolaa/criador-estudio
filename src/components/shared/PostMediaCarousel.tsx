@@ -1,24 +1,27 @@
 import { useEffect, useRef, useState } from "react";
 import { ImageOff, ChevronLeft, ChevronRight, X, Play } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
+import { getDisplayImageUrl, getDriveImageFallbackUrl, getVideoEmbedUrl, isVideoMedia } from "@/lib/driveMedia";
 
 export type CarouselMedia = {
-  id?: string; provider?: string | null; view_url?: string | null; thumbnail_url?: string | null;
-  download_url?: string | null; bunny_video_id?: string | null; file_type?: string | null; file_name?: string | null;
+  id?: string; provider?: string | null; external_file_id?: string | null; view_url?: string | null;
+  thumbnail_url?: string | null; download_url?: string | null; bunny_video_id?: string | null;
+  file_type?: string | null; file_name?: string | null;
 };
 
 function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => void }) {
   const [playing, setPlaying] = useState(false);
-  const [thumbOk, setThumbOk] = useState<boolean | null>(item.thumbnail_url ? null : true);
+  const thumb = getDisplayImageUrl(item);
+  const [thumbOk, setThumbOk] = useState<boolean | null>(thumb ? null : true);
   const [bust, setBust] = useState(0);
-  const thumb = item.thumbnail_url;
+  const embedUrl = getVideoEmbedUrl(item);
 
   useEffect(() => {
     if (thumbOk === false) { const t = setTimeout(() => setBust((b) => b + 1), 5000); return () => clearTimeout(t); }
   }, [thumbOk, bust]);
 
-  if (playing && item.view_url)
-    return <iframe src={item.view_url} className="w-full h-full bg-black" allow="autoplay; fullscreen; picture-in-picture" title={item.file_name || "vídeo"} />;
+  if (playing && embedUrl)
+    return <iframe src={embedUrl} className="w-full h-full bg-black" allow="autoplay; fullscreen; picture-in-picture" title={item.file_name || "vídeo"} />;
 
   return (
     <div className="relative w-full h-full bg-black">
@@ -26,7 +29,12 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
         <img src={`${thumb}${bust ? `?r=${bust}` : ""}`} alt={item.file_name || ""}
           className={`w-full h-full object-cover ${thumbOk ? "" : "opacity-0"}`}
           onLoad={() => { if (thumbOk === false) onReady?.(); setThumbOk(true); }}
-          onError={() => setThumbOk((p) => (p === true ? true : false))} />
+          onError={(e) => {
+            const img = e.currentTarget;
+            const fb = getDriveImageFallbackUrl(item);
+            if (fb && !img.dataset.fb) { img.dataset.fb = "1"; img.src = fb; return; }
+            setThumbOk((p) => (p === true ? true : false));
+          }} />
       )}
       {thumbOk !== true && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[#15131f] text-white">
@@ -47,10 +55,14 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
 }
 
 function Slide({ item, onReady }: { item: CarouselMedia; onReady?: () => void }) {
-  const isVideo = item.file_type?.startsWith("video") || !!item.bunny_video_id || item.provider === "bunny_stream";
-  if (isVideo) return <VideoSlide item={item} onReady={onReady} />;
-  const src = item.view_url || item.thumbnail_url || item.download_url || "";
-  if (src) return <img src={src} alt={item.file_name || ""} className="w-full h-full object-cover bg-muted" loading="lazy" />;
+  if (isVideoMedia(item)) return <VideoSlide item={item} onReady={onReady} />;
+  const src = getDisplayImageUrl(item) || "";
+  const onImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    const fb = getDriveImageFallbackUrl(item);
+    if (fb && !img.dataset.fb) { img.dataset.fb = "1"; img.src = fb; }
+  };
+  if (src) return <img src={src} alt={item.file_name || ""} className="w-full h-full object-cover bg-muted" loading="lazy" onError={onImgError} />;
   return <div className="w-full h-full bg-muted flex items-center justify-center text-muted-foreground"><ImageOff className="h-8 w-8" /></div>;
 }
 

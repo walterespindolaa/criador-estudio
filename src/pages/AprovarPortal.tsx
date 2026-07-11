@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Check, RotateCcw, Loader2, ImageOff, Sparkles, Heart, MessageCircle, Send, Bookmark, Zap, ListChecks } from "lucide-react";
 import { PostMediaCarousel } from "@/components/shared/PostMediaCarousel";
+import { StoryPreview } from "@/components/accounts/StoryPreview";
 import { postAspect } from "@/lib/post-aspect";
+import { EtapasChecklist, type Stage } from "@/components/aprovar/EtapasChecklist";
 
 type AnyRpc = (fn: string, args?: Record<string, unknown>) => ReturnType<typeof supabase.rpc>;
 const sbRpc = supabase.rpc.bind(supabase) as unknown as AnyRpc;
@@ -31,16 +33,20 @@ const STATUS: Record<string, { label: string; cls: string }> = {
   ajuste_solicitado: { label: "Ajuste solicitado", cls: "bg-orange-100 text-orange-700" },
   aprovado: { label: "Aprovado", cls: "bg-green-100 text-green-700" },
 };
-const STAGE_ORDER = ["tema", "conteudo", "midia", "legenda"] as const;
-type Stage = (typeof STAGE_ORDER)[number];
-const STAGE_LABEL: Record<Stage, string> = { tema: "Tema", conteudo: "Conteúdo", midia: "Mídia", legenda: "Legenda" };
-const STAGE_ICON: Record<Stage, string> = { tema: "💡", conteudo: "📝", midia: "🖼️", legenda: "✍️" };
 
 function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
   const media = Array.isArray(post.media) ? post.media : [];
   const handle = client.instagram_handle ? client.instagram_handle.replace(/^@/, "") : (client.client_name || "perfil").toLowerCase().replace(/\s+/g, "");
   const aspect = postAspect(post.platform, post.format);
   const vertical = aspect === "9 / 16";
+  // Story tem preview próprio: tela cheia 9:16, sem legenda e sem ações de feed.
+  if ((post.format || "").toLowerCase() === "story") {
+    return (
+      <article className="rounded-3xl overflow-hidden shadow-[0_8px_30px_rgba(27,26,24,0.07)]">
+        <StoryPreview media={media} handle={handle} avatarUrl={client.client_logo} />
+      </article>
+    );
+  }
   return (
     <article className="bg-white border border-border rounded-3xl overflow-hidden shadow-[0_8px_30px_rgba(27,26,24,0.07)]">
       <div className="flex items-center gap-2.5 px-3.5 py-3">
@@ -79,22 +85,6 @@ function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
   );
 }
 
-function StageContent({ post, stage }: { post: PortalPost; stage: Stage }) {
-  const map: Record<Stage, { label: string; value: string; box: boolean }> = {
-    tema: { label: "Tema · ideia do post", value: post.title || "-", box: false },
-    conteudo: { label: "Conteúdo · roteiro", value: post.script || post.hook || "-", box: true },
-    midia: { label: "Mídia", value: "Revise a mídia exibida no post ao lado.", box: false },
-    legenda: { label: "Legenda", value: post.caption || "-", box: true },
-  };
-  const c = map[stage];
-  return (
-    <div className="mt-1">
-      <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">{c.label}</p>
-      <p className={`text-sm leading-relaxed whitespace-pre-wrap ${c.box ? "bg-muted/50 rounded-xl p-3" : "text-foreground/90"}`}>{c.value}</p>
-    </div>
-  );
-}
-
 function PostApproval({ client, post, busy, onApproveFast, onAdjustFast, onApproveStage, onAdjustStage }: {
   client: ClientHeader; post: PortalPost; busy: boolean;
   onApproveFast: (id: string) => void; onAdjustFast: (id: string, comment: string) => void;
@@ -103,18 +93,13 @@ function PostApproval({ client, post, busy, onApproveFast, onAdjustFast, onAppro
   const mode = post.approval_mode ?? "fast";
   const [view, setView] = useState<"fast" | "flow">(mode === "flow" ? "flow" : "fast");
   const showFlow = view === "flow";
-  const stStatus = (s: Stage) => (post.approval_stages?.[s] ?? "pendente");
-  const firstOpen = STAGE_ORDER.find((s) => stStatus(s) !== "aprovado") ?? "tema";
-  const [tab, setTab] = useState<Stage>(firstOpen);
   const [adjOpen, setAdjOpen] = useState(false);
   const [comment, setComment] = useState("");
   const fullyApproved = post.approval_status === "aprovado";
-  const approvedCount = STAGE_ORDER.filter((s) => stStatus(s) === "aprovado").length;
   const vertical = postAspect(post.platform, post.format) === "9 / 16";
 
   const openAdjust = () => { setAdjOpen(true); setComment(""); };
   const sendFast = () => { onAdjustFast(post.post_id, comment.trim()); setAdjOpen(false); setComment(""); };
-  const sendStage = () => { onAdjustStage(post.post_id, tab, comment.trim()); setAdjOpen(false); setComment(""); };
 
   return (
     <div className="border-b border-border pb-10 mb-10 last:border-0 last:pb-0 last:mb-0">
@@ -123,7 +108,7 @@ function PostApproval({ client, post, busy, onApproveFast, onAdjustFast, onAppro
           <CardIG client={client} post={post} />
         </div>
         <div className="w-full max-w-[440px] md:flex-1 md:max-w-[660px] mx-auto md:mx-0">
-          <div className="bg-card border border-border rounded-3xl p-6 md:sticky md:top-[88px] shadow-[0_8px_30px_rgba(27,26,24,0.05)]">
+          <div className="bg-card border border-border rounded-3xl p-4 sm:p-6 md:sticky md:top-[88px] shadow-[0_8px_30px_rgba(27,26,24,0.05)]">
             {mode === "both" && (
               <div className="flex bg-muted rounded-2xl p-1.5 mb-5">
                 <button onClick={() => setView("fast")} className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-body font-extrabold py-3 rounded-xl transition-colors ${view === "fast" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}><Zap className="h-4 w-4" /> Rápida</button>
@@ -158,46 +143,12 @@ function PostApproval({ client, post, busy, onApproveFast, onAdjustFast, onAppro
                 )}
               </>
             ) : (
-              <>
-                <h3 className="text-lg font-display font-extrabold text-foreground">Aprovação por etapas</h3>
-                <div className="flex items-center gap-3 mt-3 mb-5">
-                  <div className="flex-1 h-2 rounded-full bg-primary/10 overflow-hidden"><div className="h-full bg-primary rounded-full transition-all" style={{ width: `${(approvedCount / 4) * 100}%` }} /></div>
-                  <span className="text-xs font-bold text-primary shrink-0">{approvedCount} de 4</span>
-                </div>
-                <div className="grid grid-cols-2 gap-3 mb-5">
-                  {STAGE_ORDER.map((s) => {
-                    const st = stStatus(s); const on = tab === s;
-                    return (
-                      <button key={s} onClick={() => { setTab(s); setAdjOpen(false); }}
-                        className={`text-left rounded-2xl border-[1.5px] p-4 transition-colors ${on ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/30"}`}>
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg mb-2.5 ${on ? "bg-card" : "bg-primary/5"}`}>{STAGE_ICON[s]}</div>
-                        <span className="block text-[15px] font-display font-bold text-foreground">{STAGE_LABEL[s]}</span>
-                        <span className={`inline-flex items-center gap-1 text-[11px] font-bold mt-1.5 px-2 py-0.5 rounded-full ${st === "aprovado" ? "bg-green-100 text-green-700" : st === "ajuste_solicitado" ? "bg-orange-100 text-orange-700" : "bg-amber-100 text-amber-700"}`}>
-                          {st === "aprovado" ? "✓ Aprovado" : st === "ajuste_solicitado" ? "↺ Em ajuste" : "⏳ Revisar"}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <StageContent post={post} stage={tab} />
-                {stStatus(tab) === "aprovado" ? (
-                  <div className="mt-5 flex items-center gap-2 text-sm font-body font-bold text-green-700 bg-green-50 rounded-2xl px-4 py-3.5"><Check className="h-5 w-5" /> Etapa aprovada</div>
-                ) : !adjOpen ? (
-                  <div className="flex gap-3 mt-5">
-                    <Button className="flex-1 h-14 rounded-2xl text-base font-bold shadow-lg shadow-primary/25" onClick={() => onApproveStage(post.post_id, tab)} disabled={busy}>{busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Check className="h-5 w-5 mr-1.5" /> Aprovar etapa</>}</Button>
-                    <Button variant="secondary" className="h-14 rounded-2xl px-5" onClick={openAdjust} disabled={busy}><RotateCcw className="h-4 w-4 mr-1.5" /> Ajuste</Button>
-                  </div>
-                ) : (
-                  <div className="space-y-2.5 mt-5">
-                    <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder={`O que ajustar em "${STAGE_LABEL[tab]}"?`} className="rounded-2xl" rows={3} />
-                    <div className="flex gap-2.5">
-                      <Button className="flex-1 h-12 rounded-2xl" disabled={busy || !comment.trim()} onClick={sendStage}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar ajuste"}</Button>
-                      <Button variant="ghost" className="h-12 rounded-2xl" onClick={() => setAdjOpen(false)} disabled={busy}>Cancelar</Button>
-                    </div>
-                  </div>
-                )}
-                {fullyApproved && <div className="mt-5 flex items-center gap-2 text-sm font-body font-bold text-green-700 bg-green-50 rounded-2xl px-4 py-3.5"><Check className="h-5 w-5" /> Tudo aprovado, obrigada!</div>}
-              </>
+              <EtapasChecklist
+                post={post}
+                busy={busy}
+                onApproveStage={(stage) => onApproveStage(post.post_id, stage)}
+                onAdjustStage={(stage, stageComment) => onAdjustStage(post.post_id, stage, stageComment)}
+              />
             )}
           </div>
         </div>
