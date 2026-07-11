@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
-  useCrmClients, useCrmTasks, useUpdateCrmTask,
+  useCrmClients, useCrmTasks, useUpdateCrmTask, useCreateCrmTask, useCrmLeads,
   CRM_TASK_PRIORITIES, CRM_TASK_PRIORITY_LABELS, CRM_TASK_STATUSES,
   type CrmTask, type CrmTaskPriority, type CrmTaskStatus,
 } from "@/hooks/useCrm";
@@ -41,6 +41,14 @@ const STATUS: Record<Capture["status"], { label: string; cls: string }> = {
 export default function AgendaCriacao() {
   const navigate = useNavigate();
   const [weekStart, setWeekStart] = useState(() => mondayOf(parseDateOnly(hojeBR())));
+  // Visão: semana (padrão) ou mês. O mês usa a MESMA grade arrastável.
+  const [view, setView] = useState<"semana" | "mes">(() => {
+    try { return (localStorage.getItem("agenda_view") as "semana" | "mes") || "semana"; } catch { return "semana"; }
+  });
+  const setViewPersist = (v: "semana" | "mes") => {
+    setView(v);
+    try { localStorage.setItem("agenda_view", v); } catch { /* segue */ }
+  };
   // Toggle: mostrar as tarefas dos clientes (CRM) na grade, persistido por dispositivo
   const [showTasks, setShowTasks] = useState(() => {
     try { return localStorage.getItem("agenda_show_tasks") === "1"; } catch { return false; }
@@ -49,11 +57,25 @@ export default function AgendaCriacao() {
     setShowTasks(v);
     try { localStorage.setItem("agenda_show_tasks", v ? "1" : "0"); } catch { /* segue */ }
   };
-  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d; }), [weekStart]);
-  const from = ymd(days[0]); const to = ymd(days[6]);
+  // Semana = 7 dias a partir da segunda. Mês = grade completa (segunda a domingo) cobrindo o mês do anchor.
+  const days = useMemo(() => {
+    if (view === "semana") {
+      return Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d; });
+    }
+    const first = new Date(weekStart.getFullYear(), weekStart.getMonth(), 1);
+    const gridStart = mondayOf(first);
+    const last = new Date(weekStart.getFullYear(), weekStart.getMonth() + 1, 0);
+    const gridEnd = mondayOf(last); gridEnd.setDate(gridEnd.getDate() + 6);
+    const n = Math.round((gridEnd.getTime() - gridStart.getTime()) / 86400000) + 1;
+    return Array.from({ length: n }, (_, i) => { const d = new Date(gridStart); d.setDate(d.getDate() + i); return d; });
+  }, [weekStart, view]);
+  const from = ymd(days[0]); const to = ymd(days[days.length - 1]);
   const today = hojeBR();
+  const curMonth = weekStart.getMonth();
 
   const { data: clients = [] } = useCrmClients();
+  const { data: leads = [] } = useCrmLeads();
+  const createTask = useCreateCrmTask();
   const { data: teamNames = [] } = useCollaboratorNames();
   const { data: creations = [] } = useCreations(from, to);
   const addCreation = useAddCreation();
@@ -117,6 +139,7 @@ export default function AgendaCriacao() {
 
   const nameOf = (crmId: string | null, fallback: string | null) =>
     (crmId ? clients.find((c) => c.id === crmId)?.name : null) || fallback || "Cliente";
+  const leadName = (leadId: string | null) => (leadId ? leads.find((l) => l.id === leadId)?.name ?? null : null);
 
   // Tarefas dos clientes (CRM) com vencimento na semana exibida, por dia.
   // Concluídas ficam de fora: a grade é sobre o que ainda precisa acontecer.
@@ -157,26 +180,59 @@ export default function AgendaCriacao() {
               <span className="text-xs font-body font-semibold text-muted-foreground">Tarefas dos clientes</span>
             </label>
           </div>
-          <div className="flex items-center gap-1">
-            <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setWeekStart((w) => { const n = new Date(w); n.setDate(n.getDate() - 7); return n; })}>‹</Button>
-            <span className="text-xs font-body text-muted-foreground px-1">{shortDate(days[0])} – {shortDate(days[6])}</span>
-            <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={() => setWeekStart(mondayOf(parseDateOnly(hojeBR())))}>Hoje</Button>
-            <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setWeekStart((w) => { const n = new Date(w); n.setDate(n.getDate() + 7); return n; })}>›</Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Semana (padrão) / Mês */}
+            <div className="inline-flex rounded-lg border border-border overflow-hidden">
+              {(["semana", "mes"] as const).map((v) => (
+                <button key={v} onClick={() => setViewPersist(v)}
+                  className={cn("px-2.5 py-1 text-xs font-body font-semibold transition-colors",
+                    view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
+                  {v === "semana" ? "Semana" : "Mês"}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="sm" className="h-8 w-8 p-0"
+                onClick={() => setWeekStart((w) => { const n = new Date(w); view === "mes" ? n.setMonth(n.getMonth() - 1) : n.setDate(n.getDate() - 7); return n; })}>‹</Button>
+              <span className="text-xs font-body text-muted-foreground px-1">
+                {view === "mes"
+                  ? weekStart.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
+                  : `${shortDate(days[0])} – ${shortDate(days[6])}`}
+              </span>
+              <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={() => setWeekStart(mondayOf(parseDateOnly(hojeBR())))}>Hoje</Button>
+              <Button variant="outline" size="sm" className="h-8 w-8 p-0"
+                onClick={() => setWeekStart((w) => { const n = new Date(w); view === "mes" ? n.setMonth(n.getMonth() + 1) : n.setDate(n.getDate() + 7); return n; })}>›</Button>
+            </div>
           </div>
         </div>
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="flex gap-2 overflow-x-auto pb-2 lg:grid lg:grid-cols-7 lg:overflow-visible lg:pb-0">
+          {view === "mes" && (
+            <div className="hidden lg:grid lg:grid-cols-7 gap-2 mb-1">
+              {WD.map((w) => <p key={w} className="text-[10px] uppercase tracking-wider font-body font-semibold text-muted-foreground text-center">{w}</p>)}
+            </div>
+          )}
+          <div className={cn(
+            view === "mes"
+              ? "grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2"
+              : "flex gap-2 overflow-x-auto pb-2 lg:grid lg:grid-cols-7 lg:overflow-visible lg:pb-0",
+          )}>
             {days.map((d, i) => {
               const iso = ymd(d); const list = byDay.get(iso) ?? []; const caps = capturesByDay.get(iso) ?? []; const dayTasks = tasksByDay.get(iso) ?? []; const isToday = iso === today;
+              const outOfMonth = view === "mes" && d.getMonth() !== curMonth;
               return (
                 <Droppable droppableId={iso} key={iso}>
                   {(dropProvided, dropSnapshot) => (
                     <div ref={dropProvided.innerRef} {...dropProvided.droppableProps}
-                      className={cn("w-[170px] shrink-0 lg:w-auto min-h-[220px] lg:min-h-[280px] rounded-xl border p-2.5 flex flex-col gap-1.5 transition-shadow",
+                      className={cn("rounded-xl border p-2.5 flex flex-col gap-1.5 transition-shadow",
+                        view === "mes" ? "min-h-[110px]" : "w-[170px] shrink-0 lg:w-auto min-h-[220px] lg:min-h-[280px]",
                         isToday ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-background",
+                        outOfMonth && "opacity-45",
                         dropSnapshot.isDraggingOver && "ring-2 ring-primary/40 border-primary/60 bg-primary/5")}>
                       <div className="flex items-center justify-between px-0.5">
-                        <div><span className={cn("text-[11px] uppercase tracking-wider font-body font-semibold", isToday ? "text-primary" : "text-muted-foreground")}>{WD[i]}</span> <span className={cn("text-base font-display font-bold", isToday ? "text-primary" : "text-foreground")}>{d.getDate()}</span></div>
+                        <div>
+                          {view === "semana" && <span className={cn("text-[11px] uppercase tracking-wider font-body font-semibold", isToday ? "text-primary" : "text-muted-foreground")}>{WD[i % 7]}</span>}{" "}
+                          <span className={cn("text-base font-display font-bold", isToday ? "text-primary" : "text-foreground")}>{d.getDate()}</span>
+                        </div>
                         <button onClick={() => setAddDay(iso)} className="text-muted-foreground hover:text-primary" aria-label="Adicionar"><Plus className="h-3.5 w-3.5" /></button>
                       </div>
                       {caps.map((c, idx) => (
@@ -197,26 +253,33 @@ export default function AgendaCriacao() {
                           )}
                         </Draggable>
                       ))}
-                      {dayTasks.map((t, idx) => (
+                      {dayTasks.map((t, idx) => {
+                        // Tarefa de LEAD é azul; tarefa de CLIENTE é âmbar. A cor diz de quem é.
+                        const isLead = !!t.crm_lead_id;
+                        const who = isLead ? (leadName(t.crm_lead_id) ?? "Lead") : nameOf(t.crm_client_id, null);
+                        return (
                         <Draggable key={`task:${t.id}`} draggableId={`task:${t.id}`} index={caps.length + idx}>
                           {(dragProvided, dragSnapshot) => (
                             <button ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
                               type="button" title={t.description ?? undefined}
                               onClick={() => setEditTask(t)}
                               className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors",
-                                t.priority === "urgente" || t.priority === "alta"
+                                isLead
+                                  ? "border-sky-500/45 bg-sky-500/10 hover:bg-sky-500/15"
+                                  : t.priority === "urgente" || t.priority === "alta"
                                   ? "border-amber-500/50 bg-amber-500/15 hover:bg-amber-500/20"
                                   : "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10",
                                 dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
-                              <div className="flex items-center gap-1 text-amber-700 dark:text-amber-300">
+                              <div className={cn("flex items-center gap-1", isLead ? "text-sky-700 dark:text-sky-300" : "text-amber-700 dark:text-amber-300")}>
                                 <ListChecks className="h-3 w-3 shrink-0" />
-                                <span className="text-[10px] font-body font-bold truncate">{nameOf(t.crm_client_id, null)}</span>
+                                <span className="text-[10px] font-body font-bold truncate">{isLead ? `Lead · ${who}` : who}</span>
                               </div>
                               <p className="text-[12px] font-body font-semibold text-foreground leading-tight truncate">{t.title}</p>
                             </button>
                           )}
                         </Draggable>
-                      ))}
+                        );
+                      })}
                       {list.map((c, idx) => (
                         <Draggable key={`cria:${c.id}`} draggableId={`cria:${c.id}`} index={caps.length + dayTasks.length + idx}>
                           {(dragProvided, dragSnapshot) => (
@@ -266,14 +329,15 @@ export default function AgendaCriacao() {
                     <p className="text-[10px] font-body uppercase text-muted-foreground">{d.toLocaleDateString("pt-BR", { month: "short" })}</p>
                   </div>
                   <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-primary shrink-0"><Video className="h-4 w-4" /></div>
-                  <div className="min-w-0 flex-1">
+                  <button type="button" onClick={() => setEditCap(c)} className="min-w-0 flex-1 text-left">
                     <p className="text-sm font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}</p>
                     <div className="flex items-center gap-2 flex-wrap text-[11px] font-body text-muted-foreground">
                       {c.capture_time && <span className="inline-flex items-center gap-0.5"><Clock className="h-3 w-3" />{c.capture_time.slice(0, 5)}</span>}
                       {c.location && <span className="inline-flex items-center gap-0.5"><MapPin className="h-3 w-3" />{c.location}</span>}
                       {c.team && <span className="inline-flex items-center gap-0.5"><Users className="h-3 w-3" />{c.team}</span>}
                     </div>
-                  </div>
+                    {c.note && <p className="text-[11px] font-body text-muted-foreground/80 mt-0.5 truncate italic">{c.note}</p>}
+                  </button>
                   <select value={c.status} onChange={(e) => updCapture.mutate({ id: c.id, patch: { status: e.target.value as Capture["status"] } })}
                     className={cn("text-[11px] font-body font-semibold rounded-full px-2 py-1 border-0 outline-none cursor-pointer", st.cls)}>
                     <option value="agendada">Agendada</option>
@@ -288,16 +352,22 @@ export default function AgendaCriacao() {
         )}
       </div>
 
-      <AddCreationDialog open={!!addDay || !!editCreation} day={addDay} initial={editCreation} clients={clients} teamNames={teamNames}
-        onClose={() => { setAddDay(null); setEditCreation(null); }}
-        onSave={(crm, name, team) => {
+      {/* "+" do dia: escolhe o TIPO (criação / tarefa / captação) antes de preencher. */}
+      <AddAnyDialog open={!!addDay} day={addDay} clients={clients} teamNames={teamNames}
+        onClose={() => setAddDay(null)}
+        onCreation={(crm, name, team, note) => { if (addDay) addCreation.mutate({ day: addDay, crm_client_id: crm, client_name: name, team, note }); setAddDay(null); }}
+        onTask={(v) => { createTask.mutate(v, { onSuccess: () => toast.success("Tarefa criada.") }); setAddDay(null); }}
+        onCapture={(v) => { addCapture.mutate(v); setAddDay(null); }} />
+
+      {/* Edição de uma criação existente */}
+      <AddCreationDialog open={!!editCreation} day={null} initial={editCreation} clients={clients} teamNames={teamNames}
+        onClose={() => setEditCreation(null)}
+        onSave={(crm, name, team, note) => {
           if (editCreation) {
-            updCreation.mutate({ id: editCreation.id, patch: { crm_client_id: crm, client_name: name, team } },
+            updCreation.mutate({ id: editCreation.id, patch: { crm_client_id: crm, client_name: name, team, note } },
               { onSuccess: () => toast.success("Criação atualizada."), onError: () => toast.error("Não consegui salvar.") });
-          } else if (addDay) {
-            addCreation.mutate({ day: addDay, crm_client_id: crm, client_name: name, team });
           }
-          setAddDay(null); setEditCreation(null);
+          setEditCreation(null);
         }} />
       <CaptureDialog open={capOpen || !!editCap} initial={editCap} clients={clients} teamNames={teamNames}
         onClose={() => { setCapOpen(false); setEditCap(null); }}
@@ -341,13 +411,14 @@ function TeamDatalist({ names }: { names: string[] }) {
   return <datalist id="agenda-team-names">{names.map((n) => <option key={n} value={n} />)}</datalist>;
 }
 
-function AddCreationDialog({ open, day, initial, clients, teamNames, onClose, onSave }: { open: boolean; day: string | null; initial?: Creation | null; clients: Client[]; teamNames: string[]; onClose: () => void; onSave: (crm: string | null, name: string | null, team: string | null) => void }) {
+function AddCreationDialog({ open, day, initial, clients, teamNames, onClose, onSave }: { open: boolean; day: string | null; initial?: Creation | null; clients: Client[]; teamNames: string[]; onClose: () => void; onSave: (crm: string | null, name: string | null, team: string | null, note: string | null) => void }) {
   const [crm, setCrm] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [team, setTeam] = useState("");
+  const [note, setNote] = useState("");
   const seed = open ? `${day ?? ""}:${initial?.id ?? "new"}` : "";
   const [seeded, setSeeded] = useState("");
-  if (open && seed !== seeded) { setSeeded(seed); setCrm(initial?.crm_client_id ?? null); setName(initial?.client_name ?? ""); setTeam(initial?.team ?? ""); }
+  if (open && seed !== seeded) { setSeeded(seed); setCrm(initial?.crm_client_id ?? null); setName(initial?.client_name ?? ""); setTeam(initial?.team ?? ""); setNote(initial?.note ?? ""); }
   if (!open && seeded) setSeeded("");
   const valid = !!crm || name.trim();
   return (
@@ -361,23 +432,131 @@ function AddCreationDialog({ open, day, initial, clients, teamNames, onClose, on
             <Input value={team} onChange={(e) => setTeam(e.target.value)} placeholder="Ex.: Ana, Bruno" list="agenda-team-names" />
             <TeamDatalist names={teamNames} />
           </div>
+          <div>
+            <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1">Notas (opcional)</p>
+            <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ex.: gravar 3 reels, levar tripé…" className="rounded-xl text-sm" />
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => onSave(crm, name.trim() || null, team.trim() || null)} disabled={!valid}>{initial ? "Salvar" : "Adicionar"}</Button>
+          <Button onClick={() => onSave(crm, name.trim() || null, team.trim() || null, note.trim() || null)} disabled={!valid}>{initial ? "Salvar" : "Adicionar"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
-function CaptureDialog({ open, initial, clients, teamNames, onClose, onSave, pending }: { open: boolean; initial?: Capture | null; clients: Client[]; teamNames: string[]; onClose: () => void; onSave: (v: { capture_date: string; capture_time?: string | null; location?: string | null; crm_client_id?: string | null; client_name?: string | null; team?: string | null; status?: Capture["status"] }) => void; pending: boolean }) {
+// "+" do dia: primeiro escolhe O QUE é (criação / tarefa / captação), depois preenche.
+function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTask, onCapture }: {
+  open: boolean; day: string | null; clients: Client[]; teamNames: string[]; onClose: () => void;
+  onCreation: (crm: string | null, name: string | null, team: string | null, note: string | null) => void;
+  onTask: (v: { title: string; description: string | null; crm_client_id: string | null; priority: CrmTaskPriority; status: CrmTaskStatus; due_date: string }) => void;
+  onCapture: (v: { capture_date: string; capture_time?: string | null; location?: string | null; crm_client_id?: string | null; client_name?: string | null; team?: string | null; note?: string | null }) => void;
+}) {
+  const [kind, setKind] = useState<"criacao" | "tarefa" | "captacao">("criacao");
+  const [crm, setCrm] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [team, setTeam] = useState("");
+  const [note, setNote] = useState("");
+  const [title, setTitle] = useState("");
+  const [prio, setPrio] = useState<CrmTaskPriority>("media");
+  const [time, setTime] = useState("");
+  const [loc, setLoc] = useState("");
+  const [seeded, setSeeded] = useState("");
+
+  if (open && day && seeded !== day) {
+    setSeeded(day);
+    setKind("criacao"); setCrm(null); setName(""); setTeam(""); setNote(""); setTitle(""); setPrio("media"); setTime(""); setLoc("");
+  }
+  if (!open && seeded) setSeeded("");
+
+  const hasClient = !!crm || !!name.trim();
+  const valid = kind === "tarefa" ? !!title.trim() : hasClient;
+
+  const submit = () => {
+    if (!day) return;
+    if (kind === "criacao") onCreation(crm, name.trim() || null, team.trim() || null, note.trim() || null);
+    else if (kind === "tarefa") onTask({ title: title.trim(), description: note.trim() || null, crm_client_id: crm, priority: prio, status: "pendente", due_date: day });
+    else onCapture({ capture_date: day, capture_time: time || null, location: loc.trim() || null, crm_client_id: crm, client_name: name.trim() || null, team: team.trim() || null, note: note.trim() || null });
+  };
+
+  const KINDS = [
+    { k: "criacao", label: "Criação" },
+    { k: "tarefa", label: "Tarefa" },
+    { k: "captacao", label: "Captação" },
+  ] as const;
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-md rounded-2xl">
+        <DialogHeader><DialogTitle className="font-display">Adicionar no dia</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          {/* Tipo */}
+          <div className="grid grid-cols-3 gap-2">
+            {KINDS.map(({ k, label }) => (
+              <button key={k} type="button" onClick={() => setKind(k)}
+                className={cn("rounded-xl border py-2 text-sm font-body font-semibold transition-colors",
+                  kind === k ? "border-primary bg-primary/[0.06] text-primary" : "border-border text-muted-foreground hover:border-primary/40")}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {kind === "tarefa" && (
+            <div>
+              <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Tarefa *</p>
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="O que precisa ser feito" />
+            </div>
+          )}
+
+          <ClientPicker clients={clients} crm={crm} name={name} onCrm={setCrm} onName={setName} />
+
+          {kind === "captacao" && (
+            <div className="flex gap-2">
+              <div className="w-28"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Hora</p><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} /></div>
+              <div className="flex-1"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Local (opcional)</p><Input value={loc} onChange={(e) => setLoc(e.target.value)} placeholder="Ex.: Estúdio" /></div>
+            </div>
+          )}
+
+          {kind === "tarefa" && (
+            <div>
+              <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Prioridade</p>
+              <select value={prio} onChange={(e) => setPrio(e.target.value as CrmTaskPriority)} className="w-full h-10 rounded-xl border border-border bg-card px-3 text-sm font-body">
+                {CRM_TASK_PRIORITIES.map((p) => <option key={p} value={p}>{CRM_TASK_PRIORITY_LABELS[p]}</option>)}
+              </select>
+            </div>
+          )}
+
+          {kind !== "tarefa" && (
+            <div>
+              <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Equipe (opcional)</p>
+              <Input value={team} onChange={(e) => setTeam(e.target.value)} placeholder="Ex.: Ana, Bruno" list="agenda-team-names" />
+              <TeamDatalist names={teamNames} />
+            </div>
+          )}
+
+          <div>
+            <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Notas (opcional)</p>
+            <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ex.: captação mês de julho, captação de anúncio…" className="rounded-xl text-sm" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={submit} disabled={!valid}>Adicionar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CaptureDialog({ open, initial, clients, teamNames, onClose, onSave, pending }: { open: boolean; initial?: Capture | null; clients: Client[]; teamNames: string[]; onClose: () => void; onSave: (v: { capture_date: string; capture_time?: string | null; location?: string | null; crm_client_id?: string | null; client_name?: string | null; team?: string | null; note?: string | null; status?: Capture["status"] }) => void; pending: boolean }) {
   const [crm, setCrm] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [loc, setLoc] = useState("");
   const [team, setTeam] = useState("");
+  const [note, setNote] = useState("");
   const [status, setStatus] = useState<Capture["status"]>("agendada");
   const seed = open ? (initial?.id ?? "new") : "";
   const [seeded, setSeeded] = useState("");
@@ -385,7 +564,7 @@ function CaptureDialog({ open, initial, clients, teamNames, onClose, onSave, pen
     setSeeded(seed);
     setCrm(initial?.crm_client_id ?? null); setName(initial?.client_name ?? "");
     setDate(initial?.capture_date ?? ""); setTime(initial?.capture_time ? initial.capture_time.slice(0, 5) : "");
-    setLoc(initial?.location ?? ""); setTeam(initial?.team ?? ""); setStatus(initial?.status ?? "agendada");
+    setLoc(initial?.location ?? ""); setTeam(initial?.team ?? ""); setNote(initial?.note ?? ""); setStatus(initial?.status ?? "agendada");
   }
   if (!open && seeded) setSeeded("");
   const valid = date && (!!crm || name.trim());
@@ -401,6 +580,10 @@ function CaptureDialog({ open, initial, clients, teamNames, onClose, onSave, pen
           </div>
           <div><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Local (opcional)</p><Input value={loc} onChange={(e) => setLoc(e.target.value)} placeholder="Ex.: Estúdio, coworking, local externo" /></div>
           <div><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Equipe (opcional)</p><Input value={team} onChange={(e) => setTeam(e.target.value)} placeholder="Ex.: Ana, Bruno" list="agenda-team-names" /><TeamDatalist names={teamNames} /></div>
+          <div>
+            <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Notas (opcional)</p>
+            <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ex.: captação mês de julho, captação de anúncio…" className="rounded-xl text-sm" />
+          </div>
           {initial && (
             <div>
               <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Status</p>
@@ -414,7 +597,7 @@ function CaptureDialog({ open, initial, clients, teamNames, onClose, onSave, pen
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => onSave({ capture_date: date, capture_time: time || null, location: loc.trim() || null, crm_client_id: crm, client_name: name.trim() || null, team: team.trim() || null, ...(initial ? { status } : {}) })} disabled={!valid || pending}>
+          <Button onClick={() => onSave({ capture_date: date, capture_time: time || null, location: loc.trim() || null, crm_client_id: crm, client_name: name.trim() || null, team: team.trim() || null, note: note.trim() || null, ...(initial ? { status } : {}) })} disabled={!valid || pending}>
             {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : initial ? "Salvar" : "Agendar"}
           </Button>
         </DialogFooter>
