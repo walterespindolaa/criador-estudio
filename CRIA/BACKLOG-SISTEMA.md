@@ -31,20 +31,20 @@ Documento vivo. Marcar `[x]` conforme entrega. Ordem de ataque definida: **Agend
 
 ---
 
-## 🔨 Bloco 2: Cria Post — PARCIAL
+## ✅ Bloco 2: Cria Post — CONCLUÍDO
 
 - [x] Campo de **data/hora** (Cronograma) no formulário de post
 - [x] **Visão de calendário** (mês) arrastável, alternando com o Kanban; preferência salva
 - [x] Arrastar post entre dias muda a data na hora (otimista); área "Sem data" pra jogar no calendário
 - [x] **Data direto no card** do kanban (input de data, sem abrir o post)
 - [x] "+" no dia do calendário já abre o Novo post com a data preenchida
-- [ ] **Mídia já na criação** — bloqueado: o upload precisa do `post.id`. Solução: criar o post como rascunho ao abrir o modal (ou upload em memória + commit no salvar). Requer refactor do `CriaPostMedia`.
-- [ ] **Enviar pro cliente por período** (link de aprovação filtrado por intervalo de datas, além de "tudo")
+- [x] **Mídia já na criação** — "Novo post" cria um rascunho (`is_draft`, sem `external_client_id`), então o `post.id` já existe e o upload funciona de cara. Rascunho não aparece no kanban/calendário/portal; cancelar apaga.
+- [x] **Enviar pro cliente por período** — dialog no "Link dos posts": link completo OU link de um intervalo (`approval_tokens.period_start/end`); o portal filtra.
 
-## Bloco 3: Cronograma
+## ✅ Bloco 3: Cronograma — CONCLUÍDO
 
-- [ ] **Reordenar itens** (#4 virar #1)
-- [ ] Layout do card em **caixinhas separadas** (capa / post)
+- [x] **Reordenar itens** arrastando (#4 vira #1); o número acompanha a ordem (usa `sort_order`, update otimista)
+- [x] Tabela virou **caixinhas separadas**: cabeçalho (tipo · data · status), copy em destaque, descrição em bloco próprio com parágrafos preservados
 
 ## Bloco 4: Cliente (resto)
 

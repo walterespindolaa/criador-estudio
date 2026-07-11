@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ArrowLeft, Plus, Pencil, Trash2, Send, Link2, CalendarRange, Building2, PartyPopper, Check, AtSign, LayoutGrid } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Send, Link2, CalendarRange, Building2, PartyPopper, Check, AtSign, LayoutGrid, GripVertical } from "lucide-react";
+import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -145,7 +146,16 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
   onUpdate: (p: { id: string } & Partial<Cronograma>) => void;
   onDelete: (id: string) => void;
 }) {
-  const { items, addItem, updateItem, deleteItem } = useCronogramaItems(c.id);
+  const { items, addItem, updateItem, deleteItem, reorder } = useCronogramaItems(c.id);
+
+  // Reordenar: arrastar a caixinha muda o número (#4 vira #1) e salva a ordem.
+  const onReorder = (r: DropResult) => {
+    if (!r.destination || r.destination.index === r.source.index) return;
+    const next = Array.from(items);
+    const [moved] = next.splice(r.source.index, 1);
+    next.splice(r.destination.index, 0, moved);
+    reorder.mutate(next);
+  };
   const { user } = useAuth();
   const [editing, setEditing] = useState<CronogramaItem | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -232,45 +242,78 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
 
       <DatasComemorativasSection cronogramaId={c.id} />
 
-      <div className="bg-card border border-border rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[640px]">
-            <thead className="bg-muted/30 border-b border-border text-left">
-              <tr className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                <th className="px-3 py-2.5 font-bold">Nº</th>
-                <th className="px-3 py-2.5 font-bold">Copy</th>
-                <th className="px-3 py-2.5 font-bold">Descrição</th>
-                <th className="px-3 py-2.5 font-bold">Data</th>
-                <th className="px-3 py-2.5 font-bold">Tipo</th>
-                <th className="px-3 py-2.5 font-bold">Status / Comentário</th>
-                <th className="px-3 py-2.5"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((it, i) => (
-                <tr key={it.id} className="border-b border-border/40 last:border-0 hover:bg-accent/30 group">
-                  <td className="px-3 py-2.5 font-bold text-muted-foreground">#{i + 1}</td>
-                  <td className="px-3 py-2.5 font-semibold">{it.copy || "-"}</td>
-                  <td className="px-3 py-2.5 text-xs text-muted-foreground max-w-[280px]">{it.description}</td>
-                  <td className="px-3 py-2.5 whitespace-nowrap">{it.date ? it.date.split("-").reverse().slice(0, 2).join("/") : "-"}</td>
-                  <td className="px-3 py-2.5">{it.type && <span className={cn("text-[11px] font-bold text-white px-2 py-0.5 rounded-full whitespace-nowrap", TYPE_COLOR[it.type] ?? "bg-gray-500")}>{it.type}</span>}</td>
-                  <td className="px-3 py-2.5">
-                    <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", ST_CLASS[it.approval_status])}>{ST_LABEL[it.approval_status]}</span>
-                    {it.converted_post_id && <span className="ml-1 inline-flex items-center gap-0.5 text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full"><Check className="h-2.5 w-2.5" /> no Cria Post</span>}
-                    {it.client_comment && <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1 mt-1 max-w-[240px]">"{it.client_comment}"</div>}
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <div className="flex gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => openEdit(it)} className="w-7 h-7 rounded-lg border border-border grid place-items-center hover:text-primary"><Pencil className="h-3.5 w-3.5" /></button>
-                      <button onClick={() => { if (confirm("Excluir item?")) deleteItem.mutate(it.id); }} className="w-7 h-7 rounded-lg border border-border grid place-items-center hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="p-3 text-center border-t border-border">
+      {/* Itens em CAIXINHAS separadas e arrastáveis — arrastar muda o número (#4 vira #1). */}
+      <div className="space-y-2">
+        {items.length > 0 && (
+          <p className="text-[11px] font-body text-muted-foreground">Arraste pelo <GripVertical className="inline h-3 w-3 -mt-0.5" /> pra reordenar. O número acompanha a ordem.</p>
+        )}
+        <DragDropContext onDragEnd={onReorder}>
+          <Droppable droppableId="cronograma-itens">
+            {(dropP) => (
+              <div ref={dropP.innerRef} {...dropP.droppableProps} className="space-y-2.5">
+                {items.map((it, i) => (
+                  <Draggable key={it.id} draggableId={it.id} index={i}>
+                    {(dragP, dragS) => (
+                      <div ref={dragP.innerRef} {...dragP.draggableProps}
+                        className={cn("group bg-card border border-border rounded-2xl p-3.5 transition-shadow",
+                          dragS.isDragging && "shadow-warm-lg ring-2 ring-primary/40")}>
+                        <div className="flex items-start gap-2.5">
+                          {/* Alça de arrasto + número */}
+                          <div {...dragP.dragHandleProps} className="flex items-center gap-1 shrink-0 pt-0.5 cursor-grab active:cursor-grabbing">
+                            <GripVertical className="h-4 w-4 text-muted-foreground/50 group-hover:text-muted-foreground" />
+                            <span className="text-sm font-display font-extrabold text-muted-foreground">#{i + 1}</span>
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            {/* Cabeçalho: tipo · data · status */}
+                            <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                              {it.type && <span className={cn("text-[10px] font-bold text-white px-2 py-0.5 rounded-full", TYPE_COLOR[it.type] ?? "bg-gray-500")}>{it.type}</span>}
+                              <span className="text-[11px] font-body text-muted-foreground">
+                                {it.date ? it.date.split("-").reverse().slice(0, 2).join("/") : "sem data"}
+                              </span>
+                              <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full ml-auto", ST_CLASS[it.approval_status])}>{ST_LABEL[it.approval_status]}</span>
+                              {it.converted_post_id && <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full"><Check className="h-2.5 w-2.5" /> no Cria Post</span>}
+                            </div>
+
+                            {/* Copy / título */}
+                            <p className="text-sm font-display font-bold text-foreground leading-snug">{it.copy || "(sem copy)"}</p>
+
+                            {/* Descrição em caixinha própria, preservando os parágrafos */}
+                            {it.description && (
+                              <div className="mt-2 rounded-xl bg-muted/40 border border-border/60 px-3 py-2">
+                                <p className="text-[12px] font-body text-muted-foreground leading-relaxed whitespace-pre-wrap line-clamp-6">{it.description}</p>
+                              </div>
+                            )}
+
+                            {it.client_comment && (
+                              <div className="mt-2 text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1.5">"{it.client_comment}"</div>
+                            )}
+                          </div>
+
+                          {/* Ações */}
+                          <div className="flex gap-1 shrink-0 opacity-40 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => openEdit(it)} className="w-7 h-7 rounded-lg border border-border grid place-items-center hover:text-primary"><Pencil className="h-3.5 w-3.5" /></button>
+                            <button onClick={() => { if (confirm("Excluir item?")) deleteItem.mutate(it.id); }} className="w-7 h-7 rounded-lg border border-border grid place-items-center hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {dropP.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
+
+        {items.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-border p-10 text-center">
+            <p className="text-sm font-body text-foreground font-medium">Nenhum item ainda</p>
+            <p className="text-xs text-muted-foreground font-body mt-1">Adicione o primeiro conteúdo do cronograma.</p>
+          </div>
+        )}
+
+        <div className="pt-1 text-center">
           <Button variant="outline" size="sm" onClick={openNew} className="gap-1.5"><Plus className="h-4 w-4" /> Adicionar item</Button>
         </div>
       </div>
