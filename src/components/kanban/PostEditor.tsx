@@ -1128,6 +1128,14 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               >
                 <X className="h-4 w-4" />
               </button>
+              <button
+                type="button"
+                onClick={() => startTour("post-editor")}
+                className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-primary shrink-0"
+                aria-label="Ver tutorial do editor"
+              >
+                <CircleHelp className="h-4 w-4" />
+              </button>
               <div className="flex-1 min-w-0 flex items-center gap-3">
                 <input
                   value={title}
@@ -1158,15 +1166,6 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     <span className="hidden sm:inline">Excluir</span>
                   </Button>
                 )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 px-2.5"
-                  aria-label="Ver tutorial do editor"
-                  onClick={() => startTour("post-editor")}
-                >
-                  <CircleHelp className="h-4 w-4" />
-                </Button>
                 <Button
                   variant="outline"
                   size="sm"
