@@ -37,6 +37,8 @@ const FLOW_EXPLAIN: Record<string, string> = {
   relatorio: "O relatório white-label com o resultado do que foi publicado no mês.",
 };
 const initial = (n?: string | null) => (n ? n.trim().charAt(0).toUpperCase() : "?");
+import { formatBRL } from "@/lib/money";
+// Financeiro (crm_records) guarda CENTAVOS. Cliente (monthly_value) guarda REAIS — usar formatBRL.
 const brl = (c: number) => `R$ ${(c / 100).toFixed(2).replace(".", ",")}`;
 
 export default function ClienteHub() {
@@ -122,7 +124,8 @@ export default function ClienteHub() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <Info label="Segmento" value={client.segment || "-"} />
             <Info label="Contato" value={client.email || client.phone || "-"} />
-            <Info label="Mensalidade" value={client.monthly_value ? brl(client.monthly_value) : "-"} />
+            {/* monthly_value é em REAIS (não centavos) — brl() aqui é da parte financeira, que é em centavos. */}
+            <Info label="Mensalidade" value={formatBRL(client.monthly_value)} />
             <Info label="Renovação" value={client.renewal_date ? new Date(client.renewal_date).toLocaleDateString("pt-BR") : "-"} />
           </div>
           {client.notes && (

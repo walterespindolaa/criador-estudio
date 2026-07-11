@@ -170,7 +170,8 @@ export default function CronogramaPublica() {
                 {it.approval_status === "ajuste" && <span style={{ marginLeft: "auto", fontSize: 10.5, fontWeight: 800, color: "#B45309", background: "#FEF3C7", padding: "2px 8px", borderRadius: 999 }}>Ajuste pedido</span>}
               </div>
               <div style={{ fontWeight: 800, fontSize: 14.5, color: "#2A2440" }}>{it.copy || "(sem título)"}</div>
-              {it.description && <div style={{ fontSize: 13, color: "#5b5470", marginTop: 2, lineHeight: 1.45 }}>{it.description}</div>}
+              {/* pre-wrap: preserva os parágrafos/quebras que o social mídia escreveu. */}
+              {it.description && <div style={{ fontSize: 13, color: "#5b5470", marginTop: 2, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{it.description}</div>}
               {it.client_comment && <div style={{ fontSize: 12, color: "#B45309", background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 8, padding: "6px 9px", marginTop: 8 }}>"{it.client_comment}"</div>}
 
               {!isApproved && !isReason && (

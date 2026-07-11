@@ -3,7 +3,8 @@ import { useNavigate, useLocation, Navigate } from "react-router-dom";
 import { Plus, Download, Search, Building2, Instagram, DollarSign, ArrowRight, SlidersHorizontal, X } from "lucide-react";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import {
-  useCrmClients, useCreateCrmClient, useImportCriaClients, type CrmClient,
+  useCrmClients, useCreateCrmClient, useImportCriaClients, useCrmTags,
+  CLIENT_STATUS_META, TAG_COLOR_CLS, type CrmClient, type ClientStatus,
 } from "@/hooks/useCrm";
 import { ModuleGate } from "@/components/accounts/ModuleGate";
 import { ManagerSectionTitle } from "@/components/accounts/ManagerSectionTitle";
@@ -20,7 +21,9 @@ import { TasksTab } from "@/components/accounts/crm/TasksTab";
 import { CrmCalendarTab } from "@/components/accounts/crm/CrmCalendarTab";
 import { cn } from "@/lib/utils";
 
-const brl = (v?: number | null) => `R$ ${Number(v ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+import { formatBRL } from "@/lib/money";
+import { MoneyInput } from "@/components/shared/MoneyInput";
+const brl = (v?: number | null) => formatBRL(v, { zeroAsDash: false });
 function initial(name?: string | null) { return name ? name.trim().charAt(0).toUpperCase() : "?"; }
 const splitSeg = (s?: string | null) => (s ?? "").split(/[,;]+/).map((x) => x.trim()).filter(Boolean);
 
@@ -63,6 +66,8 @@ function ClientsTab() {
   const navigate = useNavigate();
   const { managedAccounts, setActiveAccount } = useActiveAccount();
   const { data: clients = [], isLoading } = useCrmClients();
+  const { data: tagCatalog = [] } = useCrmTags();
+  const tagColor = (name: string) => tagCatalog.find((t) => t.name === name)?.color ?? "slate";
   const importCria = useImportCriaClients();
   const createClient = useCreateCrmClient();
 
@@ -156,6 +161,15 @@ function ClientsTab() {
                     {c.segment && <p className="text-[11px] text-muted-foreground font-body truncate">{c.segment}</p>}
                   </div>
                 </div>
+                {/* Status fixo + etiquetas personalizadas — visíveis já na lista. */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full border", CLIENT_STATUS_META[(c.status ?? "ativo") as ClientStatus]?.cls)}>
+                    {CLIENT_STATUS_META[(c.status ?? "ativo") as ClientStatus]?.label ?? "Ativo"}
+                  </span>
+                  {(c.tags ?? []).map((t) => (
+                    <span key={t} className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full border", TAG_COLOR_CLS[tagColor(t)] ?? TAG_COLOR_CLS.slate)}>{t}</span>
+                  ))}
+                </div>
                 {Number(c.monthly_value) > 0 && <div className="flex items-center gap-1 text-xs font-semibold text-primary"><DollarSign className="h-3 w-3" />{brl(c.monthly_value)}/mês</div>}
                 {c.cria_owner_id && (
                   <Button variant="outline" size="sm" className="w-full" onClick={(e) => { e.stopPropagation(); openCria(c); }}>
@@ -184,8 +198,8 @@ function CreateClientDialog({ open, onOpenChange, onCreate, saving }: {
   onCreate: (input: { name: string; instagram?: string; segment?: string; monthly_value?: number }) => void; saving: boolean;
 }) {
   const [name, setName] = useState(""); const [instagram, setInstagram] = useState("");
-  const [segment, setSegment] = useState(""); const [value, setValue] = useState("");
-  const reset = () => { setName(""); setInstagram(""); setSegment(""); setValue(""); };
+  const [segment, setSegment] = useState(""); const [value, setValue] = useState<number | null>(null);
+  const reset = () => { setName(""); setInstagram(""); setSegment(""); setValue(null); };
   return (
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) reset(); }}>
       <DialogContent className="sm:max-w-md rounded-2xl">
@@ -196,11 +210,11 @@ function CreateClientDialog({ open, onOpenChange, onCreate, saving }: {
             <div className="space-y-1.5"><Label className="text-xs">Instagram</Label><Input value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="@empresa" className="rounded-xl" /></div>
             <div className="space-y-1.5"><Label className="text-xs">Segmento</Label><Input value={segment} onChange={(e) => setSegment(e.target.value)} placeholder="Ex: Gastronomia" className="rounded-xl" /></div>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs">Valor mensal (R$)</Label><Input type="number" value={value} onChange={(e) => setValue(e.target.value)} placeholder="0" className="rounded-xl" /></div>
+          <div className="space-y-1.5"><Label className="text-xs">Valor mensal</Label><MoneyInput value={value} onChange={setValue} /></div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button disabled={!name.trim() || saving} onClick={() => onCreate({ name: name.trim(), instagram: instagram.trim() || undefined, segment: segment.trim() || undefined, monthly_value: Number(value) || 0 })}>Criar</Button>
+          <Button disabled={!name.trim() || saving} onClick={() => onCreate({ name: name.trim(), instagram: instagram.trim() || undefined, segment: segment.trim() || undefined, monthly_value: value ?? 0 })}>Criar</Button>
         </div>
       </DialogContent>
     </Dialog>

@@ -82,7 +82,7 @@ export function useAddCreation() {
 export function useUpdateCreation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<Creation, "day" | "team" | "note">> }) => {
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<Creation, "day" | "team" | "note" | "crm_client_id" | "client_name">> }) => {
       const { error } = await sbFrom("agenda_creations").update(patch as never).eq("id", id);
       if (error) throw error;
     },
@@ -136,7 +136,7 @@ export function useAddCapture() {
 export function useUpdateCapture() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<Capture, "status" | "capture_date" | "capture_time" | "location" | "team" | "note">> }) => {
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<Capture, "status" | "capture_date" | "capture_time" | "location" | "team" | "note" | "crm_client_id" | "client_name">> }) => {
       const { error } = await sbFrom("agenda_captures").update(patch as never).eq("id", id);
       if (error) throw error;
     },

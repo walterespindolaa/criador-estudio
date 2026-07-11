@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, RotateCcw, Loader2, ImageOff, Sparkles, Heart, MessageCircle, Send, Bookmark, Zap, ListChecks } from "lucide-react";
+import { Check, RotateCcw, Loader2, ImageOff, Heart, MessageCircle, Send, Bookmark, Zap, ListChecks, ChevronDown } from "lucide-react";
+import { hexToHsl } from "@/lib/applyTheme";
 import { PostMediaCarousel } from "@/components/shared/PostMediaCarousel";
 import { StoryPreview } from "@/components/accounts/StoryPreview";
 import { postAspect } from "@/lib/post-aspect";
@@ -26,7 +27,7 @@ type PortalPost = {
   scheduled_date: string | null; media: MediaItem[];
   last_comment: string | null; last_comment_role: string | null;
 };
-type ClientHeader = { client_name: string; client_logo: string | null; manager_name: string | null; instagram_handle?: string | null };
+type ClientHeader = { client_name: string; client_logo: string | null; manager_name: string | null; brand_color?: string | null; instagram_handle?: string | null };
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   pendente: { label: "Aguardando você", cls: "bg-amber-100 text-amber-700" },
@@ -102,13 +103,11 @@ function PostApproval({ client, post, busy, onApproveFast, onAdjustFast, onAppro
   const sendFast = () => { onAdjustFast(post.post_id, comment.trim()); setAdjOpen(false); setComment(""); };
 
   return (
-    <div className="border-b border-border pb-10 mb-10 last:border-0 last:pb-0 last:mb-0">
-      <div className="flex flex-col md:flex-row md:items-start gap-6 md:gap-8 md:justify-center">
-        <div className={`w-full mx-auto md:mx-0 md:shrink-0 ${vertical ? "max-w-[330px] md:w-[330px]" : "max-w-[420px] md:w-[388px]"}`}>
-          <CardIG client={client} post={post} />
-        </div>
-        <div className="w-full max-w-[440px] md:flex-1 md:max-w-[660px] mx-auto md:mx-0">
-          <div className="bg-card border border-border rounded-3xl p-4 sm:p-6 md:sticky md:top-[88px] shadow-[0_8px_30px_rgba(27,26,24,0.05)]">
+    <div className="mb-10 last:mb-0">
+      <div className={`w-full mx-auto ${vertical ? "max-w-[330px]" : ""}`}>
+        <CardIG client={client} post={post} />
+      </div>
+      <div className="bg-card border border-border rounded-3xl p-4 sm:p-6 mt-3 shadow-[0_8px_30px_rgba(27,26,24,0.05)]">
             {mode === "both" && (
               <div className="flex bg-muted rounded-2xl p-1.5 mb-5">
                 <button onClick={() => setView("fast")} className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-body font-extrabold py-3 rounded-xl transition-colors ${view === "fast" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}><Zap className="h-4 w-4" /> Rápida</button>
@@ -150,8 +149,6 @@ function PostApproval({ client, post, busy, onApproveFast, onAdjustFast, onAppro
                 onAdjustStage={(stage, stageComment) => onAdjustStage(post.post_id, stage, stageComment)}
               />
             )}
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -193,6 +190,14 @@ export default function AprovarPortal() {
 
   const busy = approveFast.isPending || adjustFast.isPending || approveStage.isPending || adjustStage.isPending;
 
+  const [showApproved, setShowApproved] = useState(false);
+
+  // Registra que o cliente abriu o portal (fire and forget, não bloqueia nada).
+  useEffect(() => {
+    if (!token) return;
+    sbRpc("portal_mark_viewed", { _token: token }).then(() => undefined, () => undefined);
+  }, [token]);
+
   if (clientQ.isLoading) return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   if (clientQ.isError || !clientQ.data) {
     return (
@@ -208,41 +213,86 @@ export default function AprovarPortal() {
 
   const c: ClientHeader = { ...clientQ.data, instagram_handle: handleQ.data ?? null };
   const posts = postsQ.data ?? [];
+  // Ordem do feed: pendentes primeiro, depois em ajuste; aprovados ficam num grupo colapsado.
+  const pendentes = posts.filter((p) => p.approval_status === "pendente");
+  const emAjuste = posts.filter((p) => p.approval_status === "ajuste_solicitado");
+  const aprovados = posts.filter((p) => p.approval_status === "aprovado");
+  const fila = [...pendentes, ...emAjuste];
+  const total = posts.length;
+  // Cor da marca do cliente vira o accent local da página (CSS vars no wrapper).
+  const brandVars = (c.brand_color
+    ? { "--primary": hexToHsl(c.brand_color), "--ring": hexToHsl(c.brand_color) }
+    : {}) as CSSProperties;
+
+  const renderPost = (p: PortalPost) => (
+    <PostApproval key={p.post_id} client={c} post={p} busy={busy}
+      onApproveFast={(id) => approveFast.mutate(id)}
+      onAdjustFast={(id, comment) => adjustFast.mutate({ id, comment })}
+      onApproveStage={(id, stage) => approveStage.mutate({ id, stage })}
+      onAdjustStage={(id, stage, comment) => adjustStage.mutate({ id, stage, comment })} />
+  );
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card/60 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-5 py-3.5 flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-primary via-purple-600 to-pink-500 p-[2px] shrink-0">
-            <div className="w-full h-full rounded-2xl bg-card overflow-hidden flex items-center justify-center">
-              {c.client_logo ? <img src={c.client_logo} alt="" className="w-full h-full object-cover" /> : <span className="font-display font-extrabold text-primary">{(c.client_name || "?").charAt(0).toUpperCase()}</span>}
-            </div>
+    <div className="min-h-screen bg-background" style={brandVars}>
+      <header className="border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-10">
+        <div className="max-w-md mx-auto px-4 py-3 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-primary/10 ring-2 ring-primary/25 overflow-hidden flex items-center justify-center shrink-0">
+            {c.client_logo ? <img src={c.client_logo} alt="" className="w-full h-full object-cover" /> : <span className="font-display font-extrabold text-primary">{(c.client_name || "?").charAt(0).toUpperCase()}</span>}
           </div>
-          <div className="min-w-0"><p className="font-display font-bold text-foreground truncate">{c.client_name}</p>{c.manager_name && <p className="text-xs text-muted-foreground font-body truncate">conteúdo por {c.manager_name}</p>}</div>
-          <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-body font-bold text-primary bg-primary/10 px-2 py-1 rounded-full shrink-0"><Sparkles className="h-3 w-3" /> cria post</span>
+          <div className="min-w-0 flex-1">
+            <p className="font-display font-bold text-foreground truncate leading-tight">{c.client_name}</p>
+            {c.manager_name && <p className="text-[11px] text-muted-foreground font-body truncate">conteúdo por {c.manager_name}</p>}
+          </div>
+          {total > 0 && (
+            <div className="text-right shrink-0">
+              <p className="text-sm font-display font-extrabold text-primary leading-tight">{aprovados.length} de {total}</p>
+              <p className="text-[10px] text-muted-foreground font-body">aprovados</p>
+            </div>
+          )}
+        </div>
+        <div className="h-1 bg-primary/10">
+          <div className="h-full bg-primary transition-all duration-500" style={{ width: total ? `${(aprovados.length / total) * 100}%` : "0%" }} />
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-5 py-7">
-        <div className="text-center mb-7">
-          <h1 className="font-display font-extrabold text-foreground text-xl sm:text-2xl">Aprove seus posts</h1>
+      <main className="max-w-md mx-auto px-4 py-6">
+        <div className="text-center mb-6">
+          <h1 className="font-display font-extrabold text-foreground text-xl">Aprove seus posts</h1>
           <p className="text-sm text-muted-foreground font-body mt-1">Revise o conteúdo e aprove ou peça ajustes.</p>
         </div>
 
         {postsQ.isLoading ? (
           <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
-        ) : posts.length === 0 ? (
+        ) : total === 0 ? (
           <div className="text-center py-16 text-muted-foreground font-body"><Check className="h-10 w-10 mx-auto mb-3 opacity-40" /><p className="font-medium text-foreground">Tudo em dia!</p><p className="text-sm mt-1">Nenhum post aguardando sua revisão agora.</p></div>
         ) : (
-          posts.map((p) => (
-            <PostApproval key={p.post_id} client={c} post={p} busy={busy}
-              onApproveFast={(id) => approveFast.mutate(id)}
-              onAdjustFast={(id, comment) => adjustFast.mutate({ id, comment })}
-              onApproveStage={(id, stage) => approveStage.mutate({ id, stage })}
-              onAdjustStage={(id, stage, comment) => adjustStage.mutate({ id, stage, comment })} />
-          ))
+          <>
+            {fila.length === 0 ? (
+              <div className="text-center bg-green-50 border border-green-100 rounded-3xl px-4 py-8 mb-6">
+                <div className="w-12 h-12 rounded-full bg-green-500 text-white flex items-center justify-center mx-auto mb-3"><Check className="h-6 w-6" strokeWidth={3} /></div>
+                <p className="font-display font-extrabold text-green-800">Tudo aprovado, obrigado!</p>
+                <p className="text-[13px] font-body text-green-700 mt-1">Nenhum post esperando sua revisão agora.</p>
+              </div>
+            ) : (
+              fila.map(renderPost)
+            )}
+
+            {aprovados.length > 0 && (
+              <section className="mt-2">
+                <button type="button" onClick={() => setShowApproved((v) => !v)} aria-expanded={showApproved}
+                  className="w-full min-h-[48px] flex items-center justify-between gap-2 bg-card border border-border rounded-2xl px-4 py-3 hover:bg-muted/40 transition-colors">
+                  <span className="flex items-center gap-2.5 text-sm font-body font-bold text-foreground">
+                    <span className="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0"><Check className="h-3.5 w-3.5" strokeWidth={3} /></span>
+                    Aprovados ({aprovados.length})
+                  </span>
+                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showApproved ? "rotate-180" : ""}`} />
+                </button>
+                {showApproved && <div className="mt-6">{aprovados.map(renderPost)}</div>}
+              </section>
+            )}
+          </>
         )}
-        <p className="text-center text-[11px] text-muted-foreground font-body pt-6 pb-10">Powered by cria · criasocialclub.com.br</p>
+        <p className="text-center text-[11px] text-muted-foreground font-body pt-8 pb-10">Feito com <span className="font-extrabold text-primary">CRIA</span></p>
       </main>
     </div>
   );

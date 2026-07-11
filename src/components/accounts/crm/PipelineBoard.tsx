@@ -17,7 +17,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { cn } from "@/lib/utils";
 
-const brl = (v?: number | null) => `R$ ${Number(v ?? 0).toLocaleString("pt-BR")}`;
+import { formatBRL } from "@/lib/money";
+import { MoneyInput } from "@/components/shared/MoneyInput";
+const brl = (v?: number | null) => formatBRL(v, { zeroAsDash: false });
 const POT: Record<string, string> = { alto: "🟢", medio: "🟡", baixo: "🔴" };
 const shortDate = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 const STAGE_BG: Record<CrmStage, string> = {
@@ -231,7 +233,7 @@ function LeadDialog({ lead, onClose, onCreate, onUpdate, onDelete, saving }: {
           <L label="Instagram"><Input value={f.instagram ?? ""} onChange={(e) => set({ instagram: e.target.value })} className="rounded-xl" /></L>
           <L label="Telefone"><Input value={f.phone ?? ""} onChange={(e) => set({ phone: e.target.value })} className="rounded-xl" /></L>
           <L label="Segmento"><Input value={f.segment ?? ""} onChange={(e) => set({ segment: e.target.value })} className="rounded-xl" /></L>
-          <L label="Valor mensal (R$)"><Input type="number" value={f.monthly_value ?? 0} onChange={(e) => set({ monthly_value: Number(e.target.value) })} className="rounded-xl" /></L>
+          <L label="Valor mensal"><MoneyInput value={f.monthly_value} onChange={(v) => set({ monthly_value: v })} /></L>
           <L label="Potencial">
             <select value={f.closing_potential ?? ""} onChange={(e) => set({ closing_potential: (e.target.value || null) as CrmLeadInput["closing_potential"] })}
               className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">

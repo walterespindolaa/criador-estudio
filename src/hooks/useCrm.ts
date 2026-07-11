@@ -4,6 +4,28 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { toast } from "sonner";
 
+export const CLIENT_STATUSES = ["ativo", "pausado", "inativo"] as const;
+export type ClientStatus = (typeof CLIENT_STATUSES)[number];
+export const CLIENT_STATUS_META: Record<ClientStatus, { label: string; cls: string }> = {
+  ativo: { label: "Ativo", cls: "bg-emerald-500/12 text-emerald-600 border-emerald-500/25" },
+  pausado: { label: "Pausado", cls: "bg-amber-500/12 text-amber-700 border-amber-500/25" },
+  inativo: { label: "Inativo", cls: "bg-muted text-muted-foreground border-border" },
+};
+
+export const TAG_COLORS = ["slate", "emerald", "amber", "rose", "violet", "sky", "orange", "green"] as const;
+export type TagColor = (typeof TAG_COLORS)[number];
+export const TAG_COLOR_CLS: Record<string, string> = {
+  slate: "bg-slate-500/15 text-slate-700 border-slate-500/25",
+  emerald: "bg-emerald-500/15 text-emerald-700 border-emerald-500/25",
+  amber: "bg-amber-500/15 text-amber-700 border-amber-500/25",
+  rose: "bg-rose-500/15 text-rose-700 border-rose-500/25",
+  violet: "bg-violet-500/15 text-violet-700 border-violet-500/25",
+  sky: "bg-sky-500/15 text-sky-700 border-sky-500/25",
+  orange: "bg-orange-500/15 text-orange-700 border-orange-500/25",
+  green: "bg-green-600/15 text-green-700 border-green-600/25",
+};
+export type CrmTag = { id: string; manager_id: string; name: string; color: string; created_at: string };
+
 export type CrmClient = {
   id: string;
   manager_id: string;
@@ -18,6 +40,19 @@ export type CrmClient = {
   monthly_value: number | null;
   contract_date: string | null;
   renewal_date: string | null;
+  // Informações gerais (empresa)
+  company_name: string | null;
+  cnpj: string | null;
+  owner_name: string | null;
+  whatsapp: string | null;
+  address: string | null;
+  // Contrato
+  plan_name: string | null;
+  payment_day: number | null;
+  birthday: string | null;
+  // Organização
+  status: ClientStatus;
+  tags: string[];
   services: string[] | null;
   brand_core: Record<string, string>;
   persona: Record<string, string>;
@@ -86,8 +121,23 @@ export function useUpdateCrmClient() {
       const { error } = await sbFrom("crm_clients").update(updates as never).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-clients"] }),
-    onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao atualizar."),
+    // Update OTIMISTA: a tela reflete na hora e o cache do cliente fica correto.
+    // Sem isso, o cache de ["crm-client", id] ficava velho → parecia "não salvou".
+    onMutate: async ({ id, ...updates }: { id: string } & Partial<CrmClientInput>) => {
+      await qc.cancelQueries({ queryKey: ["crm-client", id] });
+      const prev = qc.getQueryData<CrmClient>(["crm-client", id]);
+      qc.setQueryData<CrmClient | null>(["crm-client", id], (old) => (old ? { ...old, ...updates } as CrmClient : old));
+      qc.setQueriesData<CrmClient[]>({ queryKey: ["crm-clients"] }, (old) =>
+        Array.isArray(old) ? old.map((c) => (c.id === id ? { ...c, ...updates } as CrmClient : c)) : old);
+      return { prev, id };
+    },
+    onError: (e: unknown, _v, ctx) => {
+      const c = ctx as { prev?: CrmClient; id?: string } | undefined;
+      if (c?.prev && c.id) qc.setQueryData(["crm-client", c.id], c.prev);
+      toast.error((e as Error)?.message ?? "Erro ao atualizar.");
+    },
+    // Cache já está certo — revalida a lista em background, sem travar a UI.
+    onSettled: () => qc.invalidateQueries({ queryKey: ["crm-clients"], refetchType: "none" }),
   });
 }
 
@@ -203,6 +253,46 @@ export function useDeleteCrmRef() {
   });
 }
 
+// ===================== ETIQUETAS (catálogo da agência) =====================
+export function useCrmTags() {
+  const { agencyOwnerId } = useActiveAccount();
+  return useQuery<CrmTag[]>({
+    queryKey: ["crm-tags", agencyOwnerId],
+    enabled: !!agencyOwnerId,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("crm_tags").select("*").eq("manager_id", agencyOwnerId!).order("name");
+      if (error) throw error;
+      return (data ?? []) as unknown as CrmTag[];
+    },
+  });
+}
+
+export function useCreateCrmTag() {
+  const { agencyOwnerId } = useActiveAccount();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ name, color }: { name: string; color: string }) => {
+      if (!agencyOwnerId) throw new Error("Sem sessão");
+      const { error } = await sbFrom("crm_tags").insert({ manager_id: agencyOwnerId, name: name.trim(), color } as never);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-tags"] }),
+    onError: (e: unknown) => toast.error((e as Error)?.message?.includes("duplicate") ? "Já existe uma etiqueta com esse nome." : "Erro ao criar etiqueta."),
+  });
+}
+
+export function useDeleteCrmTag() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await sbFrom("crm_tags").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-tags"] }),
+    onError: () => toast.error("Erro ao excluir etiqueta."),
+  });
+}
+
 // ===================== LEADS =====================
 export const CRM_STAGES = ["lead","contato","reuniao","proposta","negociacao","fechado","perdido"] as const;
 export type CrmStage = typeof CRM_STAGES[number];
@@ -251,8 +341,21 @@ export function useUpdateCrmLead() {
       const { error } = await sbFrom("crm_leads").update(updates as never).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-leads"] }),
-    onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao atualizar lead."),
+    // Update OTIMISTA — é o que deixa o kanban fluido. Sem isso o card voltava
+    // pra coluna original e só pulava depois do refetch (~2s de delay).
+    onMutate: async ({ id, ...updates }: { id: string } & Partial<CrmLeadInput>) => {
+      await qc.cancelQueries({ queryKey: ["crm-leads"] });
+      const snapshot = qc.getQueriesData<CrmLead[]>({ queryKey: ["crm-leads"] });
+      qc.setQueriesData<CrmLead[]>({ queryKey: ["crm-leads"] }, (old) =>
+        Array.isArray(old) ? old.map((l) => (l.id === id ? { ...l, ...updates } as CrmLead : l)) : old);
+      return { snapshot };
+    },
+    onError: (e: unknown, _v, ctx) => {
+      const c = ctx as { snapshot?: [readonly unknown[], CrmLead[] | undefined][] } | undefined;
+      c?.snapshot?.forEach(([key, data]) => qc.setQueryData(key, data)); // desfaz
+      toast.error((e as Error)?.message ?? "Erro ao atualizar lead.");
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["crm-leads"], refetchType: "none" }),
   });
 }
 export function useDeleteCrmLead() {

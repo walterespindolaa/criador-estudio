@@ -3,11 +3,17 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, Save, Trash2, Plus, X, ImagePlus, Pencil, Camera, Upload, Download,
   Instagram, Mail, Phone, Palette, Type, MessageSquare, Image as ImageIcon,
-  Brain, HeartCrack, Heart, Lightbulb, Activity, NotebookPen, Target, Building2, Mic,
+  Brain, HeartCrack, Heart, Lightbulb, Activity, NotebookPen, Target, Building2, Mic, Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useActiveAccount } from "@/contexts/AccountContext";
-import { useCrmClient, useUpdateCrmClient, useDeleteCrmClient, useCrmClientRefs, useAddCrmRef, useDeleteCrmRef, useUploadCrmAsset, useSyncCrmFromCria, type CrmClient } from "@/hooks/useCrm";
+import {
+  useCrmClient, useUpdateCrmClient, useDeleteCrmClient, useCrmClientRefs, useAddCrmRef, useDeleteCrmRef,
+  useUploadCrmAsset, useSyncCrmFromCria, useCrmTags, useCreateCrmTag, useDeleteCrmTag,
+  CLIENT_STATUSES, CLIENT_STATUS_META, TAG_COLORS, TAG_COLOR_CLS,
+  type CrmClient, type ClientStatus,
+} from "@/hooks/useCrm";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useScrapes, useHasHubCria, useDeleteScrape } from "@/hooks/useHubCria";
 import { SummaryCard } from "@/components/hubcria/CriativoTab";
 import { ClientTasks } from "@/components/accounts/crm/ClientTasks";
@@ -18,10 +24,21 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { formatBRL } from "@/lib/money";
+import { MoneyInput } from "@/components/shared/MoneyInput";
 
 const CONSCIOUSNESS = ["Inconsciente do problema", "Consciente do problema", "Consciente da solução", "Consciente do produto", "Totalmente consciente"];
-const brl = (v?: number | null) => `R$ ${Number(v ?? 0).toLocaleString("pt-BR")}`;
 const initial = (n?: string | null) => (n ? n.trim().charAt(0).toUpperCase() : "?");
+// Campos que o autosave persiste. persona vai como ARRAY (antes ia só a persona ativa — apagava as outras).
+const payloadOf = (f: CrmClient) => ({
+  name: f.name, instagram: f.instagram, email: f.email, phone: f.phone,
+  segment: f.segment, monthly_value: f.monthly_value, contract_date: f.contract_date,
+  renewal_date: f.renewal_date, notes: f.notes, logo: f.logo,
+  company_name: f.company_name, cnpj: f.cnpj, owner_name: f.owner_name, whatsapp: f.whatsapp, address: f.address,
+  plan_name: f.plan_name, payment_day: f.payment_day, birthday: f.birthday,
+  status: f.status, tags: f.tags,
+  brand_core: f.brand_core, persona: f.persona, diagnosis: f.diagnosis, competitors: f.competitors,
+});
 const monthYear = (d?: string | null) => d ? new Date(d + "T00:00:00").toLocaleDateString("pt-BR", { month: "short", year: "numeric" }) : "-";
 const parseHex = (s?: string) => (s ?? "").split(/[\s,;]+/).filter((x) => /^#([0-9a-f]{3,8})$/i.test(x)).slice(0, 8);
 const DIAG = { baixo: { l: "Baixo", c: "text-red-600" }, medio: { l: "Médio", c: "text-amber-600" }, alto: { l: "Alto", c: "text-green-600" } } as const;
@@ -84,7 +101,21 @@ function ClientWorkspace() {
 
   const [form, setForm] = useState<CrmClient | null>(null);
   const [personaIdx, setPersonaIdx] = useState(0);
-  useEffect(() => { if (client) setForm(client); }, [client]);
+  const lastServer = useRef<string>("");   // último estado vindo do servidor
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+
+  // Sincroniza do servidor SEM atropelar o que o usuário está digitando.
+  // (Antes, qualquer refetch resetava o form → "coloco a info, saio e volta zerado".)
+  useEffect(() => {
+    if (!client) return;
+    const srv = JSON.stringify(client);
+    setForm((cur) => {
+      if (!cur || cur.id !== client.id) { lastServer.current = srv; return client; }   // trocou de cliente
+      const clean = JSON.stringify(cur) === lastServer.current;                        // sem edição pendente?
+      lastServer.current = srv;
+      return clean ? client : cur;                                                     // só adota o servidor se estou limpo
+    });
+  }, [client]);
 
   // Auto-sync uma vez ao abrir um cliente que usa o Cria (puxa Brandbook/nome atualizados).
   useEffect(() => {
@@ -94,6 +125,21 @@ function ClientWorkspace() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client?.cria_owner_id, id]);
+
+  // AUTOSAVE: salva sozinho ~0,8s depois da última tecla. Sem botão, sem perder dado.
+  useEffect(() => {
+    if (!form || !client || form.id !== client.id) return;
+    if (JSON.stringify(payloadOf(form)) === JSON.stringify(payloadOf(client))) return; // nada mudou
+    setSaveState("saving");
+    const t = setTimeout(() => {
+      update.mutate({ id: form.id, ...payloadOf(form) }, {
+        onSuccess: () => { setSaveState("saved"); setTimeout(() => setSaveState("idle"), 1600); },
+        onError: () => setSaveState("idle"),
+      });
+    }, 800);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, client]);
 
   if (isLoading || !form) {
     return <div className="space-y-4"><div className="h-32 rounded-3xl bg-muted animate-pulse" /><div className="h-72 rounded-3xl bg-muted animate-pulse" /></div>;
@@ -131,13 +177,11 @@ function ClientWorkspace() {
     const arr = comps.slice(); arr[i] = { ...arr[i], ...patch }; setForm({ ...form, competitors: arr });
   };
 
+  // Salvamento manual (o autosave já cobre; o botão só força na hora).
   const save = async () => {
-    await update.mutateAsync({
-      id: form.id, name: form.name, instagram: form.instagram, email: form.email, phone: form.phone,
-      segment: form.segment, monthly_value: form.monthly_value, contract_date: form.contract_date,
-      renewal_date: form.renewal_date, notes: form.notes, brand_core: bc, persona: pe, diagnosis: dg, competitors: comps,
-    });
-    toast.success("Cliente salvo!");
+    await update.mutateAsync({ id: form.id, ...payloadOf(form) });
+    setSaveState("saved");
+    setTimeout(() => setSaveState("idle"), 1600);
   };
 
   const onPickAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -187,18 +231,32 @@ function ClientWorkspace() {
             <h1 className="font-display font-bold text-2xl sm:text-3xl tracking-tight text-foreground truncate">{form.name || "Sem nome"}</h1>
             <div className="flex items-center gap-2 mt-2.5 flex-wrap">
               {form.segment && <span className="text-xs font-semibold px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/15">{form.segment}</span>}
-              <span className="text-xs font-semibold px-3 py-1 rounded-full bg-muted text-foreground/70 border border-border inline-flex items-center gap-1.5">{isCria ? "cria" : <><span className="w-1.5 h-1.5 rounded-full bg-green-500" />Ativo</>}</span>
+              {/* Status FIXO (ativo/pausado/inativo) */}
+              <select value={form.status ?? "ativo"} onChange={(e) => setForm({ ...form, status: e.target.value as ClientStatus })}
+                className={cn("text-xs font-semibold px-3 py-1 rounded-full border cursor-pointer outline-none", CLIENT_STATUS_META[(form.status ?? "ativo") as ClientStatus].cls)}>
+                {CLIENT_STATUSES.map((s) => <option key={s} value={s}>{CLIENT_STATUS_META[s].label}</option>)}
+              </select>
+              {isCria && <span className="text-xs font-semibold px-3 py-1 rounded-full bg-muted text-foreground/70 border border-border">cria</span>}
               {form.instagram && <span className="text-xs font-semibold px-3 py-1 rounded-full bg-muted text-foreground/70 border border-border inline-flex items-center gap-1"><Instagram className="h-3 w-3" />{form.instagram.replace(/^@/, "")}</span>}
+              {/* Etiquetas VARIÁVEIS (multi-seleção) */}
+              <TagPicker selected={form.tags ?? []} onChange={(tags) => setForm({ ...form, tags })} />
             </div>
           </div>
           <div className="flex gap-2 shrink-0">
             <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={async () => { if (confirm("Excluir este cliente?")) { await del.mutateAsync(form.id); navigate("/socialmidia/criacrm"); } }}><Trash2 className="h-4 w-4" /></Button>
             {isCria && <Button variant="outline" size="sm" className="rounded-xl" onClick={() => { setActiveAccount(form.cria_owner_id!); navigate("/app"); }}>Abrir no cria <ArrowRight className="h-3.5 w-3.5 ml-1" /></Button>}
-            <Button size="sm" className="rounded-xl shadow-sm" onClick={save} disabled={update.isPending}><Save className="h-3.5 w-3.5 mr-1.5" /> Salvar</Button>
+            {/* Autosave: salva sozinho. O botão só serve pra forçar na hora. */}
+            <span className={cn("inline-flex items-center gap-1.5 text-xs font-body px-2.5 py-1.5 rounded-lg transition-colors",
+              saveState === "saving" ? "text-muted-foreground bg-muted"
+              : saveState === "saved" ? "text-emerald-600 bg-emerald-500/10"
+              : "text-muted-foreground")}>
+              {saveState === "saving" ? "Salvando…" : saveState === "saved" ? "Salvo ✓" : "Salva automático"}
+            </span>
+            <Button variant="outline" size="sm" className="rounded-xl" onClick={save} disabled={update.isPending}><Save className="h-3.5 w-3.5 mr-1.5" /> Salvar</Button>
           </div>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-border">
-          <Stat k="Valor mensal" v={brl(form.monthly_value)} s="por mês" accent />
+          <Stat k="Valor mensal" v={formatBRL(form.monthly_value)} s="por mês" accent />
           <Stat k="Cliente desde" v={monthYear(form.contract_date)} />
           <Stat k="Renovação" v={monthYear(form.renewal_date)} />
           <Stat k="Diagnóstico" v={diagOverall ? diagOverall.l : "-"} cls={diagOverall ? diagOverall.c : ""} />
@@ -218,6 +276,18 @@ function ClientWorkspace() {
           <Card icon={<NotebookPen />} title="Sobre o cliente">
             <Textarea rows={3} value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Contexto, objetivo, observações..." className="rounded-xl text-sm" />
           </Card>
+          {/* Informações gerais da empresa */}
+          <Card icon={<NotebookPen />} title="Informações gerais">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <F label="Nome da empresa (razão social)"><Input value={form.company_name ?? ""} onChange={(e) => setForm({ ...form, company_name: e.target.value })} className="rounded-xl" /></F>
+              <F label="CNPJ"><Input value={form.cnpj ?? ""} onChange={(e) => setForm({ ...form, cnpj: e.target.value })} placeholder="00.000.000/0001-00" className="rounded-xl" /></F>
+              <F label="Responsável principal"><Input value={form.owner_name ?? ""} onChange={(e) => setForm({ ...form, owner_name: e.target.value })} className="rounded-xl" /></F>
+              <F label="WhatsApp"><Input value={form.whatsapp ?? ""} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} placeholder="47 98853-7969" className="rounded-xl" /></F>
+              <F label="Endereço" className="sm:col-span-2"><Input value={form.address ?? ""} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Rua, nº, sala — bairro / cidade" className="rounded-xl" /></F>
+              <F label="Aniversário (lembrete)"><Input type="date" value={form.birthday ?? ""} onChange={(e) => setForm({ ...form, birthday: e.target.value || null })} className="rounded-xl" /></F>
+            </div>
+          </Card>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card icon={<Phone />} title="Contato">
               <div className="grid grid-cols-1 gap-3">
@@ -229,7 +299,13 @@ function ClientWorkspace() {
             <Card icon={<Activity />} title="Comercial">
               <div className="grid grid-cols-2 gap-3">
                 <F label="Segmento"><Input value={form.segment ?? ""} onChange={(e) => setForm({ ...form, segment: e.target.value })} className="rounded-xl" /></F>
-                <F label="Valor mensal (R$)"><Input type="number" value={form.monthly_value ?? 0} onChange={(e) => setForm({ ...form, monthly_value: Number(e.target.value) })} className="rounded-xl" /></F>
+                <F label="Valor mensal"><MoneyInput value={form.monthly_value} onChange={(v) => setForm({ ...form, monthly_value: v })} /></F>
+                <F label="Plano contratado"><Input value={form.plan_name ?? ""} onChange={(e) => setForm({ ...form, plan_name: e.target.value })} placeholder="Ex.: Gestão completa" className="rounded-xl" /></F>
+                <F label="Dia de pagamento">
+                  <Input type="number" min={1} max={31} value={form.payment_day ?? ""} placeholder="Ex.: 15"
+                    onChange={(e) => { const n = Number(e.target.value); setForm({ ...form, payment_day: e.target.value === "" ? null : Math.max(1, Math.min(31, n)) }); }}
+                    className="rounded-xl" />
+                </F>
                 <F label="Início do contrato"><Input type="date" value={form.contract_date ?? ""} onChange={(e) => setForm({ ...form, contract_date: e.target.value || null })} className="rounded-xl" /></F>
                 <F label="Renovação"><Input type="date" value={form.renewal_date ?? ""} onChange={(e) => setForm({ ...form, renewal_date: e.target.value || null })} className="rounded-xl" /></F>
               </div>
@@ -431,6 +507,72 @@ function ClientWorkspace() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+// Etiquetas personalizadas: multi-seleção + criar/excluir (catálogo por agência).
+function TagPicker({ selected, onChange }: { selected: string[]; onChange: (tags: string[]) => void }) {
+  const { data: tags = [] } = useCrmTags();
+  const createTag = useCreateCrmTag();
+  const delTag = useDeleteCrmTag();
+  const [open, setOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newColor, setNewColor] = useState<string>("violet");
+
+  const toggle = (name: string) =>
+    onChange(selected.includes(name) ? selected.filter((t) => t !== name) : [...selected, name]);
+  const colorOf = (name: string) => tags.find((t) => t.name === name)?.color ?? "slate";
+  const doCreate = () => { if (newName.trim()) { createTag.mutate({ name: newName, color: newColor }); setNewName(""); } };
+
+  return (
+    <>
+      {selected.map((name) => (
+        <span key={name} className={cn("text-xs font-semibold px-2.5 py-1 rounded-full border inline-flex items-center gap-1", TAG_COLOR_CLS[colorOf(name)] ?? TAG_COLOR_CLS.slate)}>
+          {name}
+          <button type="button" onClick={() => toggle(name)} className="opacity-60 hover:opacity-100" aria-label={`Remover ${name}`}>×</button>
+        </span>
+      ))}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button type="button" className="text-xs font-semibold px-2.5 py-1 rounded-full border border-dashed border-border text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors">
+            + Etiqueta
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-64 p-3" align="start">
+          <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-2">Etiquetas</p>
+          <div className="max-h-44 overflow-y-auto space-y-1 mb-2">
+            {tags.length === 0 && <p className="text-[11px] text-muted-foreground">Nenhuma ainda. Crie a primeira abaixo.</p>}
+            {tags.map((t) => {
+              const on = selected.includes(t.name);
+              return (
+                <div key={t.id} className="flex items-center gap-2 group">
+                  <button type="button" onClick={() => toggle(t.name)} className="flex items-center gap-2 flex-1 min-w-0 text-left rounded-md px-1 py-1 hover:bg-muted/50">
+                    <span className={cn("h-4 w-4 rounded border flex items-center justify-center shrink-0", on ? "bg-primary border-primary" : "border-muted-foreground/40")}>
+                      {on && <Check className="h-3 w-3 text-primary-foreground" />}
+                    </span>
+                    <span className={cn("text-[12px] font-body px-2 py-0.5 rounded-full border truncate", TAG_COLOR_CLS[t.color] ?? TAG_COLOR_CLS.slate)}>{t.name}</span>
+                  </button>
+                  <button type="button" onClick={() => delTag.mutate(t.id)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive shrink-0" aria-label="Excluir etiqueta">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <div className="border-t border-border pt-2 space-y-2">
+            <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nova etiqueta…" className="h-8 text-sm rounded-lg"
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); doCreate(); } }} />
+            <div className="flex items-center gap-1 flex-wrap">
+              {TAG_COLORS.map((c) => (
+                <button key={c} type="button" onClick={() => setNewColor(c)}
+                  className={cn("h-5 w-5 rounded-full border", TAG_COLOR_CLS[c], newColor === c && "ring-2 ring-primary ring-offset-1")} aria-label={c} />
+              ))}
+            </div>
+            <Button size="sm" className="w-full h-8" disabled={!newName.trim() || createTag.isPending} onClick={doCreate}>Criar etiqueta</Button>
+          </div>
+        </PopoverContent>
+      </Popover>
+    </>
   );
 }
 

@@ -1,5 +1,9 @@
-import { useState } from "react";
-import { useExternalClients, useExternalPosts, type ExternalClient, type ExternalClientInput, type ExternalPost, type ExternalPostInput } from "@/hooks/useCriaPost";
+import { useRef, useState } from "react";
+import { useExternalClients, useExternalPosts, usePortalActivity, type ExternalClient, type ExternalClientInput, type ExternalPost, type ExternalPostInput } from "@/hooks/useCriaPost";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { validateUpload } from "@/lib/upload-validation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,10 +13,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CronogramaBoard } from "@/components/accounts/CronogramaBoard";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
-import { Plus, Link2, Pencil, Loader2, Users, ArrowRight, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare } from "lucide-react";
+import { Plus, Link2, Pencil, Loader2, Users, ArrowRight, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare, Eye, Clock, Image as ImageIcon } from "lucide-react";
 import { CriaPostMedia } from "@/components/accounts/CriaPostMedia";
 import { ImportKanbanDialog } from "@/components/accounts/ImportKanbanDialog";
 import { ClientReportDialog } from "@/components/accounts/ClientReportDialog";
+import { QuickReportCard } from "@/components/accounts/QuickReportCard";
 import { useProfile } from "@/hooks/useProfile";
 import { useCrmClients } from "@/hooks/useCrm";
 import { useClientSocialConnection, connectInstagram } from "@/hooks/useSocialInsights";
@@ -21,8 +26,23 @@ import { FORMATS_BY_PLATFORM, FORMAT_LABELS } from "@/lib/constants";
 const PLATFORMS = ["instagram", "tiktok", "youtube"];
 const FORMATS = ["reels", "carrossel", "foto", "story", "video"];
 export const CLIENT_COLORS = ["#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#EF4444", "#14B8A6", "#A855F7"];
+// Paleta CRIA pra cor da marca do cliente no portal público.
+const PORTAL_BRAND_COLORS = ["#CE4A1D", "#2A4BDF", "#F27EB5", "#F2C21E", "#3E9152"];
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 function initial(n?: string | null) { return n ? n.trim().charAt(0).toUpperCase() : "?"; }
+function relTimeBR(iso: string): string {
+  const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (min < 1) return "agora mesmo";
+  if (min < 60) return `há ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `há ${h}h`;
+  const d = Math.floor(h / 24);
+  return d === 1 ? "há 1 dia" : `há ${d} dias`;
+}
+function daysWaiting(p: ExternalPost): number {
+  const base = p.approval_updated_at ?? p.created_at;
+  return Math.floor((Date.now() - new Date(base).getTime()) / 86400000);
+}
 const STATUS: Record<string, { label: string; cls: string }> = {
   pendente: { label: "Aguardando cliente", cls: "bg-amber-100 text-amber-700" },
   ajuste_solicitado: { label: "Ajuste solicitado", cls: "bg-orange-100 text-orange-700" },
@@ -39,17 +59,42 @@ export function CriaPostBoard() {
 function ClientsList({ onOpen }: { onOpen: (c: ExternalClient) => void }) {
   const { clients, isLoading, pending, create, update, setActive, copyLink } = useExternalClients();
   const { data: crmClients = [] } = useCrmClients();
+  const { user } = useAuth();
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<ExternalClient | null>(null);
-  const [f, setF] = useState<ExternalClientInput>({ name: "", instagram_handle: "", notes: "", color: CLIENT_COLORS[0], crm_client_id: null });
+  const [f, setF] = useState<ExternalClientInput>({ name: "", instagram_handle: "", notes: "", color: CLIENT_COLORS[0], crm_client_id: null, logo_url: null, brand_color: null });
   const [copying, setCopying] = useState<string | null>(null);
 
-  const openNew = () => { setEditing(null); setF({ name: "", instagram_handle: "", notes: "", color: CLIENT_COLORS[clients.length % CLIENT_COLORS.length], crm_client_id: null }); setFormOpen(true); };
-  const openEdit = (c: ExternalClient) => { setEditing(c); setF({ name: c.name, instagram_handle: c.instagram_handle ?? "", notes: c.notes ?? "", color: c.color ?? CLIENT_COLORS[0], crm_client_id: c.crm_client_id ?? null }); setFormOpen(true); };
+  const openNew = () => { setEditing(null); setF({ name: "", instagram_handle: "", notes: "", color: CLIENT_COLORS[clients.length % CLIENT_COLORS.length], crm_client_id: null, logo_url: null, brand_color: null }); setFormOpen(true); };
+  const openEdit = (c: ExternalClient) => { setEditing(c); setF({ name: c.name, instagram_handle: c.instagram_handle ?? "", notes: c.notes ?? "", color: c.color ?? CLIENT_COLORS[0], crm_client_id: c.crm_client_id ?? null, logo_url: c.logo_url ?? null, brand_color: c.brand_color ?? null }); setFormOpen(true); };
   const submit = async () => {
     if (!f.name.trim()) return;
     if (editing) await update.mutateAsync({ id: editing.id, ...f }); else await create.mutateAsync(f);
     setFormOpen(false);
+  };
+  // Reusa a infra de upload do bucket avatars (mesma dos logos da gestora).
+  const handleLogoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !user) return;
+    const v = validateUpload(file, "managerAvatar");
+    if (!v.ok) { toast.error(v.reason); return; }
+    setUploadingLogo(true);
+    try {
+      const ext = (file.name.split(".").pop() || "png").toLowerCase();
+      const path = `${user.id}/cria-post-client-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
+      if (error) throw error;
+      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+      setF((p) => ({ ...p, logo_url: `${data.publicUrl}?t=${Date.now()}` }));
+      toast.success("Logo enviada!");
+    } catch {
+      toast.error("Erro ao enviar a logo.");
+    } finally {
+      setUploadingLogo(false);
+    }
   };
   const doCopy = async (id: string) => { setCopying(id); await copyLink(id); setCopying(null); };
   const activeClients = clients.filter((c) => c.active);
@@ -61,6 +106,9 @@ function ClientsList({ onOpen }: { onOpen: (c: ExternalClient) => void }) {
           <p className="text-sm text-muted-foreground font-body mt-1">Clientes que não usam o Cria aprovam seus posts por um link.</p></div>
         <Button onClick={openNew} className="shrink-0"><Plus className="h-4 w-4 mr-1.5" /> Novo cliente</Button>
       </div>
+
+      {/* Relatório rápido: cliente + período + 1 clique, sem passar pela personalização */}
+      <QuickReportCard />
 
       {isLoading ? (
         <div className="grid sm:grid-cols-2 gap-4">{[0, 1].map((i) => <div key={i} className="h-32 rounded-2xl bg-muted animate-pulse" />)}</div>
@@ -122,6 +170,33 @@ function ClientsList({ onOpen }: { onOpen: (c: ExternalClient) => void }) {
             </div>
             <div className="space-y-1.5"><Label className="text-xs font-body">Nome *</Label><Input value={f.name} onChange={(e) => setF((p) => ({ ...p, name: e.target.value }))} className="rounded-xl" /></div>
             <div className="space-y-1.5"><Label className="text-xs font-body">@ do Instagram</Label><Input value={f.instagram_handle ?? ""} onChange={(e) => setF((p) => ({ ...p, instagram_handle: e.target.value }))} placeholder="@cliente" className="rounded-xl" /></div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-body">Logo do cliente (aparece no portal)</Label>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl border border-border bg-muted overflow-hidden flex items-center justify-center shrink-0">
+                  {f.logo_url ? <img src={f.logo_url} alt="" className="w-full h-full object-cover" /> : <ImageIcon className="h-4 w-4 text-muted-foreground" />}
+                </div>
+                <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo}>
+                  {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar imagem"}
+                </Button>
+                {f.logo_url && <Button type="button" variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setF((p) => ({ ...p, logo_url: null }))}>Remover</Button>}
+                <input ref={logoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleLogoSelect} />
+              </div>
+              <Input value={f.logo_url ?? ""} onChange={(e) => setF((p) => ({ ...p, logo_url: e.target.value || null }))} placeholder="ou cole a URL da imagem" className="rounded-xl text-xs" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-body">Cor da marca (deixa o portal com a cara do cliente)</Label>
+              <div className="flex items-center flex-wrap gap-2">
+                {PORTAL_BRAND_COLORS.map((c) => (
+                  <button key={c} type="button" onClick={() => setF((p) => ({ ...p, brand_color: c }))}
+                    className={`h-7 w-7 rounded-full transition-transform ${f.brand_color === c ? "ring-2 ring-offset-2 ring-foreground scale-110" : "hover:scale-105"}`}
+                    style={{ backgroundColor: c }} aria-label={`Cor da marca ${c}`} />
+                ))}
+                <input type="color" value={f.brand_color ?? "#CE4A1D"} onChange={(e) => setF((p) => ({ ...p, brand_color: e.target.value }))}
+                  className="h-7 w-9 rounded-lg border border-border bg-transparent p-0.5 cursor-pointer" aria-label="Cor personalizada" />
+                {f.brand_color && <button type="button" onClick={() => setF((p) => ({ ...p, brand_color: null }))} className="text-[11px] font-body text-muted-foreground hover:text-foreground">Limpar</button>}
+              </div>
+            </div>
             <div className="space-y-1.5"><Label className="text-xs font-body">Notas (interno)</Label><Textarea value={f.notes ?? ""} onChange={(e) => setF((p) => ({ ...p, notes: e.target.value }))} rows={2} className="rounded-xl" /></div>
             <div className="space-y-1.5">
               <Label className="text-xs font-body">Cor (calendário)</Label>
@@ -151,6 +226,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   const { posts, isLoading, create, update, remove, moveStatus } = useExternalPosts(client.id);
   const { copyLink } = useExternalClients();
   const { profile } = useProfile();
+  const { data: portalViewedAt } = usePortalActivity(client.id);
   const [confirmMove, setConfirmMove] = useState<{ id: string; status: ApprovalKey } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
@@ -202,7 +278,8 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               {client.instagram_handle && <p className="text-sm text-muted-foreground font-body">@{client.instagram_handle.replace(/^@/, "")}</p>}
             </div>
             <div className="flex gap-2 shrink-0">
-              <Button variant="outline" onClick={doCopy} disabled={copying}>{copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Link2 className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Copiar link</span></>}</Button>
+              {/* Link de aprovação dos POSTS (diferente do link do cronograma) — nome explícito pra não confundir. */}
+              <Button variant="outline" onClick={doCopy} disabled={copying}>{copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Link2 className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Link dos posts</span></>}</Button>
             </div>
           </div>
         </>
@@ -262,6 +339,22 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                             {p.approval_status === "ajuste_solicitado" && p.last_comment && p.last_comment_role === "cliente_externo" && (
                               <div className="mt-2 text-xs font-body text-orange-700 bg-orange-50 border border-orange-100 rounded-lg px-2.5 py-1.5">Cliente pediu: "{p.last_comment}"</div>
                             )}
+                            {colKey === "pendente" && (() => {
+                              const sentAt = p.approval_updated_at ?? p.created_at;
+                              const seen = !!portalViewedAt && new Date(portalViewedAt) >= new Date(sentAt);
+                              const wait = daysWaiting(p);
+                              if (!seen && wait <= 3) return null;
+                              return (
+                                <div className="mt-2 space-y-1">
+                                  {seen && (
+                                    <p className="flex items-center gap-1 text-[10px] font-body font-semibold text-sky-700"><Eye className="h-3 w-3 shrink-0" /> Visto pelo cliente {relTimeBR(portalViewedAt!)}</p>
+                                  )}
+                                  {wait > 3 && (
+                                    <p className="flex items-center gap-1 text-[10px] font-body font-bold text-amber-600"><Clock className="h-3 w-3 shrink-0" /> Esperando há {wait} dias</p>
+                                  )}
+                                </div>
+                              );
+                            })()}
                             <span className="inline-block mt-2 text-[9px] font-body font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">{p.approval_mode === "flow" ? "Detalhada" : p.approval_mode === "both" ? "Ambas" : "Simplificada"}</span>
                           </div>
                           <div className="flex flex-col gap-1 shrink-0">

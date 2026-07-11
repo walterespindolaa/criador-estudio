@@ -13,7 +13,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ContractGeneratorDialog } from "@/components/accounts/crm/ContractGeneratorDialog";
 import { toast } from "sonner";
 
-const brl = (v?: number | null) => `R$ ${Number(v ?? 0).toLocaleString("pt-BR")}`;
+import { formatBRL, parseBRL } from "@/lib/money";
+import { MoneyInput } from "@/components/shared/MoneyInput";
+const brl = (v?: number | null) => formatBRL(v, { zeroAsDash: false });
 const STATUS_LABEL: Record<string, string> = { enviado: "Enviado", fechado: "Fechado", encerrado: "Encerrado" };
 
 export function ContractsTab() {
@@ -38,6 +40,15 @@ export function ContractsTab() {
           <Button size="sm" onClick={() => setGenOpen(true)}><FileText className="h-3.5 w-3.5 mr-1.5" /> Gerar contrato</Button>
           <Button size="sm" variant="outline" onClick={openNew}><Plus className="h-3.5 w-3.5 mr-1.5" /> Novo contrato</Button>
         </div>
+      </div>
+
+      {/* Disclaimer jurídico */}
+      <div className="flex items-start gap-2 rounded-xl border border-amber-300/40 bg-amber-50/60 px-4 py-3">
+        <span className="text-amber-600 mt-0.5 shrink-0">⚖️</span>
+        <p className="text-[12.5px] font-body text-amber-900/90 leading-relaxed">
+          <strong>Aviso:</strong> os contratos aqui são <strong>modelos de apoio</strong> pra agilizar seu dia a dia — não substituem orientação jurídica.
+          Cada caso pode exigir cláusulas diferentes. Recomendamos a revisão de um advogado antes de enviar ao cliente, pro seu devido respaldo legal.
+        </p>
       </div>
       {isLoading ? (
         <div className="h-24 rounded-2xl bg-muted animate-pulse" />
@@ -95,13 +106,13 @@ function ContractDialog({ contract, clients, saving, onClose, onCreate, onUpdate
 }) {
   const [title, setTitle] = useState(contract?.title ?? "");
   const [clientId, setClientId] = useState(contract?.crm_client_id ?? "");
-  const [value, setValue] = useState(String(contract?.monthly_value ?? ""));
+  const [value, setValue] = useState<number | null>(contract?.monthly_value ?? null);
   const [status, setStatus] = useState<CrmContract["status"]>(contract?.status ?? "enviado");
   const [notes, setNotes] = useState(contract?.notes ?? "");
 
   const submit = () => {
     if (!title.trim()) { toast.error("Título é obrigatório."); return; }
-    const mv = Number(value) || 0;
+    const mv = value ?? 0;
     const base: CrmContractInput = {
       title: title.trim(),
       crm_client_id: clientId || null,
@@ -132,7 +143,7 @@ function ContractDialog({ contract, clients, saving, onClose, onCreate, onUpdate
             </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5"><Label className="text-xs">Valor mensal (R$)</Label><Input type="number" value={value} onChange={(e) => setValue(e.target.value)} className="rounded-xl" /></div>
+            <div className="space-y-1.5"><Label className="text-xs">Valor mensal</Label><MoneyInput value={value} onChange={setValue} /></div>
             <div className="space-y-1.5"><Label className="text-xs">Status</Label>
               <select value={status} onChange={(e) => setStatus(e.target.value as CrmContract["status"])} className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
                 <option value="enviado">Enviado</option><option value="fechado">Fechado</option><option value="encerrado">Encerrado</option>

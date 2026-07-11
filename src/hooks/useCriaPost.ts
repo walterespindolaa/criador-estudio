@@ -12,11 +12,12 @@ const PORTAL_ORIGIN =
 export type ExternalClient = {
   id: string; manager_id: string; name: string; logo_url: string | null;
   instagram_handle: string | null; notes: string | null; active: boolean; created_at: string;
-  color: string | null; crm_client_id: string | null;
+  color: string | null; crm_client_id: string | null; brand_color: string | null;
 };
 // crm_client_id: vincular a um cliente já existente no cadastro central.
 // Se vier null/undefined, criamos um novo cliente central automaticamente.
-export type ExternalClientInput = { name: string; instagram_handle?: string | null; notes?: string | null; color?: string | null; crm_client_id?: string | null };
+// logo_url + brand_color personalizam o portal público de aprovação do cliente.
+export type ExternalClientInput = { name: string; instagram_handle?: string | null; notes?: string | null; color?: string | null; crm_client_id?: string | null; logo_url?: string | null; brand_color?: string | null };
 
 export type ExternalPost = {
   id: string; title: string; platform: string; format: string;
@@ -24,6 +25,7 @@ export type ExternalPost = {
   approval_status: "pendente" | "ajuste_solicitado" | "aprovado" | null;
   scheduled_date: string | null; created_at: string;
   approval_mode: string; script: string | null;
+  approval_updated_at: string | null;
   last_comment: string | null; last_comment_role: string | null;
 };
 export type ExternalPostInput = { title: string; platform: string; format: string; caption?: string | null; hook?: string | null; script?: string | null; approval_mode?: "fast" | "flow" | "both" };
@@ -188,4 +190,24 @@ export function useExternalPosts(clientId: string | null) {
   });
 
   return { posts: postsQ.data ?? [], isLoading: postsQ.isLoading, create, update, remove, moveStatus };
+}
+
+// Última vez que o cliente abriu o portal de aprovação (last_viewed_at do token ativo).
+export function usePortalActivity(clientId: string | null) {
+  return useQuery({
+    queryKey: ["portal-activity", clientId],
+    enabled: !!clientId,
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("approval_tokens")
+        .select("last_viewed_at")
+        .eq("external_client_id", clientId!)
+        .eq("active", true)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (error) throw error;
+      const row = (data as { last_viewed_at: string | null }[] | null)?.[0];
+      return row?.last_viewed_at ?? null;
+    },
+  });
 }

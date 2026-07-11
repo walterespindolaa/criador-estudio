@@ -22,30 +22,32 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:var(--b);background:var(--creme);color:var(--ink);font-size:14px;line-height:1.5}
 
-/* ---------- FAIXA SUPERIOR: fica! só troca a pintura (era teal → vira ink com blob) ---------- */
-.banda{background:var(--ink);color:var(--creme);padding:26px 32px 66px;position:relative;overflow:hidden}
-.banda::before{content:"";position:absolute;width:340px;height:340px;background:var(--laranja);opacity:.28;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;top:-160px;right:-80px;animation:flutua 16s ease-in-out infinite}
-.banda::after{content:"";position:absolute;width:180px;height:180px;background:var(--rosa);opacity:.2;border-radius:55% 45% 40% 60%/50% 60% 40% 50%;bottom:-90px;right:22%;animation:flutua 20s ease-in-out infinite reverse}
-@keyframes flutua{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-16px) rotate(4deg)}}
-@media (prefers-reduced-motion:reduce){.banda::before,.banda::after{animation:none}}
+/* ---------- FAIXA SUPERIOR: fica! pintura nova (era teal → laranja vivo com formas dançando) ---------- */
+.banda{background:var(--laranja);color:#fff;padding:26px 32px 66px;position:relative;overflow:hidden}
+.banda::before{content:"";position:absolute;width:360px;height:360px;background:var(--amarelo);opacity:.85;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;top:-190px;right:-70px;animation:flutua 11s ease-in-out infinite}
+.banda::after{content:"";position:absolute;width:210px;height:210px;background:var(--rosa);opacity:.8;border-radius:55% 45% 40% 60%/50% 60% 40% 50%;bottom:-110px;right:20%;animation:flutua 14s ease-in-out infinite reverse}
+.banda .b3{position:absolute;width:70px;height:70px;background:var(--creme);opacity:.9;border-radius:50%;top:28%;right:38%;animation:flutua 9s ease-in-out infinite;animation-delay:1.5s}
+.banda .b4{position:absolute;width:120px;height:120px;background:var(--azul);opacity:.55;border-radius:45% 55% 60% 40%/55% 45% 55% 45%;bottom:-60px;left:8%;animation:flutua 13s ease-in-out infinite reverse}
+@keyframes flutua{0%,100%{transform:translateY(0) rotate(0) scale(1)}50%{transform:translateY(-20px) rotate(7deg) scale(1.05)}}
+@media (prefers-reduced-motion:reduce){.banda::before,.banda::after,.banda .b3,.banda .b4{animation:none}}
 .banda-top{display:flex;align-items:center;gap:14px;position:relative;z-index:2;padding-left:76px}
-.avatar{width:52px;height:52px;border-radius:50%;background:var(--rosa);border:2.5px solid var(--creme);display:flex;align-items:center;justify-content:center;font-family:var(--d);font-weight:800;color:var(--ink);font-size:1.2rem}
-.sauda small{display:block;font-size:.82rem;opacity:.75}
+.avatar{width:52px;height:52px;border-radius:50%;background:var(--amarelo);border:2.5px solid #fff;display:flex;align-items:center;justify-content:center;font-family:var(--d);font-weight:800;color:var(--ink);font-size:1.2rem}
+.sauda small{display:block;font-size:.82rem;opacity:.85}
 .sauda .nome{font-family:var(--d);font-weight:800;font-size:1.7rem;line-height:1.1}
-.sauda .nome .script{font-family:var(--script);font-weight:400;font-size:.75em;color:var(--amarelo);margin-left:8px}
+.sauda .nome .script{font-family:var(--script);font-weight:400;font-size:.75em;color:var(--amarelo);margin-left:8px;display:inline-block;transform:rotate(-2deg)}
 .banda-acoes{display:flex;gap:10px;margin-left:18px}
-.chip-btn{display:inline-flex;align-items:center;gap:7px;font-family:var(--d);font-weight:700;font-size:.85rem;padding:9px 18px;border-radius:999px;cursor:pointer;transition:all .18s;border:1.5px solid rgba(244,239,227,.35);background:transparent;color:var(--creme)}
-.chip-btn:hover{background:rgba(244,239,227,.12)}
-.chip-btn.cheio{background:var(--laranja);border-color:var(--laranja);box-shadow:0 3px 0 rgba(0,0,0,.5)}
-.chip-btn.cheio:hover{transform:translateY(-2px);box-shadow:0 5px 0 rgba(0,0,0,.5)}
+.chip-btn{display:inline-flex;align-items:center;gap:7px;font-family:var(--d);font-weight:700;font-size:.85rem;padding:9px 18px;border-radius:999px;cursor:pointer;transition:all .18s;border:1.5px solid rgba(255,255,255,.5);background:transparent;color:#fff}
+.chip-btn:hover{background:rgba(255,255,255,.15)}
+.chip-btn.cheio{background:var(--ink);border-color:var(--ink);box-shadow:0 3px 0 rgba(0,0,0,.35)}
+.chip-btn.cheio:hover{transform:translateY(-2px);box-shadow:0 5px 0 rgba(0,0,0,.35)}
 .banda-icones{margin-left:auto;display:flex;gap:10px}
-.ico-btn{width:38px;height:38px;border-radius:12px;background:rgba(244,239,227,.12);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:background .2s}
-.ico-btn:hover{background:rgba(244,239,227,.22)}
-.ico-btn .num{position:absolute;top:-6px;right:-6px;background:var(--laranja);color:#fff;font-size:.62rem;font-weight:800;border-radius:999px;padding:1px 6px}
+.ico-btn{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:all .2s}
+.ico-btn:hover{background:rgba(255,255,255,.3);transform:translateY(-2px)}
+.ico-btn .num{position:absolute;top:-6px;right:-6px;background:var(--ink);color:#fff;font-size:.62rem;font-weight:800;border-radius:999px;padding:1px 6px}
 .periodos{display:flex;gap:6px;justify-content:flex-end;margin-top:18px;position:relative;z-index:2;flex-wrap:wrap}
-.per{font-weight:700;font-size:.8rem;color:rgba(244,239,227,.65);padding:6px 14px;border-radius:999px;cursor:pointer;transition:all .18s}
-.per:hover{color:var(--creme)}
-.per.on{background:var(--creme);color:var(--ink)}
+.per{font-weight:700;font-size:.8rem;color:rgba(255,255,255,.75);padding:6px 14px;border-radius:999px;cursor:pointer;transition:all .18s}
+.per:hover{color:#fff;background:rgba(255,255,255,.12)}
+.per.on{background:var(--creme);color:var(--ink);box-shadow:0 2px 0 rgba(0,0,0,.25)}
 
 /* ---------- MENU FLUTUANTE: igual ao atual (destacado, arredondado, ícones) ---------- */
 .rail{position:fixed;left:14px;top:120px;z-index:40;background:var(--branco);border:1.5px solid var(--ink-12);border-radius:26px;padding:12px 9px;display:flex;flex-direction:column;gap:6px;box-shadow:0 10px 30px rgba(27,26,23,.12)}
@@ -138,6 +140,8 @@ main{max-width:1240px;margin:-42px auto 60px;padding:0 24px 0 96px;position:rela
 
 <!-- FAIXA SUPERIOR (mesma estrutura de hoje, pintura nova) -->
 <div class="banda">
+  <div class="b3"></div>
+  <div class="b4"></div>
   <div class="banda-top">
     <div class="avatar">W</div>
     <div class="sauda">

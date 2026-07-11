@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, Sparkles } from "lucide-react";
+import { Loader2, Download, Sparkles, Link2, Mail, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { usePdfExport } from "@/hooks/usePdfExport";
@@ -27,13 +27,40 @@ const MONTHS = [
 ];
 const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
-function lastNMonths(n: number): { key: string; label: string }[] {
-  const out: { key: string; label: string }[] = [];
-  const d = new Date();
-  for (let i = 0; i < n; i++) {
-    const m = new Date(d.getFullYear(), d.getMonth() - i, 1);
-    const key = `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, "0")}`;
-    out.push({ key, label: `${MONTHS[m.getMonth()]} de ${m.getFullYear()}` });
+export type ReportPeriod = { key: string; label: string; since: Date; until: Date };
+
+function startOfDay(d: Date): Date {
+  const out = new Date(d);
+  out.setHours(0, 0, 0, 0);
+  return out;
+}
+
+// Presets rápidos + últimos meses fechados. `until` é sempre exclusivo.
+function buildPeriods(): ReportPeriod[] {
+  const now = new Date();
+  const tomorrow = startOfDay(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const d7 = startOfDay(now);
+  d7.setDate(d7.getDate() - 6);
+  const d30 = startOfDay(now);
+  d30.setDate(d30.getDate() - 29);
+  const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const out: ReportPeriod[] = [
+    { key: "7d", label: "Últimos 7 dias", since: d7, until: tomorrow },
+    { key: "30d", label: "Últimos 30 dias", since: d30, until: tomorrow },
+    { key: "mes-passado", label: `${MONTHS[lastMonth.getMonth()]} de ${lastMonth.getFullYear()}`, since: lastMonth, until: thisMonth },
+    { key: "este-mes", label: `Este mês (${MONTHS[thisMonth.getMonth()]})`, since: thisMonth, until: nextMonth },
+  ];
+  for (let i = 2; i <= 6; i++) {
+    const m = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    out.push({
+      key: `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, "0")}`,
+      label: `${MONTHS[m.getMonth()]} de ${m.getFullYear()}`,
+      since: m,
+      until: new Date(m.getFullYear(), m.getMonth() + 1, 1),
+    });
   }
   return out;
 }
@@ -44,6 +71,8 @@ type Props = {
   client: ExternalClient;
   posts: ExternalPost[];
   managerName?: string;
+  // Preset vindo do "Relatório rápido" ("7d" | "30d" | "mes-passado" | "este-mes").
+  initialPeriodKey?: string;
 };
 
 // Cores fixas (hex), html2canvas não lê variáveis CSS em oklch.
@@ -52,8 +81,8 @@ const C = {
   brand: "#8B5CF6", green: "#16a34a", amber: "#d97706", orange: "#ea580c",
 };
 
-export function ClientReportDialog({ open, onOpenChange, client, posts, managerName }: Props) {
-  const { exportPdf } = usePdfExport();
+export function ClientReportDialog({ open, onOpenChange, client, posts, managerName, initialPeriodKey }: Props) {
+  const { exportPdf, exportPdfBlob } = usePdfExport();
   const { user } = useAuth();
   const { data: crmClients = [] } = useCrmClients();
   const linked = useMemo(
@@ -62,13 +91,26 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   );
   const reportRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
-  const months = useMemo(() => lastNMonths(6), []);
-  const [monthKey, setMonthKey] = useState(months[0].key);
+  const periods = useMemo(buildPeriods, []);
+  const [periodKey, setPeriodKey] = useState(initialPeriodKey ?? "este-mes");
   const [downloading, setDownloading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [sharing, setSharing] = useState<"link" | "wa" | "mail" | null>(null);
 
-  // Limpa a análise ao trocar de mês (não vale pra outro período).
-  useEffect(() => { if (editorRef.current) editorRef.current.innerHTML = ""; }, [monthKey]);
+  const period = useMemo(
+    () => periods.find((p) => p.key === periodKey) ?? periods.find((p) => p.key === "este-mes") ?? periods[0],
+    [periods, periodKey],
+  );
+
+  // Relatório rápido: reabre já no preset escolhido pela gestora.
+  useEffect(() => { if (open && initialPeriodKey) setPeriodKey(initialPeriodKey); }, [open, initialPeriodKey]);
+
+  // Limpa a análise e o link publicado ao trocar de período (não valem pra outro recorte).
+  useEffect(() => {
+    if (editorRef.current) editorRef.current.innerHTML = "";
+    setShareUrl(null);
+  }, [periodKey]);
 
   const [active, setActive] = useState<Record<string, boolean>>({});
 
@@ -93,8 +135,12 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   };
 
   const monthPosts = useMemo(
-    () => posts.filter((p) => (p.created_at || "").slice(0, 7) === monthKey),
-    [posts, monthKey],
+    () => posts.filter((p) => {
+      if (!p.created_at) return false;
+      const t = new Date(p.created_at);
+      return t >= period.since && t < period.until;
+    }),
+    [posts, period],
   );
 
   const stats = useMemo(() => {
@@ -110,19 +156,16 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     return { total: monthPosts.length, byFormat, byPlatform, byStatus };
   }, [monthPosts]);
 
-  const monthLabel = months.find((m) => m.key === monthKey)?.label ?? "";
+  const monthLabel = period.label;
 
   // Métricas reais do Instagram do PRÓPRIO CLIENTE (conta que ele conectou).
   // Lidas via RPC segura (a gestora não conecta nada; só lê o que o cliente conectou).
-  const monthRange = useMemo(() => {
-    const [y, mo] = monthKey.split("-").map(Number);
-    return {
-      since: new Date(Date.UTC(y, mo - 1, 1)).toISOString(),
-      until: new Date(Date.UTC(y, mo, 1)).toISOString(),
-    };
-  }, [monthKey]);
+  const monthRange = useMemo(() => ({
+    since: period.since.toISOString(),
+    until: period.until.toISOString(),
+  }), [period]);
   const { data: igMedia = [] } = useQuery<IgMediaRow[]>({
-    queryKey: ["report-ig-media", client.crm_client_id, monthKey],
+    queryKey: ["report-ig-media", client.crm_client_id, period.key],
     enabled: open && !!client.crm_client_id,
     queryFn: async () => {
       const { data, error } = await sbRpcR("get_client_ig_media", {
@@ -164,10 +207,79 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   const download = async () => {
     setDownloading(true);
     try {
-      await exportPdf(reportRef, `relatorio-${client.name}-${monthKey}`.replace(/\s+/g, "-").toLowerCase());
+      await exportPdf(reportRef, `relatorio-${client.name}-${period.key}`.replace(/\s+/g, "-").toLowerCase());
     } finally {
       setDownloading(false);
     }
+  };
+
+  // ── Compartilhamento: publica o PDF no Storage e vira um link público ──
+  const shareText = (url: string) =>
+    `Olá! O relatório de ${period.label} de ${client.name} está pronto: ${url}`;
+
+  const ensureShareLink = async (): Promise<string | null> => {
+    if (shareUrl) return shareUrl;
+    if (!user) { toast.error("Sessão expirada, entre de novo pra compartilhar."); return null; }
+    const blob = await exportPdfBlob(reportRef);
+    if (!blob) { toast.error("Não consegui gerar o PDF do relatório."); return null; }
+    const slug = client.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "cliente";
+    const path = `${user.id}/relatorio-${slug}-${period.key}-${Date.now()}.pdf`;
+    // Bucket dedicado "relatorios"; se ainda não existir no projeto, cai no "avatars"
+    // (público e já usado pelas gestoras pra logos), pra não travar o envio.
+    for (const bucket of ["relatorios", "avatars"]) {
+      const { error } = await supabase.storage.from(bucket).upload(path, blob, { upsert: true, contentType: "application/pdf" });
+      if (!error) {
+        const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+        setShareUrl(data.publicUrl);
+        return data.publicUrl;
+      }
+    }
+    toast.error("Não consegui publicar o link. Baixe o PDF e envie manualmente.");
+    return null;
+  };
+
+  const copyShareLink = async () => {
+    if (sharing) return;
+    setSharing("link");
+    try {
+      const url = await ensureShareLink();
+      if (!url) return;
+      try { await navigator.clipboard.writeText(url); toast.success("Link do relatório copiado!"); }
+      catch { toast.message(url); }
+    } finally { setSharing(null); }
+  };
+
+  // Telefone da ficha do cliente (cadastro central), normalizado pro wa.me.
+  const waPhone = useMemo(() => {
+    const digits = (linked?.phone ?? "").replace(/\D/g, "");
+    if (!digits) return null;
+    return digits.length <= 11 ? `55${digits}` : digits;
+  }, [linked?.phone]);
+
+  const sendWhatsApp = async () => {
+    if (sharing) return;
+    setSharing("wa");
+    // Abre a aba ainda no clique; depois do await o navegador bloquearia o popup.
+    const win = window.open("about:blank", "_blank");
+    try {
+      const url = await ensureShareLink();
+      if (!url) { win?.close(); return; }
+      const wa = `https://wa.me/${waPhone ?? ""}?text=${encodeURIComponent(shareText(url))}`;
+      if (win) win.location.href = wa;
+      else window.open(wa, "_blank");
+    } finally { setSharing(null); }
+  };
+
+  const sendEmail = async () => {
+    if (sharing) return;
+    setSharing("mail");
+    try {
+      const url = await ensureShareLink();
+      if (!url) return;
+      const subject = encodeURIComponent(`Relatório de ${period.label} - ${client.name}`);
+      const body = encodeURIComponent(shareText(url));
+      window.location.href = `mailto:${linked?.email ?? ""}?subject=${subject}&body=${body}`;
+    } finally { setSharing(null); }
   };
 
   const genAI = async () => {
@@ -208,7 +320,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       const fmtList = Object.entries(stats.byFormat).map(([f, v]) => `${FORMAT_LABELS[f] ?? f} (${v})`).join(", ");
       const aprov = stats.byStatus.aprovado ?? 0;
       const fallback =
-        `<p><strong>Resumo.</strong> Em ${escapeHtml(monthLabel)}, foram produzidos ${stats.total} post(s) para ${escapeHtml(client.name)}` +
+        `<p><strong>Resumo.</strong> No período (${escapeHtml(monthLabel)}), foram produzidos ${stats.total} post(s) para ${escapeHtml(client.name)}` +
         (fmtList ? `, ${escapeHtml(fmtList)}` : "") +
         `. ${aprov} aprovado(s) pelo cliente.</p>` +
         `<p><strong>Recomendações</strong></p><ul><li>Manter a constância de publicações no próximo mês.</li><li>Priorizar os formatos com melhor desempenho.</li></ul>`;
@@ -247,13 +359,13 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
 
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-body text-muted-foreground">Período:</span>
-          {months.map((m) => (
+          {periods.map((m) => (
             <button
               key={m.key}
               type="button"
-              onClick={() => setMonthKey(m.key)}
+              onClick={() => setPeriodKey(m.key)}
               className={`px-3 py-1.5 rounded-full text-xs font-body border transition-colors ${
-                monthKey === m.key
+                periodKey === m.key
                   ? "bg-primary text-primary-foreground border-primary"
                   : "bg-card border-border text-muted-foreground hover:text-foreground"
               }`}
@@ -448,6 +560,26 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Compartilhar: link público do PDF + WhatsApp + e-mail */}
+        <div className="mt-4 rounded-2xl border border-border bg-muted/30 p-3 sm:p-4">
+          <p className="text-xs font-body font-semibold text-foreground">Compartilhar com o cliente</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={copyShareLink} disabled={sharing !== null}>
+              {sharing === "link" ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5 mr-1.5" />} Copiar link
+            </Button>
+            <Button variant="outline" size="sm" onClick={sendWhatsApp} disabled={sharing !== null}>
+              {sharing === "wa" ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5 mr-1.5" />} Enviar por WhatsApp
+            </Button>
+            <Button variant="outline" size="sm" onClick={sendEmail} disabled={sharing !== null}>
+              {sharing === "mail" ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Mail className="h-3.5 w-3.5 mr-1.5" />} Enviar por e-mail
+            </Button>
+          </div>
+          <p className="text-[11px] font-body text-muted-foreground mt-2">
+            O link publica o PDF deste período pra você mandar direto.
+            {!waPhone && " Dica: cadastre o telefone na ficha do cliente pro WhatsApp abrir já na conversa dele."}
+          </p>
         </div>
 
         <DialogFooter className="mt-4 sm:justify-between">

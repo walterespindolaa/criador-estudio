@@ -224,7 +224,7 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
               <LayoutGrid className="h-3.5 w-3.5" /> {converting ? "Convertendo…" : `Converter ${approvedToConvert.length} aprovado(s) → Cria Post`}
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={() => { navigator.clipboard?.writeText(link); toast.success("Link copiado."); }} className="gap-1.5"><Link2 className="h-3.5 w-3.5" /> Copiar link</Button>
+          {/* Botão único: "Enviar pra aprovação" já marca como enviado E copia o link. */}
           <Button size="sm" onClick={sendForApproval} className="gap-1.5"><Send className="h-3.5 w-3.5" /> Enviar pra aprovação</Button>
           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => { if (confirm("Excluir este cronograma?")) onDelete(c.id); }}><Trash2 className="h-4 w-4" /></Button>
         </div>
