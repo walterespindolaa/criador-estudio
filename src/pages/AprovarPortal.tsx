@@ -174,12 +174,26 @@ export default function AprovarPortal() {
       return (typeof data === "string" ? data : null) as string | null;
     },
   });
+  // Período do link (opcional). Se o social mídia gerou um link "só desse intervalo",
+  // o portal mostra apenas os posts agendados dentro dele.
+  const periodQ = useQuery({
+    queryKey: ["portal-period", token], enabled: !!token,
+    queryFn: async () => {
+      const { data } = await sbRpc("get_token_period", { _token: token });
+      const row = (data as { period_start: string | null; period_end: string | null }[] | null)?.[0];
+      return row ?? { period_start: null, period_end: null };
+    },
+  });
   const postsQ = useQuery({
-    queryKey: ["portal-posts", token], enabled: !!token && !!clientQ.data,
+    queryKey: ["portal-posts", token, periodQ.data?.period_start, periodQ.data?.period_end],
+    enabled: !!token && !!clientQ.data && !periodQ.isLoading,
     queryFn: async () => {
       const { data, error } = await sbRpc("list_posts_by_token", { _token: token });
       if (error) throw error;
-      return (data as PortalPost[]) ?? [];
+      const all = (data as PortalPost[]) ?? [];
+      const ps = periodQ.data?.period_start; const pe = periodQ.data?.period_end;
+      if (!ps || !pe) return all;                       // sem período = tudo
+      return all.filter((p) => !!p.scheduled_date && p.scheduled_date >= ps && p.scheduled_date <= pe);
     },
   });
 

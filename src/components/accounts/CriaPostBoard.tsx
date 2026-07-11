@@ -223,7 +223,9 @@ function ClientsList({ onOpen }: { onOpen: (c: ExternalClient) => void }) {
 }
 
 export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange }: { client: ExternalClient; onBack?: () => void; embedded?: boolean; activeTab?: string; onTabChange?: (t: string) => void }) {
-  const { posts, isLoading, create, update, remove, moveStatus, setDate } = useExternalPosts(client.id);
+  const { posts, isLoading, create, createDraft, update, remove, moveStatus, setDate } = useExternalPosts(client.id);
+  // Guarda o id do rascunho aberto: se o usuário cancelar, apagamos (não vira lixo).
+  const [draftId, setDraftId] = useState<string | null>(null);
   // Kanban (padrão) ou Calendário. Preferência salva por dispositivo.
   const [view, setView] = useState<"kanban" | "calendario">(() => {
     try { return (localStorage.getItem("criapost_view") as "kanban" | "calendario") || "kanban"; } catch { return "kanban"; }
@@ -258,15 +260,54 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   const [f, setF] = useState<ExternalPostInput>({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", scheduled_date: null, scheduled_time: null });
   const [copying, setCopying] = useState(false);
 
-  const openNew = (day?: string) => { setEditing(null); setF({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", scheduled_date: day ?? null, scheduled_time: null }); setFormOpen(true); };
-  const openEdit = (p: ExternalPost) => { setEditing(p); setF({ title: p.title, platform: p.platform, format: p.format, caption: p.caption ?? "", hook: p.hook ?? "", approval_mode: (p.approval_mode as "fast"|"flow"|"both") ?? "fast", script: p.script ?? "", scheduled_date: p.scheduled_date ?? null, scheduled_time: (p as { scheduled_time?: string | null }).scheduled_time ?? null }); setFormOpen(true); };
+  // Novo post: cria um RASCUNHO na hora. Assim o post.id já existe e a mídia pode ser
+  // anexada de cara (o storage precisa do id). O rascunho não aparece pro cliente.
+  const openNew = async (day?: string) => {
+    setF({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", scheduled_date: day ?? null, scheduled_time: null });
+    setFormOpen(true);
+    try {
+      const draft = await createDraft.mutateAsync({ scheduled_date: day ?? null });
+      setDraftId(draft.id);
+      setEditing(draft);
+    } catch { setFormOpen(false); }
+  };
+  const openEdit = (p: ExternalPost) => { setDraftId(null); setEditing(p); setF({ title: p.title, platform: p.platform, format: p.format, caption: p.caption ?? "", hook: p.hook ?? "", approval_mode: (p.approval_mode as "fast"|"flow"|"both") ?? "fast", script: p.script ?? "", scheduled_date: p.scheduled_date ?? null, scheduled_time: (p as { scheduled_time?: string | null }).scheduled_time ?? null }); setFormOpen(true); };
+
+  // Cancelar um post novo apaga o rascunho (com a mídia que já subiu).
+  const closeForm = async () => {
+    setFormOpen(false);
+    if (draftId) { await remove.mutateAsync(draftId).catch(() => { /* silencioso */ }); setDraftId(null); }
+    setEditing(null);
+  };
+
   const submit = async () => {
     if (!f.title.trim()) return;
-    if (editing) await update.mutateAsync({ id: editing.id, resend: editing.approval_status === "ajuste_solicitado", ...f });
-    else await create.mutateAsync(f);
+    if (draftId) {
+      // Rascunho → publica (entra na fila de aprovação do cliente).
+      await update.mutateAsync({ id: draftId, publish: true, ...f });
+      toast.success("Post enviado pra aprovação!");
+      setDraftId(null);
+    } else if (editing) {
+      await update.mutateAsync({ id: editing.id, resend: editing.approval_status === "ajuste_solicitado", ...f });
+    } else {
+      await create.mutateAsync(f);
+      toast.success("Post enviado pra aprovação!");
+    }
     setFormOpen(false);
+    setEditing(null);
   };
   const doCopy = async () => { setCopying(true); await copyLink(client.id); setCopying(false); };
+  // Envio por PERÍODO: gera um link que só mostra os posts daquele intervalo.
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [pStart, setPStart] = useState("");
+  const [pEnd, setPEnd] = useState("");
+  const doCopyPeriod = async () => {
+    if (!pStart || !pEnd) { toast.error("Escolha o início e o fim do período."); return; }
+    if (pEnd < pStart) { toast.error("O fim tem que ser depois do início."); return; }
+    setCopying(true);
+    await copyLink(client.id, { start: pStart, end: pEnd });
+    setCopying(false); setLinkOpen(false);
+  };
   const onChangePlatform = (pl: string) => {
     setF((prev) => {
       const allowed = FORMATS_BY_PLATFORM[pl] ?? [];
@@ -287,7 +328,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
             </div>
             <div className="flex gap-2 shrink-0">
               {/* Link de aprovação dos POSTS (diferente do link do cronograma) — nome explícito pra não confundir. */}
-              <Button variant="outline" onClick={doCopy} disabled={copying}>{copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Link2 className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Link dos posts</span></>}</Button>
+              <Button variant="outline" onClick={() => setLinkOpen(true)} disabled={copying}>{copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Link2 className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Link dos posts</span></>}</Button>
             </div>
           </div>
         </>
@@ -472,13 +513,46 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+      {/* Link de aprovação: tudo OU um período específico */}
+      <Dialog open={linkOpen} onOpenChange={setLinkOpen}>
+        <DialogContent className="sm:max-w-md rounded-2xl">
+          <DialogHeader><DialogTitle className="font-display">Link de aprovação</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-xl border border-border p-3">
+              <p className="text-sm font-body font-semibold text-foreground">Todos os posts</p>
+              <p className="text-[12px] font-body text-muted-foreground mb-2">O cliente vê tudo que está na fila de aprovação.</p>
+              <Button variant="outline" size="sm" onClick={async () => { await doCopy(); setLinkOpen(false); }} disabled={copying}>
+                <Link2 className="h-3.5 w-3.5 mr-1.5" /> Copiar link completo
+              </Button>
+            </div>
+            <div className="rounded-xl border border-primary/30 bg-primary/[0.04] p-3">
+              <p className="text-sm font-body font-semibold text-foreground">Só um período</p>
+              <p className="text-[12px] font-body text-muted-foreground mb-2">Gera um link que mostra apenas os posts agendados nesse intervalo.</p>
+              <div className="flex gap-2 mb-2">
+                <div className="flex-1">
+                  <Label className="text-[11px] font-body text-muted-foreground">Início</Label>
+                  <Input type="date" value={pStart} onChange={(e) => setPStart(e.target.value)} className="rounded-xl" />
+                </div>
+                <div className="flex-1">
+                  <Label className="text-[11px] font-body text-muted-foreground">Fim</Label>
+                  <Input type="date" value={pEnd} onChange={(e) => setPEnd(e.target.value)} className="rounded-xl" />
+                </div>
+              </div>
+              <Button size="sm" onClick={doCopyPeriod} disabled={copying}>
+                {copying ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5 mr-1.5" />} Copiar link do período
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={formOpen} onOpenChange={(o) => { if (!o) void closeForm(); }}>
         <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="max-w-md md:max-w-5xl bg-white rounded-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="flex flex-row items-center justify-between gap-3 pr-8">
-            <DialogTitle className="font-display">{editing ? "Editar post" : "Novo post"}</DialogTitle>
+            <DialogTitle className="font-display">{draftId || !editing ? "Novo post" : "Editar post"}</DialogTitle>
             <div className="flex items-center gap-2 shrink-0">
-              <Button variant="outline" size="sm" onClick={() => setFormOpen(false)}>Cancelar</Button>
-              <Button size="sm" onClick={submit} disabled={create.isPending || update.isPending || !f.title.trim()}>{(create.isPending || update.isPending) ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? (editing.approval_status === "ajuste_solicitado" ? <><RotateCcw className="h-4 w-4 mr-1.5" /> Salvar e reenviar</> : "Salvar") : "Criar e enviar"}</Button>
+              <Button variant="outline" size="sm" onClick={() => void closeForm()}>Cancelar</Button>
+              <Button size="sm" onClick={submit} disabled={create.isPending || update.isPending || !f.title.trim()}>{(create.isPending || update.isPending) ? <Loader2 className="h-4 w-4 animate-spin" /> : draftId ? "Criar e enviar" : editing ? (editing.approval_status === "ajuste_solicitado" ? <><RotateCcw className="h-4 w-4 mr-1.5" /> Salvar e reenviar</> : "Salvar") : "Criar e enviar"}</Button>
             </div>
           </DialogHeader>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-[1.1fr_0.9fr] md:gap-5">
@@ -533,7 +607,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                   caption={f.caption ?? undefined} handle={client.instagram_handle || client.name}
                   approved={editing.approval_status === "aprovado"} />
               ) : (
-                <p className="text-xs text-muted-foreground">Salve o post primeiro para anexar mídia.</p>
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Preparando o post pra você anexar a mídia…</p>
               )}
             </div>
 

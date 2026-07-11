@@ -34,6 +34,7 @@ export function usePosts(options?: { limit?: number }) {
         .select("*")
         .eq("user_id", userId!)
         .is("deleted_at", null)
+        .not("is_draft", "is", true)   // rascunhos do Cria Post não poluem o kanban pessoal
         .order("created_at", { ascending: false })
         .limit(limit);
       if (error) throw error;

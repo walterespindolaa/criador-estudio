@@ -108,18 +108,30 @@ export function useExternalClients() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["external-clients", agencyOwnerId] }),
   });
 
-  const copyLink = async (clientId: string) => {
-    const { data: existing, error: e1 } = await sbFrom("approval_tokens")
-      .select("token").eq("external_client_id", clientId).eq("active", true).order("created_at", { ascending: false }).limit(1);
-    if (e1) { toast.error("Erro ao gerar link."); return; }
-    let token = (existing as { token: string }[] | null)?.[0]?.token;
-    if (!token) {
-      const { data: created, error: e2 } = await sbFrom("approval_tokens").insert({ manager_id: agencyOwnerId!, external_client_id: clientId }).select("token").single();
-      if (e2 || !created) { toast.error("Erro ao gerar link."); return; }
+  // Link de aprovação. Sem período = manda TUDO (comportamento padrão).
+  // Com período = gera um link novo que só mostra os posts daquele intervalo.
+  const copyLink = async (clientId: string, period?: { start: string; end: string } | null) => {
+    let token: string | undefined;
+    if (period?.start && period?.end) {
+      const { data: created, error } = await sbFrom("approval_tokens")
+        .insert({ manager_id: agencyOwnerId!, external_client_id: clientId, period_start: period.start, period_end: period.end })
+        .select("token").single();
+      if (error || !created) { toast.error("Erro ao gerar o link do período."); return; }
       token = (created as { token: string }).token;
+    } else {
+      const { data: existing, error: e1 } = await sbFrom("approval_tokens")
+        .select("token").eq("external_client_id", clientId).eq("active", true)
+        .is("period_start", null).order("created_at", { ascending: false }).limit(1);
+      if (e1) { toast.error("Erro ao gerar link."); return; }
+      token = (existing as { token: string }[] | null)?.[0]?.token;
+      if (!token) {
+        const { data: created, error: e2 } = await sbFrom("approval_tokens").insert({ manager_id: agencyOwnerId!, external_client_id: clientId }).select("token").single();
+        if (e2 || !created) { toast.error("Erro ao gerar link."); return; }
+        token = (created as { token: string }).token;
+      }
     }
     const url = `${PORTAL_ORIGIN}/aprovar/${token}`;
-    try { await navigator.clipboard.writeText(url); toast.success("Link de aprovação copiado!"); }
+    try { await navigator.clipboard.writeText(url); toast.success(period ? "Link do período copiado!" : "Link de aprovação copiado!"); }
     catch { toast.message(url); }
   };
 
@@ -135,7 +147,10 @@ export function useExternalPosts(clientId: string | null) {
     queryKey: key,
     enabled: !!agencyOwnerId && !!clientId,
     queryFn: async () => {
-      const { data, error } = await sbFrom("posts").select("*").eq("external_client_id", clientId!).order("created_at", { ascending: false });
+      // Rascunhos (is_draft) NÃO aparecem no kanban/calendário nem vão pro cliente.
+      const { data, error } = await sbFrom("posts").select("*").eq("external_client_id", clientId!)
+        .not("is_draft", "is", true)
+        .order("created_at", { ascending: false });
       if (error) throw error;
       const posts = (data as ExternalPost[]) ?? [];
       const ids = posts.map((p) => p.id);
@@ -149,22 +164,49 @@ export function useExternalPosts(clientId: string | null) {
   });
 
   const create = useMutation({
-    mutationFn: async (input: ExternalPostInput) => {
+    mutationFn: async (input: ExternalPostInput): Promise<ExternalPost> => {
       const { approval_mode, ...rest } = input;
-      const { error } = await sbFrom("posts").insert({
+      const { data, error } = await sbFrom("posts").insert({
         user_id: agencyOwnerId!, external_client_id: clientId, status: "editando",
         approval_status: "pendente", approval_mode: approval_mode ?? "fast", ...rest,
-      });
+      }).select().single();
       if (error) throw error;
+      return data as unknown as ExternalPost;
     },
-    onSuccess: () => { toast.success("Post enviado pra aprovação!"); qc.invalidateQueries({ queryKey: key }); qc.invalidateQueries({ queryKey: ["external-pending", agencyOwnerId] }); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); qc.invalidateQueries({ queryKey: ["external-pending", agencyOwnerId] }); },
     onError: () => toast.error("Erro ao criar post."),
   });
 
+  // Rascunho: cria o post JÁ ao abrir o "Novo post", pra liberar o upload de mídia na hora
+  // (o storage precisa do post.id). Se o usuário cancelar, o rascunho é apagado.
+  const createDraft = useMutation({
+    mutationFn: async (input: Partial<ExternalPostInput> & { scheduled_date?: string | null }): Promise<ExternalPost> => {
+      // external_client_id fica NULL no rascunho: assim ele não aparece no kanban nem
+      // no portal do cliente. O vínculo só acontece quando o post é publicado.
+      const { data, error } = await sbFrom("posts").insert({
+        user_id: agencyOwnerId!, external_client_id: null, status: "editando",
+        approval_status: "pendente", approval_mode: "fast", is_draft: true,
+        title: "", platform: "instagram", format: "reels",
+        scheduled_date: input.scheduled_date ?? null,
+      }).select().single();
+      if (error) throw error;
+      return data as unknown as ExternalPost;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: key, refetchType: "none" }),
+    onError: () => toast.error("Não consegui abrir o post."),
+  });
+
   const update = useMutation({
-    mutationFn: async ({ id, resend, ...input }: ExternalPostInput & { id: string; resend?: boolean }) => {
+    mutationFn: async ({ id, resend, publish, ...input }: ExternalPostInput & { id: string; resend?: boolean; publish?: boolean }) => {
       const patch: Record<string, unknown> = { ...input };
       if (resend) { patch.approval_status = "pendente"; patch.approval_updated_at = new Date().toISOString(); }
+      // publish = sai de rascunho, VINCULA o cliente e entra na fila de aprovação dele.
+      if (publish) {
+        patch.is_draft = false;
+        patch.external_client_id = clientId;
+        patch.approval_status = "pendente";
+        patch.approval_updated_at = new Date().toISOString();
+      }
       const { error } = await sbFrom("posts").update(patch).eq("id", id); if (error) throw error;
     },
     onSuccess: () => { toast.success("Post atualizado!"); qc.invalidateQueries({ queryKey: key }); qc.invalidateQueries({ queryKey: ["external-pending", agencyOwnerId] }); },
@@ -210,7 +252,7 @@ export function useExternalPosts(clientId: string | null) {
     onSettled: () => qc.invalidateQueries({ queryKey: key, refetchType: "none" }),
   });
 
-  return { posts: postsQ.data ?? [], isLoading: postsQ.isLoading, create, update, remove, moveStatus, setDate };
+  return { posts: postsQ.data ?? [], isLoading: postsQ.isLoading, create, createDraft, update, remove, moveStatus, setDate };
 }
 
 // Última vez que o cliente abriu o portal de aprovação (last_viewed_at do token ativo).
