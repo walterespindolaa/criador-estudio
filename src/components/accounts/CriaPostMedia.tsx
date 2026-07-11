@@ -42,7 +42,6 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
   const { list, uploadImage, uploadVideo, addDriveLink, remove, reorder } = useCriaPostMedia(postId);
   const imgRef = useRef<HTMLInputElement>(null);
   const vidRef = useRef<HTMLInputElement>(null);
-  const gifRef = useRef<HTMLInputElement>(null);
   const [driveUrl, setDriveUrl] = useState("");
   const [showDrive, setShowDrive] = useState(false);
   const [order, setOrder] = useState<string[]>([]);
@@ -67,7 +66,7 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
     ? (order.map((id) => media.find((m) => m.id === id)).filter(Boolean) as CriaMedia[])
     : media;
 
-  const onPick = async (e: React.ChangeEvent<HTMLInputElement>, kind: "image" | "video" | "gif") => {
+  const onPick = async (e: React.ChangeEvent<HTMLInputElement>, kind: "image" | "video") => {
     const files = Array.from(e.target.files ?? []); e.target.value = "";
     if (!files.length) return;
     const slots = remaining();
@@ -116,10 +115,8 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
       <div className="flex items-center gap-2 flex-wrap">
         <input ref={imgRef} type="file" accept="image/*,.heic,.heif" multiple hidden onChange={(e) => onPick(e, "image")} />
         <input ref={vidRef} type="file" accept="video/*" multiple hidden onChange={(e) => onPick(e, "video")} />
-        <input ref={gifRef} type="file" accept="image/gif" multiple hidden onChange={(e) => onPick(e, "gif")} />
         <Button type="button" size="sm" variant="outline" disabled={busy || full} onClick={() => imgRef.current?.click()}><ImagePlus className="h-4 w-4 mr-1.5" /> Imagem</Button>
         <Button type="button" size="sm" variant="outline" disabled={busy || full} onClick={() => vidRef.current?.click()}><Video className="h-4 w-4 mr-1.5" /> Vídeo</Button>
-        <Button type="button" size="sm" variant="outline" disabled={busy || full} onClick={() => gifRef.current?.click()}><FileImage className="h-4 w-4 mr-1.5" /> GIF</Button>
         <Button type="button" size="sm" variant="outline" disabled={busy || full} onClick={() => setShowDrive((s) => !s)}><Link2 className="h-4 w-4 mr-1.5" /> Link Drive</Button>
         {busy && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
         <span className={`ml-auto text-xs font-body ${full ? "text-orange-600 font-bold" : "text-muted-foreground"}`}>{count}/{MAX_MEDIA}</span>

@@ -38,7 +38,7 @@ import { UploadProgressIndicator } from "@/components/UploadProgressIndicator";
 
 const AppLayout = () => {
   const { profile, isLoading } = useProfile();
-  const { isManaging } = useActiveAccount();
+  const { isManaging, activeAccountId, managedAccounts, teamAccounts } = useActiveAccount();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -90,7 +90,13 @@ const AppLayout = () => {
 
   const hour = new Date().getHours();
   const greetWord = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
-  const firstName = (profile?.name ?? "").trim().split(" ")[0] || "criador";
+  // Gerenciando a conta de um cliente: a saudação e o avatar são do CLIENTE, não do gestor logado.
+  const managedAccount = isManaging
+    ? [...managedAccounts, ...teamAccounts].find((a) => a.owner_id === activeAccountId) ?? null
+    : null;
+  const displayName = managedAccount?.name ?? profile?.name ?? "";
+  const displayAvatarUrl = managedAccount ? managedAccount.avatar_url : profile?.avatar_url;
+  const firstName = displayName.trim().split(" ")[0] || "criador";
   const PAGE_TITLES: Record<string, string> = {
     "/app/ideias": "Ideias", "/app/aprovacao": "Aprovações", "/app/feed": "Meu Feed", "/app/tarefas": "Tarefas",
     "/app/criando": "Criando", "/app/metas": "Metas", "/app/arquivos": "Arquivos",
@@ -103,7 +109,7 @@ const AppLayout = () => {
   const heroEyebrow = isDash ? `${greetWord},` : undefined;
   const avatarNode = isDash ? (
     <Avatar className="h-11 w-11 shrink-0 border-2 border-white/40 shadow-sm">
-      <AvatarImage src={profile?.avatar_url ?? undefined} alt={firstName} />
+      <AvatarImage src={displayAvatarUrl ?? undefined} alt={firstName} />
       <AvatarFallback className="bg-white/20 font-display font-bold text-white">
         {firstName.charAt(0).toUpperCase()}
       </AvatarFallback>
