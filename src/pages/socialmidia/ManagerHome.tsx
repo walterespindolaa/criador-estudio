@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Camera, ArrowRight, Ticket, Settings, Users, Sparkles, Check } from "lucide-react";
+import { Camera, ArrowRight, Ticket, Settings, Users, Sparkles, Check, Gift } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -138,6 +138,19 @@ export default function ManagerHome() {
             <CopyButton text={partner.coupon_code} />
           </div>
         </>
+      )}
+
+      {/* Indique e ganhe: quem ainda não é parceira vê o convite direto no dashboard. */}
+      {!isPartner && (
+        <button type="button" onClick={() => navigate("/socialmidia/parceria")}
+          className="w-full mb-8 rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/10 via-card to-card px-4 py-3 flex items-center gap-3 text-left hover:border-primary/40 transition-colors">
+          <div className="w-10 h-10 rounded-xl bg-primary/15 grid place-items-center shrink-0"><Gift className="h-5 w-5 text-primary" /></div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-display font-bold text-foreground">Indique o CRIA e ganhe comissão recorrente</p>
+            <p className="text-xs text-muted-foreground font-body mt-0.5">Vire parceira, compartilhe seu cupom e receba todo mês enquanto a indicação for assinante.</p>
+          </div>
+          <ArrowRight className="h-4 w-4 text-primary shrink-0" />
+        </button>
       )}
 
       <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">Seus clientes</h2>

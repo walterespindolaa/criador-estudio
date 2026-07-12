@@ -247,7 +247,7 @@ function LeadDialog({ lead, onClose, onCreate, onUpdate, onDelete, saving }: {
           <L label="Valor mensal"><MoneyInput value={f.monthly_value} onChange={(v) => set({ monthly_value: v })} /></L>
           <L label="Potencial">
             <select value={f.closing_potential ?? ""} onChange={(e) => set({ closing_potential: (e.target.value || null) as CrmLeadInput["closing_potential"] })}
-              className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
+              className="w-full h-10 rounded-xl border border-input bg-card px-3 text-sm">
               <option value="">-</option><option value="alto">🟢 Alto</option><option value="medio">🟡 Médio</option><option value="baixo">🔴 Baixo</option>
             </select>
           </L>
@@ -366,12 +366,12 @@ function TaskEditDialog({ task, onClose }: { task: CrmTask; onClose: () => void 
           <div className="space-y-1.5"><Label className="text-xs">Título *</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} className="rounded-xl" /></div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5"><Label className="text-xs">Prioridade</Label>
-              <select value={priority} onChange={(e) => setPriority(e.target.value as CrmTaskPriority)} className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
+              <select value={priority} onChange={(e) => setPriority(e.target.value as CrmTaskPriority)} className="w-full h-10 rounded-xl border border-input bg-card px-3 text-sm">
                 <option value="baixa">Baixa</option><option value="media">Média</option><option value="alta">Alta</option><option value="urgente">Urgente</option>
               </select>
             </div>
             <div className="space-y-1.5"><Label className="text-xs">Status</Label>
-              <select value={status} onChange={(e) => setStatus(e.target.value as CrmTaskStatus)} className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
+              <select value={status} onChange={(e) => setStatus(e.target.value as CrmTaskStatus)} className="w-full h-10 rounded-xl border border-input bg-card px-3 text-sm">
                 <option value="pendente">Pendente</option><option value="em_andamento">Em andamento</option><option value="concluida">Concluída</option>
               </select>
             </div>

@@ -584,7 +584,7 @@ function RecordDialog({ record, context, clients, defaultDate, defaultCats, cust
                 </div>
               ) : (
                 <select value={f.category ?? ""} onChange={(e) => { if (e.target.value === "__add__") { setAddingCat(true); return; } set({ category: e.target.value, subcategory: "" }); }}
-                  className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
+                  className="w-full h-10 rounded-xl border border-input bg-card px-3 text-sm">
                   <option value="">sem categoria</option>
                   {cats.map((c) => <option key={c} value={c}>{c}</option>)}
                   <option value="__add__">＋ Adicionar categoria…</option>
@@ -592,7 +592,7 @@ function RecordDialog({ record, context, clients, defaultDate, defaultCats, cust
               )}
             </div>
             <div className="space-y-1.5"><Label className="text-xs">Status</Label>
-              <select value={f.status ?? "pendente"} onChange={(e) => set({ status: e.target.value as FinStatus })} className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
+              <select value={f.status ?? "pendente"} onChange={(e) => set({ status: e.target.value as FinStatus })} className="w-full h-10 rounded-xl border border-input bg-card px-3 text-sm">
                 <option value="pago">Pago</option><option value="pendente">Pendente</option><option value="atrasado">Atrasado</option>
               </select>
             </div>
@@ -607,7 +607,7 @@ function RecordDialog({ record, context, clients, defaultDate, defaultCats, cust
                 </div>
               ) : (
                 <select value={f.subcategory ?? ""} onChange={(e) => { if (e.target.value === "__add__") { setAddingSub(true); return; } set({ subcategory: e.target.value }); }}
-                  className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
+                  className="w-full h-10 rounded-xl border border-input bg-card px-3 text-sm">
                   <option value="">sem subcategoria</option>
                   {subs.map((s) => <option key={s} value={s}>{s}</option>)}
                   <option value="__add__">＋ Adicionar subcategoria…</option>
@@ -617,7 +617,7 @@ function RecordDialog({ record, context, clients, defaultDate, defaultCats, cust
           )}
           {context === "pj" && (
             <div className="space-y-1.5"><Label className="text-xs">Cliente (opcional)</Label>
-              <select value={f.crm_client_id ?? ""} onChange={(e) => set({ crm_client_id: e.target.value || null })} className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
+              <select value={f.crm_client_id ?? ""} onChange={(e) => set({ crm_client_id: e.target.value || null })} className="w-full h-10 rounded-xl border border-input bg-card px-3 text-sm">
                 <option value="">-</option>{clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>

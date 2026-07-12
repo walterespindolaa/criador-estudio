@@ -89,7 +89,7 @@ export function ContractGeneratorDialog({ open, onOpenChange }: Props) {
           <div className="space-y-5 mt-2">
             <Sec title="Cliente (CONTRATANTE)">
               <Fld label="Selecionar cliente da carteira (opcional)" full>
-                <select value={clientId} onChange={(e) => setClientId(e.target.value)} className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
+                <select value={clientId} onChange={(e) => setClientId(e.target.value)} className="w-full h-10 rounded-xl border border-input bg-card px-3 text-sm">
                   <option value="">preencher manualmente</option>
                   {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>

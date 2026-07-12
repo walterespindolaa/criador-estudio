@@ -110,7 +110,8 @@ export function useExternalClients() {
 
   // Link de aprovação. Sem período = manda TUDO (comportamento padrão).
   // Com período = gera um link novo que só mostra os posts daquele intervalo.
-  const copyLink = async (clientId: string, period?: { start: string; end: string } | null) => {
+  // Retorna a URL pra quem quiser abrir o portal em nova aba além de copiar.
+  const copyLink = async (clientId: string, period?: { start: string; end: string } | null): Promise<string | undefined> => {
     let token: string | undefined;
     if (period?.start && period?.end) {
       const { data: created, error } = await sbFrom("approval_tokens")
@@ -133,6 +134,7 @@ export function useExternalClients() {
     const url = `${PORTAL_ORIGIN}/aprovar/${token}`;
     try { await navigator.clipboard.writeText(url); toast.success(period ? "Link do período copiado!" : "Link de aprovação copiado!"); }
     catch { toast.message(url); }
+    return url;
   };
 
   return { clients: clientsQ.data ?? [], isLoading: clientsQ.isLoading, pending: pendingQ.data ?? {}, create, update, setActive, copyLink };

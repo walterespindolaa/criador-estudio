@@ -236,7 +236,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                             <input type="date" value={p.scheduled_date ?? ""}
                               onClick={(e) => e.stopPropagation()}
                               onChange={(e) => { e.stopPropagation(); setDate.mutate({ id: p.id, scheduled_date: e.target.value || null }); }}
-                              className="mt-1 h-6 w-full rounded-md border border-border bg-background px-1.5 text-[11px] font-body text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+                              className="mt-1 h-6 w-full rounded-md border border-border bg-card px-1.5 text-[11px] font-body text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
                             {p.caption && <p className="text-xs text-muted-foreground font-body line-clamp-2 mt-0.5">{p.caption}</p>}
                             {p.approval_status === "ajuste_solicitado" && p.last_comment && p.last_comment_role === "cliente_externo" && (
                               <div className="mt-2 text-xs font-body text-orange-700 bg-orange-50 border border-orange-100 rounded-lg px-2.5 py-1.5">Cliente pediu: "{p.last_comment}"</div>

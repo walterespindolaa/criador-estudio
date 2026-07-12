@@ -138,14 +138,14 @@ function ContractDialog({ contract, clients, saving, onClose, onCreate, onUpdate
         <div className="space-y-3 mt-2">
           <div className="space-y-1.5"><Label className="text-xs">Título *</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Contrato - Café Aroma" className="rounded-xl" /></div>
           <div className="space-y-1.5"><Label className="text-xs">Cliente</Label>
-            <select value={clientId} onChange={(e) => setClientId(e.target.value)} className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
+            <select value={clientId} onChange={(e) => setClientId(e.target.value)} className="w-full h-10 rounded-xl border border-input bg-card px-3 text-sm">
               <option value="">-</option>{clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5"><Label className="text-xs">Valor mensal</Label><MoneyInput value={value} onChange={setValue} /></div>
             <div className="space-y-1.5"><Label className="text-xs">Status</Label>
-              <select value={status} onChange={(e) => setStatus(e.target.value as CrmContract["status"])} className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm">
+              <select value={status} onChange={(e) => setStatus(e.target.value as CrmContract["status"])} className="w-full h-10 rounded-xl border border-input bg-card px-3 text-sm">
                 <option value="enviado">Enviado</option><option value="fechado">Fechado</option><option value="encerrado">Encerrado</option>
               </select>
             </div>

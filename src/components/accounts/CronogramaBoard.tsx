@@ -230,7 +230,7 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
                 onChange={(e) => setHandle(e.target.value.replace(/^@/, ""))}
                 onBlur={() => onUpdate({ id: c.id, client_handle: handle.replace(/^@/, "") || null })}
                 placeholder="cliente"
-                className="h-6 w-32 pl-5 pr-1.5 text-xs rounded-md border border-border bg-background text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                className="h-6 w-32 pl-5 pr-1.5 text-xs rounded-md border border-border bg-card text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
           </div>

@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, ExternalLink, Loader2, Plus, Wallet, Send } from "lucide-react";
+import { ArrowLeft, ExternalLink, Link2, Loader2, Plus, Settings2, Wallet, Send } from "lucide-react";
 import { toast } from "sonner";
 import { useCrmClient } from "@/hooks/useCrm";
 import { useExternalClients } from "@/hooks/useCriaPost";
 import { useFinRecords, useCreateFinRecord, type FinType } from "@/hooks/useFinance";
 import { ClientDetail } from "@/components/accounts/CriaPostBoard";
+import { ExternalClientDialog } from "@/components/accounts/ExternalClientDialog";
 import { saveLastClient } from "@/components/accounts/ClientSwitcher";
 import { CriativoTab } from "@/components/hubcria/CriativoTab";
 import { useHasHubCria } from "@/hooks/useHubCria";
@@ -49,8 +50,24 @@ export default function ClienteHub() {
   const visibleTabs = useMemo(() => TABS.filter((t) => !("gated" in t && t.gated) || hasHubCria), [hasHubCria]);
   const activeTab = tab && visibleTabs.some((t) => t.key === tab) ? tab : "visao-geral";
   const { data: client, isLoading } = useCrmClient(id);
-  const { clients: ext, create: createExt } = useExternalClients();
+  const { clients: ext, create: createExt, pending, copyLink } = useExternalClients();
   const extClient = useMemo(() => ext.find((e) => e.crm_client_id === id) ?? null, [ext, id]);
+  const pendCount = extClient ? (pending[extClient.id] ?? 0) : 0;
+
+  // Ações do cabeçalho: copiar o link de aprovação (toast no hook) e abrir o portal em nova aba.
+  const [copying, setCopying] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const doCopyLink = async () => {
+    if (!extClient) return;
+    setCopying(true);
+    await copyLink(extClient.id);
+    setCopying(false);
+  };
+  const openPortal = async () => {
+    if (!extClient) return;
+    const url = await copyLink(extClient.id);
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   const goTab = (t: string) => navigate(`/socialmidia/clientes/${id}/${t}`);
 
@@ -77,18 +94,41 @@ export default function ClienteHub() {
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="pb-24 md:pb-0">
       <button onClick={() => navigate("/socialmidia/clientes")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground font-body mb-4"><ArrowLeft className="h-4 w-4" /> Clientes</button>
 
-      <div className="flex items-center gap-3 mb-4">
-        <span className="relative w-12 h-12 rounded-full grid place-items-center text-white font-display font-bold shrink-0 overflow-hidden" style={{ background: "linear-gradient(135deg,#0F6E56,#1d9e75)" }}>
-          {initial(client.name)}
-          {client.logo && <img src={client.logo} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 w-full h-full object-cover" />}
-        </span>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-display font-extrabold text-foreground tracking-tight truncate">{client.name}</h1>
-          <p className="text-sm text-muted-foreground font-body truncate">
-            {client.instagram ? `@${client.instagram.replace(/^@/, "")}` : "sem @"}{client.cria_owner_id ? " · usa o Cria" : " · aprova por link"}
-          </p>
+      {/* Cabeçalho no padrão vitrine: logo grande, badges de status e ações sempre visíveis. */}
+      <div className="mb-4 rounded-3xl border border-border bg-card p-4 sm:p-5">
+        <div className="flex flex-wrap items-center gap-4">
+          <span className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-full grid place-items-center text-white text-xl font-display font-bold shrink-0 overflow-hidden ring-2 ring-border/60" style={{ background: "linear-gradient(135deg,#0F6E56,#1d9e75)" }}>
+            {initial(client.name)}
+            {client.logo && <img src={client.logo} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 w-full h-full object-cover" />}
+          </span>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-display font-extrabold text-foreground tracking-tight truncate">{client.name}</h1>
+            <p className="text-sm text-muted-foreground font-body truncate">
+              {client.instagram ? `@${client.instagram.replace(/^@/, "")}` : "sem @"}{client.cria_owner_id ? " · usa o Cria" : " · aprova por link"}
+            </p>
+            <div className="flex gap-1.5 mt-1.5 flex-wrap">
+              {extClient
+                ? <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/12 text-emerald-600 font-body font-semibold">Link de aprovação ativo</span>
+                : <span className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-body">Cria Post não ativado</span>}
+              {pendCount > 0 && <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-body font-semibold">{pendCount} pendente{pendCount > 1 ? "s" : ""}</span>}
+            </div>
+          </div>
+          {extClient && (
+            <div className="flex gap-2 shrink-0 flex-wrap">
+              <Button onClick={doCopyLink} disabled={copying}>
+                {copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Link2 className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Link de aprovação</span></>}
+              </Button>
+              <Button variant="outline" className="px-3" onClick={openPortal} title="Abrir portal do cliente em nova aba" aria-label="Abrir portal do cliente em nova aba">
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" onClick={() => setEditOpen(true)}>
+                <Settings2 className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Personalizar</span>
+              </Button>
+            </div>
+          )}
         </div>
       </div>
+      <ExternalClientDialog open={editOpen} onOpenChange={setEditOpen} client={extClient} />
 
       {/* Abas por URL */}
       <div className="flex gap-1 border-b border-border mb-5 overflow-x-auto">

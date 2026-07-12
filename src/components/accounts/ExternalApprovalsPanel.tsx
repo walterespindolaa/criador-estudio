@@ -55,6 +55,26 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
   );
   const sections = statusFilter ? SECTIONS.filter((s) => s.key === statusFilter) : SECTIONS;
 
+  // Sumário por cliente: contagem de cada status pros chips do topo (clicáveis = filtro).
+  const summary = useMemo(() => {
+    const m = new Map<string, { client: ExternalClient; pendente: number; ajuste: number; aprovado: number }>();
+    posts.forEach((p) => {
+      const c = byId[p.external_client_id];
+      if (!c) return;
+      const s = m.get(c.id) ?? { client: c, pendente: 0, ajuste: 0, aprovado: 0 };
+      const st = p.approval_status ?? "pendente";
+      if (st === "pendente") s.pendente += 1;
+      else if (st === "ajuste_solicitado") s.ajuste += 1;
+      else s.aprovado += 1;
+      m.set(c.id, s);
+    });
+    return Array.from(m.values()).sort((a, b) => (b.pendente + b.ajuste) - (a.pendente + a.ajuste));
+  }, [posts, byId]);
+
+  // Celebração: tudo que está visível foi aprovado pelo(s) cliente(s).
+  const allApproved = shown.length > 0 && shown.every((p) => (p.approval_status ?? "pendente") === "aprovado");
+  const celebName = clientId ? byId[clientId]?.name ?? null : null;
+
   const openClient = (ext: ExternalClient | undefined) => {
     if (!ext) return;
     if (ext.crm_client_id) {
@@ -116,7 +136,49 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
   return (
     <div>
       {title && <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">{title}</h2>}
-      {activeClients.length > 1 && (
+
+      {/* Sumário por cliente: chips com a contagem de cada status. Clicar filtra, clicar de novo limpa. */}
+      {!compact && summary.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          {summary.map(({ client: c, pendente, ajuste, aprovado }) => {
+            const on = clientId === c.id;
+            return (
+              <button key={c.id} type="button" onClick={() => setClientId(on ? "" : c.id)}
+                aria-pressed={on}
+                className={`flex items-center gap-2 rounded-2xl border px-2.5 py-1.5 transition-all ${on ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-card hover:border-primary/40"}`}>
+                <span className="relative grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-full text-[11px] font-display font-bold text-white"
+                  style={{ background: c.color || "#8B5CF6" }}>
+                  {initial(c.name)}
+                  {c.logo_url && <img src={c.logo_url} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 h-full w-full object-cover" />}
+                </span>
+                <span className="max-w-[110px] truncate text-xs font-body font-semibold text-foreground">{c.name}</span>
+                <span className="flex items-center gap-1">
+                  {pendente > 0 && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">{pendente} aguardando</span>}
+                  {ajuste > 0 && <span className="rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-700">{ajuste} em ajuste</span>}
+                  {aprovado > 0 && <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-bold text-green-700">{aprovado} aprovado{aprovado > 1 ? "s" : ""}</span>}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Tudo aprovado no recorte visível: estado de celebração. */}
+      {!compact && allApproved && (
+        <div className="mb-4 flex items-center gap-4 rounded-2xl border border-green-500/25 bg-green-50 p-5">
+          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-green-100">
+            <CheckCircle2 className="h-7 w-7 text-green-600" />
+          </div>
+          <div className="min-w-0">
+            <p className="font-display font-bold text-green-800">Tudo aprovado!</p>
+            <p className="text-sm font-body text-green-700">
+              {celebName ? `Os posts de ${celebName} estão liberados pra produção e agenda.` : "Todos os posts visíveis foram aprovados. Conteúdo liberado pra produção e agenda."}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {compact && activeClients.length > 1 && (
         <div className="mb-3">
           <select value={clientId} onChange={(e) => setClientId(e.target.value)}
             className="rounded-xl border border-border bg-card px-3 py-2 text-sm font-body" aria-label="Filtrar por cliente">

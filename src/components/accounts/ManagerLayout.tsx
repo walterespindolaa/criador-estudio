@@ -5,7 +5,7 @@ import { BroadcastBanner } from "@/components/BroadcastBanner";
 import { NotificationNudge } from "@/components/NotificationNudge";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import {
-  Home, Boxes, Handshake, DollarSign, Users, ListChecks, ChevronUp,
+  Home, Boxes, Handshake, DollarSign, Users, ListChecks, ChevronUp, Gift,
   Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, Sparkles, CalendarDays, Trash2, UserPlus, type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -235,6 +235,12 @@ export default function ManagerLayout() {
         {/* HeroBand (desktop), sangra full-width por trás do rail */}
         <div className="hidden md:block md:-ml-[104px] md:w-[calc(100%+104px)]">
           <HeroBand eyebrow={isDash ? `${greet},` : undefined} title={heroTitle} avatar={avatarNode}>
+            {/* Indique e ganhe: sempre visível. Parceira vai direto pras comissões. */}
+            <button type="button" onClick={onNavComissoes}
+              title={isPartner ? "Ver suas comissões" : "Indique o CRIA e ganhe comissão recorrente"}
+              className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-body font-semibold text-white backdrop-blur transition-colors hover:bg-white/25">
+              <Gift className="h-3.5 w-3.5" /> Indique e ganhe
+            </button>
             <div className="flex items-center gap-2 rounded-2xl bg-white/15 px-2 py-1 backdrop-blur">
               {canClients && <ClientSwitcher />}
               <HelpButton light />
