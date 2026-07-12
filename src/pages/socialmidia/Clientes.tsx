@@ -22,8 +22,10 @@ export default function Clientes() {
   const createClient = useCreateCrmClient();
   // Foto da conta CRIA do cliente sempre atual: avatar do profile → logo manual → inicial.
   const { data: criaProfiles } = useCriaClientProfiles();
-  const avatarOf = (c: CrmClient) =>
-    (c.cria_owner_id ? criaProfiles?.[c.cria_owner_id]?.avatar_url ?? null : null) ?? c.logo;
+  const avatarOf = (c: CrmClient) => {
+    const criaAvatar = c.cria_owner_id ? criaProfiles?.[c.cria_owner_id]?.avatar_url : null;
+    return criaAvatar ?? c.logo;
+  };
 
   const [filter, setFilter] = useState<"todos" | "cria" | "link">("todos");
   // Filtro Ativos/Inativos: clicar de novo no chip selecionado limpa o filtro.

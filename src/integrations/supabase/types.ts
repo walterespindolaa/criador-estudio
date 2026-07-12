@@ -985,6 +985,7 @@ export type Database = {
           notes: string | null
           owner_name: string | null
           payment_day: number | null
+          payment_method: string | null
           persona: Json
           phone: string | null
           plan_name: string | null
@@ -1020,6 +1021,7 @@ export type Database = {
           notes?: string | null
           owner_name?: string | null
           payment_day?: number | null
+          payment_method?: string | null
           persona?: Json
           phone?: string | null
           plan_name?: string | null
@@ -1055,6 +1057,7 @@ export type Database = {
           notes?: string | null
           owner_name?: string | null
           payment_day?: number | null
+          payment_method?: string | null
           persona?: Json
           phone?: string | null
           plan_name?: string | null
@@ -1557,6 +1560,7 @@ export type Database = {
           manager_id: string
           name: string
           notes: string | null
+          portal_settings: Json
         }
         Insert: {
           active?: boolean
@@ -1570,6 +1574,7 @@ export type Database = {
           manager_id: string
           name: string
           notes?: string | null
+          portal_settings?: Json
         }
         Update: {
           active?: boolean
@@ -1583,6 +1588,7 @@ export type Database = {
           manager_id?: string
           name?: string
           notes?: string | null
+          portal_settings?: Json
         }
         Relationships: [
           {
@@ -1901,6 +1907,7 @@ export type Database = {
           end_date: string | null
           id: string
           manager_id: string
+          payment_method: string | null
           start_date: string
           subcategory: string | null
           type: string
@@ -1918,6 +1925,7 @@ export type Database = {
           end_date?: string | null
           id?: string
           manager_id: string
+          payment_method?: string | null
           start_date?: string
           subcategory?: string | null
           type?: string
@@ -1935,6 +1943,7 @@ export type Database = {
           end_date?: string | null
           id?: string
           manager_id?: string
+          payment_method?: string | null
           start_date?: string
           subcategory?: string | null
           type?: string
@@ -4443,6 +4452,7 @@ export type Database = {
           brand_color: string
           client_logo: string
           client_name: string
+          instagram_handle: string
           manager_name: string
         }[]
       }
@@ -4465,6 +4475,12 @@ export type Database = {
           referred_name: string
           status: string
           unlocked_at: string
+        }[]
+      }
+      get_portal_settings: {
+        Args: { _token: string }
+        Returns: {
+          settings: Json
         }[]
       }
       get_proposal_by_token: { Args: { _token: string }; Returns: Json }
@@ -4572,7 +4588,25 @@ export type Database = {
           pendentes: number
         }[]
       }
+      manager_client_brandbook: {
+        Args: { client_owner_id: string }
+        Returns: Json
+      }
+      manager_client_instagram: {
+        Args: { client_owner_id: string }
+        Returns: Json
+      }
       manager_client_posts: { Args: { client_owner_id: string }; Returns: Json }
+      manager_clients_cria_profiles: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          cria_owner_id: string
+          name: string
+          niche: string
+        }[]
+      }
+      manager_owns_cria_client: { Args: { _owner: string }; Returns: boolean }
       move_to_dlq: {
         Args: {
           dlq_name: string
