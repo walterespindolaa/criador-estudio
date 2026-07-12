@@ -199,7 +199,7 @@ export default function Contas() {
             <ol className="space-y-1 text-[12px] font-body text-foreground/80 list-decimal list-inside">
               <li>O cliente recebe um e-mail pra criar a senha (conta Studio completa, grátis pra ele).</li>
               <li>Você abre a ficha dele em <strong>Clientes</strong> e monta posts, cronograma e relatório.</li>
-              <li>Ele aprova o conteúdo por link (ou dentro do Cria), acompanhe em <strong>Acompanhamento de Aprovações</strong>.</li>
+              <li>Ele aprova o conteúdo por link (ou dentro do Cria), acompanhe em <strong>Aprovações</strong>.</li>
               <li>Tudo com a sua cara: relatórios e acesso white-label.</li>
             </ol>
           </div>

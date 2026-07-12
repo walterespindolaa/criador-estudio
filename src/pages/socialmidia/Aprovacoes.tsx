@@ -10,7 +10,7 @@ export default function Aprovacoes() {
   const [apprFilter, setApprFilter] = useState<ApprovalFilter>(null);
   return (
     <div>
-      <ManagerSectionTitle t="Acompanhamento de Aprovações" s="Todas as pendências dos seus clientes num lugar só." />
+      <ManagerSectionTitle t="Aprovações" s="Todas as pendências dos seus clientes num lugar só, do Cria e por link." />
       <div className="flex items-center gap-2 mb-4 flex-wrap">
         {([["Todas", null], ["Em ajuste", "ajuste_solicitado"], ["Pendentes", "pendente"], ["Aprovados", "aprovado"]] as [string, ApprovalFilter][]).map(([label, val]) => (
           <button key={label} onClick={() => setApprFilter(val)}
@@ -19,6 +19,10 @@ export default function Aprovacoes() {
         ))}
       </div>
       <ApprovalTracker hideHeader statusFilter={apprFilter} />
+      {/* Aprovações por link (Cria Post) no mesmo lugar: acaba a caça em duas telas. */}
+      <div className="mt-6">
+        <ExternalApprovalsPanel statusFilter={apprFilter} compact title="Aprovação por link (Cria Post)" />
+      </div>
     </div>
   );
 }
