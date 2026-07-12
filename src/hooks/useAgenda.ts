@@ -66,11 +66,11 @@ export function useAddCreation() {
   const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { day: string; crm_client_id?: string | null; client_name?: string | null; team?: string | null }) => {
+    mutationFn: async (input: { day: string; crm_client_id?: string | null; client_name?: string | null; team?: string | null; note?: string | null }) => {
       if (!agencyOwnerId) throw new Error("Not authenticated");
       const { error } = await sbFrom("agenda_creations").insert({
         manager_id: agencyOwnerId, day: input.day,
-        crm_client_id: input.crm_client_id ?? null, client_name: input.client_name ?? null, team: input.team ?? null,
+        crm_client_id: input.crm_client_id ?? null, client_name: input.client_name ?? null, team: input.team ?? null, note: input.note ?? null,
       } as never);
       if (error) throw error;
     },

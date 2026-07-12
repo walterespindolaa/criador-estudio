@@ -17,7 +17,6 @@ import {
 } from "@/hooks/useCronograma";
 import { useExternalClients } from "@/hooks/useCriaPost";
 import { SEGMENTOS, datasPara, segmentoDoTexto, type SegmentKey } from "@/lib/datasComemorativas";
-import { useExternalClients } from "@/hooks/useCriaPost";
 import { useCrmClients } from "@/hooks/useCrm";
 
 const TYPE_COLOR: Record<string, string> = {
