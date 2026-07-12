@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { toast } from "sonner";
 
 export type FinType = "entrada" | "despesa";
@@ -154,5 +155,148 @@ export function useDeleteFinByGroup() {
     mutationFn: async (group: string) => { const { error } = await sbFrom("fin_records").delete().eq("transfer_group", group); if (error) throw error; },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records"] }),
     onError: () => toast.error("Erro ao excluir transferência."),
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// MENSALIDADES — instância mensal (modelo absorvido do Atlas).
+// Cada mensalidade tem vida própria no mês: nasce PENDENTE, e você pode
+//   • confirmar  → cria o lançamento (fin_record) e guarda o vínculo
+//   • desfazer   → apaga o lançamento e volta a pendente   ← faltava isso
+//   • pular      → status "pulado", com motivo, sem sumir do histórico
+// ═══════════════════════════════════════════════════════════════════════
+
+export type MonthlyStatus = "pendente" | "pago" | "pulado";
+export type FinMonthly = {
+  id: string; manager_id: string; crm_client_id: string | null;
+  month_ref: string; due_date: string; amount: number;
+  status: MonthlyStatus; skip_reason: string | null;
+  fin_record_id: string | null; paid_at: string | null; created_at: string;
+};
+
+// 1º dia do mês, no formato do banco.
+export const monthRefOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+// Vencimento real: respeita o payment_day do cliente sem estourar o fim do mês.
+export function dueDateFor(monthRef: string, paymentDay: number | null | undefined): string {
+  const [y, m] = monthRef.split("-").map(Number);
+  const lastDay = new Date(y, m, 0).getDate();
+  const day = Math.min(Math.max(Number(paymentDay) || 1, 1), lastDay);
+  return `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+export function useFinMonthly(monthRef: string) {
+  const { agencyOwnerId } = useActiveAccount();
+  return useQuery<FinMonthly[]>({
+    queryKey: ["fin-monthly", agencyOwnerId, monthRef],
+    enabled: !!agencyOwnerId && !!monthRef,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("fin_monthly")
+        .select("*").eq("manager_id", agencyOwnerId!).eq("month_ref", monthRef)
+        .order("due_date", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as FinMonthly[];
+    },
+  });
+}
+
+// Garante que existe uma instância do mês pra cada cliente ativo com mensalidade.
+// Idempotente: o UNIQUE (crm_client_id, month_ref) impede duplicar.
+export function useEnsureMonthly() {
+  const { agencyOwnerId } = useActiveAccount();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ monthRef, clients }: {
+      monthRef: string;
+      clients: { id: string; monthly_value: number | null; payment_day: number | null; status?: string }[];
+    }) => {
+      if (!agencyOwnerId) throw new Error("Sem sessão");
+      const rows = clients
+        .filter((c) => c.status !== "inativo" && Number(c.monthly_value) > 0)
+        .map((c) => ({
+          manager_id: agencyOwnerId,
+          crm_client_id: c.id,
+          month_ref: monthRef,
+          due_date: dueDateFor(monthRef, c.payment_day),
+          amount: Number(c.monthly_value) || 0,
+          status: "pendente" as MonthlyStatus,
+        }));
+      if (!rows.length) return;
+      // ignoreDuplicates: não sobrescreve o que já foi pago/pulado.
+      const { error } = await sbFrom("fin_monthly")
+        .upsert(rows as never, { onConflict: "crm_client_id,month_ref", ignoreDuplicates: true } as never);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-monthly"] }),
+  });
+}
+
+// Confirmar recebimento: cria o lançamento e vincula à instância.
+export function useConfirmMonthly() {
+  const { agencyOwnerId } = useActiveAccount();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ m, clientName }: { m: FinMonthly; clientName: string }) => {
+      if (!agencyOwnerId) throw new Error("Sem sessão");
+      const { data: rec, error: e1 } = await sbFrom("fin_records").insert({
+        manager_id: agencyOwnerId, crm_client_id: m.crm_client_id, context: "pj",
+        type: "entrada", description: `Mensalidade — ${clientName}`, category: "Mensalidade",
+        amount: m.amount, status: "pago", date: m.due_date, recurring: true,
+      } as never).select("id").single();
+      if (e1) throw e1;
+      const { error: e2 } = await sbFrom("fin_monthly").update({
+        status: "pago", paid_at: new Date().toISOString(), fin_record_id: (rec as { id: string }).id,
+      } as never).eq("id", m.id);
+      if (e2) throw e2;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["fin-monthly"] });
+      qc.invalidateQueries({ queryKey: ["fin-records"] });
+      toast.success("Recebimento confirmado.");
+    },
+    onError: () => toast.error("Não consegui confirmar."),
+  });
+}
+
+// DESFAZER: apaga o lançamento criado e volta a instância pra pendente.
+export function useUndoMonthly() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (m: FinMonthly) => {
+      if (m.fin_record_id) {
+        const { error } = await sbFrom("fin_records").delete().eq("id", m.fin_record_id);
+        if (error) throw error;
+      }
+      const { error } = await sbFrom("fin_monthly").update({
+        status: "pendente", paid_at: null, fin_record_id: null, skip_reason: null,
+      } as never).eq("id", m.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["fin-monthly"] });
+      qc.invalidateQueries({ queryKey: ["fin-records"] });
+      toast.success("Desfeito. A mensalidade voltou pra pendente.");
+    },
+    onError: () => toast.error("Não consegui desfazer."),
+  });
+}
+
+// PULAR o mês (com motivo). Não vira lançamento e não conta na previsão.
+export function useSkipMonthly() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ m, reason }: { m: FinMonthly; reason?: string }) => {
+      // Se já tinha virado lançamento, some com ele antes de pular.
+      if (m.fin_record_id) await sbFrom("fin_records").delete().eq("id", m.fin_record_id);
+      const { error } = await sbFrom("fin_monthly").update({
+        status: "pulado", skip_reason: reason?.trim() || null, paid_at: null, fin_record_id: null,
+      } as never).eq("id", m.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["fin-monthly"] });
+      qc.invalidateQueries({ queryKey: ["fin-records"] });
+      toast.success("Mensalidade pulada neste mês.");
+    },
+    onError: () => toast.error("Não consegui pular."),
   });
 }

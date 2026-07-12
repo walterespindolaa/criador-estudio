@@ -54,15 +54,17 @@ Documento vivo. Marcar `[x]` conforme entrega. Ordem de ataque definida: **Agend
 - [x] Foto do Cria agora **sincroniza** pro Cria Gestão (`crm-sync-from-cria` passou a trazer o `avatar_url`)
 - [x] **Datas comemorativas por segmento** — a lista deixou de ser só gastronomia. Agora tem **Geral (feriados nacionais)** + 9 segmentos (gastronomia, fitness, finanças, beleza, moda, pet, educação, saúde, imobiliário). O picker do cronograma tem chips de segmento e **sugere sozinho** o do cliente pelo campo "Segmento" (`segmentoDoTexto`).
 
-## Bloco 5: Cria Caixa / Financeiro — aguardar o Atlas
+## ✅ Bloco 5: Cria Caixa / Financeiro — CONCLUÍDO
 
-- [ ] **Desfazer** "marcar recebido" + botão **pular mensalidade**
-- [ ] Status do lançamento: **pendente / pago / atrasado**
-- [ ] Card destaque: **previsão total do mês** (bruto e líquido após custos)
-- [ ] **Calendário de recebimentos/pagamentos** por dia de vencimento (`payment_day` já existe)
-- [ ] Categoria **projetos avulsos**
-- [ ] **Relatório com extração por período** (mês/ano/intervalo) — evolução, recebimentos, gastos
-- [ ] Absorver financeiro + relatórios do **Atlas** (Walter vai mandar o GitHub)
+- [x] **Mensalidade como instância do mês** (`fin_monthly`) — modelo absorvido do Atlas (template + instância)
+- [x] **Desfazer** o "marcar recebido" (apaga o lançamento e volta pra pendente) ← era impossível antes
+- [x] **Pular mensalidade** com motivo (status `pulado`, fica no histórico, não conta na previsão) + reverter
+- [x] Status do lançamento **pendente / pago / atrasado** editável direto na lista (o campo já existia no banco, só não estava exposto)
+- [x] Card em destaque: **previsão total do mês** (bruto = recebido + a receber; líquido = bruto − despesas)
+- [x] **Calendário de recebimentos e pagamentos** — cada mensalidade cai no seu vencimento (`payment_day` do cliente); despesas do mês também
+- [x] Categoria **"Projeto avulso"** — já existia nas entradas PJ
+- [x] **Relatório por período** (mês / 12 meses / ano / intervalo livre) com evolução mês a mês e **exportação CSV**
+- [x] Marca "Atrasado" automática na mensalidade vencida e não paga
 
 ---
 

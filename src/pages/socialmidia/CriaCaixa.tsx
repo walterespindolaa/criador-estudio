@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Plus, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, Pencil, Building2, User, Check, Repeat, ArrowLeftRight } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, Pencil, Building2, User, Check, Repeat, ArrowLeftRight, RotateCcw, SkipForward } from "lucide-react";
 import { toast } from "sonner";
 import {
   useFinRecords, useCreateFinRecord, useUpdateFinRecord, useDeleteFinRecord, useFinRecurring, useGenerateRecurring, useDeleteFinByGroup,
-  type FinRecord, type FinType, type FinStatus, type FinContext, type FinRecordInput,
+  useFinMonthly, useEnsureMonthly, useConfirmMonthly, useUndoMonthly, useSkipMonthly,
+  type FinRecord, type FinType, type FinStatus, type FinContext, type FinRecordInput, type FinMonthly,
 } from "@/hooks/useFinance";
 import { useCrmClients } from "@/hooks/useCrm";
 import { useManagerProfile } from "@/hooks/useModules";
@@ -17,7 +18,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+
+const pad0 = (n: number) => String(n).padStart(2, "0");
 import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
@@ -66,6 +69,7 @@ function CaixaInner() {
   const { data: clients = [] } = useCrmClients();
   const { profile, save } = useManagerProfile();
   const del = useDeleteFinRecord();
+  const upd = useUpdateFinRecord();   // status editável direto na lista
   const createRec = useCreateFinRecord();
   const { data: recurring = [] } = useFinRecurring();
   const generate = useGenerateRecurring();
@@ -96,10 +100,38 @@ function CaixaInner() {
   const recebido = monthCtx.filter((r) => r.type === "entrada" && r.status === "pago").reduce((s, r) => s + Number(r.amount), 0);
   const despesas = monthCtx.filter((r) => r.type === "despesa").reduce((s, r) => s + Number(r.amount), 0);
 
-  const activeClients = useMemo(() => clients.filter((c) => c.active && Number(c.monthly_value) > 0), [clients]);
-  const paidFor = (cid: string) => monthCtx.some((r) => r.type === "entrada" && r.status === "pago" && r.crm_client_id === cid);
+  // ── Mensalidades como INSTÂNCIA do mês (fin_monthly) ──
+  const monthRef = `${ym.y}-${pad0(ym.m + 1)}-01`;
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const { data: monthlies = [] } = useFinMonthly(monthRef);
+  const ensureMonthly = useEnsureMonthly();
+  const confirmMonthly = useConfirmMonthly();
+  const undoMonthly = useUndoMonthly();
+  const skipMonthly = useSkipMonthly();
+  const [skipping, setSkipping] = useState<FinMonthly | null>(null);
+  const [skipReason, setSkipReason] = useState("");
+
+  const activeClients = useMemo(
+    () => clients.filter((c) => (c.status ?? "ativo") !== "inativo" && Number(c.monthly_value) > 0),
+    [clients],
+  );
+
+  // Cria as instâncias do mês (idempotente — não sobrescreve o que já foi pago/pulado).
+  useEffect(() => {
+    if (!activeClients.length) return;
+    ensureMonthly.mutate({
+      monthRef,
+      clients: activeClients.map((c) => ({ id: c.id, monthly_value: c.monthly_value, payment_day: c.payment_day, status: c.status })),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monthRef, activeClients.length]);
+
   const mrr = activeClients.reduce((s, c) => s + Number(c.monthly_value), 0);
-  const aReceber = activeClients.filter((c) => !paidFor(c.id)).reduce((s, c) => s + Number(c.monthly_value), 0);
+  // A receber = só o que está PENDENTE (pulado não entra na conta).
+  const aReceber = monthlies.filter((m) => m.status === "pendente").reduce((s, m) => s + Number(m.amount), 0);
+  // Previsão do mês: bruto = recebido + a receber; líquido = bruto − despesas.
+  const previstoBruto = recebido + aReceber;
+  const previstoLiquido = previstoBruto - despesas;
   const clientProfit = useMemo(() => {
     const byClient = new Map<string, { receita: number; custo: number }>();
     monthCtx.forEach((r) => {
@@ -226,12 +258,32 @@ function CaixaInner() {
       )}
 
       {isPj ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-          <Metric label="Recebido" value={brl(recebido)} tone="green" />
-          <Metric label="A receber" value={brl(aReceber)} tone="amber" />
-          <Metric label="Despesas" value={brl(despesas)} tone="red" />
-          <Metric label="Lucro do mês" value={brl(recebido - despesas)} tone={recebido - despesas >= 0 ? "green" : "red"} />
-        </div>
+        <>
+          {/* PREVISÃO DO MÊS — em destaque. Bruto = já recebido + o que falta receber. Líquido = bruto − despesas. */}
+          <div className="rounded-2xl border border-primary/25 bg-primary/[0.04] p-4 mb-3">
+            <div className="flex items-end justify-between gap-4 flex-wrap">
+              <div>
+                <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider">Previsão total do mês (bruto)</p>
+                <p className="text-3xl font-display font-extrabold text-foreground mt-0.5">{brl(previstoBruto)}</p>
+                <p className="text-[12px] font-body text-muted-foreground mt-0.5">
+                  {brl(recebido)} já recebido + {brl(aReceber)} a receber
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider">Líquido previsto</p>
+                <p className={cn("text-2xl font-display font-extrabold mt-0.5", previstoLiquido >= 0 ? "text-green-600" : "text-red-500")}>{brl(previstoLiquido)}</p>
+                <p className="text-[12px] font-body text-muted-foreground mt-0.5">depois de {brl(despesas)} de despesas</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+            <Metric label="Recebido" value={brl(recebido)} tone="green" />
+            <Metric label="A receber" value={brl(aReceber)} tone="amber" />
+            <Metric label="Despesas" value={brl(despesas)} tone="red" />
+            <Metric label="Lucro do mês" value={brl(recebido - despesas)} tone={recebido - despesas >= 0 ? "green" : "red"} />
+          </div>
+        </>
       ) : (
         <div className="grid grid-cols-3 gap-3 mb-5">
           <Metric label="Entrou" value={brl(recebido)} tone="green" />
@@ -240,30 +292,88 @@ function CaixaInner() {
         </div>
       )}
 
+      {isPj && <CalendarioFinanceiro monthlies={monthlies} records={records} ym={ym} clientName={clientName} />}
+
+      <RelatorioPeriodo records={records} ctx={ctx} />
+
       <CashflowChart records={records} ctx={ctx} ym={ym} />
 
-      {isPj && activeClients.length > 0 && (
+      {isPj && monthlies.length > 0 && (
         <div className="rounded-2xl border border-border bg-card p-4 mb-5">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <h3 className="text-sm font-display font-bold text-foreground">Mensalidades do mês</h3>
             <span className="text-[11px] text-muted-foreground font-body">MRR ativo: <span className="font-bold text-foreground">{brl(mrr)}</span></span>
           </div>
-          <div className="space-y-2">
-            {activeClients.map((c) => {
-              const paid = paidFor(c.id);
+          <div className="space-y-1">
+            {monthlies.map((m) => {
+              const nome = clientName(m.crm_client_id) ?? "Cliente";
+              const venc = m.due_date.split("-").reverse().slice(0, 2).join("/");
+              const atrasado = m.status === "pendente" && m.due_date < todayISO;
               return (
-                <div key={c.id} className="flex items-center gap-3 py-1.5">
-                  <p className="text-sm font-body font-medium text-foreground truncate min-w-0 flex-1">{c.name}</p>
-                  <span className="text-sm font-display font-bold text-foreground shrink-0">{brl(Number(c.monthly_value))}</span>
-                  {paid
-                    ? <Badge className="bg-green-100 text-green-700 text-[10px] shrink-0">Recebido</Badge>
-                    : <Button size="sm" variant="outline" className="h-7 shrink-0" onClick={() => markReceived(c)} disabled={createRec.isPending}><Check className="h-3 w-3 mr-1" /> Marcar recebido</Button>}
+                <div key={m.id} className={cn("flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-muted/40 transition-colors", m.status === "pulado" && "opacity-60")}>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-body font-medium text-foreground truncate">{nome}</p>
+                    <p className="text-[11px] font-body text-muted-foreground">
+                      vence {venc}
+                      {m.status === "pulado" && m.skip_reason && <> · pulado: {m.skip_reason}</>}
+                    </p>
+                  </div>
+                  <span className="text-sm font-display font-bold text-foreground shrink-0">{brl(Number(m.amount))}</span>
+
+                  {m.status === "pago" ? (
+                    <>
+                      <Badge className="bg-green-100 text-green-700 text-[10px] shrink-0">Recebido</Badge>
+                      {/* DESFAZER: apaga o lançamento e volta pra pendente. */}
+                      <Button size="sm" variant="ghost" className="h-7 shrink-0 text-muted-foreground hover:text-foreground"
+                        onClick={() => undoMonthly.mutate(m)} disabled={undoMonthly.isPending}>
+                        <RotateCcw className="h-3 w-3 mr-1" /> Desfazer
+                      </Button>
+                    </>
+                  ) : m.status === "pulado" ? (
+                    <>
+                      <Badge className="bg-muted text-muted-foreground text-[10px] shrink-0">Pulado</Badge>
+                      <Button size="sm" variant="ghost" className="h-7 shrink-0 text-muted-foreground hover:text-foreground"
+                        onClick={() => undoMonthly.mutate(m)} disabled={undoMonthly.isPending}>
+                        <RotateCcw className="h-3 w-3 mr-1" /> Reverter
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      {atrasado && <Badge className="bg-red-100 text-red-700 text-[10px] shrink-0">Atrasado</Badge>}
+                      <Button size="sm" variant="outline" className="h-7 shrink-0"
+                        onClick={() => confirmMonthly.mutate({ m, clientName: nome })} disabled={confirmMonthly.isPending}>
+                        <Check className="h-3 w-3 mr-1" /> Marcar recebido
+                      </Button>
+                      {/* PULAR: mês em que o cliente não paga (férias, pausa, cortesia). */}
+                      <Button size="sm" variant="ghost" className="h-7 shrink-0 text-muted-foreground hover:text-foreground"
+                        onClick={() => setSkipping(m)} disabled={skipMonthly.isPending}>
+                        <SkipForward className="h-3 w-3 mr-1" /> Pular
+                      </Button>
+                    </>
+                  )}
                 </div>
               );
             })}
           </div>
         </div>
       )}
+
+      {/* Pular mensalidade — pede o motivo */}
+      <Dialog open={!!skipping} onOpenChange={(o) => { if (!o) { setSkipping(null); setSkipReason(""); } }}>
+        <DialogContent className="sm:max-w-sm rounded-2xl">
+          <DialogHeader><DialogTitle className="font-display">Pular esta mensalidade</DialogTitle></DialogHeader>
+          <p className="text-[13px] font-body text-muted-foreground -mt-1">
+            O mês fica registrado como <strong>pulado</strong> — não vira lançamento e não conta na previsão. Dá pra reverter depois.
+          </p>
+          <Input value={skipReason} onChange={(e) => setSkipReason(e.target.value)} placeholder="Motivo (ex.: cliente pausou em julho)" className="rounded-xl" />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setSkipping(null); setSkipReason(""); }}>Cancelar</Button>
+            <Button onClick={() => { if (skipping) skipMonthly.mutate({ m: skipping, reason: skipReason }); setSkipping(null); setSkipReason(""); }}>
+              Pular mês
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {isPj && hasRuler && recebido > 0 && (
         <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 mb-5">
@@ -325,7 +435,14 @@ function CaixaInner() {
                     {new Date(r.date + "T00:00:00").toLocaleDateString("pt-BR")}{r.category ? ` · ${r.category}${r.subcategory ? ` › ${r.subcategory}` : ""}` : ""}{clientName(r.crm_client_id) ? ` · ${clientName(r.crm_client_id)}` : ""}{r.transfer_group ? " · ↔ transferência" : ""}
                   </p>
                 </div>
-                <Badge className={cn("text-[10px] shrink-0", STATUS_STYLE[r.status])}>{STATUS_LABEL[r.status]}</Badge>
+                {/* Status editável direto na lista (antes era só um badge de leitura). */}
+                <select value={r.status} onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => upd.mutate({ id: r.id, status: e.target.value as FinStatus })}
+                  className={cn("text-[10px] font-bold shrink-0 rounded-full px-2 py-1 border-0 outline-none cursor-pointer", STATUS_STYLE[r.status])}>
+                  {(["pendente", "pago", "atrasado"] as FinStatus[]).map((s) => (
+                    <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+                  ))}
+                </select>
                 <span className={cn("text-sm font-display font-extrabold shrink-0", isIn ? "text-green-700" : "text-destructive")}>{isIn ? "+" : "−"}{brl(Number(r.amount))}</span>
                 <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditing(r); setDialog(true); }}><Pencil className="h-3.5 w-3.5" /></Button>
@@ -513,5 +630,190 @@ function RecordDialog({ record, context, clients, defaultDate, defaultCats, cust
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CALENDÁRIO DE RECEBIMENTOS E PAGAMENTOS
+// "Recebo dia 15 do Fulano, dia 10 do Ciclano" — cada mensalidade cai
+// no seu vencimento (payment_day do cliente). Despesas pendentes também.
+// ═══════════════════════════════════════════════════════════════════
+function CalendarioFinanceiro({ monthlies, records, ym, clientName }: {
+  monthlies: FinMonthly[];
+  records: FinRecord[];
+  ym: { y: number; m: number };
+  clientName: (id: string | null) => string | null;
+}) {
+  const first = new Date(ym.y, ym.m, 1);
+  const lastDay = new Date(ym.y, ym.m + 1, 0).getDate();
+  const startDow = (first.getDay() + 6) % 7; // segunda = 0
+  const hoje = new Date().toISOString().slice(0, 10);
+
+  type Ev = { id: string; day: number; kind: "receber" | "pagar"; label: string; amount: number; done: boolean };
+  const evs: Ev[] = [];
+
+  for (const m of monthlies) {
+    if (m.status === "pulado") continue;
+    evs.push({
+      id: "m-" + m.id, day: Number(m.due_date.slice(8, 10)), kind: "receber",
+      label: clientName(m.crm_client_id) ?? "Cliente", amount: Number(m.amount), done: m.status === "pago",
+    });
+  }
+  for (const r of records) {
+    const d = new Date(r.date + "T00:00:00");
+    if (d.getFullYear() !== ym.y || d.getMonth() !== ym.m) continue;
+    if ((r.context ?? "pj") !== "pj" || r.type !== "despesa") continue;
+    evs.push({
+      id: "r-" + r.id, day: d.getDate(), kind: "pagar",
+      label: r.description, amount: Number(r.amount), done: r.status === "pago",
+    });
+  }
+
+  const byDay = new Map<number, Ev[]>();
+  for (const e of evs) { const a = byDay.get(e.day) ?? []; a.push(e); byDay.set(e.day, a); }
+
+  const totalReceber = evs.filter((e) => e.kind === "receber" && !e.done).reduce((s, e) => s + e.amount, 0);
+  const totalPagar = evs.filter((e) => e.kind === "pagar" && !e.done).reduce((s, e) => s + e.amount, 0);
+
+  if (evs.length === 0) return null;
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4 mb-5">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <h3 className="text-sm font-display font-bold text-foreground">Calendário de recebimentos e pagamentos</h3>
+        <div className="flex items-center gap-3 text-[11px] font-body">
+          <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" /> a receber <strong className="text-foreground">{brl(totalReceber)}</strong></span>
+          <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> a pagar <strong className="text-foreground">{brl(totalPagar)}</strong></span>
+        </div>
+      </div>
+
+      <div className="hidden sm:grid grid-cols-7 gap-1 mb-1">
+        {["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].map((d) => (
+          <p key={d} className="text-[10px] uppercase tracking-wider font-body font-semibold text-muted-foreground text-center">{d}</p>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-7 gap-1">
+        {Array.from({ length: startDow }).map((_, i) => <div key={"e" + i} className="hidden sm:block" />)}
+        {Array.from({ length: lastDay }, (_, i) => i + 1).map((day) => {
+          const list = byDay.get(day) ?? [];
+          const iso = `${ym.y}-${pad0(ym.m + 1)}-${pad0(day)}`;
+          const isToday = iso === hoje;
+          if (list.length === 0) {
+            return (
+              <div key={day} className={cn("hidden sm:block min-h-[64px] rounded-lg border p-1.5", isToday ? "border-primary bg-primary/5" : "border-border/60")}>
+                <span className={cn("text-[11px] font-display font-bold", isToday ? "text-primary" : "text-muted-foreground/50")}>{day}</span>
+              </div>
+            );
+          }
+          return (
+            <div key={day} className={cn("min-h-[64px] rounded-lg border p-1.5 space-y-1", isToday ? "border-primary bg-primary/5" : "border-border")}>
+              <span className={cn("text-[11px] font-display font-bold", isToday ? "text-primary" : "text-foreground")}>{day}</span>
+              {list.map((e) => (
+                <div key={e.id}
+                  className={cn("rounded px-1 py-0.5 text-[10px] font-body leading-tight truncate",
+                    e.done ? "opacity-50 line-through" : "",
+                    e.kind === "receber" ? "bg-green-500/10 text-green-700" : "bg-red-500/10 text-red-600")}
+                  title={`${e.label} · ${brl(e.amount)}`}>
+                  {e.kind === "receber" ? "+" : "−"}{brl(e.amount)} {e.label}
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RELATÓRIO POR PERÍODO — extrai mês / ano / intervalo livre,
+// com a evolução mês a mês e exportação em CSV.
+// ═══════════════════════════════════════════════════════════════════
+function RelatorioPeriodo({ records, ctx }: { records: FinRecord[]; ctx: FinContext }) {
+  const hoje = new Date();
+  const [de, setDe] = useState(`${hoje.getFullYear()}-01-01`);
+  const [ate, setAte] = useState(hoje.toISOString().slice(0, 10));
+
+  const preset = (kind: "mes" | "ano" | "12m") => {
+    const y = hoje.getFullYear(), m = hoje.getMonth();
+    if (kind === "mes") { setDe(`${y}-${pad0(m + 1)}-01`); setAte(new Date(y, m + 1, 0).toISOString().slice(0, 10)); }
+    else if (kind === "ano") { setDe(`${y}-01-01`); setAte(`${y}-12-31`); }
+    else { const d = new Date(y, m - 11, 1); setDe(d.toISOString().slice(0, 10)); setAte(new Date(y, m + 1, 0).toISOString().slice(0, 10)); }
+  };
+
+  const rows = records.filter((r) => (r.context ?? "pj") === ctx && r.date >= de && r.date <= ate);
+  const entradas = rows.filter((r) => r.type === "entrada" && r.status === "pago").reduce((s, r) => s + Number(r.amount), 0);
+  const saidas = rows.filter((r) => r.type === "despesa").reduce((s, r) => s + Number(r.amount), 0);
+
+  // Evolução mês a mês dentro do período.
+  const porMes = new Map<string, { receita: number; custo: number }>();
+  for (const r of rows) {
+    const k = r.date.slice(0, 7);
+    const cur = porMes.get(k) ?? { receita: 0, custo: 0 };
+    if (r.type === "entrada" && r.status === "pago") cur.receita += Number(r.amount);
+    else if (r.type === "despesa") cur.custo += Number(r.amount);
+    porMes.set(k, cur);
+  }
+  const meses = [...porMes.entries()].sort(([a], [b]) => a.localeCompare(b));
+
+  const exportCsv = () => {
+    const head = "data;tipo;descricao;categoria;status;valor";
+    const body = rows
+      .slice()
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map((r) => [r.date, r.type, (r.description ?? "").replace(/;/g, ","), r.category ?? "", r.status, String(r.amount).replace(".", ",")].join(";"));
+    const csv = [head, ...body].join("\n");
+    const url = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url; a.download = `cria-caixa-${de}_a_${ate}.csv`; a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Relatório exportado.");
+  };
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4 mb-5">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <h3 className="text-sm font-display font-bold text-foreground">Relatório por período</h3>
+        <Button size="sm" variant="outline" className="h-8" onClick={exportCsv} disabled={rows.length === 0}>Exportar CSV</Button>
+      </div>
+
+      <div className="flex items-end gap-2 flex-wrap mb-3">
+        <div><p className="text-[10px] font-body font-semibold text-muted-foreground uppercase mb-1">De</p><Input type="date" value={de} onChange={(e) => setDe(e.target.value)} className="h-9 rounded-xl w-40" /></div>
+        <div><p className="text-[10px] font-body font-semibold text-muted-foreground uppercase mb-1">Até</p><Input type="date" value={ate} onChange={(e) => setAte(e.target.value)} className="h-9 rounded-xl w-40" /></div>
+        <div className="flex gap-1">
+          {([["mes", "Este mês"], ["12m", "12 meses"], ["ano", "Este ano"]] as const).map(([k, l]) => (
+            <Button key={k} size="sm" variant="ghost" className="h-9 text-xs" onClick={() => preset(k)}>{l}</Button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        <Metric label="Entradas" value={brl(entradas)} tone="green" />
+        <Metric label="Saídas" value={brl(saidas)} tone="red" />
+        <Metric label="Resultado" value={brl(entradas - saidas)} tone={entradas - saidas >= 0 ? "green" : "red"} />
+      </div>
+
+      {meses.length === 0 ? (
+        <p className="text-[12px] font-body text-muted-foreground text-center py-3">Nenhum lançamento nesse período.</p>
+      ) : (
+        <div className="space-y-1">
+          <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Evolução mês a mês</p>
+          {meses.map(([k, v]) => {
+            const [yy, mm] = k.split("-");
+            const label = new Date(Number(yy), Number(mm) - 1, 1).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
+            const saldo = v.receita - v.custo;
+            return (
+              <div key={k} className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-muted/40">
+                <span className="text-[12px] font-body font-semibold text-foreground w-20 shrink-0 capitalize">{label}</span>
+                <span className="text-[12px] font-body text-green-700 shrink-0">+{brl(v.receita)}</span>
+                <span className="text-[12px] font-body text-red-600 shrink-0">−{brl(v.custo)}</span>
+                <span className={cn("text-[12px] font-display font-bold ml-auto shrink-0", saldo >= 0 ? "text-green-700" : "text-red-600")}>{brl(saldo)}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
