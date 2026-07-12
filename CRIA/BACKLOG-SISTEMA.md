@@ -46,13 +46,13 @@ Documento vivo. Marcar `[x]` conforme entrega. Ordem de ataque definida: **Agend
 - [x] **Reordenar itens** arrastando (#4 vira #1); o número acompanha a ordem (usa `sort_order`, update otimista)
 - [x] Tabela virou **caixinhas separadas**: cabeçalho (tipo · data · status), copy em destaque, descrição em bloco próprio com parágrafos preservados
 
-## 🔨 Bloco 4: Cliente — PARCIAL
+## ✅ Bloco 4: Cliente — CONCLUÍDO
 
 - [x] **Aniversário** no calendário do CRM (cor rosa, repete todo ano) + **notificação** no dia e 3 dias antes (robô diário)
 - [x] Tarefas do lead **já no cadastro** (lead novo guarda as tarefas e cria junto); removidos "próxima ação" e "próximos passos" soltos
 - [x] Tarefa de lead com **cor de lead** (azul) na Agenda
 - [x] Foto do Cria agora **sincroniza** pro Cria Gestão (`crm-sync-from-cria` passou a trazer o `avatar_url`)
-- [ ] **Datas comemorativas por segmento** (gastronomia, fitness, finanças…) + feriados nacionais — não iniciado
+- [x] **Datas comemorativas por segmento** — a lista deixou de ser só gastronomia. Agora tem **Geral (feriados nacionais)** + 9 segmentos (gastronomia, fitness, finanças, beleza, moda, pet, educação, saúde, imobiliário). O picker do cronograma tem chips de segmento e **sugere sozinho** o do cliente pelo campo "Segmento" (`segmentoDoTexto`).
 
 ## Bloco 5: Cria Caixa / Financeiro — aguardar o Atlas
 

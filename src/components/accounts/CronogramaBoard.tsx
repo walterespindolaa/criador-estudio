@@ -16,7 +16,9 @@ import {
   type Cronograma, type CronogramaItem, type ItemStatus,
 } from "@/hooks/useCronograma";
 import { useExternalClients } from "@/hooks/useCriaPost";
-import { DATAS_COMEMORATIVAS } from "@/lib/datasComemorativas";
+import { SEGMENTOS, datasPara, segmentoDoTexto, type SegmentKey } from "@/lib/datasComemorativas";
+import { useExternalClients } from "@/hooks/useCriaPost";
+import { useCrmClients } from "@/hooks/useCrm";
 
 const TYPE_COLOR: Record<string, string> = {
   "Reels": "bg-red-600", "Carrossel": "bg-green-700", "Feed": "bg-blue-700",
@@ -148,6 +150,12 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
 }) {
   const { items, addItem, updateItem, deleteItem, reorder } = useCronogramaItems(c.id);
 
+  // Segmento do cliente (do CRM) — usado pra sugerir as datas comemorativas do nicho.
+  const { clients: extClients } = useExternalClients();
+  const { data: crmClientsList = [] } = useCrmClients();
+  const extOfCrono = extClients.find((e) => e.id === c.external_client_id);
+  const clientSegment = crmClientsList.find((cc) => cc.id === extOfCrono?.crm_client_id)?.segment ?? null;
+
   // Reordenar: arrastar a caixinha muda o número (#4 vira #1) e salva a ordem.
   const onReorder = (r: DropResult) => {
     if (!r.destination || r.destination.index === r.source.index) return;
@@ -240,7 +248,7 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
         </div>
       </div>
 
-      <DatasComemorativasSection cronogramaId={c.id} />
+      <DatasComemorativasSection cronogramaId={c.id} clientSegment={clientSegment} />
 
       {/* Itens em CAIXINHAS separadas e arrastáveis — arrastar muda o número (#4 vira #1). */}
       <div className="space-y-2">
@@ -345,7 +353,7 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
   );
 }
 
-function DatasComemorativasSection({ cronogramaId }: { cronogramaId: string }) {
+function DatasComemorativasSection({ cronogramaId, clientSegment }: { cronogramaId: string; clientSegment?: string | null }) {
   const { datas, addData, addManyDatas, deleteData } = useCronogramaDatas(cronogramaId);
   const [label, setLabel] = useState("");
   const [day, setDay] = useState("");
@@ -397,31 +405,63 @@ function DatasComemorativasSection({ cronogramaId }: { cronogramaId: string }) {
         open={pickerOpen}
         onOpenChange={setPickerOpen}
         existingLabels={existingLabels}
+        clientSegment={clientSegment}
         onConfirm={async (rows) => { if (rows.length) await addManyDatas.mutateAsync(rows); setPickerOpen(false); }}
       />
     </div>
   );
 }
 
-function AnnualDatesDialog({ open, onOpenChange, existingLabels, onConfirm }: {
+function AnnualDatesDialog({ open, onOpenChange, existingLabels, clientSegment, onConfirm }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   existingLabels: Set<string>;
+  clientSegment?: string | null;
   onConfirm: (rows: { label: string; day_label: string | null }[]) => void;
 }) {
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const toggle = (key: string) => setPicked((prev) => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; });
 
-  const rows = DATAS_COMEMORATIVAS.flatMap((g) => g.items.map((it) => ({ key: `${g.month}-${it.label}`, label: it.label, day_label: it.day })));
+  // Segmentos: "geral" (feriados) sempre; o do cliente vem sugerido pelo campo Segmento.
+  const sugerido = segmentoDoTexto(clientSegment);
+  const [segs, setSegs] = useState<Set<SegmentKey>>(() => {
+    const s = new Set<SegmentKey>(["geral"]);
+    if (sugerido) s.add(sugerido);
+    return s;
+  });
+  const toggleSeg = (k: SegmentKey) => setSegs((prev) => {
+    const n = new Set(prev);
+    n.has(k) ? n.delete(k) : n.add(k);
+    if (n.size === 0) n.add("geral");   // nunca fica vazio
+    return n;
+  });
+
+  const lista = datasPara([...segs]);
+  const rows = lista.flatMap((g) => g.items.map((it) => ({ key: `${g.month}-${it.label}`, label: it.label, day_label: it.day })));
   const confirm = () => onConfirm(rows.filter((r) => picked.has(r.key)).map(({ label, day_label }) => ({ label, day_label })));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
         <DialogHeader><DialogTitle className="font-display">Lista anual de datas</DialogTitle></DialogHeader>
-        <p className="text-xs text-muted-foreground -mt-2">Marque as datas pra adicionar ao cronograma deste cliente.</p>
+        <p className="text-xs text-muted-foreground -mt-2">Escolha o segmento do cliente e marque as datas pra adicionar ao cronograma.</p>
+
+        {/* Segmento do cliente — filtra as datas */}
+        <div className="flex flex-wrap gap-1.5 pb-1 border-b border-border">
+          {SEGMENTOS.map((s) => {
+            const on = segs.has(s.key);
+            return (
+              <button key={s.key} type="button" onClick={() => toggleSeg(s.key)}
+                className={cn("text-[12px] font-body px-2.5 py-1 rounded-full border transition-colors",
+                  on ? "border-primary bg-primary/[0.06] text-primary font-semibold" : "border-border text-muted-foreground hover:border-primary/40")}>
+                {s.emoji} {s.label}
+              </button>
+            );
+          })}
+        </div>
+
         <div className="space-y-4 py-2">
-          {DATAS_COMEMORATIVAS.map((g) => (
+          {lista.map((g) => (
             <div key={g.month}>
               <p className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground mb-1.5">{g.month}</p>
               <div className="grid gap-1">
