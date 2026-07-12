@@ -38,9 +38,9 @@ export type ContractCompany = {
 
 export type FinSettings = {
   companyName?: string;
-  regime?: "mei" | "simples";
+  regime?: "mei" | "simples" | "presumido";
   dasMonthly?: number;   // R$ fixo (MEI)
-  taxPct?: number;       // % (Simples)
+  taxPct?: number;       // % (Simples / Presumido)
   reinvestPct?: number;
   proLaborePct?: number;
   categories?: { pj?: { entrada?: string[]; despesa?: string[] }; pf?: { entrada?: string[]; despesa?: string[] } };

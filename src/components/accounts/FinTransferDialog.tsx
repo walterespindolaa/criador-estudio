@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeftRight } from "lucide-react";
 import { toast } from "sonner";
 import { useCreateFinTransfer, type TransferKind } from "@/hooks/useFinance";
+import { MoneyInput } from "@/components/shared/MoneyInput";
 import { cn } from "@/lib/utils";
 
 const today = () => new Date().toISOString().split("T")[0];
@@ -14,11 +15,11 @@ type Props = { open: boolean; onOpenChange: (o: boolean) => void };
 export function FinTransferDialog({ open, onOpenChange }: Props) {
   const transfer = useCreateFinTransfer();
   const [kind, setKind] = useState<TransferKind>("Pró-labore");
-  const [amount, setAmount] = useState("");
+  const [amount, setAmount] = useState<number | null>(null);
   const [date, setDate] = useState(today());
   const [description, setDescription] = useState("");
 
-  const reset = () => { setKind("Pró-labore"); setAmount(""); setDate(today()); setDescription(""); };
+  const reset = () => { setKind("Pró-labore"); setAmount(null); setDate(today()); setDescription(""); };
 
   const submit = async () => {
     const value = Number(amount);
@@ -47,7 +48,7 @@ export function FinTransferDialog({ open, onOpenChange }: Props) {
             ))}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5"><Label className="text-xs">Valor (R$) *</Label><Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="rounded-xl" /></div>
+            <div className="space-y-1.5"><Label className="text-xs">Valor *</Label><MoneyInput value={amount} onChange={setAmount} /></div>
             <div className="space-y-1.5"><Label className="text-xs">Data</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="rounded-xl" /></div>
           </div>
           <div className="space-y-1.5"><Label className="text-xs">Descrição (opcional)</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder={kind} className="rounded-xl" /></div>
@@ -56,6 +57,7 @@ export function FinTransferDialog({ open, onOpenChange }: Props) {
         <div className="flex justify-end gap-2 mt-5">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={transfer.isPending}>Cancelar</Button>
           <Button onClick={submit} disabled={transfer.isPending || !amount}>{transfer.isPending && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}Transferir</Button>
+          {/* amount é number|null: 0 e null bloqueiam o botão, como deve ser. */}
         </div>
       </DialogContent>
     </Dialog>

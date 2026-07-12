@@ -25,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/money";
+import { PAYMENT_METHODS } from "@/lib/finance";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 
 const CONSCIOUSNESS = ["Inconsciente do problema", "Consciente do problema", "Consciente da solução", "Consciente do produto", "Totalmente consciente"];
@@ -35,7 +36,7 @@ const payloadOf = (f: CrmClient) => ({
   segment: f.segment, monthly_value: f.monthly_value, contract_date: f.contract_date,
   renewal_date: f.renewal_date, notes: f.notes, logo: f.logo,
   company_name: f.company_name, cnpj: f.cnpj, owner_name: f.owner_name, whatsapp: f.whatsapp, address: f.address,
-  plan_name: f.plan_name, payment_day: f.payment_day, birthday: f.birthday,
+  plan_name: f.plan_name, payment_day: f.payment_day, payment_method: f.payment_method, birthday: f.birthday,
   status: f.status, tags: f.tags,
   brand_core: f.brand_core, persona: f.persona, diagnosis: f.diagnosis, competitors: f.competitors,
 });
@@ -305,6 +306,13 @@ function ClientWorkspace() {
                   <Input type="number" min={1} max={31} value={form.payment_day ?? ""} placeholder="Ex.: 15"
                     onChange={(e) => { const n = Number(e.target.value); setForm({ ...form, payment_day: e.target.value === "" ? null : Math.max(1, Math.min(31, n)) }); }}
                     className="rounded-xl" />
+                </F>
+                <F label="Forma de pagamento">
+                  <select value={form.payment_method ?? ""} onChange={(e) => setForm({ ...form, payment_method: e.target.value || null })}
+                    className="w-full h-10 rounded-xl border border-input bg-card px-3 text-sm">
+                    <option value="">-</option>
+                    {PAYMENT_METHODS.map((p) => <option key={p} value={p}>{p}</option>)}
+                  </select>
                 </F>
                 <F label="Início do contrato"><Input type="date" value={form.contract_date ?? ""} onChange={(e) => setForm({ ...form, contract_date: e.target.value || null })} className="rounded-xl" /></F>
                 <F label="Renovação"><Input type="date" value={form.renewal_date ?? ""} onChange={(e) => setForm({ ...form, renewal_date: e.target.value || null })} className="rounded-xl" /></F>

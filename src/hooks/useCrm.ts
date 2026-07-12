@@ -49,6 +49,7 @@ export type CrmClient = {
   // Contrato
   plan_name: string | null;
   payment_day: number | null;
+  payment_method: string | null;
   birthday: string | null;
   // Organização
   status: ClientStatus;

@@ -11,6 +11,9 @@ import { ExternalClientDialog } from "@/components/accounts/ExternalClientDialog
 import { saveLastClient } from "@/components/accounts/ClientSwitcher";
 import { CriativoTab } from "@/components/hubcria/CriativoTab";
 import { useHasHubCria } from "@/hooks/useHubCria";
+import { useCriaClientProfiles } from "@/hooks/useManagerClientCria";
+import { ClienteInstagramCria } from "@/components/accounts/ClienteInstagramCria";
+import { ClienteBrandbookCria } from "@/components/accounts/ClienteBrandbookCria";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,9 +50,18 @@ export default function ClienteHub() {
   const { id, tab } = useParams<{ id: string; tab?: string }>();
   const navigate = useNavigate();
   const { allowed: hasHubCria } = useHasHubCria();
-  const visibleTabs = useMemo(() => TABS.filter((t) => !("gated" in t && t.gated) || hasHubCria), [hasHubCria]);
-  const activeTab = tab && visibleTabs.some((t) => t.key === tab) ? tab : "visao-geral";
   const { data: client, isLoading } = useCrmClient(id);
+  // Aba Criativo abre também sem HUB CRIA quando o cliente usa o Cria: é onde
+  // a gestora lê o Brandbook dele (modo leitura, sincronizado da conta do cliente).
+  const visibleTabs = useMemo(
+    () => TABS.filter((t) => !("gated" in t && t.gated) || hasHubCria || !!client?.cria_owner_id),
+    [hasHubCria, client?.cria_owner_id],
+  );
+  const activeTab = tab && visibleTabs.some((t) => t.key === tab) ? tab : "visao-geral";
+  // Foto da conta CRIA do cliente sempre atual (não depende do sync manual do CRM).
+  const { data: criaProfiles } = useCriaClientProfiles();
+  const criaAvatar = client?.cria_owner_id ? (criaProfiles?.[client.cria_owner_id]?.avatar_url ?? null) : null;
+  const avatarUrl = criaAvatar ?? client?.logo ?? null;
   const { clients: ext, create: createExt, pending, copyLink } = useExternalClients();
   const extClient = useMemo(() => ext.find((e) => e.crm_client_id === id) ?? null, [ext, id]);
   const pendCount = extClient ? (pending[extClient.id] ?? 0) : 0;
@@ -99,7 +111,8 @@ export default function ClienteHub() {
         <div className="flex flex-wrap items-center gap-4">
           <span className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-full grid place-items-center text-white text-xl font-display font-bold shrink-0 overflow-hidden ring-2 ring-border/60" style={{ background: "linear-gradient(135deg,#0F6E56,#1d9e75)" }}>
             {initial(client.name)}
-            {client.logo && <img src={client.logo} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 w-full h-full object-cover" />}
+            {/* Avatar do CRIA do cliente → logo manual → inicial. */}
+            {avatarUrl && <img src={avatarUrl} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 w-full h-full object-cover" />}
           </span>
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-display font-extrabold text-foreground tracking-tight truncate">{client.name}</h1>
@@ -188,7 +201,11 @@ export default function ClienteHub() {
         </div>
       )}
 
-      {OPERACIONAIS.has(activeTab) && (
+      {/* Instagram de cliente que USA O CRIA: dados reais sincronizados pelo próprio
+          cliente (independe do Cria Post estar ativado). Os demais casos seguem no ClientDetail. */}
+      {activeTab === "instagram" && client.cria_owner_id ? (
+        <ClienteInstagramCria criaOwnerId={client.cria_owner_id} clientName={client.name} />
+      ) : OPERACIONAIS.has(activeTab) && (
         extClient ? (
           <ClientDetail client={extClient} embedded activeTab={activeTab} onTabChange={goTab} />
         ) : (
@@ -201,7 +218,14 @@ export default function ClienteHub() {
         )
       )}
 
-      {activeTab === "criativo" && hasHubCria && <CriativoTab clientId={id!} clientName={client.name} />}
+      {/* Criativo: brandbook do CRIA do cliente (leitura) + análises do HUB CRIA.
+          Cliente SEM conta CRIA continua vendo só o fluxo atual do HUB. */}
+      {activeTab === "criativo" && (
+        <div className="space-y-6">
+          {client.cria_owner_id && <ClienteBrandbookCria criaOwnerId={client.cria_owner_id} />}
+          {hasHubCria && <CriativoTab clientId={id!} clientName={client.name} />}
+        </div>
+      )}
 
       {activeTab === "financeiro" && <FinanceTab clientId={id!} clientName={client.name} />}
     </motion.div>

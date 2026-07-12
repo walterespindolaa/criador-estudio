@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Plus, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, Pencil, Building2, User, Check, Repeat, ArrowLeftRight, RotateCcw, SkipForward } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, Pencil, Building2, User, Check, Repeat, ArrowLeftRight, RotateCcw, SkipForward, ExternalLink, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import {
-  useFinRecords, useCreateFinRecord, useUpdateFinRecord, useDeleteFinRecord, useFinRecurring, useGenerateRecurring, useDeleteFinByGroup,
+  useFinRecords, useCreateFinRecord, useUpdateFinRecord, useDeleteFinRecord, useFinRecurring, useCreateFinRecurring, useGenerateRecurring, useDeleteFinByGroup,
   useFinMonthly, useEnsureMonthly, useConfirmMonthly, useUndoMonthly, useSkipMonthly,
-  type FinRecord, type FinType, type FinStatus, type FinContext, type FinRecordInput, type FinMonthly,
+  type FinRecord, type FinType, type FinStatus, type FinContext, type FinRecordInput, type FinMonthly, type FinRecurring,
 } from "@/hooks/useFinance";
+import { MoneyInput } from "@/components/shared/MoneyInput";
+import { PAYMENT_METHODS, taxOfMonth, taxOfClient, regimeLabel, isPctRegime } from "@/lib/finance";
 import { useCrmClients } from "@/hooks/useCrm";
 import { useManagerProfile } from "@/hooks/useModules";
 import { ModuleGate } from "@/components/accounts/ModuleGate";
@@ -70,7 +72,6 @@ function CaixaInner() {
   const { profile, save } = useManagerProfile();
   const del = useDeleteFinRecord();
   const upd = useUpdateFinRecord();   // status editável direto na lista
-  const createRec = useCreateFinRecord();
   const { data: recurring = [] } = useFinRecurring();
   const generate = useGenerateRecurring();
   const delGroup = useDeleteFinByGroup();
@@ -127,44 +128,78 @@ function CaixaInner() {
   }, [monthRef, activeClients.length]);
 
   const mrr = activeClients.reduce((s, c) => s + Number(c.monthly_value), 0);
-  // A receber = só o que está PENDENTE (pulado não entra na conta).
-  const aReceber = monthlies.filter((m) => m.status === "pendente").reduce((s, m) => s + Number(m.amount), 0);
-  // Previsão do mês: bruto = recebido + a receber; líquido = bruto − despesas.
+
+  // ── A RECEBER ──
+  // Antes só contava mensalidade (fin_monthly). Uma entrada lançada à mão como
+  // "pendente" não aparecia em lugar nenhum — o card ignorava. Agora conta as duas fontes:
+  //   1) mensalidades do mês ainda pendentes (pulado NÃO entra)
+  //   2) lançamentos de entrada com status pendente/atrasado
+  const aReceberMensal = monthlies.filter((m) => m.status === "pendente").reduce((s, m) => s + Number(m.amount), 0);
+  const aReceberAvulso = monthCtx
+    .filter((r) => r.type === "entrada" && r.status !== "pago")
+    .reduce((s, r) => s + Number(r.amount), 0);
+  const aReceber = aReceberMensal + aReceberAvulso;
+
+  // Despesas: separo o que já saiu do que ainda vai sair — a pessoa precisa ver as duas.
+  const despesasPagas = monthCtx.filter((r) => r.type === "despesa" && r.status === "pago").reduce((s, r) => s + Number(r.amount), 0);
+  const aPagar = despesas - despesasPagas;
+
+  // Previsão do mês: bruto = recebido + a receber; líquido = bruto − despesas (todas).
   const previstoBruto = recebido + aReceber;
   const previstoLiquido = previstoBruto - despesas;
-  const clientProfit = useMemo(() => {
-    const byClient = new Map<string, { receita: number; custo: number }>();
+  // ── RENTABILIDADE POR CLIENTE ──
+  // Pra cada cliente: quanto entrou, quanto ainda entra, quanto se gasta COM ele,
+  // quanto de imposto ele gera, e o que sobra de fato (margem líquida).
+  type ClientRow = {
+    id: string; name: string; recebido: number; aReceber: number; receita: number;
+    custo: number; custos: { label: string; v: number }[]; imposto: number; margem: number; margemPct: number;
+  };
+  const clientRows = useMemo<ClientRow[]>(() => {
+    const map = new Map<string, { recebido: number; aReceber: number; custo: number; custos: { label: string; v: number }[] }>();
+    const touch = (id: string) => {
+      let cur = map.get(id);
+      if (!cur) { cur = { recebido: 0, aReceber: 0, custo: 0, custos: [] }; map.set(id, cur); }
+      return cur;
+    };
     monthCtx.forEach((r) => {
       if (!r.crm_client_id) return;
-      const cur = byClient.get(r.crm_client_id) ?? { receita: 0, custo: 0 };
-      if (r.type === "entrada" && r.status === "pago") cur.receita += Number(r.amount);
-      else if (r.type === "despesa") cur.custo += Number(r.amount);
-      byClient.set(r.crm_client_id, cur);
+      const cur = touch(r.crm_client_id);
+      const v = Number(r.amount);
+      if (r.type === "entrada") { if (r.status === "pago") cur.recebido += v; else cur.aReceber += v; }
+      else { cur.custo += v; cur.custos.push({ label: r.subcategory || r.category || r.description, v }); }
     });
-    return Array.from(byClient.entries())
-      .map(([id, v]) => ({ id, name: clients.find((c) => c.id === id)?.name ?? "Cliente", receita: v.receita, custo: v.custo, margem: v.receita - v.custo }))
+    // Mensalidade pendente é receita prevista do cliente, mesmo sem lançamento.
+    monthlies.forEach((m) => {
+      if (!m.crm_client_id || m.status !== "pendente") return;
+      touch(m.crm_client_id).aReceber += Number(m.amount);
+    });
+
+    const rows = Array.from(map.entries()).map(([id, v]) => ({
+      id, name: clients.find((c) => c.id === id)?.name ?? "Cliente",
+      ...v, receita: v.recebido + v.aReceber,
+    }));
+    const receitaTotal = rows.reduce((s, r) => s + r.receita, 0);
+
+    return rows
+      .map((r) => {
+        const imposto = taxOfClient(fin, r.receita, receitaTotal);
+        const margem = r.receita - r.custo - imposto;
+        return { ...r, imposto, margem, margemPct: r.receita > 0 ? (margem / r.receita) * 100 : 0 };
+      })
       .filter((x) => x.receita > 0 || x.custo > 0)
       .sort((a, b) => b.margem - a.margem);
-  }, [monthCtx, clients]);
+  }, [monthCtx, monthlies, clients, fin]);
 
-  const imposto = fin.regime === "simples" ? recebido * (Number(fin.taxPct) || 0) / 100 : (Number(fin.dasMonthly) || 0);
+  const imposto = taxOfMonth(fin, recebido);          // sobre o que JÁ entrou
+  const impostoPrevisto = taxOfMonth(fin, previstoBruto); // sobre o previsto do mês
   const reinvest = recebido * (Number(fin.reinvestPct) || 0) / 100;
   const proLabore = recebido * (Number(fin.proLaborePct) || 0) / 100;
   const hasRuler = !!(fin.taxPct || fin.dasMonthly || fin.reinvestPct || fin.proLaborePct);
+  const hasRegime = !!fin.regime;
 
   const shift = (delta: number) => setYm((p) => { const d = new Date(p.y, p.m + delta, 1); return { y: d.getFullYear(), m: d.getMonth() }; });
   const pad = (n: number) => String(n).padStart(2, "0");
   const monthDate = `${ym.y}-${pad(ym.m + 1)}-${pad(Math.min(now.getDate(), 28))}`;
-
-  const markReceived = async (c: { id: string; name: string; monthly_value: number | null }) => {
-    try {
-      await createRec.mutateAsync({
-        context: "pj", type: "entrada", description: `Mensalidade, ${c.name}`,
-        amount: Number(c.monthly_value) || 0, status: "pago", crm_client_id: c.id, category: "Mensalidade", date: monthDate,
-      });
-      toast.success("Recebimento registrado!");
-    } catch { /* hook avisa */ }
-  };
 
   const isPj = ctx === "pj";
 
@@ -180,7 +215,8 @@ function CaixaInner() {
   const lancarRecorrentes = async () => {
     const rows: FinRecordInput[] = pendingRecurring.map((t) => ({
       context: ctx, type: t.type, description: t.description, category: t.category, subcategory: t.subcategory,
-      amount: Number(t.amount), status: "pendente" as FinStatus, crm_client_id: t.crm_client_id, recurring_id: t.id,
+      amount: Number(t.amount), status: "pendente" as FinStatus, crm_client_id: t.crm_client_id,
+      payment_method: t.payment_method ?? null, recurring_id: t.id,
       date: `${ym.y}-${pad(ym.m + 1)}-${pad(Math.min(t.due_day, 28))}`,
     }));
     const n = await generate.mutateAsync(rows);
@@ -279,9 +315,11 @@ function CaixaInner() {
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
             <Metric label="Recebido" value={brl(recebido)} tone="green" />
-            <Metric label="A receber" value={brl(aReceber)} tone="amber" />
-            <Metric label="Despesas" value={brl(despesas)} tone="red" />
-            <Metric label="Lucro do mês" value={brl(recebido - despesas)} tone={recebido - despesas >= 0 ? "green" : "red"} />
+            <Metric label="A receber" value={brl(aReceber)} tone="amber"
+              hint={aReceberAvulso > 0 ? `${brl(aReceberMensal)} mensalidade + ${brl(aReceberAvulso)} avulso` : "mensalidades pendentes"} />
+            <Metric label="Despesas" value={brl(despesas)} tone="red"
+              hint={aPagar > 0 ? `${brl(despesasPagas)} pagas + ${brl(aPagar)} a pagar` : "todas pagas"} />
+            <Metric label="Lucro do mês" value={brl(recebido - despesasPagas)} tone={recebido - despesasPagas >= 0 ? "green" : "red"} hint="só o que já entrou/saiu" />
           </div>
         </>
       ) : (
@@ -292,7 +330,15 @@ function CaixaInner() {
         </div>
       )}
 
-      {isPj && <CalendarioFinanceiro monthlies={monthlies} records={records} ym={ym} clientName={clientName} />}
+      <CalendarioFinanceiro
+        monthlies={isPj ? monthlies : []}
+        records={records}
+        recurring={recurring}
+        pendingRecurring={pendingRecurring}
+        ctx={ctx}
+        ym={ym}
+        clientName={clientName}
+      />
 
       <RelatorioPeriodo records={records} ctx={ctx} />
 
@@ -375,28 +421,85 @@ function CaixaInner() {
         </DialogContent>
       </Dialog>
 
-      {isPj && hasRuler && recebido > 0 && (
-        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 mb-5">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-primary mb-2">Sobre os {brl(recebido)} que entraram, separe</p>
-          <div className="grid grid-cols-3 gap-3">
-            <Alloc label={fin.regime === "simples" ? "Imposto" : "DAS"} value={brl(imposto)} />
-            <Alloc label="Reinvestir" value={brl(reinvest)} />
-            <Alloc label="Pró-labore" value={brl(proLabore)} />
+      {/* ── IMPOSTO DO MÊS ── mastigado a partir do regime tributário da empresa. */}
+      {isPj && (
+        hasRegime ? (
+          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 mb-5">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                  <Receipt className="h-3.5 w-3.5" /> Imposto de {MONTHS[ym.m]} · {regimeLabel(fin.regime)}
+                  {isPctRegime(fin.regime) && Number(fin.taxPct) > 0 && <span className="font-body normal-case tracking-normal text-muted-foreground">({fin.taxPct}%)</span>}
+                </p>
+                <p className="text-2xl font-display font-extrabold text-foreground mt-1">{brl(imposto)}</p>
+                <p className="text-[12px] font-body text-muted-foreground mt-0.5">
+                  {isPctRegime(fin.regime)
+                    ? <>sobre os {brl(recebido)} que já entraram · fecha o mês em <strong className="text-foreground">{brl(impostoPrevisto)}</strong> se receber tudo</>
+                    : <>DAS fixo do MEI — não muda com o faturamento</>}
+                </p>
+              </div>
+              {hasRuler && recebido > 0 && (
+                <div className="grid grid-cols-2 gap-4">
+                  <Alloc label="Reinvestir" value={brl(reinvest)} />
+                  <Alloc label="Pró-labore" value={brl(proLabore)} />
+                </div>
+              )}
+            </div>
+            <p className="text-[10.5px] font-body text-muted-foreground mt-2.5 pt-2.5 border-t border-primary/15">
+              Estimativa de organização com base no que você configurou — não é apuração fiscal. Confirme com sua contabilidade.
+            </p>
           </div>
-        </div>
+        ) : (
+          <button onClick={() => setCompanyOpen(true)}
+            className="w-full rounded-2xl border border-dashed border-primary/40 bg-primary/[0.03] p-4 mb-5 text-left hover:bg-primary/[0.07] transition-colors">
+            <p className="text-sm font-display font-bold text-foreground">Configure o regime tributário</p>
+            <p className="text-[12px] font-body text-muted-foreground mt-0.5">
+              Diga se você é MEI, Simples ou Presumido em <strong>Minha empresa</strong> e o Caixa passa a calcular sozinho quanto separar de imposto — no mês e por cliente.
+            </p>
+          </button>
+        )
       )}
 
-      {isPj && clientProfit.length > 0 && (
+      {/* ── RENTABILIDADE POR CLIENTE ── quanto paga, quanto custa, quanto de imposto gera, o que sobra. */}
+      {isPj && clientRows.length > 0 && (
         <div className="rounded-2xl border border-border bg-card p-4 mb-5">
-          <h3 className="text-sm font-display font-bold text-foreground mb-3">Rentabilidade por cliente ({MONTHS[ym.m]})</h3>
+          <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
+            <h3 className="text-sm font-display font-bold text-foreground">Rentabilidade por cliente ({MONTHS[ym.m]})</h3>
+            <span className="text-[11px] font-body text-muted-foreground">margem = receita − custos − imposto</span>
+          </div>
+          <p className="text-[11px] font-body text-muted-foreground mb-3">
+            Só entra aqui o que você <strong>vinculou ao cliente</strong> no lançamento. Despesa sem cliente vira custo da operação, não do cliente.
+          </p>
+
           <div className="space-y-2">
-            {clientProfit.map((c) => (
-              <div key={c.id} className="flex items-center gap-3 py-1.5">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-body font-medium text-foreground truncate">{c.name}</p>
-                  <p className="text-[11px] text-muted-foreground font-body">recebido {brl(c.receita)} · custo {brl(c.custo)}</p>
+            {clientRows.map((c) => (
+              <div key={c.id} className="rounded-xl border border-border/70 p-3 hover:border-primary/40 transition-colors">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-display font-bold text-foreground truncate">{c.name}</p>
+                    <p className="text-[11px] text-muted-foreground font-body">
+                      {brl(c.recebido)} recebido{c.aReceber > 0 ? ` + ${brl(c.aReceber)} a receber` : ""}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className={cn("text-base font-display font-extrabold", c.margem >= 0 ? "text-green-700" : "text-destructive")}>{brl(c.margem)}</p>
+                    <p className={cn("text-[11px] font-body font-semibold", c.margemPct >= 0 ? "text-green-700/80" : "text-destructive/80")}>
+                      {c.margemPct.toFixed(0)}% de margem
+                    </p>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-muted-foreground hover:text-primary"
+                    title="Abrir no Cria Gestão" onClick={() => navigate(`/socialmidia/criacrm/${c.id}`)}>
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
                 </div>
-                <span className={cn("text-sm font-display font-bold shrink-0", c.margem >= 0 ? "text-green-700" : "text-destructive")}>{brl(c.margem)}</span>
+
+                <div className="mt-2.5 pt-2.5 border-t border-border/60 grid grid-cols-3 gap-2">
+                  <MiniStat label="Receita" value={brl(c.receita)} tone="green" />
+                  <MiniStat label={c.custos.length ? `Custos (${c.custos.length})` : "Custos"} value={brl(c.custo)} tone="red"
+                    hint={c.custos.slice(0, 3).map((x) => x.label).join(", ") || undefined} />
+                  <MiniStat label="Imposto" value={brl(c.imposto)} tone="muted"
+                    hint={isPctRegime(fin.regime) ? `${fin.taxPct ?? 0}% da receita` : "rateio do DAS"} />
+                </div>
               </div>
             ))}
           </div>
@@ -464,12 +567,24 @@ function CaixaInner() {
   );
 }
 
-function Metric({ label, value, tone }: { label: string; value: string; tone: "green" | "red" | "amber" }) {
+function Metric({ label, value, tone, hint }: { label: string; value: string; tone: "green" | "red" | "amber"; hint?: string }) {
   const c = tone === "green" ? "text-green-700" : tone === "red" ? "text-destructive" : "text-amber-600";
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
       <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-body font-semibold">{label}</p>
       <p className={cn("text-xl font-display font-extrabold mt-1", c)}>{value}</p>
+      {hint && <p className="text-[10.5px] font-body text-muted-foreground mt-0.5 leading-tight">{hint}</p>}
+    </div>
+  );
+}
+
+function MiniStat({ label, value, tone, hint }: { label: string; value: string; tone: "green" | "red" | "muted"; hint?: string }) {
+  const c = tone === "green" ? "text-green-700" : tone === "red" ? "text-destructive" : "text-foreground";
+  return (
+    <div className="min-w-0">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-body font-semibold">{label}</p>
+      <p className={cn("text-sm font-display font-bold mt-0.5", c)}>{value}</p>
+      {hint && <p className="text-[10px] font-body text-muted-foreground truncate" title={hint}>{hint}</p>}
     </div>
   );
 }
@@ -531,8 +646,11 @@ function RecordDialog({ record, context, clients, defaultDate, defaultCats, cust
   onAddCategory: (type: FinType, name: string) => Promise<void>; onAddSubcategory: (type: FinType, category: string, name: string) => Promise<void>; onClose: () => void;
 }) {
   const create = useCreateFinRecord(); const update = useUpdateFinRecord();
+  const createRecurring = useCreateFinRecurring();
   const [f, setF] = useState<FinRecordInput>(() => record ? { ...record } : { type: "entrada", description: "", amount: 0, status: "pendente", date: defaultDate, context });
   const set = (patch: Partial<FinRecordInput>) => setF((p) => ({ ...p, ...patch }));
+  // Repetir todo mês: cria o lançamento de hoje E o modelo recorrente, num clique só.
+  const [repeat, setRepeat] = useState(false);
   const [addingCat, setAddingCat] = useState(false);
   const [newCat, setNewCat] = useState("");
   const [addingSub, setAddingSub] = useState(false);
@@ -556,8 +674,21 @@ function RecordDialog({ record, context, clients, defaultDate, defaultCats, cust
   };
   const submit = async () => {
     if (!f.description?.trim()) return;
-    if (record) await update.mutateAsync({ id: record.id, ...f });
-    else await create.mutateAsync(f as FinRecordInput);
+    if (record) {
+      await update.mutateAsync({ id: record.id, ...f });
+    } else {
+      await create.mutateAsync(f as FinRecordInput);
+      if (repeat) {
+        const dia = Number((f.date ?? defaultDate).slice(8, 10)) || 1;
+        await createRecurring.mutateAsync({
+          context, type: f.type, description: f.description!, category: f.category ?? null,
+          subcategory: f.subcategory ?? null, amount: Number(f.amount) || 0,
+          due_day: Math.min(28, Math.max(1, dia)), crm_client_id: f.crm_client_id ?? null,
+          active: true, start_date: f.date ?? defaultDate,
+        });
+        toast.success("Vai repetir todo mês. Dá pra editar em “Recorrentes”.");
+      }
+    }
     onClose();
   };
   return (
@@ -572,7 +703,7 @@ function RecordDialog({ record, context, clients, defaultDate, defaultCats, cust
           </div>
           <div className="space-y-1.5"><Label className="text-xs">Descrição *</Label><Input value={f.description ?? ""} onChange={(e) => set({ description: e.target.value })} className="rounded-xl" /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5"><Label className="text-xs">Valor (R$) *</Label><Input type="number" value={f.amount ?? 0} onChange={(e) => set({ amount: Number(e.target.value) })} className="rounded-xl" /></div>
+            <div className="space-y-1.5"><Label className="text-xs">Valor *</Label><MoneyInput value={f.amount ?? null} onChange={(v) => set({ amount: v ?? 0 })} /></div>
             <div className="space-y-1.5"><Label className="text-xs">Data</Label><Input type="date" value={f.date ?? defaultDate} onChange={(e) => set({ date: e.target.value })} className="rounded-xl" /></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -622,11 +753,37 @@ function RecordDialog({ record, context, clients, defaultDate, defaultCats, cust
               </select>
             </div>
           )}
-          <div className="space-y-1.5"><Label className="text-xs">Forma de pagamento</Label><Input value={f.payment_method ?? ""} onChange={(e) => set({ payment_method: e.target.value })} placeholder="Pix, cartão..." className="rounded-xl" /></div>
+          {/* Forma de pagamento agora é padronizada (select). Texto livre não dava pra somar,
+              filtrar, nem mostrar na ficha do cliente no Cria Gestão. */}
+          <div className="space-y-1.5"><Label className="text-xs">Forma de pagamento</Label>
+            <select value={f.payment_method ?? ""} onChange={(e) => set({ payment_method: e.target.value || null })} className="w-full h-10 rounded-xl border border-input bg-card px-3 text-sm">
+              <option value="">-</option>
+              {PAYMENT_METHODS.map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+
+          {/* Repetir todo mês — sem precisar abrir a tela de Recorrentes. */}
+          {!record && (
+            <button type="button" onClick={() => setRepeat((r) => !r)}
+              className={cn("w-full flex items-start gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-colors",
+                repeat ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/40")}>
+              <span className={cn("mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded border", repeat ? "bg-primary border-primary text-white" : "border-muted-foreground/40")}>
+                {repeat && <Check className="h-3 w-3" strokeWidth={3} />}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[13px] font-body font-semibold text-foreground">Repetir todo mês</span>
+                <span className="block text-[11.5px] font-body text-muted-foreground leading-tight">
+                  {repeat
+                    ? `Vira um recorrente todo dia ${Number((f.date ?? defaultDate).slice(8, 10)) || 1}. Você lança os próximos meses com um clique.`
+                    : "Ex.: Canva, editor, mensalidade fixa."}
+                </span>
+              </span>
+            </button>
+          )}
         </div>
         <div className="flex justify-end gap-2 mt-5">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={submit} disabled={!f.description?.trim() || create.isPending || update.isPending}>{record ? "Salvar" : "Criar"}</Button>
+          <Button onClick={submit} disabled={!f.description?.trim() || create.isPending || update.isPending || createRecurring.isPending}>{record ? "Salvar" : "Criar"}</Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -634,13 +791,20 @@ function RecordDialog({ record, context, clients, defaultDate, defaultCats, cust
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// CALENDÁRIO DE RECEBIMENTOS E PAGAMENTOS
-// "Recebo dia 15 do Fulano, dia 10 do Ciclano" — cada mensalidade cai
-// no seu vencimento (payment_day do cliente). Despesas pendentes também.
+// CALENDÁRIO DE ENTRADAS E SAÍDAS — PJ e PF.
+// Mostra o mês inteiro, dia a dia: mensalidades (no vencimento de cada
+// cliente), lançamentos, e — o pulo do gato — os RECORRENTES ainda não
+// lançados, como PREVISTO (tracejado). Assim dá pra navegar pros meses
+// que vêm e enxergar a recorrência antes de ela virar lançamento.
 // ═══════════════════════════════════════════════════════════════════
-function CalendarioFinanceiro({ monthlies, records, ym, clientName }: {
+type Ev = { id: string; day: number; kind: "receber" | "pagar"; label: string; amount: number; done: boolean; previsto: boolean };
+
+function CalendarioFinanceiro({ monthlies, records, recurring, pendingRecurring, ctx, ym, clientName }: {
   monthlies: FinMonthly[];
   records: FinRecord[];
+  recurring: FinRecurring[];
+  pendingRecurring: FinRecurring[];
+  ctx: FinContext;
   ym: { y: number; m: number };
   clientName: (id: string | null) => string | null;
 }) {
@@ -649,41 +813,74 @@ function CalendarioFinanceiro({ monthlies, records, ym, clientName }: {
   const startDow = (first.getDay() + 6) % 7; // segunda = 0
   const hoje = new Date().toISOString().slice(0, 10);
 
-  type Ev = { id: string; day: number; kind: "receber" | "pagar"; label: string; amount: number; done: boolean };
-  const evs: Ev[] = [];
+  const evs = useMemo<Ev[]>(() => {
+    const out: Ev[] = [];
 
-  for (const m of monthlies) {
-    if (m.status === "pulado") continue;
-    evs.push({
-      id: "m-" + m.id, day: Number(m.due_date.slice(8, 10)), kind: "receber",
-      label: clientName(m.crm_client_id) ?? "Cliente", amount: Number(m.amount), done: m.status === "pago",
-    });
-  }
-  for (const r of records) {
-    const d = new Date(r.date + "T00:00:00");
-    if (d.getFullYear() !== ym.y || d.getMonth() !== ym.m) continue;
-    if ((r.context ?? "pj") !== "pj" || r.type !== "despesa") continue;
-    evs.push({
-      id: "r-" + r.id, day: d.getDate(), kind: "pagar",
-      label: r.description, amount: Number(r.amount), done: r.status === "pago",
-    });
-  }
+    // 1) Mensalidades do mês (só PJ) — cada uma no vencimento do cliente.
+    for (const m of monthlies) {
+      if (m.status === "pulado") continue;
+      out.push({
+        id: "m-" + m.id, day: Number(m.due_date.slice(8, 10)), kind: "receber",
+        label: clientName(m.crm_client_id) ?? "Cliente", amount: Number(m.amount),
+        done: m.status === "pago", previsto: false,
+      });
+    }
+
+    // 2) Lançamentos reais do mês — entradas E despesas (antes só vinham as despesas).
+    for (const r of records) {
+      if ((r.context ?? "pj") !== ctx) continue;
+      const d = new Date(r.date + "T00:00:00");
+      if (d.getFullYear() !== ym.y || d.getMonth() !== ym.m) continue;
+      out.push({
+        id: "r-" + r.id, day: d.getDate(), kind: r.type === "entrada" ? "receber" : "pagar",
+        label: r.description, amount: Number(r.amount), done: r.status === "pago", previsto: false,
+      });
+    }
+
+    // 3) Recorrentes ainda NÃO lançados neste mês → aparecem como previsto.
+    //    É isso que faz o mês que vem já mostrar o Canva, o editor, o aluguel…
+    const pendingIds = new Set(pendingRecurring.map((t) => t.id));
+    for (const t of recurring) {
+      if (!pendingIds.has(t.id)) continue;
+      out.push({
+        id: "p-" + t.id, day: Math.min(t.due_day, lastDay), kind: t.type === "entrada" ? "receber" : "pagar",
+        label: t.description, amount: Number(t.amount), done: false, previsto: true,
+      });
+    }
+    return out;
+  }, [monthlies, records, recurring, pendingRecurring, ctx, ym, lastDay, clientName]);
 
   const byDay = new Map<number, Ev[]>();
   for (const e of evs) { const a = byDay.get(e.day) ?? []; a.push(e); byDay.set(e.day, a); }
 
   const totalReceber = evs.filter((e) => e.kind === "receber" && !e.done).reduce((s, e) => s + e.amount, 0);
   const totalPagar = evs.filter((e) => e.kind === "pagar" && !e.done).reduce((s, e) => s + e.amount, 0);
+  const temPrevisto = evs.some((e) => e.previsto);
 
-  if (evs.length === 0) return null;
+  if (evs.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-border p-6 text-center mb-5">
+        <p className="text-sm font-body text-foreground font-medium">Nada marcado em {MONTHS[ym.m]}</p>
+        <p className="text-xs text-muted-foreground font-body mt-1">
+          Cadastre recorrentes e o dia de pagamento dos clientes — o calendário se preenche sozinho, inclusive nos meses que vêm.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-2xl border border-border bg-card p-4 mb-5">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-        <h3 className="text-sm font-display font-bold text-foreground">Calendário de recebimentos e pagamentos</h3>
+        <div>
+          <h3 className="text-sm font-display font-bold text-foreground">Calendário de entradas e saídas</h3>
+          {temPrevisto && <p className="text-[11px] font-body text-muted-foreground">Tracejado = previsto (recorrente ainda não lançado).</p>}
+        </div>
         <div className="flex items-center gap-3 text-[11px] font-body">
-          <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" /> a receber <strong className="text-foreground">{brl(totalReceber)}</strong></span>
-          <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> a pagar <strong className="text-foreground">{brl(totalPagar)}</strong></span>
+          <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" /> entra <strong className="text-foreground">{brl(totalReceber)}</strong></span>
+          <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> sai <strong className="text-foreground">{brl(totalPagar)}</strong></span>
+          <span className={cn("inline-flex items-center gap-1 font-bold", totalReceber - totalPagar >= 0 ? "text-green-700" : "text-red-600")}>
+            saldo {brl(totalReceber - totalPagar)}
+          </span>
         </div>
       </div>
 
@@ -712,9 +909,12 @@ function CalendarioFinanceiro({ monthlies, records, ym, clientName }: {
               {list.map((e) => (
                 <div key={e.id}
                   className={cn("rounded px-1 py-0.5 text-[10px] font-body leading-tight truncate",
-                    e.done ? "opacity-50 line-through" : "",
-                    e.kind === "receber" ? "bg-green-500/10 text-green-700" : "bg-red-500/10 text-red-600")}
-                  title={`${e.label} · ${brl(e.amount)}`}>
+                    e.done && "opacity-50 line-through",
+                    e.previsto && "border border-dashed opacity-80",
+                    e.kind === "receber"
+                      ? cn("text-green-700", e.previsto ? "border-green-600/40 bg-green-500/5" : "bg-green-500/10")
+                      : cn("text-red-600", e.previsto ? "border-red-600/40 bg-red-500/5" : "bg-red-500/10"))}
+                  title={`${e.label} · ${brl(e.amount)}${e.previsto ? " (previsto)" : ""}`}>
                   {e.kind === "receber" ? "+" : "−"}{brl(e.amount)} {e.label}
                 </div>
               ))}

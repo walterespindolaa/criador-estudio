@@ -18,6 +18,7 @@ import { ExternalClientDialog } from "@/components/accounts/ExternalClientDialog
 import { useProfile } from "@/hooks/useProfile";
 import { useCrmClients } from "@/hooks/useCrm";
 import { useClientSocialConnection, connectInstagram } from "@/hooks/useSocialInsights";
+import { ClienteInstagramCria } from "@/components/accounts/ClienteInstagramCria";
 import { FORMATS_BY_PLATFORM, FORMAT_LABELS } from "@/lib/constants";
 
 const PLATFORMS = ["instagram", "tiktok", "youtube"];
@@ -294,10 +295,12 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
         </TabsContent>
 
         <TabsContent value="instagram">
+          {client.crm_client_id && hasCriaAccount && criaOwnerId ? (
+            // Cliente usa o CRIA: mostra os insights reais que ele mesmo sincronizou.
+            <ClienteInstagramCria criaOwnerId={criaOwnerId} clientName={client.name} />
+          ) : (
           <div className="rounded-2xl border border-border bg-card p-6 space-y-3">
-            {client.crm_client_id && hasCriaAccount ? (
-              <div className="flex items-center gap-2 text-green-700"><Instagram className="h-5 w-5" /> <span className="font-body text-sm font-medium">Os insights vêm do Instagram conectado pelo próprio cliente na conta CRIA dele.</span></div>
-            ) : client.crm_client_id ? (
+            {client.crm_client_id ? (
               igConn ? (
                 <div className="flex items-center gap-2 text-green-700"><Instagram className="h-5 w-5" /> <span className="font-body text-sm font-medium">Conectado: @{igConn.username ?? "conta"}</span></div>
               ) : (
@@ -310,6 +313,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               <p className="text-sm font-body text-muted-foreground">Vincule este cliente ao cadastro central (no botão "Editar" do cliente, na lista) pra habilitar os insights do Instagram.</p>
             )}
           </div>
+          )}
         </TabsContent>
       </Tabs>
 

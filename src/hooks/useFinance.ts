@@ -66,6 +66,7 @@ export type FinRecurring = {
   id: string; manager_id: string; context: FinContext; type: FinType;
   description: string; category: string | null; subcategory: string | null;
   amount: number; due_day: number; crm_client_id: string | null;
+  payment_method: string | null;
   active: boolean; start_date: string; end_date: string | null;
   created_at: string; updated_at: string;
 };

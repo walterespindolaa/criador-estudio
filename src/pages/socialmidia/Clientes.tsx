@@ -5,6 +5,7 @@ import { Plus, Users, Loader2, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { useCrmClients, useCreateCrmClient, type CrmClient } from "@/hooks/useCrm";
 import { useExternalClients, type ExternalClient } from "@/hooks/useCriaPost";
+import { useCriaClientProfiles } from "@/hooks/useManagerClientCria";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +20,10 @@ export default function Clientes() {
   const { data: clients = [], isLoading } = useCrmClients();
   const { clients: ext, pending, copyLink } = useExternalClients();
   const createClient = useCreateCrmClient();
+  // Foto da conta CRIA do cliente sempre atual: avatar do profile → logo manual → inicial.
+  const { data: criaProfiles } = useCriaClientProfiles();
+  const avatarOf = (c: CrmClient) =>
+    (c.cria_owner_id ? criaProfiles?.[c.cria_owner_id]?.avatar_url ?? null : null) ?? c.logo;
 
   const [filter, setFilter] = useState<"todos" | "cria" | "link">("todos");
   // Filtro Ativos/Inativos: clicar de novo no chip selecionado limpa o filtro.
@@ -100,7 +105,7 @@ export default function Clientes() {
                 className={`group flex flex-col items-center text-center bg-card border border-border rounded-3xl p-4 sm:p-5 cursor-pointer transition-all hover:border-primary/40 hover:shadow-lg hover:-translate-y-0.5 ${inactive ? "opacity-70" : ""}`}>
                 <span className="relative w-16 h-16 rounded-full grid place-items-center text-white text-xl font-display font-bold overflow-hidden mb-3 ring-2 ring-border/60 group-hover:ring-primary/30 transition-all" style={{ background: "linear-gradient(135deg,#0F6E56,#1d9e75)" }}>
                   {initial(c.name)}
-                  {c.logo && <img src={c.logo} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 w-full h-full object-cover" />}
+                  {avatarOf(c) && <img src={avatarOf(c)!} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 w-full h-full object-cover" />}
                 </span>
                 <p className="font-display font-bold text-foreground truncate w-full">{c.name || "Sem nome"}</p>
                 {c.instagram && <p className="text-xs text-muted-foreground font-body truncate w-full">@{c.instagram.replace(/^@/, "")}</p>}

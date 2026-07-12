@@ -1,0 +1,114 @@
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useActiveAccount } from "@/contexts/AccountContext";
+
+// Leitura gestor→cliente CRIA via RPCs SECURITY DEFINER (vínculo validado em
+// account_members, mesmo padrão da manager_client_posts). types.ts é travado,
+// cast padrão do projeto (ver src/lib/tours/progress.ts / useKanbanImport).
+const sbRpc = supabase.rpc.bind(supabase) as unknown as (
+  fn: string, args?: Record<string, unknown>
+) => Promise<{ data: unknown; error: { message: string } | null }>;
+
+// ===================== Foto/perfil dos clientes que usam o CRIA =====================
+export type CriaClientProfile = {
+  cria_owner_id: string;
+  name: string | null;
+  avatar_url: string | null;
+  niche: string | null;
+};
+
+// Mapa cria_owner_id → profile (avatar sempre atual, sem depender do sync manual
+// que gravava o logo no crm_clients só quando alguém abria a ficha do CRM).
+export function useCriaClientProfiles() {
+  const { agencyOwnerId } = useActiveAccount();
+  return useQuery<Record<string, CriaClientProfile>>({
+    queryKey: ["cria-client-profiles", agencyOwnerId],
+    enabled: !!agencyOwnerId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await sbRpc("manager_clients_cria_profiles");
+      if (error) throw new Error(error.message);
+      const map: Record<string, CriaClientProfile> = {};
+      ((data as CriaClientProfile[] | null) ?? []).forEach((p) => { map[p.cria_owner_id] = p; });
+      return map;
+    },
+  });
+}
+
+// ===================== Instagram do cliente (dados já sincronizados) =====================
+export type CriaClientIgDaily = {
+  date: string;
+  followers: number | null;
+  reach: number | null;
+  profile_views: number | null;
+  total_interactions: number | null;
+};
+export type CriaClientIgMedia = {
+  id: string;
+  media_type: string | null;
+  caption: string | null;
+  permalink: string | null;
+  thumbnail_url: string | null;
+  posted_at: string | null;
+  metrics: Record<string, number> | null;
+};
+export type CriaClientInstagram = {
+  connected: boolean;
+  username?: string | null;
+  profile_picture_url?: string | null;
+  last_sync?: string | null;
+  daily?: CriaClientIgDaily[];
+  media?: CriaClientIgMedia[];
+};
+
+export function useCriaClientInstagram(criaOwnerId: string | null | undefined) {
+  return useQuery<CriaClientInstagram>({
+    queryKey: ["cria-client-instagram", criaOwnerId],
+    enabled: !!criaOwnerId,
+    queryFn: async () => {
+      const { data, error } = await sbRpc("manager_client_instagram", { client_owner_id: criaOwnerId! });
+      if (error) throw new Error(error.message);
+      return (data as CriaClientInstagram | null) ?? { connected: false };
+    },
+  });
+}
+
+// ===================== Brandbook do cliente (modo leitura) =====================
+export type CriaClientBrandItem = { type: string; name: string; value: string | null };
+export type CriaClientPersona = {
+  name: string | null;
+  age_range: string | null;
+  gender: string | null;
+  location: string | null;
+  pain_points: string[] | null;
+  desires: string[] | null;
+  interests: string[] | null;
+  how_you_help: string | null;
+};
+export type CriaClientMoodboardEntry = { section: string; question_key: string; answer: string | null };
+export type CriaClientBrandbook = {
+  profile: { name: string | null; niche: string | null; avatar_url: string | null } | null;
+  pillars: string[];
+  brand_items: CriaClientBrandItem[];
+  personas: CriaClientPersona[];
+  moodboard: CriaClientMoodboardEntry[];
+};
+
+export function useCriaClientBrandbook(criaOwnerId: string | null | undefined) {
+  return useQuery<CriaClientBrandbook>({
+    queryKey: ["cria-client-brandbook", criaOwnerId],
+    enabled: !!criaOwnerId,
+    queryFn: async () => {
+      const { data, error } = await sbRpc("manager_client_brandbook", { client_owner_id: criaOwnerId! });
+      if (error) throw new Error(error.message);
+      const d = (data as Partial<CriaClientBrandbook> | null) ?? {};
+      return {
+        profile: d.profile ?? null,
+        pillars: d.pillars ?? [],
+        brand_items: d.brand_items ?? [],
+        personas: d.personas ?? [],
+        moodboard: d.moodboard ?? [],
+      };
+    },
+  });
+}

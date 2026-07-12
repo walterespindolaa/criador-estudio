@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useManagerProfile, type FinSettings, type ManagerProfile } from "@/hooks/useModules";
+import { MoneyInput } from "@/components/shared/MoneyInput";
+import { REGIMES } from "@/lib/finance";
 import { cn } from "@/lib/utils";
 
 type Props = { open: boolean; onOpenChange: (o: boolean) => void };
@@ -18,17 +20,18 @@ const buildBase = (p: ManagerProfile | null) => ({
 
 export function FinCompanyDialog({ open, onOpenChange }: Props) {
   const { profile, save } = useManagerProfile();
-  const [s, setS] = useState<FinSettings>({ regime: "mei" });
+  const [s, setS] = useState<FinSettings>({});
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     const fin = profile?.fin_settings ?? {};
-    setS({ regime: "mei", ...fin, companyName: fin.companyName ?? profile?.contract_company?.legalName ?? "" });
+    // Não assumimos regime: chutar "MEI" pra quem é Simples entrega um imposto errado.
+    setS({ ...fin, companyName: fin.companyName ?? profile?.contract_company?.legalName ?? "" });
   }, [open, profile]);
 
   const set = (patch: Partial<FinSettings>) => setS((x) => ({ ...x, ...patch }));
-  const isMei = (s.regime ?? "mei") === "mei";
+  const isMei = s.regime === "mei";
 
   const onSave = async () => {
     setSaving(true);
@@ -56,26 +59,40 @@ export function FinCompanyDialog({ open, onOpenChange }: Props) {
 
           <div className="space-y-1.5">
             <Label className="text-xs">Regime tributário</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {([["mei", "MEI (DAS fixo)"], ["simples", "Simples (%)"]] as const).map(([v, l]) => (
-                <button key={v} type="button" onClick={() => set({ regime: v })}
-                  className={cn("rounded-xl border-2 px-3 py-2.5 text-sm font-body transition-all", (s.regime ?? "mei") === v ? "border-primary bg-primary/5 text-foreground font-semibold" : "border-border bg-card text-muted-foreground hover:border-primary/30")}>
-                  {l}
+            <div className="grid grid-cols-3 gap-2">
+              {REGIMES.map((r) => (
+                <button key={r.v} type="button" onClick={() => set({ regime: r.v })}
+                  className={cn("rounded-xl border-2 px-2 py-2.5 text-center transition-all", s.regime === r.v ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/30")}>
+                  <span className={cn("block text-[13px] font-body", s.regime === r.v ? "text-foreground font-semibold" : "text-muted-foreground")}>{r.label}</span>
+                  <span className="block text-[10px] font-body text-muted-foreground leading-tight mt-0.5">{r.hint}</span>
                 </button>
               ))}
             </div>
+            <p className="text-[11px] font-body text-muted-foreground">
+              É isso que permite o Caixa calcular o imposto do mês <strong>e por cliente</strong>.
+            </p>
           </div>
 
           <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
             <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Régua de alocação</p>
             <div className="grid grid-cols-2 gap-3">
-              {isMei
-                ? <Num label="DAS mensal (R$)" value={s.dasMonthly} onChange={(n) => set({ dasMonthly: n })} />
-                : <Num label="Imposto (%)" value={s.taxPct} onChange={(n) => set({ taxPct: n })} />}
+              {!s.regime ? (
+                <p className="col-span-2 text-[12px] font-body text-muted-foreground">Escolha o regime acima pra liberar o campo de imposto.</p>
+              ) : isMei ? (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">DAS mensal</Label>
+                  <MoneyInput value={s.dasMonthly ?? null} onChange={(n) => set({ dasMonthly: n ?? 0 })} className="bg-card" />
+                </div>
+              ) : (
+                <Num label="Alíquota efetiva (%)" value={s.taxPct} onChange={(n) => set({ taxPct: n })} />
+              )}
               <Num label="Reinvestimento (%)" value={s.reinvestPct} onChange={(n) => set({ reinvestPct: n })} />
               <Num label="Pró-labore (%)" value={s.proLaborePct} onChange={(n) => set({ proLaborePct: n })} />
             </div>
-            <p className="text-[11px] text-muted-foreground font-body">No lado PJ, a cada receita o Caixa sugere quanto reservar pra imposto, reinvestir e tirar de pró-labore.</p>
+            <p className="text-[11px] text-muted-foreground font-body">
+              No lado PJ, a cada receita o Caixa sugere quanto reservar pra imposto, reinvestir e tirar de pró-labore.
+              É <strong>organização</strong>, não apuração fiscal — confirme os números com sua contabilidade.
+            </p>
           </div>
         </div>
 
