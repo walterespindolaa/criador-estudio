@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, ExternalLink, Loader2, Plus, Wallet, Send } from "lucide-react";
@@ -7,6 +7,7 @@ import { useCrmClient } from "@/hooks/useCrm";
 import { useExternalClients } from "@/hooks/useCriaPost";
 import { useFinRecords, useCreateFinRecord, type FinType } from "@/hooks/useFinance";
 import { ClientDetail } from "@/components/accounts/CriaPostBoard";
+import { saveLastClient } from "@/components/accounts/ClientSwitcher";
 import { CriativoTab } from "@/components/hubcria/CriativoTab";
 import { useHasHubCria } from "@/hooks/useHubCria";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,11 @@ export default function ClienteHub() {
   const extClient = useMemo(() => ext.find((e) => e.crm_client_id === id) ?? null, [ext, id]);
 
   const goTab = (t: string) => navigate(`/socialmidia/clientes/${id}/${t}`);
+
+  // Último cliente visitado: alimenta o seletor global e o "Continuar em {cliente}" do dashboard.
+  useEffect(() => {
+    if (client) saveLastClient(client.id, client.name);
+  }, [client]);
 
   const enableCriaPost = async () => {
     if (!client) return;

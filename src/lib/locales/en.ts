@@ -204,4 +204,62 @@ export const en = {
     footContact: "Contact",
     footMadeWith: "Made with ♥ for creators.",
   },
+  insights: {
+    title: "Insights",
+    subtitle: "Real metrics from your Instagram account.",
+    loading: "Loading…",
+
+    connectTitle: "Connect your Instagram",
+    connectDesc: "Use an Instagram {business} or {creator} account. We read your reach, followers and post performance. Read-only: CRIA never publishes anything on your behalf.",
+    connectCta: "Connect Instagram",
+    business: "Business",
+    creator: "Creator",
+
+    connectedAccount: "Connected account",
+    connected: "Connected",
+    lastUpdate: "Updated {when}",
+    refresh: "Refresh",
+    disconnect: "Disconnect",
+
+    kpiFollowers: "Followers",
+    kpiReach: "Reach (30d)",
+    kpiInteractions: "Interactions (30d)",
+    kpiProfileViews: "Profile views",
+
+    chartReach: "Reach · last 30 days",
+    chartFollowers: "Followers · last 30 days",
+    noReachSeries: "No reach data yet.",
+
+    topReach: "Most reach",
+    topSaves: "Most saved",
+    bestFormat: "Best format",
+
+    postsTitle: "Posts · link them to your CRIA content",
+    linked: "Linked",
+
+    aiTitle: "AI reading",
+    aiRedo: "Redo",
+    aiAnalyze: "Analyze with AI",
+    aiError: "Could not generate the reading right now. Please try again.",
+
+    nextActions: "Actions for next week",
+    bestFormatTip: "Your {format} posts have the highest average reach. Worth prioritizing.",
+    clickToAnalyze: "Click {button} for a full reading of your account.",
+
+    typeImage: "Image",
+    typeVideo: "Video",
+    typeReels: "Reels",
+    typeCarousel: "Carousel",
+  },
+  nav: {
+    home: "Home", criaAi: "Cria AI", create: "Create", ideas: "Ideas",
+    inProduction: "In production", criaPlan: "Cria Plan", criaStories: "Cria Stories",
+    trends: "Trends", approvals: "Approvals", myFeed: "My Feed",
+    plan: "Plan", calendarGoals: "Calendar & Goals", tasks: "Tasks", files: "Files",
+    myBrand: "My brand", brandbook: "Brandbook", linkInBio: "Link in bio",
+    mediaKit: "Media Kit", library: "Library",
+    results: "Results", insights: "Insights", reports: "Reports", history: "History",
+    learn: "Learn", courses: "Courses", tutorials: "Tutorials",
+    partnerships: "Partnerships", trash: "Trash", settings: "Settings", signOut: "Sign out",
+  },
 };

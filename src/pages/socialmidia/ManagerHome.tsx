@@ -13,6 +13,8 @@ import { ApprovalTracker } from "@/components/accounts/ApprovalTracker";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { ClientsGrid } from "@/components/accounts/ClientsGrid";
 import { useManagerOutlet } from "@/components/accounts/ManagerLayout";
+import { readLastClient } from "@/components/accounts/ClientSwitcher";
+import { useCrmClients } from "@/hooks/useCrm";
 
 function initial(name?: string | null) { return name ? name.trim().charAt(0).toUpperCase() : "?"; }
 function greeting(name?: string | null) {
@@ -34,6 +36,12 @@ export default function ManagerHome() {
   const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
   const [cropOpen, setCropOpen] = useState(false);
   const hasAgency = (profile?.seat_limit ?? 0) > 0;
+
+  // Atalho "Continuar em {cliente}": retoma o último cliente visitado no hub.
+  // Só aparece se o cliente ainda existe (valida contra o cadastro central).
+  const { data: crmClients = [] } = useCrmClients();
+  const last = readLastClient();
+  const lastClient = last ? crmClients.find((c) => c.id === last.id) ?? null : null;
 
   const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; e.target.value = "";
@@ -77,6 +85,21 @@ export default function ManagerHome() {
           <Settings className="h-5 w-5" />
         </button>
       </div>
+
+      {lastClient && (
+        <button type="button" onClick={() => navigate(`/socialmidia/clientes/${lastClient.id}/visao-geral`)}
+          className="mb-8 flex w-full items-center gap-3 rounded-2xl border border-primary/25 bg-primary/5 px-4 py-3 text-left transition-colors hover:bg-primary/10 sm:w-auto sm:min-w-[320px] sm:max-w-md">
+          <span className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full font-display font-bold text-white" style={{ background: "linear-gradient(135deg,#0F6E56,#1d9e75)" }}>
+            {initial(lastClient.name)}
+            {lastClient.logo && <img src={lastClient.logo} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 h-full w-full object-cover" />}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[11px] font-body font-semibold uppercase tracking-wider text-muted-foreground">Continuar de onde parou</span>
+            <span className="block truncate text-sm font-display font-bold text-foreground">Continuar em {lastClient.name}</span>
+          </span>
+          <ArrowRight className="h-4 w-4 shrink-0 text-primary" />
+        </button>
+      )}
 
       <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">Seus módulos</h2>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">

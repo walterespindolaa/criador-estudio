@@ -17,6 +17,7 @@ import { useHasHubCria } from "@/hooks/useHubCria";
 import { useMyTeamPermissions } from "@/hooks/useTeam";
 import { cn } from "@/lib/utils";
 import { ModulePopup } from "@/components/accounts/ModulePopup";
+import { ClientSwitcher } from "@/components/accounts/ClientSwitcher";
 import { SettingsManagerDrawer } from "@/components/accounts/SettingsManagerDrawer";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { HeroBand } from "@/components/HeroBand";
@@ -41,17 +42,17 @@ const MODULE_TEAM_CODE: Record<string, string> = {
   crm: "cria_gestao",
 };
 
-const NAV = [
+// Seção "Negócio" do rail (Equipe e Comissões têm tratamento próprio no render).
+const BUSINESS_NAV = [
   { to: "/socialmidia/parceria", label: "Parceria", icon: Handshake },
   { to: "/socialmidia/comissoes", label: "Comissões", icon: DollarSign },
   { to: "/socialmidia/contas", label: "Suas contas", icon: Users },
-  { to: "/socialmidia/aprovacoes", label: "Acompanhamento de Aprovações", icon: ListChecks },
-  { to: "/socialmidia/lixeira", label: "Lixeira", icon: Trash2 },
 ] as const;
 
 // Títulos do HeroBand por rota (gestão)
 const HERO_TITLES: Record<string, string> = {
   "/socialmidia/clientes": "Clientes",
+  "/socialmidia/agenda": "Agenda",
   "/socialmidia/hubcria": "HUB CRIA",
   "/socialmidia/criapost": "Cria Post",
   "/socialmidia/criacrm": "Cria Gestão",
@@ -59,7 +60,9 @@ const HERO_TITLES: Record<string, string> = {
   "/socialmidia/parceria": "Parceria",
   "/socialmidia/comissoes": "Comissões",
   "/socialmidia/contas": "Suas contas",
-  "/socialmidia/aprovacoes": "Acompanhamento de Aprovações",
+  "/socialmidia/aprovacoes": "Aprovações",
+  "/socialmidia/equipe": "Equipe",
+  "/socialmidia/lixeira": "Lixeira",
 };
 
 export type ManagerOutletContext = { openModule: (m: ModuleWithStatus) => void; openSettings: () => void };
@@ -188,12 +191,12 @@ export default function ManagerLayout() {
           {railHovered && <span className="font-display text-lg font-extrabold text-foreground">Cria</span>}
         </div>
         <div className="flex w-full flex-col items-stretch gap-1">
-          {railHovered && <p className="px-2 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Operação</p>}
+          {railHovered && <p className="px-2 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Dia a dia</p>}
           {railNode(Home, "Início", { active: isActive("/socialmidia/dashboard"), onClick: () => navigate("/socialmidia/dashboard") })}
           {canClients && railNode(Contact, "Clientes", { active: isActive("/socialmidia/clientes"), onClick: () => navigate("/socialmidia/clientes") })}
           {canAgenda && railNode(CalendarDays, "Agenda", { active: isActive("/socialmidia/agenda"), onClick: () => navigate("/socialmidia/agenda") })}
-          {hasHubCria && railNode(Sparkles, "HUB CRIA", { active: isActive("/socialmidia/hubcria"), onClick: () => navigate("/socialmidia/hubcria") })}
-          {railHovered && modules.length > 0 && <p className="px-2 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Módulos</p>}
+          {railNode(ListChecks, "Aprovações", { active: isActive("/socialmidia/aprovacoes"), onClick: () => navigate("/socialmidia/aprovacoes") })}
+          {railHovered && (modules.length > 0 || hasHubCria) && <p className="px-2 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Módulos</p>}
           {modules.map((m) => {
             const Icon = (MODICONS[m.code] ?? Boxes) as LucideIcon;
             const active = m.status === "active" || m.status === "past_due";
@@ -210,10 +213,11 @@ export default function ManagerLayout() {
             );
             return railNode(Icon, m.name, { active: !!route && isActive(route), onClick: () => openModule(m), corner, tipBadge });
           })}
+          {hasHubCria && railNode(Sparkles, "HUB CRIA", { active: isActive("/socialmidia/hubcria"), onClick: () => navigate("/socialmidia/hubcria") })}
           <div className="my-2 h-px w-full bg-border" />
-          {railHovered && <p className="px-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Gestão Cria</p>}
+          {railHovered && <p className="px-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Negócio</p>}
           {!actingAsTeam && railNode(UserPlus, "Equipe", { active: isActive("/socialmidia/equipe"), onClick: () => navigate("/socialmidia/equipe") })}
-          {NAV.map((n) => {
+          {BUSINESS_NAV.map((n) => {
             const onClick = n.to === "/socialmidia/comissoes" ? onNavComissoes : () => navigate(n.to);
             return railNode(n.icon as LucideIcon, n.label, { active: isActive(n.to), onClick });
           })}
@@ -221,6 +225,7 @@ export default function ManagerLayout() {
         <div className="flex-1" />
         <div className="my-2 h-px w-full bg-border" />
         <div className="flex w-full flex-col items-stretch gap-1">
+          {railNode(Trash2, "Lixeira", { active: isActive("/socialmidia/lixeira"), onClick: () => navigate("/socialmidia/lixeira") })}
           {railNode(SettingsIcon, "Configurações", { onClick: () => setSettingsOpen(true) })}
           {railNode(LogOut, "Sair", { onClick: handleSignOut })}
         </div>
@@ -231,6 +236,7 @@ export default function ManagerLayout() {
         <div className="hidden md:block md:-ml-[104px] md:w-[calc(100%+104px)]">
           <HeroBand eyebrow={isDash ? `${greet},` : undefined} title={heroTitle} avatar={avatarNode}>
             <div className="flex items-center gap-2 rounded-2xl bg-white/15 px-2 py-1 backdrop-blur">
+              {canClients && <ClientSwitcher />}
               <HelpButton light />
               <FeedbackButton />
               <NotificationsBell />
@@ -258,15 +264,15 @@ export default function ManagerLayout() {
             <span className={cn("text-[10px] font-body", active ? "text-primary font-semibold" : "text-muted-foreground font-medium")}>{label}</span>
           </button>
         );
-        const fin = modules.find((m) => m.code === "financeiro");
+        // Dock: os 4 do dia a dia ficam diretos, o resto (módulos incluídos) vai pro "Mais".
         const moreNav = [
-          ...(canClients ? [{ label: "Clientes", icon: Contact, onClick: () => navigate("/socialmidia/clientes") }] : []),
-          ...(canAgenda ? [{ label: "Agenda", icon: CalendarDays, onClick: () => navigate("/socialmidia/agenda") }] : []),
+          ...modules.map((m) => ({ label: m.name, icon: (MODICONS[m.code] ?? Boxes) as LucideIcon, onClick: () => openModule(m) })),
           ...(hasHubCria ? [{ label: "HUB CRIA", icon: Sparkles, onClick: () => navigate("/socialmidia/hubcria") }] : []),
           ...(!actingAsTeam ? [{ label: "Equipe", icon: UserPlus, onClick: () => navigate("/socialmidia/equipe") }] : []),
           { label: "Parceria", icon: Handshake, onClick: () => navigate("/socialmidia/parceria") },
           { label: "Comissões", icon: DollarSign, onClick: onNavComissoes },
           { label: "Suas contas", icon: Users, onClick: () => navigate("/socialmidia/contas") },
+          { label: "Lixeira", icon: Trash2, onClick: () => navigate("/socialmidia/lixeira") },
           { label: "Config.", icon: SettingsIcon, onClick: () => setSettingsOpen(true) },
         ];
         return (
@@ -298,7 +304,7 @@ export default function ManagerLayout() {
                 <div className="dock-pill flex items-center gap-0.5 rounded-[30px] p-1.5">
                   {dockItem(isActive("/socialmidia/dashboard"), Home, "Início", () => navigate("/socialmidia/dashboard"))}
                   {canClients && dockItem(isActive("/socialmidia/clientes"), Contact, "Clientes", () => navigate("/socialmidia/clientes"))}
-                  {fin && dockItem(isActive("/socialmidia/criacaixa"), Wallet, "Caixa", () => openModule(fin))}
+                  {canAgenda && dockItem(isActive("/socialmidia/agenda"), CalendarDays, "Agenda", () => navigate("/socialmidia/agenda"))}
                   {dockItem(isActive("/socialmidia/aprovacoes"), ListChecks, "Aprov.", () => navigate("/socialmidia/aprovacoes"))}
                 </div>
                 <button type="button" onClick={() => setMoreOpen(!moreOpen)} aria-label="Mais"

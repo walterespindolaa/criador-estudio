@@ -1,0 +1,148 @@
+import { useEffect, useRef, useState } from "react";
+import { useExternalClients, type ExternalClient, type ExternalClientInput } from "@/hooks/useCriaPost";
+import { useCrmClients } from "@/hooks/useCrm";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { validateUpload } from "@/lib/upload-validation";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Loader2, Image as ImageIcon } from "lucide-react";
+
+// Cores dos clientes no calendário geral (também usadas pelo ManagerCalendar).
+export const CLIENT_COLORS = ["#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#EF4444", "#14B8A6", "#A855F7"];
+// Paleta CRIA pra cor da marca do cliente no portal público.
+const PORTAL_BRAND_COLORS = ["#CE4A1D", "#2A4BDF", "#F27EB5", "#F2C21E", "#3E9152"];
+
+// Edição do cliente de aprovação por link: logo e cor do portal, vínculo com o
+// cadastro central, notas e cor do calendário. Extraído da antiga lista do Cria Post
+// pra viver dentro do hub do cliente (ClienteHub) sem duplicar telas.
+export function ExternalClientDialog({ open, onOpenChange, client }: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  client: ExternalClient | null;
+}) {
+  const { update, setActive } = useExternalClients();
+  const { data: crmClients = [] } = useCrmClients();
+  const { user } = useAuth();
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [f, setF] = useState<ExternalClientInput>({ name: "", instagram_handle: "", notes: "", color: CLIENT_COLORS[0], crm_client_id: null, logo_url: null, brand_color: null });
+
+  useEffect(() => {
+    if (open && client) {
+      setF({ name: client.name, instagram_handle: client.instagram_handle ?? "", notes: client.notes ?? "", color: client.color ?? CLIENT_COLORS[0], crm_client_id: client.crm_client_id ?? null, logo_url: client.logo_url ?? null, brand_color: client.brand_color ?? null });
+    }
+  }, [open, client]);
+
+  if (!client) return null;
+
+  const submit = async () => {
+    if (!f.name.trim()) return;
+    await update.mutateAsync({ id: client.id, ...f });
+    onOpenChange(false);
+  };
+
+  // Reusa a infra de upload do bucket avatars (mesma dos logos da gestora).
+  const handleLogoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !user) return;
+    const v = validateUpload(file, "managerAvatar");
+    if (!v.ok) { toast.error(v.reason); return; }
+    setUploadingLogo(true);
+    try {
+      const ext = (file.name.split(".").pop() || "png").toLowerCase();
+      const path = `${user.id}/cria-post-client-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
+      if (error) throw error;
+      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+      setF((p) => ({ ...p, logo_url: `${data.publicUrl}?t=${Date.now()}` }));
+      toast.success("Logo enviada!");
+    } catch {
+      toast.error("Erro ao enviar a logo.");
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="max-w-md rounded-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader><DialogTitle className="font-display">Personalizar cliente</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-body">Cadastro central</Label>
+            <select
+              value={f.crm_client_id ?? ""}
+              onChange={(e) => {
+                const id = e.target.value || null;
+                const c = id ? crmClients.find((x) => x.id === id) : null;
+                setF((p) => ({
+                  ...p,
+                  crm_client_id: id,
+                  ...(c ? { name: c.name, instagram_handle: c.instagram ?? "", notes: c.notes ?? "" } : {}),
+                }));
+              }}
+              className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm"
+            >
+              <option value="">Sem vínculo</option>
+              {crmClients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <p className="text-[11px] text-muted-foreground font-body">Vincule ao cliente do cadastro central pra ele aparecer na página Clientes com posts, relatório e financeiro juntos.</p>
+          </div>
+          <div className="space-y-1.5"><Label className="text-xs font-body">Nome *</Label><Input value={f.name} onChange={(e) => setF((p) => ({ ...p, name: e.target.value }))} className="rounded-xl" /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-body">@ do Instagram</Label><Input value={f.instagram_handle ?? ""} onChange={(e) => setF((p) => ({ ...p, instagram_handle: e.target.value }))} placeholder="@cliente" className="rounded-xl" /></div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-body">Logo do cliente (aparece no portal)</Label>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl border border-border bg-muted overflow-hidden flex items-center justify-center shrink-0">
+                {f.logo_url ? <img src={f.logo_url} alt="" className="w-full h-full object-cover" /> : <ImageIcon className="h-4 w-4 text-muted-foreground" />}
+              </div>
+              <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo}>
+                {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar imagem"}
+              </Button>
+              {f.logo_url && <Button type="button" variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setF((p) => ({ ...p, logo_url: null }))}>Remover</Button>}
+              <input ref={logoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleLogoSelect} />
+            </div>
+            <Input value={f.logo_url ?? ""} onChange={(e) => setF((p) => ({ ...p, logo_url: e.target.value || null }))} placeholder="ou cole a URL da imagem" className="rounded-xl text-xs" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-body">Cor da marca (deixa o portal com a cara do cliente)</Label>
+            <div className="flex items-center flex-wrap gap-2">
+              {PORTAL_BRAND_COLORS.map((c) => (
+                <button key={c} type="button" onClick={() => setF((p) => ({ ...p, brand_color: c }))}
+                  className={`h-7 w-7 rounded-full transition-transform ${f.brand_color === c ? "ring-2 ring-offset-2 ring-foreground scale-110" : "hover:scale-105"}`}
+                  style={{ backgroundColor: c }} aria-label={`Cor da marca ${c}`} />
+              ))}
+              <input type="color" value={f.brand_color ?? "#CE4A1D"} onChange={(e) => setF((p) => ({ ...p, brand_color: e.target.value }))}
+                className="h-7 w-9 rounded-lg border border-border bg-transparent p-0.5 cursor-pointer" aria-label="Cor personalizada" />
+              {f.brand_color && <button type="button" onClick={() => setF((p) => ({ ...p, brand_color: null }))} className="text-[11px] font-body text-muted-foreground hover:text-foreground">Limpar</button>}
+            </div>
+          </div>
+          <div className="space-y-1.5"><Label className="text-xs font-body">Notas (interno)</Label><Textarea value={f.notes ?? ""} onChange={(e) => setF((p) => ({ ...p, notes: e.target.value }))} rows={2} className="rounded-xl" /></div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-body">Cor (calendário)</Label>
+            <div className="flex flex-wrap gap-2">
+              {CLIENT_COLORS.map((c) => (
+                <button key={c} type="button" onClick={() => setF((p) => ({ ...p, color: c }))}
+                  className={`h-7 w-7 rounded-full transition-transform ${f.color === c ? "ring-2 ring-offset-2 ring-foreground scale-110" : "hover:scale-105"}`}
+                  style={{ backgroundColor: c }} aria-label={`Cor ${c}`} />
+              ))}
+            </div>
+          </div>
+        </div>
+        <DialogFooter className="mt-4 sm:justify-between">
+          <Button variant="ghost" className="text-destructive mr-auto" onClick={async () => { await setActive.mutateAsync({ id: client.id, active: false }); onOpenChange(false); }}>Desativar</Button>
+          <div className="flex gap-2 ml-auto">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button onClick={submit} disabled={update.isPending || !f.name.trim()}>{update.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}</Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

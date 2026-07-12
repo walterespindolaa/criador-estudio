@@ -9,6 +9,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useCriaAI } from "@/contexts/CriaAIContext";
 import { useProfile } from "@/hooks/useProfile";
+import { useT } from "@/lib/i18n";
 import { useTier } from "@/hooks/useTier";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -22,47 +23,48 @@ type NavNode = {
 };
 
 const TOP: NavNode[] = [
-  { id: "dash", label: "Início", icon: LayoutDashboard, to: "/app", end: true },
-  { id: "ia", label: "Cria IA", icon: Sparkles, action: "cria", featured: true },
-  { id: "criar", label: "Criar", icon: PenLine, children: [
-    { label: "Ideias", icon: Lightbulb, to: "/app/ideias" },
-    { label: "Em produção", icon: Kanban, to: "/app/criando" },
-    { label: "Cria Plano", icon: Wand2, to: "/app/autopilot", studio: true },
-    { label: "Cria Stories", icon: Clapperboard, to: "/app/stories", studio: true },
-    { label: "Tendências", icon: TrendingUp, to: "/app/tendencias" },
-    { label: "Aprovações", icon: ClipboardCheck, to: "/app/aprovacao" },
-    { label: "Meu Feed", icon: Grid3X3, to: "/app/feed" },
+  { id: "dash", label: "nav.home", icon: LayoutDashboard, to: "/app", end: true },
+  { id: "ia", label: "nav.criaAi", icon: Sparkles, action: "cria", featured: true },
+  { id: "criar", label: "nav.create", icon: PenLine, children: [
+    { label: "nav.ideas", icon: Lightbulb, to: "/app/ideias" },
+    { label: "nav.inProduction", icon: Kanban, to: "/app/criando" },
+    { label: "nav.criaPlan", icon: Wand2, to: "/app/autopilot", studio: true },
+    { label: "nav.criaStories", icon: Clapperboard, to: "/app/stories", studio: true },
+    { label: "nav.trends", icon: TrendingUp, to: "/app/tendencias" },
+    { label: "nav.approvals", icon: ClipboardCheck, to: "/app/aprovacao" },
+    { label: "nav.myFeed", icon: Grid3X3, to: "/app/feed" },
   ]},
-  { id: "planejar", label: "Planejar", icon: CalendarRange, children: [
-    { label: "Calendário & Metas", icon: Target, to: "/app/metas" },
-    { label: "Tarefas", icon: ListTodo, to: "/app/tarefas" },
-    { label: "Arquivos", icon: FolderOpen, to: "/app/arquivos" },
+  { id: "planejar", label: "nav.plan", icon: CalendarRange, children: [
+    { label: "nav.calendarGoals", icon: Target, to: "/app/metas" },
+    { label: "nav.tasks", icon: ListTodo, to: "/app/tarefas" },
+    { label: "nav.files", icon: FolderOpen, to: "/app/arquivos" },
   ]},
-  { id: "marca", label: "Minha marca", icon: Palette, children: [
-    { label: "Brandbook", icon: BookMarked, to: "/app/brandbook" },
-    { label: "Link na bio", icon: Link2, to: "/app/linkinbio" },
-    { label: "Media Kit", icon: IdCard, to: "/app/media-kit" },
-    { label: "Biblioteca", icon: BookOpen, to: "/app/biblioteca" },
+  { id: "marca", label: "nav.myBrand", icon: Palette, children: [
+    { label: "nav.brandbook", icon: BookMarked, to: "/app/brandbook" },
+    { label: "nav.linkInBio", icon: Link2, to: "/app/linkinbio" },
+    { label: "nav.mediaKit", icon: IdCard, to: "/app/media-kit" },
+    { label: "nav.library", icon: BookOpen, to: "/app/biblioteca" },
   ]},
-  { id: "result", label: "Resultados", icon: BarChart3, children: [
-    { label: "Insights", icon: Instagram, to: "/app/insights" },
-    { label: "Relatórios", icon: BarChart3, to: "/app/relatorios" },
-    { label: "Histórico", icon: Archive, to: "/app/historico" },
+  { id: "result", label: "nav.results", icon: BarChart3, children: [
+    { label: "nav.insights", icon: Instagram, to: "/app/insights" },
+    { label: "nav.reports", icon: BarChart3, to: "/app/relatorios" },
+    { label: "nav.history", icon: Archive, to: "/app/historico" },
   ]},
-  { id: "aprender", label: "Aprender", icon: GraduationCap, children: [
-    { label: "Cursos", icon: BookMarked, to: "/app/aprender" },
-    { label: "Tutoriais", icon: PlayCircle, to: "/app/aprender" },
+  { id: "aprender", label: "nav.learn", icon: GraduationCap, children: [
+    { label: "nav.courses", icon: BookMarked, to: "/app/aprender" },
+    { label: "nav.tutorials", icon: PlayCircle, to: "/app/aprender" },
   ]},
-  { id: "parcerias", label: "Parcerias", icon: BadgeDollarSign, to: "/app/collabs" },
+  { id: "parcerias", label: "nav.partnerships", icon: BadgeDollarSign, to: "/app/collabs" },
 ];
 
 const BOTTOM: NavNode[] = [
-  { id: "lixeira", label: "Lixeira", icon: Trash2, to: "/app/lixeira" },
-  { id: "cfg", label: "Configurações", icon: Settings, to: "/app/configuracoes" },
-  { id: "out", label: "Sair", icon: LogOut, action: "logout" },
+  { id: "lixeira", label: "nav.trash", icon: Trash2, to: "/app/lixeira" },
+  { id: "cfg", label: "nav.settings", icon: Settings, to: "/app/configuracoes" },
+  { id: "out", label: "nav.signOut", icon: LogOut, action: "logout" },
 ];
 
 export function AppRail() {
+  const t = useT();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { openCria } = useCriaAI();
@@ -104,8 +106,8 @@ export function AppRail() {
       <div key={n.id} className="w-full">
         <button
           onClick={() => handleClick(n)}
-          title={!expanded ? n.label : undefined}
-          aria-label={n.label}
+          title={!expanded ? t(n.label) : undefined}
+          aria-label={t(n.label)}
           className={cn(
             "relative flex items-center transition-colors",
             expanded ? "h-10 w-full gap-3 rounded-xl px-3" : "mx-auto h-10 w-10 justify-center rounded-2xl",
@@ -117,7 +119,7 @@ export function AppRail() {
           )}
         >
           <Icon className="h-[18px] w-[18px] shrink-0" />
-          {expanded && <span className="flex-1 truncate text-left text-sm font-medium">{n.label}</span>}
+          {expanded && <span className="flex-1 truncate text-left text-sm font-medium">{t(n.label)}</span>}
           {expanded && n.children && (
             <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", isOpen && "rotate-180")} />
           )}
@@ -142,7 +144,7 @@ export function AppRail() {
                   )}
                 >
                   <CIcon className="h-4 w-4 shrink-0" />
-                  <span className="flex-1 truncate">{c.label}</span>
+                  <span className="flex-1 truncate">{t(c.label)}</span>
                   {c.studio && (
                     <span className="shrink-0 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-gradient-to-r from-primary to-purple-600 text-white">Studio</span>
                   )}

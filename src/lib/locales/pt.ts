@@ -204,4 +204,62 @@ export const pt = {
     footContact: "Contato",
     footMadeWith: "Feito com ♥ para criadores brasileiros.",
   },
+  insights: {
+    title: "Insights",
+    subtitle: "Métricas reais do seu Instagram.",
+    loading: "Carregando…",
+
+    connectTitle: "Conecte seu Instagram",
+    connectDesc: "Conta {business} ou {creator}. Puxamos alcance, seguidores e desempenho dos posts. Só leitura: o CRIA não publica nada por você.",
+    connectCta: "Conectar Instagram",
+    business: "Business",
+    creator: "Creator",
+
+    connectedAccount: "Conta conectada",
+    connected: "Conectado",
+    lastUpdate: "Atualizado {when}",
+    refresh: "Atualizar",
+    disconnect: "Desconectar",
+
+    kpiFollowers: "Seguidores",
+    kpiReach: "Alcance (30d)",
+    kpiInteractions: "Interações (30d)",
+    kpiProfileViews: "Visitas ao perfil",
+
+    chartReach: "Alcance · 30 dias",
+    chartFollowers: "Seguidores · 30 dias",
+    noReachSeries: "Sem série de alcance ainda.",
+
+    topReach: "Mais alcance",
+    topSaves: "Mais salvos",
+    bestFormat: "Melhor formato",
+
+    postsTitle: "Posts · vincule ao conteúdo do CRIA",
+    linked: "Vinculado",
+
+    aiTitle: "Leitura da IA",
+    aiRedo: "Refazer",
+    aiAnalyze: "Analisar com IA",
+    aiError: "Não consegui gerar a leitura agora. Tenta de novo.",
+
+    nextActions: "Ações pra próxima semana",
+    bestFormatTip: "Seu formato {format} tem o maior alcance médio. Vale priorizar.",
+    clickToAnalyze: "Clique em {button} pra uma leitura completa da conta.",
+
+    typeImage: "Imagem",
+    typeVideo: "Vídeo",
+    typeReels: "Reels",
+    typeCarousel: "Carrossel",
+  },
+  nav: {
+    home: "Início", criaAi: "Cria IA", create: "Criar", ideas: "Ideias",
+    inProduction: "Em produção", criaPlan: "Cria Plano", criaStories: "Cria Stories",
+    trends: "Tendências", approvals: "Aprovações", myFeed: "Meu Feed",
+    plan: "Planejar", calendarGoals: "Calendário & Metas", tasks: "Tarefas", files: "Arquivos",
+    myBrand: "Minha marca", brandbook: "Brandbook", linkInBio: "Link na bio",
+    mediaKit: "Media Kit", library: "Biblioteca",
+    results: "Resultados", insights: "Insights", reports: "Relatórios", history: "Histórico",
+    learn: "Aprender", courses: "Cursos", tutorials: "Tutoriais",
+    partnerships: "Parcerias", trash: "Lixeira", settings: "Configurações", signOut: "Sair",
+  },
 };

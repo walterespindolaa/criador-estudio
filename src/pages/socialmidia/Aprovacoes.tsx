@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ApprovalTracker } from "@/components/accounts/ApprovalTracker";
+import { ExternalApprovalsPanel } from "@/components/accounts/ExternalApprovalsPanel";
 import { ManagerSectionTitle } from "@/components/accounts/ManagerSectionTitle";
 import { cn } from "@/lib/utils";
 

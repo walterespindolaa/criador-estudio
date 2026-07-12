@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { useT } from "@/lib/i18n";
 import {
   Instagram, Users, Eye, Zap, UserPlus, RefreshCw, Unplug, Link2, Bookmark, Heart, Play, Image as ImageIcon, Images, Sparkles, Info, TrendingUp, BarChart3,
 } from "lucide-react";
@@ -23,11 +24,13 @@ const fmt = (n: number | null | undefined) =>
   n == null ? "-" : n >= 1000 ? `${(n / 1000).toFixed(1).replace(".0", "")}k` : String(n);
 const m = (mi: MediaInsight, k: string) => Number(mi.metrics?.[k] ?? 0);
 const MEDIA_ICON = (t: string | null) => (t === "VIDEO" || t === "REELS" ? Play : t === "CAROUSEL_ALBUM" ? Images : ImageIcon);
-const MEDIA_LABEL: Record<string, string> = { IMAGE: "Imagem", VIDEO: "Vídeo", REELS: "Reels", CAROUSEL_ALBUM: "Carrossel" };
-const fmtType = (t: string | null) => (t ? MEDIA_LABEL[t] ?? t : "-");
+const MEDIA_KEY: Record<string, string> = { IMAGE: "insights.typeImage", VIDEO: "insights.typeVideo", REELS: "insights.typeReels", CAROUSEL_ALBUM: "insights.typeCarousel" };
+const fmtTypeWith = (tr: (k: string) => string) => (mt: string | null) => (mt ? (MEDIA_KEY[mt] ? tr(MEDIA_KEY[mt]) : mt) : "-");
 const isVideo = (t: string | null) => t === "VIDEO" || t === "REELS";
 
 export default function Insights() {
+  const t = useT();
+  const fmtType = fmtTypeWith(t);
   const { data: conn, isLoading } = useSocialConnection();
   const { data: daily = [] } = useDailyMetrics(30);
   const { data: media = [] } = useMediaInsights();
@@ -69,7 +72,7 @@ export default function Insights() {
       else throw new Error("formato inesperado");
     } catch (e) {
       console.error("insights-reading failed", e);
-      toast.error("Não consegui gerar a leitura agora. Tenta de novo.");
+      toast.error(t("insights.aiError"));
     } finally {
       setAiLoading(false);
     }
@@ -89,7 +92,7 @@ export default function Insights() {
     };
   }, [daily, media]);
 
-  if (isLoading) return <div className="p-8 text-sm text-muted-foreground">Carregando…</div>;
+  if (isLoading) return <div className="p-8 text-sm text-muted-foreground">{t("insights.loading")}</div>;
 
   // ---- Desconectado ----
   if (!conn) {
@@ -101,7 +104,7 @@ export default function Insights() {
           </div>
           <div>
             <h1 className="text-3xl font-display font-extrabold text-foreground tracking-tight">Insights</h1>
-            <p className="text-muted-foreground font-body mt-0.5 text-sm">Métricas reais do seu Instagram.</p>
+            <p className="text-muted-foreground font-body mt-0.5 text-sm">{t("insights.subtitle")}</p>
           </div>
         </div>
         <div className="bg-card border border-border rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-5">
@@ -109,13 +112,13 @@ export default function Insights() {
             <Instagram className="h-7 w-7 text-white" />
           </div>
           <div className="flex-1">
-            <h3 className="font-display font-bold text-foreground">Conecte seu Instagram</h3>
+            <h3 className="font-display font-bold text-foreground">{t("insights.connectTitle")}</h3>
             <p className="text-sm text-muted-foreground font-body mt-1">
-              Conta <b>Business</b> ou <b>Creator</b>. Puxamos alcance, seguidores e desempenho dos posts, só leitura, o CRIA não publica nada por você.
+              {t("insights.connectDesc", { business: t("insights.business"), creator: t("insights.creator") })}
             </p>
           </div>
           <Button onClick={() => connectInstagram()} className="gap-2 shrink-0 bg-gradient-to-r from-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90">
-            <Instagram className="h-4 w-4" /> Conectar
+            <Instagram className="h-4 w-4" /> {t("insights.connectCta")}
           </Button>
         </div>
       </div>
@@ -146,7 +149,7 @@ export default function Insights() {
         </div>
         <div>
           <h1 className="text-3xl font-display font-extrabold text-foreground tracking-tight">Insights</h1>
-          <p className="text-muted-foreground font-body mt-0.5 text-sm">Métricas reais do seu Instagram.</p>
+          <p className="text-muted-foreground font-body mt-0.5 text-sm">{t("insights.subtitle")}</p>
         </div>
       </div>
 
@@ -156,35 +159,35 @@ export default function Insights() {
           {(conn.username ?? "?").charAt(0).toUpperCase()}
         </div>
         <div className="min-w-0">
-          <p className="font-display font-bold text-sm">{conn.username ? `@${conn.username}` : "Conta conectada"}</p>
+          <p className="font-display font-bold text-sm">{conn.username ? `@${conn.username}` : t("insights.connectedAccount")}</p>
           <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Conectado{conn.account_type ? ` · ${conn.account_type}` : ""}
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> {t("insights.connected")}{conn.account_type ? ` · ${conn.account_type}` : ""}
           </p>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <span className="text-xs text-muted-foreground hidden sm:inline">Atualizado {lastSync}</span>
+          <span className="text-xs text-muted-foreground hidden sm:inline">{t("insights.lastUpdate", { when: lastSync })}</span>
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => sync.mutate()} disabled={sync.isPending}>
-            <RefreshCw className={`h-3.5 w-3.5 ${sync.isPending ? "animate-spin" : ""}`} /> Atualizar
+            <RefreshCw className={`h-3.5 w-3.5 ${sync.isPending ? "animate-spin" : ""}`} /> {t("insights.refresh")}
           </Button>
           <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={() => disconnect.mutate()}>
-            <Unplug className="h-3.5 w-3.5" /> Desconectar
+            <Unplug className="h-3.5 w-3.5" /> {t("insights.disconnect")}
           </Button>
         </div>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
-        <Kpi icon={Users} label="Seguidores" value={fmt(kpis?.followers)} delta={kpis ? `${kpis.followersDelta >= 0 ? "▲" : "▼"} ${Math.abs(kpis.followersDelta)} (30d)` : undefined} up={(kpis?.followersDelta ?? 0) >= 0} />
-        <Kpi icon={Eye} label="Alcance (30d)" value={fmt(kpis?.reach)} />
-        <Kpi icon={Zap} label="Interações (30d)" value={fmt(kpis?.interactions)} />
-        <Kpi icon={UserPlus} label="Visitas ao perfil" value={fmt(kpis?.profileViews)} />
+        <Kpi icon={Users} label={t("insights.kpiFollowers")} value={fmt(kpis?.followers)} delta={kpis ? `${kpis.followersDelta >= 0 ? "▲" : "▼"} ${Math.abs(kpis.followersDelta)} (30d)` : undefined} up={(kpis?.followersDelta ?? 0) >= 0} />
+        <Kpi icon={Eye} label={t("insights.kpiReach")} value={fmt(kpis?.reach)} />
+        <Kpi icon={Zap} label={t("insights.kpiInteractions")} value={fmt(kpis?.interactions)} />
+        <Kpi icon={UserPlus} label={t("insights.kpiProfileViews")} value={fmt(kpis?.profileViews)} />
       </div>
 
       {/* gráficos */}
       {(reachSeries.length > 1 || followerSeries.length > 1) ? (
         <div className="grid md:grid-cols-2 gap-3 mt-3">
           <div className="bg-card border border-border rounded-2xl p-4">
-            <h4 className="text-sm font-bold">Alcance · 30 dias</h4>
+            <h4 className="text-sm font-bold">{t("insights.chartReach")}</h4>
             {reachSeries.length > 1 ? (
               <div className="h-[140px] mt-3">
                 <ResponsiveContainer width="100%" height="100%">
@@ -195,10 +198,10 @@ export default function Insights() {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-            ) : <p className="text-xs text-muted-foreground mt-3">Sem série de alcance ainda.</p>}
+            ) : <p className="text-xs text-muted-foreground mt-3">{t("insights.noReachSeries")}</p>}
           </div>
           <div className="bg-card border border-border rounded-2xl p-4">
-            <h4 className="text-sm font-bold">Seguidores · 30 dias</h4>
+            <h4 className="text-sm font-bold">{t("insights.chartFollowers")}</h4>
             {followerSeries.length > 1 ? (
               <div className="h-[140px] mt-3">
                 <ResponsiveContainer width="100%" height="100%">
@@ -224,15 +227,15 @@ export default function Insights() {
             O que mais gerou crescimento <span className="text-[10px] font-extrabold text-primary bg-primary/10 px-2 py-0.5 rounded-full">IA</span>
           </h2>
           <div className="grid sm:grid-cols-3 gap-3">
-            <Driver icon={Eye} t="Mais alcance" big={byReach[0]?.caption?.slice(0, 40) ?? "-"} s={`${fmt(m(byReach[0], "reach"))} de alcance`} />
-            <Driver icon={Bookmark} t="Mais salvos" big={bySaves[0]?.caption?.slice(0, 40) ?? "-"} s={`${fmt(m(bySaves[0], "saved") + m(bySaves[0], "saves"))} salvos`} />
-            <Driver icon={BarChart3} t="Melhor formato" big={fmtType(bestFormat?.t ?? null)} s={`média de ${fmt(Math.round(bestFormat?.avg ?? 0))} de alcance`} />
+            <Driver icon={Eye} t={t("insights.topReach")} big={byReach[0]?.caption?.slice(0, 40) ?? "-"} s={`${fmt(m(byReach[0], "reach"))} de alcance`} />
+            <Driver icon={Bookmark} t={t("insights.topSaves")} big={bySaves[0]?.caption?.slice(0, 40) ?? "-"} s={`${fmt(m(bySaves[0], "saved") + m(bySaves[0], "saves"))} salvos`} />
+            <Driver icon={BarChart3} t={t("insights.bestFormat")} big={fmtType(bestFormat?.t ?? null)} s={`média de ${fmt(Math.round(bestFormat?.avg ?? 0))} de alcance`} />
           </div>
         </>
       )}
 
       {/* posts + vínculo manual */}
-      <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-7 mb-3">Posts · vincule ao conteúdo do CRIA</h2>
+      <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-7 mb-3">{t("insights.postsTitle")}</h2>
       {media.length === 0 ? (
         <p className="text-sm text-muted-foreground">Nenhum post coletado ainda. Clique em “Atualizar” após conectar.</p>
       ) : (
@@ -257,7 +260,7 @@ export default function Insights() {
                   <div className="mt-2">
                     {mi.post_id && mi.posts ? (
                       <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full">
-                        <Link2 className="h-3 w-3" /> {[mi.posts.format, mi.posts.hook].filter(Boolean).join(" · ") || mi.posts.title || "Vinculado"}
+                        <Link2 className="h-3 w-3" /> {[mi.posts.format, mi.posts.hook].filter(Boolean).join(" · ") || mi.posts.title || t("insights.linked")}
                       </span>
                     ) : (
                       <button onClick={() => setLinkFor(mi)} className="inline-flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground bg-background border border-dashed border-border px-2.5 py-1 rounded-full hover:border-primary/40 hover:text-primary">
@@ -276,10 +279,10 @@ export default function Insights() {
       {media.length > 0 && bestFormat && (
         <div className="bg-card border border-border rounded-2xl p-4 mt-4">
           <div className="flex items-center justify-between gap-2">
-            <h4 className="text-sm font-extrabold flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> Leitura da IA</h4>
+            <h4 className="text-sm font-extrabold flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> {t("insights.aiTitle")}</h4>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={genReading} disabled={aiLoading}>
               {aiLoading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-              {aiRead ? "Refazer" : "Analisar com IA"}
+              {aiRead ? t("insights.aiRedo") : t("insights.aiAnalyze")}
             </Button>
           </div>
 
@@ -292,7 +295,7 @@ export default function Insights() {
               </ul>
               {aiRead.acoes.length > 0 && (
                 <div>
-                  <p className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground mb-1.5">Ações pra próxima semana</p>
+                  <p className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground mb-1.5">{t("insights.nextActions")}</p>
                   <ul className="space-y-1.5 text-[13px]">
                     {aiRead.acoes.map((a, i) => (
                       <li key={i} className="flex gap-2"><Zap className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" /><span>{a}</span></li>
@@ -303,8 +306,8 @@ export default function Insights() {
             </div>
           ) : (
             <ul className="mt-2.5 space-y-2 text-[13px]">
-              <li className="flex gap-2"><TrendingUp className="h-4 w-4 text-green-600 shrink-0 mt-0.5" /><span>Seu formato <b>{fmtType(bestFormat.t)}</b> tem o maior alcance médio. Vale priorizar.</span></li>
-              <li className="flex gap-2"><TrendingUp className="h-4 w-4 text-green-600 shrink-0 mt-0.5" /><span>Clique em <b>Analisar com IA</b> pra uma leitura completa cruzando seus números.</span></li>
+              <li className="flex gap-2"><TrendingUp className="h-4 w-4 text-green-600 shrink-0 mt-0.5" /><span>{t("insights.bestFormatTip", { format: fmtType(bestFormat.t) })}</span></li>
+              <li className="flex gap-2"><TrendingUp className="h-4 w-4 text-green-600 shrink-0 mt-0.5" /><span>{t("insights.clickToAnalyze", { button: t("insights.aiAnalyze") })}</span></li>
             </ul>
           )}
 

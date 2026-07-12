@@ -1,23 +1,20 @@
-import { useRef, useState } from "react";
-import { useExternalClients, useExternalPosts, usePortalActivity, type ExternalClient, type ExternalClientInput, type ExternalPost, type ExternalPostInput } from "@/hooks/useCriaPost";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { validateUpload } from "@/lib/upload-validation";
+import { useState } from "react";
+import { useExternalClients, useExternalPosts, usePortalActivity, type ExternalClient, type ExternalPost, type ExternalPostInput } from "@/hooks/useCriaPost";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CronogramaBoard } from "@/components/accounts/CronogramaBoard";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
-import { Plus, Link2, Pencil, Loader2, Users, ArrowRight, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare, Eye, Clock, Image as ImageIcon } from "lucide-react";
+import { Plus, Link2, Pencil, Loader2, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare, Eye, Clock, Settings2 } from "lucide-react";
 import { CriaPostMedia } from "@/components/accounts/CriaPostMedia";
 import { ImportKanbanDialog } from "@/components/accounts/ImportKanbanDialog";
 import { ClientReportDialog } from "@/components/accounts/ClientReportDialog";
-import { QuickReportCard } from "@/components/accounts/QuickReportCard";
+import { ExternalClientDialog } from "@/components/accounts/ExternalClientDialog";
 import { useProfile } from "@/hooks/useProfile";
 import { useCrmClients } from "@/hooks/useCrm";
 import { useClientSocialConnection, connectInstagram } from "@/hooks/useSocialInsights";
@@ -25,11 +22,9 @@ import { FORMATS_BY_PLATFORM, FORMAT_LABELS } from "@/lib/constants";
 
 const PLATFORMS = ["instagram", "tiktok", "youtube"];
 const FORMATS = ["reels", "carrossel", "foto", "story", "video"];
-export const CLIENT_COLORS = ["#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#EF4444", "#14B8A6", "#A855F7"];
-// Paleta CRIA pra cor da marca do cliente no portal público.
-const PORTAL_BRAND_COLORS = ["#CE4A1D", "#2A4BDF", "#F27EB5", "#F2C21E", "#3E9152"];
+// CLIENT_COLORS mudou de casa (ExternalClientDialog), re-export mantém imports antigos.
+export { CLIENT_COLORS } from "@/components/accounts/ExternalClientDialog";
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-function initial(n?: string | null) { return n ? n.trim().charAt(0).toUpperCase() : "?"; }
 function relTimeBR(iso: string): string {
   const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
   if (min < 1) return "agora mesmo";
@@ -50,177 +45,6 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 };
 const APPROVAL_COLS = ["pendente", "ajuste_solicitado", "aprovado"] as const;
 type ApprovalKey = (typeof APPROVAL_COLS)[number];
-
-export function CriaPostBoard() {
-  const [client, setClient] = useState<ExternalClient | null>(null);
-  return client ? <ClientDetail client={client} onBack={() => setClient(null)} /> : <ClientsList onOpen={setClient} />;
-}
-
-function ClientsList({ onOpen }: { onOpen: (c: ExternalClient) => void }) {
-  const { clients, isLoading, pending, create, update, setActive, copyLink } = useExternalClients();
-  const { data: crmClients = [] } = useCrmClients();
-  const { user } = useAuth();
-  const logoInputRef = useRef<HTMLInputElement>(null);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<ExternalClient | null>(null);
-  const [f, setF] = useState<ExternalClientInput>({ name: "", instagram_handle: "", notes: "", color: CLIENT_COLORS[0], crm_client_id: null, logo_url: null, brand_color: null });
-  const [copying, setCopying] = useState<string | null>(null);
-
-  const openNew = () => { setEditing(null); setF({ name: "", instagram_handle: "", notes: "", color: CLIENT_COLORS[clients.length % CLIENT_COLORS.length], crm_client_id: null, logo_url: null, brand_color: null }); setFormOpen(true); };
-  const openEdit = (c: ExternalClient) => { setEditing(c); setF({ name: c.name, instagram_handle: c.instagram_handle ?? "", notes: c.notes ?? "", color: c.color ?? CLIENT_COLORS[0], crm_client_id: c.crm_client_id ?? null, logo_url: c.logo_url ?? null, brand_color: c.brand_color ?? null }); setFormOpen(true); };
-  const submit = async () => {
-    if (!f.name.trim()) return;
-    if (editing) await update.mutateAsync({ id: editing.id, ...f }); else await create.mutateAsync(f);
-    setFormOpen(false);
-  };
-  // Reusa a infra de upload do bucket avatars (mesma dos logos da gestora).
-  const handleLogoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file || !user) return;
-    const v = validateUpload(file, "managerAvatar");
-    if (!v.ok) { toast.error(v.reason); return; }
-    setUploadingLogo(true);
-    try {
-      const ext = (file.name.split(".").pop() || "png").toLowerCase();
-      const path = `${user.id}/cria-post-client-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
-      if (error) throw error;
-      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-      setF((p) => ({ ...p, logo_url: `${data.publicUrl}?t=${Date.now()}` }));
-      toast.success("Logo enviada!");
-    } catch {
-      toast.error("Erro ao enviar a logo.");
-    } finally {
-      setUploadingLogo(false);
-    }
-  };
-  const doCopy = async (id: string) => { setCopying(id); await copyLink(id); setCopying(null); };
-  const activeClients = clients.filter((c) => c.active);
-
-  return (
-    <div>
-      <div className="flex items-start justify-between gap-3 mb-5">
-        <div><h1 className="text-2xl font-display font-extrabold text-foreground tracking-tight">Cria Post</h1>
-          <p className="text-sm text-muted-foreground font-body mt-1">Clientes que não usam o Cria aprovam seus posts por um link.</p></div>
-        <Button onClick={openNew} className="shrink-0"><Plus className="h-4 w-4 mr-1.5" /> Novo cliente</Button>
-      </div>
-
-      {/* Relatório rápido: cliente + período + 1 clique, sem passar pela personalização */}
-      <QuickReportCard />
-
-      {isLoading ? (
-        <div className="grid sm:grid-cols-2 gap-4">{[0, 1].map((i) => <div key={i} className="h-32 rounded-2xl bg-muted animate-pulse" />)}</div>
-      ) : activeClients.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border p-10 text-center">
-          <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-3"><Users className="h-5 w-5 text-muted-foreground" /></div>
-          <p className="text-sm font-body text-foreground font-medium">Nenhum cliente externo ainda</p>
-          <p className="text-xs text-muted-foreground font-body mt-1">Crie um cliente, monte os posts e mande o link de aprovação.</p>
-        </div>
-      ) : (
-        <div className="grid sm:grid-cols-2 gap-4">
-          {activeClients.map((c) => (
-            <div key={c.id} className="bg-card border border-border rounded-2xl p-5">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary via-purple-600 to-pink-500 p-[2px] shrink-0 overflow-hidden">
-                  <div className="w-full h-full rounded-2xl bg-card flex items-center justify-center overflow-hidden">
-                    {c.logo_url ? <img src={c.logo_url} alt="" className="w-full h-full object-cover" /> : <span className="font-display font-extrabold text-primary">{initial(c.name)}</span>}
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-display font-bold text-foreground truncate">{c.name}</p>
-                  {c.instagram_handle && <p className="text-xs text-muted-foreground font-body truncate">@{c.instagram_handle.replace(/^@/, "")}</p>}
-                </div>
-                {(pending[c.id] ?? 0) > 0 && <span className="text-[11px] font-body font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded-full shrink-0">{pending[c.id]} aguardando</span>}
-              </div>
-              <div className="flex items-center gap-2 mt-4">
-                <Button className="flex-1" onClick={() => onOpen(c)}>Abrir posts <ArrowRight className="h-3.5 w-3.5 ml-1" /></Button>
-                <Button variant="outline" onClick={() => doCopy(c.id)} disabled={copying === c.id} aria-label="Copiar link">{copying === c.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}</Button>
-                <Button variant="outline" onClick={() => openEdit(c)} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="max-w-md rounded-2xl">
-          <DialogHeader><DialogTitle className="font-display">{editing ? "Editar cliente" : "Novo cliente"}</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-body">Cadastro central</Label>
-              <select
-                value={f.crm_client_id ?? ""}
-                onChange={(e) => {
-                  const id = e.target.value || null;
-                  const c = id ? crmClients.find((x) => x.id === id) : null;
-                  setF((p) => ({
-                    ...p,
-                    crm_client_id: id,
-                    ...(c ? { name: c.name, instagram_handle: c.instagram ?? "", notes: c.notes ?? "" } : {}),
-                  }));
-                }}
-                className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm"
-              >
-                <option value="">Criar novo cliente central</option>
-                {crmClients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-              <p className="text-[11px] text-muted-foreground font-body">Vincule a um cliente que já existe no Gestão/Caixa (puxa os dados) ou deixe "Criar novo". Assim o mesmo cliente fica em todos os módulos.</p>
-            </div>
-            <div className="space-y-1.5"><Label className="text-xs font-body">Nome *</Label><Input value={f.name} onChange={(e) => setF((p) => ({ ...p, name: e.target.value }))} className="rounded-xl" /></div>
-            <div className="space-y-1.5"><Label className="text-xs font-body">@ do Instagram</Label><Input value={f.instagram_handle ?? ""} onChange={(e) => setF((p) => ({ ...p, instagram_handle: e.target.value }))} placeholder="@cliente" className="rounded-xl" /></div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-body">Logo do cliente (aparece no portal)</Label>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl border border-border bg-muted overflow-hidden flex items-center justify-center shrink-0">
-                  {f.logo_url ? <img src={f.logo_url} alt="" className="w-full h-full object-cover" /> : <ImageIcon className="h-4 w-4 text-muted-foreground" />}
-                </div>
-                <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo}>
-                  {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar imagem"}
-                </Button>
-                {f.logo_url && <Button type="button" variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setF((p) => ({ ...p, logo_url: null }))}>Remover</Button>}
-                <input ref={logoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleLogoSelect} />
-              </div>
-              <Input value={f.logo_url ?? ""} onChange={(e) => setF((p) => ({ ...p, logo_url: e.target.value || null }))} placeholder="ou cole a URL da imagem" className="rounded-xl text-xs" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-body">Cor da marca (deixa o portal com a cara do cliente)</Label>
-              <div className="flex items-center flex-wrap gap-2">
-                {PORTAL_BRAND_COLORS.map((c) => (
-                  <button key={c} type="button" onClick={() => setF((p) => ({ ...p, brand_color: c }))}
-                    className={`h-7 w-7 rounded-full transition-transform ${f.brand_color === c ? "ring-2 ring-offset-2 ring-foreground scale-110" : "hover:scale-105"}`}
-                    style={{ backgroundColor: c }} aria-label={`Cor da marca ${c}`} />
-                ))}
-                <input type="color" value={f.brand_color ?? "#CE4A1D"} onChange={(e) => setF((p) => ({ ...p, brand_color: e.target.value }))}
-                  className="h-7 w-9 rounded-lg border border-border bg-transparent p-0.5 cursor-pointer" aria-label="Cor personalizada" />
-                {f.brand_color && <button type="button" onClick={() => setF((p) => ({ ...p, brand_color: null }))} className="text-[11px] font-body text-muted-foreground hover:text-foreground">Limpar</button>}
-              </div>
-            </div>
-            <div className="space-y-1.5"><Label className="text-xs font-body">Notas (interno)</Label><Textarea value={f.notes ?? ""} onChange={(e) => setF((p) => ({ ...p, notes: e.target.value }))} rows={2} className="rounded-xl" /></div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-body">Cor (calendário)</Label>
-              <div className="flex flex-wrap gap-2">
-                {CLIENT_COLORS.map((c) => (
-                  <button key={c} type="button" onClick={() => setF((p) => ({ ...p, color: c }))}
-                    className={`h-7 w-7 rounded-full transition-transform ${f.color === c ? "ring-2 ring-offset-2 ring-foreground scale-110" : "hover:scale-105"}`}
-                    style={{ backgroundColor: c }} aria-label={`Cor ${c}`} />
-                ))}
-              </div>
-            </div>
-          </div>
-          <DialogFooter className="mt-4 sm:justify-between">
-            {editing && <Button variant="ghost" className="text-destructive mr-auto" onClick={async () => { await setActive.mutateAsync({ id: editing.id, active: false }); setFormOpen(false); }}>Desativar</Button>}
-            <div className="flex gap-2 ml-auto">
-              <Button variant="outline" onClick={() => setFormOpen(false)}>Cancelar</Button>
-              <Button onClick={submit} disabled={create.isPending || update.isPending || !f.name.trim()}>{(create.isPending || update.isPending) ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}</Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
 
 export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange }: { client: ExternalClient; onBack?: () => void; embedded?: boolean; activeTab?: string; onTabChange?: (t: string) => void }) {
   const { posts, isLoading, create, createDraft, update, remove, moveStatus, setDate } = useExternalPosts(client.id);
@@ -256,6 +80,9 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   const [formOpen, setFormOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  // Personalização do cliente (logo, cores, vínculo central): antes vivia na lista do
+  // Cria Post, agora acompanha o cliente aqui dentro (embutido no ClienteHub).
+  const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<ExternalPost | null>(null);
   const [f, setF] = useState<ExternalPostInput>({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", scheduled_date: null, scheduled_time: null });
   const [copying, setCopying] = useState(false);
@@ -335,6 +162,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
       )}
 
       <ClientReportDialog open={reportOpen} onOpenChange={setReportOpen} client={client} posts={posts} managerName={profile?.name ?? undefined} />
+      <ExternalClientDialog open={editOpen} onOpenChange={setEditOpen} client={client} />
       <ImportKanbanDialog open={importOpen} onOpenChange={setImportOpen} externalClientId={client.id} criaOwnerId={criaOwnerId} existingTitles={new Set(posts.map((p) => p.title))} />
 
       <Tabs value={embedded ? activeTab : undefined} defaultValue={embedded ? undefined : "posts"} onValueChange={embedded ? onTabChange : undefined} className="w-full">
@@ -359,6 +187,12 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               ))}
             </div>
             <div className="flex gap-2 flex-wrap">
+              {embedded && (
+                <>
+                  <Button variant="outline" onClick={() => setLinkOpen(true)} disabled={copying}>{copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Link2 className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Link de aprovação</span></>}</Button>
+                  <Button variant="outline" onClick={() => setEditOpen(true)}><Settings2 className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Personalizar</span></Button>
+                </>
+              )}
               <Button variant="outline" onClick={() => setImportOpen(true)}><KanbanSquare className="h-4 w-4 mr-1.5" /> Importar do kanban</Button>
               <Button onClick={() => openNew()}><Plus className="h-4 w-4 mr-1.5" /> Novo post</Button>
             </div>

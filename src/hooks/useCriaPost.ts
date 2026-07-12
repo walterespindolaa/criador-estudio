@@ -255,6 +255,34 @@ export function useExternalPosts(clientId: string | null) {
   return { posts: postsQ.data ?? [], isLoading: postsQ.isLoading, create, createDraft, update, remove, moveStatus, setDate };
 }
 
+// Todos os posts de aprovação por link, de todos os clientes externos, num query só.
+// Alimenta o painel de aprovações do Cria Post (visão do fluxo por status).
+export type ExternalPostWithClient = ExternalPost & { external_client_id: string };
+export function useAllExternalPosts() {
+  const { agencyOwnerId } = useActiveAccount();
+  return useQuery({
+    queryKey: ["external-posts-all", agencyOwnerId],
+    enabled: !!agencyOwnerId,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("posts").select("*")
+        .eq("user_id", agencyOwnerId!)
+        .not("external_client_id", "is", null)
+        .not("is_draft", "is", true)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      const posts = (data as ExternalPostWithClient[]) ?? [];
+      // Último comentário só pros posts em ajuste (é o que a gestora precisa ver de cara).
+      const ids = posts.filter((p) => p.approval_status === "ajuste_solicitado").map((p) => p.id);
+      const comments: Record<string, { content: string; author_role: string }> = {};
+      if (ids.length) {
+        const { data: cdata } = await sbFrom("post_approval_comments").select("post_id, content, author_role, created_at").in("post_id", ids).order("created_at", { ascending: false });
+        for (const c of (cdata as { post_id: string; content: string; author_role: string }[]) ?? []) if (!comments[c.post_id]) comments[c.post_id] = { content: c.content, author_role: c.author_role };
+      }
+      return posts.map((p) => ({ ...p, last_comment: comments[p.id]?.content ?? p.last_comment ?? null, last_comment_role: comments[p.id]?.author_role ?? p.last_comment_role ?? null }));
+    },
+  });
+}
+
 // Última vez que o cliente abriu o portal de aprovação (last_viewed_at do token ativo).
 export function usePortalActivity(clientId: string | null) {
   return useQuery({
