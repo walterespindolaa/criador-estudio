@@ -291,7 +291,10 @@ export type Database = {
           expires_at: string | null
           external_client_id: string
           id: string
+          last_viewed_at: string | null
           manager_id: string
+          period_end: string | null
+          period_start: string | null
           token: string
         }
         Insert: {
@@ -300,7 +303,10 @@ export type Database = {
           expires_at?: string | null
           external_client_id: string
           id?: string
+          last_viewed_at?: string | null
           manager_id: string
+          period_end?: string | null
+          period_start?: string | null
           token?: string
         }
         Update: {
@@ -309,7 +315,10 @@ export type Database = {
           expires_at?: string | null
           external_client_id?: string
           id?: string
+          last_viewed_at?: string | null
           manager_id?: string
+          period_end?: string | null
+          period_start?: string | null
           token?: string
         }
         Relationships: [
@@ -954,7 +963,11 @@ export type Database = {
       crm_clients: {
         Row: {
           active: boolean
+          address: string | null
+          birthday: string | null
           brand_core: Json
+          cnpj: string | null
+          company_name: string | null
           competitors: Json
           contract_date: string | null
           created_at: string
@@ -970,16 +983,26 @@ export type Database = {
           monthly_value: number | null
           name: string
           notes: string | null
+          owner_name: string | null
+          payment_day: number | null
           persona: Json
           phone: string | null
+          plan_name: string | null
           renewal_date: string | null
           segment: string | null
           services: string[] | null
+          status: string
+          tags: string[]
           updated_at: string
+          whatsapp: string | null
         }
         Insert: {
           active?: boolean
+          address?: string | null
+          birthday?: string | null
           brand_core?: Json
+          cnpj?: string | null
+          company_name?: string | null
           competitors?: Json
           contract_date?: string | null
           created_at?: string
@@ -995,16 +1018,26 @@ export type Database = {
           monthly_value?: number | null
           name: string
           notes?: string | null
+          owner_name?: string | null
+          payment_day?: number | null
           persona?: Json
           phone?: string | null
+          plan_name?: string | null
           renewal_date?: string | null
           segment?: string | null
           services?: string[] | null
+          status?: string
+          tags?: string[]
           updated_at?: string
+          whatsapp?: string | null
         }
         Update: {
           active?: boolean
+          address?: string | null
+          birthday?: string | null
           brand_core?: Json
+          cnpj?: string | null
+          company_name?: string | null
           competitors?: Json
           contract_date?: string | null
           created_at?: string
@@ -1020,12 +1053,18 @@ export type Database = {
           monthly_value?: number | null
           name?: string
           notes?: string | null
+          owner_name?: string | null
+          payment_day?: number | null
           persona?: Json
           phone?: string | null
+          plan_name?: string | null
           renewal_date?: string | null
           segment?: string | null
           services?: string[] | null
+          status?: string
+          tags?: string[]
           updated_at?: string
+          whatsapp?: string | null
         }
         Relationships: [
           {
@@ -1176,6 +1215,30 @@ export type Database = {
           segment?: string | null
           stage?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      crm_tags: {
+        Row: {
+          color: string
+          created_at: string | null
+          id: string
+          manager_id: string
+          name: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string | null
+          id?: string
+          manager_id: string
+          name: string
+        }
+        Update: {
+          color?: string
+          created_at?: string | null
+          id?: string
+          manager_id?: string
+          name?: string
         }
         Relationships: []
       }
@@ -1484,6 +1547,7 @@ export type Database = {
       external_clients: {
         Row: {
           active: boolean
+          brand_color: string | null
           color: string | null
           created_at: string
           crm_client_id: string | null
@@ -1496,6 +1560,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          brand_color?: string | null
           color?: string | null
           created_at?: string
           crm_client_id?: string | null
@@ -1508,6 +1573,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          brand_color?: string | null
           color?: string | null
           created_at?: string
           crm_client_id?: string | null
@@ -1686,6 +1752,63 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_monthly: {
+        Row: {
+          amount: number
+          created_at: string
+          crm_client_id: string | null
+          due_date: string
+          fin_record_id: string | null
+          id: string
+          manager_id: string
+          month_ref: string
+          paid_at: string | null
+          skip_reason: string | null
+          status: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          crm_client_id?: string | null
+          due_date: string
+          fin_record_id?: string | null
+          id?: string
+          manager_id: string
+          month_ref: string
+          paid_at?: string | null
+          skip_reason?: string | null
+          status?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          crm_client_id?: string | null
+          due_date?: string
+          fin_record_id?: string | null
+          id?: string
+          manager_id?: string
+          month_ref?: string
+          paid_at?: string | null
+          skip_reason?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_monthly_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_monthly_fin_record_id_fkey"
+            columns: ["fin_record_id"]
+            isOneToOne: false
+            referencedRelation: "fin_records"
             referencedColumns: ["id"]
           },
         ]
@@ -2920,6 +3043,7 @@ export type Database = {
           hook: string | null
           id: string
           idea_id: string | null
+          is_draft: boolean
           learnings: string | null
           notes: string | null
           pillar_id: string | null
@@ -2959,6 +3083,7 @@ export type Database = {
           hook?: string | null
           id?: string
           idea_id?: string | null
+          is_draft?: boolean
           learnings?: string | null
           notes?: string | null
           pillar_id?: string | null
@@ -2998,6 +3123,7 @@ export type Database = {
           hook?: string | null
           id?: string
           idea_id?: string | null
+          is_draft?: boolean
           learnings?: string | null
           notes?: string | null
           pillar_id?: string | null
@@ -3092,6 +3218,7 @@ export type Database = {
           terms_accepted_at: string | null
           terms_version: string | null
           theme_accent: string | null
+          theme_bg: string | null
           theme_color: string | null
           theme_font: string | null
           theme_mode: string | null
@@ -3145,6 +3272,7 @@ export type Database = {
           terms_accepted_at?: string | null
           terms_version?: string | null
           theme_accent?: string | null
+          theme_bg?: string | null
           theme_color?: string | null
           theme_font?: string | null
           theme_mode?: string | null
@@ -3198,6 +3326,7 @@ export type Database = {
           terms_accepted_at?: string | null
           terms_version?: string | null
           theme_accent?: string | null
+          theme_bg?: string | null
           theme_color?: string | null
           theme_font?: string | null
           theme_mode?: string | null
@@ -4138,6 +4267,36 @@ export type Database = {
           },
         ]
       }
+      user_tour_progress: {
+        Row: {
+          completed: boolean
+          completed_at: string | null
+          id: string
+          last_step: number
+          tour_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          completed_at?: string | null
+          id?: string
+          last_step?: number
+          tour_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          completed_at?: string | null
+          id?: string
+          last_step?: number
+          tour_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -4281,6 +4440,7 @@ export type Database = {
       get_external_client_by_token: {
         Args: { _token: string }
         Returns: {
+          brand_color: string
           client_logo: string
           client_name: string
           manager_name: string
@@ -4331,6 +4491,13 @@ export type Database = {
           instagram_handle: string
           name: string
           niche: string
+        }[]
+      }
+      get_token_period: {
+        Args: { _token: string }
+        Returns: {
+          period_end: string
+          period_start: string
         }[]
       }
       get_user_details: { Args: { _user_id: string }; Returns: Json }
@@ -4405,6 +4572,7 @@ export type Database = {
           pendentes: number
         }[]
       }
+      manager_client_posts: { Args: { client_owner_id: string }; Returns: Json }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -4442,6 +4610,7 @@ export type Database = {
           owner_id: string
         }[]
       }
+      portal_mark_viewed: { Args: { _token: string }; Returns: undefined }
       rate_touch: { Args: { _key: string; _limit: number }; Returns: boolean }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
