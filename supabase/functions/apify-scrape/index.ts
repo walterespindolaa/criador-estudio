@@ -42,8 +42,21 @@ function buildApifyInput(type: string, handle: string, limit: number, since?: st
   if (type === "mentions") {
     return { directUrls: [`https://www.instagram.com/${h}/`], resultsType: "mentions", resultsLimit: limit, addParentData: false, ...period };
   }
-  // posts | reels
+  if (type === "reels") {
+    // A aba /reels/ do perfil — SÓ reels. Antes caía no mesmo input de "posts"
+    // e os dois traziam exatamente o mesmo resultado (com carrossel no meio).
+    return { directUrls: [`https://www.instagram.com/${h}/reels/`], resultsType: "posts", resultsLimit: limit, addParentData: false, ...period };
+  }
+  // posts (feed)
   return { directUrls: [`https://www.instagram.com/${h}/`], resultsType: "posts", resultsLimit: limit, addParentData: false, ...period };
+}
+
+// Rede de segurança: mesmo puxando a aba /reels/, o ator às vezes devolve item que não é vídeo.
+// Aqui garantimos que "reels" só tenha reel, e "posts do feed" não seja dominado por reels.
+function isReel(it: any): boolean {
+  const t = String(it?.type ?? "").toLowerCase();
+  const pt = String(it?.productType ?? "").toLowerCase();
+  return t === "video" || pt === "clips" || !!it?.videoUrl || it?.videoViewCount != null || it?.videoPlayCount != null;
 }
 
 // Resumo compacto do que voltou (top posts por engajamento + distribuição de formato).
@@ -253,7 +266,12 @@ Deno.serve(async (req) => {
         await svc.from("competitor_scrapes").update({ status: "error", error: `apify ${resp.status}`, finished_at: new Date().toISOString() }).eq("id", scrapeId);
         return json({ error: "apify_failed", message: `Apify retornou ${resp.status}.` }, 502);
       }
-      const items = await resp.json() as any[];
+      let items = await resp.json() as any[];
+      // "reels" = só vídeo/clips. Sem isso, carrossel do feed vazava pro resultado de reels.
+      if (type === "reels" && Array.isArray(items)) {
+        const onlyReels = items.filter(isReel);
+        if (onlyReels.length > 0) items = onlyReels;
+      }
       const nItems = Array.isArray(items) ? items.length : 0;
       // Transcrição vazia = reel privado/indisponível ou link inválido. Não deixa "0 itens" silencioso.
       if (type === "transcription" && nItems === 0) {
