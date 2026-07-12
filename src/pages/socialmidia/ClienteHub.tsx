@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, ExternalLink, Link2, Loader2, Plus, Settings2, Wallet, Send } from "lucide-react";
 import { toast } from "sonner";
-import { useCrmClient } from "@/hooks/useCrm";
+import { useCrmClient, useUpdateCrmClient } from "@/hooks/useCrm";
 import { useExternalClients } from "@/hooks/useCriaPost";
 import { useFinRecords, useCreateFinRecord, type FinType } from "@/hooks/useFinance";
 import { ClientDetail } from "@/components/accounts/CriaPostBoard";
@@ -17,6 +17,7 @@ import { ClienteBrandbookCria } from "@/components/accounts/ClienteBrandbookCria
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 const TABS = [
   { key: "visao-geral", label: "Visão geral" },
@@ -43,8 +44,11 @@ const FLOW_EXPLAIN: Record<string, string> = {
 };
 const initial = (n?: string | null) => (n ? n.trim().charAt(0).toUpperCase() : "?");
 import { formatBRL } from "@/lib/money";
-// Financeiro (crm_records) guarda CENTAVOS. Cliente (monthly_value) guarda REAIS — usar formatBRL.
-const brl = (c: number) => `R$ ${(c / 100).toFixed(2).replace(".", ",")}`;
+import { MoneyInput } from "@/components/shared/MoneyInput";
+import { useManagerProfile } from "@/hooks/useModules";
+import { isPctRegime } from "@/lib/finance";
+// Dinheiro nesta tela é sempre em REAIS (fin_records.amount e crm_clients.monthly_value).
+// formatBRL cuida da formatação — nada de dividir/multiplicar por 100 aqui.
 
 export default function ClienteHub() {
   const { id, tab } = useParams<{ id: string; tab?: string }>();
@@ -187,12 +191,9 @@ export default function ClienteHub() {
             <Info label="Mensalidade" value={formatBRL(client.monthly_value)} />
             <Info label="Renovação" value={client.renewal_date ? new Date(client.renewal_date).toLocaleDateString("pt-BR") : "-"} />
           </div>
-          {client.notes && (
-            <div className="bg-card border border-border rounded-2xl p-4">
-              <p className="text-xs font-body text-muted-foreground mb-1">Anotações</p>
-              <p className="text-sm font-body text-foreground whitespace-pre-wrap">{client.notes}</p>
-            </div>
-          )}
+          {/* Anotações: saíram do "Personalizar" (onde ninguém achava) e viraram um campo
+              editável aqui, que é onde a pessoa procura por elas. */}
+          <NotasCliente clientId={client.id} notes={client.notes} />
           <div className="flex gap-2 flex-wrap">
             <Button onClick={() => goTab("posts")}><Send className="h-4 w-4 mr-1.5" /> Ver posts</Button>
             <Button variant="outline" onClick={() => goTab("relatorio")}>Relatório</Button>
@@ -227,8 +228,50 @@ export default function ClienteHub() {
         </div>
       )}
 
-      {activeTab === "financeiro" && <FinanceTab clientId={id!} clientName={client.name} />}
+      {activeTab === "financeiro" && <FinanceTab clientId={id!} clientName={client.name} monthlyValue={client.monthly_value} />}
     </motion.div>
+  );
+}
+
+// Anotações do cliente — salva ~0,8s depois da última tecla (mesmo padrão da ficha do CRM).
+function NotasCliente({ clientId, notes }: { clientId: string; notes: string | null }) {
+  const update = useUpdateCrmClient();
+  const [txt, setTxt] = useState(notes ?? "");
+  const [state, setState] = useState<"idle" | "saving" | "saved">("idle");
+  const serverRef = useRef(notes ?? "");
+
+  // Adota o servidor só quando não há edição pendente (não atropela quem digita).
+  useEffect(() => {
+    const srv = notes ?? "";
+    setTxt((cur) => (cur === serverRef.current ? srv : cur));
+    serverRef.current = srv;
+  }, [notes]);
+
+  useEffect(() => {
+    if (txt === serverRef.current) return;
+    setState("saving");
+    const t = setTimeout(() => {
+      update.mutate({ id: clientId, notes: txt || null }, {
+        onSuccess: () => { setState("saved"); setTimeout(() => setState("idle"), 1500); },
+        onError: () => setState("idle"),
+      });
+    }, 800);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [txt, clientId]);
+
+  return (
+    <div className="bg-card border border-border rounded-2xl p-4">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-body text-muted-foreground">Anotações</p>
+        <span className={`text-[11px] font-body ${state === "saved" ? "text-emerald-600" : "text-muted-foreground"}`}>
+          {state === "saving" ? "Salvando…" : state === "saved" ? "Salvo ✓" : "Salva automático"}
+        </span>
+      </div>
+      <Textarea rows={3} value={txt} onChange={(e) => setTxt(e.target.value)}
+        placeholder="Contexto, combinados, senhas de acesso, o que o cliente odeia…"
+        className="rounded-xl text-sm" />
+    </div>
   );
 }
 
@@ -241,64 +284,175 @@ function Info({ label, value }: { label: string; value: string }) {
   );
 }
 
-function FinanceTab({ clientId, clientName }: { clientId: string; clientName: string }) {
-  const { data: all = [], isLoading } = useFinRecords();
-  const create = useCreateFinRecord();
-  const records = useMemo(() => all.filter((r) => r.crm_client_id === clientId), [all, clientId]);
-  const totalIn = records.filter((r) => r.type === "entrada").reduce((s, r) => s + r.amount, 0);
-  const totalOut = records.filter((r) => r.type === "despesa").reduce((s, r) => s + r.amount, 0);
+// Categorias de custo que a agência de fato tem por cliente. É isso que responde
+// "quanto eu gasto com o Fulano — e COM O QUÊ".
+const CUSTO_CATS = ["Design", "Copy", "Edição de vídeo", "Tráfego pago", "Ferramentas", "Freelancer", "Outros"] as const;
+const ENTRADA_CATS = ["Mensalidade", "Projeto avulso", "Tráfego reembolsado", "Outras receitas"] as const;
 
-  const [type, setType] = useState<FinType>("entrada");
+function FinanceTab({ clientId, clientName, monthlyValue }: { clientId: string; clientName: string; monthlyValue: number | null }) {
+  const { data: all = [], isLoading } = useFinRecords();
+  const { profile } = useManagerProfile();
+  const create = useCreateFinRecord();
+
+  const records = useMemo(() => all.filter((r) => r.crm_client_id === clientId), [all, clientId]);
+
+  // Recorte de tempo: o mês diz a saúde atual, o total diz a história do cliente.
+  const [range, setRange] = useState<"mes" | "tudo">("mes");
+  const now = new Date();
+  const ymPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const rows = useMemo(
+    () => (range === "mes" ? records.filter((r) => r.date.startsWith(ymPrefix)) : records),
+    [records, range, ymPrefix],
+  );
+
+  // fin_records.amount é em REAIS (mesma unidade do Cria Caixa).
+  // Antes esta aba gravava *100 e lia /100 — um custo de R$ 400 virava R$ 40.000 no Caixa.
+  const recebido = rows.filter((r) => r.type === "entrada" && r.status === "pago").reduce((s, r) => s + Number(r.amount), 0);
+  const aReceber = rows.filter((r) => r.type === "entrada" && r.status !== "pago").reduce((s, r) => s + Number(r.amount), 0);
+  const receita = recebido + aReceber;
+  const custo = rows.filter((r) => r.type === "despesa").reduce((s, r) => s + Number(r.amount), 0);
+
+  const fin = profile?.fin_settings ?? null;
+  // No rateio do MEI usamos a receita deste cliente sobre ela mesma → sem base pra ratear.
+  // Aqui o honesto é: regime %, calcula; MEI, mostra "DAS fixo" e não finge precisão.
+  const imposto = isPctRegime(fin?.regime) ? receita * (Number(fin?.taxPct) || 0) / 100 : 0;
+  const margem = receita - custo - imposto;
+  const margemPct = receita > 0 ? (margem / receita) * 100 : 0;
+
+  // Onde o dinheiro vai: agrupa a despesa por categoria (e cai na subcategoria quando existe).
+  const porCategoria = useMemo(() => {
+    const map = new Map<string, number>();
+    rows.filter((r) => r.type === "despesa").forEach((r) => {
+      const k = r.category?.trim() || "Sem categoria";
+      map.set(k, (map.get(k) ?? 0) + Number(r.amount));
+    });
+    return [...map.entries()].map(([k, v]) => ({ cat: k, v, pct: custo > 0 ? (v / custo) * 100 : 0 })).sort((a, b) => b.v - a.v);
+  }, [rows, custo]);
+
+  const [type, setType] = useState<FinType>("despesa");
   const [desc, setDesc] = useState("");
-  const [valor, setValor] = useState("");
+  const [cat, setCat] = useState<string>("Design");
+  const [valor, setValor] = useState<number | null>(null);
+
+  const cats = type === "despesa" ? CUSTO_CATS : ENTRADA_CATS;
 
   const add = async () => {
-    const cents = Math.round(parseFloat(valor.replace(",", ".")) * 100);
-    if (!desc.trim() || !cents || cents <= 0) { toast.error("Preencha descrição e valor."); return; }
-    await create.mutateAsync({ crm_client_id: clientId, context: "pj", type, description: desc.trim(), amount: cents, status: "pendente", date: new Date().toISOString().slice(0, 10) });
-    setDesc(""); setValor("");
-    toast.success("Lançamento criado, aparece no Cria Caixa.");
+    if (!desc.trim() || !valor || valor <= 0) { toast.error("Preencha descrição e valor."); return; }
+    await create.mutateAsync({
+      crm_client_id: clientId, context: "pj", type, description: desc.trim(),
+      category: cat, amount: valor, status: type === "despesa" ? "pago" : "pendente",
+      date: new Date().toISOString().slice(0, 10),
+    });
+    setDesc(""); setValor(null);
+    toast.success("Lançado. Já aparece no Cria Caixa.");
   };
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-card border border-border rounded-2xl p-4"><p className="text-xs text-muted-foreground font-body">Recebido/previsto</p><p className="text-xl font-display font-extrabold text-green-600 mt-1">{brl(totalIn)}</p></div>
-        <div className="bg-card border border-border rounded-2xl p-4"><p className="text-xs text-muted-foreground font-body">Custos</p><p className="text-xl font-display font-extrabold text-red-500 mt-1">{brl(totalOut)}</p></div>
+      {/* Recorte */}
+      <div className="flex items-center gap-2">
+        {([["mes", "Este mês"], ["tudo", "Desde o início"]] as const).map(([k, l]) => (
+          <button key={k} onClick={() => setRange(k)}
+            className={`px-3 py-1.5 rounded-full text-xs font-body font-bold border ${range === k ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground"}`}>{l}</button>
+        ))}
+        {monthlyValue ? (
+          <span className="text-[11px] font-body text-muted-foreground ml-auto">Mensalidade contratada: <strong className="text-foreground">{formatBRL(monthlyValue)}</strong></span>
+        ) : null}
       </div>
 
+      {/* O quadro do cliente: entra, sai, imposto, sobra. */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <FinBox label="Receita" value={formatBRL(receita)} tone="green" hint={aReceber > 0 ? `${formatBRL(recebido)} pago + ${formatBRL(aReceber)} a receber` : "tudo recebido"} />
+        <FinBox label="Custo com o cliente" value={formatBRL(custo)} tone="red" hint={porCategoria.length ? `${porCategoria.length} categoria(s)` : "nada lançado"} />
+        <FinBox label="Imposto" value={isPctRegime(fin?.regime) ? formatBRL(imposto) : "—"} tone="muted"
+          hint={isPctRegime(fin?.regime) ? `${fin?.taxPct ?? 0}% da receita` : "MEI: DAS é fixo, não rateia aqui"} />
+        <FinBox label="Margem" value={formatBRL(margem)} tone={margem >= 0 ? "green" : "red"} hint={receita > 0 ? `${margemPct.toFixed(0)}% da receita` : "sem receita no período"} />
+      </div>
+
+      {/* ONDE O DINHEIRO VAI — era isso que faltava. */}
+      <div className="bg-card border border-border rounded-2xl p-4">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <p className="text-sm font-display font-bold text-foreground">Onde vai o dinheiro deste cliente</p>
+          <span className="text-[11px] font-body text-muted-foreground">custo total {formatBRL(custo)}</span>
+        </div>
+        {porCategoria.length === 0 ? (
+          <p className="text-[12px] font-body text-muted-foreground py-2">
+            Nenhum custo lançado {range === "mes" ? "neste mês" : "ainda"}. Lance abaixo escolhendo a categoria (Design, Copy, Tráfego…) —
+            é assim que você descobre se o cliente dá lucro de verdade.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {porCategoria.map((c) => (
+              <div key={c.cat}>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className="text-[12.5px] font-body font-medium text-foreground truncate">{c.cat}</span>
+                  <span className="text-[12.5px] font-body text-muted-foreground shrink-0">
+                    <strong className="text-foreground">{formatBRL(c.v)}</strong> · {c.pct.toFixed(0)}%
+                  </span>
+                </div>
+                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div className="h-full rounded-full bg-destructive/70" style={{ width: `${Math.max(2, c.pct)}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Lançamento rápido, agora com categoria. */}
       <div className="bg-card border border-border rounded-2xl p-4">
         <p className="text-sm font-display font-semibold text-foreground mb-3">Novo lançamento de {clientName}</p>
         <div className="flex flex-col sm:flex-row gap-2">
           <div className="flex rounded-lg border border-border overflow-hidden shrink-0">
-            {(["entrada", "despesa"] as const).map((t) => (
-              <button key={t} onClick={() => setType(t)} className={`text-xs px-3 py-2 ${type === t ? (t === "entrada" ? "bg-green-600 text-white" : "bg-red-500 text-white") : "text-muted-foreground"}`}>{t === "entrada" ? "Entrada" : "Despesa"}</button>
+            {(["despesa", "entrada"] as const).map((t) => (
+              <button key={t} onClick={() => { setType(t); setCat(t === "despesa" ? "Design" : "Mensalidade"); }}
+                className={`text-xs px-3 py-2 ${type === t ? (t === "entrada" ? "bg-green-600 text-white" : "bg-red-500 text-white") : "text-muted-foreground"}`}>
+                {t === "entrada" ? "Entrada" : "Custo"}
+              </button>
             ))}
           </div>
-          <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Descrição" className="rounded-lg flex-1" />
-          <Input value={valor} onChange={(e) => setValor(e.target.value)} placeholder="0,00" inputMode="decimal" className="rounded-lg w-full sm:w-32" />
+          <select value={cat} onChange={(e) => setCat(e.target.value)} className="h-10 rounded-lg border border-border bg-card px-3 text-sm shrink-0">
+            {cats.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Descrição (ex.: 4 artes do mês)" className="rounded-lg flex-1" />
+          <div className="w-full sm:w-36 shrink-0"><MoneyInput value={valor} onChange={setValor} /></div>
           <Button onClick={add} disabled={create.isPending} className="shrink-0">{create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}</Button>
         </div>
-        <p className="text-[11px] text-muted-foreground font-body mt-2 flex items-center gap-1"><Wallet className="h-3 w-3" /> Tudo que você lança aqui entra unificado no Cria Caixa.</p>
+        <p className="text-[11px] text-muted-foreground font-body mt-2 flex items-center gap-1"><Wallet className="h-3 w-3" /> Vinculado a este cliente e unificado no Cria Caixa.</p>
       </div>
 
       {isLoading ? (
         <div className="h-16 rounded-2xl bg-muted animate-pulse" />
-      ) : records.length === 0 ? (
-        <p className="text-sm text-muted-foreground font-body text-center py-8">Nenhum lançamento deste cliente ainda.</p>
+      ) : rows.length === 0 ? (
+        <p className="text-sm text-muted-foreground font-body text-center py-8">Nenhum lançamento {range === "mes" ? "neste mês" : "deste cliente ainda"}.</p>
       ) : (
         <div className="space-y-2">
-          {records.map((r) => (
+          {rows.map((r) => (
             <div key={r.id} className="flex items-center justify-between gap-3 bg-card border border-border rounded-xl px-4 py-3">
               <div className="min-w-0">
                 <p className="text-sm font-body text-foreground truncate">{r.description}</p>
-                <p className="text-[11px] text-muted-foreground font-body">{new Date(r.date).toLocaleDateString("pt-BR")} · {r.status}</p>
+                <p className="text-[11px] text-muted-foreground font-body truncate">
+                  {new Date(r.date + "T00:00:00").toLocaleDateString("pt-BR")} · {r.status}{r.category ? ` · ${r.category}` : ""}
+                </p>
               </div>
-              <span className={`text-sm font-display font-bold shrink-0 ${r.type === "entrada" ? "text-green-600" : "text-red-500"}`}>{r.type === "entrada" ? "+" : "−"}{brl(r.amount)}</span>
+              <span className={`text-sm font-display font-bold shrink-0 ${r.type === "entrada" ? "text-green-600" : "text-red-500"}`}>
+                {r.type === "entrada" ? "+" : "−"}{formatBRL(Number(r.amount))}
+              </span>
             </div>
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function FinBox({ label, value, tone, hint }: { label: string; value: string; tone: "green" | "red" | "muted"; hint?: string }) {
+  const c = tone === "green" ? "text-green-600" : tone === "red" ? "text-red-500" : "text-foreground";
+  return (
+    <div className="bg-card border border-border rounded-2xl p-4">
+      <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide">{label}</p>
+      <p className={`text-xl font-display font-extrabold mt-1 ${c}`}>{value}</p>
+      {hint && <p className="text-[10.5px] font-body text-muted-foreground mt-0.5 leading-tight">{hint}</p>}
     </div>
   );
 }

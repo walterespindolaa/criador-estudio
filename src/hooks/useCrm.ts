@@ -294,6 +294,61 @@ export function useDeleteCrmTag() {
   });
 }
 
+// Renomear / trocar a cor de uma etiqueta existente.
+export function useUpdateCrmTag() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, name, color }: { id: string; name?: string; color?: string }) => {
+      const patch: Record<string, string> = {};
+      if (name !== undefined) patch.name = name.trim();
+      if (color !== undefined) patch.color = color;
+      const { error } = await sbFrom("crm_tags").update(patch as never).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-tags"] }),
+    onError: (e: unknown) => toast.error((e as Error)?.message?.includes("duplicate") ? "Já existe uma etiqueta com esse nome." : "Erro ao salvar etiqueta."),
+  });
+}
+
+// ── ETIQUETAS PADRÃO ──
+// Um ponto de partida, não uma regra: a agência pode renomear, trocar a cor,
+// excluir qualquer uma e criar as suas. Só evita a tela em branco.
+export const DEFAULT_CRM_TAGS: { name: string; color: TagColor }[] = [
+  { name: "VIP", color: "amber" },
+  { name: "Recorrente", color: "emerald" },
+  { name: "Projeto pontual", color: "sky" },
+  { name: "Paga em dia", color: "green" },
+  { name: "Inadimplente", color: "rose" },
+  { name: "Renovação próxima", color: "orange" },
+  { name: "Precisa de atenção", color: "violet" },
+  { name: "Indicação", color: "slate" },
+];
+
+// Cria só as que ainda não existem (idempotente — clicar duas vezes não duplica).
+export function useSeedDefaultCrmTags() {
+  const { agencyOwnerId } = useActiveAccount();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (existing: CrmTag[]) => {
+      if (!agencyOwnerId) throw new Error("Sem sessão");
+      const have = new Set(existing.map((t) => t.name.toLowerCase()));
+      const rows = DEFAULT_CRM_TAGS
+        .filter((t) => !have.has(t.name.toLowerCase()))
+        .map((t) => ({ manager_id: agencyOwnerId, name: t.name, color: t.color }));
+      if (!rows.length) return 0;
+      const { error } = await sbFrom("crm_tags").insert(rows as never);
+      if (error) throw error;
+      return rows.length;
+    },
+    onSuccess: (n) => {
+      qc.invalidateQueries({ queryKey: ["crm-tags"] });
+      if (n) toast.success(`${n} etiqueta(s) padrão criada(s). Edite ou exclua à vontade.`);
+      else toast.info("As etiquetas padrão já estão todas aí.");
+    },
+    onError: () => toast.error("Erro ao criar as etiquetas padrão."),
+  });
+}
+
 // ===================== LEADS =====================
 export const CRM_STAGES = ["lead","contato","reuniao","proposta","negociacao","fechado","perdido"] as const;
 export type CrmStage = typeof CRM_STAGES[number];

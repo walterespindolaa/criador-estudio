@@ -10,8 +10,9 @@ import { useActiveAccount } from "@/contexts/AccountContext";
 import {
   useCrmClient, useUpdateCrmClient, useDeleteCrmClient, useCrmClientRefs, useAddCrmRef, useDeleteCrmRef,
   useUploadCrmAsset, useSyncCrmFromCria, useCrmTags, useCreateCrmTag, useDeleteCrmTag,
+  useUpdateCrmTag, useSeedDefaultCrmTags, DEFAULT_CRM_TAGS,
   CLIENT_STATUSES, CLIENT_STATUS_META, TAG_COLORS, TAG_COLOR_CLS,
-  type CrmClient, type ClientStatus,
+  type CrmClient, type ClientStatus, type CrmTag,
 } from "@/hooks/useCrm";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useScrapes, useHasHubCria, useDeleteScrape } from "@/hooks/useHubCria";
@@ -523,14 +524,32 @@ function TagPicker({ selected, onChange }: { selected: string[]; onChange: (tags
   const { data: tags = [] } = useCrmTags();
   const createTag = useCreateCrmTag();
   const delTag = useDeleteCrmTag();
+  const updTag = useUpdateCrmTag();
+  const seed = useSeedDefaultCrmTags();
   const [open, setOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState<string>("violet");
+  const [editId, setEditId] = useState<string | null>(null);   // etiqueta em edição
+  const [editName, setEditName] = useState("");
 
   const toggle = (name: string) =>
     onChange(selected.includes(name) ? selected.filter((t) => t !== name) : [...selected, name]);
   const colorOf = (name: string) => tags.find((t) => t.name === name)?.color ?? "slate";
   const doCreate = () => { if (newName.trim()) { createTag.mutate({ name: newName, color: newColor }); setNewName(""); } };
+
+  // Renomear: se o cliente já usava a etiqueta, o nome selecionado acompanha.
+  const commitRename = (t: CrmTag) => {
+    const nome = editName.trim();
+    setEditId(null);
+    if (!nome || nome === t.name) return;
+    updTag.mutate({ id: t.id, name: nome }, {
+      onSuccess: () => { if (selected.includes(t.name)) onChange(selected.map((s) => (s === t.name ? nome : s))); },
+    });
+  };
+
+  const faltamPadrao = DEFAULT_CRM_TAGS.some(
+    (d) => !tags.some((t) => t.name.toLowerCase() === d.name.toLowerCase()),
+  );
 
   return (
     <>
@@ -540,33 +559,70 @@ function TagPicker({ selected, onChange }: { selected: string[]; onChange: (tags
           <button type="button" onClick={() => toggle(name)} className="opacity-60 hover:opacity-100" aria-label={`Remover ${name}`}>×</button>
         </span>
       ))}
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setEditId(null); }}>
         <PopoverTrigger asChild>
           <button type="button" className="text-xs font-semibold px-2.5 py-1 rounded-full border border-dashed border-border text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors">
             + Etiqueta
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-64 p-3" align="start">
-          <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-2">Etiquetas</p>
-          <div className="max-h-44 overflow-y-auto space-y-1 mb-2">
-            {tags.length === 0 && <p className="text-[11px] text-muted-foreground">Nenhuma ainda. Crie a primeira abaixo.</p>}
+        <PopoverContent className="w-72 p-3" align="start">
+          <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1">Etiquetas da sua agência</p>
+          <p className="text-[10.5px] font-body text-muted-foreground mb-2 leading-tight">Valem pra todos os clientes. Renomeie, troque a cor ou exclua à vontade.</p>
+
+          <div className="max-h-52 overflow-y-auto space-y-1 mb-2">
+            {tags.length === 0 && <p className="text-[11px] text-muted-foreground py-1">Nenhuma ainda.</p>}
             {tags.map((t) => {
               const on = selected.includes(t.name);
+              if (editId === t.id) {
+                return (
+                  <div key={t.id} className="rounded-lg border border-primary/40 bg-primary/[0.03] p-2 space-y-2">
+                    <Input autoFocus value={editName} onChange={(e) => setEditName(e.target.value)} className="h-8 text-sm rounded-lg"
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitRename(t); } if (e.key === "Escape") setEditId(null); }} />
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {TAG_COLORS.map((c) => (
+                        <button key={c} type="button" onClick={() => updTag.mutate({ id: t.id, color: c })}
+                          className={cn("h-5 w-5 rounded-full border", TAG_COLOR_CLS[c], t.color === c && "ring-2 ring-primary ring-offset-1")} aria-label={c} />
+                      ))}
+                    </div>
+                    <div className="flex gap-1">
+                      <Button size="sm" className="h-7 flex-1 text-xs" onClick={() => commitRename(t)}>Salvar</Button>
+                      <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditId(null)}>Cancelar</Button>
+                    </div>
+                  </div>
+                );
+              }
               return (
-                <div key={t.id} className="flex items-center gap-2 group">
+                <div key={t.id} className="flex items-center gap-1 group">
                   <button type="button" onClick={() => toggle(t.name)} className="flex items-center gap-2 flex-1 min-w-0 text-left rounded-md px-1 py-1 hover:bg-muted/50">
                     <span className={cn("h-4 w-4 rounded border flex items-center justify-center shrink-0", on ? "bg-primary border-primary" : "border-muted-foreground/40")}>
                       {on && <Check className="h-3 w-3 text-primary-foreground" />}
                     </span>
                     <span className={cn("text-[12px] font-body px-2 py-0.5 rounded-full border truncate", TAG_COLOR_CLS[t.color] ?? TAG_COLOR_CLS.slate)}>{t.name}</span>
                   </button>
-                  <button type="button" onClick={() => delTag.mutate(t.id)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive shrink-0" aria-label="Excluir etiqueta">
+                  <button type="button" onClick={() => { setEditId(t.id); setEditName(t.name); }}
+                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary shrink-0 p-1" aria-label="Editar etiqueta">
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button type="button" onClick={() => { if (confirm(`Excluir a etiqueta "${t.name}"? Ela sai de todos os clientes.`)) delTag.mutate(t.id); }}
+                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive shrink-0 p-1" aria-label="Excluir etiqueta">
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
               );
             })}
           </div>
+
+          {/* Etiquetas padrão: ponto de partida pra não encarar tela em branco. */}
+          {faltamPadrao && (
+            <button type="button" onClick={() => seed.mutate(tags)} disabled={seed.isPending}
+              className="w-full rounded-lg border border-dashed border-primary/40 bg-primary/[0.03] px-2 py-2 mb-2 text-left hover:bg-primary/[0.07] transition-colors">
+              <p className="text-[12px] font-body font-semibold text-foreground">Usar as etiquetas padrão</p>
+              <p className="text-[10.5px] font-body text-muted-foreground leading-tight">
+                {DEFAULT_CRM_TAGS.map((t) => t.name).join(", ")} — depois é só editar ou excluir.
+              </p>
+            </button>
+          )}
+
           <div className="border-t border-border pt-2 space-y-2">
             <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nova etiqueta…" className="h-8 text-sm rounded-lg"
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); doCreate(); } }} />

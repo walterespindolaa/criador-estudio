@@ -8,9 +8,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Loader2, Image as ImageIcon } from "lucide-react";
+import { Loader2, Image as ImageIcon, Eye, EyeOff } from "lucide-react";
 
 // Cores dos clientes no calendário geral (também usadas pelo ManagerCalendar).
 export const CLIENT_COLORS = ["#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#EF4444", "#14B8A6", "#A855F7"];
@@ -72,68 +71,113 @@ export function ExternalClientDialog({ open, onOpenChange, client }: {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="max-w-md rounded-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle className="font-display">Personalizar cliente</DialogTitle></DialogHeader>
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs font-body">Cadastro central</Label>
-            <select
-              value={f.crm_client_id ?? ""}
-              onChange={(e) => {
-                const id = e.target.value || null;
-                const c = id ? crmClients.find((x) => x.id === id) : null;
-                setF((p) => ({
-                  ...p,
-                  crm_client_id: id,
-                  ...(c ? { name: c.name, instagram_handle: c.instagram ?? "", notes: c.notes ?? "" } : {}),
-                }));
-              }}
-              className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm"
-            >
-              <option value="">Sem vínculo</option>
-              {crmClients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-            <p className="text-[11px] text-muted-foreground font-body">Vincule ao cliente do cadastro central pra ele aparecer na página Clientes com posts, relatório e financeiro juntos.</p>
-          </div>
-          <div className="space-y-1.5"><Label className="text-xs font-body">Nome *</Label><Input value={f.name} onChange={(e) => setF((p) => ({ ...p, name: e.target.value }))} className="rounded-xl" /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-body">@ do Instagram</Label><Input value={f.instagram_handle ?? ""} onChange={(e) => setF((p) => ({ ...p, instagram_handle: e.target.value }))} placeholder="@cliente" className="rounded-xl" /></div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-body">Logo do cliente (aparece no portal)</Label>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl border border-border bg-muted overflow-hidden flex items-center justify-center shrink-0">
-                {f.logo_url ? <img src={f.logo_url} alt="" className="w-full h-full object-cover" /> : <ImageIcon className="h-4 w-4 text-muted-foreground" />}
+        <DialogHeader>
+          <DialogTitle className="font-display">Personalizar cliente</DialogTitle>
+          <p className="text-[12.5px] font-body text-muted-foreground">
+            Duas coisas diferentes moram aqui: o que <strong>o cliente vê</strong> na página de aprovação, e o que <strong>só você vê</strong> no seu painel.
+          </p>
+        </DialogHeader>
+
+        <div className="space-y-5">
+          {/* ───────── O QUE O CLIENTE VÊ ───────── */}
+          <section className="rounded-2xl border border-border p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Eye className="h-4 w-4 text-primary shrink-0" />
+              <p className="text-[12px] font-body font-bold uppercase tracking-wider text-primary">O que o cliente vê</p>
+            </div>
+            <p className="text-[11.5px] font-body text-muted-foreground -mt-1">
+              Isso aparece na página que você manda pra ele aprovar os posts.
+            </p>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-body">Nome exibido *</Label>
+              <Input value={f.name} onChange={(e) => setF((p) => ({ ...p, name: e.target.value }))} className="rounded-xl" />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-body">@ do Instagram</Label>
+              <Input value={f.instagram_handle ?? ""} onChange={(e) => setF((p) => ({ ...p, instagram_handle: e.target.value }))} placeholder="@cliente" className="rounded-xl" />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-body">Logo da marca</Label>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl border border-border bg-muted overflow-hidden flex items-center justify-center shrink-0">
+                  {f.logo_url ? <img src={f.logo_url} alt="" className="w-full h-full object-cover" /> : <ImageIcon className="h-4 w-4 text-muted-foreground" />}
+                </div>
+                <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo}>
+                  {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar imagem"}
+                </Button>
+                {f.logo_url && <Button type="button" variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setF((p) => ({ ...p, logo_url: null }))}>Remover</Button>}
+                <input ref={logoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleLogoSelect} />
               </div>
-              <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo}>
-                {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar imagem"}
-              </Button>
-              {f.logo_url && <Button type="button" variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setF((p) => ({ ...p, logo_url: null }))}>Remover</Button>}
-              <input ref={logoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleLogoSelect} />
+              <Input value={f.logo_url ?? ""} onChange={(e) => setF((p) => ({ ...p, logo_url: e.target.value || null }))} placeholder="ou cole a URL da imagem" className="rounded-xl text-xs" />
             </div>
-            <Input value={f.logo_url ?? ""} onChange={(e) => setF((p) => ({ ...p, logo_url: e.target.value || null }))} placeholder="ou cole a URL da imagem" className="rounded-xl text-xs" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-body">Cor da marca (deixa o portal com a cara do cliente)</Label>
-            <div className="flex items-center flex-wrap gap-2">
-              {PORTAL_BRAND_COLORS.map((c) => (
-                <button key={c} type="button" onClick={() => setF((p) => ({ ...p, brand_color: c }))}
-                  className={`h-7 w-7 rounded-full transition-transform ${f.brand_color === c ? "ring-2 ring-offset-2 ring-foreground scale-110" : "hover:scale-105"}`}
-                  style={{ backgroundColor: c }} aria-label={`Cor da marca ${c}`} />
-              ))}
-              <input type="color" value={f.brand_color ?? "#CE4A1D"} onChange={(e) => setF((p) => ({ ...p, brand_color: e.target.value }))}
-                className="h-7 w-9 rounded-lg border border-border bg-transparent p-0.5 cursor-pointer" aria-label="Cor personalizada" />
-              {f.brand_color && <button type="button" onClick={() => setF((p) => ({ ...p, brand_color: null }))} className="text-[11px] font-body text-muted-foreground hover:text-foreground">Limpar</button>}
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-body">Cor da marca</Label>
+              <p className="text-[11px] font-body text-muted-foreground -mt-1">Pinta os botões e destaques da página de aprovação com a cara do cliente.</p>
+              <div className="flex items-center flex-wrap gap-2">
+                {PORTAL_BRAND_COLORS.map((c) => (
+                  <button key={c} type="button" onClick={() => setF((p) => ({ ...p, brand_color: c }))}
+                    className={`h-7 w-7 rounded-full transition-transform ${f.brand_color === c ? "ring-2 ring-offset-2 ring-foreground scale-110" : "hover:scale-105"}`}
+                    style={{ backgroundColor: c }} aria-label={`Cor da marca ${c}`} />
+                ))}
+                <input type="color" value={f.brand_color ?? "#CE4A1D"} onChange={(e) => setF((p) => ({ ...p, brand_color: e.target.value }))}
+                  className="h-7 w-9 rounded-lg border border-border bg-transparent p-0.5 cursor-pointer" aria-label="Cor personalizada" />
+                {f.brand_color && <button type="button" onClick={() => setF((p) => ({ ...p, brand_color: null }))} className="text-[11px] font-body text-muted-foreground hover:text-foreground">Limpar</button>}
+              </div>
             </div>
-          </div>
-          <div className="space-y-1.5"><Label className="text-xs font-body">Notas (interno)</Label><Textarea value={f.notes ?? ""} onChange={(e) => setF((p) => ({ ...p, notes: e.target.value }))} rows={2} className="rounded-xl" /></div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-body">Cor (calendário)</Label>
-            <div className="flex flex-wrap gap-2">
-              {CLIENT_COLORS.map((c) => (
-                <button key={c} type="button" onClick={() => setF((p) => ({ ...p, color: c }))}
-                  className={`h-7 w-7 rounded-full transition-transform ${f.color === c ? "ring-2 ring-offset-2 ring-foreground scale-110" : "hover:scale-105"}`}
-                  style={{ backgroundColor: c }} aria-label={`Cor ${c}`} />
-              ))}
+          </section>
+
+          {/* ───────── O QUE SÓ VOCÊ VÊ ───────── */}
+          <section className="rounded-2xl border border-border p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <EyeOff className="h-4 w-4 text-muted-foreground shrink-0" />
+              <p className="text-[12px] font-body font-bold uppercase tracking-wider text-muted-foreground">Só você vê</p>
             </div>
-          </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-body">Cor no seu calendário</Label>
+              <p className="text-[11px] font-body text-muted-foreground -mt-1">Só pra você bater o olho e saber de quem é o post. O cliente nunca vê esta cor.</p>
+              <div className="flex flex-wrap gap-2">
+                {CLIENT_COLORS.map((c) => (
+                  <button key={c} type="button" onClick={() => setF((p) => ({ ...p, color: c }))}
+                    className={`h-7 w-7 rounded-full transition-transform ${f.color === c ? "ring-2 ring-offset-2 ring-foreground scale-110" : "hover:scale-105"}`}
+                    style={{ backgroundColor: c }} aria-label={`Cor ${c}`} />
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-body">Ficha do cliente</Label>
+              <select
+                value={f.crm_client_id ?? ""}
+                onChange={(e) => {
+                  const id = e.target.value || null;
+                  const c = id ? crmClients.find((x) => x.id === id) : null;
+                  setF((p) => ({
+                    ...p,
+                    crm_client_id: id,
+                    ...(c ? { name: c.name, instagram_handle: c.instagram ?? "", notes: c.notes ?? "" } : {}),
+                  }));
+                }}
+                className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm"
+              >
+                <option value="">Sem vínculo</option>
+                {crmClients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <p className="text-[11px] text-muted-foreground font-body">
+                Liga esta página de aprovação à ficha do cliente no Cria Gestão. Sem o vínculo, posts, relatório e financeiro ficam soltos.
+              </p>
+            </div>
+
+            {/* As anotações saíram daqui: agora moram na Visão geral do cliente,
+                que é onde a pessoa procura por elas. */}
+            <p className="text-[11px] font-body text-muted-foreground rounded-xl bg-muted/40 px-3 py-2">
+              Procurando as <strong>anotações</strong>? Elas passaram pra aba <strong>Visão geral</strong> do cliente.
+            </p>
+          </section>
         </div>
         <DialogFooter className="mt-4 sm:justify-between">
           <Button variant="ghost" className="text-destructive mr-auto" onClick={async () => { await setActive.mutateAsync({ id: client.id, active: false }); onOpenChange(false); }}>Desativar</Button>
