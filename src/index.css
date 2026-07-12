@@ -13,16 +13,17 @@ html, body {
 
 @layer base {
   :root {
-    /* ===== Rebranding CRIA (Fase 1) — paleta da LP =====
-       creme #F6F2E8 · ink #1B1A17 · laranja #CE4A1D
-       verde #3E9152 · azul #2A4BDF · rosa #F27EB5 · amarelo #F2C21E */
-    --background: 43 44% 94%;          /* creme */
+    /* ===== BASE: branco =====
+       O creme (#F6F2E8) virou o tema "CRIA", opcional em Ajustes → Visual.
+       Aqui a base é branca: card branco sobre fundo quase-branco cria hierarquia
+       de verdade. Creme sobre creme não separava nada — era a origem do "morto". */
+    --background: 40 33% 98%;          /* #FDFBF5 — branco quente */
     --foreground: 45 8% 10%;           /* ink */
 
-    --card: 48 56% 98%;                /* branco quente */
+    --card: 0 0% 100%;                 /* branco puro — o card SALTA do fundo */
     --card-foreground: 45 8% 10%;
 
-    --popover: 48 56% 98%;
+    --popover: 0 0% 100%;
     --popover-foreground: 45 8% 10%;
 
     --primary: 15 75% 46%;             /* laranja CRIA */
@@ -31,7 +32,7 @@ html, body {
     --secondary: 134 40% 41%;          /* verde */
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 44 39% 89%;               /* creme-2 */
+    --muted: 42 30% 95%;               /* areia clara */
     --muted-foreground: 45 6% 40%;
 
     --accent: 18 76% 93%;              /* laranja bem suave (fundo do ativo) */
@@ -40,23 +41,34 @@ html, body {
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 43 20% 84%;
-    --input: 43 20% 84%;
+    --border: 40 22% 89%;
+    --input: 40 22% 89%;
     --ring: 15 75% 46%;
 
     --radius: 1rem;
 
-    --sidebar-background: 48 56% 98%;
+    --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 45 8% 10%;
     --sidebar-primary: 15 75% 46%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 18 76% 93%;
     --sidebar-accent-foreground: 15 75% 38%;
-    --sidebar-border: 43 20% 84%;
+    --sidebar-border: 40 22% 89%;
     --sidebar-ring: 15 75% 46%;
 
     --shadow-warm: 0 2px 12px rgba(28, 28, 26, 0.06);
     --shadow-warm-lg: 0 8px 30px rgba(28, 28, 26, 0.08);
+
+    /* ===== AS 6 CORES DA LP =====
+       O sistema só usava laranja e verde. As outras quatro nunca apareciam —
+       por isso a plataforma parecia morta perto da landing page.
+       Agora são tokens de primeira classe: uma cor por módulo + as formas orgânicas. */
+    --cria-laranja: 15 75% 46%;        /* #CE4A1D */
+    --cria-verde:  134 40% 41%;        /* #3E9152 */
+    --cria-azul:   229 74% 52%;        /* #2A4BDF */
+    --cria-rosa:   332 81% 72%;        /* #F27EB5 */
+    --cria-amarelo: 47 88% 53%;        /* #F2C21E */
+    --cria-lilas:  228 78% 71%;        /* #7C90F0 */
 
     --font-display: 'Baloo 2', 'Plus Jakarta Sans', sans-serif;
     --font-body: 'Nunito Sans', sans-serif;

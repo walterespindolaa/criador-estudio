@@ -209,9 +209,10 @@ const App = () => (
                 <Route path="criacrm/pipeline" element={<ErrorBoundary><CriaCrm /></ErrorBoundary>} />
                 <Route path="criacrm/contratos" element={<ErrorBoundary><CriaCrm /></ErrorBoundary>} />
                 <Route path="criacrm/:id" element={<ErrorBoundary><CriaCrmClient /></ErrorBoundary>} />
-                <Route path="criacaixa" element={<ErrorBoundary><CriaCaixa /></ErrorBoundary>} />
-                <Route path="criacaixa/empresa" element={<ErrorBoundary><CriaCaixa /></ErrorBoundary>} />
-                <Route path="criacaixa/pessoafisica" element={<ErrorBoundary><CriaCaixa /></ErrorBoundary>} />
+                {/* Cria Caixa: cada seção é uma rota de verdade
+                    (/criacaixa/empresa/calendario, /pessoal/orcamento, …).
+                    Catch-all: o próprio componente lê o contexto e a seção do path. */}
+                <Route path="criacaixa/*" element={<ErrorBoundary><CriaCaixa /></ErrorBoundary>} />
                 <Route path="parceria" element={<ErrorBoundary><Parceria /></ErrorBoundary>} />
                 <Route path="comissoes" element={<ErrorBoundary><Comissoes /></ErrorBoundary>} />
                 <Route path="contas" element={<ErrorBoundary><Contas /></ErrorBoundary>} />

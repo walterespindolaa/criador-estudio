@@ -94,6 +94,16 @@ export function FinCompanyDialog({ open, onOpenChange }: Props) {
               É <strong>organização</strong>, não apuração fiscal — confirme os números com sua contabilidade.
             </p>
           </div>
+
+          {/* Meta de reserva — é o que faz a barra da Pessoa Física te cobrar. */}
+          <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Pessoa física</p>
+            <Num label="Quero guardar por mês (%)" value={s.reservePct} onChange={(n) => set({ reservePct: n })} />
+            <p className="text-[11px] text-muted-foreground font-body">
+              Quanto da sua renda pessoal você quer guardar. A tela Pessoal mostra a barra da meta e o quanto sobrou de verdade,
+              já descontando as contas fixas que ainda vão cair.
+            </p>
+          </div>
         </div>
 
         <div className="flex justify-end gap-2 mt-5">

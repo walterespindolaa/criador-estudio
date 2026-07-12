@@ -43,6 +43,7 @@ export type FinSettings = {
   taxPct?: number;       // % (Simples / Presumido)
   reinvestPct?: number;
   proLaborePct?: number;
+  reservePct?: number;   // PF: % da renda que a pessoa quer guardar todo mês
   categories?: { pj?: { entrada?: string[]; despesa?: string[] }; pf?: { entrada?: string[]; despesa?: string[] } };
   subcats?: { pj?: { entrada?: Record<string, string[]>; despesa?: Record<string, string[]> }; pf?: { entrada?: Record<string, string[]>; despesa?: Record<string, string[]> } };
 };

@@ -12,7 +12,7 @@ import { PAYMENT_METHODS, taxOfMonth, taxOfClient, regimeLabel, isPctRegime } fr
 import { useCrmClients } from "@/hooks/useCrm";
 import { useManagerProfile } from "@/hooks/useModules";
 import { ModuleGate } from "@/components/accounts/ModuleGate";
-import { ManagerSectionTitle } from "@/components/accounts/ManagerSectionTitle";
+import { ModuleHero, type SubTab } from "@/components/brand/ModuleHero";
 import { FinCompanyDialog } from "@/components/accounts/FinCompanyDialog";
 import { FinRecurringDialog } from "@/components/accounts/FinRecurringDialog";
 import { FinTransferDialog } from "@/components/accounts/FinTransferDialog";
@@ -80,9 +80,24 @@ function CaixaInner() {
   const now = new Date();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const caixaSeg = pathname.split("/").filter(Boolean).pop() || "";
-  const ctx: FinContext = caixaSeg === "pessoafisica" ? "pf" : "pj";
-  useEffect(() => { if (caixaSeg === "criacaixa") navigate("/socialmidia/criacaixa/empresa", { replace: true }); }, [caixaSeg, navigate]);
+
+  // ── ROTA: /socialmidia/criacaixa/<empresa|pessoal>/<seção> ──
+  // Antes tudo caía numa página só e a informação ficava jogada. Agora cada
+  // seção tem URL própria: dá pra favoritar, compartilhar e o "voltar" funciona.
+  const parts = pathname.split("/").filter(Boolean);           // [socialmidia, criacaixa, ctx, sec]
+  const ctxSeg = parts[2] ?? "";
+  const ctx: FinContext = ctxSeg === "pessoal" || ctxSeg === "pessoafisica" ? "pf" : "pj";
+  const section = parts[3] ?? "visao";
+
+  // Normaliza a URL (inclusive os links antigos /pessoafisica).
+  useEffect(() => {
+    if (parts.length < 4) {
+      const c = ctxSeg === "pessoal" || ctxSeg === "pessoafisica" ? "pessoal" : "empresa";
+      navigate(`/socialmidia/criacaixa/${c}/visao`, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
   const [ym, setYm] = useState({ y: now.getFullYear(), m: now.getMonth() });
   const [typeF, setTypeF] = useState<FinType | "todos">("todos");
   const [statusF, setStatusF] = useState<FinStatus | "todos">("todos");
@@ -254,37 +269,66 @@ function CaixaInner() {
     });
   };
 
+  // ── SUBMENU do módulo. Cada aba é uma URL. ──
+  const base = `/socialmidia/criacaixa/${isPj ? "empresa" : "pessoal"}`;
+  const tabs: SubTab[] = isPj
+    ? [
+        { to: `${base}/visao`, label: "Visão geral" },
+        { to: `${base}/mensalidades`, label: "Mensalidades" },
+        { to: `${base}/calendario`, label: "Calendário" },
+        { to: `${base}/lancamentos`, label: "Lançamentos" },
+        { to: `${base}/clientes`, label: "Clientes" },
+        { to: `${base}/relatorios`, label: "Relatórios" },
+      ]
+    : [
+        { to: `${base}/visao`, label: "Visão geral" },
+        { to: `${base}/calendario`, label: "Calendário" },
+        { to: `${base}/lancamentos`, label: "Lançamentos" },
+        { to: `${base}/relatorios`, label: "Relatórios" },
+      ];
+
+  const seletorPjPf = (
+    <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="inline-flex items-center gap-1 rounded-2xl border border-border bg-background/70 backdrop-blur-sm p-1">
+        {([["pj", "Empresa", Building2], ["pf", "Pessoal", User]] as const).map(([v, l, Icon]) => (
+          <button key={v} onClick={() => navigate(`/socialmidia/criacaixa/${v === "pj" ? "empresa" : "pessoal"}/visao`)}
+            className={cn("flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-body font-bold transition-colors", ctx === v ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground")}>
+            <Icon className="h-4 w-4" /> {l}
+          </button>
+        ))}
+      </div>
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="icon" className="h-8 w-8 bg-background/70" onClick={() => shift(-1)}><ChevronLeft className="h-4 w-4" /></Button>
+        <span className="text-sm font-display font-bold text-foreground min-w-[100px] text-center">{MONTHS[ym.m]} {ym.y}</span>
+        <Button variant="outline" size="icon" className="h-8 w-8 bg-background/70" onClick={() => shift(1)}><ChevronRight className="h-4 w-4" /></Button>
+      </div>
+    </div>
+  );
+
+  const show = (s: string) => section === s;
+
   return (
     <div>
-      <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
-        <ManagerSectionTitle t="Cria Caixa" s="O financeiro da sua operação, empresa e pessoal, separados." />
-        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto scrollbar-none justify-start sm:justify-end">
-          {isPj && <Button variant="outline" size="sm" onClick={() => setTransferOpen(true)} className="shrink-0"><ArrowLeftRight className="h-3.5 w-3.5 mr-1.5" /> Transferir p/ PF</Button>}
-          <Button variant="outline" size="sm" onClick={() => setRecurringOpen(true)} className="shrink-0"><Repeat className="h-3.5 w-3.5 mr-1.5" /> Recorrentes</Button>
-          <Button variant="outline" size="sm" onClick={() => setCompanyOpen(true)} className="shrink-0"><Building2 className="h-3.5 w-3.5 mr-1.5" /> Minha empresa</Button>
-        </div>
-      </div>
+      <ModuleHero
+        title="Cria Caixa"
+        subtitle="O financeiro da sua operação — empresa e pessoal, separados."
+        color="azul"
+        tabs={tabs}
+        actions={
+          <>
+            <Button size="sm" onClick={() => { setEditing(null); setDialog(true); }}>
+              <Plus className="h-3.5 w-3.5 mr-1.5" /> Novo lançamento
+            </Button>
+            {isPj && <Button variant="outline" size="sm" className="bg-background/70" onClick={() => setTransferOpen(true)}><ArrowLeftRight className="h-3.5 w-3.5 mr-1.5" /> Transferir p/ PF</Button>}
+            <Button variant="outline" size="sm" className="bg-background/70" onClick={() => setRecurringOpen(true)}><Repeat className="h-3.5 w-3.5 mr-1.5" /> Recorrentes</Button>
+            <Button variant="outline" size="sm" className="bg-background/70" onClick={() => setCompanyOpen(true)}><Building2 className="h-3.5 w-3.5 mr-1.5" /> Minha empresa</Button>
+          </>
+        }
+      >
+        {seletorPjPf}
+      </ModuleHero>
 
-      <div className="flex items-center justify-between gap-3 flex-wrap mb-5">
-        <div className="inline-flex items-center gap-1 rounded-2xl border border-border bg-card p-1">
-          {([["pj", "Empresa", Building2], ["pf", "Pessoa Física", User]] as const).map(([v, l, Icon]) => (
-            <button key={v} onClick={() => navigate(`/socialmidia/criacaixa/${v === "pj" ? "empresa" : "pessoafisica"}`)}
-              className={cn("flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-body font-bold transition-colors", ctx === v ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground")}>
-              <Icon className="h-4 w-4" /> {l}
-            </button>
-          ))}
-        </div>
-        <Button size="sm" onClick={() => { setEditing(null); setDialog(true); }}>
-          <Plus className="h-3.5 w-3.5 mr-1.5" /> Novo lançamento {ctx === "pj" ? "(Empresa)" : "(Pessoal)"}
-        </Button>
-      </div>
-
-      <div className="flex items-center gap-2 mb-4">
-        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => shift(-1)}><ChevronLeft className="h-4 w-4" /></Button>
-        <span className="text-sm font-display font-bold text-foreground min-w-[110px] text-center">{MONTHS[ym.m]} {ym.y}</span>
-        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => shift(1)}><ChevronRight className="h-4 w-4" /></Button>
-      </div>
-
+      {/* O aviso de recorrente pendente aparece em qualquer seção — é ação, não informação. */}
       {pendingRecurring.length > 0 && (
         <button onClick={lancarRecorrentes} disabled={generate.isPending}
           className="w-full mb-5 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-primary/10 transition-colors">
@@ -293,7 +337,8 @@ function CaixaInner() {
         </button>
       )}
 
-      {isPj ? (
+      {/* ═══════ VISÃO GERAL ═══════ */}
+      {show("visao") && (isPj ? (
         <>
           {/* PREVISÃO DO MÊS — em destaque. Bruto = já recebido + o que falta receber. Líquido = bruto − despesas. */}
           <div className="rounded-2xl border border-primary/25 bg-primary/[0.04] p-4 mb-3">
@@ -323,28 +368,44 @@ function CaixaInner() {
           </div>
         </>
       ) : (
-        <div className="grid grid-cols-3 gap-3 mb-5">
-          <Metric label="Entrou" value={brl(recebido)} tone="green" />
-          <Metric label="Gastos" value={brl(despesas)} tone="red" />
-          <Metric label="Sobra" value={brl(recebido - despesas)} tone={recebido - despesas >= 0 ? "green" : "red"} />
-        </div>
+        <PessoalVisao
+          recebido={recebido} despesas={despesas} monthCtx={monthCtx}
+          recurring={recurring} fin={fin} ym={ym}
+          onNovo={() => { setEditing(null); setDialog(true); }}
+        />
+      ))}
+
+      {/* ═══════ CALENDÁRIO ═══════ */}
+      {show("calendario") && (
+        <CalendarioFinanceiro
+          monthlies={isPj ? monthlies : []}
+          records={records}
+          recurring={recurring}
+          pendingRecurring={pendingRecurring}
+          ctx={ctx}
+          ym={ym}
+          clientName={clientName}
+        />
       )}
 
-      <CalendarioFinanceiro
-        monthlies={isPj ? monthlies : []}
-        records={records}
-        recurring={recurring}
-        pendingRecurring={pendingRecurring}
-        ctx={ctx}
-        ym={ym}
-        clientName={clientName}
-      />
+      {/* ═══════ RELATÓRIOS ═══════ */}
+      {show("relatorios") && (
+        <>
+          <RelatorioPeriodo records={records} ctx={ctx} />
+          <CashflowChart records={records} ctx={ctx} ym={ym} />
+        </>
+      )}
 
-      <RelatorioPeriodo records={records} ctx={ctx} />
-
-      <CashflowChart records={records} ctx={ctx} ym={ym} />
-
-      {isPj && monthlies.length > 0 && (
+      {/* ═══════ MENSALIDADES ═══════ */}
+      {show("mensalidades") && isPj && monthlies.length === 0 && (
+        <div className="rounded-2xl border border-dashed border-border p-10 text-center">
+          <p className="text-sm font-body text-foreground font-medium">Nenhuma mensalidade neste mês</p>
+          <p className="text-xs text-muted-foreground font-body mt-1">
+            Preencha o <strong>valor mensal</strong> e o <strong>dia de pagamento</strong> na ficha dos clientes — elas nascem sozinhas todo mês.
+          </p>
+        </div>
+      )}
+      {show("mensalidades") && isPj && monthlies.length > 0 && (
         <div className="rounded-2xl border border-border bg-card p-4 mb-5">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <h3 className="text-sm font-display font-bold text-foreground">Mensalidades do mês</h3>
@@ -421,8 +482,9 @@ function CaixaInner() {
         </DialogContent>
       </Dialog>
 
-      {/* ── IMPOSTO DO MÊS ── mastigado a partir do regime tributário da empresa. */}
-      {isPj && (
+      {/* ── IMPOSTO DO MÊS ── mastigado a partir do regime tributário da empresa.
+           Fica na Visão geral: é a primeira coisa que a pessoa precisa saber. */}
+      {show("visao") && isPj && (
         hasRegime ? (
           <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 mb-5">
             <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -460,8 +522,16 @@ function CaixaInner() {
         )
       )}
 
-      {/* ── RENTABILIDADE POR CLIENTE ── quanto paga, quanto custa, quanto de imposto gera, o que sobra. */}
-      {isPj && clientRows.length > 0 && (
+      {/* ═══════ CLIENTES — rentabilidade ═══════ */}
+      {show("clientes") && isPj && clientRows.length === 0 && (
+        <div className="rounded-2xl border border-dashed border-border p-10 text-center">
+          <p className="text-sm font-body text-foreground font-medium">Nenhum cliente com movimento em {MONTHS[ym.m]}</p>
+          <p className="text-xs text-muted-foreground font-body mt-1">
+            Vincule os lançamentos a um cliente e esta tela mostra receita, custo, imposto e margem de cada um.
+          </p>
+        </div>
+      )}
+      {show("clientes") && isPj && clientRows.length > 0 && (
         <div className="rounded-2xl border border-border bg-card p-4 mb-5">
           <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
             <h3 className="text-sm font-display font-bold text-foreground">Rentabilidade por cliente ({MONTHS[ym.m]})</h3>
@@ -506,17 +576,20 @@ function CaixaInner() {
         </div>
       )}
 
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
-        {(["todos", "entrada", "despesa"] as const).map((t) => (
-          <button key={t} onClick={() => setTypeF(t)} className={cn("px-3 py-1.5 rounded-full text-xs font-body font-bold border", typeF === t ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground")}>{t === "todos" ? "Tudo" : t === "entrada" ? "Entradas" : "Despesas"}</button>
-        ))}
-        <span className="w-px h-5 bg-border mx-1" />
-        {(["todos", "pago", "pendente", "atrasado"] as const).map((s) => (
-          <button key={s} onClick={() => setStatusF(s)} className={cn("px-3 py-1.5 rounded-full text-xs font-body font-bold border", statusF === s ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground")}>{s === "todos" ? "Status" : STATUS_LABEL[s]}</button>
-        ))}
-      </div>
+      {/* ═══════ LANÇAMENTOS ═══════ */}
+      {show("lancamentos") && (
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          {(["todos", "entrada", "despesa"] as const).map((t) => (
+            <button key={t} onClick={() => setTypeF(t)} className={cn("px-3 py-1.5 rounded-full text-xs font-body font-bold border", typeF === t ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground")}>{t === "todos" ? "Tudo" : t === "entrada" ? "Entradas" : "Despesas"}</button>
+          ))}
+          <span className="w-px h-5 bg-border mx-1" />
+          {(["todos", "pago", "pendente", "atrasado"] as const).map((s) => (
+            <button key={s} onClick={() => setStatusF(s)} className={cn("px-3 py-1.5 rounded-full text-xs font-body font-bold border", statusF === s ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground")}>{s === "todos" ? "Status" : STATUS_LABEL[s]}</button>
+          ))}
+        </div>
+      )}
 
-      {isLoading ? (
+      {show("lancamentos") && (isLoading ? (
         <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-16 rounded-2xl bg-muted animate-pulse" />)}</div>
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border p-10 text-center">
@@ -555,7 +628,7 @@ function CaixaInner() {
             );
           })}
         </div>
-      )}
+      ))}
 
       {dialog && (
         <RecordDialog key={editing?.id ?? "new"} record={editing} context={ctx} clients={clients} defaultDate={monthDate} defaultCats={DEFAULT_CATS[ctx]} customCats={customCats} defaultSubs={DEFAULT_SUBCATS[ctx]} customSubs={customSubs} onAddCategory={addCategory} onAddSubcategory={addSubcategory} onClose={() => { setDialog(false); setEditing(null); }} />
@@ -564,6 +637,168 @@ function CaixaInner() {
       <FinRecurringDialog open={recurringOpen} onOpenChange={setRecurringOpen} ctx={ctx} defaultCats={DEFAULT_CATS[ctx]} customCats={customCats} defaultSubs={DEFAULT_SUBCATS[ctx]} customSubs={customSubs} />
       <FinTransferDialog open={transferOpen} onOpenChange={setTransferOpen} />
     </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// PESSOA FÍSICA — no padrão do Atlas.
+//
+// Antes eram três cartõezinhos (entrou / gastou / sobrou) e ponto. Isso não
+// é gestão pessoal, é um extrato. O Atlas responde três perguntas que faltavam:
+//   1. Quanto sobra de verdade depois das contas fixas que ainda vão cair?
+//   2. Pra onde vai meu dinheiro? (gasto por categoria, com peso)
+//   3. Quanto eu consigo guardar? (reserva do mês)
+// ═══════════════════════════════════════════════════════════════════════
+function PessoalVisao({ recebido, despesas, monthCtx, recurring, fin, ym, onNovo }: {
+  recebido: number;
+  despesas: number;
+  monthCtx: FinRecord[];
+  recurring: FinRecurring[];
+  fin: { reservePct?: number };
+  ym: { y: number; m: number };
+  onNovo: () => void;
+}) {
+  // Contas fixas do mês que AINDA não foram lançadas — é o que muda a conta do "sobra".
+  const fixasPendentes = recurring.filter(
+    (t) => t.active && (t.context ?? "pj") === "pf" && t.type === "despesa" &&
+      !monthCtx.some((r) => r.recurring_id === t.id),
+  );
+  const aPagarFixo = fixasPendentes.reduce((s, t) => s + Number(t.amount), 0);
+
+  const jaGastou = despesas;
+  const sobraReal = recebido - jaGastou - aPagarFixo;   // ← a conta honesta
+  const comprometido = recebido > 0 ? ((jaGastou + aPagarFixo) / recebido) * 100 : 0;
+
+  // Pra onde vai o dinheiro.
+  const porCat = useMemo(() => {
+    const map = new Map<string, number>();
+    monthCtx.filter((r) => r.type === "despesa").forEach((r) => {
+      const k = r.category?.trim() || "Sem categoria";
+      map.set(k, (map.get(k) ?? 0) + Number(r.amount));
+    });
+    fixasPendentes.forEach((t) => {
+      const k = t.category?.trim() || "Contas fixas";
+      map.set(k, (map.get(k) ?? 0) + Number(t.amount));
+    });
+    const total = [...map.values()].reduce((s, v) => s + v, 0);
+    return [...map.entries()]
+      .map(([cat, v]) => ({ cat, v, pct: total > 0 ? (v / total) * 100 : 0 }))
+      .sort((a, b) => b.v - a.v);
+  }, [monthCtx, fixasPendentes]);
+
+  const metaPct = Number(fin.reservePct) || 0;
+  const metaReserva = recebido * metaPct / 100;
+  const guardado = Math.max(0, sobraReal);
+  const atingido = metaReserva > 0 ? Math.min(100, (guardado / metaReserva) * 100) : 0;
+
+  return (
+    <>
+      {/* SOBRA REAL — a única métrica que importa no fim do mês. */}
+      <div className="rounded-2xl border border-primary/25 bg-primary/[0.04] p-4 mb-3">
+        <div className="flex items-end justify-between gap-4 flex-wrap">
+          <div>
+            <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider">Sobra real de {MONTHS[ym.m]}</p>
+            <p className={cn("text-3xl font-display font-extrabold mt-0.5", sobraReal >= 0 ? "text-foreground" : "text-red-500")}>{brl(sobraReal)}</p>
+            <p className="text-[12px] font-body text-muted-foreground mt-0.5">
+              {brl(recebido)} entrou − {brl(jaGastou)} já gasto
+              {aPagarFixo > 0 && <> − <strong className="text-foreground">{brl(aPagarFixo)}</strong> de contas fixas que ainda vão cair</>}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider">Comprometido</p>
+            <p className={cn("text-2xl font-display font-extrabold mt-0.5", comprometido > 90 ? "text-red-500" : comprometido > 70 ? "text-amber-600" : "text-green-600")}>
+              {recebido > 0 ? `${comprometido.toFixed(0)}%` : "—"}
+            </p>
+            <p className="text-[12px] font-body text-muted-foreground mt-0.5">da sua renda do mês</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+        <Metric label="Entrou" value={brl(recebido)} tone="green" />
+        <Metric label="Já gastou" value={brl(jaGastou)} tone="red" />
+        <Metric label="Contas a pagar" value={brl(aPagarFixo)} tone="amber"
+          hint={fixasPendentes.length ? `${fixasPendentes.length} conta(s) fixa(s)` : "nada a vencer"} />
+        <Metric label="Sobra" value={brl(sobraReal)} tone={sobraReal >= 0 ? "green" : "red"} hint="depois de tudo" />
+      </div>
+
+      {/* CONTAS FIXAS DO MÊS — o que ainda vai cair, com o que fazer. */}
+      {fixasPendentes.length > 0 && (
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/[0.05] p-4 mb-5">
+          <p className="text-sm font-display font-bold text-foreground mb-1">Contas fixas que ainda vão cair</p>
+          <p className="text-[11.5px] font-body text-muted-foreground mb-3">
+            Já estão descontadas da sua sobra. Use “Lançar do mês” lá em cima pra registrar todas de uma vez.
+          </p>
+          <div className="space-y-1.5">
+            {fixasPendentes.map((t) => (
+              <div key={t.id} className="flex items-center gap-3 rounded-xl bg-card border border-border px-3 py-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-body font-medium text-foreground truncate">{t.description}</p>
+                  <p className="text-[11px] font-body text-muted-foreground">vence dia {t.due_day}{t.category ? ` · ${t.category}` : ""}</p>
+                </div>
+                <span className="text-sm font-display font-bold text-destructive shrink-0">−{brl(Number(t.amount))}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* PRA ONDE VAI O DINHEIRO */}
+      <div className="rounded-2xl border border-border bg-card p-4 mb-5">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <h3 className="text-sm font-display font-bold text-foreground">Pra onde vai o seu dinheiro</h3>
+          <span className="text-[11px] font-body text-muted-foreground">inclui as contas a vencer</span>
+        </div>
+        {porCat.length === 0 ? (
+          <div className="text-center py-4">
+            <p className="text-[12.5px] font-body text-muted-foreground mb-3">Nenhum gasto em {MONTHS[ym.m]} ainda.</p>
+            <Button size="sm" variant="outline" onClick={onNovo}><Plus className="h-3.5 w-3.5 mr-1.5" /> Lançar um gasto</Button>
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {porCat.map((c) => (
+              <div key={c.cat}>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className="text-[12.5px] font-body font-medium text-foreground truncate">{c.cat}</span>
+                  <span className="text-[12.5px] font-body text-muted-foreground shrink-0">
+                    <strong className="text-foreground">{brl(c.v)}</strong> · {c.pct.toFixed(0)}%
+                  </span>
+                </div>
+                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div className="h-full rounded-full bg-destructive/70" style={{ width: `${Math.max(2, c.pct)}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* RESERVA DO MÊS */}
+      <div className="rounded-2xl border border-border bg-card p-4 mb-5">
+        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+          <h3 className="text-sm font-display font-bold text-foreground">Reserva do mês</h3>
+          <span className="text-[11px] font-body text-muted-foreground">
+            {metaPct > 0 ? <>meta: guardar {metaPct}% ({brl(metaReserva)})</> : "defina a meta em “Minha empresa”"}
+          </span>
+        </div>
+        {metaPct > 0 ? (
+          <>
+            <div className="h-2.5 rounded-full bg-muted overflow-hidden mb-2">
+              <div className={cn("h-full rounded-full transition-all", atingido >= 100 ? "bg-green-600" : "bg-primary")} style={{ width: `${Math.max(2, atingido)}%` }} />
+            </div>
+            <p className="text-[12px] font-body text-muted-foreground">
+              {guardado > 0
+                ? <>Sobrou <strong className="text-foreground">{brl(guardado)}</strong> — {atingido >= 100 ? "meta batida 🎯" : `${atingido.toFixed(0)}% da meta`}</>
+                : "Este mês não sobrou nada pra guardar."}
+            </p>
+          </>
+        ) : (
+          <p className="text-[12.5px] font-body text-muted-foreground">
+            Quanto da sua renda você quer guardar todo mês? Defina em <strong>Minha empresa → Reserva</strong> e a barra passa a te cobrar.
+          </p>
+        )}
+      </div>
+    </>
   );
 }
 
