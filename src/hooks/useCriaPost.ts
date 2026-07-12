@@ -9,15 +9,21 @@ const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 const PORTAL_ORIGIN =
   ((import.meta.env as Record<string, string | undefined>).VITE_CRIAPOST_ORIGIN) ?? window.location.origin;
 
+// Abas extras do portal do cliente. O portal já sabe renderizar as duas —
+// isto aqui é o interruptor que a gestora liga por cliente.
+export type PortalSettings = { show_calendar?: boolean; show_report?: boolean };
+
 export type ExternalClient = {
   id: string; manager_id: string; name: string; logo_url: string | null;
   instagram_handle: string | null; notes: string | null; active: boolean; created_at: string;
   color: string | null; crm_client_id: string | null; brand_color: string | null;
+  portal_settings: PortalSettings | null;
 };
 // crm_client_id: vincular a um cliente já existente no cadastro central.
 // Se vier null/undefined, criamos um novo cliente central automaticamente.
 // logo_url + brand_color personalizam o portal público de aprovação do cliente.
-export type ExternalClientInput = { name: string; instagram_handle?: string | null; notes?: string | null; color?: string | null; crm_client_id?: string | null; logo_url?: string | null; brand_color?: string | null };
+// portal_settings decide se o link do cliente mostra Calendário e Relatório.
+export type ExternalClientInput = { name: string; instagram_handle?: string | null; notes?: string | null; color?: string | null; crm_client_id?: string | null; logo_url?: string | null; brand_color?: string | null; portal_settings?: PortalSettings | null };
 
 export type ExternalPost = {
   id: string; title: string; platform: string; format: string;

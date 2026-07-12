@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useExternalClients, type ExternalClient, type ExternalClientInput } from "@/hooks/useCriaPost";
+import { useExternalClients, type ExternalClient, type ExternalClientInput, type PortalSettings } from "@/hooks/useCriaPost";
 import { useCrmClients } from "@/hooks/useCrm";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Loader2, Image as ImageIcon, Eye, EyeOff } from "lucide-react";
+import { Loader2, Image as ImageIcon, Eye, EyeOff, Check } from "lucide-react";
 
 // Cores dos clientes no calendário geral (também usadas pelo ManagerCalendar).
 export const CLIENT_COLORS = ["#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#EF4444", "#14B8A6", "#A855F7"];
@@ -19,6 +19,24 @@ const PORTAL_BRAND_COLORS = ["#CE4A1D", "#2A4BDF", "#F27EB5", "#F2C21E", "#3E915
 // Edição do cliente de aprovação por link: logo e cor do portal, vínculo com o
 // cadastro central, notas e cor do calendário. Extraído da antiga lista do Cria Post
 // pra viver dentro do hub do cliente (ClienteHub) sem duplicar telas.
+// Interruptor de aba do portal — mostra o que o cliente ganha ao ligar.
+function PortalToggle({ on, onClick, title, desc }: { on: boolean; onClick: () => void; title: string; desc: string }) {
+  return (
+    <button type="button" onClick={onClick}
+      className={`w-full flex items-start gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-colors ${
+        on ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/40"}`}>
+      <span className={`mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded border ${
+        on ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground/40"}`}>
+        {on && <Check className="h-3 w-3" strokeWidth={3} />}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[13px] font-body font-semibold text-foreground">{title}</span>
+        <span className="block text-[11.5px] font-body text-muted-foreground leading-tight">{desc}</span>
+      </span>
+    </button>
+  );
+}
+
 export function ExternalClientDialog({ open, onOpenChange, client }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -29,13 +47,16 @@ export function ExternalClientDialog({ open, onOpenChange, client }: {
   const { user } = useAuth();
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [f, setF] = useState<ExternalClientInput>({ name: "", instagram_handle: "", notes: "", color: CLIENT_COLORS[0], crm_client_id: null, logo_url: null, brand_color: null });
+  const [f, setF] = useState<ExternalClientInput>({ name: "", instagram_handle: "", notes: "", color: CLIENT_COLORS[0], crm_client_id: null, logo_url: null, brand_color: null, portal_settings: {} });
 
   useEffect(() => {
     if (open && client) {
-      setF({ name: client.name, instagram_handle: client.instagram_handle ?? "", notes: client.notes ?? "", color: client.color ?? CLIENT_COLORS[0], crm_client_id: client.crm_client_id ?? null, logo_url: client.logo_url ?? null, brand_color: client.brand_color ?? null });
+      setF({ name: client.name, instagram_handle: client.instagram_handle ?? "", notes: client.notes ?? "", color: client.color ?? CLIENT_COLORS[0], crm_client_id: client.crm_client_id ?? null, logo_url: client.logo_url ?? null, brand_color: client.brand_color ?? null, portal_settings: client.portal_settings ?? {} });
     }
   }, [open, client]);
+
+  const ps = f.portal_settings ?? {};
+  const setPs = (patch: PortalSettings) => setF((p) => ({ ...p, portal_settings: { ...(p.portal_settings ?? {}), ...patch } }));
 
   if (!client) return null;
 
@@ -127,6 +148,31 @@ export function ExternalClientDialog({ open, onOpenChange, client }: {
                   className="h-7 w-9 rounded-lg border border-border bg-transparent p-0.5 cursor-pointer" aria-label="Cor personalizada" />
                 {f.brand_color && <button type="button" onClick={() => setF((p) => ({ ...p, brand_color: null }))} className="text-[11px] font-body text-muted-foreground hover:text-foreground">Limpar</button>}
               </div>
+            </div>
+
+            {/* ── O que mais o cliente encontra no link ──
+                O portal já sabe montar as duas abas. Aqui a gestora decide se liga.
+                Com as duas ligadas, o link deixa de ser "aprove os posts" e vira
+                a área do cliente: aprovações + calendário + relatório num lugar só. */}
+            <div className="space-y-2 pt-1">
+              <Label className="text-xs font-body">Abas do link</Label>
+              <PortalToggle
+                on={!!ps.show_calendar}
+                onClick={() => setPs({ show_calendar: !ps.show_calendar })}
+                title="Calendário"
+                desc="O cliente vê o que já foi aprovado e quando sai. Corta metade das perguntas no WhatsApp."
+              />
+              <PortalToggle
+                on={!!ps.show_report}
+                onClick={() => setPs({ show_report: !ps.show_report })}
+                title="Relatório"
+                desc="Resumo do que foi entregue no período, com a marca dele. Vira prova de trabalho."
+              />
+              {(ps.show_calendar || ps.show_report) && (
+                <p className="text-[11px] font-body text-muted-foreground">
+                  O link vira a <strong>área do cliente</strong>: aprovações{ps.show_calendar ? " + calendário" : ""}{ps.show_report ? " + relatório" : ""}, tudo com a marca dele.
+                </p>
+              )}
             </div>
           </section>
 
