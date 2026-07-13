@@ -61,12 +61,19 @@ function deriveState(profile: Perfil): BadgeState | null {
   return { kind: "expired" };
 }
 
-export function PlanBadge({ light = false }: { light?: boolean }) {
+export function PlanBadge({ light = false, onlyUrgent = false }: { light?: boolean; onlyUrgent?: boolean }) {
   const { profile } = useProfile();
   const navigate = useNavigate();
   const state = deriveState(profile);
 
   if (!state) return null;
+
+  // No header do celular não cabe tudo. Ali a pílula só aparece quando ela PEDE
+  // uma ação: o teste está acabando, ou a pessoa está sem plano. "Studio" e
+  // "Admin" não são notícia — pra isso existe o item "Planos" no menu.
+  if (onlyUrgent && !["trial_active", "trial_warning", "expired"].includes(state.kind)) {
+    return null;
+  }
 
   const base =
     "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-body font-semibold transition-all hover:opacity-90 hover:-translate-y-px cursor-pointer shrink-0";

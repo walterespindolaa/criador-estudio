@@ -142,9 +142,8 @@ export default function ManagerHome() {
             </button>
           )}
 
-          <button type="button" onClick={openSettings} aria-label="Configurações" className="md:hidden p-2.5 rounded-xl border border-border text-muted-foreground hover:text-foreground shrink-0">
-            <Settings className="h-5 w-5" />
-          </button>
+          {/* A engrenagem que ficava aqui virou duplicata: agora existe uma no
+              header mobile, que é onde a pessoa espera encontrar. */}
         </div>
 
         {/* Os números que importam. Antes o dashboard não mostrava NENHUM. */}

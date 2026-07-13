@@ -279,6 +279,41 @@ export default function ManagerLayout() {
           </HeroBand>
         </div>
 
+        {/* HEADER MOBILE DA SOCIAL MÍDIA — não existia.
+            O sino de notificações morava SÓ dentro da HeroBand, que é `hidden md:block`.
+            Ou seja: no celular, o gestor não tinha como ver notificação nenhuma —
+            nem aprovação de cliente, nem lead. Todo o sistema de push apontava pra
+            uma tela que ele não conseguia abrir.
+            Mesma estrutura do lado do criador: 2 à esquerda, logo no centro, 2 à direita. */}
+        <header className="h-14 sticky top-0 z-40 grid grid-cols-[1fr_auto_1fr] items-center px-3 bg-background border-b border-border md:hidden">
+          <div className="flex items-center gap-1 justify-self-start">
+            <GlobalSearch />
+            <HelpButton />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => navigate("/socialmidia/dashboard")}
+            className="justify-self-center px-2 text-xl font-display font-semibold tracking-tight text-foreground"
+            style={{ fontVariationSettings: "'opsz' 9" }}
+          >
+            cria
+          </button>
+
+          <div className="flex items-center gap-1 justify-self-end">
+            {canClients && <ClientSwitcher />}
+            <NotificationsBell />
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Configurações"
+              className="p-2 rounded-xl text-muted-foreground hover:bg-accent/60 hover:text-foreground transition-colors"
+            >
+              <SettingsIcon className="h-5 w-5" />
+            </button>
+          </div>
+        </header>
+
         {/* max-w-6xl (1152px) deixava metade da tela vazia num monitor grande e o
             conteúdo espremido numa coluna no meio. 1600px usa a tela de trabalho
             de verdade; acima disso o texto ficaria longo demais pra ler. */}

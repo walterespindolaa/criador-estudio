@@ -164,8 +164,21 @@ const AppLayout = () => {
               </HeroBand>
             </div>
 
-            <header className="h-14 sticky top-0 z-40 flex items-center justify-between px-4 bg-background border-b border-border md:hidden">
-              <NavLink to="/app" className="flex items-center">
+            {/* HEADER MOBILE — 3 zonas, logo no centro.
+                Antes eram SETE controles empilhados à direita (busca, conta, plano,
+                upload, ajuda, feedback, sino, engrenagem) com o logo espremido na
+                esquerda. Num celular de 380px isso vira uma barra ilegível.
+                Agora: 2 à esquerda · logo centrado · 2 à direita. A pílula do plano
+                só aparece quando ela EXIGE atenção (teste acabando, sem plano) —
+                nos outros casos ela mora no menu, em "Planos". O feedback virou o
+                botão flutuante que já existe. */}
+            <header className="h-14 sticky top-0 z-40 grid grid-cols-[1fr_auto_1fr] items-center px-3 bg-background border-b border-border md:hidden">
+              <div className="flex items-center gap-1 justify-self-start">
+                <GlobalSearch />
+                <HelpButton />
+              </div>
+
+              <NavLink to="/app" className="flex items-center justify-self-center px-2">
                 <h1
                   className="text-xl font-display font-semibold text-foreground tracking-tight"
                   style={{ fontVariationSettings: "'opsz' 9" }}
@@ -173,13 +186,11 @@ const AppLayout = () => {
                   cria
                 </h1>
               </NavLink>
-              <div className="flex items-center gap-1.5">
-                <GlobalSearch />
-                <AccountSwitcher compact />
-                <PlanBadge />
+
+              <div className="flex items-center gap-1 justify-self-end">
                 <UploadProgressIndicator />
-                <HelpButton />
-                <FeedbackButton />
+                <PlanBadge onlyUrgent />
+                <AccountSwitcher compact />
                 <NotificationsBell />
                 <NavLink to="/app/configuracoes" aria-label="Configurações" className="p-2 hover:bg-accent/60 rounded-xl transition-colors">
                   <Settings className="h-5 w-5 text-muted-foreground hover:text-foreground" />
