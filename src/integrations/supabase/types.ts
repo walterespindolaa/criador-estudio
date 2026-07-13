@@ -1221,6 +1221,50 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_saved_refs: {
+        Row: {
+          author: string | null
+          created_at: string
+          crm_client_id: string
+          id: string
+          manager_id: string
+          note: string | null
+          thumbnail_url: string | null
+          title: string | null
+          url: string
+        }
+        Insert: {
+          author?: string | null
+          created_at?: string
+          crm_client_id: string
+          id?: string
+          manager_id: string
+          note?: string | null
+          thumbnail_url?: string | null
+          title?: string | null
+          url: string
+        }
+        Update: {
+          author?: string | null
+          created_at?: string
+          crm_client_id?: string
+          id?: string
+          manager_id?: string
+          note?: string | null
+          thumbnail_url?: string | null
+          title?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_saved_refs_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_tags: {
         Row: {
           color: string
@@ -4592,6 +4636,7 @@ export type Database = {
         Args: { client_owner_id: string }
         Returns: Json
       }
+      manager_client_ideas: { Args: { client_owner_id: string }; Returns: Json }
       manager_client_instagram: {
         Args: { client_owner_id: string }
         Returns: Json
