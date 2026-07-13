@@ -63,7 +63,7 @@ export default function Equipe() {
       </div>
 
       {/* Assentos */}
-      <div className="bg-card border border-border rounded-2xl p-4 flex items-center gap-4 flex-wrap">
+      <div data-tour="eq-assentos" className="bg-card border border-border rounded-2xl p-4 flex items-center gap-4 flex-wrap">
         <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><Users className="h-5 w-5" /></div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-display font-bold text-foreground">Assentos: {used} de {total} em uso</p>
@@ -75,7 +75,7 @@ export default function Equipe() {
         </Button>
       </div>
 
-      <Button onClick={openInvite}><UserPlus className="h-4 w-4 mr-2" /> Convidar colaborador</Button>
+      <Button data-tour="eq-convidar" onClick={openInvite}><UserPlus className="h-4 w-4 mr-2" /> Convidar colaborador</Button>
 
       {/* Lista */}
       {isLoading ? (

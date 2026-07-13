@@ -171,7 +171,7 @@ export default function AgendaCriacao() {
       </div>
 
       {/* Agenda de criação */}
-      <div className="rounded-2xl border border-border bg-card p-4">
+      <div data-tour="ag-quadro" className="rounded-2xl border border-border bg-card p-4">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <div className="flex items-center gap-4 flex-wrap">
             <p className="text-sm font-display font-bold text-foreground">Agenda de criação</p>
@@ -180,7 +180,7 @@ export default function AgendaCriacao() {
               <span className="text-xs font-body font-semibold text-muted-foreground">Tarefas dos clientes</span>
             </label>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div data-tour="ag-navegacao" className="flex items-center gap-2 flex-wrap">
             {/* Semana (padrão) / Mês */}
             <div className="inline-flex rounded-lg border border-border overflow-hidden">
               {(["semana", "mes"] as const).map((v) => (
@@ -310,7 +310,7 @@ export default function AgendaCriacao() {
       </div>
 
       {/* Captações */}
-      <div id="captacoes-section" className="rounded-2xl border border-border bg-card p-4 mt-4 scroll-mt-20">
+      <div id="captacoes-section" data-tour="ag-captacoes" className="rounded-2xl border border-border bg-card p-4 mt-4 scroll-mt-20">
         <div className="flex items-center justify-between mb-3">
           <p className="text-sm font-display font-bold text-foreground">Captações</p>
           <Button size="sm" className="h-8" onClick={() => setCapOpen(true)}><Plus className="h-3.5 w-3.5 mr-1" /> Nova captação</Button>

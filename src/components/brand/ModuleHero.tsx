@@ -37,7 +37,9 @@ export function ModuleHero({
     // A faixa colorida ficava presa dentro do padding da página, virando um
     // cartãozinho no meio da tela. No celular ela agora sangra até as bordas
     // (-mx-4, w-[100vw]) e encosta no topo: vira a "capa" do módulo, com volume.
-    <div className={cn(
+    <div
+      data-tour="hero"
+      className={cn(
       "relative overflow-hidden border-border bg-card mb-5",
       "-mx-4 w-[calc(100%+2rem)] rounded-b-3xl border-b -mt-7 pt-2",
       "sm:mx-0 sm:mt-0 sm:w-auto sm:rounded-3xl sm:border sm:pt-0",
@@ -52,7 +54,7 @@ export function ModuleHero({
           </div>
           {/* Ações: no mobile viram uma tira que rola, em vez de vazar pra fora. */}
           {actions && (
-            <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto scrollbar-none scroll-snap-x sm:flex-wrap sm:overflow-visible shrink-0 pb-0.5">
+            <div data-tour="hero-actions" className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto scrollbar-none scroll-snap-x sm:flex-wrap sm:overflow-visible shrink-0 pb-0.5">
               {actions}
             </div>
           )}
@@ -62,7 +64,7 @@ export function ModuleHero({
 
         {/* Submenu, rota real por seção. Sublinhado na cor do módulo. */}
         {tabs && tabs.length > 0 && (
-          <nav className="mt-4 -mx-1 flex gap-1 overflow-x-auto scrollbar-none scroll-snap-x">
+          <nav data-tour="hero-tabs" className="mt-4 -mx-1 flex gap-1 overflow-x-auto scrollbar-none scroll-snap-x">
             {tabs.map((t) => (
               <NavLink
                 key={t.to}

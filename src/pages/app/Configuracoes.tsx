@@ -91,6 +91,7 @@ const Configuracoes = () => {
   const editorialLineHydratedRef = useRef(false);
   const [selectedNiches, setSelectedNiches] = useState<string[]>([]);
   const [customNiche, setCustomNiche] = useState("");
+  const [nichoOpen, setNichoOpen] = useState(false);
 
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -432,74 +433,107 @@ const Configuracoes = () => {
                     <Input {...register("name")} className="rounded-xl" />
                     {errors.name && <p className="text-xs text-destructive mt-1">{errors.name.message}</p>}
                   </div>
+                  {/* BIO. min-h de 60px cortava a bio no meio: a pessoa digitava 3 linhas
+                      e via 1 e meia. Agora nasce com altura de leitura e cresce se precisar. */}
                   <div className="space-y-2">
                     <Label className="font-body text-sm">Bio <span className="text-muted-foreground">({bio.length}/160)</span></Label>
-                    <Textarea {...register("bio")} placeholder="Conte um pouco sobre você..." className="rounded-xl min-h-[60px]" />
+                    <Textarea
+                      {...register("bio")}
+                      rows={4}
+                      maxLength={160}
+                      placeholder="Conte um pouco sobre você..."
+                      className="rounded-xl min-h-[112px] leading-relaxed resize-y"
+                    />
                     {errors.bio && <p className="text-xs text-destructive mt-1">{errors.bio.message}</p>}
                   </div>
+
+                  {/* NICHO. Antes o formulário despejava TODAS as opções na tela, inclusive
+                      as 10 que não são suas. Virava um muro de chips. Agora a tela mostra só
+                      o SEU nicho; escolher é um clique que abre a lista. */}
                   <div className="space-y-2">
                     <Label className="font-body text-sm">Nicho</Label>
-                    <p className="text-[11px] text-muted-foreground font-body">
-                      Selecione um ou mais. Adicione um nicho personalizado se preferir.
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {NICHE_OPTIONS.map((n) => {
-                        const active = selectedNiches.includes(n);
-                        return (
+                    {selectedNiches.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedNiches.map((n) => (
                           <button
                             key={n}
                             type="button"
                             onClick={() => toggleNiche(n)}
-                            className={`px-3 py-1.5 rounded-full text-sm font-body transition-colors ${
-                              active
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-muted text-foreground hover:bg-muted/80"
-                            }`}
-                          >
-                            {n}
-                          </button>
-                        );
-                      })}
-                      {selectedNiches
-                        .filter((n) => !NICHE_OPTIONS.includes(n))
-                        .map((n) => (
-                          <button
-                            key={n}
-                            type="button"
-                            onClick={() => toggleNiche(n)}
+                            title="Remover"
                             className="px-3 py-1.5 rounded-full text-sm font-body bg-primary text-primary-foreground hover:opacity-90"
                           >
                             {n}
                             <span className="ml-1.5 opacity-70">×</span>
                           </button>
                         ))}
-                    </div>
-                    <div className="flex gap-2 pt-1">
-                      <Input
-                        placeholder="Outro nicho..."
-                        value={customNiche}
-                        onChange={(e) => setCustomNiche(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            addCustomNiche();
-                          }
-                        }}
-                        maxLength={40}
-                        className="rounded-xl text-sm"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={addCustomNiche}
-                        disabled={!customNiche.trim() || selectedNiches.includes(customNiche.trim())}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
+                      </div>
+                    ) : (
+                      <p className="text-[13px] text-muted-foreground font-body">Nenhum nicho escolhido ainda.</p>
+                    )}
+                    <Button type="button" variant="outline" className="rounded-xl w-full sm:w-auto" onClick={() => setNichoOpen(true)}>
+                      <Plus className="h-4 w-4 mr-1.5" />
+                      {selectedNiches.length > 0 ? "Editar nichos" : "Escolher nicho"}
+                    </Button>
                     {errors.niche && <p className="text-xs text-destructive mt-1">{errors.niche.message}</p>}
                   </div>
+
+                  <Dialog open={nichoOpen} onOpenChange={setNichoOpen}>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle className="font-display">Seu nicho</DialogTitle>
+                        <DialogDescription className="font-body text-sm">
+                          Escolha um ou mais. É o que faz a IA falar do assunto certo e sugerir os melhores horários pro seu público.
+                        </DialogDescription>
+                      </DialogHeader>
+
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {[...NICHE_OPTIONS, ...selectedNiches.filter((n) => !NICHE_OPTIONS.includes(n))].map((n) => {
+                          const active = selectedNiches.includes(n);
+                          return (
+                            <button
+                              key={n}
+                              type="button"
+                              onClick={() => toggleNiche(n)}
+                              className={`px-3 py-1.5 rounded-full text-sm font-body transition-colors ${
+                                active ? "bg-primary text-primary-foreground" : "bg-muted text-foreground hover:bg-muted/80"
+                              }`}
+                            >
+                              {n}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="flex gap-2 pt-2">
+                        <Input
+                          placeholder="Outro nicho..."
+                          value={customNiche}
+                          onChange={(e) => setCustomNiche(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              addCustomNiche();
+                            }
+                          }}
+                          maxLength={40}
+                          className="rounded-xl text-sm"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={addCustomNiche}
+                          disabled={!customNiche.trim() || selectedNiches.includes(customNiche.trim())}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      <DialogFooter>
+                        <Button type="button" onClick={() => setNichoOpen(false)}>Pronto</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                   <div className="space-y-2">
                     <Label className="font-body text-sm">Plataformas</Label>
                     <div className="flex flex-wrap gap-2">
@@ -530,10 +564,16 @@ const Configuracoes = () => {
                       <Input placeholder="@seuyoutube" {...register("youtube_handle")} className="rounded-xl" />
                     </div>
                   </div>
+                  {/* PIX. Pedir a chave Pix do nada assusta e parece cobrança. O disclaimer
+                      explica ANTES do campo pra que serve: é você RECEBENDO de publi. */}
                   <div className="space-y-2">
-                    <Label className="font-body text-sm">Chave Pix</Label>
+                    <Label className="font-body text-sm">Chave Pix <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                    <div className="rounded-xl border border-primary/25 bg-primary/5 px-3 py-2.5">
+                      <p className="text-[12px] font-body text-foreground leading-relaxed">
+                        Isto é pra você <strong>RECEBER</strong>, não pra pagar nada. A chave entra nas propostas de collab e publi, pra marca te pagar direto, sem ficar pedindo seus dados no direct. O CRIA nunca cobra nada por Pix.
+                      </p>
+                    </div>
                     <Input placeholder="CPF, e-mail, telefone ou chave aleatória" {...register("pix_key")} className="rounded-xl" />
-                    <p className="text-[11px] text-muted-foreground font-body">Aparece nas suas propostas pra marca te pagar direto.</p>
                     {errors.pix_key && <p className="text-xs text-destructive mt-1">{errors.pix_key.message}</p>}
                   </div>
                   <Button type="submit" variant="hero">Salvar perfil</Button>

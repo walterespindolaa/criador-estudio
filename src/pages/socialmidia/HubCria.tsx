@@ -59,7 +59,7 @@ export default function HubCria() {
             <Button onClick={() => navigate("/socialmidia/clientes")}>Ir para Clientes</Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div data-tour="hub-clientes" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {clients.map((c) => {
               const stat = byClient[c.id] ?? { pendentes: 0, total: 0 };
               return (
@@ -95,7 +95,7 @@ export default function HubCria() {
       </div>
 
       {/* Análise avulsa (sem cliente) */}
-      <div className="mt-8 border-t border-border pt-5">
+      <div data-tour="hub-avulsa" className="mt-8 border-t border-border pt-5">
         <button onClick={() => setAvulsa((v) => !v)} className="flex items-center gap-2 text-sm font-display font-bold text-foreground">
           <TrendingUp className="h-4 w-4 text-primary" /> Análise avulsa (sem cliente)
           <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${avulsa ? "rotate-180" : ""}`} />

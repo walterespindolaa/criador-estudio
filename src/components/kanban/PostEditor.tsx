@@ -1270,6 +1270,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
             <div className="flex md:hidden shrink-0 border-b border-border bg-muted/30">
               <button
                 type="button"
+                data-tour="editor-tab-config"
                 onClick={() => setMobileTab("config")}
                 className={cn(
                   "flex-1 py-2.5 text-sm font-body font-semibold transition-colors",
@@ -1282,6 +1283,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               </button>
               <button
                 type="button"
+                data-tour="editor-tab-criar"
                 onClick={() => setMobileTab("criar")}
                 className={cn(
                   "flex-1 py-2.5 text-sm font-body font-semibold transition-colors",

@@ -150,6 +150,7 @@ export const TOURS_CRIADOR: TourConfig[] = [
     steps: [
       {
         target: '[data-tour="editor-plataforma"]',
+        mobileOpenFirst: '[data-tour="editor-tab-config"]',
         title: "Plataforma e formato",
         body: "Comece dizendo ONDE esse post vai viver (Instagram, TikTok, YouTube) e em que formato (Reels, carrossel, foto...). O CRIA adapta a estrutura do editor pra esse formato: um Reels ganha cenas, um carrossel ganha lâminas.",
         mobileBody: "Na aba Config do editor você define ONDE esse post vai viver (Instagram, TikTok, YouTube) e em que formato (Reels, carrossel, foto...). O CRIA adapta a estrutura pra esse formato: um Reels ganha cenas, um carrossel ganha lâminas.",
@@ -157,6 +158,7 @@ export const TOURS_CRIADOR: TourConfig[] = [
       },
       {
         target: '[data-tour="editor-status"]',
+        mobileOpenFirst: '[data-tour="editor-tab-config"]',
         title: "Status: onde esse post está no fluxo",
         body: "Esses chips são as mesmas colunas do kanban. Mudou o status aqui, o card anda lá no board. Ideia é a faísca; Planejamento é escrever; Produzindo é gravar; Pronto é finalizado; Agendado tem data; Publicado está no ar.",
         mobileBody: "Os chips de Status (na aba Config) são as mesmas colunas do kanban: mudou aqui, o card anda lá no board. Ideia é a faísca; Planejamento é escrever; Produzindo é gravar; Pronto é finalizado; Agendado tem data; Publicado está no ar.",
@@ -164,6 +166,7 @@ export const TOURS_CRIADOR: TourConfig[] = [
       },
       {
         target: '[data-tour="editor-agendamento"]',
+        mobileOpenFirst: '[data-tour="editor-tab-config"]',
         title: "Agendamento e melhor horário",
         body: "Defina data e hora, e repare na sugestão de melhores horários: ela é baseada no seu nicho e na plataforma (e fica mais precisa com o Instagram conectado). Post com data aparece no calendário e no Dashboard.",
         mobileBody: "Em Agendamento (aba Config), defina data e hora e repare na sugestão de melhores horários: é baseada no seu nicho e na plataforma, e fica mais precisa com o Instagram conectado. Post com data aparece no calendário e no Dashboard.",
@@ -171,6 +174,7 @@ export const TOURS_CRIADOR: TourConfig[] = [
       },
       {
         target: '[data-tour="editor-abas"]',
+        mobileOpenFirst: '[data-tour="editor-tab-criar"]',
         title: "As abas do post",
         body: "Legenda: o texto que vai no post. Roteiro: cena a cena do vídeo. Tarefas: o que falta fazer pra esse post sair. Notas: anotações livres. Refs: referências e links de inspiração. Um post completo mora nessas 5 abas.",
         mobileBody: "Na área de conteúdo do post você encontra 5 abas. Legenda: o texto que vai no post. Roteiro: cena a cena do vídeo. Tarefas: o que falta pra esse post sair. Notas: anotações livres. Refs: referências e inspiração. Um post completo mora nessas 5 abas.",
@@ -178,6 +182,7 @@ export const TOURS_CRIADOR: TourConfig[] = [
       },
       {
         target: '[data-tour="editor-ia"]',
+        mobileOpenFirst: '[data-tour="editor-tab-config"]',
         title: "Content Assistant",
         body: "Escolha o tom (descontraído, profissional, provocativo...) e a IA escreve legenda e roteiro no estilo da sua marca, ou avalia o gancho que você escreveu. É o seu copywriter de plantão. E o botão ? aqui em cima reabre este tutorial quando quiser.",
         mobileBody: "No Content Assistant (aba Config), escolha o tom (descontraído, profissional, provocativo...) e a IA escreve legenda e roteiro no estilo da sua marca, ou avalia seu gancho. O botão ? no topo do editor reabre este tutorial quando quiser.",

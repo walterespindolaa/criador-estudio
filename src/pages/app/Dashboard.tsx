@@ -13,7 +13,7 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { getDailyInsight } from "@/lib/ai/claude";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, isWithinInterval, parseISO } from "date-fns";
 import { hojeBR, toISODateBR } from "@/lib/date-br";
@@ -335,6 +335,34 @@ const Dashboard = () => {
           <NextBestAction />
         </div>
 
+        {/* CAPTURA RÁPIDA NO TOPO.
+            A ideia chega quando chega, e ela é o começo de TODO o fluxo do CRIA.
+            Estava enterrada no fim da coluna: a pessoa tinha que rolar a tela pra
+            anotar um pensamento, e ideia que espera scroll é ideia perdida. */}
+        <DCard data-tour="dash-captura" className="relative overflow-hidden bg-card border-border group mb-6">
+          <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Sparkles className="h-24 w-24 text-primary" />
+          </div>
+          <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+            <h3 className="font-display font-semibold text-foreground flex items-center gap-2">
+              <Lightbulb className="h-4 w-4 text-primary" /> Captura Rápida
+            </h3>
+            <Link to="/app/ideias" className="text-xs font-body font-bold text-primary hover:underline shrink-0">
+              Ver minhas ideias ({ideas.length})
+            </Link>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Input
+              placeholder="O que você está pensando?"
+              className="rounded-xl border-border bg-background/50 h-11"
+              value={quickIdea}
+              onChange={(e) => setQuickIdea(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleQuickCapture()}
+            />
+            <Button onClick={handleQuickCapture} variant="hero" size="lg" className="w-full sm:w-auto">Capturar</Button>
+          </div>
+        </DCard>
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
           <div className="lg:col-span-8 space-y-6">
@@ -434,25 +462,6 @@ const Dashboard = () => {
                 </p>
               )}
             </section>
-
-            <DCard data-tour="dash-captura" className="relative overflow-hidden bg-card border-border group">
-              <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                <Sparkles className="h-24 w-24 text-primary" />
-              </div>
-              <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
-                <Lightbulb className="h-4 w-4 text-primary" /> Captura Rápida
-              </h3>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Input
-                  placeholder="O que você está pensando?"
-                  className="rounded-xl border-border bg-background/50 h-11"
-                  value={quickIdea}
-                  onChange={(e) => setQuickIdea(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleQuickCapture()}
-                />
-                <Button onClick={handleQuickCapture} variant="hero" size="lg" className="w-full sm:w-auto">Capturar</Button>
-              </div>
-            </DCard>
 
             <DCard className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200/50 dark:from-amber-500/10 dark:to-orange-500/5 dark:border-amber-500/20">
               <h3 className="text-sm font-display font-bold text-amber-700 dark:text-amber-400 mb-2 flex items-center gap-1.5">

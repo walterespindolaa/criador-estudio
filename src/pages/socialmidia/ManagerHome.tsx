@@ -148,7 +148,7 @@ export default function ManagerHome() {
         </div>
 
         {/* Os números que importam. Antes o dashboard não mostrava NENHUM. */}
-        <div className="relative grid grid-cols-2 lg:grid-cols-4 gap-2.5 mt-6">
+        <div data-tour="gh-numeros" className="relative grid grid-cols-2 lg:grid-cols-4 gap-2.5 mt-6">
           <Painel color="rosa" icon={Users} valor={String(ativos)} label={ativos === 1 ? "cliente ativo" : "clientes ativos"} to="/socialmidia/clientes" />
           <Painel color="azul" icon={Wallet} valor={formatBRL(mrr)} label="por mês na carteira" to="/socialmidia/criacaixa/empresa/visao" />
           <Painel color="laranja" icon={Send} valor={String(pendentes)} label={pendentes === 1 ? "post esperando o cliente" : "posts esperando o cliente"} to="/socialmidia/criapost/aprovacoes" destaque={pendentes > 0} />
@@ -157,7 +157,7 @@ export default function ManagerHome() {
       </section>
 
       <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">Seus módulos</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+      <div data-tour="gh-modulos" className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
         {modules.map((m) => {
           const active = m.status === "active" || m.status === "past_due";
           return (
@@ -179,7 +179,7 @@ export default function ManagerHome() {
         <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider">Aprovações recentes</h2>
         <button onClick={() => navigate("/socialmidia/aprovacoes")} className="text-primary font-body font-bold text-xs flex items-center gap-1 hover:underline">Ver todas <ArrowRight className="h-3 w-3" /></button>
       </div>
-      <div className="mb-8"><ApprovalTracker hideHeader limit={5} /></div>
+      <div data-tour="gh-aprovacoes" className="mb-8"><ApprovalTracker hideHeader limit={5} /></div>
 
       {isPartner && partner?.coupon_code && (
         <>
@@ -209,7 +209,7 @@ export default function ManagerHome() {
       )}
 
       <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">Seus clientes</h2>
-      <ClientsGrid defaultLimit={5} />
+      <div data-tour="gh-clientes"><ClientsGrid defaultLimit={5} /></div>
 
       {!hasAgency && (
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-purple-600 text-white p-5 sm:p-6 mt-8">

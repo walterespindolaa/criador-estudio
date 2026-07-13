@@ -74,6 +74,8 @@ export function TourProvider({ children }: { children: ReactNode }) {
         ...s,
         target: isMobile && s.mobileTarget ? s.mobileTarget : s.target,
         body: isMobile && s.mobileBody ? s.mobileBody : s.body,
+        // O controle que precisa ser aberto antes do alvo existir (aba, acordeão).
+        openFirst: isMobile && s.mobileOpenFirst ? s.mobileOpenFirst : s.openFirst,
       }));
     setActive({ ...tour, steps });
     setStep(-1);

@@ -73,10 +73,10 @@ export default function Clientes() {
           <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Clientes</h1>
           <p className="text-muted-foreground font-body text-sm mt-0.5">Todos os seus clientes num lugar só, usem o Cria ou aprovem por link.</p>
         </div>
-        <Button onClick={() => setNewOpen(true)} className="shrink-0"><Plus className="h-4 w-4 mr-1.5" /> Novo cliente</Button>
+        <Button data-tour="cli-novo" onClick={() => setNewOpen(true)} className="shrink-0"><Plus className="h-4 w-4 mr-1.5" /> Novo cliente</Button>
       </div>
 
-      <div className="flex items-center gap-2 my-4 flex-wrap">
+      <div data-tour="cli-filtros" className="flex items-center gap-2 my-4 flex-wrap">
         {([["todos", "Todos"], ["cria", "Usam o Cria"], ["link", "Aprovam por link"]] as const).map(([k, l]) => (
           <button key={k} onClick={() => setFilter(k)} className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${filter === k ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground"}`}>{l}</button>
         ))}
@@ -96,7 +96,7 @@ export default function Clientes() {
           <Button onClick={() => setNewOpen(true)} className="mt-5"><Plus className="h-4 w-4 mr-1.5" /> Criar primeiro cliente</Button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        <div data-tour="cli-grid" className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {shown.map((c) => {
             const aguardando = pendingByCrm[c.id] ?? 0;
             const extc = extByCrm[c.id] ?? null;

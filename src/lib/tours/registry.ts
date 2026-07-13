@@ -18,6 +18,17 @@ export type TourStep = {
   /** Passo só existe numa das versões (elemento não existe na outra). */
   skipOnMobile?: boolean;
   skipOnDesktop?: boolean;
+  /**
+   * ABRIR ANTES DE PROCURAR.
+   * Seletor de um controle (aba, acordeão, botão "mais") que precisa ser CLICADO
+   * pra que o alvo exista no DOM. Sem isso, o tour não encontrava o elemento e
+   * caía no modo "sem alvo": mostrava só o texto, sem destacar nada na tela.
+   * É o que acontecia no editor de post no mobile, onde as abas do conteúdo vivem
+   * atrás do botão "Criar conteúdo".
+   */
+  openFirst?: string;
+  /** Idem, mas só no mobile (o desktop costuma mostrar tudo de uma vez). */
+  mobileOpenFirst?: string;
   placement?: "top" | "bottom" | "left" | "right";
   /** Se presente, mostra o botão "Fazer com a Cria IA" que abre o painel com esse prompt. */
   aiPrompt?: string;
@@ -27,6 +38,12 @@ export type TourConfig = {
   id: string;
   /** Rota exata que ativa o tour (pathname). */
   route: string;
+  /**
+   * Vale também pras sub-rotas (/criacaixa/empresa/visao, /criapost/aprovacoes...).
+   * Sem isso, o "?" dentro de uma seção do módulo não achava tour nenhum.
+   * NÃO ligar em rotas com :id (ex.: /clientes/:id), que são OUTRA tela.
+   */
+  routePrefix?: boolean;
   title: string;
   /** Por que a tela existe / que problema resolve, mostrado no card de abertura. */
   valueProp: string;
@@ -37,7 +54,12 @@ export type TourConfig = {
 export const TOURS: TourConfig[] = [...TOURS_CRIADOR, ...TOURS_GESTOR];
 
 export function findTourByRoute(pathname: string): TourConfig | undefined {
-  return TOURS.find(t => t.route === pathname);
+  const exato = TOURS.find(t => t.route === pathname);
+  if (exato) return exato;
+  // Sub-rota do módulo: pega o tour de rota mais longa que seja prefixo.
+  return TOURS
+    .filter(t => t.routePrefix && pathname.startsWith(`${t.route}/`))
+    .sort((a, b) => b.route.length - a.route.length)[0];
 }
 
 export function findTourById(id: string): TourConfig | undefined {

@@ -51,12 +51,30 @@ export function TourOverlay({
       const foraDeVista = r.top < 72 || r.bottom > window.innerHeight - 140;
       if (foraDeVista) el.scrollIntoView({ block: "center", behavior: "smooth" });
     };
+    // ABRIR O QUE ESCONDE O ALVO.
+    // Muito passo apontava pra um elemento que vive atrás de uma aba fechada
+    // (ex.: no mobile, as abas do post moram dentro de "Criar conteúdo").
+    // Como o elemento não existia no DOM, o tour caía no modo "sem alvo" e
+    // virava um texto solto, sem destacar nada. Agora ele CLICA no controle
+    // que revela o alvo e só depois procura. Isso é o "direcionamento quebrado".
+    let abriu = false;
     const find = () => {
       if (cancelled) return;
       const el = document.querySelector(current.target);
-      if (el) attach(el);
-      else if (tries++ < 80) window.setTimeout(find, 50); // até ~4s pra páginas lazy montarem
-      else { setRect(null); setMissing(true); } // sem alvo: mostra o conteúdo centrado, NUNCA fica mudo
+      if (el) { attach(el); return; }
+
+      if (!abriu && current.openFirst) {
+        const gatilho = document.querySelector<HTMLElement>(current.openFirst);
+        if (gatilho) {
+          abriu = true;
+          gatilho.click();
+          window.setTimeout(find, 120);   // dá um frame pro conteúdo montar
+          return;
+        }
+      }
+
+      if (tries++ < 80) window.setTimeout(find, 50); // até ~4s pra páginas lazy montarem
+      else { setRect(null); setMissing(true); }      // sem alvo: card centrado, NUNCA fica mudo
     };
     find();
     return () => { cancelled = true; };
