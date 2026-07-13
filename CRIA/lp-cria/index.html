@@ -522,50 +522,75 @@ html,body{overflow-x:clip}
     </div>
     <div class="tudo-grid">
       <div class="tudo-col reveal">
+        <!-- ANTES esta coluna dizia "tá no Pro e no Studio" e listava Cria Stories,
+             Collabs e Cria Estúdio junto — nenhum dos três está no Pro. Vender o que
+             não entrega é reembolso na certa. Agora cada item diz em que plano está. -->
         <div class="tudo-head">
           <h3>Pro criador</h3>
-          <span class="tudo-sub">tá no Pro e no Studio</span>
+          <span class="tudo-sub">o que entra em cada plano</span>
         </div>
+        <p class="tudo-nivel">No Essencial (R$19,90), e daí pra cima:</p>
         <div class="chips">
           <span class="chip">Dashboard do dia</span>
           <span class="chip">Banco de ideias</span>
           <span class="chip">Kanban "Criando"</span>
           <span class="chip">Calendário de conteúdo</span>
-          <span class="chip">Tarefas</span>
+          <span class="chip">Tarefas e metas</span>
+          <span class="chip">Brandbook da marca</span>
+          <span class="chip">Link in bio</span>
+          <span class="chip">Notificações + resumo diário</span>
+        </div>
+        <p class="tudo-nivel">A partir do Pro (R$32,90):</p>
+        <div class="chips">
           <span class="chip destaque-az">Cria IA: legendas</span>
           <span class="chip destaque-az">Cria IA: roteiros</span>
           <span class="chip destaque-az">Avaliação de gancho</span>
           <span class="chip destaque-az">Ideias por IA</span>
-          <span class="chip">Brandbook da marca</span>
-          <span class="chip">Link in bio</span>
-          <span class="chip">Meu Feed (preview)</span>
-          <span class="chip">Cria Stories: plano semanal</span>
           <span class="chip">Insights reais do Instagram</span>
+          <span class="chip">Meu Feed (preview)</span>
+          <span class="chip">Melhor horário pra postar</span>
+          <span class="chip">Tendências do seu nicho</span>
+          <span class="chip">Media Kit automático</span>
+          <span class="chip">Relatórios</span>
+        </div>
+        <p class="tudo-nivel">Só no Studio (R$49,90):</p>
+        <div class="chips">
+          <span class="chip destaque-az">Cria Plano: a IA monta seu mês</span>
+          <span class="chip destaque-az">Cria Stories: plano semanal</span>
           <span class="chip">Collabs e publis</span>
-          <span class="chip">Cria Estúdio: imagens com IA</span>
-          <span class="chip">Notificações + resumo diário</span>
         </div>
       </div>
       <div class="tudo-col tudo-gestor reveal">
+        <!-- O lado gestor NÃO vem no plano do criador. São módulos comprados à
+             parte, cada um com o seu preço. Deixar isso implícito era o que fazia
+             a pessoa achar que o Studio de R$49,90 vinha com CRM e financeiro. -->
         <div class="tudo-head">
           <h3>Pro gestor</h3>
-          <span class="tudo-sub">área do gestor · módulos à parte</span>
+          <span class="tudo-sub">a conta é grátis · cada módulo é comprado à parte</span>
         </div>
+        <p class="tudo-nivel" style="color:rgba(255,255,255,.6)">Cria Post · R$19,90/mês</p>
         <div class="chips">
-          <span class="chip c-dark">Clientes ilimitados</span>
-          <span class="chip c-dark destaque-la">Cria Post: aprovação por link</span>
-          <span class="chip c-dark">CRM: pipeline de vendas</span>
-          <span class="chip c-dark">Contratos</span>
-          <span class="chip c-dark">Envio de propostas</span>
-          <span class="chip c-dark destaque-la">Cria Caixa: financeiro + MRR</span>
-          <span class="chip c-dark">Relatórios white-label</span>
-          <span class="chip c-dark">HUB CRIA: análise de concorrentes</span>
-          <span class="chip c-dark">Ideias por cliente</span>
-          <span class="chip c-dark">Modo Agência</span>
-          <span class="chip c-dark">Cupons</span>
-          <span class="chip c-dark">Collabs</span>
-          <span class="chip c-dark">Brandbook por cliente</span>
-          <span class="chip c-dark">Calendário por cliente</span>
+          <span class="chip c-dark destaque-la">Aprovação por link, sem cadastro</span>
+          <span class="chip c-dark">Portal com a cara da sua agência</span>
+          <span class="chip c-dark">Calendário e relatório pro cliente</span>
+        </div>
+        <p class="tudo-nivel" style="color:rgba(255,255,255,.6)">Cria Gestão · R$29,90/mês</p>
+        <div class="chips">
+          <span class="chip c-dark destaque-la">Ficha completa do cliente</span>
+          <span class="chip c-dark">Pipeline de vendas</span>
+          <span class="chip c-dark">Contratos e propostas</span>
+          <span class="chip c-dark">Tarefas e calendário por cliente</span>
+        </div>
+        <p class="tudo-nivel" style="color:rgba(255,255,255,.6)">Cria Caixa · R$24,90/mês</p>
+        <div class="chips">
+          <span class="chip c-dark destaque-la">Margem de lucro por cliente</span>
+          <span class="chip c-dark">Imposto pelo seu regime</span>
+          <span class="chip c-dark">Recebimentos, custos e MRR</span>
+        </div>
+        <p class="tudo-nivel" style="color:rgba(255,255,255,.6)">Modo Agência · R$36,90 por cliente</p>
+        <div class="chips">
+          <span class="chip c-dark">Cada cliente ganha uma conta Studio, de graça</span>
+          <span class="chip c-dark">Equipe com acesso por cliente</span>
         </div>
         <a href="social-media.html" class="tudo-link">ver o lado gestor em detalhe →</a>
       </div>
@@ -581,6 +606,11 @@ html,body{overflow-x:clip}
 .tudo-gestor .tudo-head h3{color:var(--creme)}
 .tudo-sub{font-family:var(--font-script);font-size:1.15rem;color:var(--azul)}
 .tudo-gestor .tudo-sub{color:var(--amarelo)}
+/* Divisor por plano/módulo: sem isso, tudo virava um monte de chips e a pessoa
+   assumia que TUDO vinha junto — que é exatamente o mal-entendido que gera
+   reembolso. */
+.tudo-nivel{font-family:var(--font-display);font-weight:700;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;opacity:.7;margin:22px 0 10px}
+.tudo-nivel:first-of-type{margin-top:16px}
 .chips{display:flex;flex-wrap:wrap;gap:9px}
 .chip{display:inline-flex;align-items:center;font-size:.86rem;font-weight:500;padding:8px 15px;border-radius:999px;background:var(--creme);border:1.5px solid rgba(21,20,18,.18)}
 .chip.destaque-az{background:var(--azul);color:#fff;border-color:var(--azul)}
@@ -598,7 +628,7 @@ html,body{overflow-x:clip}
       <div>
         <span class="kicker" style="background:var(--amarelo);color:var(--ink)">Você gerencia clientes?</span>
         <h2 style="color:#fff">Conheça o lado gestor do CRIA</h2>
-        <p style="color:rgba(255,255,255,.85);max-width:52ch">Cria Gestão, Cria Caixa, Cria Post, Modo Agência, propostas e cupons — a operação inteira de quem vive de social media, numa página só.</p>
+        <p style="color:rgba(255,255,255,.85);max-width:52ch">Cria Post, Cria Gestão, Cria Caixa e o Modo Agência. A conta é grátis; você ativa só os módulos que usar, cada um com o seu preço. A operação inteira de quem vive de social media, numa página só.</p>
       </div>
       <span class="gestor-arrow">→</span>
     </a>
@@ -692,7 +722,7 @@ html,body{overflow-x:clip}
     </div>
     <div class="stack-box reveal">
       <h3>O que você paga hoje, separado:</h3>
-      <div class="stack-line"><span><span class="x">✕</span> Planner / agendador</span><span>~R$ 29,90/mês</span></div>
+      <div class="stack-line"><span><span class="x">✕</span> Banco de ideias / segundo cérebro</span><span>~R$ 30/mês</span></div>
       <div class="stack-line"><span><span class="x">✕</span> Organização (Notion + templates)</span><span>~R$ 50/mês</span></div>
       <div class="stack-line"><span><span class="x">✕</span> IA de escrita</span><span>~R$ 100/mês</span></div>
       <div class="stack-line"><span><span class="x">✕</span> Link in bio pro</span><span>~R$ 25/mês</span></div>
@@ -767,7 +797,7 @@ html,body{overflow-x:clip}
     <div class="faq-list reveal">
       <div class="faq-item"><button class="faq-q">Preciso de cartão pra testar?<span class="plus">+</span></button><div class="faq-a"><p>Você tem 7 dias grátis com acesso completo. Cancele antes do fim do trial e não paga nada.</p></div></div>
       <div class="faq-item"><button class="faq-q">Serve pra quem tá começando?<span class="plus">+</span></button><div class="faq-a"><p>Sim. O plano Pro foi feito pro criador solo — você não precisa ter clientes pra ter processo. Quando os clientes chegarem, o CRIA cresce com você.</p></div></div>
-      <div class="faq-item"><button class="faq-q">Sou social media e atendo clientes. O CRIA serve pra mim?<span class="plus">+</span></button><div class="faq-a"><p>Serve — e tem uma área inteira só sua: aprovação por link, CRM, financeiro e relatórios white-label, com acesso gratuito e módulos ativados à parte. <a href="social-media.html" style="text-decoration:underline;font-weight:700">Conheça o lado gestor →</a></p></div></div>
+      <div class="faq-item"><button class="faq-q">Sou social media e atendo clientes. O CRIA serve pra mim?<span class="plus">+</span></button><div class="faq-a"><p>Serve — e tem uma área inteira só sua. A <b>conta de gestor é gratuita</b>: você ativa só os módulos que for usar (Cria Post R$19,90, Cria Gestão R$29,90, Cria Caixa R$24,90). Nada disso vem no plano de criador — são coisas separadas, de propósito, pra você não pagar pelo que não usa. <a href="social-media.html" style="text-decoration:underline;font-weight:700">Conheça o lado gestor →</a></p></div></div>
       <div class="faq-item"><button class="faq-q">O CRIA publica automaticamente?<span class="plus">+</span></button><div class="faq-a"><p>Hoje o CRIA planeja, organiza a aprovação e analisa os insights reais do Instagram. A publicação automática está no roadmap.</p></div></div>
       <div class="faq-item"><button class="faq-q">A IA funciona em português?<span class="plus">+</span></button><div class="faq-a"><p>100%. O CRIA é brasileiro, feito pro mercado BR — e a Cria IA escreve no tom da sua marca usando o brandbook.</p></div></div>
       <div class="faq-item"><button class="faq-q">Quanto tempo pra migrar minha operação?<span class="plus">+</span></button><div class="faq-a"><p>A maioria organiza o primeiro cliente em menos de 1 hora. Sem importação complexa: é colar suas ideias e seguir.</p></div></div>
