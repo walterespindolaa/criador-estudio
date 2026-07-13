@@ -9,7 +9,7 @@ import { useManageSubscription } from "@/hooks/useManageSubscription";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { PLANS, type PlanId } from "@/lib/plans";
+import { PLANS, PLAN_VALUE, type PlanId } from "@/lib/plans";
 import { track, newEventId } from "@/lib/metaPixel";
 
 export default function Assinar() {
@@ -88,7 +88,9 @@ export default function Assinar() {
     if (loadingPlan) return; // já tem um checkout em andamento
     setLoadingPlan(planId);
     // Guarda o valor pra disparar a conversão (Purchase) na página de obrigado + mede InitiateCheckout.
-    const planValue = planId === "studio" ? 49.9 : 32.9;
+    // O valor sai do PLANS (fonte única): antes era um ternário que só conhecia
+    // dois planos, e o terceiro entraria no funil com o preço errado.
+    const planValue = PLAN_VALUE[planId];
     const eventId = newEventId();
     try { sessionStorage.setItem("cria_checkout", JSON.stringify({ plano: planId, value: planValue, name: `cria ${planId}`, eventId })); } catch { /* ignore */ }
     track("InitiateCheckout", { value: planValue, currency: "BRL", content_ids: [planId] }, eventId);
@@ -161,31 +163,37 @@ export default function Assinar() {
         </div>
       )}
 
-      <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-6">
         {PLANS.map((plan) => {
           const isLoading = loadingPlan === plan.id;
-          // Qualquer checkout em andamento trava os dois botões (evita 2 sessões Stripe).
+          // Qualquer checkout em andamento trava todos os botões (evita 2 sessões Stripe).
           const anyLoading = loadingPlan !== null;
+          // Veio de uma trava ("Liberar por R$ X") → destaca o plano que ela foi buscar.
+          const veioPor = searchParams.get("plano") === plan.id;
+          const destaque = veioPor || (plan.highlighted && !searchParams.get("plano"));
           return (
             <div
               key={plan.id}
               className={cn(
                 "relative bg-card border rounded-2xl p-8 shadow-warm flex flex-col",
-                plan.highlighted
-                  ? "border-primary ring-1 ring-primary/30"
-                  : "border-border",
+                destaque ? "border-primary ring-1 ring-primary/30" : "border-border",
               )}
             >
-              {plan.highlighted && (
+              {destaque && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="inline-flex items-center gap-1 bg-primary text-primary-foreground rounded-full px-3 py-1 text-[11px] font-body font-semibold shadow-sm">
+                  <span className="inline-flex items-center gap-1 bg-primary text-primary-foreground rounded-full px-3 py-1 text-[11px] font-body font-semibold shadow-sm whitespace-nowrap">
                     <Sparkles className="h-3 w-3" />
-                    Mais completo
+                    {veioPor ? "É este que você quer" : "Mais escolhido"}
                   </span>
                 </div>
               )}
 
               <div className="text-center mb-6">
+                {/* O VERBO do degrau. A pessoa não compra uma lista de recursos,
+                    compra uma mudança: organizar → criar melhor → a IA faz por você. */}
+                <p className="text-[11px] font-body font-bold uppercase tracking-wider text-primary mb-1.5">
+                  {plan.verbo}
+                </p>
                 <h2 className="text-xl font-display font-extrabold text-foreground mb-1">
                   {plan.name}
                 </h2>
@@ -207,7 +215,7 @@ export default function Assinar() {
                     <div
                       className={cn(
                         "w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5",
-                        plan.highlighted ? "bg-primary/20" : "bg-primary/15",
+                        destaque ? "bg-primary/20" : "bg-primary/15",
                       )}
                     >
                       <Check className="h-3 w-3 text-primary" />
@@ -218,7 +226,7 @@ export default function Assinar() {
               </ul>
 
               <Button
-                variant={plan.highlighted ? "hero" : "outline"}
+                variant={destaque ? "hero" : "outline"}
                 size="lg"
                 className="w-full text-base"
                 onClick={() => handleSubscribe(plan.id)}

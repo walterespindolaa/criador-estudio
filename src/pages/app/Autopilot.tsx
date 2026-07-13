@@ -68,8 +68,9 @@ export default function Autopilot() {
     [usingConta, userSlots, plataforma, profile?.niche],
   );
 
-  const trialOk = profile?.trial_ends_at ? new Date(profile.trial_ends_at).getTime() > Date.now() : false;
-  const isStudio = profile?.plan === "studio" || profile?.role === "admin" || trialOk;
+  // Aqui existia uma TERCEIRA implementação do deriveTier, escrita à mão
+  // (plan === "studio" || role === "admin" || trialOk). Toda vez que a regra de
+  // plano mudava, este arquivo ficava pra trás. A trava agora é a da rota.
 
   const { data: runs = [] } = useQuery<RunRow[]>({
     queryKey: ["autopilot-runs", user?.id],
@@ -169,17 +170,6 @@ export default function Autopilot() {
     setItems(buildItems(run.posts ?? []));
     toast.message("Cronograma reaberto. Edite e reenvie quando quiser.");
   };
-
-  if (!isStudio) {
-    return (
-      <div className="max-w-lg mx-auto text-center py-16">
-        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4"><Lock className="h-6 w-6 text-primary" /></div>
-        <h1 className="text-2xl font-display font-extrabold text-foreground">Cria Plano é do Cria Studio</h1>
-        <p className="text-sm font-body text-muted-foreground mt-2">A IA monta seu mês (ou semana) de conteúdo no seu tom, sem repetir o que você já fez. Disponível no plano Studio.</p>
-        <Button asChild className="mt-5"><Link to="/app/assinar">Conhecer o Studio</Link></Button>
-      </div>
-    );
-  }
 
   const gridCols = periodo === "mes"
     ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"

@@ -106,20 +106,8 @@ export default function CriaStories() {
     openCria(`Quero adaptar esta tendência de STORIES pro meu nicho: "${t.title}"${t.description ? `, ${t.description}` : ""} (formato: ${t.format}). Me dá 3 sequências de stories prontas pra gravar, com o texto que vai na tela e a interação sugerida, no meu tom.`);
   };
 
-  // ── Guard Studio ───────────────────────────────────────────────
-  if (!tierLoading && !isStudio) {
-    return (
-      <div className="pb-24 md:pb-0">
-        <Header lastUpdated={null} />
-        <div className="border border-dashed border-border rounded-2xl py-16 px-6 text-center mt-4">
-          <Lock className="h-7 w-7 text-muted-foreground/40 mx-auto mb-3" strokeWidth={1.5} />
-          <p className="text-sm font-body text-foreground font-medium">Cria Stories é um recurso do plano Studio</p>
-          <p className="text-xs font-body text-muted-foreground mt-1 max-w-sm mx-auto">Gere um plano semanal de stories baseado no que está em alta e adaptado ao seu nicho.</p>
-          <Button asChild className="mt-5"><Link to="/app/assinar">Conhecer o Studio</Link></Button>
-        </div>
-      </div>
-    );
-  }
+  // Trava de plano: agora mora na rota (App.tsx → <UpgradeGate feature="stories">),
+  // não aqui. Uma regra, um lugar.
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="pb-24 md:pb-0">

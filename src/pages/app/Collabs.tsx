@@ -31,7 +31,10 @@ export default function Collabs() {
   const [confirmDel, setConfirmDel] = useState<CollabWithDeliverables | null>(null);
   const [kitOpen, setKitOpen] = useState(false);
 
-  if (tier !== "studio") return <Navigate to="/app/assinar" replace />;
+  // Antes: <Navigate to="/app/assinar"> — porta na cara. A pessoa clicou EM
+  // Collabs, ela queria Collabs, e a gente jogava ela numa tabela de preços
+  // genérica. Agora a trava é o UpgradeGate na rota, que mostra o que ela
+  // ganharia AQUI, com o CTA. Melhor momento de venda que existe.
 
   const active = collabs.filter((c) => !c.archived);
   const archived = collabs.filter((c) => c.archived);

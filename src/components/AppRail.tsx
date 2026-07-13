@@ -133,11 +133,13 @@ export function AppRail() {
             {n.children.map((c) => {
               const CIcon = c.icon;
               const cActive = matchTo(c.to);
-              const locked = c.studio && !isStudio;
+              // Item travado agora NAVEGA. Antes abria um popup genérico de
+              // "assine o Studio"; agora a pessoa cai na própria tela, onde o
+              // UpgradeGate mostra o que ELA ganharia ali. Clicou porque queria.
               return (
                 <button
                   key={c.to + c.label}
-                  onClick={() => { setOpenId(null); if (locked) { setStudioGate(true); } else { navigate(c.to); } }}
+                  onClick={() => { setOpenId(null); navigate(c.to); }}
                   className={cn(
                     "flex w-full items-center gap-2.5 rounded-xl py-2 pl-11 pr-3 text-left text-sm font-medium transition-colors",
                     cActive ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-primary/10 hover:text-primary",

@@ -28,6 +28,7 @@ import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { OfflineBanner } from "@/components/pwa/OfflineBanner";
 import { RoutePrefetch } from "@/components/pwa/RoutePrefetch";
 import { ScrollRestore } from "@/components/pwa/ScrollRestore";
+import { UpgradeGate } from "@/components/shared/UpgradeGate";
 import { useProfile } from "@/hooks/useProfile";
 import { useActiveAccount } from "@/contexts/AccountContext";
 
@@ -192,29 +193,36 @@ const App = () => (
                 <Route index element={<ErrorBoundary><AppHome /></ErrorBoundary>} />
                 <Route path="ideias" element={<ErrorBoundary><Ideias /></ErrorBoundary>} />
                 <Route path="criando" element={<ErrorBoundary><Criando /></ErrorBoundary>} />
-                <Route path="autopilot" element={<ErrorBoundary><Autopilot /></ErrorBoundary>} />
-                <Route path="media-kit" element={<ErrorBoundary><MediaKit /></ErrorBoundary>} />
-                <Route path="tendencias" element={<ErrorBoundary><Tendencias /></ErrorBoundary>} />
-                <Route path="stories" element={<ErrorBoundary><CriaStories /></ErrorBoundary>} />
-                <Route path="stories/semanastories" element={<ErrorBoundary><CriaStories /></ErrorBoundary>} />
-                <Route path="estudio" element={<ErrorBoundary><CriaEstudio /></ErrorBoundary>} />
+                {/* ═══ TRAVAS DE PLANO ═══
+                    A trava mora AQUI, na rota — não espalhada dentro das páginas.
+                    Antes cada tela inventava a sua (três implementações diferentes
+                    da mesma regra), e o Cria Estúdio, que gasta crédito pago de
+                    geração de imagem, não tinha trava NENHUMA: bastava digitar a
+                    URL. Agora esquecer é impossível: quem não tem o plano vê a
+                    vitrine daquele recurso, com o CTA. Não é porta na cara. */}
+                <Route path="autopilot" element={<ErrorBoundary><UpgradeGate feature="cria-plano"><Autopilot /></UpgradeGate></ErrorBoundary>} />
+                <Route path="media-kit" element={<ErrorBoundary><UpgradeGate feature="media-kit"><MediaKit /></UpgradeGate></ErrorBoundary>} />
+                <Route path="tendencias" element={<ErrorBoundary><UpgradeGate feature="tendencias"><Tendencias /></UpgradeGate></ErrorBoundary>} />
+                <Route path="stories" element={<ErrorBoundary><UpgradeGate feature="stories"><CriaStories /></UpgradeGate></ErrorBoundary>} />
+                <Route path="stories/semanastories" element={<ErrorBoundary><UpgradeGate feature="stories"><CriaStories /></UpgradeGate></ErrorBoundary>} />
+                <Route path="estudio" element={<ErrorBoundary><UpgradeGate feature="estudio"><CriaEstudio /></UpgradeGate></ErrorBoundary>} />
                 <Route path="aprovacao" element={<ErrorBoundary><Aprovacao /></ErrorBoundary>} />
                 <Route path="modulos" element={<ErrorBoundary><Modulos /></ErrorBoundary>} />
-                <Route path="feed" element={<ErrorBoundary><Feed /></ErrorBoundary>} />
+                <Route path="feed" element={<ErrorBoundary><UpgradeGate feature="feed"><Feed /></UpgradeGate></ErrorBoundary>} />
                 <Route path="lixeira" element={<ErrorBoundary><Lixeira /></ErrorBoundary>} />
-                <Route path="relatorios" element={<ErrorBoundary><Relatorios /></ErrorBoundary>} />
+                <Route path="relatorios" element={<ErrorBoundary><UpgradeGate feature="relatorios"><Relatorios /></UpgradeGate></ErrorBoundary>} />
                 <Route path="cf-admin-panel" element={<ErrorBoundary><Admin /></ErrorBoundary>} />
                 <Route path="tarefas" element={<ErrorBoundary><Tarefas /></ErrorBoundary>} />
                 <Route path="plano" element={<Navigate to="/app/metas" replace />} />
                 <Route path="metas" element={<ErrorBoundary><Metas /></ErrorBoundary>} />
-                <Route path="biblioteca" element={<ErrorBoundary><Biblioteca /></ErrorBoundary>} />
+                <Route path="biblioteca" element={<ErrorBoundary><UpgradeGate feature="biblioteca"><Biblioteca /></UpgradeGate></ErrorBoundary>} />
                 <Route path="arquivos" element={<ErrorBoundary><Arquivos /></ErrorBoundary>} />
-                <Route path="historico" element={<ErrorBoundary><Historico /></ErrorBoundary>} />
+                <Route path="historico" element={<ErrorBoundary><UpgradeGate feature="historico"><Historico /></UpgradeGate></ErrorBoundary>} />
                 <Route path="aprender" element={<ErrorBoundary><Aprender /></ErrorBoundary>} />
                 <Route path="brandbook" element={<ErrorBoundary><Brandbook /></ErrorBoundary>} />
                 <Route path="linkinbio" element={<ErrorBoundary><LinkInBio /></ErrorBoundary>} />
-                <Route path="collabs" element={<ErrorBoundary><Collabs /></ErrorBoundary>} />
-                <Route path="insights" element={<ErrorBoundary><Insights /></ErrorBoundary>} />
+                <Route path="collabs" element={<ErrorBoundary><UpgradeGate feature="collabs"><Collabs /></UpgradeGate></ErrorBoundary>} />
+                <Route path="insights" element={<ErrorBoundary><UpgradeGate feature="insights"><Insights /></UpgradeGate></ErrorBoundary>} />
                 <Route path="configuracoes" element={<ErrorBoundary><Configuracoes /></ErrorBoundary>} />
               </Route>
               <Route path="/socialmidia" element={

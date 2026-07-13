@@ -9,7 +9,11 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
 const DEDUCTION_PCT_FALLBACK = 10; // fallback se partner_program_config não tiver linha
 
 // Mantém em sincronia com STORAGE_BYTES do src/lib/plans.ts (runtime Deno não importa o frontend)
-const STORAGE_BY_PLAN: Record<string, number> = { pro: 5368709120, studio: 16106127360 };
+const STORAGE_BY_PLAN: Record<string, number> = {
+  essencial: 524288000,   // 500 MB
+  pro: 5368709120,        // 5 GB
+  studio: 16106127360,    // 15 GB
+};
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,

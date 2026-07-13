@@ -40,7 +40,7 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const plan = body?.plan;
-    if (plan !== "pro" && plan !== "studio" && plan !== "agency") {
+    if (plan !== "essencial" && plan !== "pro" && plan !== "studio" && plan !== "agency") {
       return new Response(JSON.stringify({ error: "invalid_plan" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -55,6 +55,8 @@ serve(async (req) => {
       ? Deno.env.get("STRIPE_PRICE_AGENCY_SEAT")!
       : plan === "studio"
       ? Deno.env.get("STRIPE_PRICE_STUDIO")!
+      : plan === "essencial"
+      ? Deno.env.get("STRIPE_PRICE_ESSENCIAL")!
       : Deno.env.get("STRIPE_PRICE_PRO")!;
     if (!priceId) {
       return new Response(JSON.stringify({ error: "price_not_configured" }), {

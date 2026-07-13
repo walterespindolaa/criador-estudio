@@ -44,6 +44,7 @@ import {
 import { Logo } from "@/components/shared/Logo";
 import { AiUsageBadge } from "@/components/shared/AiUsageBadge";
 import { useTier } from "@/hooks/useTier";
+import { FEATURES, tierAtLeast, type FeatureKey } from "@/lib/plans";
 import { AccountSwitcher } from "@/components/accounts/AccountSwitcher";
 
 const groups = [
@@ -53,7 +54,7 @@ const groups = [
       { title: "Dashboard", url: "/app", icon: LayoutDashboard, end: true },
       { title: "Ideias", url: "/app/ideias", icon: Lightbulb },
       { title: "Aprovações", url: "/app/aprovacao", icon: ClipboardCheck },
-      { title: "Meu Feed", url: "/app/feed", icon: Grid3X3 },
+      { title: "Meu Feed", url: "/app/feed", icon: Grid3X3, feature: "feed" },
       { title: "Tarefas", url: "/app/tarefas", icon: ListTodo },
     ],
   },
@@ -61,8 +62,8 @@ const groups = [
     label: "Planejamento",
     items: [
       { title: "Criando", url: "/app/criando", icon: Kanban },
-      { title: "Tendências", url: "/app/tendencias", icon: TrendingUp },
-      { title: "Cria Stories", url: "/app/stories", icon: Clapperboard, studioLock: true },
+      { title: "Tendências", url: "/app/tendencias", icon: TrendingUp, feature: "tendencias" },
+      { title: "Cria Stories", url: "/app/stories", icon: Clapperboard, feature: "stories" },
       { title: "Metas", url: "/app/metas", icon: Target },
       { title: "Arquivos", url: "/app/arquivos", icon: FolderOpen },
     ],
@@ -70,17 +71,16 @@ const groups = [
   {
     label: "Estratégia",
     items: [
-      { title: "Biblioteca", url: "/app/biblioteca", icon: BookOpen },
+      { title: "Biblioteca", url: "/app/biblioteca", icon: BookOpen, feature: "biblioteca" },
       { title: "Brandbook", url: "/app/brandbook", icon: BookMarked },
       { title: "Link in Bio", url: "/app/linkinbio", icon: Link2 },
-      { title: "Media Kit", url: "/app/media-kit", icon: IdCard },
+      { title: "Media Kit", url: "/app/media-kit", icon: IdCard, feature: "media-kit" },
     ],
   },
   {
     label: "Monetização",
-    studioOnly: true,
     items: [
-      { title: "Collabs", url: "/app/collabs", icon: Handshake, studioLock: true },
+      { title: "Collabs", url: "/app/collabs", icon: Handshake, feature: "collabs" },
     ],
   },
   {
@@ -93,8 +93,8 @@ const groups = [
   {
     label: "Análise",
     items: [
-      { title: "Relatórios", url: "/app/relatorios", icon: BarChart3 },
-      { title: "Histórico", url: "/app/historico", icon: Archive },
+      { title: "Relatórios", url: "/app/relatorios", icon: BarChart3, feature: "relatorios" },
+      { title: "Histórico", url: "/app/historico", icon: Archive, feature: "historico" },
     ],
   },
   {
@@ -183,26 +183,14 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {group.items.map((item) => {
-                  const studioLock = (item as { studioLock?: boolean }).studioLock;
-                  if (studioLock && tier !== "studio") {
-                    return (
-                      <SidebarMenuItem key={item.url}>
-                        <SidebarMenuButton
-                          tooltip={item.title}
-                          onClick={() => navigate("/app/assinar")}
-                          className="group relative rounded-xl px-3 py-2.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-all duration-150"
-                        >
-                          <item.icon className="h-5 w-5 flex-shrink-0" strokeWidth={1.5} />
-                          {!collapsed && (
-                            <>
-                              <span className="font-body text-sm">{item.title}</span>
-                              <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">Studio</span>
-                            </>
-                          )}
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  }
+                  // O item TRAVADO continua clicável, de propósito. Antes ele jogava
+                  // a pessoa em /app/assinar (uma tabela de preços genérica). Agora
+                  // ele abre a própria tela, onde o UpgradeGate mostra o que ela
+                  // ganharia ALI. Ela clicou naquilo porque queria aquilo.
+                  const fk = (item as { feature?: FeatureKey }).feature;
+                  const min = fk ? FEATURES[fk]?.minimo : undefined;
+                  const travado = !!min && min !== "admin" && !tierAtLeast(tier, min);
+                  const selo = min === "studio" ? "Studio" : min === "pro" ? "Pro" : null;
                   return (
                     <SidebarMenuItem key={item.url}>
                       <SidebarMenuButton asChild tooltip={item.title}>
@@ -213,7 +201,16 @@ export function AppSidebar() {
                           activeClassName="bg-primary/10 text-primary font-semibold before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-5 before:bg-primary before:rounded-r-full before:content-['']"
                         >
                           <item.icon className="h-5 w-5 flex-shrink-0" strokeWidth={1.5} />
-                          {!collapsed && <span className="font-body text-sm">{item.title}</span>}
+                          {!collapsed && (
+                            <>
+                              <span className="font-body text-sm">{item.title}</span>
+                              {travado && selo && (
+                                <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                                  {selo}
+                                </span>
+                              )}
+                            </>
+                          )}
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
