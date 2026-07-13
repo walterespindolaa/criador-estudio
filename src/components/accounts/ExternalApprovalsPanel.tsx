@@ -110,7 +110,7 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
     const dt = dateBR(p.scheduled_date);
     return (
       <button key={p.id} onClick={() => openClient(c)}
-        className="w-full text-left bg-card border border-border rounded-xl px-3 py-2.5 hover:border-primary/40 hover:shadow-sm transition-all flex items-center gap-2.5">
+        className="w-full min-w-0 max-w-full overflow-hidden text-left bg-card border border-border rounded-xl px-3 py-2.5 hover:border-primary/40 hover:shadow-sm transition-all flex items-center gap-2.5">
         <span className="relative w-8 h-8 rounded-lg grid place-items-center text-white text-xs font-display font-bold shrink-0 overflow-hidden"
           style={{ background: c?.color || "#8B5CF6" }}>
           {initial(c?.name)}
@@ -187,13 +187,17 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
           </select>
         </div>
       )}
-      <div className={sections.length > 1 ? "grid gap-3 lg:grid-cols-3 items-start" : "space-y-2"}>
+      {/* min-w-0 no grid E na coluna: item de grid nasce com `min-width: auto`,
+          ou seja, ele NÃO encolhe abaixo do min-content dos filhos. Um título
+          longo de post empurrava a coluna inteira pra fora da tela, mesmo com
+          o `truncate` no texto. É o bug do print. */}
+      <div className={sections.length > 1 ? "grid gap-3 lg:grid-cols-3 items-start min-w-0" : "space-y-2 min-w-0"}>
         {sections.map((s) => {
           const all = shown.filter((p) => (p.approval_status ?? "pendente") === s.key);
           const list = s.key === "aprovado" ? all.slice(0, APPROVED_LIMIT) : all;
           const Icon = s.icon;
           return (
-            <div key={s.key} className={sections.length > 1 ? "rounded-2xl bg-muted/30 p-2" : ""}>
+            <div key={s.key} className={sections.length > 1 ? "rounded-2xl bg-muted/30 p-2 min-w-0" : "min-w-0"}>
               <div className="flex items-center justify-between px-2 py-2">
                 <span className={`inline-flex items-center gap-1 text-[10px] font-body font-bold px-2 py-0.5 rounded-full ${s.cls}`}><Icon className="h-3 w-3" /> {s.label}</span>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{all.length}</span>
