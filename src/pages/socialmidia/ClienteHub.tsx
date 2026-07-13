@@ -11,7 +11,7 @@ import {
 } from "@/hooks/useFinance";
 import { ClienteIdeias } from "@/components/accounts/ClienteIdeias";
 import { ClientePortalTab } from "@/components/accounts/ClientePortalTab";
-import { CaixaUpsell } from "@/components/accounts/CaixaUpsell";
+import { ModuleUpsell, ModuleUpsellDialog } from "@/components/accounts/ModuleUpsell";
 import { useHasModule } from "@/hooks/useModules";
 import { ClientDetail } from "@/components/accounts/CriaPostBoard";
 import { ExternalClientDialog } from "@/components/accounts/ExternalClientDialog";
@@ -72,6 +72,7 @@ export default function ClienteHub() {
   const navigate = useNavigate();
   const { allowed: hasHubCria } = useHasHubCria();
   const { allowed: hasCaixa } = useHasModule("financeiro");
+  const { allowed: hasPost } = useHasModule("aprovapost_externo");
   const { data: client, isLoading } = useCrmClient(id);
   // A aba Pesquisa (Apify) só aparece pra quem tem o HUB liberado, se não tem,
   // a aba nem existe (não adianta mostrar porta trancada).
@@ -110,8 +111,14 @@ export default function ClienteHub() {
     if (client) saveLastClient(client.id, client.name);
   }, [client]);
 
+  // Ativar o Cria Post num cliente exige o MÓDULO Cria Post.
+  // Antes o botão simplesmente tentava e falhava (ou o gate genérico dizia
+  // "módulo inativo"). Agora, sem o módulo, abre a vitrine: o que ela ganha,
+  // com o nome do cliente na chamada.
+  const [upsell, setUpsell] = useState<string | null>(null);
   const enableCriaPost = async () => {
     if (!client) return;
+    if (!hasPost) { setUpsell("aprovapost_externo"); return; }
     await createExt.mutateAsync({ name: client.name, crm_client_id: id, instagram_handle: client.instagram });
     toast.success("Cliente ativado no Cria Post!");
   };
@@ -304,8 +311,16 @@ export default function ClienteHub() {
       {activeTab === "financeiro" && (
         hasCaixa
           ? <FinanceTab clientId={id!} clientName={client.name} monthlyValue={client.monthly_value} />
-          : <CaixaUpsell clientName={client.name} />
+          : <ModuleUpsell code="financeiro" clientName={client.name} />
       )}
+      {/* Vitrine em popup: aparece quando a pessoa CLICA numa ação que exige
+          um módulo que ela não assina (ex.: ativar o Cria Post num cliente). */}
+      <ModuleUpsellDialog
+        open={!!upsell}
+        onOpenChange={(o) => !o && setUpsell(null)}
+        code={upsell ?? "aprovapost_externo"}
+        clientName={client.name}
+      />
     </motion.div>
   );
 }

@@ -210,10 +210,27 @@ function RefCard({ url, thumb, title, author, note, onDelete }: {
   return (
     <div className="group relative rounded-2xl border border-border bg-card overflow-hidden">
       <a href={url} target="_blank" rel="noopener noreferrer" className="block">
-        <div className="aspect-square bg-muted grid place-items-center overflow-hidden">
-          {thumb
-            ? <img src={thumb} alt="" loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-            : <Instagram className="h-6 w-6 text-muted-foreground/40" />}
+        {/* referrerPolicy="no-referrer" é OBRIGATÓRIO aqui.
+            O CDN do Instagram recusa a imagem quando o navegador manda o Referer
+            de outro domínio (anti-hotlink). No desktop às vezes passa; no Safari
+            do iPhone ele bloqueia sempre, e a imagem vira o "?" quebrado do print.
+            Sem o Referer, o CDN serve normalmente.
+            O ícone fica ATRÁS: se a imagem carrega, ela cobre. Se falhar, o onError
+            some com a <img> e sobra o ícone, em vez do quadrado de imagem quebrada. */}
+        <div className="relative aspect-square bg-muted overflow-hidden">
+          <span className="absolute inset-0 grid place-items-center">
+            <Instagram className="h-6 w-6 text-muted-foreground/40" />
+          </span>
+          {thumb && (
+            <img
+              src={thumb}
+              alt=""
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              onError={(e) => { e.currentTarget.style.display = "none"; }}
+              className="relative w-full h-full object-cover group-hover:scale-105 transition-transform"
+            />
+          )}
         </div>
         <div className="p-3">
           {author && <p className="text-[11px] font-body text-muted-foreground truncate">@{author.replace(/^@/, "")}</p>}

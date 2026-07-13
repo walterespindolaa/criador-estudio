@@ -111,7 +111,7 @@ export function ClienteInstagramCria({ criaOwnerId, clientName }: { criaOwnerId:
                     <div key={mi.id} className="bg-card border border-border rounded-2xl overflow-hidden flex flex-col">
                       <div className="relative aspect-square bg-muted">
                         {mi.thumbnail_url && (
-                          <img src={mi.thumbnail_url} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover"
+                          <img src={mi.thumbnail_url} referrerPolicy="no-referrer" alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover"
                             onError={(e) => { e.currentTarget.style.display = "none"; }} />
                         )}
                         <span className="absolute top-2 left-2 flex items-center gap-1 text-[10px] font-body font-semibold px-1.5 py-0.5 rounded-full bg-black/55 text-white">

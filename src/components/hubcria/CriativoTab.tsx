@@ -387,7 +387,7 @@ function TopPostCard({ p, rank }: { p: any; rank: number }) {
           <a href={p.url} target="_blank" rel="noopener noreferrer"
             className="group relative h-24 w-24 shrink-0 rounded-lg overflow-hidden border border-border bg-muted grid place-items-center">
             {p.thumbnail
-              ? <img src={p.thumbnail} alt="" loading="lazy" className="h-full w-full object-cover group-hover:scale-105 transition-transform" />
+              ? <img src={p.thumbnail} referrerPolicy="no-referrer" alt="" loading="lazy" className="h-full w-full object-cover group-hover:scale-105 transition-transform" />
               : <Instagram className="h-5 w-5 text-muted-foreground/40" />}
             <span className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/30 transition-colors grid place-items-center">
               <ExternalLink className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -396,7 +396,7 @@ function TopPostCard({ p, rank }: { p: any; rank: number }) {
         ) : (
           <div className="h-24 w-24 shrink-0 rounded-lg border border-border bg-muted grid place-items-center">
             {p.thumbnail
-              ? <img src={p.thumbnail} alt="" loading="lazy" className="h-full w-full object-cover rounded-lg" />
+              ? <img src={p.thumbnail} referrerPolicy="no-referrer" alt="" loading="lazy" className="h-full w-full object-cover rounded-lg" />
               : <Instagram className="h-5 w-5 text-muted-foreground/40" />}
           </div>
         )}
@@ -490,7 +490,7 @@ export function SummaryCard({ summary, handle, defaultOpen = false, onDelete, id
               <div key={i} className="flex gap-2.5 rounded-lg border border-border/60 px-2.5 py-2">
                 {a.thumbnail && (
                   <a href={a.library_link || a.link || a.thumbnail} target="_blank" rel="noreferrer" className="shrink-0">
-                    <img src={a.thumbnail} alt="" loading="lazy" className="h-16 w-16 rounded-md object-cover border border-border/60 bg-muted" />
+                    <img src={a.thumbnail} referrerPolicy="no-referrer" alt="" loading="lazy" className="h-16 w-16 rounded-md object-cover border border-border/60 bg-muted" />
                   </a>
                 )}
                 <div className="min-w-0 flex-1">
