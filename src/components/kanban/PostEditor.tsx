@@ -1115,11 +1115,20 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
             // Issue conhecida: radix-ui/primitives#1280.
             e.preventDefault();
           }}
-          className="[&>button:last-child]:hidden top-0 translate-y-0 sm:top-1/2 sm:-translate-y-1/2 max-w-none w-full h-[100dvh] sm:w-[96vw] sm:h-[94vh] sm:max-w-[1400px] p-0 overflow-hidden overflow-x-hidden flex flex-col bg-background rounded-none sm:rounded-2xl"
+          // No mobile o editor era um retângulo reto colado nas bordas: cara de
+          // página quebrada, não de app. Agora ele desce um pouco do topo e ganha
+          // canto arredondado em cima e embaixo, como uma folha sobre a tela.
+          className="[&>button:last-child]:hidden top-2 translate-y-0 sm:top-1/2 sm:-translate-y-1/2 max-w-none w-[calc(100vw-0.75rem)] h-[calc(100dvh-1rem)] sm:w-[96vw] sm:h-[94vh] sm:max-w-[1400px] p-0 overflow-hidden overflow-x-hidden flex flex-col bg-background rounded-3xl sm:rounded-2xl"
         >
-          <DialogHeader className="px-4 sm:px-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 shrink-0 border-b border-border">
+          {/* CABEÇALHO
+              No mobile o título disputava espaço com 6 botões e virava "O gargalo qu…".
+              Agora são duas faixas: em cima SÓ as ações (fechar, tutorial, excluir,
+              PDF, prévia, salvar), embaixo o título com a linha inteira pra ele.
+              No desktop volta pra uma faixa só, com o título no meio. */}
+          <DialogHeader className="px-4 sm:px-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 shrink-0 border-b border-border gap-2">
             <DialogTitle className="sr-only">{isNew ? "Novo Post" : "Editar Post"}</DialogTitle>
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0 overflow-hidden">
+
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
@@ -1136,12 +1145,14 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               >
                 <CircleHelp className="h-4 w-4" />
               </button>
-              <div className="flex-1 min-w-0 flex items-center gap-3">
+
+              {/* Título inline: só no desktop, onde sobra largura. */}
+              <div className="hidden sm:flex flex-1 min-w-0 items-center gap-3">
                 <input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder={isNew ? "Sobre o que é esse post?" : "Sem título"}
-                  className="flex-1 min-w-0 bg-transparent border-none outline-none focus:outline-none focus:ring-0 font-display text-lg sm:text-xl md:text-2xl font-extrabold text-foreground placeholder:text-muted-foreground/40"
+                  className="flex-1 min-w-0 bg-transparent border-none outline-none focus:outline-none focus:ring-0 font-display text-xl md:text-2xl font-extrabold text-foreground placeholder:text-muted-foreground/40"
                 />
                 {autoSaveStatus && (
                   <span
@@ -1154,7 +1165,11 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-1.5">
+
+              {/* No mobile o espaço vazio empurra as ações pra direita. */}
+              <div className="flex-1 sm:hidden" />
+
+              <div className="flex items-center gap-1.5 shrink-0">
                 {!isNew && post && (
                   <Button
                     variant="ghost"
@@ -1228,6 +1243,24 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   {saving ? "Salvando…" : isNew ? "Criar" : "Salvar"}
                 </Button>
               </div>
+            </div>
+
+            {/* MOBILE: o título ganha a linha inteira, como campo de verdade. */}
+            <div className="sm:hidden">
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder={isNew ? "Sobre o que é esse post?" : "Sem título"}
+                className="w-full bg-muted/40 rounded-2xl px-3.5 py-2.5 border border-border outline-none focus:border-primary/50 focus:ring-0 font-display text-lg font-extrabold text-foreground placeholder:text-muted-foreground/40 placeholder:font-body placeholder:font-normal"
+              />
+              {autoSaveStatus && (
+                <p className={cn(
+                  "mt-1 text-[11px] font-body font-medium",
+                  autoSaveStatus === "saving" ? "text-muted-foreground" : autoSaveStatus === "error" ? "text-destructive" : "text-secondary",
+                )}>
+                  {autoSaveStatus === "saving" ? "Salvando…" : autoSaveStatus === "error" ? "Não salvo, salve manualmente" : "Salvo ✓"}
+                </p>
+              )}
             </div>
           </DialogHeader>
 
