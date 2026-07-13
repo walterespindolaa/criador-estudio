@@ -4,7 +4,9 @@ import { toast } from "sonner";
 import { useExternalClients, useAllExternalPosts, type ExternalClient, type ExternalPostWithClient } from "@/hooks/useCriaPost";
 import { ExternalClientDialog } from "@/components/accounts/ExternalClientDialog";
 import { Button } from "@/components/ui/button";
-import { Clock, RotateCcw, CheckCircle2, ChevronRight, Contact, Send } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Clock, RotateCcw, CheckCircle2, ChevronRight, ChevronsUpDown, Contact, Send } from "lucide-react";
 
 // Painel de aprovações por link (Cria Post): visão do fluxo por status, com filtro
 // por cliente. Não é mais uma lista de clientes: clicar em qualquer post abre o
@@ -41,6 +43,8 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
   const { data: posts = [], isLoading } = useAllExternalPosts();
   const [clientId, setClientId] = useState<string>("");
   const [fixing, setFixing] = useState<ExternalClient | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [busca, setBusca] = useState("");
 
   const byId = useMemo(() => {
     const m: Record<string, ExternalClient> = {};
@@ -70,6 +74,20 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
     });
     return Array.from(m.values()).sort((a, b) => (b.pendente + b.ajuste) - (a.pendente + a.ajuste));
   }, [posts, byId]);
+
+  // O cliente escolhido no seletor (com as contagens dele já prontas).
+  const selecionado = useMemo(
+    () => (clientId ? summary.find((s) => s.client.id === clientId) ?? null : null),
+    [clientId, summary],
+  );
+  // Totais gerais, pro estado "Todos os clientes" dizer alguma coisa útil.
+  const totais = useMemo(
+    () => summary.reduce(
+      (acc, s) => ({ pendente: acc.pendente + s.pendente, ajuste: acc.ajuste + s.ajuste }),
+      { pendente: 0, ajuste: 0 },
+    ),
+    [summary],
+  );
 
   // Celebração: tudo que está visível foi aprovado pelo(s) cliente(s).
   const allApproved = shown.length > 0 && shown.every((p) => (p.approval_status ?? "pendente") === "aprovado");
@@ -137,29 +155,95 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
     <div>
       {title && <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">{title}</h2>}
 
-      {/* Sumário por cliente: chips com a contagem de cada status. Clicar filtra, clicar de novo limpa. */}
+      {/* SELETOR DE CLIENTE.
+          Antes era uma fileira de chips com TODOS os clientes empilhados: com 20
+          clientes virava um paredão antes de você ver um único post. Agora é um
+          botão. A lista com as contagens abre dentro dele, com busca. */}
       {!compact && summary.length > 0 && (
-        <div className="mb-4 flex flex-wrap gap-2">
-          {summary.map(({ client: c, pendente, ajuste, aprovado }) => {
-            const on = clientId === c.id;
-            return (
-              <button key={c.id} type="button" onClick={() => setClientId(on ? "" : c.id)}
-                aria-pressed={on}
-                className={`flex items-center gap-2 rounded-2xl border px-2.5 py-1.5 transition-all ${on ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-card hover:border-primary/40"}`}>
-                <span className="relative grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-full text-[11px] font-display font-bold text-white"
-                  style={{ background: c.color || "#8B5CF6" }}>
-                  {initial(c.name)}
-                  {c.logo_url && <img src={c.logo_url} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 h-full w-full object-cover" />}
-                </span>
-                <span className="max-w-[110px] truncate text-xs font-body font-semibold text-foreground">{c.name}</span>
-                <span className="flex items-center gap-1">
-                  {pendente > 0 && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">{pendente} aguardando</span>}
-                  {ajuste > 0 && <span className="rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-700">{ajuste} em ajuste</span>}
-                  {aprovado > 0 && <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-bold text-green-700">{aprovado} aprovado{aprovado > 1 ? "s" : ""}</span>}
-                </span>
+        <div className="mb-4">
+          <Sheet open={pickerOpen} onOpenChange={setPickerOpen}>
+            <SheetTrigger asChild>
+              <button type="button"
+                className="w-full flex items-center gap-3 rounded-2xl border border-border bg-card px-3 py-2.5 text-left transition-colors hover:border-primary/40">
+                {selecionado ? (
+                  <>
+                    <span className="relative grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full text-xs font-display font-bold text-white"
+                      style={{ background: selecionado.client.color || "#8B5CF6" }}>
+                      {initial(selecionado.client.name)}
+                      {selecionado.client.logo_url && <img src={selecionado.client.logo_url} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 h-full w-full object-cover" />}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-display font-bold text-foreground">{selecionado.client.name}</span>
+                      <span className="flex items-center gap-1 flex-wrap mt-0.5">
+                        {selecionado.pendente > 0 && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">{selecionado.pendente} aguardando</span>}
+                        {selecionado.ajuste > 0 && <span className="rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-700">{selecionado.ajuste} em ajuste</span>}
+                        {selecionado.aprovado > 0 && <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-bold text-green-700">{selecionado.aprovado} aprovado{selecionado.aprovado > 1 ? "s" : ""}</span>}
+                      </span>
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                      <Contact className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-display font-bold text-foreground">Todos os clientes</span>
+                      <span className="block text-[11.5px] font-body text-muted-foreground">
+                        {totais.pendente > 0 ? `${totais.pendente} aguardando o cliente` : "Nada aguardando"}
+                        {totais.ajuste > 0 ? ` · ${totais.ajuste} em ajuste` : ""}
+                      </span>
+                    </span>
+                  </>
+                )}
+                <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
               </button>
-            );
-          })}
+            </SheetTrigger>
+
+            <SheetContent side="bottom" className="rounded-t-[28px] max-h-[80vh] overflow-y-auto">
+              <SheetHeader><SheetTitle className="font-display text-left">Escolha o cliente</SheetTitle></SheetHeader>
+
+              <div className="mt-3">
+                <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar cliente…" className="rounded-xl" />
+              </div>
+
+              <div className="mt-3 space-y-1 pb-2">
+                <button type="button"
+                  onClick={() => { setClientId(""); setPickerOpen(false); setBusca(""); }}
+                  className={`w-full flex items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors ${!clientId ? "bg-primary/10" : "active:bg-muted/60"}`}>
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary"><Contact className="h-4 w-4" /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-body font-semibold text-foreground">Todos os clientes</span>
+                    <span className="block text-[11.5px] font-body text-muted-foreground">{posts.length} post(s) na fila</span>
+                  </span>
+                </button>
+
+                {summary
+                  .filter(({ client: c }) => !busca.trim() || c.name.toLowerCase().includes(busca.trim().toLowerCase()))
+                  .map(({ client: c, pendente, ajuste, aprovado }) => (
+                    <button key={c.id} type="button"
+                      onClick={() => { setClientId(c.id); setPickerOpen(false); setBusca(""); }}
+                      className={`w-full flex items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors ${clientId === c.id ? "bg-primary/10" : "active:bg-muted/60"}`}>
+                      <span className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full text-xs font-display font-bold text-white"
+                        style={{ background: c.color || "#8B5CF6" }}>
+                        {initial(c.name)}
+                        {c.logo_url && <img src={c.logo_url} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 h-full w-full object-cover" />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[15px] font-body font-semibold text-foreground">{c.name}</span>
+                        {/* As contagens já aparecem aqui: a pessoa escolhe sabendo onde está o problema. */}
+                        <span className="flex items-center gap-1 flex-wrap mt-0.5">
+                          {pendente > 0 && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">{pendente} aguardando</span>}
+                          {ajuste > 0 && <span className="rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-700">{ajuste} em ajuste</span>}
+                          {aprovado > 0 && <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-bold text-green-700">{aprovado} aprovado{aprovado > 1 ? "s" : ""}</span>}
+                          {pendente === 0 && ajuste === 0 && <span className="text-[11px] font-body text-muted-foreground">em dia</span>}
+                        </span>
+                      </span>
+                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50" />
+                    </button>
+                  ))}
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       )}
 
@@ -178,13 +262,58 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
         </div>
       )}
 
+      {/* No modo compacto (página Aprovações) o filtro é o mesmo seletor, mas enxuto. */}
       {compact && activeClients.length > 1 && (
         <div className="mb-3">
-          <select value={clientId} onChange={(e) => setClientId(e.target.value)}
-            className="rounded-xl border border-border bg-card px-3 py-2 text-sm font-body" aria-label="Filtrar por cliente">
-            <option value="">Todos os clientes</option>
-            {activeClients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          <Sheet open={pickerOpen} onOpenChange={setPickerOpen}>
+            <SheetTrigger asChild>
+              <button type="button"
+                className="w-full flex items-center gap-2.5 rounded-xl border border-border bg-card px-3 py-2.5 text-left transition-colors hover:border-primary/40">
+                <span className="min-w-0 flex-1 truncate text-sm font-body font-semibold text-foreground">
+                  {selecionado ? selecionado.client.name : "Todos os clientes"}
+                </span>
+                {!selecionado && totais.pendente > 0 && (
+                  <span className="shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">{totais.pendente} aguardando</span>
+                )}
+                <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="rounded-t-[28px] max-h-[80vh] overflow-y-auto">
+              <SheetHeader><SheetTitle className="font-display text-left">Escolha o cliente</SheetTitle></SheetHeader>
+              <div className="mt-3">
+                <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar cliente…" className="rounded-xl" />
+              </div>
+              <div className="mt-3 space-y-1 pb-2">
+                <button type="button" onClick={() => { setClientId(""); setPickerOpen(false); setBusca(""); }}
+                  className={`w-full flex items-center gap-3 rounded-2xl px-3 py-2.5 text-left ${!clientId ? "bg-primary/10" : "active:bg-muted/60"}`}>
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary"><Contact className="h-4 w-4" /></span>
+                  <span className="text-[15px] font-body font-semibold text-foreground">Todos os clientes</span>
+                </button>
+                {summary
+                  .filter(({ client: c }) => !busca.trim() || c.name.toLowerCase().includes(busca.trim().toLowerCase()))
+                  .map(({ client: c, pendente, ajuste, aprovado }) => (
+                    <button key={c.id} type="button" onClick={() => { setClientId(c.id); setPickerOpen(false); setBusca(""); }}
+                      className={`w-full flex items-center gap-3 rounded-2xl px-3 py-2.5 text-left ${clientId === c.id ? "bg-primary/10" : "active:bg-muted/60"}`}>
+                      <span className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full text-xs font-display font-bold text-white"
+                        style={{ background: c.color || "#8B5CF6" }}>
+                        {initial(c.name)}
+                        {c.logo_url && <img src={c.logo_url} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 h-full w-full object-cover" />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[15px] font-body font-semibold text-foreground">{c.name}</span>
+                        <span className="flex items-center gap-1 flex-wrap mt-0.5">
+                          {pendente > 0 && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">{pendente} aguardando</span>}
+                          {ajuste > 0 && <span className="rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-700">{ajuste} em ajuste</span>}
+                          {aprovado > 0 && <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-bold text-green-700">{aprovado} aprovado{aprovado > 1 ? "s" : ""}</span>}
+                          {pendente === 0 && ajuste === 0 && <span className="text-[11px] font-body text-muted-foreground">em dia</span>}
+                        </span>
+                      </span>
+                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50" />
+                    </button>
+                  ))}
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       )}
       {/* min-w-0 no grid E na coluna: item de grid nasce com `min-width: auto`,
