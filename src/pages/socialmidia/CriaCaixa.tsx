@@ -385,6 +385,15 @@ function CaixaInner() {
           ctx={ctx}
           ym={ym}
           clientName={clientName}
+          acoes={{
+            confirmarMensalidade: (m, nome) => confirmMonthly.mutate({ m, clientName: nome }),
+            desfazerMensalidade: (m) => undoMonthly.mutate(m),
+            pularMensalidade: (m) => setSkipping(m),
+            mudarStatus: (id, status) => upd.mutate({ id, status }),
+            editarLancamento: (r) => { setEditing(r); setDialog(true); },
+            lancarRecorrentes,
+            ocupado: confirmMonthly.isPending || undoMonthly.isPending || skipMonthly.isPending || upd.isPending || generate.isPending,
+          }}
         />
       )}
 
@@ -1032,9 +1041,20 @@ function RecordDialog({ record, context, clients, defaultDate, defaultCats, cust
 // lançados, como PREVISTO (tracejado). Assim dá pra navegar pros meses
 // que vêm e enxergar a recorrência antes de ela virar lançamento.
 // ═══════════════════════════════════════════════════════════════════
-type Ev = { id: string; day: number; kind: "receber" | "pagar"; label: string; amount: number; done: boolean; previsto: boolean };
+// A origem de cada evento. É o que permite AGIR: mensalidade tem confirmar/pular,
+// lançamento tem status, previsto ainda não existe (só dá pra lançar).
+type EvSrc =
+  | { t: "monthly"; m: FinMonthly }
+  | { t: "record"; r: FinRecord }
+  | { t: "previsto"; tpl: FinRecurring };
 
-function CalendarioFinanceiro({ monthlies, records, recurring, pendingRecurring, ctx, ym, clientName }: {
+type Ev = {
+  id: string; day: number; kind: "receber" | "pagar";
+  label: string; amount: number; done: boolean; previsto: boolean;
+  src: EvSrc;
+};
+
+function CalendarioFinanceiro({ monthlies, records, recurring, pendingRecurring, ctx, ym, clientName, acoes }: {
   monthlies: FinMonthly[];
   records: FinRecord[];
   recurring: FinRecurring[];
@@ -1042,22 +1062,33 @@ function CalendarioFinanceiro({ monthlies, records, recurring, pendingRecurring,
   ctx: FinContext;
   ym: { y: number; m: number };
   clientName: (id: string | null) => string | null;
+  acoes: {
+    confirmarMensalidade: (m: FinMonthly, nome: string) => void;
+    desfazerMensalidade: (m: FinMonthly) => void;
+    pularMensalidade: (m: FinMonthly) => void;
+    mudarStatus: (id: string, status: FinStatus) => void;
+    editarLancamento: (r: FinRecord) => void;
+    lancarRecorrentes: () => void;
+    ocupado: boolean;
+  };
 }) {
   const first = new Date(ym.y, ym.m, 1);
   const lastDay = new Date(ym.y, ym.m + 1, 0).getDate();
   const startDow = (first.getDay() + 6) % 7; // segunda = 0
   const hoje = new Date().toISOString().slice(0, 10);
+  const [diaAberto, setDiaAberto] = useState<number | null>(null);
 
   const evs = useMemo<Ev[]>(() => {
     const out: Ev[] = [];
 
     // 1) Mensalidades do mês (só PJ), cada uma no vencimento do cliente.
+    //    Mantemos as PULADAS aqui: escondê-las tirava a chance de reverter.
     for (const m of monthlies) {
-      if (m.status === "pulado") continue;
       out.push({
         id: "m-" + m.id, day: Number(m.due_date.slice(8, 10)), kind: "receber",
         label: clientName(m.crm_client_id) ?? "Cliente", amount: Number(m.amount),
-        done: m.status === "pago", previsto: false,
+        done: m.status === "pago" || m.status === "pulado", previsto: false,
+        src: { t: "monthly", m },
       });
     }
 
@@ -1069,6 +1100,7 @@ function CalendarioFinanceiro({ monthlies, records, recurring, pendingRecurring,
       out.push({
         id: "r-" + r.id, day: d.getDate(), kind: r.type === "entrada" ? "receber" : "pagar",
         label: r.description, amount: Number(r.amount), done: r.status === "pago", previsto: false,
+        src: { t: "record", r },
       });
     }
 
@@ -1080,6 +1112,7 @@ function CalendarioFinanceiro({ monthlies, records, recurring, pendingRecurring,
       out.push({
         id: "p-" + t.id, day: Math.min(t.due_day, lastDay), kind: t.type === "entrada" ? "receber" : "pagar",
         label: t.description, amount: Number(t.amount), done: false, previsto: true,
+        src: { t: "previsto", tpl: t },
       });
     }
     return out;
@@ -1131,16 +1164,28 @@ function CalendarioFinanceiro({ monthlies, records, recurring, pendingRecurring,
           const list = byDay.get(day) ?? [];
           const iso = `${ym.y}-${pad0(ym.m + 1)}-${pad0(day)}`;
           const isToday = iso === hoje;
-          if (list.length === 0) {
-            return (
-              <div key={day} className={cn("hidden sm:block min-h-[64px] rounded-lg border p-1.5", isToday ? "border-primary bg-primary/5" : "border-border/60")}>
-                <span className={cn("text-[11px] font-display font-bold", isToday ? "text-primary" : "text-muted-foreground/50")}>{day}</span>
-              </div>
-            );
-          }
+          const aberto = diaAberto === day;
+          const vazio = list.length === 0;
+
+          // O dia inteiro é um botão. Clicou, abre o painel embaixo com as ações.
           return (
-            <div key={day} className={cn("min-h-[64px] rounded-lg border p-1.5 space-y-1", isToday ? "border-primary bg-primary/5" : "border-border")}>
-              <span className={cn("text-[11px] font-display font-bold", isToday ? "text-primary" : "text-foreground")}>{day}</span>
+            <button
+              key={day}
+              type="button"
+              onClick={() => setDiaAberto(aberto ? null : day)}
+              className={cn(
+                "min-h-[64px] rounded-lg border p-1.5 space-y-1 text-left transition-all",
+                vazio && "hidden sm:block",
+                aberto ? "border-primary ring-2 ring-primary/30 bg-primary/[0.06]"
+                  : isToday ? "border-primary bg-primary/5"
+                  : vazio ? "border-border/60" : "border-border hover:border-primary/50 hover:shadow-sm",
+              )}
+              aria-label={`Dia ${day}${vazio ? ", sem movimento" : `, ${list.length} item(ns)`}`}
+            >
+              <span className={cn("text-[11px] font-display font-bold",
+                aberto || isToday ? "text-primary" : vazio ? "text-muted-foreground/50" : "text-foreground")}>
+                {day}
+              </span>
               {list.map((e) => (
                 <div key={e.id}
                   className={cn("rounded px-1 py-0.5 text-[10px] font-body leading-tight truncate",
@@ -1153,10 +1198,165 @@ function CalendarioFinanceiro({ monthlies, records, recurring, pendingRecurring,
                   {e.kind === "receber" ? "+" : "−"}{brl(e.amount)} {e.label}
                 </div>
               ))}
-            </div>
+            </button>
           );
         })}
       </div>
+
+      {/* ═══ PAINEL DO DIA ═══
+          O calendário mostrava e não deixava fazer nada. Agora clicou no dia,
+          as pendências daquele dia abrem aqui embaixo, com o botão de cada ação:
+          marcar pago, desfazer, pular a mensalidade, mudar o status do lançamento. */}
+      {diaAberto !== null && (
+        <DiaDetalhe
+          dia={diaAberto}
+          mes={MONTHS[ym.m]}
+          itens={byDay.get(diaAberto) ?? []}
+          clientName={clientName}
+          acoes={acoes}
+          onFechar={() => setDiaAberto(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function DiaDetalhe({ dia, mes, itens, clientName, acoes, onFechar }: {
+  dia: number;
+  mes: string;
+  itens: Ev[];
+  clientName: (id: string | null) => string | null;
+  acoes: {
+    confirmarMensalidade: (m: FinMonthly, nome: string) => void;
+    desfazerMensalidade: (m: FinMonthly) => void;
+    pularMensalidade: (m: FinMonthly) => void;
+    mudarStatus: (id: string, status: FinStatus) => void;
+    editarLancamento: (r: FinRecord) => void;
+    lancarRecorrentes: () => void;
+    ocupado: boolean;
+  };
+  onFechar: () => void;
+}) {
+  const entra = itens.filter((e) => e.kind === "receber" && !e.done).reduce((s, e) => s + e.amount, 0);
+  const sai = itens.filter((e) => e.kind === "pagar" && !e.done).reduce((s, e) => s + e.amount, 0);
+
+  return (
+    <div className="mt-4 rounded-2xl border border-primary/30 bg-primary/[0.03] p-4">
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+        <div>
+          <h4 className="text-sm font-display font-bold text-foreground">Dia {dia} de {mes}</h4>
+          <p className="text-[11.5px] font-body text-muted-foreground">
+            {itens.length === 0
+              ? "Nada marcado neste dia."
+              : <>{brl(entra)} a entrar · {brl(sai)} a sair</>}
+          </p>
+        </div>
+        <Button variant="ghost" size="sm" onClick={onFechar}>Fechar</Button>
+      </div>
+
+      {itens.length === 0 ? (
+        <p className="text-[12.5px] font-body text-muted-foreground py-2">Sem pendências neste dia.</p>
+      ) : (
+        <div className="space-y-2">
+          {itens.map((e) => {
+            const s = e.src;
+
+            // ── MENSALIDADE: confirmar, desfazer, pular ──
+            if (s.t === "monthly") {
+              const m = s.m;
+              const nome = clientName(m.crm_client_id) ?? "Cliente";
+              return (
+                <div key={e.id} className="rounded-xl border border-border bg-card p-3 flex items-center gap-3 flex-wrap">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-body font-semibold text-foreground truncate">{nome}</p>
+                    <p className="text-[11px] font-body text-muted-foreground">
+                      Mensalidade
+                      {m.status === "pulado" && m.skip_reason ? ` · pulada: ${m.skip_reason}` : ""}
+                    </p>
+                  </div>
+                  <span className="text-sm font-display font-bold text-green-700 shrink-0">{brl(Number(m.amount))}</span>
+
+                  {m.status === "pago" ? (
+                    <>
+                      <Badge className="bg-green-100 text-green-700 text-[10px] shrink-0">Recebido</Badge>
+                      <Button size="sm" variant="outline" className="h-8 shrink-0" disabled={acoes.ocupado}
+                        onClick={() => acoes.desfazerMensalidade(m)}>
+                        <RotateCcw className="h-3 w-3 mr-1" /> Desfazer
+                      </Button>
+                    </>
+                  ) : m.status === "pulado" ? (
+                    <>
+                      <Badge className="bg-muted text-muted-foreground text-[10px] shrink-0">Pulada</Badge>
+                      <Button size="sm" variant="outline" className="h-8 shrink-0" disabled={acoes.ocupado}
+                        onClick={() => acoes.desfazerMensalidade(m)}>
+                        <RotateCcw className="h-3 w-3 mr-1" /> Reverter
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button size="sm" className="h-8 shrink-0" disabled={acoes.ocupado}
+                        onClick={() => acoes.confirmarMensalidade(m, nome)}>
+                        <Check className="h-3 w-3 mr-1" /> Marcar recebido
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-8 shrink-0 text-muted-foreground" disabled={acoes.ocupado}
+                        onClick={() => acoes.pularMensalidade(m)}>
+                        <SkipForward className="h-3 w-3 mr-1" /> Pular
+                      </Button>
+                    </>
+                  )}
+                </div>
+              );
+            }
+
+            // ── LANÇAMENTO: muda o status ali mesmo ──
+            if (s.t === "record") {
+              const r = s.r;
+              const isIn = r.type === "entrada";
+              return (
+                <div key={e.id} className="rounded-xl border border-border bg-card p-3 flex items-center gap-3 flex-wrap">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-body font-semibold text-foreground truncate">{r.description}</p>
+                    <p className="text-[11px] font-body text-muted-foreground truncate">
+                      {r.category ?? "sem categoria"}{clientName(r.crm_client_id) ? ` · ${clientName(r.crm_client_id)}` : ""}
+                    </p>
+                  </div>
+                  <span className={cn("text-sm font-display font-bold shrink-0", isIn ? "text-green-700" : "text-destructive")}>
+                    {isIn ? "+" : "−"}{brl(Number(r.amount))}
+                  </span>
+                  <select value={r.status} disabled={acoes.ocupado}
+                    onChange={(ev) => acoes.mudarStatus(r.id, ev.target.value as FinStatus)}
+                    className={cn("text-[11px] font-bold shrink-0 rounded-lg px-2 py-1.5 border-0 outline-none cursor-pointer", STATUS_STYLE[r.status])}>
+                    {(["pendente", "pago", "atrasado"] as FinStatus[]).map((st) => (
+                      <option key={st} value={st}>{STATUS_LABEL[st]}</option>
+                    ))}
+                  </select>
+                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0 shrink-0" onClick={() => acoes.editarLancamento(r)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              );
+            }
+
+            // ── PREVISTO: ainda não existe como lançamento ──
+            const tpl = s.tpl;
+            return (
+              <div key={e.id} className="rounded-xl border border-dashed border-border bg-card/60 p-3 flex items-center gap-3 flex-wrap">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-body font-semibold text-foreground truncate">{tpl.description}</p>
+                  <p className="text-[11px] font-body text-muted-foreground">Previsto (recorrente ainda não lançado)</p>
+                </div>
+                <span className={cn("text-sm font-display font-bold shrink-0", tpl.type === "entrada" ? "text-green-700" : "text-destructive")}>
+                  {tpl.type === "entrada" ? "+" : "−"}{brl(Number(tpl.amount))}
+                </span>
+                <Button size="sm" variant="outline" className="h-8 shrink-0" disabled={acoes.ocupado}
+                  onClick={acoes.lancarRecorrentes}>
+                  <Repeat className="h-3 w-3 mr-1" /> Lançar do mês
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
