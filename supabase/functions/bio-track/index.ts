@@ -1,9 +1,9 @@
 // Tracking público do Link na bio (visitas e cliques) com rate-limit por IP+slug.
-// As RPCs increment_bio_* só são acessíveis via service_role — esta é a única porta.
+// As RPCs increment_bio_* só são acessíveis via service_role, esta é a única porta.
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-// Allowlist (+ localhost/preview do Lovable) — bloqueia origens aleatórias sem quebrar dev.
+// Allowlist (+ localhost/preview do Lovable), bloqueia origens aleatórias sem quebrar dev.
 function isAllowedOrigin(origin: string): boolean {
   if (["https://app.criasocialclub.com.br", "https://criasocialclub.com.br", "https://www.criasocialclub.com.br"].includes(origin)) return true;
   if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;

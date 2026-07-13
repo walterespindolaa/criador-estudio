@@ -47,7 +47,7 @@ function buildEvent(
     (post.caption || post.notes || '').trim(),
     '',
     meta,
-    '— Agendado pelo CreatorsFlow',
+    'Agendado pelo CreatorsFlow',
   ]
     .filter((line) => line !== undefined)
     .join('\n')

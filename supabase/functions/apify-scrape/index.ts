@@ -1,4 +1,4 @@
-// HUB CRIA — dispara um scraper do Apify (Instagram), resume o resultado e gera
+// HUB CRIA, dispara um scraper do Apify (Instagram), resume o resultado e gera
 // ideias de conteúdo por cliente. Gated: gestor com módulo hub_cria (ou admin).
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 
@@ -43,7 +43,7 @@ function buildApifyInput(type: string, handle: string, limit: number, since?: st
     return { directUrls: [`https://www.instagram.com/${h}/`], resultsType: "mentions", resultsLimit: limit, addParentData: false, ...period };
   }
   if (type === "reels") {
-    // A aba /reels/ do perfil — SÓ reels. Antes caía no mesmo input de "posts"
+    // A aba /reels/ do perfil. SÓ reels. Antes caía no mesmo input de "posts"
     // e os dois traziam exatamente o mesmo resultado (com carrossel no meio).
     return { directUrls: [`https://www.instagram.com/${h}/reels/`], resultsType: "posts", resultsLimit: limit, addParentData: false, ...period };
   }
@@ -158,7 +158,7 @@ function summarize(items: any[], type: string): { summary: Record<string, unknow
         thumbnail: x.displayUrl || x.thumbnailUrl || x.images?.[0] || null,
         posted_at: x.timestamp || null,
         music: x.musicInfo?.song_name ?? null,
-        // Transcrição completa (800), não 300 — o roteiro é o produto aqui.
+        // Transcrição completa (800), não 300, o roteiro é o produto aqui.
         transcript: type === "transcription" ? transcriptOf(x) : undefined,
       })),
     },
@@ -295,7 +295,7 @@ Deno.serve(async (req) => {
         status: "done", result_summary: summary, cost_usd: costUsd, finished_at: new Date().toISOString(),
       }).eq("id", scrapeId);
 
-      // Gera ideias (só pra posts/reels/hashtag — profile é só raio-x).
+      // Gera ideias (só pra posts/reels/hashtag, profile é só raio-x).
       let ideas: Array<{ title: string; format: string; rationale: string }> = [];
       const lovableKey = Deno.env.get("LOVABLE_API_KEY");
       if (lovableKey && type !== "profile" && top.length > 0) {
@@ -320,10 +320,10 @@ Deno.serve(async (req) => {
           const evitar = brand.filter((b: any) => b.type === "evitar").map((b: any) => b.name).join(", ");
           const persona = (persRes.data || [])[0] as any;
           const recentes = (recentRes.data || []).map((p: any) => p.title).filter(Boolean).slice(0, 12).join("; ");
-          clientCtx = `O cliente TEM conta no Cria — use a marca REAL dele.
+          clientCtx = `O cliente TEM conta no Cria, use a marca REAL dele.
 Nicho: ${nicho}
 Pilares de conteúdo: ${pilares || "-"}
-Tom de voz: ${tom || "-"}${evitar ? `\nEvitar: ${evitar}` : ""}${persona ? `\nPersona: ${persona.name || ""} — dores: ${(persona.pain_points || []).join(", ")}; interesses: ${(persona.interests || []).join(", ")}` : ""}
+Tom de voz: ${tom || "-"}${evitar ? `\nEvitar: ${evitar}` : ""}${persona ? `\nPersona: ${persona.name || ""}, dores: ${(persona.pain_points || []).join(", ")}; interesses: ${(persona.interests || []).join(", ")}` : ""}
 Conteúdo que o cliente JÁ fez (NÃO repita, complemente): ${recentes || "-"}`;
         } else {
           // Cliente SEM conta no Cria → usa o Brandbook que a social mídia cadastrou no CRM.
@@ -338,11 +338,11 @@ Conteúdo que o cliente JÁ fez (NÃO repita, complemente): ${recentes || "-"}`;
             bc.avoid && `EVITAR: ${bc.avoid}`,
           ].filter(Boolean).join("\n");
           const personaTxt = client?.persona && typeof client.persona === "object" ? JSON.stringify(client.persona).slice(0, 600) : "";
-          clientCtx = `O cliente NÃO tem conta no Cria — use SÓ o Brandbook que a social mídia cadastrou no CRM.
+          clientCtx = `O cliente NÃO tem conta no Cria, use SÓ o Brandbook que a social mídia cadastrou no CRM.
 Nicho/segmento: ${nicho}${brandLines ? `\n${brandLines}` : ""}${personaTxt ? `\nPersona (CRM): ${personaTxt}` : ""}`;
         }
 
-        const sys = `Você é estrategista de conteúdo brasileiro. Gere ideias PRONTAS pro cliente, SEMPRE dentro da marca e do nicho DELE. O concorrente serve só de inspiração de FORMATO/gancho/roteiro — nunca copie o assunto se for de outro nicho. Responda SOMENTE JSON válido.`;
+        const sys = `Você é estrategista de conteúdo brasileiro. Gere ideias PRONTAS pro cliente, SEMPRE dentro da marca e do nicho DELE. O concorrente serve só de inspiração de FORMATO/gancho/roteiro, nunca copie o assunto se for de outro nicho. Responda SOMENTE JSON válido.`;
 
         let fonte = "";
         let tarefa = "";
@@ -358,7 +358,7 @@ Nicho/segmento: ${nicho}${brandLines ? `\n${brandLines}` : ""}${personaTxt ? `\n
           const as = top.slice(0, 10).map((a: any, i: number) =>
             `${i + 1}.${a.isActive ?? a.active ? " [ativo]" : ""} "${String(a.adText || a.snapshot?.body?.text || a.body || a.text || "").replace(/\s+/g, " ").slice(0, 180)}"`).join("\n");
           fonte = `=== ANÚNCIOS que @${cleanHandle(inputHandle)} está rodando (Meta Ad Library) ===\n${as}`;
-          tarefa = `Esses são os anúncios que o concorrente PAGA pra promover — revelam a oferta, o ângulo e o gancho que funcionam pra ele. Gere ideias de conteúdo ORGÂNICO pro cliente (${clientName}) no nicho ${nicho}, inspiradas nesses ângulos (sem copiar a oferta).`;
+          tarefa = `Esses são os anúncios que o concorrente PAGA pra promover, revelam a oferta, o ângulo e o gancho que funcionam pra ele. Gere ideias de conteúdo ORGÂNICO pro cliente (${clientName}) no nicho ${nicho}, inspiradas nesses ângulos (sem copiar a oferta).`;
         } else if (type === "stories") {
           const ss = top.slice(0, 12).map((x: any, i: number) =>
             `${i + 1}. ${x.type || ""} ${x.caption ? `"${String(x.caption).replace(/\s+/g, " ").slice(0, 120)}"` : "(sem texto na tela)"}`).join("\n");
@@ -366,8 +366,8 @@ Nicho/segmento: ${nicho}${brandLines ? `\n${brandLines}` : ""}${personaTxt ? `\n
           tarefa = `Analise o tipo de story que o concorrente usa no dia a dia e gere ideias de stories pro cliente (${clientName}) no nicho ${nicho}, na estrutura que funciona.`;
         } else {
           const ps = top.slice(0, 8).map((x: any, i: number) =>
-            `${i + 1}. [${x.productType || x.type}] ${x.likesCount || 0} curtidas, ${x.commentsCount || 0} coment${x.videoPlayCount ? `, ${x.videoPlayCount} views` : ""} — "${(x.caption || "").replace(/\s+/g, " ").slice(0, 120)}"`).join("\n");
-          fonte = `=== CONCORRENTE @${cleanHandle(inputHandle)} — o que mais engajou ===\n${ps}`;
+            `${i + 1}. [${x.productType || x.type}] ${x.likesCount || 0} curtidas, ${x.commentsCount || 0} coment${x.videoPlayCount ? `, ${x.videoPlayCount} views` : ""}, "${(x.caption || "").replace(/\s+/g, " ").slice(0, 120)}"`).join("\n");
+          fonte = `=== CONCORRENTE @${cleanHandle(inputHandle)}, o que mais engajou ===\n${ps}`;
           tarefa = `Aproveite o FORMATO/gancho que funcionou no concorrente e gere ideias no nicho ${nicho} e na VOZ do cliente.`;
         }
 

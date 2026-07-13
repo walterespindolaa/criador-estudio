@@ -155,7 +155,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               {client.instagram_handle && <p className="text-sm text-muted-foreground font-body">@{client.instagram_handle.replace(/^@/, "")}</p>}
             </div>
             <div className="flex gap-2 shrink-0">
-              {/* Link de aprovação dos POSTS (diferente do link do cronograma) — nome explícito pra não confundir. */}
+              {/* Link de aprovação dos POSTS (diferente do link do cronograma), nome explícito pra não confundir. */}
               <Button variant="outline" onClick={() => setLinkOpen(true)} disabled={copying}>{copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Link2 className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Link dos posts</span></>}</Button>
             </div>
           </div>
@@ -178,7 +178,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
 
         <TabsContent value="posts">
           <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-            {/* Kanban (padrão) / Calendário — as duas visões conversam: mudar a data reflete no card. */}
+            {/* Kanban (padrão) / Calendário, as duas visões conversam: mudar a data reflete no card. */}
             <div className="inline-flex rounded-lg border border-border overflow-hidden">
               {(["kanban", "calendario"] as const).map((v) => (
                 <button key={v} onClick={() => setViewPersist(v)}
@@ -233,7 +233,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                           <div className="flex-1 min-w-0">
                             <span className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wide">{cap(p.format)} · {cap(p.platform)}</span>
                             <p className="font-display font-bold text-sm text-foreground truncate mt-1">{p.title}</p>
-                            {/* Data direto no card — sem abrir o post. Reflete no calendário na hora. */}
+                            {/* Data direto no card, sem abrir o post. Reflete no calendário na hora. */}
                             <input type="date" value={p.scheduled_date ?? ""}
                               onClick={(e) => e.stopPropagation()}
                               onChange={(e) => { e.stopPropagation(); setDate.mutate({ id: p.id, scheduled_date: e.target.value || null }); }}
@@ -353,7 +353,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
 
       {/* Link de aprovação: tudo OU um período específico */}
       <Dialog open={linkOpen} onOpenChange={setLinkOpen}>
-        <DialogContent className="sm:max-w-md rounded-2xl">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader><DialogTitle className="font-display">Link de aprovação</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="rounded-xl border border-border p-3">
@@ -586,7 +586,7 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove }: {
       {/* Posts ainda sem data: arraste pra um dia do calendário. */}
       {semData.length > 0 && (
         <div className="mt-4 rounded-xl border border-dashed border-border p-3">
-          <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-2">Sem data ({semData.length}) — arraste pra um dia</p>
+          <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-2">Sem data ({semData.length}), arraste pra um dia</p>
           <Droppable droppableId="sem-data" direction="horizontal">
             {(dropP) => (
               <div ref={dropP.innerRef} {...dropP.droppableProps} className="flex gap-2 flex-wrap">

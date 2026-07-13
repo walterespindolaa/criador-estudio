@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
 
   const cutoff = new Date(Date.now() + REFRESH_WINDOW_DAYS * 86400000).toISOString();
 
-  // Conexões que expiram na janela (ou sem data conhecida) — renova todas.
+  // Conexões que expiram na janela (ou sem data conhecida), renova todas.
   const { data: conns, error } = await admin
     .from('social_connections')
     .select('id, access_token, token_expires_at')

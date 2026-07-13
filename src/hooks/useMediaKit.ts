@@ -31,14 +31,14 @@ export const MEDIA_KIT_DEFAULTS: MediaKitProfile = {
   cities: "",
   gender: { women: 60, men: 40 },
   audience: [
-    { label: "25–34 anos", pct: 45 },
-    { label: "35–44 anos", pct: 28 },
-    { label: "18–24 anos", pct: 18 },
+    { label: "25-34 anos", pct: 45 },
+    { label: "35-44 anos", pct: 28 },
+    { label: "18-24 anos", pct: 18 },
     { label: "45+ anos", pct: 9 },
   ],
   services: [
     { name: "Reels patrocinado", desc: "Roteiro + gravação + edição · 1 publicação", price: "R$ 0" },
-    { name: "Sequência de Stories", desc: "3–5 stories com link e CTA", price: "R$ 0" },
+    { name: "Sequência de Stories", desc: "3-5 stories com link e CTA", price: "R$ 0" },
     { name: "Carrossel educativo", desc: "Conteúdo + arte na identidade da marca", price: "R$ 0" },
   ],
   accent: "#0F6E56",

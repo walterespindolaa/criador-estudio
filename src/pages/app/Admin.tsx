@@ -442,7 +442,7 @@ const AdminInner = () => {
           {totalCount > PAGE_SIZE && (
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-border">
               <p className="text-xs text-muted-foreground font-body">
-                {safePage * PAGE_SIZE + 1}–{Math.min((safePage + 1) * PAGE_SIZE, totalCount)} de{" "}
+                {safePage * PAGE_SIZE + 1}-{Math.min((safePage + 1) * PAGE_SIZE, totalCount)} de{" "}
                 {totalCount}
               </p>
               <div className="flex items-center gap-2">
@@ -658,7 +658,7 @@ const AdminInner = () => {
         </Dialog>
 
         <Dialog open={!!result} onOpenChange={(o) => !o && setResult(null)}>
-          <DialogContent className="sm:max-w-md rounded-2xl">
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle className="font-display">Usuário criado</DialogTitle>
             </DialogHeader>

@@ -369,9 +369,9 @@ function IdeaBtn({ active, onClick, icon, children }: { active: boolean; onClick
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// TOP POST — antes era uma linha de texto cortada, sem capa e sem link.
+// TOP POST, antes era uma linha de texto cortada, sem capa e sem link.
 // A pessoa lia "média de curtidas: 0" e fechava a tela. O dado do post
-// (capa, link, transcrição) já vinha do Apify — a tela é que jogava fora.
+// (capa, link, transcrição) já vinha do Apify, a tela é que jogava fora.
 // ═══════════════════════════════════════════════════════════════════════
 function TopPostCard({ p, rank }: { p: any; rank: number }) {
   const [aberto, setAberto] = useState(false);
@@ -423,7 +423,7 @@ function TopPostCard({ p, rank }: { p: any; rank: number }) {
         </div>
       </div>
 
-      {/* A TRANSCRIÇÃO — é o roteiro do concorrente. É o produto desta análise. */}
+      {/* A TRANSCRIÇÃO, é o roteiro do concorrente. É o produto desta análise. */}
       {transcricao && (
         <div className="border-t border-border/60 bg-muted/30 px-3 py-2.5">
           <p className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1.5">

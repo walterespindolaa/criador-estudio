@@ -116,7 +116,7 @@ export function AgencyClients({ seatsFree }: { seatsFree: number }) {
       </div>
 
       <Dialog open={!!editing} onOpenChange={(o) => !savingEdit && !o && setEditing(null)}>
-        <DialogContent className="sm:max-w-md rounded-2xl">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="font-display">Editar cliente</DialogTitle>
             <DialogDescription className="font-body text-sm">Corrija o nome ou o e-mail de acesso do cliente.</DialogDescription>

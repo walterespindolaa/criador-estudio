@@ -9,7 +9,7 @@ const corsHeaders = {
 const GRAPH = 'https://graph.instagram.com';
 
 // Faz a chamada e reporta se a Graph API respondeu erro. A Graph devolve HTTP 4xx
-// com { error: {...} } quando o token expira/é revogado — sem checar isso, o corpo
+// com { error: {...} } quando o token expira/é revogado, sem checar isso, o corpo
 // de erro era tratado como dado e gravava null por cima das métricas do dia.
 async function fetchGraph(url: string): Promise<{ ok: boolean; status: number; body: Record<string, unknown> }> {
   try {
@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
     if (!token) return json({ error: 'not_connected' }, 400);
 
     // 1) conta -> métricas diárias + atualiza a conexão
-    // Se o token expirou/foi revogado, ABORTA aqui — não sobrescreve as métricas do
+    // Se o token expirou/foi revogado, ABORTA aqui, não sobrescreve as métricas do
     // dia com null e sinaliza pro frontend pedir reconexão.
     const meRes = await fetchGraph(`${GRAPH}/me?fields=username,account_type,followers_count,media_count,profile_picture_url&access_token=${token}`);
     if (!meRes.ok) {

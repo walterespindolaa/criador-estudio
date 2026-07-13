@@ -118,7 +118,7 @@ serve(async (req) => {
 
     const html = emailHtml({
       title: "Você foi convidado",
-      paragraph: `${ownerName} convidou você para gerenciar a conta dele(a) no cria como social media. Clique no botão abaixo para acessar — você define sua senha e já entra direto.`,
+      paragraph: `${ownerName} convidou você para gerenciar a conta dele(a) no cria como social media. Clique no botão abaixo para acessar, você define sua senha e já entra direto.`,
       buttonLabel: "Aceitar convite e acessar",
       actionLink,
       secondary: "Depois de entrar, selecione o cliente no seletor de contas no topo.",

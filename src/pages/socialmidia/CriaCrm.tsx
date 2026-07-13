@@ -41,7 +41,7 @@ function CrmInner() {
   if (seg === "criacrm") return <Navigate to="/socialmidia/criacrm/clientes" replace />;
   const tab: CrmTab = (CRM_TABS as readonly string[]).includes(seg) ? (seg as CrmTab) : "clientes";
 
-  // Cada aba já é uma rota — então o submenu do ModuleHero funciona direto,
+  // Cada aba já é uma rota, então o submenu do ModuleHero funciona direto,
   // com a cor do módulo (Gestão = rosa) e as formas orgânicas atrás.
   const base = "/socialmidia/criacrm";
   const tabs: SubTab[] = [
@@ -168,7 +168,7 @@ function ClientsTab() {
                     {c.segment && <p className="text-[11px] text-muted-foreground font-body truncate">{c.segment}</p>}
                   </div>
                 </div>
-                {/* Status fixo + etiquetas personalizadas — visíveis já na lista. */}
+                {/* Status fixo + etiquetas personalizadas, visíveis já na lista. */}
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full border", CLIENT_STATUS_META[(c.status ?? "ativo") as ClientStatus]?.cls)}>
                     {CLIENT_STATUS_META[(c.status ?? "ativo") as ClientStatus]?.label ?? "Ativo"}
@@ -209,7 +209,7 @@ function CreateClientDialog({ open, onOpenChange, onCreate, saving }: {
   const reset = () => { setName(""); setInstagram(""); setSegment(""); setValue(null); };
   return (
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) reset(); }}>
-      <DialogContent className="sm:max-w-md rounded-2xl">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader><DialogTitle className="font-display">Novo cliente</DialogTitle></DialogHeader>
         <div className="space-y-3 mt-2">
           <div className="space-y-1.5"><Label className="text-xs">Nome *</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Café Aroma" className="rounded-xl" /></div>

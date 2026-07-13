@@ -45,13 +45,13 @@ export function FinCompanyDialog({ open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[88vh] overflow-y-auto rounded-2xl">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle className="font-display">Minha empresa</DialogTitle>
+          <DialogTitle className="font-display text-xl">Minha empresa</DialogTitle>
           <DialogDescription className="font-body text-sm">Usado no lado Empresa (PJ) do Cria Caixa. A régua é só organização, não cálculo fiscal.</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 mt-2">
+        <div className="space-y-5">
           <div className="space-y-1.5">
             <Label className="text-xs">Nome da empresa</Label>
             <Input value={s.companyName ?? ""} onChange={(e) => set({ companyName: e.target.value })} placeholder="Ex: Studio da Bia" className="rounded-xl" />
@@ -59,12 +59,12 @@ export function FinCompanyDialog({ open, onOpenChange }: Props) {
 
           <div className="space-y-1.5">
             <Label className="text-xs">Regime tributário</Label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2.5">
               {REGIMES.map((r) => (
                 <button key={r.v} type="button" onClick={() => set({ regime: r.v })}
-                  className={cn("rounded-xl border-2 px-2 py-2.5 text-center transition-all", s.regime === r.v ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/30")}>
-                  <span className={cn("block text-[13px] font-body", s.regime === r.v ? "text-foreground font-semibold" : "text-muted-foreground")}>{r.label}</span>
-                  <span className="block text-[10px] font-body text-muted-foreground leading-tight mt-0.5">{r.hint}</span>
+                  className={cn("rounded-2xl border-2 px-3 py-3 text-center transition-all", s.regime === r.v ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/30")}>
+                  <span className={cn("block text-sm font-body", s.regime === r.v ? "text-foreground font-semibold" : "text-muted-foreground")}>{r.label}</span>
+                  <span className="block text-[11px] font-body text-muted-foreground leading-tight mt-0.5">{r.hint}</span>
                 </button>
               ))}
             </div>
@@ -73,7 +73,10 @@ export function FinCompanyDialog({ open, onOpenChange }: Props) {
             </p>
           </div>
 
-          <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
+          {/* Duas colunas: Empresa e Pessoal lado a lado. Antes empilhava tudo
+              numa coluna estreita e a pessoa precisava rolar pra ver o resto. */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="rounded-2xl border border-border bg-muted/30 p-4 space-y-3">
             <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Régua de alocação</p>
             <div className="grid grid-cols-2 gap-3">
               {!s.regime ? (
@@ -91,12 +94,12 @@ export function FinCompanyDialog({ open, onOpenChange }: Props) {
             </div>
             <p className="text-[11px] text-muted-foreground font-body">
               No lado PJ, a cada receita o Caixa sugere quanto reservar pra imposto, reinvestir e tirar de pró-labore.
-              É <strong>organização</strong>, não apuração fiscal — confirme os números com sua contabilidade.
+              É <strong>organização</strong>, não apuração fiscal, confirme os números com sua contabilidade.
             </p>
           </div>
 
-          {/* Meta de reserva — é o que faz a barra da Pessoa Física te cobrar. */}
-          <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
+          {/* Meta de reserva, é o que faz a barra da Pessoa Física te cobrar. */}
+          <div className="rounded-2xl border border-border bg-muted/30 p-4 space-y-3">
             <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Pessoa física</p>
             <Num label="Quero guardar por mês (%)" value={s.reservePct} onChange={(n) => set({ reservePct: n })} />
             <p className="text-[11px] text-muted-foreground font-body">
@@ -104,9 +107,10 @@ export function FinCompanyDialog({ open, onOpenChange }: Props) {
               já descontando as contas fixas que ainda vão cair.
             </p>
           </div>
+          </div>
         </div>
 
-        <div className="flex justify-end gap-2 mt-5">
+        <div className="flex justify-end gap-2 pt-2 border-t border-border">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
           <Button onClick={onSave} disabled={saving}>{saving && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}Salvar</Button>
         </div>

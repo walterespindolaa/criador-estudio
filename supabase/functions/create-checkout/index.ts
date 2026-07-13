@@ -131,14 +131,14 @@ serve(async (req) => {
         }
       }
     }
-    // Marca self_subscribe nas metadatas — webhook B.2 lê "1" pra NÃO gerar comissão.
+    // Marca self_subscribe nas metadatas, webhook B.2 lê "1" pra NÃO gerar comissão.
     const selfSubMark: Record<string, string> = selfSubValidated ? { self_subscribe: "1" } : {};
     // ────────────────────────────────────────────────────────────
 
     const origin = req.headers.get("origin") ?? "https://app.criasocialclub.com.br";
 
     const agencyMeta: Record<string, string> = isAgency ? { seats: String(seats) } : {};
-    // sid={CHECKOUT_SESSION_ID} é substituído pelo Stripe — usado como event_id do Purchase (dedupe com o webhook).
+    // sid={CHECKOUT_SESSION_ID} é substituído pelo Stripe, usado como event_id do Purchase (dedupe com o webhook).
     const successUrl = isAgency ? `${origin}/socialmidia/contas?checkout=success` : `${origin}/app/obrigado?checkout=success&sid={CHECKOUT_SESSION_ID}`;
     const cancelUrl = isAgency ? `${origin}/socialmidia/contas?checkout=cancel` : `${origin}/app/assinar?checkout=cancel`;
 

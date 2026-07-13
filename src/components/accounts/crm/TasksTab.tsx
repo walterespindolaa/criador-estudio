@@ -197,7 +197,7 @@ function TaskDialog({ task, clients, saving, onClose, onCreate, onUpdate, onDele
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-md rounded-2xl">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader><DialogTitle className="font-display">{task ? "Editar tarefa" : "Nova tarefa"}</DialogTitle></DialogHeader>
         <div className="space-y-3 mt-2">
           <div className="space-y-1.5"><Label className="text-xs">Título *</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Gravar reels de quinta" className="rounded-xl" /></div>

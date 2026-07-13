@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 // ═══════════════════════════════════════════════════════════════════════
 // BANCO DE IDEIAS DO CLIENTE
 //
-// Antes as ideias moravam misturadas com a pesquisa do Apify — a pessoa
+// Antes as ideias moravam misturadas com a pesquisa do Apify, a pessoa
 // abria "Criativo" e não sabia se aquilo era do cliente, do HUB, ou dela.
 //
 // Agora são quatro origens, cada uma com o seu lugar e o seu rótulo:
@@ -26,7 +26,7 @@ const ABAS: { key: Fonte; label: string; icon: typeof Lightbulb; hint: string }[
   { key: "cliente", label: "Do cliente", icon: Lightbulb, hint: "Ideias que o próprio cliente escreveu na conta CRIA dele. Ele pensa, você executa." },
   { key: "salvos-cliente", label: "Salvos dele", icon: Bookmark, hint: "Posts que o cliente guardou como referência. É o gosto dele, em imagem." },
   { key: "hub", label: "Do HUB", icon: Sparkles, hint: "Ideias que a IA gerou a partir da análise dos concorrentes dele." },
-  { key: "meus", label: "Seus salvos", icon: Instagram, hint: "Links que você guarda pra este cliente. Só você vê — nem ele, nem a equipe do lado dele." },
+  { key: "meus", label: "Seus salvos", icon: Instagram, hint: "Links que você guarda pra este cliente. Só você vê, nem ele, nem a equipe do lado dele." },
 ];
 
 export function ClienteIdeias({ clientId, criaOwnerId }: { clientId: string; criaOwnerId: string | null }) {
@@ -65,7 +65,7 @@ export function ClienteIdeias({ clientId, criaOwnerId }: { clientId: string; cri
 
   return (
     <div className="space-y-4">
-      {/* Explicação — didática de propósito. */}
+      {/* Explicação, didática de propósito. */}
       <div className="rounded-2xl border border-primary/15 bg-primary/[0.04] px-4 py-3">
         <p className="text-[13px] font-body text-foreground/85 leading-relaxed">
           Tudo que inspira este cliente, num lugar só. O que <strong>ele</strong> pensou, o que <strong>ele</strong> salvou,
@@ -137,7 +137,7 @@ export function ClienteIdeias({ clientId, criaOwnerId }: { clientId: string; cri
       {aba === "hub" && (
         loadingHub ? <Carregando /> :
         hubIdeas.length === 0 ? (
-          <Vazio titulo="Nenhuma ideia do HUB" texto="Rode uma análise de concorrente na aba Pesquisa — cada análise gera ideias pra este cliente." />
+          <Vazio titulo="Nenhuma ideia do HUB" texto="Rode uma análise de concorrente na aba Pesquisa, cada análise gera ideias pra este cliente." />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {hubIdeas.map((i) => (
@@ -189,7 +189,7 @@ export function ClienteIdeias({ clientId, criaOwnerId }: { clientId: string; cri
 
           {loadingRefs ? <Carregando /> :
             meusRefs.length === 0 ? (
-              <Vazio titulo="Você ainda não salvou nada" texto="Vá guardando os posts que te inspiram pra este cliente — vira o seu banco particular." />
+              <Vazio titulo="Você ainda não salvou nada" texto="Vá guardando os posts que te inspiram pra este cliente, vira o seu banco particular." />
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {meusRefs.map((r) => (

@@ -42,7 +42,7 @@ export function FeedbackButton({ className }: { className?: string }) {
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="sm:max-w-md rounded-2xl">
+        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="sm:max-w-lg">
           <DialogHeader><DialogTitle className="font-display">Enviar feedback</DialogTitle></DialogHeader>
           <div className="space-y-3 py-1">
             <div className="space-y-1.5">

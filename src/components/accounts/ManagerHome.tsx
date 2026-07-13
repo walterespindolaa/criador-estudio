@@ -27,7 +27,7 @@ import { useManagerApprovalOverview } from "@/hooks/useApprovals";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { Handshake, Check, Clock, Ticket } from "lucide-react";
 
-// Atalho colorido do painel. A cor é a MESMA do cabeçalho daquele módulo —
+// Atalho colorido do painel. A cor é a MESMA do cabeçalho daquele módulo:
 // é o que faz a pessoa reconhecer o lugar antes de ler o nome.
 function Atalho({ to, color, icon: Icon, label, hint }: {
   to: string; color: CriaColor; icon: typeof Users; label: string; hint: string;
@@ -187,7 +187,7 @@ export function ManagerHome({ embedded = false }: { embedded?: boolean }) {
           {/* ═══ PAINEL DE ABERTURA ═══
               Era uma saudação solta e um card cinza com um número. Nada convidava
               a pilotar o sistema. Agora é um painel com as formas orgânicas da marca
-              e os atalhos vivos — cada um na sua cor de módulo. */}
+              e os atalhos vivos, cada um na sua cor de módulo. */}
           <section className="relative overflow-hidden rounded-3xl border border-border bg-card p-5 sm:p-7 mb-8">
             <OrganicBlobs color="laranja" />
 
@@ -235,7 +235,7 @@ export function ManagerHome({ embedded = false }: { embedded?: boolean }) {
               </div>
             </div>
 
-            {/* Atalhos — a cor de cada módulo, igual ao cabeçalho de cada tela.
+            {/* Atalhos, a cor de cada módulo, igual ao cabeçalho de cada tela.
                 A pessoa aprende a cor uma vez e navega no automático. */}
             <div className="relative grid grid-cols-2 lg:grid-cols-4 gap-2.5 mt-6">
               <Atalho to="/socialmidia/clientes" color="rosa" icon={Users} label="Clientes" hint="carteira" />

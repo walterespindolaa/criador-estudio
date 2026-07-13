@@ -117,7 +117,7 @@ function ClientTaskDialog({ task, saving, onClose, onSave }: {
   };
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-md rounded-2xl">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader><DialogTitle className="font-display">Editar tarefa</DialogTitle></DialogHeader>
         <div className="space-y-3 mt-2">
           <div className="space-y-1.5"><Label className="text-xs">Título *</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} className="rounded-xl" /></div>

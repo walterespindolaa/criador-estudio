@@ -1,4 +1,4 @@
-// CORS centralizado — restringe a origens conhecidas (em vez de "*").
+// CORS centralizado, restringe a origens conhecidas (em vez de "*").
 const allowedOrigins = [
   "https://app.criasocialclub.com.br",
   "https://criasocialclub.com.br",

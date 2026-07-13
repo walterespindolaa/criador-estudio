@@ -134,7 +134,7 @@ export default function Clientes() {
       )}
 
       <Dialog open={newOpen} onOpenChange={(o) => !createClient.isPending && setNewOpen(o)}>
-        <DialogContent className="sm:max-w-md rounded-2xl">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="font-display">Novo cliente</DialogTitle>
             <DialogDescription className="font-body text-sm">Cria a ficha do cliente. Você adiciona posts, cronograma e o resto dentro dele.</DialogDescription>

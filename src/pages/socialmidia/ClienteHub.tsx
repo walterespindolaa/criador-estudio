@@ -65,7 +65,7 @@ import { MoneyInput } from "@/components/shared/MoneyInput";
 import { useManagerProfile } from "@/hooks/useModules";
 import { isPctRegime } from "@/lib/finance";
 // Dinheiro nesta tela é sempre em REAIS (fin_records.amount e crm_clients.monthly_value).
-// formatBRL cuida da formatação — nada de dividir/multiplicar por 100 aqui.
+// formatBRL cuida da formatação, nada de dividir/multiplicar por 100 aqui.
 
 export default function ClienteHub() {
   const { id, tab } = useParams<{ id: string; tab?: string }>();
@@ -73,7 +73,7 @@ export default function ClienteHub() {
   const { allowed: hasHubCria } = useHasHubCria();
   const { allowed: hasCaixa } = useHasModule("financeiro");
   const { data: client, isLoading } = useCrmClient(id);
-  // A aba Pesquisa (Apify) só aparece pra quem tem o HUB liberado — se não tem,
+  // A aba Pesquisa (Apify) só aparece pra quem tem o HUB liberado, se não tem,
   // a aba nem existe (não adianta mostrar porta trancada).
   const visibleTabs = useMemo(
     () => TABS.filter((t) => !("hub" in t && t.hub) || hasHubCria),
@@ -205,7 +205,7 @@ export default function ClienteHub() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <Info label="Segmento" value={client.segment || "-"} />
             <Info label="Contato" value={client.email || client.phone || "-"} />
-            {/* monthly_value é em REAIS (não centavos) — brl() aqui é da parte financeira, que é em centavos. */}
+            {/* monthly_value é em REAIS (não centavos), brl() aqui é da parte financeira, que é em centavos. */}
             <Info label="Mensalidade" value={formatBRL(client.monthly_value)} />
             <Info label="Renovação" value={client.renewal_date ? new Date(client.renewal_date).toLocaleDateString("pt-BR") : "-"} />
           </div>
@@ -237,7 +237,7 @@ export default function ClienteHub() {
         )
       )}
 
-      {/* BRANDBOOK — quem é a marca. Leitura, vem da conta CRIA do cliente. */}
+      {/* BRANDBOOK, quem é a marca. Leitura, vem da conta CRIA do cliente. */}
       {activeTab === "brandbook" && (
         client.cria_owner_id ? (
           <ClienteBrandbookCria criaOwnerId={client.cria_owner_id} />
@@ -257,13 +257,13 @@ export default function ClienteHub() {
         )
       )}
 
-      {/* IDEIAS — o banco de ideias do cliente (4 origens). */}
+      {/* IDEIAS, o banco de ideias do cliente (4 origens). */}
       {activeTab === "ideias" && <ClienteIdeias clientId={id!} criaOwnerId={client.cria_owner_id} />}
 
-      {/* PESQUISA — Apify. A aba só existe pra quem tem o HUB liberado. */}
+      {/* PESQUISA. Apify. A aba só existe pra quem tem o HUB liberado. */}
       {activeTab === "pesquisa" && hasHubCria && <CriativoTab clientId={id!} clientName={client.name} />}
 
-      {/* PORTAL — o que era o popup "Personalizar", agora com espaço pra respirar. */}
+      {/* PORTAL, o que era o popup "Personalizar", agora com espaço pra respirar. */}
       {activeTab === "portal" && (
         extClient ? (
           <ClientePortalTab client={extClient} onCopyLink={doCopyLink} onOpenPortal={openPortal} copying={copying} />
@@ -276,7 +276,7 @@ export default function ClienteHub() {
         )
       )}
 
-      {/* FINANCEIRO — exclusivo de quem assina o Cria Caixa. */}
+      {/* FINANCEIRO, exclusivo de quem assina o Cria Caixa. */}
       {activeTab === "financeiro" && (
         hasCaixa
           ? <FinanceTab clientId={id!} clientName={client.name} monthlyValue={client.monthly_value} />
@@ -286,7 +286,7 @@ export default function ClienteHub() {
   );
 }
 
-// Anotações do cliente — salva ~0,8s depois da última tecla (mesmo padrão da ficha do CRM).
+// Anotações do cliente, salva ~0,8s depois da última tecla (mesmo padrão da ficha do CRM).
 function NotasCliente({ clientId, notes }: { clientId: string; notes: string | null }) {
   const update = useUpdateCrmClient();
   const [txt, setTxt] = useState(notes ?? "");
@@ -338,7 +338,7 @@ function Info({ label, value }: { label: string; value: string }) {
 }
 
 // Categorias de custo que a agência de fato tem por cliente. É isso que responde
-// "quanto eu gasto com o Fulano — e COM O QUÊ".
+// "quanto eu gasto com o Fulano, e COM O QUÊ".
 const CUSTO_CATS = ["Design", "Copy", "Edição de vídeo", "Tráfego pago", "Ferramentas", "Freelancer", "Outros"] as const;
 const ENTRADA_CATS = ["Mensalidade", "Projeto avulso", "Tráfego reembolsado", "Outras receitas"] as const;
 
@@ -359,7 +359,7 @@ function FinanceTab({ clientId, clientName, monthlyValue }: { clientId: string; 
   );
 
   // fin_records.amount é em REAIS (mesma unidade do Cria Caixa).
-  // Antes esta aba gravava *100 e lia /100 — um custo de R$ 400 virava R$ 40.000 no Caixa.
+  // Antes esta aba gravava *100 e lia /100, um custo de R$ 400 virava R$ 40.000 no Caixa.
   const recebido = rows.filter((r) => r.type === "entrada" && r.status === "pago").reduce((s, r) => s + Number(r.amount), 0);
   const aReceber = rows.filter((r) => r.type === "entrada" && r.status !== "pago").reduce((s, r) => s + Number(r.amount), 0);
   const receita = recebido + aReceber;
@@ -436,12 +436,12 @@ function FinanceTab({ clientId, clientName, monthlyValue }: { clientId: string; 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <FinBox label="Receita" value={formatBRL(receita)} tone="green" hint={aReceber > 0 ? `${formatBRL(recebido)} pago + ${formatBRL(aReceber)} a receber` : "tudo recebido"} />
         <FinBox label="Custo com o cliente" value={formatBRL(custo)} tone="red" hint={porCategoria.length ? `${porCategoria.length} categoria(s)` : "nada lançado"} />
-        <FinBox label="Imposto" value={isPctRegime(fin?.regime) ? formatBRL(imposto) : "—"} tone="muted"
+        <FinBox label="Imposto" value={isPctRegime(fin?.regime) ? formatBRL(imposto) : "-"} tone="muted"
           hint={isPctRegime(fin?.regime) ? `${fin?.taxPct ?? 0}% da receita` : "MEI: DAS é fixo, não rateia aqui"} />
         <FinBox label="Margem" value={formatBRL(margem)} tone={margem >= 0 ? "green" : "red"} hint={receita > 0 ? `${margemPct.toFixed(0)}% da receita` : "sem receita no período"} />
       </div>
 
-      {/* ONDE O DINHEIRO VAI — era isso que faltava. */}
+      {/* ONDE O DINHEIRO VAI, era isso que faltava. */}
       <div className="bg-card border border-border rounded-2xl p-4">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <p className="text-sm font-display font-bold text-foreground">Onde vai o dinheiro deste cliente</p>
@@ -449,8 +449,7 @@ function FinanceTab({ clientId, clientName, monthlyValue }: { clientId: string; 
         </div>
         {porCategoria.length === 0 ? (
           <p className="text-[12px] font-body text-muted-foreground py-2">
-            Nenhum custo lançado {range === "mes" ? "neste mês" : "ainda"}. Lance abaixo escolhendo a categoria (Design, Copy, Tráfego…) —
-            é assim que você descobre se o cliente dá lucro de verdade.
+            Nenhum custo lançado {range === "mes" ? "neste mês" : "ainda"}. Lance abaixo escolhendo a categoria (Design, Copy, Tráfego…), é assim que você descobre se o cliente dá lucro de verdade.
           </p>
         ) : (
           <div className="space-y-2">
@@ -493,7 +492,7 @@ function FinanceTab({ clientId, clientName, monthlyValue }: { clientId: string; 
           </Button>
         </div>
 
-        {/* Repetir todo mês — sem precisar sair pro Cria Caixa. */}
+        {/* Repetir todo mês, sem precisar sair pro Cria Caixa. */}
         <button type="button" onClick={() => setRepetir((r) => !r)}
           className={`mt-2 w-full flex items-start gap-2.5 rounded-xl border px-3 py-2 text-left transition-colors ${
             repetir ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}>
@@ -545,7 +544,7 @@ function FinanceTab({ clientId, clientName, monthlyValue }: { clientId: string; 
             const pago = r.status === "pago";
             return (
               <div key={r.id} className="flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3">
-                {/* Check de pago — muda aqui, muda no Cria Caixa (é o mesmo lançamento). */}
+                {/* Check de pago, muda aqui, muda no Cria Caixa (é o mesmo lançamento). */}
                 <button
                   onClick={() => upd.mutate({ id: r.id, status: pago ? "pendente" : "pago" })}
                   title={pago ? "Marcar como pendente" : "Marcar como pago"}

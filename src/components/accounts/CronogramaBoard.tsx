@@ -149,7 +149,7 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
 }) {
   const { items, addItem, updateItem, deleteItem, reorder } = useCronogramaItems(c.id);
 
-  // Segmento do cliente (do CRM) — usado pra sugerir as datas comemorativas do nicho.
+  // Segmento do cliente (do CRM), usado pra sugerir as datas comemorativas do nicho.
   const { clients: extClients } = useExternalClients();
   const { data: crmClientsList = [] } = useCrmClients();
   const extOfCrono = extClients.find((e) => e.id === c.external_client_id);
@@ -249,7 +249,7 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
 
       <DatasComemorativasSection cronogramaId={c.id} clientSegment={clientSegment} />
 
-      {/* Itens em CAIXINHAS separadas e arrastáveis — arrastar muda o número (#4 vira #1). */}
+      {/* Itens em CAIXINHAS separadas e arrastáveis, arrastar muda o número (#4 vira #1). */}
       <div className="space-y-2">
         {items.length > 0 && (
           <p className="text-[11px] font-body text-muted-foreground">Arraste pelo <GripVertical className="inline h-3 w-3 -mt-0.5" /> pra reordenar. O número acompanha a ordem.</p>
@@ -445,7 +445,7 @@ function AnnualDatesDialog({ open, onOpenChange, existingLabels, clientSegment, 
         <DialogHeader><DialogTitle className="font-display">Lista anual de datas</DialogTitle></DialogHeader>
         <p className="text-xs text-muted-foreground -mt-2">Escolha o segmento do cliente e marque as datas pra adicionar ao cronograma.</p>
 
-        {/* Segmento do cliente — filtra as datas */}
+        {/* Segmento do cliente, filtra as datas */}
         <div className="flex flex-wrap gap-1.5 pb-1 border-b border-border">
           {SEGMENTOS.map((s) => {
             const on = segs.has(s.key);

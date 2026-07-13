@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
     const status = typeof v.status === "number" ? v.status : null;
     const encodeProgress = typeof v.encodeProgress === "number" ? v.encodeProgress : null;
     // Só está realmente tocável quando o encoding chega a 100% E o status é Finished (4).
-    // status >= 4 sozinho é cedo demais — o player ainda mostra "Processing".
+    // status >= 4 sozinho é cedo demais, o player ainda mostra "Processing".
     const ready = status === 4 && (encodeProgress ?? 0) >= 100;
     return json({ status, encodeProgress, ready });
   } catch (e) {

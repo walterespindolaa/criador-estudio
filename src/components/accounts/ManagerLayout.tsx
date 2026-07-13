@@ -250,8 +250,11 @@ export default function ManagerLayout() {
           </HeroBand>
         </div>
 
+        {/* max-w-6xl (1152px) deixava metade da tela vazia num monitor grande e o
+            conteúdo espremido numa coluna no meio. 1600px usa a tela de trabalho
+            de verdade; acima disso o texto ficaria longo demais pra ler. */}
         <main className="relative z-[1] flex-1 px-4 py-7 pb-[96px] sm:px-8 sm:py-10 md:pb-10 overflow-x-hidden">
-          <div className="mx-auto w-full max-w-6xl">
+          <div className="mx-auto w-full max-w-[1600px]">
             <BroadcastBanner audience="social" />
             <NotificationNudge />
             <Suspense fallback={<ContentSkeleton />}>

@@ -227,7 +227,7 @@ function LeadDialog({ lead, onClose, onCreate, onUpdate, onDelete, saving }: {
   onDelete: (id: string) => void; saving: boolean;
 }) {
   const [f, setF] = useState<CrmLeadInput>(() => (lead ? { ...lead } : { name: "" }));
-  // Lead novo ainda não tem id — as tarefas ficam pendentes e são criadas junto com ele.
+  // Lead novo ainda não tem id, as tarefas ficam pendentes e são criadas junto com ele.
   const [pending, setPending] = useState<{ title: string; due: string | null }[]>([]);
   const set = (patch: Partial<CrmLeadInput>) => setF((p) => ({ ...p, ...patch }));
   const submit = () => {
@@ -236,7 +236,7 @@ function LeadDialog({ lead, onClose, onCreate, onUpdate, onDelete, saving }: {
   };
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-lg max-h-[88vh] overflow-y-auto rounded-2xl">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader><DialogTitle className="font-display">{lead ? "Editar lead" : "Novo lead"}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
           <L label="Nome *"><Input value={f.name ?? ""} onChange={(e) => set({ name: e.target.value })} className="rounded-xl" /></L>
@@ -360,7 +360,7 @@ function TaskEditDialog({ task, onClose }: { task: CrmTask; onClose: () => void 
   const remove = async () => { if (confirm("Excluir esta tarefa?")) { await del.mutateAsync(task.id); onClose(); } };
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-md rounded-2xl">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader><DialogTitle className="font-display">Editar tarefa</DialogTitle></DialogHeader>
         <div className="space-y-3 mt-2">
           <div className="space-y-1.5"><Label className="text-xs">Título *</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} className="rounded-xl" /></div>

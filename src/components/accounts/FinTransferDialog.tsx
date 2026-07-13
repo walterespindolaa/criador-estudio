@@ -32,7 +32,7 @@ export function FinTransferDialog({ open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}>
-      <DialogContent className="sm:max-w-md rounded-2xl">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="font-display flex items-center gap-2"><ArrowLeftRight className="h-4 w-4" /> Transferir p/ Pessoa Física</DialogTitle>
           <DialogDescription className="font-body text-sm">Tira dinheiro da empresa pra você. Cria a saída na Empresa e a entrada na PF de uma vez.</DialogDescription>

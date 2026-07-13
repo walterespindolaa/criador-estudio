@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
       ? [persona.name, persona.age_range, (persona.pain_points || []).length ? `dores: ${(persona.pain_points || []).join(", ")}` : "", (persona.interests || []).length ? `interesses: ${(persona.interests || []).join(", ")}` : ""].filter(Boolean).join(" · ")
       : "";
 
-    // Chaves derivadas do Cria (sobrescrevem — o Cria é a fonte da verdade pra cliente Cria).
+    // Chaves derivadas do Cria (sobrescrevem, o Cria é a fonte da verdade pra cliente Cria).
     const synced: Record<string, string> = {};
     const pilares = (pillarsRes.data ?? []).map((p: any) => p.name).join(", ");
     if (pilares) synced.contentThemes = pilares;
@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
     if (prof?.name && prof.name !== (cli as any).name) update.name = prof.name;
     if (prof?.niche && !(cli as any).segment) update.segment = prof.niche;
     // Foto: a do Cria é a fonte da verdade pro cliente que usa o app.
-    // (Antes ela não vinha — trocava no Cria e o Cria Gestão continuava com a antiga.)
+    // (Antes ela não vinha, trocava no Cria e o Cria Gestão continuava com a antiga.)
     if ((prof as any)?.avatar_url && (prof as any).avatar_url !== (cli as any).logo) {
       update.logo = (prof as any).avatar_url;
     }

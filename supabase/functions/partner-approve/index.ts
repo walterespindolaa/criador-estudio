@@ -126,7 +126,7 @@ serve(async (req) => {
         httpClient: Stripe.createFetchHttpClient(),
       });
 
-      // Cria o coupon (objeto de desconto) uma vez — pode ser reusado em N promotion codes
+      // Cria o coupon (objeto de desconto) uma vez, pode ser reusado em N promotion codes
       let coupon: Stripe.Coupon;
       try {
         coupon = await stripe.coupons.create({

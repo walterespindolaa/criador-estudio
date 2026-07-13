@@ -342,7 +342,7 @@ function StorySlotDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-md rounded-2xl max-h-[88vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-[88vh] overflow-y-auto">
         <DialogHeader><DialogTitle className="font-display">{editing ? "Editar story" : "Novo story"}</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div>

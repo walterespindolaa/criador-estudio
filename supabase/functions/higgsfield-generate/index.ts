@@ -1,4 +1,4 @@
-// Cria Estúdio — gera prompts de imagem (com a marca do usuário) e dispara no
+// Cria Estúdio, gera prompts de imagem (com a marca do usuário) e dispara no
 // Higgsfield (modelo Soul). Assíncrono: action "generate" cria o job + envia à fila;
 // action "poll" consulta o status e traz as imagens prontas. Admin-only.
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
@@ -40,7 +40,7 @@ const soulSize = (aspect: string): string => SOUL_SIZE[aspect] ?? "1536x2048";
 // resolução da UI → quality do Soul (só 720p/1080p).
 const soulQuality = (res: string): string => (res.includes("720") ? "720p" : "1080p");
 
-// Perplexity (sonar) — pesquisa web atual com fontes. Fail-soft: sem chave/erro → "".
+// Perplexity (sonar), pesquisa web atual com fontes. Fail-soft: sem chave/erro → "".
 async function pplx(userPrompt: string): Promise<string> {
   const key = Deno.env.get("PERPLEXITY_API_KEY");
   if (!key) return "";
@@ -181,7 +181,7 @@ Deno.serve(async (req) => {
       const niche = (String(body?.niche ?? "").trim() || prof?.niche || "geral");
       const topic = String(body?.topic ?? "").trim().slice(0, 200);
       const hoje = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
-      const raw = await pplx(`Hoje é ${hoje}. Traga de 3 a 4 notícias/acontecimentos REALMENTE RECENTES (publicados nos ÚLTIMOS 7 DIAS — NÃO traga nada com mais de 2 semanas; se não tiver certeza da data, descarte)${topic ? ` relacionados ao assunto "${topic}"` : ` relevantes para o nicho "${niche}"`} (contexto do criador: nicho ${niche}), que rendam carrossel/reels de Instagram. Para cada uma inclua a DATA de publicação. Responda SOMENTE JSON: {"items":[{"titulo":"manchete curta","resumo":"2 frases","angulo":"como transformar num carrossel (gancho)","fonte":"nome ou url","data":"quando saiu"}]}`);
+      const raw = await pplx(`Hoje é ${hoje}. Traga de 3 a 4 notícias/acontecimentos REALMENTE RECENTES (publicados nos ÚLTIMOS 7 DIAS. NÃO traga nada com mais de 2 semanas; se não tiver certeza da data, descarte)${topic ? ` relacionados ao assunto "${topic}"` : ` relevantes para o nicho "${niche}"`} (contexto do criador: nicho ${niche}), que rendam carrossel/reels de Instagram. Para cada uma inclua a DATA de publicação. Responda SOMENTE JSON: {"items":[{"titulo":"manchete curta","resumo":"2 frases","angulo":"como transformar num carrossel (gancho)","fonte":"nome ou url","data":"quando saiu"}]}`);
       if (!raw) return json({ error: "pplx_unavailable", message: "Perplexity indisponível." }, 502);
       let items: Array<Record<string, string>> = [];
       try {
@@ -199,14 +199,14 @@ Deno.serve(async (req) => {
     const aspect = String(body?.aspect_ratio ?? "4:5");
     const resolution = String(body?.resolution ?? "1080p");
     const postId = body?.post_id ? String(body.post_id) : null;
-    // Conteúdo já escrito no Cria Plano (roteiro/legenda do post) — vira a espinha dorsal dos slides.
+    // Conteúdo já escrito no Cria Plano (roteiro/legenda do post), vira a espinha dorsal dos slides.
     const sourceContent = String(body?.source_content ?? "").trim().slice(0, 4000);
     // Pesquisa atual do Perplexity (dados/estatísticas com fonte), preenchida sob demanda no draft.
     let extraResearch = "";
     // Gerar a imagem COM o texto embutido (usando a tipografia da marca) ou só o fundo limpo.
     const withText = body?.with_text === true;
 
-    // Contexto RICO da marca — igual o Cria IA usa (perfil + pilares + persona + Brandbook).
+    // Contexto RICO da marca, igual o Cria IA usa (perfil + pilares + persona + Brandbook).
     // Sem isso o modelo alucina em títulos metafóricos (ex.: "Atlas" vira atlas geográfico).
     const [brandRes, pillarsRes, personaRes, moodRes] = await Promise.all([
       svc.from("brand_items").select("type, name").eq("user_id", user.id),
@@ -234,7 +234,7 @@ Tom de voz: ${tom || "direto e autêntico"}${arquetipo ? ` · Arquétipo: ${arqu
 ${expressoes ? `Expressões da marca: ${expressoes}` : ""}${evitar ? `\nEvitar: ${evitar}` : ""}
 Paleta (pro visual): ${cores || "(livre, moderna)"} · Fontes: ${fontes || "sans-serif moderna"}
 ${persona ? `Público: ${persona.name || "principal"}${persona.pain_points?.length ? ` · Dores: ${persona.pain_points.join(", ")}` : ""}${persona.interests?.length ? ` · Interesses: ${persona.interests.join(", ")}` : ""}` : ""}
-${brandbook ? `\nO QUE A MARCA/PRODUTO REALMENTE É (Brandbook do criador — esta é a FONTE DA VERDADE sobre o produto; use pra entender o tema, não invente):\n${brandbook}` : ""}`.trim();
+${brandbook ? `\nO QUE A MARCA/PRODUTO REALMENTE É (Brandbook do criador, esta é a FONTE DA VERDADE sobre o produto; use pra entender o tema, não invente):\n${brandbook}` : ""}`.trim();
 
     // IA escreve o PROMPT MASTER (linha editorial/estilo) + o texto e prompt de cada slide.
     async function writePages(): Promise<{ master: string; pages: Array<{ role?: string; screen_text?: string; prompt?: string }> }> {
@@ -246,11 +246,11 @@ ${brandCtx}
 
 TEMA/IDEIA DO POST: ${title}
 FORMATO: ${format === "carrossel" ? `carrossel de ${slides} páginas` : "imagem estática única"}
-${sourceContent ? `\nROTEIRO/LEGENDA JÁ ESCRITOS (FONTE DA VERDADE do conteúdo — fatie e enxugue ISSO; não troque de assunto):\n${sourceContent}\n` : ""}${extraResearch ? `\nPESQUISA ATUAL (dados/estatísticas reais com fonte — INCORPORE nos slides pra dar autoridade; cite o número no texto):\n${extraResearch}\n` : ""}
+${sourceContent ? `\nROTEIRO/LEGENDA JÁ ESCRITOS (FONTE DA VERDADE do conteúdo, fatie e enxugue ISSO; não troque de assunto):\n${sourceContent}\n` : ""}${extraResearch ? `\nPESQUISA ATUAL (dados/estatísticas reais com fonte. INCORPORE nos slides pra dar autoridade; cite o número no texto):\n${extraResearch}\n` : ""}
 ENTENDIMENTO DO TEMA (crítico):
 - O TÍTULO pode ser METAFÓRICO ou poético. NÃO interprete ao pé da letra. Ex.: se o título fala em "mapa/atlas" mas a marca é de finanças, o tema é FINANÇAS, não geografia.
 - Descubra o tema real cruzando o CONTEXTO DA MARCA + o ROTEIRO. Na dúvida, siga o roteiro e o que a marca vende.
-- Se faltar informação concreta, fique no que o roteiro/marca já dizem — NÃO invente estatística, história ou fato.
+- Se faltar informação concreta, fique no que o roteiro/marca já dizem. NÃO invente estatística, história ou fato.
 
 O "master_prompt" (em INGLÊS) é a ÂNCORA que garante consistência entre todas as páginas. Deve definir:
 - Linha editorial/conceito visual do carrossel (o "pensamento" por trás).
@@ -260,12 +260,12 @@ O "master_prompt" (em INGLÊS) é a ÂNCORA que garante consistência entre toda
 Escreva o master como um bloco reutilizável que pode ser colado ANTES de cada prompt de página.
 
 REGRAS DE ESCRITA:
-- Cada "screen_text" tem que ser CONCRETO e específico ao produto/tema — nada de frase vaga tipo "alcance seus objetivos". Diga algo real e útil.
+- Cada "screen_text" tem que ser CONCRETO e específico ao produto/tema, nada de frase vaga tipo "alcance seus objetivos". Diga algo real e útil.
 - CAPA (página 1): gancho forte que para o scroll, conectado ao tema real. Capriche num TÍTULO curto e impactante (isso é o que vira a capa).
 - Demais páginas: desenvolvem a ideia (contexto → benefício concreto → prova/exemplo → CTA claro).
 ${withText
   ? `- "prompt" de cada página: em INGLÊS. IMPORTANTE: a imagem DEVE conter o texto do slide renderizado (o "screen_text"), com tipografia da marca, título grande e legível, boa hierarquia e contraste. Descreva onde o texto fica e o estilo tipográfico. Ex.: 'bold headline text reading "..." in the top third, brand font, high contrast'.`
-  : `- "prompt" de cada página: em INGLÊS, só a CENA/fundo (SEM texto — o texto entra depois por cima). Assuma o master como base e descreva só a variação daquela página + "clean empty space for text overlay".`}
+  : `- "prompt" de cada página: em INGLÊS, só a CENA/fundo (SEM texto, o texto entra depois por cima). Assuma o master como base e descreva só a variação daquela página + "clean empty space for text overlay".`}
 
 Responda SOMENTE JSON:
 {"master_prompt":"editorial + style anchor in English","pages":[{"role":"capa|desenvolvimento|prova|cta","screen_text":"texto PT curto e concreto","prompt":"variação da cena em inglês"}]}
@@ -294,14 +294,14 @@ Gere EXATAMENTE ${slides} página(s).`;
         const research = await pplx(`Sobre "${title}" (nicho ${niche}): dados/fatos atuais e verificáveis com fonte pra citar num reels. 3 a 5 bullets curtos.`);
         if (research) extraResearch = research.slice(0, 1500);
       }
-      const sys = `Você é um SOCIAL MEDIA SÊNIOR e roteirista de Reels no Brasil, especialista em retenção e viralização. Escreve roteiros PRONTOS pra gravar, densos e específicos — nada de conselho genérico ("seja consistente", "tenha foco"). Cada fala entrega algo concreto: um número, um exemplo real, um passo, uma comparação. Usa só o contexto da marca, o roteiro e a pesquisa — NUNCA inventa fatos. NUNCA usa markdown (nada de ** ou ##): texto puro.`;
+      const sys = `Você é um SOCIAL MEDIA SÊNIOR e roteirista de Reels no Brasil, especialista em retenção e viralização. Escreve roteiros PRONTOS pra gravar, densos e específicos, nada de conselho genérico ("seja consistente", "tenha foco"). Cada fala entrega algo concreto: um número, um exemplo real, um passo, uma comparação. Usa só o contexto da marca, o roteiro e a pesquisa. NUNCA inventa fatos. NUNCA usa markdown (nada de ** ou ##): texto puro.`;
       const usr = `CONTEXTO DA MARCA (entenda o que a marca/produto É):
 ${brandCtx}
 
 TEMA: ${title}
 DURAÇÃO ALVO: ${seconds} segundos
-${sourceContent ? `ROTEIRO/LEGENDA JÁ ESCRITOS (FONTE DA VERDADE — use como espinha dorsal, não troque de assunto):\n${sourceContent}\n` : ""}${extraResearch ? `PESQUISA ATUAL (cite os dados no roteiro):\n${extraResearch}\n` : ""}
-IMPORTANTE: o TÍTULO pode ser metafórico — NÃO interprete ao pé da letra. Descubra o tema real cruzando o contexto da marca + o roteiro. Não invente fatos.
+${sourceContent ? `ROTEIRO/LEGENDA JÁ ESCRITOS (FONTE DA VERDADE, use como espinha dorsal, não troque de assunto):\n${sourceContent}\n` : ""}${extraResearch ? `PESQUISA ATUAL (cite os dados no roteiro):\n${extraResearch}\n` : ""}
+IMPORTANTE: o TÍTULO pode ser metafórico. NÃO interprete ao pé da letra. Descubra o tema real cruzando o contexto da marca + o roteiro. Não invente fatos.
 
 QUALIDADE (nível profissional):
 - GANCHO (0-3s): tem que ser específico e gerar tensão/curiosidade real. Traga uma das técnicas: número surpreendente, erro comum, promessa concreta, pergunta que incomoda, contra-intuição. Nada de "você sabia que...".
@@ -408,7 +408,7 @@ Termine com uma sugestão de LEGENDA pro post. Texto puro, sem markdown.`;
     const { data: jobRow, error: insErr } = await svc.from("higgsfield_jobs").insert({
       user_id: user.id, title, format, aspect_ratio: aspect, resolution, post_id: postId,
       status: anyQueued ? "running" : "error", pages,
-      error: anyQueued ? null : "Nenhuma página foi aceita pelo Higgsfield — confira a chave/plano.",
+      error: anyQueued ? null : "Nenhuma página foi aceita pelo Higgsfield, confira a chave/plano.",
     }).select("id").single();
     if (insErr || !jobRow) return json({ error: "job_create_failed" }, 500);
 
@@ -420,7 +420,7 @@ Termine com uma sugestão de LEGENDA pro post. Texto puro, sem markdown.`;
         : firstErr === "err_422"
         ? "Parâmetros recusados pela API."
         : "Erro na chamada.";
-      return json({ error: "higgsfield_rejected", message: `Higgsfield recusou (${firstErr}). ${hint}${firstErrDetail ? ` — Detalhe: ${firstErrDetail}` : ""}`, job_id: jobRow.id }, 502);
+      return json({ error: "higgsfield_rejected", message: `Higgsfield recusou (${firstErr}). ${hint}${firstErrDetail ? `. Detalhe: ${firstErrDetail}` : ""}`, job_id: jobRow.id }, 502);
     }
 
     return json({ ok: true, job_id: jobRow.id, status: "running", pages });

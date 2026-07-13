@@ -141,7 +141,7 @@ serve(async (req) => {
           const msg = (err as { message?: string })?.message ?? "";
           if (msg === "stripe_not_configured") {
             console.error("[partner-manage] suspend: STRIPE_SECRET_KEY missing");
-            // Continua — a suspensão no DB é o essencial
+            // Continua, a suspensão no DB é o essencial
           }
         }
       }

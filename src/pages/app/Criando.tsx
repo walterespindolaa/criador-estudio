@@ -816,7 +816,7 @@ const Criando = () => {
                   return (
                     <div className="rounded-2xl border border-border bg-card p-4">
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-display font-bold text-lg">{fmt(calWeekStart)} – {fmt(days[6])}</h3>
+                        <h3 className="font-display font-bold text-lg">{fmt(calWeekStart)}, {fmt(days[6])}</h3>
                         <div className="flex items-center gap-1">
                           <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => shiftWeek(-7)}>‹</Button>
                           <Button variant="outline" size="sm" className="h-8 px-3 text-xs" onClick={() => setCalWeekStart(startOfWeek(new Date(), { weekStartsOn: 0 }))}>Hoje</Button>

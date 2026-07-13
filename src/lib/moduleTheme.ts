@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 // COR POR MÓDULO
 //
-// O sistema usava só laranja e verde — as outras 4 cores da LP nunca
+// O sistema usava só laranja e verde, as outras 4 cores da LP nunca
 // apareciam. Resultado: tudo igual, tudo morto, e a pessoa nunca sabe
 // "onde está" sem ler o título.
 //
@@ -12,7 +12,7 @@
 
 export type CriaColor = "laranja" | "verde" | "azul" | "rosa" | "amarelo" | "lilas";
 
-/** Hex das 6 cores da landing page. Fonte da verdade — não invente tons novos. */
+/** Hex das 6 cores da landing page. Fonte da verdade, não invente tons novos. */
 export const CRIA_HEX: Record<CriaColor, string> = {
   laranja: "#CE4A1D",
   verde: "#3E9152",

@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { OrganicBlobs } from "@/components/brand/OrganicBlobs";
 
 // Card de venda do Cria Caixa. Aparece no lugar da aba Financeiro do cliente
-// pra quem não assina o módulo. Não é uma porta trancada — é uma vitrine:
+// pra quem não assina o módulo. Não é uma porta trancada, é uma vitrine:
 // mostra exatamente o que ela ganharia SOBRE ESTE CLIENTE.
 const GANHOS = [
   { icon: TrendingUp, t: "Margem real por cliente", d: "Quanto ele paga, quanto você gasta com ele (design, copy, tráfego) e o que sobra de verdade." },
-  { icon: Receipt, t: "Imposto mastigado", d: "Você diz o regime (MEI, Simples, Presumido) e o Caixa calcula quanto separar — no mês e por cliente." },
+  { icon: Receipt, t: "Imposto mastigado", d: "Você diz o regime (MEI, Simples, Presumido) e o Caixa calcula quanto separar, no mês e por cliente." },
   { icon: Repeat, t: "Entradas e saídas fixas", d: "Cadastre uma vez. Todo mês elas já aparecem previstas, sem você lembrar de nada." },
   { icon: CalendarClock, t: "Calendário de recebimentos", d: "Quem paga dia 10, quem paga dia 15, o que vence semana que vem. Bate o olho e sabe." },
 ];

@@ -114,7 +114,7 @@ export function useCriaPostMedia(postId: string | null) {
       const raw = url.trim();
 
       // Link de PASTA não serve. O código pegava o ID da pasta e montava
-      // /file/d/<id-da-pasta>/preview — uma URL que não existe. A prévia
+      // /file/d/<id-da-pasta>/preview, uma URL que não existe. A prévia
       // nunca aparecia e ninguém entendia por quê. Agora avisa na hora.
       if (/drive\.google\.com\/drive\/(u\/\d+\/)?folders\//i.test(raw)) {
         throw new Error(

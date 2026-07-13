@@ -179,7 +179,7 @@ export default function Contas() {
 
       {/* Adicionar cliente (assento) */}
       <Dialog open={addOpen} onOpenChange={(o) => !adding && setAddOpen(o)}>
-        <DialogContent className="sm:max-w-md rounded-2xl">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="font-display">Adicionar cliente</DialogTitle>
             <DialogDescription className="font-body text-sm">Cria o acesso de criadora coberto pelo seu plano de agência. O cliente não paga nada.</DialogDescription>
@@ -212,7 +212,7 @@ export default function Contas() {
 
       {/* Expandir/assinar assentos */}
       <Dialog open={expandOpen} onOpenChange={(o) => !expanding && setExpandOpen(o)}>
-        <DialogContent className="sm:max-w-md rounded-2xl">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="font-display">{seatLimit > 0 ? "Expandir assentos" : "Assinar plano de Agência"}</DialogTitle>
             <DialogDescription className="font-body text-sm">Escolha quantos assentos de cliente você quer (mínimo 3). Você é cobrada por assento, mensalmente.</DialogDescription>
@@ -245,7 +245,7 @@ export default function Contas() {
 
       {/* Mensagem pronta após adicionar cliente */}
       <Dialog open={!!addResult} onOpenChange={(o) => !o && setAddResult(null)}>
-        <DialogContent className="sm:max-w-md rounded-2xl">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="font-display">Cliente adicionado</DialogTitle>
             <DialogDescription className="font-body text-sm">Já enviamos o acesso por e-mail pro cliente. Se quiser, mande também a mensagem abaixo (WhatsApp).</DialogDescription>

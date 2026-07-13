@@ -74,7 +74,7 @@ export function ContractGeneratorDialog({ open, onOpenChange }: Props) {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-2xl max-h-[88vh] overflow-y-auto rounded-2xl">
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle className="font-display">Gerar contrato</DialogTitle>
             <DialogDescription className="font-body text-sm">Modelo base de gerenciamento de redes sociais. Revise os campos antes de enviar.</DialogDescription>

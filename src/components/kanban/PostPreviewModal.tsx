@@ -250,7 +250,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm p-0 overflow-hidden rounded-3xl border-0 shadow-2xl bg-background">
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden rounded-3xl border-0 shadow-2xl bg-background">
         <Tabs defaultValue={platform || "instagram"} className="w-full">
           <TabsList className="w-full rounded-none border-b border-border bg-card/80 backdrop-blur grid grid-cols-3 h-11">
             {["instagram", "tiktok", "youtube"].map(p => (

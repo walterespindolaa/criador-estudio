@@ -132,7 +132,7 @@ function CaixaInner() {
     [clients],
   );
 
-  // Cria as instâncias do mês (idempotente — não sobrescreve o que já foi pago/pulado).
+  // Cria as instâncias do mês (idempotente, não sobrescreve o que já foi pago/pulado).
   useEffect(() => {
     if (!activeClients.length) return;
     ensureMonthly.mutate({
@@ -146,7 +146,7 @@ function CaixaInner() {
 
   // ── A RECEBER ──
   // Antes só contava mensalidade (fin_monthly). Uma entrada lançada à mão como
-  // "pendente" não aparecia em lugar nenhum — o card ignorava. Agora conta as duas fontes:
+  // "pendente" não aparecia em lugar nenhum, o card ignorava. Agora conta as duas fontes:
   //   1) mensalidades do mês ainda pendentes (pulado NÃO entra)
   //   2) lançamentos de entrada com status pendente/atrasado
   const aReceberMensal = monthlies.filter((m) => m.status === "pendente").reduce((s, m) => s + Number(m.amount), 0);
@@ -155,7 +155,7 @@ function CaixaInner() {
     .reduce((s, r) => s + Number(r.amount), 0);
   const aReceber = aReceberMensal + aReceberAvulso;
 
-  // Despesas: separo o que já saiu do que ainda vai sair — a pessoa precisa ver as duas.
+  // Despesas: separo o que já saiu do que ainda vai sair, a pessoa precisa ver as duas.
   const despesasPagas = monthCtx.filter((r) => r.type === "despesa" && r.status === "pago").reduce((s, r) => s + Number(r.amount), 0);
   const aPagar = despesas - despesasPagas;
 
@@ -311,7 +311,7 @@ function CaixaInner() {
     <div>
       <ModuleHero
         title="Cria Caixa"
-        subtitle="O financeiro da sua operação — empresa e pessoal, separados."
+        subtitle="O financeiro da sua operação, empresa e pessoal, separados."
         color="azul"
         tabs={tabs}
         actions={
@@ -328,7 +328,7 @@ function CaixaInner() {
         {seletorPjPf}
       </ModuleHero>
 
-      {/* O aviso de recorrente pendente aparece em qualquer seção — é ação, não informação. */}
+      {/* O aviso de recorrente pendente aparece em qualquer seção, é ação, não informação. */}
       {pendingRecurring.length > 0 && (
         <button onClick={lancarRecorrentes} disabled={generate.isPending}
           className="w-full mb-5 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-primary/10 transition-colors">
@@ -340,7 +340,7 @@ function CaixaInner() {
       {/* ═══════ VISÃO GERAL ═══════ */}
       {show("visao") && (isPj ? (
         <>
-          {/* PREVISÃO DO MÊS — em destaque. Bruto = já recebido + o que falta receber. Líquido = bruto − despesas. */}
+          {/* PREVISÃO DO MÊS, em destaque. Bruto = já recebido + o que falta receber. Líquido = bruto − despesas. */}
           <div className="rounded-2xl border border-primary/25 bg-primary/[0.04] p-4 mb-3">
             <div className="flex items-end justify-between gap-4 flex-wrap">
               <div>
@@ -401,7 +401,7 @@ function CaixaInner() {
         <div className="rounded-2xl border border-dashed border-border p-10 text-center">
           <p className="text-sm font-body text-foreground font-medium">Nenhuma mensalidade neste mês</p>
           <p className="text-xs text-muted-foreground font-body mt-1">
-            Preencha o <strong>valor mensal</strong> e o <strong>dia de pagamento</strong> na ficha dos clientes — elas nascem sozinhas todo mês.
+            Preencha o <strong>valor mensal</strong> e o <strong>dia de pagamento</strong> na ficha dos clientes, elas nascem sozinhas todo mês.
           </p>
         </div>
       )}
@@ -465,12 +465,12 @@ function CaixaInner() {
         </div>
       )}
 
-      {/* Pular mensalidade — pede o motivo */}
+      {/* Pular mensalidade, pede o motivo */}
       <Dialog open={!!skipping} onOpenChange={(o) => { if (!o) { setSkipping(null); setSkipReason(""); } }}>
-        <DialogContent className="sm:max-w-sm rounded-2xl">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader><DialogTitle className="font-display">Pular esta mensalidade</DialogTitle></DialogHeader>
           <p className="text-[13px] font-body text-muted-foreground -mt-1">
-            O mês fica registrado como <strong>pulado</strong> — não vira lançamento e não conta na previsão. Dá pra reverter depois.
+            O mês fica registrado como <strong>pulado</strong>, não vira lançamento e não conta na previsão. Dá pra reverter depois.
           </p>
           <Input value={skipReason} onChange={(e) => setSkipReason(e.target.value)} placeholder="Motivo (ex.: cliente pausou em julho)" className="rounded-xl" />
           <DialogFooter>
@@ -497,7 +497,7 @@ function CaixaInner() {
                 <p className="text-[12px] font-body text-muted-foreground mt-0.5">
                   {isPctRegime(fin.regime)
                     ? <>sobre os {brl(recebido)} que já entraram · fecha o mês em <strong className="text-foreground">{brl(impostoPrevisto)}</strong> se receber tudo</>
-                    : <>DAS fixo do MEI — não muda com o faturamento</>}
+                    : <>DAS fixo do MEI, não muda com o faturamento</>}
                 </p>
               </div>
               {hasRuler && recebido > 0 && (
@@ -508,7 +508,7 @@ function CaixaInner() {
               )}
             </div>
             <p className="text-[10.5px] font-body text-muted-foreground mt-2.5 pt-2.5 border-t border-primary/15">
-              Estimativa de organização com base no que você configurou — não é apuração fiscal. Confirme com sua contabilidade.
+              Estimativa de organização com base no que você configurou, não é apuração fiscal. Confirme com sua contabilidade.
             </p>
           </div>
         ) : (
@@ -516,13 +516,13 @@ function CaixaInner() {
             className="w-full rounded-2xl border border-dashed border-primary/40 bg-primary/[0.03] p-4 mb-5 text-left hover:bg-primary/[0.07] transition-colors">
             <p className="text-sm font-display font-bold text-foreground">Configure o regime tributário</p>
             <p className="text-[12px] font-body text-muted-foreground mt-0.5">
-              Diga se você é MEI, Simples ou Presumido em <strong>Minha empresa</strong> e o Caixa passa a calcular sozinho quanto separar de imposto — no mês e por cliente.
+              Diga se você é MEI, Simples ou Presumido em <strong>Minha empresa</strong> e o Caixa passa a calcular sozinho quanto separar de imposto, no mês e por cliente.
             </p>
           </button>
         )
       )}
 
-      {/* ═══════ CLIENTES — rentabilidade ═══════ */}
+      {/* ═══════ CLIENTES, rentabilidade ═══════ */}
       {show("clientes") && isPj && clientRows.length === 0 && (
         <div className="rounded-2xl border border-dashed border-border p-10 text-center">
           <p className="text-sm font-body text-foreground font-medium">Nenhum cliente com movimento em {MONTHS[ym.m]}</p>
@@ -641,7 +641,7 @@ function CaixaInner() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// PESSOA FÍSICA — no padrão do Atlas.
+// PESSOA FÍSICA, no padrão do Atlas.
 //
 // Antes eram três cartõezinhos (entrou / gastou / sobrou) e ponto. Isso não
 // é gestão pessoal, é um extrato. O Atlas responde três perguntas que faltavam:
@@ -658,7 +658,7 @@ function PessoalVisao({ recebido, despesas, monthCtx, recurring, fin, ym, onNovo
   ym: { y: number; m: number };
   onNovo: () => void;
 }) {
-  // Contas fixas do mês que AINDA não foram lançadas — é o que muda a conta do "sobra".
+  // Contas fixas do mês que AINDA não foram lançadas, é o que muda a conta do "sobra".
   const fixasPendentes = recurring.filter(
     (t) => t.active && (t.context ?? "pj") === "pf" && t.type === "despesa" &&
       !monthCtx.some((r) => r.recurring_id === t.id),
@@ -693,7 +693,7 @@ function PessoalVisao({ recebido, despesas, monthCtx, recurring, fin, ym, onNovo
 
   return (
     <>
-      {/* SOBRA REAL — a única métrica que importa no fim do mês. */}
+      {/* SOBRA REAL, a única métrica que importa no fim do mês. */}
       <div className="rounded-2xl border border-primary/25 bg-primary/[0.04] p-4 mb-3">
         <div className="flex items-end justify-between gap-4 flex-wrap">
           <div>
@@ -707,7 +707,7 @@ function PessoalVisao({ recebido, despesas, monthCtx, recurring, fin, ym, onNovo
           <div className="text-right">
             <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider">Comprometido</p>
             <p className={cn("text-2xl font-display font-extrabold mt-0.5", comprometido > 90 ? "text-red-500" : comprometido > 70 ? "text-amber-600" : "text-green-600")}>
-              {recebido > 0 ? `${comprometido.toFixed(0)}%` : "—"}
+              {recebido > 0 ? `${comprometido.toFixed(0)}%` : "-"}
             </p>
             <p className="text-[12px] font-body text-muted-foreground mt-0.5">da sua renda do mês</p>
           </div>
@@ -722,7 +722,7 @@ function PessoalVisao({ recebido, despesas, monthCtx, recurring, fin, ym, onNovo
         <Metric label="Sobra" value={brl(sobraReal)} tone={sobraReal >= 0 ? "green" : "red"} hint="depois de tudo" />
       </div>
 
-      {/* CONTAS FIXAS DO MÊS — o que ainda vai cair, com o que fazer. */}
+      {/* CONTAS FIXAS DO MÊS, o que ainda vai cair, com o que fazer. */}
       {fixasPendentes.length > 0 && (
         <div className="rounded-2xl border border-amber-500/30 bg-amber-500/[0.05] p-4 mb-5">
           <p className="text-sm font-display font-bold text-foreground mb-1">Contas fixas que ainda vão cair</p>
@@ -788,7 +788,7 @@ function PessoalVisao({ recebido, despesas, monthCtx, recurring, fin, ym, onNovo
             </div>
             <p className="text-[12px] font-body text-muted-foreground">
               {guardado > 0
-                ? <>Sobrou <strong className="text-foreground">{brl(guardado)}</strong> — {atingido >= 100 ? "meta batida 🎯" : `${atingido.toFixed(0)}% da meta`}</>
+                ? <>Sobrou <strong className="text-foreground">{brl(guardado)}</strong>, {atingido >= 100 ? "meta batida 🎯" : `${atingido.toFixed(0)}% da meta`}</>
                 : "Este mês não sobrou nada pra guardar."}
             </p>
           </>
@@ -928,7 +928,7 @@ function RecordDialog({ record, context, clients, defaultDate, defaultCats, cust
   };
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-md rounded-2xl">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader><DialogTitle className="font-display">{record ? "Editar lançamento" : context === "pj" ? "Novo lançamento (Empresa)" : "Novo lançamento (Pessoal)"}</DialogTitle></DialogHeader>
         <div className="space-y-3 mt-2">
           <div className="grid grid-cols-2 gap-2">
@@ -997,7 +997,7 @@ function RecordDialog({ record, context, clients, defaultDate, defaultCats, cust
             </select>
           </div>
 
-          {/* Repetir todo mês — sem precisar abrir a tela de Recorrentes. */}
+          {/* Repetir todo mês, sem precisar abrir a tela de Recorrentes. */}
           {!record && (
             <button type="button" onClick={() => setRepeat((r) => !r)}
               className={cn("w-full flex items-start gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-colors",
@@ -1026,9 +1026,9 @@ function RecordDialog({ record, context, clients, defaultDate, defaultCats, cust
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// CALENDÁRIO DE ENTRADAS E SAÍDAS — PJ e PF.
+// CALENDÁRIO DE ENTRADAS E SAÍDAS. PJ e PF.
 // Mostra o mês inteiro, dia a dia: mensalidades (no vencimento de cada
-// cliente), lançamentos, e — o pulo do gato — os RECORRENTES ainda não
+// cliente), lançamentos, e, o pulo do gato, os RECORRENTES ainda não
 // lançados, como PREVISTO (tracejado). Assim dá pra navegar pros meses
 // que vêm e enxergar a recorrência antes de ela virar lançamento.
 // ═══════════════════════════════════════════════════════════════════
@@ -1051,7 +1051,7 @@ function CalendarioFinanceiro({ monthlies, records, recurring, pendingRecurring,
   const evs = useMemo<Ev[]>(() => {
     const out: Ev[] = [];
 
-    // 1) Mensalidades do mês (só PJ) — cada uma no vencimento do cliente.
+    // 1) Mensalidades do mês (só PJ), cada uma no vencimento do cliente.
     for (const m of monthlies) {
       if (m.status === "pulado") continue;
       out.push({
@@ -1061,7 +1061,7 @@ function CalendarioFinanceiro({ monthlies, records, recurring, pendingRecurring,
       });
     }
 
-    // 2) Lançamentos reais do mês — entradas E despesas (antes só vinham as despesas).
+    // 2) Lançamentos reais do mês, entradas E despesas (antes só vinham as despesas).
     for (const r of records) {
       if ((r.context ?? "pj") !== ctx) continue;
       const d = new Date(r.date + "T00:00:00");
@@ -1097,7 +1097,7 @@ function CalendarioFinanceiro({ monthlies, records, recurring, pendingRecurring,
       <div className="rounded-2xl border border-dashed border-border p-6 text-center mb-5">
         <p className="text-sm font-body text-foreground font-medium">Nada marcado em {MONTHS[ym.m]}</p>
         <p className="text-xs text-muted-foreground font-body mt-1">
-          Cadastre recorrentes e o dia de pagamento dos clientes — o calendário se preenche sozinho, inclusive nos meses que vêm.
+          Cadastre recorrentes e o dia de pagamento dos clientes, o calendário se preenche sozinho, inclusive nos meses que vêm.
         </p>
       </div>
     );
@@ -1162,7 +1162,7 @@ function CalendarioFinanceiro({ monthlies, records, recurring, pendingRecurring,
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// RELATÓRIO POR PERÍODO — extrai mês / ano / intervalo livre,
+// RELATÓRIO POR PERÍODO, extrai mês / ano / intervalo livre,
 // com a evolução mês a mês e exportação em CSV.
 // ═══════════════════════════════════════════════════════════════════
 function RelatorioPeriodo({ records, ctx }: { records: FinRecord[]; ctx: FinContext }) {

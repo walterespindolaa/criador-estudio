@@ -291,7 +291,7 @@ Deno.serve(async (req) => {
           if (p) await supabase.from("profiles")
             .update({ subscription_status: "canceled" }).eq("id", p.id);
         }
-        // B.2 — cancelamento antes da liberação anula só 'pending'.
+        // B.2, cancelamento antes da liberação anula só 'pending'.
         // 'payable' (sobreviveu à carência) e 'paid' (já pagamos) são mantidos.
         await supabase.from("partner_referrals")
           .update({
@@ -321,7 +321,7 @@ Deno.serve(async (req) => {
         // sem atribuição ou self-subscribe → sem comissão
         if (!partnerId || !referredUserId || selfSub) break;
 
-        // dono do cupom — usado pelas duas checagens abaixo
+        // dono do cupom, usado pelas duas checagens abaixo
         const { data: partnerRow } = await supabase
           .from("partners").select("user_id").eq("id", partnerId).maybeSingle();
         const ownerOfCoupon = partnerRow ? (partnerRow as { user_id: string }).user_id : null;

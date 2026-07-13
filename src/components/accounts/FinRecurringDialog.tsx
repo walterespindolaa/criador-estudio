@@ -62,17 +62,17 @@ export function FinRecurringDialog({ open, onOpenChange, ctx, defaultCats, custo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[88vh] overflow-y-auto rounded-2xl">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle className="font-display flex items-center gap-2"><Repeat className="h-4 w-4" /> Recorrentes, {ctx === "pj" ? "Empresa" : "Pessoal"}</DialogTitle>
           <DialogDescription className="font-body text-sm">
-            O que se repete todo mês. Aparece no calendário como <strong>previsto</strong> antes mesmo de ser lançado — e você lança o mês inteiro com um clique no Caixa.
+            O que se repete todo mês. Aparece no calendário como <strong>previsto</strong> antes mesmo de ser lançado, e você lança o mês inteiro com um clique no Caixa.
           </DialogDescription>
         </DialogHeader>
 
         {!adding ? (
           <div className="space-y-4 mt-1">
-            {/* Resumo — o que sai e o que entra todo mês, fixo. */}
+            {/* Resumo, o que sai e o que entra todo mês, fixo. */}
             <div className="grid grid-cols-3 gap-2">
               <Resumo label="Entra fixo" value={brl(totalEntrada)} tone="green" sub={`${entradas.filter((t) => t.active).length} ativo(s)`} />
               <Resumo label="Sai fixo" value={brl(totalDespesa)} tone="red" sub={`${despesas.filter((t) => t.active).length} ativo(s)`} />
@@ -109,7 +109,7 @@ export function FinRecurringDialog({ open, onOpenChange, ctx, defaultCats, custo
 
             <div className="grid grid-cols-2 gap-3">
               <Fld label="Valor"><MoneyInput value={f.amount ?? null} onChange={(v) => set({ amount: v ?? 0 })} /></Fld>
-              <Fld label="Todo dia (1–28)">
+              <Fld label="Todo dia (1-28)">
                 <Input type="number" min={1} max={28} value={f.due_day ?? 5} onChange={(e) => set({ due_day: Math.min(28, Math.max(1, Number(e.target.value) || 1)) })} className="rounded-xl" />
               </Fld>
             </div>

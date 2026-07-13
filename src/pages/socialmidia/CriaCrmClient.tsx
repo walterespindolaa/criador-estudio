@@ -31,7 +31,7 @@ import { MoneyInput } from "@/components/shared/MoneyInput";
 
 const CONSCIOUSNESS = ["Inconsciente do problema", "Consciente do problema", "Consciente da solução", "Consciente do produto", "Totalmente consciente"];
 const initial = (n?: string | null) => (n ? n.trim().charAt(0).toUpperCase() : "?");
-// Campos que o autosave persiste. persona vai como ARRAY (antes ia só a persona ativa — apagava as outras).
+// Campos que o autosave persiste. persona vai como ARRAY (antes ia só a persona ativa, apagava as outras).
 const payloadOf = (f: CrmClient) => ({
   name: f.name, instagram: f.instagram, email: f.email, phone: f.phone,
   segment: f.segment, monthly_value: f.monthly_value, contract_date: f.contract_date,
@@ -285,7 +285,7 @@ function ClientWorkspace() {
               <F label="CNPJ"><Input value={form.cnpj ?? ""} onChange={(e) => setForm({ ...form, cnpj: e.target.value })} placeholder="00.000.000/0001-00" className="rounded-xl" /></F>
               <F label="Responsável principal"><Input value={form.owner_name ?? ""} onChange={(e) => setForm({ ...form, owner_name: e.target.value })} className="rounded-xl" /></F>
               <F label="WhatsApp"><Input value={form.whatsapp ?? ""} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} placeholder="47 98853-7969" className="rounded-xl" /></F>
-              <F label="Endereço" className="sm:col-span-2"><Input value={form.address ?? ""} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Rua, nº, sala — bairro / cidade" className="rounded-xl" /></F>
+              <F label="Endereço" className="sm:col-span-2"><Input value={form.address ?? ""} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Rua, nº, sala, bairro / cidade" className="rounded-xl" /></F>
               <F label="Aniversário (lembrete)"><Input type="date" value={form.birthday ?? ""} onChange={(e) => setForm({ ...form, birthday: e.target.value || null })} className="rounded-xl" /></F>
             </div>
           </Card>
@@ -432,7 +432,7 @@ function ClientWorkspace() {
           <Card icon={<Target />} title={`Editando: ${pe.name || `Persona ${idx + 1}`}`}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <F label="Nome / apelido da persona"><Input value={pe.name ?? ""} onChange={(e) => setPe("name", e.target.value)} placeholder="Ex.: Ana, a empreendedora ocupada" className="rounded-xl" /></F>
-              <F label="Faixa etária"><Input value={pe.ageRange ?? ""} onChange={(e) => setPe("ageRange", e.target.value)} placeholder="Ex.: 28–40" className="rounded-xl" /></F>
+              <F label="Faixa etária"><Input value={pe.ageRange ?? ""} onChange={(e) => setPe("ageRange", e.target.value)} placeholder="Ex.: 28-40" className="rounded-xl" /></F>
             </div>
           </Card>
           <Card icon={<Brain />} title="Estado de consciência">
@@ -618,7 +618,7 @@ function TagPicker({ selected, onChange }: { selected: string[]; onChange: (tags
               className="w-full rounded-lg border border-dashed border-primary/40 bg-primary/[0.03] px-2 py-2 mb-2 text-left hover:bg-primary/[0.07] transition-colors">
               <p className="text-[12px] font-body font-semibold text-foreground">Usar as etiquetas padrão</p>
               <p className="text-[10.5px] font-body text-muted-foreground leading-tight">
-                {DEFAULT_CRM_TAGS.map((t) => t.name).join(", ")} — depois é só editar ou excluir.
+                {DEFAULT_CRM_TAGS.map((t) => t.name).join(", ")}, depois é só editar ou excluir.
               </p>
             </button>
           )}

@@ -123,7 +123,7 @@ async function runTrendRefresh(admin: any, lovableApiKey: string, corsHeaders: R
   const trendSys = `Você é um analista de tendências de conteúdo para criadores e social medias no Brasil. Hoje é ${hoje}. Gere um banco de tendências ATUAL e prático para Instagram, TikTok e Reels. Responda SOMENTE em JSON válido, sem markdown.`
   const trendUsr = `${webResearch ? `PESQUISA DA WEB (use como base, é atual):\n${webResearch}\n\n` : ''}Gere de 10 a 14 tendências variadas e acionáveis no formato:
 {"trends":[{"kind":"formato|tema|gancho|data","title":"curto (max 8 palavras)","description":"1 frase prática de como usar","niche":"geral"}]}
-OBRIGATÓRIO variar os tipos — inclua PELO MENOS 2 de cada: "formato" (formatos de vídeo/post em alta), "tema" (assuntos quentes), "gancho" (aberturas que retêm), "data" (datas comemorativas/sazonais próximas no Brasil). Seja específico e brasileiro. Nada genérico.`
+OBRIGATÓRIO variar os tipos, inclua PELO MENOS 2 de cada: "formato" (formatos de vídeo/post em alta), "tema" (assuntos quentes), "gancho" (aberturas que retêm), "data" (datas comemorativas/sazonais próximas no Brasil). Seja específico e brasileiro. Nada genérico.`
 
   const tr = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
@@ -190,7 +190,7 @@ async function runStoryTrendRefresh(admin: any, lovableApiKey: string, corsHeade
   }
 
   const sys = `Você é um analista de tendências de STORIES do Instagram no Brasil. Hoje é ${hoje}. Responda SOMENTE em JSON válido, sem markdown.`
-  const usr = `${webResearch ? `PESQUISA DA WEB (use como base, é atual):\n${webResearch}\n\n` : ''}Gere de 8 a 12 tendências de STORIES no formato JSON abaixo. Escreva pra um LEIGO conseguir executar SEM dúvida — proibido ser abstrato ou genérico.
+  const usr = `${webResearch ? `PESQUISA DA WEB (use como base, é atual):\n${webResearch}\n\n` : ''}Gere de 8 a 12 tendências de STORIES no formato JSON abaixo. Escreva pra um LEIGO conseguir executar SEM dúvida, proibido ser abstrato ou genérico.
 {"trends":[{"format":"enquete|caixinha|bastidor|tutorial|antes-depois|dica-rapida|contagem|quiz|trend","title":"nome curto e claro","description":"instrução direta de COMO fazer, em passo a passo curto","example":"um story PRONTO pra postar hoje, concreto: diga exatamente o que gravar, o TEXTO que vai na tela e a interação/sticker. Ex: 'Grave 10s mostrando sua mesa bagunçada e escreva na tela: \\'era isso ou desistir\\'. Coloque enquete: \\'você já pensou em desistir? Sim/Não\\''","why_trending":"por que engaja agora"}]}
 REGRAS OBRIGATÓRIAS:
 - "description" e "example" TÊM que ser concretos e específicos, como ensinando alguém que nunca postou um story.
@@ -497,7 +497,7 @@ REGRAS DE COMPORTAMENTO:
 - Adapte sugestões ao nicho e ao tom de voz definido
 - Considere o público-alvo em todas as sugestões
 - Use o contexto do Brandbook para personalizar ao máximo
-- Nunca escreva o conteúdo pela pessoa — sugira, direcione, inspire
+- Nunca escreva o conteúdo pela pessoa, sugira, direcione, inspire
 - Seja encorajador mas direto
 `
       }
@@ -534,22 +534,22 @@ REGRAS DE COMPORTAMENTO:
 
 FRAMEWORK DE PILARES DE CONTEÚDO:
 Cada sugestão deve cobrir um pilar diferente:
-1. EDUCACIONAL (40% do mix) — How-tos, dicas, frameworks, erros comuns
-2. BASTIDORES (20%) — Processo, rotina, dia-a-dia, vulnerabilidade
-3. ENGAJAMENTO (15%) — Perguntas, debates, polêmicas leves, "qual você prefere?"
-4. PROVA SOCIAL (15%) — Resultados, transformações, antes/depois, depoimentos
-5. PROMOCIONAL (10%) — Produtos, serviços, ofertas, CTAs diretos
+1. EDUCACIONAL (40% do mix). How-tos, dicas, frameworks, erros comuns
+2. BASTIDORES (20%). Processo, rotina, dia-a-dia, vulnerabilidade
+3. ENGAJAMENTO (15%). Perguntas, debates, polêmicas leves, "qual você prefere?"
+4. PROVA SOCIAL (15%). Resultados, transformações, antes/depois, depoimentos
+5. PROMOCIONAL (10%). Produtos, serviços, ofertas, CTAs diretos
 
 FÓRMULAS DE HOOK POR PLATAFORMA:
 Instagram/Reels: "Save isso pra depois", "Testei [X] por [tempo]. Resultado:", "POV: você acabou de descobrir [benefício]", "O que [público] erra sobre [tema]:", "Meu processo exato pra [resultado]:"
 TikTok: "Espera, você ainda faz [jeito antigo]?", "O hack de [tema] que ninguém te mostrou", "Se você é [público], assiste isso", "Story time: [setup intrigante]"
-YouTube: "Tutorial completo:", "[número] erros que estão travando seu [tema]", "Testei por [tempo] — vale a pena?"
+YouTube: "Tutorial completo:", "[número] erros que estão travando seu [tema]", "Testei por [tempo], vale a pena?"
 
 REGRAS:
-- Títulos são HOOKS — a primeira coisa que a pessoa lê/ouve. Máximo 70 caracteres.
+- Títulos são HOOKS, a primeira coisa que a pessoa lê/ouve. Máximo 70 caracteres.
 - Cada sugestão com ângulo editorial DIFERENTE: tutorial, bastidor, opinião, storytelling, lista, antes/depois, mito vs verdade, trend adaptada
 - Formatos: varie entre reels, carrossel, foto, video, story, shorts
-- Objetivos: engajamento, autoridade, venda, relacionamento — varie entre as 3
+- Objetivos: engajamento, autoridade, venda, relacionamento, varie entre as 3
 - Linguagem de rede social BR: informal, direta, como amigo falando
 - NUNCA use títulos genéricos como "Reflexão sobre X" ou "Dicas de X"
 
@@ -590,14 +590,14 @@ FRAMEWORKS DE COPY A USAR:
 
 REGRAS:
 - Formato: ${data.formato || 'post'} para ${data.plataforma || 'instagram'}
-- NUNCA comece com "Olá", "Ei", "Você sabia que" — comece com IMPACTO
+- NUNCA comece com "Olá", "Ei", "Você sabia que", comece com IMPACTO
 - Emojis: 2-3 no máximo, posicionados estrategicamente
 - CTA no final: pergunta aberta, convite à ação, ou chamada pro próximo passo
 - Se carrossel: legenda complementa os slides (não repete)
 - Se reels: curta e direta (gancho → valor → CTA)
 - Se story: ultra-curta, 1-2 linhas com CTA direto
 - SEM hashtags (sistema adiciona separadamente)
-- Linguagem natural brasileira — como pessoa real falando
+- Linguagem natural brasileira, como pessoa real falando
 - Use line breaks pra respirar (não um bloco de texto)
 
 TÁTICA DE ENGAJAMENTO:
@@ -618,18 +618,18 @@ CONTEÚDO/ROTEIRO: ${(data.conteudo || data.roteiro || 'não informado').slice(0
         operationPrompt = `Você é especialista em estratégia de hashtags para redes sociais brasileiras.
 
 FRAMEWORK DE HASHTAGS EM 3 CAMADAS:
-1. NICHO (7 hashtags) — Menos de 100K posts. Alta relevância, fácil de ranquear. Específicas pro sub-nicho do criador.
-2. MÉDIO (7 hashtags) — 100K-1M posts. Boa descoberta com competição moderada. Relevantes pro nicho geral.
-3. AMPLO (6 hashtags) — 1M+ posts. Alta descoberta, pouca chance de ranquear, mas amplia alcance.
+1. NICHO (7 hashtags). Menos de 100K posts. Alta relevância, fácil de ranquear. Específicas pro sub-nicho do criador.
+2. MÉDIO (7 hashtags), 100K-1M posts. Boa descoberta com competição moderada. Relevantes pro nicho geral.
+3. AMPLO (6 hashtags), 1M+ posts. Alta descoberta, pouca chance de ranquear, mas amplia alcance.
 
 REGRAS:
 - EXATAMENTE 20 hashtags, nessa ordem: 7 nicho + 7 médio + 6 amplo
 - Apenas em português BR (exceto termos universais: reels, tiktok, etc)
-- SEM # na frente — apenas a palavra/frase
+- SEM # na frente, apenas a palavra/frase
 - Considere a plataforma: Instagram usa 15-20 no caption/comentário, TikTok usa 3-5 curtas
 - Formato ${data.formato || 'post'}: reels/video usam hashtags de formato (#reelsbrasil), carrossel usa hashtags educativas
 - Misture hashtags de comunidade (#criadorbrasileiro) com hashtags de tema (#dicasdeconteudo)
-- NUNCA use hashtags genéricas demais (#love, #instagood) — são inúteis
+- NUNCA use hashtags genéricas demais (#love, #instagood), são inúteis
 - NUNCA invente hashtags que não existem
 
 RESPONDA APENAS com array JSON de strings, sem texto:
@@ -660,27 +660,27 @@ PERSONALIDADE:
 
 - Fale como uma amiga próxima que MANJA de social media
 
-- Informal mas natural — como conversa no WhatsApp
+- Informal mas natural, como conversa no WhatsApp
 
-- Prática e direta — entregue coisas PRONTAS PRA USAR, não teoria
+- Prática e direta, entregue coisas PRONTAS PRA USAR, não teoria
 
 - Emojis: 1-2 por resposta MAX
 
 - NUNCA se apresente de novo se já falou
 
-- Responda EXATAMENTE o que foi perguntado — não mude de assunto
+- Responda EXATAMENTE o que foi perguntado, não mude de assunto
 
 EXPERTISE:
 
-1. IDEIAS — Framework de 5 pilares: Educacional (40%), Bastidores (20%), Engajamento (15%), Prova Social (15%), Promocional (10%)
+1. IDEIAS. Framework de 5 pilares: Educacional (40%), Bastidores (20%), Engajamento (15%), Prova Social (15%), Promocional (10%)
 
-2. HOOKS — Fórmulas: curiosidade, contraste, identificação, storytelling, lista, polêmica
+2. HOOKS. Fórmulas: curiosidade, contraste, identificação, storytelling, lista, polêmica
 
-3. LEGENDAS — Frameworks: PAS, AIDA, Before-After-Bridge
+3. LEGENDAS. Frameworks: PAS, AIDA, Before-After-Bridge
 
-4. ESTRATÉGIA — Mix de formatos, frequência, horários (11h-13h e 18h-20h no BR), repurposing
+4. ESTRATÉGIA. Mix de formatos, frequência, horários (11h-13h e 18h-20h no BR), repurposing
 
-5. HASHTAGS — 3 camadas: nicho (<100K), médio (100K-1M), amplo (1M+)
+5. HASHTAGS, 3 camadas: nicho (<100K), médio (100K-1M), amplo (1M+)
 
 REGRAS:
 
@@ -731,7 +731,7 @@ REGRAS:
 
 - Dê 1 dica prática de execução (ex: "Filme vertical em 9:16", "Use texto grande no Slide 1")
 
-- NUNCA copie o conteúdo original — REESCREVA com ângulo diferente
+- NUNCA copie o conteúdo original. REESCREVA com ângulo diferente
 
 - Se for de reels→carrossel: transforme o roteiro em slides educativos
 
@@ -831,7 +831,7 @@ TOM: profissional, direto, específico. Português BR. Nada de conselho genéric
 
 ENTREGUE:
 - resumo: 2 a 3 frases de DIAGNÓSTICO (pode citar no máximo 1 número-chave pra embasar, mas o foco é a leitura, não repetir os cards).
-- recomendacoes: 2 a 3 ações ESPECÍFICAS e acionáveis ligadas ao diagnóstico e ao nicho — algo que o cliente não saberia só olhando os cards.
+- recomendacoes: 2 a 3 ações ESPECÍFICAS e acionáveis ligadas ao diagnóstico e ao nicho, algo que o cliente não saberia só olhando os cards.
 
 RESPONDA APENAS com JSON válido, sem texto antes ou depois:
 {"resumo":"string","recomendacoes":["r1","r2"]}`
@@ -853,7 +853,7 @@ ${data.persona ? `Persona/público-alvo: ${data.persona}` : ''}`
         maxTokens = 8192
         break
       case 'insights-reading':
-        operationPrompt = `Você é um analista de social media sênior. Recebe métricas REAIS de uma conta do Instagram e escreve uma leitura afiada e específica — nada de conselho genérico.
+        operationPrompt = `Você é um analista de social media sênior. Recebe métricas REAIS de uma conta do Instagram e escreve uma leitura afiada e específica, nada de conselho genérico.
 
 REGRAS:
 - Cite números, formatos e comparações dos dados recebidos.
@@ -886,7 +886,7 @@ OBJETIVO: ${data.qtd || 8} posts pro período (${data.periodo || 'semana'}), no 
 
 REGRAS:
 - Gancho forte na 1ª linha (sem clichê tipo "Olá"/"Você sabia").
-- Varie formatos entre reels, carrossel e foto — nada repetitivo. NÃO sugira "story"/"stories": eles têm um módulo próprio (Cria Stories). O cronograma é só pra posts de feed.
+- Varie formatos entre reels, carrossel e foto, nada repetitivo. NÃO sugira "story"/"stories": eles têm um módulo próprio (Cria Stories). O cronograma é só pra posts de feed.
 - Cada post traz uma legenda curta PRONTA pra usar.
 - "porque": 1 frase ligando à estratégia/dados/nicho (ex.: "Reels foi seu maior alcance").
 - Considere o FOCO informado.
@@ -912,7 +912,7 @@ ${data.brandContext ? `\nMARCA DO CRIADOR:\n${data.brandContext}` : ''}`
         const dias = Math.max(1, Math.min(15, Number(data.dias) || 7))
         operationPrompt = `Você é um estrategista de STORIES do Instagram no Brasil. Monte um plano de stories PRONTO pra gravar, no tom da marca do criador.
 
-OBJETIVO: ${perDia} stories por dia, por ${dias} dias. Cada story é acionável, específico ao nicho e à marca — nada genérico.
+OBJETIVO: ${perDia} stories por dia, por ${dias} dias. Cada story é acionável, específico ao nicho e à marca, nada genérico.
 
 REGRAS:
 - Varie os formatos ao longo do dia e da semana: enquete, caixinha de perguntas, bastidor, tutorial rápido, antes/depois, dica rápida, contagem regressiva, quiz, "assista até o fim".

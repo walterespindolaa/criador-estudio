@@ -207,7 +207,7 @@ async function handleWebhook(req: Request): Promise<Response> {
   // The email action type is in payload.data.action_type (e.g., "signup", "recovery")
   // payload.type is the hook event type ("auth")
   const emailType = payload.data.action_type
-  // Não logar o e-mail (PII/LGPD) — run_id basta pra rastrear.
+  // Não logar o e-mail (PII/LGPD), run_id basta pra rastrear.
   console.log('Received auth event', { emailType, run_id })
 
   const EmailTemplate = EMAIL_TEMPLATES[emailType]

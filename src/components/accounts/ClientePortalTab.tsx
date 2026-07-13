@@ -18,7 +18,7 @@ const PORTAL_BRAND_COLORS = ["#CE4A1D", "#2A4BDF", "#F27EB5", "#F2C21E", "#3E915
 // ABA PORTAL
 //
 // Isto era um popup. Espremia marca do cliente, cor do calendário, vínculo
-// com o CRM e as abas do link num retângulo com scroll — e ninguém entendia
+// com o CRM e as abas do link num retângulo com scroll, e ninguém entendia
 // o que era o quê. Virou aba, com espaço, dividida em duas metades óbvias:
 // o que o CLIENTE vê × o que só VOCÊ vê.
 // ═══════════════════════════════════════════════════════════════════════
@@ -108,7 +108,7 @@ export function ClientePortalTab({ client, onCopyLink, onOpenPortal, copying }: 
             <p className="text-[12px] font-body text-muted-foreground mt-0.5">Tudo aqui aparece na página que ele abre.</p>
           </header>
 
-          {/* Prévia — mostra o efeito antes de salvar. */}
+          {/* Prévia, mostra o efeito antes de salvar. */}
           <div className="rounded-xl border border-border overflow-hidden">
             <div className="p-4 flex items-center gap-3" style={{ background: `${brand}12` }}>
               <div className="w-11 h-11 rounded-xl bg-background border border-border overflow-hidden grid place-items-center shrink-0">
@@ -222,7 +222,7 @@ export function ClientePortalTab({ client, onCopyLink, onOpenPortal, copying }: 
         </section>
       </div>
 
-      {/* Barra de salvar — só aparece quando há mudança. */}
+      {/* Barra de salvar, só aparece quando há mudança. */}
       {dirty && (
         <div className="sticky bottom-4 z-10 rounded-2xl border border-primary/30 bg-card shadow-lg px-4 py-3 flex items-center gap-3">
           <p className="text-[13px] font-body text-foreground flex-1">Você tem alterações não salvas.</p>

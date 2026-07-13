@@ -46,7 +46,7 @@ export function ContractsTab() {
       <div className="flex items-start gap-2 rounded-xl border border-amber-300/40 bg-amber-50/60 px-4 py-3">
         <span className="text-amber-600 mt-0.5 shrink-0">⚖️</span>
         <p className="text-[12.5px] font-body text-amber-900/90 leading-relaxed">
-          <strong>Aviso:</strong> os contratos aqui são <strong>modelos de apoio</strong> pra agilizar seu dia a dia — não substituem orientação jurídica.
+          <strong>Aviso:</strong> os contratos aqui são <strong>modelos de apoio</strong> pra agilizar seu dia a dia, não substituem orientação jurídica.
           Cada caso pode exigir cláusulas diferentes. Recomendamos a revisão de um advogado antes de enviar ao cliente, pro seu devido respaldo legal.
         </p>
       </div>
@@ -133,7 +133,7 @@ function ContractDialog({ contract, clients, saving, onClose, onCreate, onUpdate
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-md rounded-2xl">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader><DialogTitle className="font-display">{contract ? "Editar contrato" : "Novo contrato"}</DialogTitle></DialogHeader>
         <div className="space-y-3 mt-2">
           <div className="space-y-1.5"><Label className="text-xs">Título *</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Contrato - Café Aroma" className="rounded-xl" /></div>

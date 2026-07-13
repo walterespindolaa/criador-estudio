@@ -92,7 +92,7 @@ export function ManagerCalendar() {
   const goNext = () => setCursor((c) => (view === "mes" ? addMonths(c, 1) : addDays(c, 7)));
   const headerLabel = view === "mes"
     ? format(cursor, "MMMM 'de' yyyy", { locale: ptBR })
-    : `${format(gridStart, "d MMM", { locale: ptBR })} – ${format(addDays(gridStart, 6), "d MMM", { locale: ptBR })}`;
+    : `${format(gridStart, "d MMM", { locale: ptBR })}, ${format(addDays(gridStart, 6), "d MMM", { locale: ptBR })}`;
 
   const onDrop = (date: string | null) => (e: React.DragEvent) => {
     e.preventDefault();

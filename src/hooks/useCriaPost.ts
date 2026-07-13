@@ -9,7 +9,7 @@ const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 const PORTAL_ORIGIN =
   ((import.meta.env as Record<string, string | undefined>).VITE_CRIAPOST_ORIGIN) ?? window.location.origin;
 
-// Abas extras do portal do cliente. O portal já sabe renderizar as duas —
+// Abas extras do portal do cliente. O portal já sabe renderizar as duas;
 // isto aqui é o interruptor que a gestora liga por cliente.
 export type PortalSettings = { show_calendar?: boolean; show_report?: boolean };
 

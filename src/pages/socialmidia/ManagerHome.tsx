@@ -1,6 +1,10 @@
 import { useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Camera, ArrowRight, Ticket, Settings, Users, Sparkles, Check, Gift } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { Camera, ArrowRight, Ticket, Settings, Users, Sparkles, Check, Gift, Wallet, Send, CalendarDays } from "lucide-react";
+import { OrganicBlobs } from "@/components/brand/OrganicBlobs";
+import { CRIA_HEX, type CriaColor } from "@/lib/moduleTheme";
+import { formatBRL } from "@/lib/money";
+import { useManagerApprovalOverview } from "@/hooks/useApprovals";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -15,6 +19,25 @@ import { ClientsGrid } from "@/components/accounts/ClientsGrid";
 import { useManagerOutlet } from "@/components/accounts/ManagerLayout";
 import { readLastClient } from "@/components/accounts/ClientSwitcher";
 import { useCrmClients } from "@/hooks/useCrm";
+
+// Card do painel. A cor é a do módulo pra onde ele leva: a pessoa aprende
+// a cor uma vez e depois navega no automático, sem ler.
+function Painel({ color, icon: Icon, valor, label, to, destaque }: {
+  color: CriaColor; icon: typeof Users; valor: string; label: string; to: string; destaque?: boolean;
+}) {
+  const hex = CRIA_HEX[color];
+  return (
+    <Link to={to}
+      className="group rounded-2xl border border-border bg-background/70 backdrop-blur-sm p-3.5 transition-all hover:-translate-y-0.5 hover:shadow-md"
+      style={{ borderLeftWidth: 3, borderLeftColor: hex, ...(destaque ? { background: `${hex}0f` } : {}) }}>
+      <span className="grid h-9 w-9 place-items-center rounded-xl mb-2" style={{ background: `${hex}1f`, color: hex }}>
+        <Icon className="h-4 w-4" />
+      </span>
+      <p className="text-xl font-display font-extrabold text-foreground leading-none tabular-nums">{valor}</p>
+      <p className="text-[11px] font-body text-muted-foreground mt-1 leading-tight">{label}</p>
+    </Link>
+  );
+}
 
 function initial(name?: string | null) { return name ? name.trim().charAt(0).toUpperCase() : "?"; }
 function greeting(name?: string | null) {
@@ -43,6 +66,14 @@ export default function ManagerHome() {
   const last = readLastClient();
   const lastClient = last ? crmClients.find((c) => c.id === last.id) ?? null : null;
 
+  // O resumo do dia. Antes a frase prometia um resumo e nada aparecia.
+  const ativos = crmClients.filter((c) => (c.status ?? "ativo") === "ativo").length;
+  const mrr = crmClients
+    .filter((c) => (c.status ?? "ativo") !== "inativo")
+    .reduce((s, c) => s + (Number(c.monthly_value) || 0), 0);
+  const { overview } = useManagerApprovalOverview();
+  const pendentes = overview.reduce((s, r) => s + (r.pendentes ?? 0), 0);
+
   const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; e.target.value = "";
     if (!file) return;
@@ -67,39 +98,63 @@ export default function ManagerHome() {
 
   return (
     <div>
-      <div className="flex items-center gap-4 mb-8">
-        <button type="button" onClick={() => fileInputRef.current?.click()}
-          className="relative w-[72px] h-[72px] rounded-3xl bg-gradient-to-br from-primary via-purple-600 to-pink-500 p-[3px] shrink-0 hover:scale-[1.02] transition-transform" aria-label="Trocar foto">
-          <div className="w-full h-full rounded-3xl bg-card overflow-hidden flex items-center justify-center">
-            {profile?.avatar_url ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" />
-              : <span className="text-3xl font-display font-extrabold text-primary">{initial(profile?.name)}</span>}
-          </div>
-          <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary border-2 border-background flex items-center justify-center shadow-sm"><Camera className="h-3.5 w-3.5 text-primary-foreground" /></div>
-        </button>
-        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarSelect} />
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">{greeting(profile?.name)}</h1>
-          <p className="text-sm text-muted-foreground font-body mt-1">Aqui está o resumo do seu dia.</p>
-        </div>
-        <button type="button" onClick={openSettings} aria-label="Configurações" className="md:hidden p-2.5 rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors shrink-0">
-          <Settings className="h-5 w-5" />
-        </button>
-      </div>
+      {/* ═══ PAINEL DE ABERTURA ═══
+          Era saudação + "Aqui está o resumo do seu dia" e nenhum resumo aparecia.
+          Agora o resumo existe de verdade: quanto você fatura, quantos clientes,
+          o que está travado esperando aprovação. E os atalhos na cor de cada módulo. */}
+      <section className="relative overflow-hidden rounded-3xl border border-border bg-card p-5 sm:p-7 mb-6">
+        <OrganicBlobs color="laranja" />
 
-      {lastClient && (
-        <button type="button" onClick={() => navigate(`/socialmidia/clientes/${lastClient.id}/visao-geral`)}
-          className="mb-8 flex w-full items-center gap-3 rounded-2xl border border-primary/25 bg-primary/5 px-4 py-3 text-left transition-colors hover:bg-primary/10 sm:w-auto sm:min-w-[320px] sm:max-w-md">
-          <span className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full font-display font-bold text-white" style={{ background: "linear-gradient(135deg,#0F6E56,#1d9e75)" }}>
-            {initial(lastClient.name)}
-            {lastClient.logo && <img src={lastClient.logo} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 h-full w-full object-cover" />}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[11px] font-body font-semibold uppercase tracking-wider text-muted-foreground">Continuar de onde parou</span>
-            <span className="block truncate text-sm font-display font-bold text-foreground">Continuar em {lastClient.name}</span>
-          </span>
-          <ArrowRight className="h-4 w-4 shrink-0 text-primary" />
-        </button>
-      )}
+        <div className="relative flex items-center gap-4 flex-wrap">
+          <button type="button" onClick={() => fileInputRef.current?.click()}
+            className="relative w-[72px] h-[72px] rounded-3xl bg-gradient-to-br from-primary via-purple-600 to-pink-500 p-[3px] shrink-0 hover:scale-[1.02] transition-transform" aria-label="Trocar foto">
+            <div className="w-full h-full rounded-3xl bg-card overflow-hidden flex items-center justify-center">
+              {profile?.avatar_url ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                : <span className="text-3xl font-display font-extrabold text-primary">{initial(profile?.name)}</span>}
+            </div>
+            <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary border-2 border-background flex items-center justify-center shadow-sm"><Camera className="h-3.5 w-3.5 text-primary-foreground" /></div>
+          </button>
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarSelect} />
+
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">{greeting(profile?.name)}</h1>
+            <p className="text-sm text-muted-foreground font-body mt-1">
+              {pendentes > 0
+                ? <><strong className="text-foreground">{pendentes}</strong> {pendentes === 1 ? "post esperando" : "posts esperando"} o cliente aprovar. O resto está em dia.</>
+                : ativos > 0
+                  ? <>Nada travado. Bom momento pra adiantar a semana.</>
+                  : <>Bora colocar a sua operação de pé.</>}
+            </p>
+          </div>
+
+          {lastClient && (
+            <button type="button" onClick={() => navigate(`/socialmidia/clientes/${lastClient.id}/visao-geral`)}
+              className="flex items-center gap-3 rounded-2xl border border-border bg-background/70 backdrop-blur-sm px-4 py-2.5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md shrink-0">
+              <span className="relative grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full font-display font-bold text-white text-sm" style={{ background: "linear-gradient(135deg,#0F6E56,#1d9e75)" }}>
+                {initial(lastClient.name)}
+                {lastClient.logo && <img src={lastClient.logo} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 h-full w-full object-cover" />}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[10px] font-body font-semibold uppercase tracking-wider text-muted-foreground">Continuar de onde parou</span>
+                <span className="block truncate text-[13px] font-display font-bold text-foreground max-w-[160px]">{lastClient.name}</span>
+              </span>
+              <ArrowRight className="h-4 w-4 shrink-0 text-primary" />
+            </button>
+          )}
+
+          <button type="button" onClick={openSettings} aria-label="Configurações" className="md:hidden p-2.5 rounded-xl border border-border text-muted-foreground hover:text-foreground shrink-0">
+            <Settings className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Os números que importam. Antes o dashboard não mostrava NENHUM. */}
+        <div className="relative grid grid-cols-2 lg:grid-cols-4 gap-2.5 mt-6">
+          <Painel color="rosa" icon={Users} valor={String(ativos)} label={ativos === 1 ? "cliente ativo" : "clientes ativos"} to="/socialmidia/clientes" />
+          <Painel color="azul" icon={Wallet} valor={formatBRL(mrr)} label="por mês na carteira" to="/socialmidia/criacaixa/empresa/visao" />
+          <Painel color="laranja" icon={Send} valor={String(pendentes)} label={pendentes === 1 ? "post esperando o cliente" : "posts esperando o cliente"} to="/socialmidia/criapost/aprovacoes" destaque={pendentes > 0} />
+          <Painel color="amarelo" icon={CalendarDays} valor="Agenda" label="a sua semana" to="/socialmidia/agenda" />
+        </div>
+      </section>
 
       <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">Seus módulos</h2>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">

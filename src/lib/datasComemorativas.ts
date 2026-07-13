@@ -1,6 +1,6 @@
 // Datas comemorativas por SEGMENTO + feriados/datas gerais.
 // A social media escolhe o(s) segmento(s) do cliente e marca as datas que quer trabalhar.
-// "data móvel" = muda todo ano (Páscoa, Dia das Mães...) — mostramos o rótulo, não calculamos.
+// "data móvel" = muda todo ano (Páscoa, Dia das Mães...), mostramos o rótulo, não calculamos.
 
 export type DataComemorativaItem = { label: string; day: string };
 export type DataComemorativaGroup = { month: string; items: DataComemorativaItem[] };
@@ -165,7 +165,7 @@ const FITNESS: DataComemorativaGroup[] = [
 const FINANCAS: DataComemorativaGroup[] = [
   { month: "Janeiro", items: [
     { label: "Planejamento financeiro do ano", day: "mês todo" },
-    { label: "IPVA / IPTU — organização", day: "mês todo" },
+    { label: "IPVA / IPTU, organização", day: "mês todo" },
   ] },
   { month: "Março", items: [
     { label: "Início do prazo do Imposto de Renda", day: "15/03" },
@@ -181,18 +181,18 @@ const FINANCAS: DataComemorativaGroup[] = [
   ] },
   { month: "Outubro", items: [{ label: "Dia Mundial da Poupança", day: "31/10" }] },
   { month: "Novembro", items: [
-    { label: "Black Friday — consumo consciente", day: "última sexta" },
-    { label: "13º salário — como usar", day: "mês todo" },
+    { label: "Black Friday, consumo consciente", day: "última sexta" },
+    { label: "13º salário, como usar", day: "mês todo" },
   ] },
   { month: "Dezembro", items: [{ label: "Balanço do ano / metas do próximo", day: "mês todo" }] },
 ];
 
 const BELEZA: DataComemorativaGroup[] = [
   { month: "Janeiro", items: [{ label: "Janeiro Branco (saúde mental)", day: "mês todo" }] },
-  { month: "Fevereiro", items: [{ label: "Pré-Carnaval — make e cabelo", day: "mês todo" }] },
+  { month: "Fevereiro", items: [{ label: "Pré-Carnaval, make e cabelo", day: "mês todo" }] },
   { month: "Março", items: [{ label: "Dia Internacional da Mulher", day: "08/03" }] },
   { month: "Abril", items: [{ label: "Dia Nacional do Cabeleireiro", day: "08/04" }] },
-  { month: "Maio", items: [{ label: "Dia das Mães — autocuidado", day: "2º domingo" }] },
+  { month: "Maio", items: [{ label: "Dia das Mães, autocuidado", day: "2º domingo" }] },
   { month: "Setembro", items: [{ label: "Dia Mundial da Beleza", day: "09/09" }] },
   { month: "Outubro", items: [{ label: "Outubro Rosa", day: "mês todo" }] },
   { month: "Novembro", items: [
@@ -210,7 +210,7 @@ const MODA: DataComemorativaGroup[] = [
   { month: "Junho", items: [{ label: "Dia dos Namorados", day: "12/06" }] },
   { month: "Julho", items: [{ label: "Dia Nacional do Estilista", day: "18/07" }] },
   { month: "Agosto", items: [{ label: "Dia dos Pais", day: "2º domingo" }] },
-  { month: "Setembro", items: [{ label: "Primavera — nova coleção", day: "22/09" }] },
+  { month: "Setembro", items: [{ label: "Primavera, nova coleção", day: "22/09" }] },
   { month: "Outubro", items: [{ label: "Dia das Crianças", day: "12/10" }] },
   { month: "Novembro", items: [{ label: "Black Friday", day: "última sexta" }] },
   { month: "Dezembro", items: [{ label: "Presentes de Natal / looks de festa", day: "mês todo" }] },
@@ -226,7 +226,7 @@ const PET: DataComemorativaGroup[] = [
 ];
 
 const EDUCACAO: DataComemorativaGroup[] = [
-  { month: "Janeiro", items: [{ label: "Volta às aulas — matrículas", day: "mês todo" }] },
+  { month: "Janeiro", items: [{ label: "Volta às aulas, matrículas", day: "mês todo" }] },
   { month: "Fevereiro", items: [{ label: "Início do ano letivo", day: "mês todo" }] },
   { month: "Abril", items: [{ label: "Dia do Livro", day: "23/04" }] },
   { month: "Agosto", items: [{ label: "Dia do Estudante", day: "11/08" }] },
@@ -254,7 +254,7 @@ const SAUDE: DataComemorativaGroup[] = [
 
 const IMOBILIARIO: DataComemorativaGroup[] = [
   { month: "Janeiro", items: [{ label: "IPTU / planejamento da casa nova", day: "mês todo" }] },
-  { month: "Maio", items: [{ label: "Dia das Mães — a casa dos sonhos", day: "2º domingo" }] },
+  { month: "Maio", items: [{ label: "Dia das Mães, a casa dos sonhos", day: "2º domingo" }] },
   { month: "Agosto", items: [{ label: "Dia do Corretor de Imóveis", day: "27/08" }] },
   { month: "Dezembro", items: [
     { label: "Dia do Arquiteto", day: "15/12" },

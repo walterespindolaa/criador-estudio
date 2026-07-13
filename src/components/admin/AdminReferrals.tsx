@@ -233,7 +233,7 @@ export function AdminReferrals() {
       <Dialog open={!!payoutTarget} onOpenChange={(o) => !o && !payoutMutation.isPending && setPayoutTarget(null)}>
         <DialogContent
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="sm:max-w-md rounded-2xl"
+          className="sm:max-w-lg"
         >
           <DialogHeader>
             <DialogTitle className="font-display">Marcar comissão como paga</DialogTitle>

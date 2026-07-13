@@ -4,7 +4,7 @@ import { useActiveAccount } from "@/contexts/AccountContext";
 import { toast } from "sonner";
 
 // Banco de ideias do cliente: junta o que vem da conta CRIA dele com o que a
-// social mídia guarda por conta própria. types.ts é travado — cast padrão do projeto.
+// social mídia guarda por conta própria. types.ts é travado, cast padrão do projeto.
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 const sbRpc = supabase.rpc.bind(supabase) as unknown as (

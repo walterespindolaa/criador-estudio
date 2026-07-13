@@ -132,7 +132,7 @@ serve(async (req) => {
       role: "manager", status: "active", accepted_at: new Date().toISOString(),
     }, { onConflict: "owner_id,member_email" });
 
-    // E-mail automático pro cliente (best-effort — não bloqueia a resposta).
+    // E-mail automático pro cliente (best-effort, não bloqueia a resposta).
     try { await sendClientInvite(svc, email, String(caller?.name ?? ""), inviteLink); }
     catch (e) { console.error("[manager-add-client] email enqueue failed:", e); }
 

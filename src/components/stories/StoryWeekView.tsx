@@ -63,7 +63,7 @@ export function StoryWeekView({
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-display font-bold text-lg text-foreground">{shortDate(days[0])} – {shortDate(days[6])}</h3>
+        <h3 className="font-display font-bold text-lg text-foreground">{shortDate(days[0])}, {shortDate(days[6])}</h3>
         <div className="flex items-center gap-1">
           <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => onShiftWeek(-7)} aria-label="Semana anterior">‹</Button>
           <Button variant="outline" size="sm" className="h-8 px-3 text-xs" onClick={onToday}>Hoje</Button>

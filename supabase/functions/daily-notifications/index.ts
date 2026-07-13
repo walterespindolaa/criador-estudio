@@ -82,7 +82,7 @@ serve(async (req) => {
       });
     }
 
-    // Insert em lote (1 chamada) — o trigger de push dispara por linha.
+    // Insert em lote (1 chamada), o trigger de push dispara por linha.
     if (rows.length) await svc.from("notifications").insert(rows);
 
     return json({ ok: true, created: rows.length });

@@ -19,7 +19,7 @@ const PORTAL_BRAND_COLORS = ["#CE4A1D", "#2A4BDF", "#F27EB5", "#F2C21E", "#3E915
 // Edição do cliente de aprovação por link: logo e cor do portal, vínculo com o
 // cadastro central, notas e cor do calendário. Extraído da antiga lista do Cria Post
 // pra viver dentro do hub do cliente (ClienteHub) sem duplicar telas.
-// Interruptor de aba do portal — mostra o que o cliente ganha ao ligar.
+// Interruptor de aba do portal, mostra o que o cliente ganha ao ligar.
 function PortalToggle({ on, onClick, title, desc }: { on: boolean; onClick: () => void; title: string; desc: string }) {
   return (
     <button type="button" onClick={onClick}

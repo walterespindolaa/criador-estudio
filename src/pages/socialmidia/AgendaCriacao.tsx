@@ -197,7 +197,7 @@ export default function AgendaCriacao() {
               <span className="text-xs font-body text-muted-foreground px-1">
                 {view === "mes"
                   ? weekStart.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
-                  : `${shortDate(days[0])} – ${shortDate(days[6])}`}
+                  : `${shortDate(days[0])}, ${shortDate(days[6])}`}
               </span>
               <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={() => setWeekStart(mondayOf(parseDateOnly(hojeBR())))}>Hoje</Button>
               <Button variant="outline" size="sm" className="h-8 w-8 p-0"
@@ -423,7 +423,7 @@ function AddCreationDialog({ open, day, initial, clients, teamNames, onClose, on
   const valid = !!crm || name.trim();
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-sm rounded-2xl">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader><DialogTitle className="font-display">{initial ? "Editar criação" : "Adicionar à criação"}</DialogTitle></DialogHeader>
         <div className="space-y-2">
           <ClientPicker clients={clients} crm={crm} name={name} onCrm={setCrm} onName={setName} />
@@ -488,7 +488,7 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-md rounded-2xl">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader><DialogTitle className="font-display">Adicionar no dia</DialogTitle></DialogHeader>
         <div className="space-y-3">
           {/* Tipo */}
@@ -570,7 +570,7 @@ function CaptureDialog({ open, initial, clients, teamNames, onClose, onSave, pen
   const valid = date && (!!crm || name.trim());
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-md rounded-2xl">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader><DialogTitle className="font-display">{initial ? "Editar captação" : "Nova captação"}</DialogTitle></DialogHeader>
         <div className="space-y-2">
           <ClientPicker clients={clients} crm={crm} name={name} onCrm={setCrm} onName={setName} />
@@ -630,7 +630,7 @@ function TaskDialog({ task, clients, onClose, onOpenCrm, onSave }: {
   const clientName = task?.crm_client_id ? clients.find((c) => c.id === task.crm_client_id)?.name : null;
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-md rounded-2xl">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader><DialogTitle className="font-display">Editar tarefa</DialogTitle></DialogHeader>
         <div className="space-y-2">
           {clientName && <p className="text-[11px] font-body text-muted-foreground">Cliente: <span className="font-semibold text-foreground">{clientName}</span></p>}

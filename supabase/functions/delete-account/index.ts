@@ -110,7 +110,7 @@ serve(async (req) => {
       }
     } catch (stripeErr) {
       // Não bloqueia o delete se o cancel falhar (ex: já cancelada).
-      // Mas LOGA pra você ver depois — pode ser que precise cancelar manual.
+      // Mas LOGA pra você ver depois, pode ser que precise cancelar manual.
       console.error("[delete-account] failed to cancel stripe subscription:", stripeErr);
     }
     // ────────────────────────────────────────────────────────────

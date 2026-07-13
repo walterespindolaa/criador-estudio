@@ -24,7 +24,7 @@ function emailHtml(opts: { managerName: string; actionLink: string }): string {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:32px 16px"><tr><td align="center">
     <table role="presentation" width="480" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;width:100%;background:#fff;border-radius:16px;padding:40px 32px;box-shadow:0 1px 3px rgba(0,0,0,0.05)"><tr><td>
       <h1 style="margin:0 0 16px 0;font-size:22px;font-weight:700;color:#111827;line-height:1.3">Você foi adicionado à equipe</h1>
-      <p style="margin:0 0 28px 0;font-size:15px;line-height:1.55;color:#4b5563">${opts.managerName} te convidou pra colaborar no cria. Clique pra acessar e definir sua senha — você já entra direto na conta da agência pra trabalhar.</p>
+      <p style="margin:0 0 28px 0;font-size:15px;line-height:1.55;color:#4b5563">${opts.managerName} te convidou pra colaborar no cria. Clique pra acessar e definir sua senha, você já entra direto na conta da agência pra trabalhar.</p>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px 0"><tr><td style="border-radius:12px;background:#8B5CF6">
         <a href="${opts.actionLink}" style="display:inline-block;padding:12px 24px;color:#fff;font-size:15px;font-weight:600;text-decoration:none;border-radius:12px">Acessar a equipe</a>
       </td></tr></table>

@@ -1,5 +1,5 @@
 // Dinheiro em pt-BR. Regra: o valor guardado é SEMPRE número em reais (ex.: 1197.5).
-// A digitação aceita "1197", "1.197", "1.197,50" e "1197,5" — nunca vira 1,2.
+// A digitação aceita "1197", "1.197", "1.197,50" e "1197,5", nunca vira 1,2.
 
 export function parseBRL(raw: string): number | null {
   if (raw == null) return null;
@@ -23,16 +23,16 @@ export function parseBRL(raw: string): number | null {
   return n;
 }
 
-// "1.197,00" (sem o R$, pro input). Vazio quando null — nunca mostra 0 preso.
+// "1.197,00" (sem o R$, pro input). Vazio quando null, nunca mostra 0 preso.
 export function formatBRLInput(v: number | null | undefined): string {
   if (v == null || !Number.isFinite(Number(v))) return "";
   return Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// "R$ 1.197,00" pra exibição. Vazio/zero vira "—" (não polui a tela com R$ 0).
+// "R$ 1.197,00" pra exibição. Vazio/zero vira "-" (não polui a tela com R$ 0).
 export function formatBRL(v: number | null | undefined, opts?: { zeroAsDash?: boolean }): string {
   const n = Number(v);
-  if (v == null || !Number.isFinite(n)) return "—";
-  if (n === 0 && (opts?.zeroAsDash ?? true)) return "—";
+  if (v == null || !Number.isFinite(n)) return "-";
+  if (n === 0 && (opts?.zeroAsDash ?? true)) return "-";
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }

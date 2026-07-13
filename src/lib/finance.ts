@@ -3,7 +3,7 @@
 
 import type { FinSettings } from "@/hooks/useModules";
 
-/** Formas de pagamento padronizadas — vira select, não texto livre.
+/** Formas de pagamento padronizadas, vira select, não texto livre.
  *  Padronizar é o que permite somar/filtrar e mostrar a forma na ficha do cliente. */
 export const PAYMENT_METHODS = [
   "Pix",
@@ -25,7 +25,7 @@ export type Regime = (typeof REGIMES)[number]["v"];
 
 export const isPctRegime = (r?: string) => r === "simples" || r === "presumido";
 
-/** Alíquota efetiva (%) que o usuário declarou. MEI não tem alíquota — tem DAS fixo. */
+/** Alíquota efetiva (%) que o usuário declarou. MEI não tem alíquota, tem DAS fixo. */
 export const taxRateOf = (fin: FinSettings | null | undefined): number =>
   isPctRegime(fin?.regime) ? Number(fin?.taxPct) || 0 : 0;
 
@@ -44,7 +44,7 @@ export function taxOfMonth(fin: FinSettings | null | undefined, receita: number)
  * Imposto atribuível a UM cliente.
  * - Regime %: direto, alíquota × receita daquele cliente.
  * - MEI: o DAS é fixo, então rateia proporcional à participação do cliente na receita.
- *   (É rateio de gestão, não apuração fiscal — deixamos isso explícito na tela.)
+ *   (É rateio de gestão, não apuração fiscal, deixamos isso explícito na tela.)
  */
 export function taxOfClient(
   fin: FinSettings | null | undefined,

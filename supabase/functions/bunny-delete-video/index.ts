@@ -49,9 +49,9 @@ Deno.serve(async (req) => {
       if (!membership) return json({ error: "Sem permissão para essa conta" }, 403);
     }
 
-    // A checagem de permissão da conta acima já é o guard suficiente — o guid é
+    // A checagem de permissão da conta acima já é o guard suficiente, o guid é
     // um UUID aleatório só conhecido por quem subiu. Buscamos a ref só pra log
-    // (vídeo pode estar pending, sem row ainda — orphan no Bunny senão).
+    // (vídeo pode estar pending, sem row ainda, orphan no Bunny senão).
     const { data: ref } = await supabase
       .from("external_media_refs")
       .select("id")

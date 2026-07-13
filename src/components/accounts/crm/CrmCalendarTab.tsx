@@ -32,7 +32,7 @@ export function CrmCalendarTab() {
     tasks.forEach((t) => { if (t.due_date) out.push({ id: "t-" + t.id, date: t.due_date, kind: "task", title: t.title, meta: KIND_LABEL.task, done: t.status === "concluida" }); });
     leads.forEach((l) => { if (l.next_interaction_date && l.stage !== "fechado" && l.stage !== "perdido") out.push({ id: "l-" + l.id, date: l.next_interaction_date, kind: "lead", title: l.name, meta: "Próxima ação" }); });
     clients.forEach((c) => { if (c.renewal_date && c.active) out.push({ id: "r-" + c.id, date: c.renewal_date, kind: "renewal", title: c.name, meta: "Renovação de contrato" }); });
-    // Aniversário do cliente: repete todo ano — projeta no ano que o calendário está mostrando.
+    // Aniversário do cliente: repete todo ano, projeta no ano que o calendário está mostrando.
     clients.forEach((c) => {
       if (!c.birthday || c.status === "inativo") return;
       const [, mm, dd] = c.birthday.split("-");

@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     const shortToken = shortJson.access_token as string;
 
     // 2) token curto -> token longo (60 dias)
-    // Se a troca falhar, ABORTA — não salvar o token curto (~1h) como se estivesse
+    // Se a troca falhar, ABORTA, não salvar o token curto (~1h) como se estivesse
     // "conectado", senão a conexão morre em 1h sem o usuário saber.
     const longRes = await fetch(
       `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${appSecret}&access_token=${shortToken}`,

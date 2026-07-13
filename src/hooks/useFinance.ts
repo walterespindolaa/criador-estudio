@@ -160,7 +160,7 @@ export function useDeleteFinByGroup() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// MENSALIDADES — instância mensal (modelo absorvido do Atlas).
+// MENSALIDADES, instância mensal (modelo absorvido do Atlas).
 // Cada mensalidade tem vida própria no mês: nasce PENDENTE, e você pode
 //   • confirmar  → cria o lançamento (fin_record) e guarda o vínculo
 //   • desfazer   → apaga o lançamento e volta a pendente   ← faltava isso
@@ -240,7 +240,7 @@ export function useConfirmMonthly() {
       if (!agencyOwnerId) throw new Error("Sem sessão");
       const { data: rec, error: e1 } = await sbFrom("fin_records").insert({
         manager_id: agencyOwnerId, crm_client_id: m.crm_client_id, context: "pj",
-        type: "entrada", description: `Mensalidade — ${clientName}`, category: "Mensalidade",
+        type: "entrada", description: `Mensalidade, ${clientName}`, category: "Mensalidade",
         amount: m.amount, status: "pago", date: m.due_date, recurring: true,
       } as never).select("id").single();
       if (e1) throw e1;

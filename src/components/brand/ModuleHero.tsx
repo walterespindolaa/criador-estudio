@@ -14,7 +14,7 @@ export type SubTab = { to: string; label: string; end?: boolean };
 // pro Post, fica laranja. Antes era tudo o mesmo bege e o único sinal de
 // contexto era o título escrito.
 //
-// Recebe as abas do módulo (submenu com rota real) — cada seção vira uma
+// Recebe as abas do módulo (submenu com rota real), cada seção vira uma
 // URL de verdade, compartilhável e com botão voltar funcionando.
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -47,7 +47,7 @@ export function ModuleHero({
 
         {children && <div className="mt-4">{children}</div>}
 
-        {/* Submenu — rota real por seção. Sublinhado na cor do módulo. */}
+        {/* Submenu, rota real por seção. Sublinhado na cor do módulo. */}
         {tabs && tabs.length > 0 && (
           <nav className="mt-4 -mx-1 flex gap-1 overflow-x-auto scrollbar-none">
             {tabs.map((t) => (

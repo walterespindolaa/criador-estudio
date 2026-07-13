@@ -137,7 +137,7 @@ export function useUpdateCrmClient() {
       if (c?.prev && c.id) qc.setQueryData(["crm-client", c.id], c.prev);
       toast.error((e as Error)?.message ?? "Erro ao atualizar.");
     },
-    // Cache já está certo — revalida a lista em background, sem travar a UI.
+    // Cache já está certo, revalida a lista em background, sem travar a UI.
     onSettled: () => qc.invalidateQueries({ queryKey: ["crm-clients"], refetchType: "none" }),
   });
 }
@@ -324,7 +324,7 @@ export const DEFAULT_CRM_TAGS: { name: string; color: TagColor }[] = [
   { name: "Indicação", color: "slate" },
 ];
 
-// Cria só as que ainda não existem (idempotente — clicar duas vezes não duplica).
+// Cria só as que ainda não existem (idempotente, clicar duas vezes não duplica).
 export function useSeedDefaultCrmTags() {
   const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
@@ -398,7 +398,7 @@ export function useUpdateCrmLead() {
       const { error } = await sbFrom("crm_leads").update(updates as never).eq("id", id);
       if (error) throw error;
     },
-    // Update OTIMISTA — é o que deixa o kanban fluido. Sem isso o card voltava
+    // Update OTIMISTA, é o que deixa o kanban fluido. Sem isso o card voltava
     // pra coluna original e só pulava depois do refetch (~2s de delay).
     onMutate: async ({ id, ...updates }: { id: string } & Partial<CrmLeadInput>) => {
       await qc.cancelQueries({ queryKey: ["crm-leads"] });

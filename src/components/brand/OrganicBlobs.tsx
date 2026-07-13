@@ -2,7 +2,7 @@ import { CRIA_HEX, type CriaColor } from "@/lib/moduleTheme";
 import { cn } from "@/lib/utils";
 
 // ═══════════════════════════════════════════════════════════════════════
-// FORMAS ORGÂNICAS — as manchas coloridas da landing page, dentro do sistema.
+// FORMAS ORGÂNICAS, as manchas coloridas da landing page, dentro do sistema.
 //
 // A LP faz isso com border-radius assimétrico (ex.: 38% 62% 55% 45% / 48% 42% 58% 52%),
 // não com SVG. Mesma técnica aqui: leve, escala em qualquer tamanho, zero request.

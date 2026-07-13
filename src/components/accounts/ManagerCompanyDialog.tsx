@@ -38,7 +38,7 @@ export function ManagerCompanyDialog({ open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[88vh] overflow-y-auto rounded-2xl">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="font-display">Dados da minha empresa</DialogTitle>
           <DialogDescription className="font-body text-sm">Usados como CONTRATADA nos contratos que você gerar. Preenche uma vez e reusa.</DialogDescription>

@@ -22,7 +22,7 @@ export function PortalRelatorio({ posts, client, brand, periodStart, periodEnd }
   }, [posts]);
 
   const fmt = (d: string | null) =>
-    d ? new Date(d + "T00:00:00").toLocaleDateString("pt-BR") : "—";
+    d ? new Date(d + "T00:00:00").toLocaleDateString("pt-BR") : "-";
 
   return (
     <div className="space-y-6">
@@ -39,7 +39,7 @@ export function PortalRelatorio({ posts, client, brand, periodStart, periodEnd }
               Relatório do período
             </h2>
             <p className="text-xs font-body text-muted-foreground">
-              {fmt(periodStart)} — {fmt(periodEnd)}
+              {fmt(periodStart)}, {fmt(periodEnd)}
             </p>
           </div>
         </div>
