@@ -100,6 +100,17 @@ export function useModules() {
   return { modules: data ?? [], isLoading };
 }
 
+/** Tem este módulo pago e ativo? Use quando a decisão é "mostro ou vendo". */
+export function useHasModule(code: string) {
+  const { modules, isLoading } = useModules();
+  const mod = modules.find((m) => m.code === code);
+  return {
+    allowed: !!mod && (mod.status === "active" || mod.status === "past_due"),
+    module: mod ?? null,
+    isLoading,
+  };
+}
+
 export function useManagerProfile() {
   const { user } = useAuth();
   const queryClient = useQueryClient();

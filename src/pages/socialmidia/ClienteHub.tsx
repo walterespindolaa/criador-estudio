@@ -1,11 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, ExternalLink, Link2, Loader2, Plus, Settings2, Wallet, Send } from "lucide-react";
+import { ArrowLeft, ExternalLink, Link2, Loader2, Plus, Settings2, Wallet, Send, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useCrmClient, useUpdateCrmClient } from "@/hooks/useCrm";
 import { useExternalClients } from "@/hooks/useCriaPost";
-import { useFinRecords, useCreateFinRecord, type FinType } from "@/hooks/useFinance";
+import {
+  useFinRecords, useCreateFinRecord, useUpdateFinRecord,
+  useFinRecurring, useCreateFinRecurring, type FinType,
+} from "@/hooks/useFinance";
+import { ClienteIdeias } from "@/components/accounts/ClienteIdeias";
+import { ClientePortalTab } from "@/components/accounts/ClientePortalTab";
+import { CaixaUpsell } from "@/components/accounts/CaixaUpsell";
+import { useHasModule } from "@/hooks/useModules";
 import { ClientDetail } from "@/components/accounts/CriaPostBoard";
 import { ExternalClientDialog } from "@/components/accounts/ExternalClientDialog";
 import { saveLastClient } from "@/components/accounts/ClientSwitcher";
@@ -19,27 +26,37 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
+// ── ABAS DO CLIENTE ──
+// A aba "Criativo" misturava três coisas diferentes: o Brandbook do cliente,
+// as ideias e a pesquisa do Apify. Virou uma sopa. Agora cada coisa tem o seu lugar:
+//   Brandbook → quem é a marca         (leitura, vem da conta CRIA dele)
+//   Ideias    → o que postar           (dele + do HUB + suas)
+//   Pesquisa  → analisar concorrente   (Apify, só quem tem o HUB liberado)
+//   Portal    → o que o cliente vê     (era o popup "Personalizar", espremido)
 const TABS = [
   { key: "visao-geral", label: "Visão geral" },
-  { key: "criativo", label: "Criativo", gated: true },
+  { key: "brandbook", label: "Brandbook" },
+  { key: "ideias", label: "Ideias" },
   { key: "posts", label: "Posts" },
   { key: "cronograma", label: "Cronograma" },
   { key: "relatorio", label: "Relatório" },
   { key: "instagram", label: "Instagram" },
   { key: "financeiro", label: "Financeiro" },
+  { key: "pesquisa", label: "Pesquisa", hub: true },   // só com HUB CRIA liberado
+  { key: "portal", label: "Portal" },
 ];
 const OPERACIONAIS = new Set(["posts", "cronograma", "relatorio", "instagram"]);
-const WORKFLOW = new Set(["criativo", "posts", "cronograma", "relatorio"]);
+const WORKFLOW = new Set(["ideias", "posts", "cronograma", "relatorio"]);
 const FLOW_STEPS = [
-  { key: "criativo", n: 1, label: "Pesquisa & ideias", gated: true },
+  { key: "ideias", n: 1, label: "Ideias" },
   { key: "posts", n: 2, label: "Montar & aprovar" },
   { key: "cronograma", n: 3, label: "Calendário do mês" },
   { key: "relatorio", n: 4, label: "Resultado" },
 ];
 const FLOW_EXPLAIN: Record<string, string> = {
-  criativo: "De onde vem: você analisa concorrentes (HUB/Apify) e recebe ideias prontas. Pra onde vai: marque as boas como “Usar” e clique em “Criar posts”, elas viram posts na aba Posts.",
-  posts: "De onde vem: as ideias que você aprovou no Criativo (ou posts criados na mão). Aqui você monta cada post e manda o cliente aprovar por link: Aguardando cliente → Ajuste solicitado → Aprovado.",
-  cronograma: "É o calendário do mês pro cliente: datas comemorativas + link público com a visão geral do que vai sair. Serve pra alinhar o plano, a aprovação post a post acontece na aba Posts.",
+  ideias: "O banco de ideias deste cliente: o que ele mesmo anotou, o que ele salvou, o que a IA tirou dos concorrentes e o que você guardou. Marque as boas como “Usar” e clique em “Criar posts”.",
+  posts: "De onde vem: as ideias que você aprovou (ou posts criados na mão). Aqui você monta cada post e manda o cliente aprovar por link: Aguardando cliente → Ajuste solicitado → Aprovado.",
+  cronograma: "É o calendário do mês pro cliente: datas comemorativas + link público com a visão geral do que vai sair. A aprovação post a post acontece na aba Posts.",
   relatorio: "O relatório white-label com o resultado do que foi publicado no mês.",
 };
 const initial = (n?: string | null) => (n ? n.trim().charAt(0).toUpperCase() : "?");
@@ -54,12 +71,13 @@ export default function ClienteHub() {
   const { id, tab } = useParams<{ id: string; tab?: string }>();
   const navigate = useNavigate();
   const { allowed: hasHubCria } = useHasHubCria();
+  const { allowed: hasCaixa } = useHasModule("financeiro");
   const { data: client, isLoading } = useCrmClient(id);
-  // Aba Criativo abre também sem HUB CRIA quando o cliente usa o Cria: é onde
-  // a gestora lê o Brandbook dele (modo leitura, sincronizado da conta do cliente).
+  // A aba Pesquisa (Apify) só aparece pra quem tem o HUB liberado — se não tem,
+  // a aba nem existe (não adianta mostrar porta trancada).
   const visibleTabs = useMemo(
-    () => TABS.filter((t) => !("gated" in t && t.gated) || hasHubCria || !!client?.cria_owner_id),
-    [hasHubCria, client?.cria_owner_id],
+    () => TABS.filter((t) => !("hub" in t && t.hub) || hasHubCria),
+    [hasHubCria],
   );
   const activeTab = tab && visibleTabs.some((t) => t.key === tab) ? tab : "visao-geral";
   // Foto da conta CRIA do cliente sempre atual (não depende do sync manual do CRM).
@@ -219,16 +237,51 @@ export default function ClienteHub() {
         )
       )}
 
-      {/* Criativo: brandbook do CRIA do cliente (leitura) + análises do HUB CRIA.
-          Cliente SEM conta CRIA continua vendo só o fluxo atual do HUB. */}
-      {activeTab === "criativo" && (
-        <div className="space-y-6">
-          {client.cria_owner_id && <ClienteBrandbookCria criaOwnerId={client.cria_owner_id} />}
-          {hasHubCria && <CriativoTab clientId={id!} clientName={client.name} />}
-        </div>
+      {/* BRANDBOOK — quem é a marca. Leitura, vem da conta CRIA do cliente. */}
+      {activeTab === "brandbook" && (
+        client.cria_owner_id ? (
+          <ClienteBrandbookCria criaOwnerId={client.cria_owner_id} />
+        ) : (
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-dashed border-border p-10 text-center">
+              <p className="text-sm font-body text-foreground font-medium">Este cliente não usa o Cria</p>
+              <p className="text-xs text-muted-foreground font-body mt-1 mb-4 max-w-md mx-auto">
+                O Brandbook (paleta, tom de voz, personas, moodboard) é preenchido pelo cliente na conta dele.
+                Sem conta Cria, preencha na mão pela ficha completa do CRM.
+              </p>
+              <Button variant="outline" asChild>
+                <Link to={`/socialmidia/criacrm/${id}`}><ExternalLink className="h-4 w-4 mr-1.5" /> Preencher no CRM</Link>
+              </Button>
+            </div>
+          </div>
+        )
       )}
 
-      {activeTab === "financeiro" && <FinanceTab clientId={id!} clientName={client.name} monthlyValue={client.monthly_value} />}
+      {/* IDEIAS — o banco de ideias do cliente (4 origens). */}
+      {activeTab === "ideias" && <ClienteIdeias clientId={id!} criaOwnerId={client.cria_owner_id} />}
+
+      {/* PESQUISA — Apify. A aba só existe pra quem tem o HUB liberado. */}
+      {activeTab === "pesquisa" && hasHubCria && <CriativoTab clientId={id!} clientName={client.name} />}
+
+      {/* PORTAL — o que era o popup "Personalizar", agora com espaço pra respirar. */}
+      {activeTab === "portal" && (
+        extClient ? (
+          <ClientePortalTab client={extClient} onCopyLink={doCopyLink} onOpenPortal={openPortal} copying={copying} />
+        ) : (
+          <div className="rounded-2xl border border-dashed border-border p-10 text-center">
+            <p className="text-sm font-body text-foreground font-medium">Cria Post não está ativo pra este cliente</p>
+            <p className="text-xs text-muted-foreground font-body mt-1 mb-4">Ative pra gerar o link de aprovação e personalizar o que ele vê.</p>
+            <Button onClick={enableCriaPost} disabled={createExt.isPending}>Ativar agora</Button>
+          </div>
+        )
+      )}
+
+      {/* FINANCEIRO — exclusivo de quem assina o Cria Caixa. */}
+      {activeTab === "financeiro" && (
+        hasCaixa
+          ? <FinanceTab clientId={id!} clientName={client.name} monthlyValue={client.monthly_value} />
+          : <CaixaUpsell clientName={client.name} />
+      )}
     </motion.div>
   );
 }
@@ -333,18 +386,37 @@ function FinanceTab({ clientId, clientName, monthlyValue }: { clientId: string; 
   const [desc, setDesc] = useState("");
   const [cat, setCat] = useState<string>("Design");
   const [valor, setValor] = useState<number | null>(null);
+  const [repetir, setRepetir] = useState(false);   // vira entrada/saída fixa deste cliente
 
   const cats = type === "despesa" ? CUSTO_CATS : ENTRADA_CATS;
 
+  const upd = useUpdateFinRecord();
+  const createRecurring = useCreateFinRecurring();
+  const { data: allRecurring = [] } = useFinRecurring();
+  const fixos = useMemo(
+    () => allRecurring.filter((t) => t.crm_client_id === clientId && (t.context ?? "pj") === "pj"),
+    [allRecurring, clientId],
+  );
+
   const add = async () => {
     if (!desc.trim() || !valor || valor <= 0) { toast.error("Preencha descrição e valor."); return; }
+    const hoje = new Date();
     await create.mutateAsync({
       crm_client_id: clientId, context: "pj", type, description: desc.trim(),
       category: cat, amount: valor, status: type === "despesa" ? "pago" : "pendente",
-      date: new Date().toISOString().slice(0, 10),
+      date: hoje.toISOString().slice(0, 10),
     });
-    setDesc(""); setValor(null);
-    toast.success("Lançado. Já aparece no Cria Caixa.");
+    if (repetir) {
+      await createRecurring.mutateAsync({
+        context: "pj", type, description: desc.trim(), category: cat,
+        amount: valor, due_day: Math.min(28, hoje.getDate()), crm_client_id: clientId,
+        active: true, start_date: hoje.toISOString().slice(0, 10),
+      });
+      toast.success("Vai repetir todo mês. Aparece previsto no Cria Caixa.");
+    } else {
+      toast.success("Lançado. Já aparece no Cria Caixa.");
+    }
+    setDesc(""); setValor(null); setRepetir(false);
   };
 
   return (
@@ -416,10 +488,52 @@ function FinanceTab({ clientId, clientName, monthlyValue }: { clientId: string; 
           </select>
           <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Descrição (ex.: 4 artes do mês)" className="rounded-lg flex-1" />
           <div className="w-full sm:w-36 shrink-0"><MoneyInput value={valor} onChange={setValor} /></div>
-          <Button onClick={add} disabled={create.isPending} className="shrink-0">{create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}</Button>
+          <Button onClick={add} disabled={create.isPending || createRecurring.isPending} className="shrink-0">
+            {create.isPending || createRecurring.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          </Button>
         </div>
+
+        {/* Repetir todo mês — sem precisar sair pro Cria Caixa. */}
+        <button type="button" onClick={() => setRepetir((r) => !r)}
+          className={`mt-2 w-full flex items-start gap-2.5 rounded-xl border px-3 py-2 text-left transition-colors ${
+            repetir ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}>
+          <span className={`mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded border ${
+            repetir ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground/40"}`}>
+            {repetir && <Check className="h-3 w-3" strokeWidth={3} />}
+          </span>
+          <span className="min-w-0">
+            <span className="block text-[12.5px] font-body font-semibold text-foreground">Repetir todo mês</span>
+            <span className="block text-[11px] font-body text-muted-foreground leading-tight">
+              Vira {type === "entrada" ? "uma entrada fixa" : "um custo fixo"} deste cliente. Aparece previsto no calendário do Caixa.
+            </span>
+          </span>
+        </button>
+
         <p className="text-[11px] text-muted-foreground font-body mt-2 flex items-center gap-1"><Wallet className="h-3 w-3" /> Vinculado a este cliente e unificado no Cria Caixa.</p>
       </div>
+
+      {/* ENTRADAS E SAÍDAS FIXAS deste cliente */}
+      {fixos.length > 0 && (
+        <div className="bg-card border border-border rounded-2xl p-4">
+          <p className="text-sm font-display font-bold text-foreground mb-1">Fixos deste cliente</p>
+          <p className="text-[11.5px] font-body text-muted-foreground mb-3">Se repetem todo mês. Gerencie no Cria Caixa → Recorrentes.</p>
+          <div className="space-y-1.5">
+            {fixos.map((t) => (
+              <div key={t.id} className={`flex items-center gap-3 rounded-xl border border-border px-3 py-2 ${!t.active ? "opacity-55" : ""}`}>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-body font-medium text-foreground truncate">{t.description}</p>
+                  <p className="text-[11px] font-body text-muted-foreground">
+                    todo dia {t.due_day}{t.category ? ` · ${t.category}` : ""}{!t.active ? " · pausado" : ""}
+                  </p>
+                </div>
+                <span className={`text-sm font-display font-bold shrink-0 ${t.type === "entrada" ? "text-green-600" : "text-red-500"}`}>
+                  {t.type === "entrada" ? "+" : "−"}{formatBRL(Number(t.amount))}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="h-16 rounded-2xl bg-muted animate-pulse" />
@@ -427,19 +541,31 @@ function FinanceTab({ clientId, clientName, monthlyValue }: { clientId: string; 
         <p className="text-sm text-muted-foreground font-body text-center py-8">Nenhum lançamento {range === "mes" ? "neste mês" : "deste cliente ainda"}.</p>
       ) : (
         <div className="space-y-2">
-          {rows.map((r) => (
-            <div key={r.id} className="flex items-center justify-between gap-3 bg-card border border-border rounded-xl px-4 py-3">
-              <div className="min-w-0">
-                <p className="text-sm font-body text-foreground truncate">{r.description}</p>
-                <p className="text-[11px] text-muted-foreground font-body truncate">
-                  {new Date(r.date + "T00:00:00").toLocaleDateString("pt-BR")} · {r.status}{r.category ? ` · ${r.category}` : ""}
-                </p>
+          {rows.map((r) => {
+            const pago = r.status === "pago";
+            return (
+              <div key={r.id} className="flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3">
+                {/* Check de pago — muda aqui, muda no Cria Caixa (é o mesmo lançamento). */}
+                <button
+                  onClick={() => upd.mutate({ id: r.id, status: pago ? "pendente" : "pago" })}
+                  title={pago ? "Marcar como pendente" : "Marcar como pago"}
+                  aria-label={pago ? "Marcar como pendente" : "Marcar como pago"}
+                  className={`grid h-6 w-6 shrink-0 place-items-center rounded-lg border transition-colors ${
+                    pago ? "bg-green-600 border-green-600 text-white" : "border-border text-muted-foreground hover:border-green-600 hover:text-green-600"}`}>
+                  <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                </button>
+                <div className="min-w-0 flex-1">
+                  <p className={`text-sm font-body text-foreground truncate ${pago ? "" : "font-medium"}`}>{r.description}</p>
+                  <p className="text-[11px] text-muted-foreground font-body truncate">
+                    {new Date(r.date + "T00:00:00").toLocaleDateString("pt-BR")} · {pago ? "pago" : r.status}{r.category ? ` · ${r.category}` : ""}
+                  </p>
+                </div>
+                <span className={`text-sm font-display font-bold shrink-0 ${r.type === "entrada" ? "text-green-600" : "text-red-500"}`}>
+                  {r.type === "entrada" ? "+" : "−"}{formatBRL(Number(r.amount))}
+                </span>
               </div>
-              <span className={`text-sm font-display font-bold shrink-0 ${r.type === "entrada" ? "text-green-600" : "text-red-500"}`}>
-                {r.type === "entrada" ? "+" : "−"}{formatBRL(Number(r.amount))}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

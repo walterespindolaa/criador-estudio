@@ -147,12 +147,19 @@ function summarize(items: any[], type: string): { summary: Record<string, unknow
       avg_comments: posts.length ? Math.round(totalComments / posts.length) : 0,
       formats: fmt,
       top: top.map((x) => ({
-        caption: (x.caption || "").slice(0, 140),
+        // Legenda inteira (era cortada em 140 e virava frase pela metade na tela).
+        caption: (x.caption || "").slice(0, 600),
         likes: x.likesCount, comments: x.commentsCount,
         views: x.videoPlayCount ?? x.videoViewCount ?? null,
-        format: x.productType || x.type, url: x.url,
+        format: x.productType || x.type,
+        // O link do post: sem ele a pessoa lia o dado e não conseguia VER o post.
+        url: x.url || (x.shortCode ? `https://www.instagram.com/p/${x.shortCode}/` : null),
+        // A capa. É o que faz a tela deixar de ser uma lista de texto morta.
+        thumbnail: x.displayUrl || x.thumbnailUrl || x.images?.[0] || null,
+        posted_at: x.timestamp || null,
         music: x.musicInfo?.song_name ?? null,
-        transcript: type === "transcription" ? transcriptOf(x).slice(0, 300) : undefined,
+        // Transcrição completa (800), não 300 — o roteiro é o produto aqui.
+        transcript: type === "transcription" ? transcriptOf(x) : undefined,
       })),
     },
     top,

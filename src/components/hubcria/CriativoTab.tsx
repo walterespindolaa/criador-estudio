@@ -368,6 +368,83 @@ function IdeaBtn({ active, onClick, icon, children }: { active: boolean; onClick
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// TOP POST — antes era uma linha de texto cortada, sem capa e sem link.
+// A pessoa lia "média de curtidas: 0" e fechava a tela. O dado do post
+// (capa, link, transcrição) já vinha do Apify — a tela é que jogava fora.
+// ═══════════════════════════════════════════════════════════════════════
+function TopPostCard({ p, rank }: { p: any; rank: number }) {
+  const [aberto, setAberto] = useState(false);
+  const legenda = String(p.caption || "");
+  const transcricao = String(p.transcript || "");
+  const longo = legenda.length > 160 || transcricao.length > 200;
+
+  return (
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="flex gap-3 p-3">
+        {/* Capa. Clicou, abre o post no Instagram. */}
+        {p.url ? (
+          <a href={p.url} target="_blank" rel="noopener noreferrer"
+            className="group relative h-24 w-24 shrink-0 rounded-lg overflow-hidden border border-border bg-muted grid place-items-center">
+            {p.thumbnail
+              ? <img src={p.thumbnail} alt="" loading="lazy" className="h-full w-full object-cover group-hover:scale-105 transition-transform" />
+              : <Instagram className="h-5 w-5 text-muted-foreground/40" />}
+            <span className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/30 transition-colors grid place-items-center">
+              <ExternalLink className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+            </span>
+          </a>
+        ) : (
+          <div className="h-24 w-24 shrink-0 rounded-lg border border-border bg-muted grid place-items-center">
+            {p.thumbnail
+              ? <img src={p.thumbnail} alt="" loading="lazy" className="h-full w-full object-cover rounded-lg" />
+              : <Instagram className="h-5 w-5 text-muted-foreground/40" />}
+          </div>
+        )}
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap mb-1">
+            <span className="text-[10px] font-body font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary shrink-0">#{rank}</span>
+            {p.format && <span className="text-[10px] font-body px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground capitalize shrink-0">{p.format}</span>}
+            <span className="flex items-center gap-0.5 text-[11px] font-body text-muted-foreground"><Heart className="h-3 w-3" />{fmtNum(p.likes)}</span>
+            <span className="flex items-center gap-0.5 text-[11px] font-body text-muted-foreground"><MessageCircle className="h-3 w-3" />{fmtNum(p.comments)}</span>
+            {p.views != null && <span className="flex items-center gap-0.5 text-[11px] font-body text-muted-foreground"><Play className="h-3 w-3" />{fmtNum(p.views)}</span>}
+          </div>
+
+          <p className={cn("text-[12.5px] font-body text-foreground leading-snug whitespace-pre-wrap", !aberto && "line-clamp-3")}>
+            {legenda || "(sem legenda)"}
+          </p>
+
+          {p.url && (
+            <a href={p.url} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[11px] font-body font-semibold text-primary hover:underline mt-1.5">
+              <ExternalLink className="h-3 w-3" /> ver o post
+            </a>
+          )}
+        </div>
+      </div>
+
+      {/* A TRANSCRIÇÃO — é o roteiro do concorrente. É o produto desta análise. */}
+      {transcricao && (
+        <div className="border-t border-border/60 bg-muted/30 px-3 py-2.5">
+          <p className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1.5">
+            <FileText className="h-3 w-3" /> Roteiro (transcrição do áudio)
+          </p>
+          <p className={cn("text-[12.5px] font-body text-foreground/90 leading-relaxed whitespace-pre-wrap", !aberto && "line-clamp-4")}>
+            {transcricao}
+          </p>
+        </div>
+      )}
+
+      {longo && (
+        <button onClick={() => setAberto((a) => !a)}
+          className="w-full py-1.5 text-[11px] font-body font-semibold text-primary hover:bg-muted/40 border-t border-border/60 transition-colors">
+          {aberto ? "mostrar menos" : "ler tudo"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function SummaryCard({ summary, handle, defaultOpen = false, onDelete, ideas, onIdeaStatus, onIdeaDelete }: { summary: Record<string, unknown>; handle: string; defaultOpen?: boolean; onDelete?: () => void; ideas?: CreativeIdea[]; onIdeaStatus?: (id: string, status: CreativeIdea["status"]) => void; onIdeaDelete?: (id: string) => void }) {
   const [open, setOpen] = useState(defaultOpen);
   const s = summary as Record<string, any>;
@@ -461,19 +538,8 @@ export function SummaryCard({ summary, handle, defaultOpen = false, onDelete, id
             </div>
             {Array.isArray(s.top) && s.top.length > 0 && (
               <ListWrap title="Top posts (o que mais engajou)">
-                {s.top.slice(0, 5).map((p: any, i: number) => (
-                  <div key={i} className="flex items-start gap-2 rounded-lg border border-border/60 px-2.5 py-2">
-                    <span className="text-[10px] font-body px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground capitalize shrink-0 mt-0.5">{p.format}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[12px] font-body text-foreground leading-snug line-clamp-2">{p.caption || "(sem legenda)"}</p>
-                      {p.transcript && <p className="text-[11px] font-body text-muted-foreground/80 mt-0.5 line-clamp-2 italic">🎙 {p.transcript}</p>}
-                    </div>
-                    <div className="flex items-center gap-2 text-[11px] font-body text-muted-foreground shrink-0">
-                      <span className="flex items-center gap-0.5"><Heart className="h-3 w-3" />{fmtNum(p.likes)}</span>
-                      <span className="flex items-center gap-0.5"><MessageCircle className="h-3 w-3" />{fmtNum(p.comments)}</span>
-                      {p.views != null && <span className="flex items-center gap-0.5"><Play className="h-3 w-3" />{fmtNum(p.views)}</span>}
-                    </div>
-                  </div>
+                {s.top.slice(0, 8).map((p: any, i: number) => (
+                  <TopPostCard key={i} p={p} rank={i + 1} />
                 ))}
               </ListWrap>
             )}
