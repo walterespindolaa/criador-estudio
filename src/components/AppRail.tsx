@@ -4,7 +4,7 @@ import {
   LayoutDashboard, PenLine, Lightbulb, ClipboardCheck, Grid3X3, ListTodo,
   CalendarRange, Kanban, Target, FolderOpen, Palette, BookOpen, BookMarked,
   Link2, Sparkles, BadgeDollarSign, BarChart3, Archive, GraduationCap,
-  PlayCircle, Settings, LogOut, Instagram, ShieldCheck, ChevronDown, Wand2, IdCard, TrendingUp, Clapperboard, Trash2, type LucideIcon,
+  PlayCircle, Settings, LogOut, Instagram, ShieldCheck, ChevronDown, Wand2, IdCard, TrendingUp, Clapperboard, Trash2, Gem, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCriaAI } from "@/contexts/CriaAIContext";
@@ -59,6 +59,9 @@ const TOP: NavNode[] = [
 
 const BOTTOM: NavNode[] = [
   { id: "lixeira", label: "nav.trash", icon: Trash2, to: "/app/lixeira" },
+  // PLANOS. Não existia NENHUM lugar no sistema pra pessoa ver o plano que tem,
+  // comparar, ou fazer upgrade. Quem quisesse pagar mais não tinha por onde.
+  { id: "planos", label: "Planos", icon: Gem, to: "/app/assinar" },
   { id: "cfg", label: "nav.settings", icon: Settings, to: "/app/configuracoes" },
   { id: "out", label: "nav.signOut", icon: LogOut, action: "logout" },
 ];

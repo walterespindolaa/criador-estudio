@@ -278,8 +278,11 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
 .stack-line{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1.5px dashed rgba(21,20,18,.15);font-size:.95rem}
 .stack-line .x{color:var(--laranja);font-weight:700}
 .stack-total{display:flex;justify-content:space-between;padding-top:14px;font-family:var(--font-display);font-weight:800;font-size:1.1rem}
-.planos-grid{display:grid;grid-template-columns:1fr 1fr;gap:26px;max-width:880px;margin:0 auto}
-.plano{border-radius:var(--radius-lg);padding:44px 38px;position:relative}
+/* 3 planos agora (entrou o Essencial). O do meio é o que a gente quer que ela
+   escolha, então ele é o escuro, destacado, e fica no centro. */
+.planos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;max-width:1120px;margin:0 auto;align-items:start}
+.plano{border-radius:var(--radius-lg);padding:40px 30px;position:relative}
+.verbo{display:block;font-family:var(--font-display);font-weight:700;font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--laranja);margin-bottom:6px}
 .plano-pro{background:var(--branco);border:2px solid var(--ink)}
 .plano-studio{background:var(--ink);color:var(--creme);box-shadow:0 12px 0 var(--laranja)}
 .plano .badge{position:absolute;top:-16px;right:26px;background:var(--laranja);color:#fff;font-family:var(--font-display);font-weight:700;font-size:.8rem;padding:7px 16px;border-radius:999px;transform:rotate(3deg)}
@@ -296,7 +299,7 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
 .trial-link:hover{opacity:1}
 .garantia{max-width:720px;margin:40px auto 0;text-align:center;background:var(--verde);color:#fff;border-radius:var(--radius-lg);padding:36px 40px;box-shadow:0 10px 0 rgba(21,20,18,.25)}
 .garantia h3{font-size:1.35rem;margin-bottom:8px}
-@media(max-width:760px){.planos-grid{grid-template-columns:1fr}}
+@media(max-width:1000px){.planos-grid{grid-template-columns:1fr;max-width:560px}}
 
 /* ---------- FAQ ---------- */
 #faq{background:var(--creme);padding:55px 0}
@@ -632,7 +635,7 @@ html,body{overflow-x:clip}
           <li><b>✓</b> Semana inteira planejada no kanban e calendário</li>
           <li><b>✓</b> Legenda e roteiro prontos em minutos, com o seu brandbook</li>
           <li><b>✓</b> Insights reais mostrando o que repetir</li>
-          <li><b>✓</b> Uma assinatura só, a partir de R$32,90</li>
+          <li><b>✓</b> Uma assinatura só, a partir de R$19,90</li>
         </ul>
       </div>
     </div>
@@ -695,35 +698,56 @@ html,body{overflow-x:clip}
       <div class="stack-line"><span><span class="x">✕</span> Link in bio pro</span><span>~R$ 25/mês</span></div>
       <div class="stack-total"><span>Total do combo</span><span style="color:var(--laranja)">~R$ 205/mês</span></div>
     </div>
+    <!-- ATENÇÃO: o que estava aqui prometia o que o produto não entrega.
+         O Studio listava "Cria Post", "CRM", "Cria Caixa" e "HUB CRIA" dentro dos
+         R$49,90 — mas esses são MÓDULOS vendidos à parte. E o Pro listava "Cria
+         Stories", que é do Studio. Agora espelha src/lib/plans.ts. -->
     <div class="planos-grid">
       <div class="plano plano-pro reveal">
-        <h3>CRIA Pro</h3>
-        <p class="desc">Pro criador solo que quer processo e constância.</p>
-        <div class="preco">R$32,90<small>/mês</small></div>
+        <span class="verbo">Organizar</span>
+        <h3>CRIA Essencial</h3>
+        <p class="desc">Pra tirar suas ideias de 4 apps diferentes.</p>
+        <div class="preco">R$19,90<small>/mês</small></div>
         <ul>
-          <li><b>✓</b> Banco de ideias + kanban + calendário</li>
-          <li><b>✓</b> Cria IA (legendas, roteiros, ganchos)</li>
-          <li><b>✓</b> Brandbook + link in bio + Meu Feed</li>
-          <li><b>✓</b> Cria Stories (plano semanal)</li>
-          <li><b>✓</b> Insights do Instagram</li>
+          <li><b>✓</b> Banco de ideias ilimitado</li>
+          <li><b>✓</b> Kanban da produção: da ideia ao publicado</li>
+          <li><b>✓</b> Calendário, tarefas e metas</li>
+          <li><b>✓</b> Brandbook + link in bio</li>
+          <li><b>✓</b> Cria IA: 10 gerações/mês (pra experimentar)</li>
         </ul>
-        <a href="comprar/pro.html" class="btn btn-ghost">Assinar o Pro</a>
+        <a href="comprar/essencial.html" class="btn btn-ghost">Assinar o Essencial</a>
         <a href="https://app.criasocialclub.com.br/signup" class="trial-link">ou teste grátis por 7 dias →</a>
       </div>
       <div class="plano plano-studio reveal">
-        <span class="badge">Mais completo</span>
+        <span class="badge">Mais escolhido</span>
+        <span class="verbo" style="color:var(--amarelo)">Criar melhor</span>
+        <h3>CRIA Pro</h3>
+        <p class="desc">Pra quem trava na hora de escrever.</p>
+        <div class="preco">R$32,90<small>/mês</small></div>
+        <ul>
+          <li><b>✓</b> Tudo do Essencial, e mais:</li>
+          <li><b>✓</b> Cria IA: 150 gerações/mês (legendas, roteiros, ganchos, score)</li>
+          <li><b>✓</b> Insights reais do Instagram + Meu Feed</li>
+          <li><b>✓</b> Melhor horário pra postar</li>
+          <li><b>✓</b> Tendências do seu nicho + Media Kit automático</li>
+        </ul>
+        <a href="comprar/pro.html" class="btn btn-laranja">Assinar o Pro</a>
+        <a href="https://app.criasocialclub.com.br/signup" class="trial-link" style="color:var(--creme)">ou teste grátis por 7 dias →</a>
+      </div>
+      <div class="plano plano-pro reveal">
+        <span class="verbo">A IA cria por você</span>
         <h3>CRIA Studio</h3>
-        <p class="desc">Pra quem gerencia clientes e quer a operação inteira.</p>
+        <p class="desc">Pra quem vive de conteúdo e não tem tempo.</p>
         <div class="preco">R$49,90<small>/mês</small></div>
         <ul>
           <li><b>✓</b> Tudo do Pro, e mais:</li>
-          <li><b>✓</b> Clientes + aprovação por link (Cria Post)</li>
-          <li><b>✓</b> CRM: pipeline, clientes e contratos</li>
-          <li><b>✓</b> Cria Caixa: cachês, mensalidades, MRR</li>
-          <li><b>✓</b> Relatórios white-label + HUB CRIA</li>
+          <li><b>✓</b> Cria Plano: a IA monta o seu mês inteiro</li>
+          <li><b>✓</b> Cria Stories: o plano semanal de stories</li>
+          <li><b>✓</b> Collabs: parcerias, propostas e cachê</li>
+          <li><b>✓</b> Cria IA: 500 gerações/mês</li>
         </ul>
-        <a href="comprar/studio.html" class="btn btn-laranja">Assinar o Studio</a>
-        <a href="https://app.criasocialclub.com.br/signup" class="trial-link" style="color:var(--creme)">ou teste grátis por 7 dias →</a>
+        <a href="comprar/studio.html" class="btn btn-ghost">Assinar o Studio</a>
+        <a href="https://app.criasocialclub.com.br/signup" class="trial-link">ou teste grátis por 7 dias →</a>
       </div>
     </div>
     <div class="garantia reveal">
@@ -767,7 +791,7 @@ html,body{overflow-x:clip}
       <p class="micro" style="color:rgba(255,255,255,.85)">Sem compromisso · Cancela em 2 cliques</p>
     </div>
     <div class="ps-box reveal">
-      <p><b>PS:</b> R$32,90 é preço de early adopter. Quando subir pra novos assinantes, quem já estiver dentro mantém o valor. Entrar cedo é literalmente mais barato.</p>
+      <p><b>PS:</b> R$19,90 é preço de early adopter. Quando subir pra novos assinantes, quem já estiver dentro mantém o valor. Entrar cedo é literalmente mais barato.</p>
       <p style="margin-top:10px"><b>PPS:</b> Você não precisa decidir se o CRIA é pra sempre. Precisa só de 7 dias pra sentir como é trabalhar sem o caos.</p>
     </div>
   </div>

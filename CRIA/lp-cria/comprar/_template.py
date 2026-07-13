@@ -162,30 +162,48 @@ var FALLBACK    = "https://app.criasocialclub.com.br/login?plan={SLUG}";
 def feat(items):
     return "\n".join('      <li><b>✓</b> %s</li>' % i for i in items)
 
+# ATENÇÃO — o que estava aqui era MENTIRA e ia gerar reembolso:
+#   - o Studio prometia "Cria Post", "CRM", "Cria Caixa" e "HUB CRIA" dentro dos
+#     R$49,90. Esses são MÓDULOS vendidos à parte (R$19,90 / R$29,90 / R$24,90).
+#   - o Pro prometia "Cria Stories", que é do Studio.
+#   - o Pro prometia agendamento em outros lugares da LP. O CRIA NÃO AGENDA.
+# Agora isto espelha src/lib/plans.ts, que é o que o sistema realmente libera.
 planos = {
-    "pro": dict(
-        NOME="Pro", SLUG="pro", PRECO="32,90", BADGE="Plano do criador",
+    "essencial": dict(
+        NOME="Essencial", SLUG="essencial", PRECO="19,90", BADGE="Pra organizar",
         CARD_BG="var(--branco)", CARD_FG="var(--ink)", CARD_EXTRA="border:2px solid var(--ink);",
-        SCRIPT_COLOR="var(--azul)", CHECK_COLOR="var(--verde)", SELO_BG="var(--creme-2)",
+        SCRIPT_COLOR="var(--verde)", CHECK_COLOR="var(--verde)", SELO_BG="var(--creme-2)",
         STRIPE_LINK="",
         FEATURES=feat([
-            "Banco de ideias + kanban + calendário",
-            "Cria IA: legendas, roteiros e ganchos",
-            "Brandbook + link in bio + Meu Feed",
-            "Cria Stories (plano semanal)",
-            "Insights reais do Instagram",
+            "Banco de ideias ilimitado",
+            "Kanban da produção: da ideia ao publicado",
+            "Calendário, tarefas e metas",
+            "Brandbook + link in bio",
+            "Cria IA: 10 gerações/mês (pra experimentar)",
         ])),
-    "studio": dict(
-        NOME="Studio", SLUG="studio", PRECO="49,90", BADGE="Mais completo",
+    "pro": dict(
+        NOME="Pro", SLUG="pro", PRECO="32,90", BADGE="Mais escolhido",
         CARD_BG="var(--ink)", CARD_FG="var(--creme)", CARD_EXTRA="box-shadow:0 10px 0 var(--laranja);",
         SCRIPT_COLOR="var(--amarelo)", CHECK_COLOR="var(--amarelo)", SELO_BG="rgba(253,251,245,.08)",
         STRIPE_LINK="",
         FEATURES=feat([
+            "Tudo do Essencial, e mais:",
+            "Cria IA: 150 gerações/mês (legendas, roteiros, ganchos, score)",
+            "Insights reais do Instagram + Meu Feed",
+            "Melhor horário pra postar",
+            "Tendências do seu nicho + Media Kit automático",
+        ])),
+    "studio": dict(
+        NOME="Studio", SLUG="studio", PRECO="49,90", BADGE="A IA cria por você",
+        CARD_BG="var(--branco)", CARD_FG="var(--ink)", CARD_EXTRA="border:2px solid var(--ink);",
+        SCRIPT_COLOR="var(--azul)", CHECK_COLOR="var(--verde)", SELO_BG="var(--creme-2)",
+        STRIPE_LINK="",
+        FEATURES=feat([
             "Tudo do Pro, e mais:",
-            "Clientes + aprovação por link (Cria Post)",
-            "CRM: pipeline, clientes e contratos",
-            "Cria Caixa: cachês, mensalidades e MRR",
-            "Relatórios white-label + HUB CRIA + Modo Agência",
+            "Cria Plano: a IA monta o seu mês inteiro",
+            "Cria Stories: o plano semanal de stories",
+            "Collabs: parcerias, propostas e cachê",
+            "Cria IA: 500 gerações/mês",
         ])),
 }
 

@@ -21,17 +21,17 @@ a{color:inherit;text-decoration:none}
 .voltar{font-size:.9rem;opacity:.7}
 .voltar:hover{opacity:1}
 .wrap{width:min(1020px,94%);margin:10px auto 60px;display:grid;grid-template-columns:1fr 1.05fr;gap:28px;align-items:start}
-.resumo{background:var(--branco);color:var(--ink);border-radius:28px;padding:38px 34px;border:2px solid var(--ink);}
+.resumo{background:var(--ink);color:var(--creme);border-radius:28px;padding:38px 34px;box-shadow:0 10px 0 var(--laranja);}
 .resumo .badge{display:inline-block;background:var(--laranja);color:#fff;font-family:var(--font-display);font-weight:700;font-size:.78rem;padding:6px 14px;border-radius:999px;margin-bottom:14px}
 .resumo h1{font-size:2rem}
 .resumo .preco{font-family:var(--font-display);font-weight:800;font-size:2.8rem;margin:12px 0 2px}
 .resumo .preco small{font-size:1rem;opacity:.7;font-weight:600}
-.resumo .trial{font-family:var(--font-script);font-size:1.5rem;color:var(--azul);transform:rotate(-1.5deg);display:inline-block;margin-bottom:18px}
+.resumo .trial{font-family:var(--font-script);font-size:1.5rem;color:var(--amarelo);transform:rotate(-1.5deg);display:inline-block;margin-bottom:18px}
 .resumo ul{list-style:none;display:flex;flex-direction:column;gap:10px;font-size:.94rem;margin:14px 0 22px}
 .resumo li{display:flex;gap:10px;align-items:flex-start}
-.resumo li b{color:var(--verde);flex-shrink:0}
-.selo{display:flex;gap:12px;align-items:center;background:var(--creme-2);border-radius:16px;padding:14px 16px;font-size:.85rem}
-.selo svg{width:26px;height:26px;fill:none;stroke:var(--verde);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.resumo li b{color:var(--amarelo);flex-shrink:0}
+.selo{display:flex;gap:12px;align-items:center;background:rgba(253,251,245,.08);border-radius:16px;padding:14px 16px;font-size:.85rem}
+.selo svg{width:26px;height:26px;fill:none;stroke:var(--amarelo);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
 .form-card{background:var(--branco);border:2px solid var(--ink);border-radius:28px;padding:38px 34px;box-shadow:0 10px 0 rgba(21,20,18,.9)}
 .form-card h2{font-size:1.4rem;margin-bottom:6px}
 .form-card .sub{font-size:.9rem;opacity:.7;margin-bottom:24px}
@@ -57,16 +57,16 @@ input.erro{border-color:var(--laranja)}
 
 <div class="wrap">
   <div class="resumo">
-    <span class="badge">Plano do criador</span>
+    <span class="badge">Mais escolhido</span>
     <h1>CRIA Pro</h1>
     <div class="preco">R$32,90<small>/mês</small></div>
     <span class="trial">sem fidelidade, cancela quando quiser!</span>
     <ul>
-      <li><b>✓</b> Banco de ideias + kanban + calendário</li>
-      <li><b>✓</b> Cria IA: legendas, roteiros e ganchos</li>
-      <li><b>✓</b> Brandbook + link in bio + Meu Feed</li>
-      <li><b>✓</b> Cria Stories (plano semanal)</li>
-      <li><b>✓</b> Insights reais do Instagram</li>
+      <li><b>✓</b> Tudo do Essencial, e mais:</li>
+      <li><b>✓</b> Cria IA: 150 gerações/mês (legendas, roteiros, ganchos, score)</li>
+      <li><b>✓</b> Insights reais do Instagram + Meu Feed</li>
+      <li><b>✓</b> Melhor horário pra postar</li>
+      <li><b>✓</b> Tendências do seu nicho + Media Kit automático</li>
     </ul>
     <div class="selo">
       <svg viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1 1 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
@@ -100,7 +100,7 @@ input.erro{border-color:var(--laranja)}
    (Stripe Dashboard → Payment Links → criar link do preço Pro)
    ============================================================ */
 var STRIPE_LINK = ""; // ex: https://buy.stripe.com/xxxxx
-var FALLBACK    = "https://app.criasocialclub.com.br/signup?plan=pro";
+var FALLBACK    = "https://app.criasocialclub.com.br/login?plan=pro";
 
 (function(){
   var form = document.getElementById('checkout-form');

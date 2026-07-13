@@ -155,7 +155,7 @@ const AppLayout = () => {
               <HeroBand eyebrow={heroEyebrow} title={heroTitle} avatar={avatarNode} actions={quickActions}>
                 <div className="flex items-center gap-2 rounded-2xl bg-white/15 px-2 py-1 backdrop-blur">
                   <GlobalSearch />
-                  <PlanBadge />
+                  <PlanBadge light />
                   <UploadProgressIndicator />
                   <HelpButton light />
                   <FeedbackButton />
