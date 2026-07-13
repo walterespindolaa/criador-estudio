@@ -120,31 +120,11 @@ export function SettingsVisual() {
       <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
         {/* LEFT, Controls */}
         <div className="w-full lg:flex-[0_0_45%] space-y-8 lg:space-y-10">
-          {/* Idioma */}
-          <section>
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Languages className="h-5 w-5 text-primary" />
-                <h3 className="text-base font-body font-bold text-foreground">{t("settings.language")}</h3>
-              </div>
-              <p className="text-sm text-muted-foreground font-body">{t("settings.languageDesc")}</p>
-            </div>
-            <div className="flex gap-2">
-              {([["pt", t("settings.portuguese")], ["en", t("settings.english")]] as const).map(([code, label]) => (
-                <button
-                  key={code}
-                  type="button"
-                  onClick={() => setLang(code as "pt" | "en")}
-                  className={cn(
-                    "px-4 py-2 rounded-xl text-sm font-body font-medium border transition-colors",
-                    lang === code ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-foreground hover:border-primary/40"
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </section>
+          {/* O seletor de IDIOMA saiu daqui.
+              Ele existia só pra gravação do Meta App Review (a tela de Insights
+              precisava aparecer em inglês pro analista). Pro usuário brasileiro
+              é uma opção sem uso que só polui os Ajustes. A i18n continua no
+              código: se um dia o produto for pra fora, é só reexpor o seletor. */}
 
           {/* Themes */}
           <section>

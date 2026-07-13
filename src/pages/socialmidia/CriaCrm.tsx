@@ -152,22 +152,32 @@ function ClientsTab() {
           {filtered.map((c) => {
             const avatar = c.cria_owner_id ? criaAvatar.get(c.cria_owner_id) : null;
             return (
-              <div key={c.id} className="group rounded-2xl border border-border bg-card p-5 flex flex-col gap-3 hover:shadow-md hover:border-primary/40 transition-all cursor-pointer" onClick={() => navigate(`/socialmidia/criacrm/${c.id}`)}>
-                <div className="flex items-center gap-3">
+              // O card era uma pilha: foto+nome, depois status solto numa linha, depois
+              // o valor solto em outra. No mobile virava um bloco alto e sem hierarquia.
+              // Agora o valor sobe pra linha do nome (é a informação que decide), e o
+              // status/etiquetas ficam numa tira só, embaixo.
+              <div key={c.id} className="group rounded-2xl border border-border bg-card p-4 flex flex-col gap-3 hover:shadow-md hover:border-primary/40 transition-all cursor-pointer" onClick={() => navigate(`/socialmidia/criacrm/${c.id}`)}>
+                <div className="flex items-start gap-3">
                   <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary via-purple-600 to-pink-500 p-[2px] shrink-0 overflow-hidden">
                     <div className="w-full h-full rounded-2xl bg-card flex items-center justify-center overflow-hidden">
                       {avatar ? <img src={avatar} alt="" className="w-full h-full object-cover" loading="lazy" /> : <span className="text-lg font-display font-extrabold text-primary">{c.logo && c.logo.length <= 2 ? c.logo : initial(c.name)}</span>}
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-base font-display font-bold text-foreground truncate">{c.name}</p>
+                    <div className="flex items-start gap-2">
+                      <p className="text-base font-display font-bold text-foreground leading-snug min-w-0 flex-1">{c.name}</p>
+                      {Number(c.monthly_value) > 0 && (
+                        <span className="text-sm font-display font-extrabold text-primary shrink-0 whitespace-nowrap">{brl(c.monthly_value)}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      {c.instagram && <span className="text-xs text-muted-foreground font-body inline-flex items-center gap-1 min-w-0"><Instagram className="h-3 w-3 shrink-0" /><span className="truncate">{c.instagram.replace(/^@/, "")}</span></span>}
                       {c.cria_owner_id && <Badge variant="secondary" className="text-[9px] h-4 px-1.5 shrink-0">cria</Badge>}
                     </div>
-                    {c.instagram && <p className="text-xs text-muted-foreground font-body truncate flex items-center gap-1"><Instagram className="h-3 w-3" />{c.instagram.replace(/^@/, "")}</p>}
-                    {c.segment && <p className="text-[11px] text-muted-foreground font-body truncate">{c.segment}</p>}
+                    {c.segment && <p className="text-[11px] text-muted-foreground font-body mt-0.5 line-clamp-1">{c.segment}</p>}
                   </div>
                 </div>
+
                 {/* Status fixo + etiquetas personalizadas, visíveis já na lista. */}
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full border", CLIENT_STATUS_META[(c.status ?? "ativo") as ClientStatus]?.cls)}>
@@ -176,8 +186,8 @@ function ClientsTab() {
                   {(c.tags ?? []).map((t) => (
                     <span key={t} className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full border", TAG_COLOR_CLS[tagColor(t)] ?? TAG_COLOR_CLS.slate)}>{t}</span>
                   ))}
+                  {Number(c.monthly_value) > 0 && <span className="text-[10px] font-body text-muted-foreground ml-auto">por mês</span>}
                 </div>
-                {Number(c.monthly_value) > 0 && <div className="flex items-center gap-1 text-xs font-semibold text-primary"><DollarSign className="h-3 w-3" />{brl(c.monthly_value)}/mês</div>}
                 {c.cria_owner_id && (
                   <Button variant="outline" size="sm" className="w-full" onClick={(e) => { e.stopPropagation(); openCria(c); }}>
                     Abrir no cria <ArrowRight className="h-3.5 w-3.5 ml-1" />

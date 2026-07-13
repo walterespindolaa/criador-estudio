@@ -33,16 +33,29 @@ export function ModuleHero({
   const hex = CRIA_HEX[c];
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-border bg-card mb-5">
+    // FULL-BLEED NO MOBILE.
+    // A faixa colorida ficava presa dentro do padding da página, virando um
+    // cartãozinho no meio da tela. No celular ela agora sangra até as bordas
+    // (-mx-4, w-[100vw]) e encosta no topo: vira a "capa" do módulo, com volume.
+    <div className={cn(
+      "relative overflow-hidden border-border bg-card mb-5",
+      "-mx-4 w-[calc(100%+2rem)] rounded-b-3xl border-b -mt-7 pt-2",
+      "sm:mx-0 sm:mt-0 sm:w-auto sm:rounded-3xl sm:border sm:pt-0",
+    )}>
       <OrganicBlobs color={c} />
 
-      <div className="relative px-5 pt-5 sm:px-6 sm:pt-6">
+      <div className="relative px-4 pt-5 sm:px-6 sm:pt-6">
         <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div className="min-w-0">
-            <h1 className="font-display font-extrabold text-2xl sm:text-3xl tracking-tight text-foreground truncate">{title}</h1>
+          <div className="min-w-0 flex-1">
+            <h1 className="font-display font-extrabold text-2xl sm:text-3xl tracking-tight text-foreground">{title}</h1>
             {subtitle && <p className="text-sm font-body text-muted-foreground mt-1">{subtitle}</p>}
           </div>
-          {actions && <div className="flex items-center gap-2 flex-wrap shrink-0">{actions}</div>}
+          {/* Ações: no mobile viram uma tira que rola, em vez de vazar pra fora. */}
+          {actions && (
+            <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto scrollbar-none scroll-snap-x sm:flex-wrap sm:overflow-visible shrink-0 pb-0.5">
+              {actions}
+            </div>
+          )}
         </div>
 
         {children && <div className="mt-4">{children}</div>}

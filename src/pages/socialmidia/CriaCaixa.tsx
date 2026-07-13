@@ -425,48 +425,47 @@ function CaixaInner() {
               const nome = clientName(m.crm_client_id) ?? "Cliente";
               const venc = m.due_date.split("-").reverse().slice(0, 2).join("/");
               const atrasado = m.status === "pendente" && m.due_date < todayISO;
+              // No mobile isto era uma linha só e o "vence 01/07" quebrava letra por
+              // letra na vertical. Agora é um card: nome + valor em cima, ações embaixo.
               return (
-                <div key={m.id} className={cn("flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-muted/40 transition-colors", m.status === "pulado" && "opacity-60")}>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-body font-medium text-foreground truncate">{nome}</p>
-                    <p className="text-[11px] font-body text-muted-foreground">
-                      vence {venc}
-                      {m.status === "pulado" && m.skip_reason && <> · pulado: {m.skip_reason}</>}
-                    </p>
+                <div key={m.id} className={cn(
+                  "rounded-xl border border-border p-3 sm:border-0 sm:p-2 sm:rounded-xl sm:hover:bg-muted/40 transition-colors",
+                  m.status === "pulado" && "opacity-60",
+                )}>
+                  <div className="flex items-center gap-3 sm:gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-body font-semibold text-foreground truncate">{nome}</p>
+                      <p className="text-[11px] font-body text-muted-foreground truncate">
+                        vence {venc}
+                        {m.status === "pulado" && m.skip_reason ? ` · pulado: ${m.skip_reason}` : ""}
+                      </p>
+                    </div>
+                    <span className="text-sm font-display font-bold text-foreground shrink-0 whitespace-nowrap">{brl(Number(m.amount))}</span>
+                    {m.status === "pago" && <Badge className="bg-green-100 text-green-700 text-[10px] shrink-0">Recebido</Badge>}
+                    {m.status === "pulado" && <Badge className="bg-muted text-muted-foreground text-[10px] shrink-0">Pulado</Badge>}
+                    {m.status === "pendente" && atrasado && <Badge className="bg-red-100 text-red-700 text-[10px] shrink-0">Atrasado</Badge>}
                   </div>
-                  <span className="text-sm font-display font-bold text-foreground shrink-0">{brl(Number(m.amount))}</span>
 
-                  {m.status === "pago" ? (
-                    <>
-                      <Badge className="bg-green-100 text-green-700 text-[10px] shrink-0">Recebido</Badge>
-                      {/* DESFAZER: apaga o lançamento e volta pra pendente. */}
-                      <Button size="sm" variant="ghost" className="h-7 shrink-0 text-muted-foreground hover:text-foreground"
+                  <div className="flex items-center gap-1.5 mt-2.5 sm:mt-2">
+                    {m.status === "pago" || m.status === "pulado" ? (
+                      <Button size="sm" variant="outline" className="h-8 flex-1 sm:flex-none"
                         onClick={() => undoMonthly.mutate(m)} disabled={undoMonthly.isPending}>
-                        <RotateCcw className="h-3 w-3 mr-1" /> Desfazer
+                        <RotateCcw className="h-3 w-3 mr-1" /> {m.status === "pago" ? "Desfazer" : "Reverter"}
                       </Button>
-                    </>
-                  ) : m.status === "pulado" ? (
-                    <>
-                      <Badge className="bg-muted text-muted-foreground text-[10px] shrink-0">Pulado</Badge>
-                      <Button size="sm" variant="ghost" className="h-7 shrink-0 text-muted-foreground hover:text-foreground"
-                        onClick={() => undoMonthly.mutate(m)} disabled={undoMonthly.isPending}>
-                        <RotateCcw className="h-3 w-3 mr-1" /> Reverter
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      {atrasado && <Badge className="bg-red-100 text-red-700 text-[10px] shrink-0">Atrasado</Badge>}
-                      <Button size="sm" variant="outline" className="h-7 shrink-0"
-                        onClick={() => confirmMonthly.mutate({ m, clientName: nome })} disabled={confirmMonthly.isPending}>
-                        <Check className="h-3 w-3 mr-1" /> Marcar recebido
-                      </Button>
-                      {/* PULAR: mês em que o cliente não paga (férias, pausa, cortesia). */}
-                      <Button size="sm" variant="ghost" className="h-7 shrink-0 text-muted-foreground hover:text-foreground"
-                        onClick={() => setSkipping(m)} disabled={skipMonthly.isPending}>
-                        <SkipForward className="h-3 w-3 mr-1" /> Pular
-                      </Button>
-                    </>
-                  )}
+                    ) : (
+                      <>
+                        <Button size="sm" className="h-8 flex-1 sm:flex-none"
+                          onClick={() => confirmMonthly.mutate({ m, clientName: nome })} disabled={confirmMonthly.isPending}>
+                          <Check className="h-3 w-3 mr-1" /> Marcar recebido
+                        </Button>
+                        {/* PULAR: mês em que o cliente não paga (férias, pausa, cortesia). */}
+                        <Button size="sm" variant="outline" className="h-8 shrink-0 text-muted-foreground"
+                          onClick={() => setSkipping(m)} disabled={skipMonthly.isPending}>
+                          <SkipForward className="h-3 w-3 mr-1" /> Pular
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -610,28 +609,41 @@ function CaixaInner() {
           {filtered.map((r) => {
             const isIn = r.type === "entrada";
             return (
-              <div key={r.id} className="group rounded-2xl border border-border bg-card p-4 flex items-center gap-3">
-                <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0", isIn ? "bg-green-100 text-green-700" : "bg-destructive/10 text-destructive")}>
-                  {isIn ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
+              // No mobile a descrição, o status e o valor brigavam pelo mesmo espaço e
+              // sobrava "Paul...". Agora: linha 1 = descrição + valor. Linha 2 = data,
+              // categoria, cliente. Linha 3 = status e ações. Nada é cortado.
+              <div key={r.id} className="group rounded-2xl border border-border bg-card p-3.5 sm:p-4">
+                <div className="flex items-start gap-3">
+                  <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0", isIn ? "bg-green-100 text-green-700" : "bg-destructive/10 text-destructive")}>
+                    {isIn ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-display font-bold text-foreground leading-snug">{r.description}</p>
+                    <p className="text-[11px] text-muted-foreground font-body mt-0.5">
+                      {new Date(r.date + "T00:00:00").toLocaleDateString("pt-BR")}
+                      {r.category ? ` · ${r.category}${r.subcategory ? ` › ${r.subcategory}` : ""}` : ""}
+                      {clientName(r.crm_client_id) ? ` · ${clientName(r.crm_client_id)}` : ""}
+                      {r.transfer_group ? " · ↔ transferência" : ""}
+                    </p>
+                  </div>
+                  <span className={cn("text-sm font-display font-extrabold shrink-0 whitespace-nowrap", isIn ? "text-green-700" : "text-destructive")}>
+                    {isIn ? "+" : "−"}{brl(Number(r.amount))}
+                  </span>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-display font-bold text-foreground truncate">{r.description}</p>
-                  <p className="text-[11px] text-muted-foreground font-body truncate">
-                    {new Date(r.date + "T00:00:00").toLocaleDateString("pt-BR")}{r.category ? ` · ${r.category}${r.subcategory ? ` › ${r.subcategory}` : ""}` : ""}{clientName(r.crm_client_id) ? ` · ${clientName(r.crm_client_id)}` : ""}{r.transfer_group ? " · ↔ transferência" : ""}
-                  </p>
-                </div>
-                {/* Status editável direto na lista (antes era só um badge de leitura). */}
-                <select value={r.status} onClick={(e) => e.stopPropagation()}
-                  onChange={(e) => upd.mutate({ id: r.id, status: e.target.value as FinStatus })}
-                  className={cn("text-[10px] font-bold shrink-0 rounded-full px-2 py-1 border-0 outline-none cursor-pointer", STATUS_STYLE[r.status])}>
-                  {(["pendente", "pago", "atrasado"] as FinStatus[]).map((s) => (
-                    <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-                  ))}
-                </select>
-                <span className={cn("text-sm font-display font-extrabold shrink-0", isIn ? "text-green-700" : "text-destructive")}>{isIn ? "+" : "−"}{brl(Number(r.amount))}</span>
-                <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditing(r); setDialog(true); }}><Pencil className="h-3.5 w-3.5" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => { if (r.transfer_group) { if (confirm("Excluir esta transferência (Empresa e Pessoal)?")) delGroup.mutate(r.transfer_group); } else if (confirm("Excluir lançamento?")) del.mutate(r.id); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+
+                <div className="flex items-center gap-2 mt-2.5 pt-2.5 border-t border-border/60">
+                  {/* Status editável direto na lista (antes era só um badge de leitura). */}
+                  <select value={r.status} onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => upd.mutate({ id: r.id, status: e.target.value as FinStatus })}
+                    className={cn("text-[11px] font-bold rounded-full px-2.5 py-1.5 border-0 outline-none cursor-pointer", STATUS_STYLE[r.status])}>
+                    {(["pendente", "pago", "atrasado"] as FinStatus[]).map((s) => (
+                      <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+                    ))}
+                  </select>
+                  <div className="ml-auto flex items-center gap-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditing(r); setDialog(true); }}><Pencil className="h-3.5 w-3.5" /></Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => { if (r.transfer_group) { if (confirm("Excluir esta transferência (Empresa e Pessoal)?")) delGroup.mutate(r.transfer_group); } else if (confirm("Excluir lançamento?")) del.mutate(r.id); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                  </div>
                 </div>
               </div>
             );
@@ -1152,43 +1164,63 @@ function CalendarioFinanceiro({ monthlies, records, recurring, pendingRecurring,
         </div>
       </div>
 
-      <div className="hidden sm:grid grid-cols-7 gap-1 mb-1">
-        {["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].map((d) => (
-          <p key={d} className="text-[10px] uppercase tracking-wider font-body font-semibold text-muted-foreground text-center">{d}</p>
+      <div className="grid grid-cols-7 gap-0.5 sm:gap-1 mb-1">
+        {["S", "T", "Q", "Q", "S", "S", "D"].map((d, i) => (
+          <p key={i} className="text-[10px] uppercase tracking-wider font-body font-semibold text-muted-foreground text-center">
+            <span className="sm:hidden">{d}</span>
+            <span className="hidden sm:inline">{["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"][i]}</span>
+          </p>
         ))}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-7 gap-1">
-        {Array.from({ length: startDow }).map((_, i) => <div key={"e" + i} className="hidden sm:block" />)}
+      {/* MOBILE: o mês INTEIRO em 7 colunas, como todo calendário do mundo.
+          Antes eu escondia os dias vazios e mostrava 2 colunas: virava uma lista
+          desalinhada onde ninguém achava o dia 17. Agora o dia é um quadradinho
+          com bolinhas coloridas (entra/sai); toca e o detalhe abre embaixo. */}
+      <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
+        {Array.from({ length: startDow }).map((_, i) => <div key={"e" + i} />)}
         {Array.from({ length: lastDay }, (_, i) => i + 1).map((day) => {
           const list = byDay.get(day) ?? [];
           const iso = `${ym.y}-${pad0(ym.m + 1)}-${pad0(day)}`;
           const isToday = iso === hoje;
           const aberto = diaAberto === day;
           const vazio = list.length === 0;
+          const temEntrada = list.some((e) => e.kind === "receber");
+          const temSaida = list.some((e) => e.kind === "pagar");
+          const tudoResolvido = !vazio && list.every((e) => e.done);
 
-          // O dia inteiro é um botão. Clicou, abre o painel embaixo com as ações.
           return (
             <button
               key={day}
               type="button"
               onClick={() => setDiaAberto(aberto ? null : day)}
               className={cn(
-                "min-h-[64px] rounded-lg border p-1.5 space-y-1 text-left transition-all",
-                vazio && "hidden sm:block",
+                "rounded-lg border text-left transition-all",
+                "aspect-square p-1 flex flex-col items-center justify-center gap-1",   // mobile: quadradinho
+                "sm:aspect-auto sm:min-h-[64px] sm:items-stretch sm:justify-start sm:p-1.5 sm:gap-0 sm:space-y-1",
                 aberto ? "border-primary ring-2 ring-primary/30 bg-primary/[0.06]"
                   : isToday ? "border-primary bg-primary/5"
-                  : vazio ? "border-border/60" : "border-border hover:border-primary/50 hover:shadow-sm",
+                  : vazio ? "border-border/50" : "border-border hover:border-primary/50",
               )}
               aria-label={`Dia ${day}${vazio ? ", sem movimento" : `, ${list.length} item(ns)`}`}
             >
-              <span className={cn("text-[11px] font-display font-bold",
-                aberto || isToday ? "text-primary" : vazio ? "text-muted-foreground/50" : "text-foreground")}>
+              <span className={cn("text-[12px] sm:text-[11px] font-display font-bold",
+                aberto || isToday ? "text-primary" : vazio ? "text-muted-foreground/45" : "text-foreground")}>
                 {day}
               </span>
+
+              {/* Mobile: bolinhas. Cabem no quadradinho e dizem o essencial. */}
+              {!vazio && (
+                <span className="flex items-center gap-0.5 sm:hidden">
+                  {temEntrada && <span className={cn("h-1.5 w-1.5 rounded-full", tudoResolvido ? "bg-green-500/35" : "bg-green-500")} />}
+                  {temSaida && <span className={cn("h-1.5 w-1.5 rounded-full", tudoResolvido ? "bg-red-500/35" : "bg-red-500")} />}
+                </span>
+              )}
+
+              {/* Desktop: as etiquetas com valor, como antes. */}
               {list.map((e) => (
                 <div key={e.id}
-                  className={cn("rounded px-1 py-0.5 text-[10px] font-body leading-tight truncate",
+                  className={cn("hidden sm:block rounded px-1 py-0.5 text-[10px] font-body leading-tight truncate",
                     e.done && "opacity-50 line-through",
                     e.previsto && "border border-dashed opacity-80",
                     e.kind === "receber"
