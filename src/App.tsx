@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { QueryClient, QueryClientProvider, QueryCache } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -104,6 +104,22 @@ const Lixeira = lazy(() => import("./pages/app/Lixeira"));
 // Avisa o usuário quando uma query falha (antes os erros eram engolidos →
 // skeleton infinito / tela vazia). Throttle pra não floodar com vários toasts.
 let lastQueryErrorToast = 0;
+// SALVAR QUE FALHA EM SILÊNCIO É PIOR QUE NÃO SALVAR.
+// As queries já avisavam quando falhavam. As MUTAÇÕES não: cada hook tratava do
+// seu jeito, e qualquer um que esquecesse o onError deixava a pessoa achando que
+// tinha salvado. Com update otimista (que a gente usa em tudo), a tela até MOSTRA
+// o dado novo — e ele nunca chegou no banco. Esta é a rede de segurança: se um
+// hook não avisou, o MutationCache avisa.
+const traduzErro = (e: unknown): string => {
+  const m = e instanceof Error ? e.message : String(e ?? "");
+  if (/Failed to fetch|NetworkError|network/i.test(m)) return "Sem conexão. Sua alteração não foi salva.";
+  if (/quota_exceeded/i.test(m)) return "Você atingiu o limite de IA deste mês.";
+  if (/no_access|forbidden|permission|row-level/i.test(m)) return "Você não tem acesso a isso.";
+  if (/duplicate|unique/i.test(m)) return "Isso já existe.";
+  return m.length > 3 && m.length < 140 ? m : "Não consegui salvar. Tente de novo.";
+};
+
+let lastMutationErrorToast = 0;
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: () => {
@@ -111,6 +127,16 @@ const queryClient = new QueryClient({
       if (now - lastQueryErrorToast < 8000) return;
       lastQueryErrorToast = now;
       toast.error("Não consegui carregar alguns dados. Verifique sua conexão e tente de novo.");
+    },
+  }),
+  mutationCache: new MutationCache({
+    onError: (error, _vars, _ctx, mutation) => {
+      // Se o hook já tem o próprio onError, ele que fale — não damos toast dobrado.
+      if (mutation.options.onError) return;
+      const now = Date.now();
+      if (now - lastMutationErrorToast < 4000) return;
+      lastMutationErrorToast = now;
+      toast.error(traduzErro(error));
     },
   }),
   defaultOptions: {

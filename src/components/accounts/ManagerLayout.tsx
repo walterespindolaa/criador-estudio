@@ -24,6 +24,7 @@ import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { HeroBand } from "@/components/HeroBand";
 import { useManagerApprovalOverview } from "@/hooks/useApprovals";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
+import { GlobalSearch } from "@/components/shared/GlobalSearch";
 import { applyTheme } from "@/lib/applyTheme";
 import { BgShapes } from "@/components/BgShapes";
 import { TourProvider } from "@/components/tour/TourProvider";
@@ -269,6 +270,7 @@ export default function ManagerLayout() {
               <Gift className="h-3.5 w-3.5" /> Indique e ganhe
             </button>
             <div className="flex items-center gap-2 rounded-2xl bg-white/15 px-2 py-1 backdrop-blur">
+              <GlobalSearch />
               {canClients && <ClientSwitcher />}
               <HelpButton light />
               <FeedbackButton />

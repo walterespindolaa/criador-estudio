@@ -7,6 +7,7 @@ import { NotificationNudge } from "@/components/NotificationNudge";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import { PWAInstallBanner } from "@/components/shared/PWAInstallBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
+import { GlobalSearch } from "@/components/shared/GlobalSearch";
 import { PlanBadge } from "@/components/shared/PlanBadge";
 import { AppFooter } from "@/components/shared/AppFooter";
 import { Settings, Lightbulb, Plus } from "lucide-react";
@@ -153,6 +154,7 @@ const AppLayout = () => {
             <div className="hidden md:block md:-ml-[104px] md:w-[calc(100%+104px)]">
               <HeroBand eyebrow={heroEyebrow} title={heroTitle} avatar={avatarNode} actions={quickActions}>
                 <div className="flex items-center gap-2 rounded-2xl bg-white/15 px-2 py-1 backdrop-blur">
+                  <GlobalSearch />
                   <PlanBadge />
                   <UploadProgressIndicator />
                   <HelpButton light />
@@ -172,6 +174,7 @@ const AppLayout = () => {
                 </h1>
               </NavLink>
               <div className="flex items-center gap-1.5">
+                <GlobalSearch />
                 <AccountSwitcher compact />
                 <PlanBadge />
                 <UploadProgressIndicator />
