@@ -1,6 +1,8 @@
 import { useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowRight, Camera, LogOut, Settings as SettingsIcon, Sparkles, StickyNote, Users, Loader2 } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { ArrowRight, Camera, LogOut, Settings as SettingsIcon, Sparkles, StickyNote, Users, Loader2, Send, CalendarDays, Wallet } from "lucide-react";
+import { OrganicBlobs } from "@/components/brand/OrganicBlobs";
+import { CRIA_HEX, type CriaColor } from "@/lib/moduleTheme";
 import { toast } from "sonner";
 import { useActiveAccount, type ManagedAccount } from "@/contexts/AccountContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -24,6 +26,27 @@ import { usePartner } from "@/hooks/usePartner";
 import { useManagerApprovalOverview } from "@/hooks/useApprovals";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { Handshake, Check, Clock, Ticket } from "lucide-react";
+
+// Atalho colorido do painel. A cor é a MESMA do cabeçalho daquele módulo —
+// é o que faz a pessoa reconhecer o lugar antes de ler o nome.
+function Atalho({ to, color, icon: Icon, label, hint }: {
+  to: string; color: CriaColor; icon: typeof Users; label: string; hint: string;
+}) {
+  const hex = CRIA_HEX[color];
+  return (
+    <Link
+      to={to}
+      className="group rounded-2xl border border-border bg-background/70 backdrop-blur-sm p-3.5 hover:-translate-y-0.5 hover:shadow-md transition-all"
+      style={{ borderLeftWidth: 3, borderLeftColor: hex }}
+    >
+      <span className="grid h-9 w-9 place-items-center rounded-xl mb-2" style={{ background: `${hex}1f`, color: hex }}>
+        <Icon className="h-4 w-4" />
+      </span>
+      <p className="text-[13.5px] font-display font-bold text-foreground leading-none">{label}</p>
+      <p className="text-[11px] font-body text-muted-foreground mt-1">{hint}</p>
+    </Link>
+  );
+}
 
 function initial(name: string | null | undefined) {
   if (!name) return "?";
@@ -161,68 +184,64 @@ export function ManagerHome({ embedded = false }: { embedded?: boolean }) {
       {/* Conteúdo */}
       <main className="flex-1 px-4 sm:px-6 py-8 sm:py-12">
         <div className="w-full max-w-4xl mx-auto">
-          {/* Hero: avatar grande + saudação */}
-          <section className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 mb-10">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-br from-primary via-purple-600 to-pink-500 p-[3px] shrink-0 hover:scale-[1.02] transition-transform"
-              aria-label="Trocar foto"
-            >
-              <div className="w-full h-full rounded-3xl bg-card overflow-hidden flex items-center justify-center">
-                {profile?.avatar_url ? (
-                  <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" />
-                ) : (
-                  <span className="text-3xl font-display font-extrabold text-primary">
-                    {initial(profile?.name)}
-                  </span>
-                )}
-              </div>
-              <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary border-2 border-background flex items-center justify-center shadow-sm">
-                <Camera className="h-3.5 w-3.5 text-primary-foreground" />
-              </div>
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleAvatarSelect}
-            />
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">
-                  {greeting(profile?.name)}
-                </h1>
-                <button
-                  type="button"
-                  onClick={() => setSettingsOpen(true)}
-                  className="p-1.5 rounded-lg hover:bg-accent/60 transition-colors text-muted-foreground hover:text-foreground"
-                  aria-label="Configurações"
-                >
-                  <SettingsIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                </button>
-              </div>
-              <p className="text-sm sm:text-base text-muted-foreground font-body mt-1">
-                Selecione qual cliente você quer gerenciar.
-              </p>
-            </div>
-          </section>
+          {/* ═══ PAINEL DE ABERTURA ═══
+              Era uma saudação solta e um card cinza com um número. Nada convidava
+              a pilotar o sistema. Agora é um painel com as formas orgânicas da marca
+              e os atalhos vivos — cada um na sua cor de módulo. */}
+          <section className="relative overflow-hidden rounded-3xl border border-border bg-card p-5 sm:p-7 mb-8">
+            <OrganicBlobs color="laranja" />
 
-          {/* Stats */}
-          <section className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-10">
-            <div className="rounded-2xl border border-border bg-card p-5 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Users className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-display font-extrabold text-foreground tabular-nums">
-                  {managedAccounts.length}
+            <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-br from-primary via-purple-600 to-pink-500 p-[3px] shrink-0 hover:scale-[1.02] transition-transform"
+                aria-label="Trocar foto"
+              >
+                <div className="w-full h-full rounded-3xl bg-card overflow-hidden flex items-center justify-center">
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                  ) : (
+                    <span className="text-3xl font-display font-extrabold text-primary">
+                      {initial(profile?.name)}
+                    </span>
+                  )}
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary border-2 border-background flex items-center justify-center shadow-sm">
+                  <Camera className="h-3.5 w-3.5 text-primary-foreground" />
+                </div>
+              </button>
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarSelect} />
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">
+                    {greeting(profile?.name)}
+                  </h1>
+                  <button
+                    type="button"
+                    onClick={() => setSettingsOpen(true)}
+                    className="p-1.5 rounded-lg hover:bg-accent/60 transition-colors text-muted-foreground hover:text-foreground"
+                    aria-label="Configurações"
+                  >
+                    <SettingsIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                  </button>
+                </div>
+                <p className="text-sm sm:text-base text-muted-foreground font-body mt-1">
+                  {managedAccounts.length > 0
+                    ? <>Você cuida de <strong className="text-foreground">{managedAccounts.length}</strong> {managedAccounts.length === 1 ? "cliente" : "clientes"}. Por onde começamos hoje?</>
+                    : <>Bora colocar a sua operação de pé.</>}
                 </p>
-                <p className="text-xs text-muted-foreground font-body">
-                  {managedAccounts.length === 1 ? "cliente" : "clientes"}
-                </p>
               </div>
+            </div>
+
+            {/* Atalhos — a cor de cada módulo, igual ao cabeçalho de cada tela.
+                A pessoa aprende a cor uma vez e navega no automático. */}
+            <div className="relative grid grid-cols-2 lg:grid-cols-4 gap-2.5 mt-6">
+              <Atalho to="/socialmidia/clientes" color="rosa" icon={Users} label="Clientes" hint="carteira" />
+              <Atalho to="/socialmidia/criapost/aprovacoes" color="laranja" icon={Send} label="Aprovações" hint="o que trava" />
+              <Atalho to="/socialmidia/agenda" color="amarelo" icon={CalendarDays} label="Agenda" hint="a semana" />
+              <Atalho to="/socialmidia/criacaixa/empresa/visao" color="azul" icon={Wallet} label="Caixa" hint="o dinheiro" />
             </div>
           </section>
 

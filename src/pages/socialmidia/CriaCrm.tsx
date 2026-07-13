@@ -7,7 +7,7 @@ import {
   CLIENT_STATUS_META, TAG_COLOR_CLS, type CrmClient, type ClientStatus,
 } from "@/hooks/useCrm";
 import { ModuleGate } from "@/components/accounts/ModuleGate";
-import { ManagerSectionTitle } from "@/components/accounts/ManagerSectionTitle";
+import { ModuleHero, type SubTab } from "@/components/brand/ModuleHero";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,23 +41,30 @@ function CrmInner() {
   if (seg === "criacrm") return <Navigate to="/socialmidia/criacrm/clientes" replace />;
   const tab: CrmTab = (CRM_TABS as readonly string[]).includes(seg) ? (seg as CrmTab) : "clientes";
 
+  // Cada aba já é uma rota — então o submenu do ModuleHero funciona direto,
+  // com a cor do módulo (Gestão = rosa) e as formas orgânicas atrás.
+  const base = "/socialmidia/criacrm";
+  const tabs: SubTab[] = [
+    { to: `${base}/clientes`, label: "Clientes" },
+    { to: `${base}/tarefas`, label: "Tarefas" },
+    { to: `${base}/calendario`, label: "Calendário" },
+    { to: `${base}/pipeline`, label: "Pipeline" },
+    { to: `${base}/contratos`, label: "Contratos" },
+  ];
+
   return (
     <div>
-      <ManagerSectionTitle t="Cria Gestão" s="Carteira, tarefas, calendário, pipeline e contratos da sua operação." />
-      <Tabs value={tab} onValueChange={(v) => navigate(`/socialmidia/criacrm/${v}`)} className="w-full">
-        <TabsList className="bg-card border border-border rounded-2xl p-1.5 mb-5 flex w-full justify-start overflow-x-auto scrollbar-none">
-          <TabsTrigger value="clientes" className="shrink-0 rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Clientes</TabsTrigger>
-          <TabsTrigger value="tarefas" className="shrink-0 rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Tarefas</TabsTrigger>
-          <TabsTrigger value="calendario" className="shrink-0 rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Calendário</TabsTrigger>
-          <TabsTrigger value="pipeline" className="shrink-0 rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Pipeline</TabsTrigger>
-          <TabsTrigger value="contratos" className="shrink-0 rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Contratos</TabsTrigger>
-        </TabsList>
-        <TabsContent value="clientes"><ClientsTab /></TabsContent>
-        <TabsContent value="tarefas"><TasksTab /></TabsContent>
-        <TabsContent value="calendario"><CrmCalendarTab /></TabsContent>
-        <TabsContent value="pipeline"><PipelineBoard /></TabsContent>
-        <TabsContent value="contratos"><ContractsTab /></TabsContent>
-      </Tabs>
+      <ModuleHero
+        title="Cria Gestão"
+        subtitle="Carteira, tarefas, calendário, pipeline e contratos da sua operação."
+        color="rosa"
+        tabs={tabs}
+      />
+      {tab === "clientes" && <ClientsTab />}
+      {tab === "tarefas" && <TasksTab />}
+      {tab === "calendario" && <CrmCalendarTab />}
+      {tab === "pipeline" && <PipelineBoard />}
+      {tab === "contratos" && <ContractsTab />}
     </div>
   );
 }

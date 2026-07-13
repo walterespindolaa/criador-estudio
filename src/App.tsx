@@ -202,6 +202,7 @@ const App = () => (
                 <Route index element={<Navigate to="/socialmidia/dashboard" replace />} />
                 <Route path="dashboard" element={<ErrorBoundary><ManagerHome /></ErrorBoundary>} />
                 <Route path="criapost" element={<ErrorBoundary><CriaPost /></ErrorBoundary>} />
+                <Route path="criapost/:tab" element={<ErrorBoundary><CriaPost /></ErrorBoundary>} />
                 <Route path="criacrm" element={<ErrorBoundary><CriaCrm /></ErrorBoundary>} />
                 <Route path="criacrm/clientes" element={<ErrorBoundary><CriaCrm /></ErrorBoundary>} />
                 <Route path="criacrm/tarefas" element={<ErrorBoundary><CriaCrm /></ErrorBoundary>} />
