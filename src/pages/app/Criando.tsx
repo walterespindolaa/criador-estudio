@@ -529,8 +529,7 @@ const Criando = () => {
         </div>
 
         {view === "board" && (
-        {/* onDragStart com vibração: o dedo SENTE que pegou o card. É o detalhe
-            que separa "site num celular" de "app". iOS ignora, Android responde. */}
+        /* onDragStart com vibração: o dedo SENTE que pegou o card. iOS ignora, Android responde. */
         <DragDropContext onDragStart={() => tocar(12)} onDragEnd={(r) => { tocar(8); handleDragEnd(r); }}>
         <div data-tour="criando-board" className="hidden md:flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-proximity kanban-scroll">
           {COLUMNS.map(col => {
