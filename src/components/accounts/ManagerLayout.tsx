@@ -21,6 +21,7 @@ import { ClientSwitcher } from "@/components/accounts/ClientSwitcher";
 import { SettingsManagerDrawer } from "@/components/accounts/SettingsManagerDrawer";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { HeroBand } from "@/components/HeroBand";
+import { useManagerApprovalOverview } from "@/hooks/useApprovals";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { applyTheme } from "@/lib/applyTheme";
 import { BgShapes } from "@/components/BgShapes";
@@ -157,14 +158,34 @@ export default function ManagerLayout() {
 
   const ctx: ManagerOutletContext = { openModule, openSettings: () => setSettingsOpen(true) };
 
-  // HeroBand (desktop)
+  // ═══ FAIXA DO TOPO ═══
+  // Antes ela repetia "Bom dia, Gabriela" — a MESMA saudação que já está no card
+  // logo abaixo. Era um espaço órfão: nas outras telas a faixa mostra o nome do
+  // módulo, e no dashboard não havia nada pra mostrar, então enfiaram a saudação.
+  //
+  // Agora a faixa é sempre CONTEXTO: onde você está (nome do módulo) ou, no
+  // dashboard, o dia de hoje e a única coisa que está te travando. A saudação
+  // fica só no card, que é onde ela tem companhia (foto, números, atalhos).
   const isDash = location.pathname === "/socialmidia" || location.pathname === "/socialmidia/dashboard";
-  const hour = new Date().getHours();
-  const greet = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
+
+  const { overview } = useManagerApprovalOverview();
+  const travados = overview.reduce((s, r) => s + (r.pendentes ?? 0), 0);
   const firstName = (profile?.name ?? "").trim().split(" ")[0] || "você";
+
+  const hoje = new Date();
+  const dataHoje = hoje.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+  const dataCap = dataHoje.charAt(0).toUpperCase() + dataHoje.slice(1);
+
   const heroTitle = isDash
-    ? `${firstName} 👋`
+    ? dataCap
     : (Object.entries(HERO_TITLES).find(([k]) => location.pathname.startsWith(k))?.[1] ?? "Gestão");
+
+  // A linha de cima (eyebrow): o alarme. Se não tem nada travado, fica quieta.
+  const heroEyebrow = isDash
+    ? (travados > 0
+        ? `${travados} ${travados === 1 ? "post aguardando" : "posts aguardando"} o cliente`
+        : "Nada travado por aqui")
+    : undefined;
   const avatarNode = isDash ? (
     <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full border-2 border-white/40 bg-white/20 font-display font-bold text-white shadow-sm">
       {profile?.avatar_url
@@ -234,7 +255,7 @@ export default function ManagerLayout() {
       <div className="flex min-h-screen flex-col md:pl-[104px]">
         {/* HeroBand (desktop), sangra full-width por trás do rail */}
         <div className="hidden md:block md:-ml-[104px] md:w-[calc(100%+104px)]">
-          <HeroBand eyebrow={isDash ? `${greet},` : undefined} title={heroTitle} avatar={avatarNode}>
+          <HeroBand eyebrow={heroEyebrow} title={heroTitle} avatar={avatarNode}>
             {/* Indique e ganhe: sempre visível. Parceira vai direto pras comissões. */}
             <button type="button" onClick={onNavComissoes}
               title={isPartner ? "Ver suas comissões" : "Indique o CRIA e ganhe comissão recorrente"}
