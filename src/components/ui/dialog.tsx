@@ -30,11 +30,22 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+>(({ className, children, onOpenAutoFocus, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
+      // TECLADO NÃO ABRE SOZINHO.
+      // O Radix foca o primeiro elemento focável ao abrir. No celular, se esse
+      // elemento for um input, o teclado sobe sozinho, cobre metade da tela e a
+      // pessoa nem sabe onde está digitando. Aqui o foco vai pro CONTAINER:
+      // acessibilidade preservada (leitor de tela anuncia o dialog), teclado só
+      // aparece se ela TOCAR num campo. Um dialog pode sobrescrever se precisar.
+      onOpenAutoFocus={(e) => {
+        if (onOpenAutoFocus) return onOpenAutoFocus(e);
+        e.preventDefault();
+        (e.currentTarget as HTMLElement)?.focus?.();
+      }}
       className={cn(
         // PADRÃO DOS MODAIS DO CRIA
         // O shadcn vem com rounded-lg (8px), max-w-lg (512px) e p-6. Resultado: uma

@@ -228,6 +228,9 @@ export function useExternalPosts(clientId: string | null) {
   });
 
   // Move o status de aprovação manualmente (gestora arrastando no kanban).
+  // ANTES: só invalidava no onSuccess. O card voltava pra coluna de origem e
+  // "pulava" pra nova depois do round-trip + refetch. No 4G isso são segundos.
+  // AGORA: update otimista, o card fica onde a pessoa soltou, na hora.
   const moveStatus = useMutation({
     mutationFn: async ({ id, approval_status }: { id: string; approval_status: ExternalPost["approval_status"] }) => {
       const { error } = await sbFrom("posts")
@@ -235,8 +238,23 @@ export function useExternalPosts(clientId: string | null) {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); qc.invalidateQueries({ queryKey: ["external-pending", agencyOwnerId] }); },
-    onError: () => toast.error("Erro ao mover o post."),
+    onMutate: async ({ id, approval_status }) => {
+      await qc.cancelQueries({ queryKey: key });
+      const anterior = qc.getQueryData<ExternalPost[]>(key);
+      qc.setQueryData<ExternalPost[]>(key, (old) =>
+        (old ?? []).map((p) => (p.id === id ? { ...p, approval_status } : p)),
+      );
+      return { anterior };
+    },
+    onError: (_e, _v, ctx) => {
+      // Deu errado? Devolve o card pra onde estava, em vez de mentir pra pessoa.
+      if (ctx?.anterior) qc.setQueryData(key, ctx.anterior);
+      toast.error("Erro ao mover o post.");
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: key, refetchType: "none" });
+      qc.invalidateQueries({ queryKey: ["external-pending", agencyOwnerId] });
+    },
   });
 
   // Muda a DATA do post (arrastar no calendário / escolher no card). Otimista pra ser instantâneo.

@@ -110,10 +110,19 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5,
-      gcTime: 1000 * 60 * 10,
+      // gcTime era 10min: ao voltar pra uma tela depois de 10 minutos, o cache
+      // já tinha sido jogado fora e a tela piscava esqueleto de novo. No celular,
+      // que fica minutos em segundo plano, isso acontecia o TEMPO TODO.
+      // 24h: volta instantâneo, e o staleTime cuida de atualizar por baixo.
+      gcTime: 1000 * 60 * 60 * 24,
       retry: 1,
       refetchOnWindowFocus: false,
+      // Voltou a ter internet? Revalida. É o caso do metrô, do elevador.
+      refetchOnReconnect: true,
+      // Dado em cache aparece na hora; a atualização vem por trás, sem pisca.
+      refetchOnMount: false,
     },
+    mutations: { retry: 0 },
   },
 });
 

@@ -49,7 +49,7 @@ export function ModuleHero({
 
         {/* Submenu, rota real por seção. Sublinhado na cor do módulo. */}
         {tabs && tabs.length > 0 && (
-          <nav className="mt-4 -mx-1 flex gap-1 overflow-x-auto scrollbar-none">
+          <nav className="mt-4 -mx-1 flex gap-1 overflow-x-auto scrollbar-none scroll-snap-x">
             {tabs.map((t) => (
               <NavLink
                 key={t.to}

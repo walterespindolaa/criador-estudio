@@ -4,12 +4,59 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE FIRST
+   O celular é 99% do uso do cliente final. Estas regras valem pro
+   sistema inteiro, e resolvem na raiz o que a gente vinha remendando
+   tela por tela.
+   ═══════════════════════════════════════════════════════════════ */
+
 /* Trava o arrasto lateral no mobile (comportamento de app nativo) */
 html, body {
   overflow-x: hidden;
   max-width: 100%;
   overscroll-behavior-x: none;
+  /* Sem isso o iOS aumenta a fonte sozinho ao girar a tela. */
+  -webkit-text-size-adjust: 100%;
 }
+
+/* TEXTO ESTOURANDO A BORDA.
+   Era o bug mais comum: @handle, e-mail, URL e nome longo sem espaço
+   não quebram sozinhos e vazam pra fora do card. Aqui a quebra é global. */
+body, p, span, h1, h2, h3, h4, h5, h6, a, li, td, th, button, label {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* ZOOM DO iOS.
+   Campo com fonte < 16px faz o Safari dar zoom ao focar, e a tela fica
+   torta pra sempre. 16px no campo = zero zoom. */
+@media (max-width: 767px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* ÁREA SEGURA (notch e barra de gestos do iPhone). */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-bottom { padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem); }
+  .safe-top { padding-top: env(safe-area-inset-top); }
+}
+
+/* Toque: sem o flash cinza do Android/iOS e sem delay de 300ms. */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+button, a, [role="button"] {
+  touch-action: manipulation;
+}
+
+/* Rolagem horizontal (abas, chips) com pegada de app: para no item. */
+.scroll-snap-x {
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+.scroll-snap-x > * { scroll-snap-align: start; }
 
 @layer base {
   :root {
