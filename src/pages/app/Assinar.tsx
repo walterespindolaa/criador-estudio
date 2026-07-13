@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PLANS, PLAN_VALUE, type PlanId } from "@/lib/plans";
+import { PlanComparison } from "@/components/shared/PlanComparison";
 import { track, newEventId } from "@/lib/metaPixel";
 
 export default function Assinar() {
@@ -238,6 +239,8 @@ export default function Assinar() {
           );
         })}
       </div>
+
+      <PlanComparison className="mt-12" />
 
       <div className="w-full max-w-sm mt-8 rounded-2xl border border-border bg-card px-4 py-3">
         <label htmlFor="partner-code" className="block text-xs font-body text-muted-foreground mb-1.5">

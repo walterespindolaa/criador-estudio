@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/accordion";
 import { Logo } from "@/components/shared/Logo";
 import { PLANS } from "@/lib/plans";
+import { PlanComparison } from "@/components/shared/PlanComparison";
 import { useT } from "@/lib/i18n";
 
 // --- Components ---
@@ -574,7 +575,10 @@ export default function Landing() {
               </p>
             </motion.div>
 
-            <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto items-start">
+            {/* Eram 2 planos numa grade de 2 colunas. Com o Essencial são 3 —
+                e o do meio (Pro) é o que a gente quer que ela escolha, então ele
+                fica no centro, destacado. */}
+            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto items-start">
               {PLANS.map((plan, i) => (
                 <motion.div
                   key={plan.id}
@@ -591,6 +595,11 @@ export default function Landing() {
                     </div>
                   )}
                   <div className="text-center mb-6 pt-2">
+                    {/* O VERBO. A pessoa não compra uma lista de recursos, compra
+                        uma mudança: organizar → criar melhor → a IA faz por você. */}
+                    <p className="text-[11px] font-body font-bold uppercase tracking-wider text-primary mb-1.5">
+                      {plan.verbo}
+                    </p>
                     <h3 className="text-2xl font-display font-bold mb-1">{plan.name}</h3>
                     <p className="text-sm text-muted-foreground">{plan.tagline}</p>
                   </div>
@@ -619,6 +628,10 @@ export default function Landing() {
                 </motion.div>
               ))}
             </div>
+
+            {/* Card mostra o que o plano TEM. A tabela responde a pergunta que
+                a pessoa faz de verdade: "o que eu perco se pegar o mais barato?" */}
+            <PlanComparison className="mt-12" />
 
             <p className="text-center text-sm text-muted-foreground mt-6 font-medium">
               {t("landing.priceFootnote")}

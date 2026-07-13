@@ -516,7 +516,8 @@ export function ManagerHome({ embedded = false }: { embedded?: boolean }) {
 
             <div className="space-y-2">
               <Label className="font-body text-xs">Plano</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {/* 3 planos agora (entrou o Essencial). */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 {PLANS.map((plan) => {
                   const selected = selfSubPlan === plan.id;
                   return (
