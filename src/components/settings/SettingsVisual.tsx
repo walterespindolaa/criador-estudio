@@ -175,6 +175,38 @@ export function SettingsVisual() {
             </div>
           </section>
 
+          {/* FUNDO. Subiu pra perto dos Temas: é uma escolha visual, e estava
+              enterrada abaixo da Tipografia, onde ninguém rolava pra achar. */}
+          <section>
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Palette className="h-5 w-5 text-primary" />
+                <h3 className="text-base font-body font-bold text-foreground">Fundo</h3>
+              </div>
+              <p className="text-sm text-muted-foreground font-body">Formas decorativas atrás do conteúdo, sutileza que dá vida</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {BG_STYLES.map(bg => (
+                <button
+                  key={bg.key}
+                  onClick={() => setSelectedBg(bg.key)}
+                  className={cn(
+                    "rounded-xl border-2 p-3 text-left transition-all relative",
+                    selectedBg === bg.key ? "border-primary bg-primary/[0.06]" : "border-border hover:border-primary/40"
+                  )}
+                >
+                  <span className="block text-sm font-body font-bold text-foreground">{bg.label}</span>
+                  <span className="block text-[11px] font-body text-muted-foreground leading-snug mt-0.5">{bg.desc}</span>
+                  {selectedBg === bg.key && (
+                    <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                      <Check className="h-3 w-3 text-white" />
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </section>
+
           {/* Accent Color */}
           <section>
             <div className="mb-4">
@@ -275,37 +307,6 @@ export function SettingsVisual() {
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground" style={{ fontFamily: font.bodyFont }}>{font.desc}</p>
-                </button>
-              ))}
-            </div>
-          </section>
-
-          {/* Fundo decorativo (rebranding CRIA) */}
-          <section>
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Palette className="h-5 w-5 text-primary" />
-                <h3 className="text-base font-body font-bold text-foreground">Fundo</h3>
-              </div>
-              <p className="text-sm text-muted-foreground font-body">Formas decorativas atrás do conteúdo, sutileza que dá vida</p>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {BG_STYLES.map(bg => (
-                <button
-                  key={bg.key}
-                  onClick={() => setSelectedBg(bg.key)}
-                  className={cn(
-                    "rounded-xl border-2 p-3 text-left transition-all relative",
-                    selectedBg === bg.key ? "border-primary bg-primary/[0.06]" : "border-border hover:border-primary/40"
-                  )}
-                >
-                  <span className="block text-sm font-body font-bold text-foreground">{bg.label}</span>
-                  <span className="block text-[11px] font-body text-muted-foreground leading-snug mt-0.5">{bg.desc}</span>
-                  {selectedBg === bg.key && (
-                    <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                      <Check className="h-3 w-3 text-white" />
-                    </div>
-                  )}
                 </button>
               ))}
             </div>

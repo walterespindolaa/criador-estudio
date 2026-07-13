@@ -217,47 +217,77 @@ function ClientWorkspace() {
         <ArrowLeft className="h-4 w-4" /> Voltar pra carteira
       </button>
 
-      {/* HERO */}
-      <div className="rounded-3xl border border-border bg-card p-6 sm:p-7 shadow-sm mb-6">
-        <div className="flex items-start gap-4 sm:gap-5 flex-wrap">
+      {/* HERO
+          No mobile isto era um `flex-wrap` com tudo dentro: nome, chips e os
+          botões brigavam pela mesma linha e o resultado era o do print, sem
+          hierarquia nenhuma. Agora são três blocos empilhados e óbvios:
+          1) quem é (foto + nome)  2) o que é (chips, numa tira que rola)
+          3) o que fazer (ações, botões de verdade). No desktop volta pro lado. */}
+      <div className="rounded-3xl border border-border bg-card p-4 sm:p-7 shadow-sm mb-6">
+        {/* 1. Quem é */}
+        <div className="flex items-start gap-4 sm:gap-5">
           <button type="button" onClick={() => avatarInputRef.current?.click()}
-            className="relative w-[72px] h-[72px] rounded-3xl p-[3px] bg-gradient-to-br from-primary via-purple-500 to-pink-400 shrink-0 hover:scale-[1.02] transition-transform" aria-label="Trocar foto do cliente">
+            className="relative w-[64px] h-[64px] sm:w-[72px] sm:h-[72px] rounded-3xl p-[3px] bg-gradient-to-br from-primary via-purple-500 to-pink-400 shrink-0 hover:scale-[1.02] transition-transform" aria-label="Trocar foto do cliente">
             <div className="w-full h-full rounded-[20px] bg-card flex items-center justify-center overflow-hidden">
               {shownAvatar ? <img src={shownAvatar} alt="" className="w-full h-full object-cover" loading="lazy" />
-                : <span className="font-display font-extrabold text-3xl text-primary">{form.logo && form.logo.length <= 2 ? form.logo : initial(form.name)}</span>}
+                : <span className="font-display font-extrabold text-2xl sm:text-3xl text-primary">{form.logo && form.logo.length <= 2 ? form.logo : initial(form.name)}</span>}
             </div>
             <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary border-2 border-background flex items-center justify-center shadow-sm"><Camera className="h-3.5 w-3.5 text-primary-foreground" /></div>
           </button>
           <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={onPickAvatar} />
+
           <div className="flex-1 min-w-0 pt-0.5">
-            <h1 className="font-display font-bold text-2xl sm:text-3xl tracking-tight text-foreground truncate">{form.name || "Sem nome"}</h1>
-            <div className="flex items-center gap-2 mt-2.5 flex-wrap">
-              {form.segment && <span className="text-xs font-semibold px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/15">{form.segment}</span>}
-              {/* Status FIXO (ativo/pausado/inativo) */}
-              <select value={form.status ?? "ativo"} onChange={(e) => setForm({ ...form, status: e.target.value as ClientStatus })}
-                className={cn("text-xs font-semibold px-3 py-1 rounded-full border cursor-pointer outline-none", CLIENT_STATUS_META[(form.status ?? "ativo") as ClientStatus].cls)}>
-                {CLIENT_STATUSES.map((s) => <option key={s} value={s}>{CLIENT_STATUS_META[s].label}</option>)}
-              </select>
-              {isCria && <span className="text-xs font-semibold px-3 py-1 rounded-full bg-muted text-foreground/70 border border-border">cria</span>}
-              {form.instagram && <span className="text-xs font-semibold px-3 py-1 rounded-full bg-muted text-foreground/70 border border-border inline-flex items-center gap-1"><Instagram className="h-3 w-3" />{form.instagram.replace(/^@/, "")}</span>}
-              {/* Etiquetas VARIÁVEIS (multi-seleção) */}
-              <TagPicker selected={form.tags ?? []} onChange={(tags) => setForm({ ...form, tags })} />
-            </div>
+            <h1 className="font-display font-bold text-xl sm:text-3xl tracking-tight text-foreground leading-tight">{form.name || "Sem nome"}</h1>
+            {form.instagram && (
+              <p className="text-[13px] font-body text-muted-foreground mt-0.5 inline-flex items-center gap-1 min-w-0">
+                <Instagram className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{form.instagram.replace(/^@/, "")}</span>
+              </p>
+            )}
           </div>
-          <div className="flex gap-2 shrink-0">
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={async () => { if (confirm("Excluir este cliente?")) { await del.mutateAsync(form.id); navigate("/socialmidia/criacrm"); } }}><Trash2 className="h-4 w-4" /></Button>
-            {isCria && <Button variant="outline" size="sm" className="rounded-xl" onClick={() => { setActiveAccount(form.cria_owner_id!); navigate("/app"); }}>Abrir no cria <ArrowRight className="h-3.5 w-3.5 ml-1" /></Button>}
-            {/* Autosave: salva sozinho. O botão só serve pra forçar na hora. */}
+
+          {/* Desktop: as ações ficam aqui em cima, como sempre foram. */}
+          <div className="hidden sm:flex gap-2 shrink-0 items-center">
             <span className={cn("inline-flex items-center gap-1.5 text-xs font-body px-2.5 py-1.5 rounded-lg transition-colors",
               saveState === "saving" ? "text-muted-foreground bg-muted"
               : saveState === "saved" ? "text-emerald-600 bg-emerald-500/10"
               : "text-muted-foreground")}>
               {saveState === "saving" ? "Salvando…" : saveState === "saved" ? "Salvo ✓" : "Salva automático"}
             </span>
+            {isCria && <Button variant="outline" size="sm" className="rounded-xl" onClick={() => { setActiveAccount(form.cria_owner_id!); navigate("/app"); }}>Abrir no cria <ArrowRight className="h-3.5 w-3.5 ml-1" /></Button>}
             <Button variant="outline" size="sm" className="rounded-xl" onClick={save} disabled={update.isPending}><Save className="h-3.5 w-3.5 mr-1.5" /> Salvar</Button>
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={async () => { if (confirm("Excluir este cliente?")) { await del.mutateAsync(form.id); navigate("/socialmidia/criacrm"); } }}><Trash2 className="h-4 w-4" /></Button>
           </div>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-border">
+
+        {/* 2. O que é: chips numa tira só, que rola no mobile em vez de empilhar. */}
+        <div className="flex items-center gap-2 mt-3.5 overflow-x-auto scrollbar-none scroll-snap-x sm:flex-wrap sm:overflow-visible pb-0.5">
+          <select value={form.status ?? "ativo"} onChange={(e) => setForm({ ...form, status: e.target.value as ClientStatus })}
+            className={cn("shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full border cursor-pointer outline-none", CLIENT_STATUS_META[(form.status ?? "ativo") as ClientStatus].cls)}>
+            {CLIENT_STATUSES.map((s) => <option key={s} value={s}>{CLIENT_STATUS_META[s].label}</option>)}
+          </select>
+          {form.segment && <span className="shrink-0 whitespace-nowrap text-xs font-semibold px-3 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/15">{form.segment}</span>}
+          {isCria && <span className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full bg-muted text-foreground/70 border border-border">cria</span>}
+          {/* Etiquetas VARIÁVEIS (multi-seleção) */}
+          <TagPicker selected={form.tags ?? []} onChange={(tags) => setForm({ ...form, tags })} />
+        </div>
+
+        {/* 3. O que fazer: no mobile as ações viram botões de verdade, lado a lado. */}
+        <div className="flex sm:hidden items-center gap-2 mt-3.5">
+          <Button variant="outline" size="sm" className="flex-1 rounded-xl" onClick={save} disabled={update.isPending}>
+            <Save className="h-3.5 w-3.5 mr-1.5" /> {saveState === "saving" ? "Salvando…" : saveState === "saved" ? "Salvo ✓" : "Salvar"}
+          </Button>
+          {isCria && (
+            <Button variant="outline" size="sm" className="flex-1 rounded-xl" onClick={() => { setActiveAccount(form.cria_owner_id!); navigate("/app"); }}>
+              Abrir no cria <ArrowRight className="h-3.5 w-3.5 ml-1" />
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            onClick={async () => { if (confirm("Excluir este cliente?")) { await del.mutateAsync(form.id); navigate("/socialmidia/criacrm"); } }}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-4 sm:mt-6 sm:pt-5 border-t border-border">
           <Stat k="Valor mensal" v={formatBRL(form.monthly_value)} s="por mês" accent />
           <Stat k="Cliente desde" v={monthYear(form.contract_date)} />
           <Stat k="Renovação" v={monthYear(form.renewal_date)} />

@@ -5,7 +5,7 @@ import { BroadcastBanner } from "@/components/BroadcastBanner";
 import { NotificationNudge } from "@/components/NotificationNudge";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import {
-  Home, Boxes, Handshake, DollarSign, Users, ListChecks, ChevronUp, Gift,
+  Home, Boxes, Handshake, DollarSign, Users, ListChecks, Menu, ChevronRight, Gift,
   Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, Sparkles, CalendarDays, Trash2, UserPlus, type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -273,16 +273,40 @@ export default function ManagerLayout() {
             <span className={cn("text-[10px] font-body", active ? "text-primary font-semibold" : "text-muted-foreground font-medium")}>{label}</span>
           </button>
         );
-        // Dock: os 4 do dia a dia ficam diretos, o resto (módulos incluídos) vai pro "Mais".
-        const moreNav = [
-          ...modules.map((m) => ({ label: m.name, icon: (MODICONS[m.code] ?? Boxes) as LucideIcon, onClick: () => openModule(m) })),
-          ...(hasHubCria ? [{ label: "HUB CRIA", icon: Sparkles, onClick: () => navigate("/socialmidia/hubcria") }] : []),
-          ...(!actingAsTeam ? [{ label: "Equipe", icon: UserPlus, onClick: () => navigate("/socialmidia/equipe") }] : []),
-          { label: "Parceria", icon: Handshake, onClick: () => navigate("/socialmidia/parceria") },
-          { label: "Comissões", icon: DollarSign, onClick: onNavComissoes },
-          { label: "Suas contas", icon: Users, onClick: () => navigate("/socialmidia/contas") },
-          { label: "Lixeira", icon: Trash2, onClick: () => navigate("/socialmidia/lixeira") },
-          { label: "Config.", icon: SettingsIcon, onClick: () => setSettingsOpen(true) },
+        // MENU "MAIS" no mesmo padrão do cliente final (BottomBar.tsx):
+        // gaveta que sobe do rodapé, com SEÇÕES, uma linha por item, ícone em
+        // quadradinho, descrição do que aquilo faz e chevron. A grade de ícones
+        // secos que existia aqui não dizia o que cada coisa era.
+        const moreSections: { title: string; items: { label: string; desc?: string; icon: LucideIcon; onClick: () => void; ativo?: boolean }[] }[] = [
+          {
+            title: "Módulos",
+            items: [
+              ...modules.map((m) => ({
+                label: m.name,
+                desc: (m.status === "active" || m.status === "past_due") ? "Toque para abrir" : m.coming_soon ? "Em breve" : "Conhecer o módulo",
+                icon: (MODICONS[m.code] ?? Boxes) as LucideIcon,
+                ativo: m.status === "active" || m.status === "past_due",
+                onClick: () => openModule(m),
+              })),
+              ...(hasHubCria ? [{ label: "HUB CRIA", desc: "Analisar concorrentes e gerar ideias", icon: Sparkles as LucideIcon, ativo: true, onClick: () => navigate("/socialmidia/hubcria") }] : []),
+            ],
+          },
+          {
+            title: "Negócio",
+            items: [
+              ...(!actingAsTeam ? [{ label: "Equipe", desc: "Convidar colaboradores", icon: UserPlus as LucideIcon, onClick: () => navigate("/socialmidia/equipe") }] : []),
+              { label: "Parceria", desc: "Indique o CRIA e ganhe comissão", icon: Handshake as LucideIcon, onClick: () => navigate("/socialmidia/parceria") },
+              { label: "Comissões", desc: "O que você já ganhou", icon: DollarSign as LucideIcon, onClick: onNavComissoes },
+              { label: "Suas contas", desc: "Assentos e clientes do plano", icon: Users as LucideIcon, onClick: () => navigate("/socialmidia/contas") },
+            ],
+          },
+          {
+            title: "Sistema",
+            items: [
+              { label: "Lixeira", desc: "Recuperar o que você excluiu", icon: Trash2 as LucideIcon, onClick: () => navigate("/socialmidia/lixeira") },
+              { label: "Configurações", desc: "Perfil, visual e integrações", icon: SettingsIcon as LucideIcon, onClick: () => setSettingsOpen(true) },
+            ],
+          },
         ];
         return (
           <>
@@ -290,21 +314,47 @@ export default function ManagerLayout() {
               <div className="fixed inset-0 z-40 md:hidden bg-foreground/20 backdrop-blur-sm" onClick={() => setMoreOpen(false)} />
             )}
             {moreOpen && (
-              <div className="fixed left-3 right-3 z-40 md:hidden bg-card/95 backdrop-blur-lg border border-border rounded-3xl shadow-warm-lg p-4"
-                   style={{ bottom: "calc(84px + env(safe-area-inset-bottom, 0px))" }}>
-                <div className="grid grid-cols-4 gap-2.5">
-                  {moreNav.map((n) => (
-                    <button key={n.label} type="button" onClick={() => { setMoreOpen(false); n.onClick(); }}
-                      className="flex flex-col items-center gap-1.5 p-3 rounded-2xl bg-muted/50 text-muted-foreground hover:text-foreground transition-colors">
-                      <n.icon className="h-5 w-5" strokeWidth={1.5} />
-                      <span className="text-[10px] font-body font-medium leading-tight text-center">{n.label}</span>
-                    </button>
-                  ))}
+              <div
+                className="fixed left-0 right-0 z-40 md:hidden bg-card border-t border-border rounded-t-[28px] shadow-warm-lg overflow-hidden flex flex-col"
+                style={{ bottom: 0, maxHeight: "82vh", paddingBottom: "calc(96px + env(safe-area-inset-bottom, 0px))" }}
+              >
+                <div className="px-5 pt-3 pb-2 shrink-0">
+                  <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/25" />
+                  <h2 className="text-xl font-display font-extrabold text-foreground">Menu</h2>
                 </div>
-                <button type="button" onClick={() => { setMoreOpen(false); handleSignOut(); }}
-                  className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-destructive/10 text-destructive hover:bg-destructive/15 transition-colors text-sm font-body font-medium">
-                  <LogOut className="h-4 w-4" strokeWidth={1.5} /> Sair
-                </button>
+
+                <div className="overflow-y-auto px-3 pb-2">
+                  {moreSections.filter((s) => s.items.length > 0).map((sec) => (
+                    <div key={sec.title} className="mb-2">
+                      <p className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground/70 px-3 pt-2.5 pb-1">{sec.title}</p>
+                      <div className="space-y-0.5">
+                        {sec.items.map((item) => (
+                          <button key={sec.title + item.label} type="button"
+                            onClick={() => { setMoreOpen(false); item.onClick(); }}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl active:bg-muted/60 transition-colors text-left">
+                            <span className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-xl",
+                              item.ativo ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground")}>
+                              <item.icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <span className="block text-[15px] font-body font-semibold text-foreground truncate">{item.label}</span>
+                              {item.desc && <span className="block text-[11.5px] font-body text-muted-foreground truncate mt-0.5">{item.desc}</span>}
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" strokeWidth={2} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+
+                  <button type="button" onClick={() => { setMoreOpen(false); handleSignOut(); }}
+                    className="mt-2 mb-1 w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl active:bg-destructive/10 transition-colors">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-destructive/10 text-destructive">
+                      <LogOut className="h-[18px] w-[18px]" strokeWidth={1.8} />
+                    </span>
+                    <span className="text-[15px] font-body font-semibold text-destructive">Sair</span>
+                  </button>
+                </div>
               </div>
             )}
             <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden pointer-events-none"
@@ -316,9 +366,11 @@ export default function ManagerLayout() {
                   {canAgenda && dockItem(isActive("/socialmidia/agenda"), CalendarDays, "Agenda", () => navigate("/socialmidia/agenda"))}
                   {dockItem(isActive("/socialmidia/aprovacoes"), ListChecks, "Aprov.", () => navigate("/socialmidia/aprovacoes"))}
                 </div>
-                <button type="button" onClick={() => setMoreOpen(!moreOpen)} aria-label="Mais"
+                {/* Hambúrguer, igual ao do cliente final. A seta pra cima sugeria
+                    "expandir a tela", não "abrir o menu". */}
+                <button type="button" onClick={() => setMoreOpen(!moreOpen)} aria-label="Menu"
                   className="dock-pill h-[52px] w-[52px] rounded-full flex items-center justify-center active:scale-95 transition-transform">
-                  <ChevronUp className={cn("h-6 w-6 transition-transform", moreOpen ? "rotate-180 text-primary" : "text-muted-foreground")} strokeWidth={1.8} />
+                  <Menu className={cn("h-6 w-6 transition-colors", moreOpen ? "text-primary" : "text-muted-foreground")} strokeWidth={1.8} />
                 </button>
               </div>
             </div>
