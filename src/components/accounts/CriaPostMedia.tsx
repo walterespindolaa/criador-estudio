@@ -133,7 +133,9 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
             <Input value={driveUrl} onChange={(e) => setDriveUrl(e.target.value)} placeholder="Cole o link do Google Drive" className="h-9 rounded-xl" />
             <Button type="button" size="sm" onClick={onDrive} disabled={addDriveLink.isPending}>Adicionar</Button>
           </div>
-          <p className="text-[11px] font-body text-muted-foreground mt-1.5">Deixe o arquivo como <strong>"Qualquer pessoa com o link"</strong> no Drive, senão a prévia não aparece.</p>
+          <p className="text-[11px] font-body text-muted-foreground mt-1.5">
+            Cole o link do <strong>arquivo</strong>, não o da pasta. E deixe o arquivo como <strong>"Qualquer pessoa com o link"</strong> no Drive, senão a prévia não aparece.
+          </p>
         </div>
       )}
 

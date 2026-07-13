@@ -111,16 +111,43 @@ export function useCriaPostMedia(postId: string | null) {
 
   const addDriveLink = useMutation({
     mutationFn: async (url: string) => {
-      const m = url.match(/[-\w]{25,}/);
-      const fileId = m ? m[0] : url;
+      const raw = url.trim();
+
+      // Link de PASTA não serve. O código pegava o ID da pasta e montava
+      // /file/d/<id-da-pasta>/preview — uma URL que não existe. A prévia
+      // nunca aparecia e ninguém entendia por quê. Agora avisa na hora.
+      if (/drive\.google\.com\/drive\/(u\/\d+\/)?folders\//i.test(raw)) {
+        throw new Error(
+          "Esse é o link da PASTA. Abra o arquivo dentro dela, clique em Compartilhar → Copiar link, e cole aqui.",
+        );
+      }
+
+      // Aceita as formas de link de ARQUIVO do Drive:
+      //   /file/d/<id>/view · open?id=<id> · uc?id=<id> · ?id=<id>
+      const fileId =
+        raw.match(/\/file\/d\/([-\w]{20,})/)?.[1] ??
+        raw.match(/[?&]id=([-\w]{20,})/)?.[1] ??
+        (/^[-\w]{20,}$/.test(raw) ? raw : null);
+
+      if (!fileId) {
+        throw new Error("Não reconheci esse link. Use o link de um arquivo do Drive (…/file/d/…).");
+      }
+
       const { error } = await sbRpc("criapost_add_media", {
         p_post_id: postId, p_provider: "gdrive", p_external_file_id: fileId,
         p_file_name: "Google Drive", p_file_type: null, p_file_size: null,
         p_view_url: `https://drive.google.com/file/d/${fileId}/preview`,
         p_thumbnail_url: `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`,
-        p_download_url: url, p_bunny_video_id: null,
+        p_download_url: raw, p_bunny_video_id: null,
       });
-      if (error) throw new Error(error.message);
+      if (error) {
+        // Traduz o erro cru do banco pra algo que a pessoa entenda e resolva.
+        const m = error.message || "";
+        if (m.includes("post_nao_encontrado")) throw new Error("O post ainda não foi criado. Feche e abra de novo.");
+        if (m.includes("modulo_inativo")) throw new Error("O Cria Post não está ativo nesta conta.");
+        if (m.includes("sem_permissao")) throw new Error("Você não tem permissão pra editar este post.");
+        throw new Error(m);
+      }
     },
     onSuccess: invalidate,
   });
