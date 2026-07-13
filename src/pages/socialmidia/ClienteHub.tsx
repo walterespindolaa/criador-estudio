@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, ExternalLink, Link2, Loader2, Plus, Settings2, Wallet, Send, Check } from "lucide-react";
+import { ArrowLeft, ExternalLink, Link2, Loader2, Plus, Settings2, Wallet, Send, Check, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useCrmClient, useUpdateCrmClient } from "@/hooks/useCrm";
 import { useExternalClients } from "@/hooks/useCriaPost";
@@ -202,12 +202,36 @@ export default function ClienteHub() {
       {/* Conteúdo */}
       {activeTab === "visao-geral" && (
         <div className="space-y-4">
+          {/* Os cards eram só LEITURA e mostravam "-". A pessoa abria o cliente,
+              via quatro traços e não tinha como preencher nada dali: tinha que
+              descobrir sozinha que precisava ir na "ficha completa" do CRM.
+              Agora cada card é editável no lugar: toca, digita, salva sozinho. */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <Info label="Segmento" value={client.segment || "-"} />
-            <Info label="Contato" value={client.email || client.phone || "-"} />
-            {/* monthly_value é em REAIS (não centavos), brl() aqui é da parte financeira, que é em centavos. */}
-            <Info label="Mensalidade" value={formatBRL(client.monthly_value)} />
-            <Info label="Renovação" value={client.renewal_date ? new Date(client.renewal_date).toLocaleDateString("pt-BR") : "-"} />
+            <CampoCliente clientId={client.id} label="Segmento" tipo="texto"
+              valor={client.segment} placeholder="Ex.: Nutrição, Odonto…"
+              campo="segment" />
+            <CampoCliente clientId={client.id} label="WhatsApp" tipo="texto"
+              valor={client.whatsapp || client.phone} placeholder="47 98853-7969"
+              campo={client.whatsapp || !client.phone ? "whatsapp" : "phone"} />
+            {/* monthly_value é em REAIS (não centavos). */}
+            <CampoCliente clientId={client.id} label="Mensalidade" tipo="dinheiro"
+              valor={client.monthly_value} campo="monthly_value"
+              rodape={client.payment_day ? `vence dia ${client.payment_day}` : "defina o dia de pagamento"} />
+            <CampoCliente clientId={client.id} label="Renovação" tipo="data"
+              valor={client.renewal_date} campo="renewal_date" />
+          </div>
+
+          {/* Dia de pagamento: é o que faz a mensalidade nascer no Cria Caixa. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <CampoCliente clientId={client.id} label="Dia de pagamento" tipo="dia"
+              valor={client.payment_day} campo="payment_day"
+              rodape="a mensalidade nasce nesse dia, no Caixa" />
+            <CampoCliente clientId={client.id} label="E-mail" tipo="texto"
+              valor={client.email} placeholder="cliente@email.com" campo="email" />
+            <CampoCliente clientId={client.id} label="Cliente desde" tipo="data"
+              valor={client.contract_date} campo="contract_date" />
+            <CampoCliente clientId={client.id} label="Plano" tipo="texto"
+              valor={client.plan_name} placeholder="Ex.: Gestão completa" campo="plan_name" />
           </div>
           {/* Anotações: saíram do "Personalizar" (onde ninguém achava) e viraram um campo
               editável aqui, que é onde a pessoa procura por elas. */}
@@ -324,6 +348,97 @@ function NotasCliente({ clientId, notes }: { clientId: string; notes: string | n
       <Textarea rows={3} value={txt} onChange={(e) => setTxt(e.target.value)}
         placeholder="Contexto, combinados, senhas de acesso, o que o cliente odeia…"
         className="rounded-xl text-sm" />
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// CAMPO EDITÁVEL DO CLIENTE
+//
+// Antes era um card de leitura com "-". Agora: toca no card, ele vira campo,
+// e sai do campo → salva. Sem botão, sem modal, sem ir pra outra tela.
+// O lápis aparece no hover pra deixar claro que dá pra editar.
+// ═══════════════════════════════════════════════════════════════════════
+function CampoCliente({ clientId, label, valor, campo, tipo, placeholder, rodape }: {
+  clientId: string;
+  label: string;
+  valor: string | number | null | undefined;
+  campo: string;
+  tipo: "texto" | "dinheiro" | "data" | "dia";
+  placeholder?: string;
+  rodape?: string;
+}) {
+  const update = useUpdateCrmClient();
+  const [editando, setEditando] = useState(false);
+  const [rascunho, setRascunho] = useState<string | number | null>(valor ?? null);
+
+  useEffect(() => { if (!editando) setRascunho(valor ?? null); }, [valor, editando]);
+
+  const salvar = async (v: string | number | null) => {
+    setEditando(false);
+    if ((v ?? null) === (valor ?? null)) return;   // nada mudou, não bate no banco
+    await update.mutateAsync({ id: clientId, [campo]: v } as never);
+  };
+
+  const vazio = valor === null || valor === undefined || valor === "" || valor === 0;
+  const exibicao =
+    tipo === "dinheiro" ? (vazio ? null : formatBRL(Number(valor)))
+    : tipo === "data" ? (vazio ? null : new Date(String(valor) + "T00:00:00").toLocaleDateString("pt-BR"))
+    : tipo === "dia" ? (vazio ? null : `todo dia ${valor}`)
+    : (vazio ? null : String(valor));
+
+  return (
+    <div className="group bg-card border border-border rounded-2xl p-4 transition-colors hover:border-primary/40">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide">{label}</p>
+        {!editando && (
+          <Pencil className="h-3.5 w-3.5 shrink-0 text-muted-foreground/0 group-hover:text-muted-foreground/60 transition-colors" />
+        )}
+      </div>
+
+      {editando ? (
+        <div className="mt-1.5">
+          {tipo === "dinheiro" ? (
+            <MoneyInput
+              value={typeof rascunho === "number" ? rascunho : null}
+              onChange={(v) => setRascunho(v)}
+            />
+          ) : (
+            <Input
+              autoFocus
+              type={tipo === "data" ? "date" : tipo === "dia" ? "number" : "text"}
+              min={tipo === "dia" ? 1 : undefined}
+              max={tipo === "dia" ? 31 : undefined}
+              value={rascunho === null || rascunho === undefined ? "" : String(rascunho)}
+              placeholder={placeholder}
+              onChange={(e) => {
+                const v = e.target.value;
+                setRascunho(tipo === "dia" ? (v === "" ? null : Math.max(1, Math.min(31, Number(v)))) : (v || null));
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") salvar(rascunho);
+                if (e.key === "Escape") { setRascunho(valor ?? null); setEditando(false); }
+              }}
+              className="rounded-xl h-9"
+            />
+          )}
+          <div className="flex items-center gap-1.5 mt-2">
+            <Button size="sm" className="h-7 text-xs flex-1" onClick={() => salvar(rascunho)} disabled={update.isPending}>Salvar</Button>
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setRascunho(valor ?? null); setEditando(false); }}>Cancelar</Button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" onClick={() => setEditando(true)} className="w-full text-left">
+          {exibicao ? (
+            <p className="text-sm font-body font-semibold text-foreground mt-1 truncate">{exibicao}</p>
+          ) : (
+            <p className="text-sm font-body text-primary mt-1 inline-flex items-center gap-1">
+              <Plus className="h-3.5 w-3.5" /> adicionar
+            </p>
+          )}
+          {rodape && <p className="text-[10.5px] font-body text-muted-foreground mt-0.5 truncate">{rodape}</p>}
+        </button>
+      )}
     </div>
   );
 }
