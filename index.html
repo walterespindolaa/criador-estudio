@@ -37,11 +37,20 @@
     <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Grand+Hotel&display=swap" rel="stylesheet" />
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#8B5CF6">
+    <!-- theme-color estava roxo (#8B5CF6), cor que não existe mais na identidade.
+         Agora é o laranja do CRIA, e muda no modo escuro. -->
+    <meta name="theme-color" content="#CE4A1D" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#1B1A17" media="(prefers-color-scheme: dark)">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="cria">
+    <!-- default deixava uma barra branca feia; black-translucent faz o conteúdo
+         subir até o topo, com o safe-area cuidando do notch. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CRIA">
+    <!-- Sem isso o iPhone abre o app instalado numa tela branca e a pessoa acha
+         que quebrou. Reaproveita o ícone: não é o ideal, mas é infinitamente
+         melhor que o vazio. -->
+    <link rel="apple-touch-startup-image" href="/app-icon-512.png">
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />

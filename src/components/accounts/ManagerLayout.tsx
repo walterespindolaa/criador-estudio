@@ -16,6 +16,7 @@ import { useModules, type ModuleWithStatus } from "@/hooks/useModules";
 import { useHasHubCria } from "@/hooks/useHubCria";
 import { useMyTeamPermissions } from "@/hooks/useTeam";
 import { cn } from "@/lib/utils";
+import { definirBadge } from "@/lib/pwa";
 import { ModulePopup } from "@/components/accounts/ModulePopup";
 import { ClientSwitcher } from "@/components/accounts/ClientSwitcher";
 import { SettingsManagerDrawer } from "@/components/accounts/SettingsManagerDrawer";
@@ -170,6 +171,11 @@ export default function ManagerLayout() {
 
   const { overview } = useManagerApprovalOverview();
   const travados = overview.reduce((s, r) => s + (r.pendentes ?? 0), 0);
+
+  // Bolinha com número no ícone do app (PWA instalado). A pessoa bate o olho na
+  // tela do celular e vê "3 posts esperando o cliente", sem abrir nada.
+  useEffect(() => { definirBadge(travados); }, [travados]);
+
   const firstName = (profile?.name ?? "").trim().split(" ")[0] || "você";
 
   const hoje = new Date();

@@ -3,6 +3,7 @@ import { Bell, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { pushSupported, isPushEnabled, enablePush } from "@/lib/push";
+import { podePedirPushAgora } from "@/lib/pwa";
 
 const COUNT_KEY = "push_nudge_count";
 const DISMISS_KEY = "push_nudge_dismissed";
@@ -23,6 +24,11 @@ export function NotificationNudge() {
     let active = true;
     (async () => {
       if (!pushSupported()) return;
+      // No iPhone em ABA (não instalado), pedir permissão é garantia de falhar:
+      // a Apple só libera push pro app na tela de início. Pior: a pessoa nega
+      // uma vez e a pergunta queima pra sempre. Nesse caso quem fala é o
+      // InstallPrompt, que ensina a instalar ANTES de pedir o aviso.
+      if (!podePedirPushAgora()) return;
       if (localStorage.getItem(DISMISS_KEY) === "1") return;
       if (await isPushEnabled()) return;
 

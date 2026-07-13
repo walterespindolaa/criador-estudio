@@ -1,20 +1,55 @@
 {
-  "name": "cria",
-  "short_name": "cria",
-  "description": "Seu segundo cérebro criativo",
-  "start_url": "/app",
+  "id": "/?source=pwa",
+  "name": "Cria Social Club",
+  "short_name": "CRIA",
+  "description": "Da ideia ao publicado: conteúdo, aprovação do cliente e dinheiro num lugar só.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#FAF8F4",
-  "theme_color": "#8B5CF6",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#FFFFFF",
+  "theme_color": "#CE4A1D",
   "orientation": "any",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "categories": ["productivity", "business", "social"],
   "icons": [
     { "src": "/app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "/maskable-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
+  "shortcuts": [
+    {
+      "name": "Nova ideia",
+      "short_name": "Ideia",
+      "description": "Anota a ideia antes de esquecer",
+      "url": "/app/ideias?nova=1&source=shortcut",
+      "icons": [{ "src": "/app-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Criando",
+      "short_name": "Criando",
+      "description": "O quadro dos seus posts",
+      "url": "/app/criando?source=shortcut",
+      "icons": [{ "src": "/app-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Aprovações",
+      "short_name": "Aprovações",
+      "description": "O que está na mão do cliente",
+      "url": "/socialmidia/criapost/aprovacoes?source=shortcut",
+      "icons": [{ "src": "/app-icon-192.png", "sizes": "192x192" }]
+    }
+  ],
   "share_target": {
-    "action": "/app/ideias",
-    "method": "GET",
-    "params": { "title": "title", "text": "text", "url": "url" }
+    "action": "/compartilhar",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [{ "name": "files", "accept": ["image/*", "video/*"] }]
+    }
   }
 }

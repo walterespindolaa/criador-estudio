@@ -28,6 +28,7 @@ import { sanitizeText } from "@/lib/sanitize";
 import { useIdeas, type Idea } from "@/hooks/useIdeas";
 import { hojeBR } from "@/lib/date-br";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
+import { SharedIntake } from "@/components/pwa/SharedIntake";
 import { usePillars } from "@/hooks/usePillars";
 import { useProfile } from "@/hooks/useProfile";
 import { usePosts, type Post } from "@/hooks/usePosts";
@@ -270,6 +271,8 @@ const Ideias = () => {
 
   return (
     <div className="pb-20 md:pb-0">
+      {/* Chegou algo compartilhado de outro app (Instagram, galeria, navegador). */}
+      <SharedIntake />
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <div className="flex flex-wrap items-center justify-between gap-y-2 mb-6 gap-3">
           <div className="flex items-center gap-3 md:hidden">

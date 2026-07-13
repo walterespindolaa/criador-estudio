@@ -23,6 +23,11 @@ import Termos from "./pages/Termos";
 import Privacidade from "./pages/Privacidade";
 import ExcluirDados from "./pages/ExcluirDados";
 import { UpdatePrompt } from "@/components/UpdatePrompt";
+import { CachePersistence } from "@/components/pwa/CachePersistence";
+import { InstallPrompt } from "@/components/pwa/InstallPrompt";
+import { OfflineBanner } from "@/components/pwa/OfflineBanner";
+import { RoutePrefetch } from "@/components/pwa/RoutePrefetch";
+import { ScrollRestore } from "@/components/pwa/ScrollRestore";
 import { useProfile } from "@/hooks/useProfile";
 import { useActiveAccount } from "@/contexts/AccountContext";
 
@@ -142,7 +147,14 @@ const App = () => (
         <Toaster />
         <Sonner />
         <UpdatePrompt />
+        {/* PWA: cache persistido (abre instantâneo), aviso de offline,
+            convite de instalação + notificações, e prefetch das telas. */}
+        <CachePersistence />
+        <OfflineBanner />
+        <InstallPrompt />
+        <RoutePrefetch />
         <BrowserRouter>
+          <ScrollRestore />
           <MetaPixelTracker />
           <Suspense fallback={<LoadingScreen />}>
             <Routes>

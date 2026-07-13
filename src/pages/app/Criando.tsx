@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
+import { tocar } from "@/lib/pwa";
 import { cn } from "@/lib/utils";
 import { CoverHeader } from "@/components/shared/CoverHeader";
 import { useStatusCovers } from "@/hooks/useStatusCovers";
@@ -528,7 +529,9 @@ const Criando = () => {
         </div>
 
         {view === "board" && (
-        <DragDropContext onDragEnd={handleDragEnd}>
+        {/* onDragStart com vibração: o dedo SENTE que pegou o card. É o detalhe
+            que separa "site num celular" de "app". iOS ignora, Android responde. */}
+        <DragDropContext onDragStart={() => tocar(12)} onDragEnd={(r) => { tocar(8); handleDragEnd(r); }}>
         <div data-tour="criando-board" className="hidden md:flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-proximity kanban-scroll">
           {COLUMNS.map(col => {
             const colPosts = filteredPosts.filter(p => p.status === col.key);
@@ -867,7 +870,9 @@ const Criando = () => {
 
         {overview ? (
           <div data-tour="criando-board-m" className="md:hidden">
-            <DragDropContext onDragEnd={handleDragEnd}>
+            {/* onDragStart com vibração: o dedo SENTE que pegou o card. É o detalhe
+            que separa "site num celular" de "app". iOS ignora, Android responde. */}
+        <DragDropContext onDragStart={() => tocar(12)} onDragEnd={(r) => { tocar(8); handleDragEnd(r); }}>
             <div className="flex gap-2.5 overflow-x-auto -mx-4 px-4 kanban-scroll h-[calc(100svh-230px)] min-h-[340px]">
               {COLUMNS.map((col, i) => {
                 const colPosts = filteredPosts.filter(p => (p.status ?? "ideia") === col.key);
