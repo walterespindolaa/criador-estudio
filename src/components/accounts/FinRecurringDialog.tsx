@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 import { PAYMENT_METHODS } from "@/lib/finance";
 import { useCrmClients } from "@/hooks/useCrm";
-import {
 import { confirmar } from "@/components/shared/Confirm";
+import {
   useFinRecurring, useCreateFinRecurring, useUpdateFinRecurring, useDeleteFinRecurring,
   type FinRecurring, type FinRecurringInput, type FinContext, type FinType,
 } from "@/hooks/useFinance";

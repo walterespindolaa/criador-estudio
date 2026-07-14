@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Loader2, Sparkles, Check, X, Trash2, Instagram, Heart, MessageCircle, Play, CalendarPlus,
   LayoutGrid, FileText, CircleDashed, User, AtSign, Hash, Megaphone, TrendingUp, Plus, ChevronDown,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";

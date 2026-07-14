@@ -462,7 +462,7 @@ const LinkInBio = () => {
   const handleUpdate = (id: string, patch: Partial<BioLink>) =>
     updateLink.mutate({ id, updates: patch });
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!(await confirmar({ titulo: "Remover este item do seu link?", acao: "Remover" }))) return;
     deleteLink.mutate(id, {
       onSuccess: () => toast.success("Item removido."),

@@ -66,7 +66,7 @@ export function NotificationsBell() {
     markAllAsRead.mutate();
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     if (notifications.length === 0) return;
     if (await confirmar({ titulo: "Limpar todas as notificações?", descricao: "Isso não dá pra desfazer.", acao: "Limpar" })) {
       clearAll.mutate();

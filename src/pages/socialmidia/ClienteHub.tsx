@@ -58,7 +58,8 @@ const TABS: TabDef[] = [
 ];
 const OPERACIONAIS = new Set(["posts", "cronograma", "relatorio", "instagram"]);
 const WORKFLOW = new Set(["ideias", "posts", "cronograma", "relatorio"]);
-const FLOW_STEPS = [
+type FlowStep = { key: string; n: number; label: string; gated?: boolean };
+const FLOW_STEPS: FlowStep[] = [
   { key: "ideias", n: 1, label: "Ideias" },
   { key: "posts", n: 2, label: "Montar & aprovar" },
   { key: "cronograma", n: 3, label: "Calendário do mês" },
