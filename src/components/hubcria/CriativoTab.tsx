@@ -15,6 +15,7 @@ import {
 import { OrganicBlobs } from "@/components/brand/OrganicBlobs";
 import { CRIA_HEX } from "@/lib/moduleTheme";
 import { useExternalClients } from "@/hooks/useCriaPost";
+import { supabase } from "@/integrations/supabase/client";
 
 type InputKind = "handle" | "url" | "hashtag";
 type TypeDef = { key: ScrapeType; label: string; icon: typeof LayoutGrid; desc: string; inputKind: InputKind; cost?: string };
@@ -131,6 +132,24 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
   const pctUso = quota > 0 ? Math.min(100, Math.round((usados / quota) * 100)) : 0;
   const custoSelecao = selectedItems.reduce((s, i) => s + (CREDITOS_POR_TIPO[i.key] ?? 1), 0);
 
+  // Pacote extra: reusa o checkout de módulo que já existe (module_code hub_extra),
+  // então não precisou de edge nova. É cumulativo: pode comprar mais de um.
+  const [comprandoExtra, setComprandoExtra] = useState(false);
+  const comprarExtra = async () => {
+    setComprandoExtra(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-module-checkout", {
+        body: { module_code: "hub_extra" },
+      });
+      if (error) throw error;
+      if (data?.url) window.location.href = data.url;
+      else throw new Error("checkout sem URL");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não consegui abrir o checkout.");
+      setComprandoExtra(false);
+    }
+  };
+
   const doneScrapes = useMemo(() => scrapes.filter((s) => s.status === "done" && s.result_summary).slice(0, 8), [scrapes]);
   const matchesFilter = (i: CreativeIdea) => filter === "todas" || i.status === filter;
   // Agrupa as ideias por análise (scrape_id), cada pesquisa mostra as SUAS ideias, não um banco global.
@@ -207,8 +226,16 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
                   style={{ width: `${100 - pctUso}%` }}
                 />
               </div>
-              {restantes === 0 && (
-                <p className="text-[11px] font-body text-destructive mt-1.5 leading-tight">Acabou. Compre um pacote extra.</p>
+              {/* O pacote extra aparece QUANDO ela precisa dele — não numa
+                  tabela de preços que ela nunca vai abrir. */}
+              {pctUso >= 80 && (
+                <button
+                  onClick={comprarExtra}
+                  disabled={comprandoExtra}
+                  className="mt-2 w-full rounded-lg bg-primary px-2 py-1.5 text-[11px] font-display font-bold text-primary-foreground transition hover:brightness-105 disabled:opacity-60"
+                >
+                  {comprandoExtra ? "Abrindo…" : restantes === 0 ? "Acabou · +20 por R$ 24,90" : "+20 créditos · R$ 24,90"}
+                </button>
               )}
             </div>
           )}

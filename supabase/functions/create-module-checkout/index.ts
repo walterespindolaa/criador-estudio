@@ -67,10 +67,27 @@ serve(async (req) => {
       });
     }
 
+    // O PACOTE EXTRA de créditos só faz sentido pra quem TEM o HUB. Vender crédito
+    // avulso pra quem não tem o módulo é cobrar por algo que ela não consegue usar.
+    // (E é o tipo de compra que vira estorno + reclamação.)
+    if (moduleCode === "hub_extra") {
+      const { data: temHub } = await svc
+        .from("module_entitlements").select("id")
+        .eq("manager_id", user.id).eq("module_code", "hub_cria").eq("status", "active").maybeSingle();
+      if (!temHub) {
+        return new Response(JSON.stringify({ error: "hub_required", message: "O pacote extra de créditos é pra quem já tem o HUB CRIA." }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // já tem esse módulo ativo? não deixa assinar de novo
-    const { data: ent } = await svc
-      .from("module_entitlements").select("id")
-      .eq("manager_id", user.id).eq("module_code", moduleCode).eq("status", "active").maybeSingle();
+    // (exceção: o pacote extra é cumulativo — ela pode comprar mais de um)
+    const { data: ent } = moduleCode === "hub_extra"
+      ? { data: null }
+      : await svc
+        .from("module_entitlements").select("id")
+        .eq("manager_id", user.id).eq("module_code", moduleCode).eq("status", "active").maybeSingle();
     if (ent) {
       return new Response(JSON.stringify({ error: "already_subscribed" }), {
         status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" },
