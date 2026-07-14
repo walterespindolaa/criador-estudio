@@ -92,7 +92,7 @@ const Arquivos = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { files, uploadFile, deleteFile, getPublicUrl } = useFiles();
   const [search, setSearch] = useState("");
-  const [preview, setPreview] = useState<{ kind: "image" | "iframe" | "none"; url: string | null; name: string } | null>(null);
+  const [preview, setPreview] = useState<{ kind: "image" | "pdf" | "iframe" | "none"; url: string | null; name: string } | null>(null);
   const [catFilter, setCatFilter] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -355,11 +355,13 @@ const Arquivos = () => {
               const openUpload = async (f: typeof filteredUploads[number]) => {
                 const url = await getPublicUrl(f.storage_path);
                 if (!url) { toast.error("Não foi possível abrir o arquivo."); return; }
-                if (isImage(f.file_type)) {
-                  setPreview({ kind: "image", url, name: f.name });
-                } else {
-                  window.open(url, "_blank", "noopener,noreferrer");
-                }
+                // Tudo abre AQUI DENTRO. O PDF ia pra window.open, que o
+                // bloqueador de pop-up do celular engole — a pessoa clicava e
+                // não acontecia nada. E o que não dá pra renderizar ainda tem
+                // "Baixar" e "Abrir" no cabeçalho do modal.
+                const ehPdf = (f.file_type ?? "").includes("pdf") || /\.pdf$/i.test(f.name ?? "");
+                const kind = isImage(f.file_type) ? "image" : ehPdf ? "pdf" : "none";
+                setPreview({ kind, url, name: f.name });
               };
               const renderUploadCard = (f: typeof filteredUploads[number], i: number) => {
                 const dleft = daysUntilExpiry(f.expires_at);
