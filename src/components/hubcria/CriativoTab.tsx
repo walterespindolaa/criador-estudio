@@ -1,12 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Loader2, Sparkles, Check, X, Trash2, Instagram, Heart, MessageCircle, Play, CalendarPlus,
-<<<<<<< HEAD
   LayoutGrid, FileText, CircleDashed, User, AtSign, Hash, Megaphone, TrendingUp, Plus, ChevronDown,
   ExternalLink,
-=======
-  LayoutGrid, FileText, CircleDashed, User, AtSign, Hash, Megaphone, TrendingUp, Plus, ChevronDown, ExternalLink,
->>>>>>> 2a62918 (fix(hub): o seletor virou chip e os anuncios ganharam capa, data e link)
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
