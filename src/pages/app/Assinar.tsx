@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { PLANS, PLAN_VALUE, tierRank, type PlanId, type Tier } from "@/lib/plans";
 import { PlanComparison } from "@/components/shared/PlanComparison";
 import { OrganicBlobs } from "@/components/brand/OrganicBlobs";
+import { BgShapes } from "@/components/BgShapes";
 import { track, newEventId } from "@/lib/metaPixel";
 
 export default function Assinar() {
@@ -134,7 +135,13 @@ export default function Assinar() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center px-4 py-10 sm:py-14 bg-[#F4F2EE] dark:bg-background">
+    <div className="relative min-h-screen app-canvas overflow-hidden">
+      {/* O FUNDO NATIVO DO CRIA. A página estava numa folha lisa — a única do
+          sistema sem as formas orgânicas. Justo a página onde a pessoa decide
+          te pagar: ela precisa PARECER o produto que ela vai comprar. */}
+      <BgShapes styleKey="organico" />
+
+      <div className="relative z-[1] flex flex-col items-center px-4 py-10 sm:py-14">
       {!isExpired && (
         <button
           onClick={() => navigate("/app")}
@@ -207,9 +214,12 @@ export default function Assinar() {
           const anyLoading = loadingPlan !== null;
           // Veio de uma trava ("Liberar por R$ X") → destaca o plano que ela foi buscar.
           const veioPor = searchParams.get("plano") === plan.id;
-          const destaque = veioPor || (plan.highlighted && !searchParams.get("plano"));
           const atual = planoAtual === plan.id;
           const abaixo = planoAtual ? tierRank(plan.id) < tierRank(planoAtual) : false;
+          // O destaque NUNCA pode cair num plano abaixo do atual: ficava um botão
+          // laranja gritante escrito "Voltar pro Pro" pra quem é Studio. A página
+          // estava vendendo downgrade com o CTA principal.
+          const destaque = !atual && !abaixo && (veioPor || (plan.highlighted && !searchParams.get("plano")));
           return (
             <div
               key={plan.id}
@@ -377,6 +387,7 @@ export default function Assinar() {
         <p className="text-xs text-muted-foreground font-body mt-4">
           Pagamento seguro via Stripe · Troca de plano na hora · Sem fidelidade
         </p>
+      </div>
       </div>
     </div>
   );
