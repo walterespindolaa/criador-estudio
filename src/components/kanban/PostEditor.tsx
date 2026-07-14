@@ -87,6 +87,7 @@ import {
 } from "@/lib/ai/claude";
 import { ScriptEditor, emptySection, type Section } from "./drawer/ScriptEditor";
 import { ArtStudio } from "./ArtStudio";
+import { CarouselWriter } from "./CarouselWriter";
 import { RepurposeSheet } from "./RepurposeSheet";
 import { BestTimesHint } from "@/components/shared/BestTimesHint";
 import { PostPreviewModal } from "./PostPreviewModal";
@@ -2046,6 +2047,19 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                             </div>
                           );
                         })}
+                        {/* O gerador de lâminas voltou. Ele morava no Cria Estúdio
+                            (a tela que ninguém abria) e sumiu junto com ela. Agora
+                            mora onde as lâminas moram — e é ele que faz a aba Arte
+                            gerar prompt do CONTEÚDO real, não do título. */}
+                        {formatStructure.hasDynamicSections && (
+                          <CarouselWriter
+                            titulo={title}
+                            formato={format}
+                            pilar={pillarId ?? undefined}
+                            sections={sections}
+                            onChange={setSections}
+                          />
+                        )}
                         {formatStructure.hasDynamicSections && (
                           <ScriptEditor
                             sections={sections}
@@ -2236,6 +2250,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     titulo={title}
                     formato={format}
                     sections={sections}
+                    postId={post?.id ?? null}
                     roteiro={[hook, script, cta].filter(Boolean).join("\n\n")}
                     onSalvar={(texto) => setNotes((n) => (n ? `${n}\n\n${texto}` : texto))}
                   />

@@ -418,10 +418,24 @@ Gere um insight estratégico conciso em português BR no formato:
       data.legenda_original = truncate(data.legenda_original, 3000)
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // O QUE NÃO COBRA CRÉDITO
+    //
+    // Cobrar pela BUSCA de notícia era um erro caro: a pessoa clicava em
+    // "amarrar com o que está quente" só pra VER as manchetes, e já tinha
+    // pagado — antes de decidir qualquer coisa. Aí gerava o prompt e pagava
+    // de novo. Um post podia custar 2 créditos sem ela entender por quê.
+    //
+    // Regra: cobra o que ENTREGA (o prompt, o briefing, a leitura do PDF).
+    // Não cobra o que só AJUDA A DECIDIR. A busca continua protegida pelo
+    // rate-limit de 25/min, que é o que impede abuso de verdade.
+    // ═══════════════════════════════════════════════════════════════════════
+    const SEM_COTA = new Set(['hot-news'])
+
     // ── Cota mensal de IA por tier (pro 150 / studio 500) ──────
-    const { data: quotaData, error: quotaErr } = await supabase.rpc("bump_ai_quota", {
-      _user: userId,
-    });
+    const { data: quotaData, error: quotaErr } = SEM_COTA.has(operation)
+      ? { data: null, error: null }
+      : await supabase.rpc("bump_ai_quota", { _user: userId });
 
     if (quotaErr) {
       const msg = quotaErr.message ?? "";
@@ -1186,6 +1200,45 @@ Direção visual: ${data.visual || '(não informado)'}
 Nunca fazer: ${data.evitar || '(não informado)'}
 Público: ${data.publico || '(não informado)'}`
         maxTokens = 2000
+        break
+      }
+      // ═══════════════════════════════════════════════════════════════════
+      // O CONTEÚDO DE CADA LÂMINA (carrossel / cenas do reels)
+      //
+      // Isto existia no Cria Estúdio antigo e MORREU junto com a tela: a pessoa
+      // dava o tema e ele escrevia lâmina por lâmina. Matar a tela sem trazer o
+      // recurso junto foi erro meu — o problema era a tela, não o recurso.
+      //
+      // Agora ele vive onde as lâminas vivem: na aba Roteiro do post. E é ele
+      // que alimenta a aba Arte: com o texto de cada página escrito, o prompt
+      // da arte nasce do conteúdo real, não de um chute em cima do título.
+      // ═══════════════════════════════════════════════════════════════════
+      case 'carousel-script': {
+        const n = Math.max(2, Math.min(12, Number(data.qtd) || 5))
+        const ehReels = String(data.formato ?? '').toLowerCase().includes('reels')
+          || String(data.formato ?? '').toLowerCase().includes('video')
+
+        operationPrompt = `Você é um redator sênior de conteúdo para Instagram no Brasil. Escreva o conteúdo ${ehReels ? 'de cada CENA de um reels' : 'de cada PÁGINA de um carrossel'}, no tom da marca desta pessoa.
+
+REGRAS:
+- ${n} ${ehReels ? 'cenas' : 'páginas'}, na ordem, contando UMA história do começo ao fim.
+- A 1ª é o GANCHO: ela tem que parar o dedo. Nada de "hoje vou te contar sobre...".
+- A última é o CTA: uma ação concreta (salvar, comentar, seguir, ir pro link).
+- Cada ${ehReels ? 'cena' : 'página'} é CURTA — é texto pra tela, não parágrafo de blog. No máximo 2 frases.
+- Uma ideia por ${ehReels ? 'cena' : 'página'}. Se tem duas, quebre em duas.
+- Português BR, direto, sem clichê de coach e sem emoji.
+- Nada de "página 1", "slide 2" dentro do texto.
+
+RESPONDA APENAS JSON válido:
+{"laminas":[{"n":1,"texto":"o que vai escrito nesta página"}]}
+- Exatamente ${n} itens.`
+
+        userPrompt = `Formato: ${data.formato || 'carrossel'}
+Tema/título: ${data.tema || data.titulo || '(sem título)'}
+${data.angulo ? `Ângulo que a pessoa quer: ${data.angulo}` : ''}
+${data.pilar ? `Pilar: ${data.pilar}` : ''}
+${data.nicho ? `Nicho: ${data.nicho}` : ''}`
+        maxTokens = 2500
         break
       }
       default:

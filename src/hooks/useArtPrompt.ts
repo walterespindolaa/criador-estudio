@@ -1,5 +1,6 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { callAIContextBuilder } from "@/lib/ai/claude";
 import { useBrandItems } from "@/hooks/useBrandItems";
 import { useProfile } from "@/hooks/useProfile";
@@ -41,6 +42,56 @@ export type ArtInput = {
 };
 
 export type Noticia = { titulo: string; fonte: string; quando: string; resumo?: string };
+
+export type ArtSalvo = { resultado: ArtResult; noticias: Noticia[]; geradoEm: string };
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   OS PROMPTS FICAM NO POST
+
+   Antes eles só existiam na memória da tela: a pessoa saía do post, voltava, e
+   tinha que GERAR DE NOVO — pagando outra geração da cota pra ver exatamente a
+   mesma coisa. Crédito queimado à toa é o jeito mais rápido de ela achar o
+   produto caro e cancelar.
+
+   Agora eles vivem em posts.art (jsonb). Reabrir não custa nada. Gerar de novo
+   custa — e é por isso que o botão pergunta antes.
+   ═══════════════════════════════════════════════════════════════════════════ */
+export function useArtSalvo(postId?: string | null) {
+  const qc = useQueryClient();
+
+  const { data: salvo } = useQuery<ArtSalvo | null>({
+    queryKey: ["post-art", postId],
+    enabled: !!postId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("posts")
+        .select("art")
+        .eq("id", postId!)
+        .maybeSingle();
+      if (error) throw error;
+      const art = (data as { art?: unknown } | null)?.art;
+      return (art as ArtSalvo | null) ?? null;
+    },
+  });
+
+  const escrever = useMutation({
+    mutationFn: async (valor: ArtSalvo | null) => {
+      if (!postId) return; // post novo ainda sem id: não há onde guardar
+      const { error } = await supabase
+        .from("posts")
+        .update({ art: valor } as never)
+        .eq("id", postId);
+      if (error) throw error;
+    },
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ["post-art", postId] }); },
+  });
+
+  return {
+    salvo: salvo ?? null,
+    guardar: (v: ArtSalvo) => escrever.mutateAsync(v),
+    apagar: () => escrever.mutateAsync(null),
+  };
+}
 
 const HEX = /#?[0-9a-f]{6}\b/i;
 

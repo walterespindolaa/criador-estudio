@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import {
-  Sparkles, Copy, Check, ChevronDown, Info, Palette, ArrowLeft, Loader2, AlertTriangle,
+  Sparkles, Copy, Check, ChevronDown, Info, Palette, ArrowLeft, Loader2, AlertTriangle, RefreshCw,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { useArtPrompt, type ArtResult } from "@/hooks/useArtPrompt";
+import { useArtPrompt, useArtSalvo, type ArtResult } from "@/hooks/useArtPrompt";
+import { confirmar } from "@/components/shared/Confirm";
 import { useTier } from "@/hooks/useTier";
 import type { Section } from "./drawer/ScriptEditor";
 
@@ -34,6 +35,8 @@ type Props = {
   formato: string;
   sections: Section[];
   roteiro?: string;
+  /** O post onde os prompts ficam guardados. Sem id (post novo), não persiste. */
+  postId?: string | null;
   /** Mobile: mostra o "voltar" (o Estúdio é uma página dentro do post). */
   onVoltar?: () => void;
   /** Salva os prompts no post (campo notas/roteiro fica a cargo do pai). */
@@ -43,18 +46,25 @@ type Props = {
 const CHAVE_QUENTE = "quente";
 const CHAVE_ATEMPORAL = "atemporal";
 
-export function ArtStudio({ titulo, formato, sections, roteiro, onVoltar, onSalvar }: Props) {
+export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar, onSalvar }: Props) {
   const navigate = useNavigate();
   const { atLeast } = useTier();
   const {
-    gerar, gerando, resultado, limpar, semMarca,
+    gerar, gerando, resultado: recemGerado, limpar, semMarca,
     buscarNoticias, buscandoNoticias, noticias,
   } = useArtPrompt();
+  const { salvo, guardar } = useArtSalvo(postId);
 
   const [tempo, setTempo] = useState<string>(CHAVE_ATEMPORAL);
   const [aberta, setAberta] = useState<number | null>(1);
   const [copiada, setCopiada] = useState<number | null>(null);
   const [escolhidas, setEscolhidas] = useState<Set<string>>(new Set());
+
+  // O que a tela mostra: o que acabou de sair da IA, ou o que ficou guardado no
+  // post. Sem isto, sair do post e voltar apagava tudo — e ela pagaria outra
+  // geração pra ver exatamente a mesma coisa. Crédito queimado à toa é a forma
+  // mais rápida de a pessoa achar o produto caro.
+  const resultado = recemGerado ?? salvo?.resultado ?? null;
 
   const paginasComTexto = useMemo(
     () => sections.filter((s) => (s.text ?? "").trim().length > 0),
@@ -109,14 +119,26 @@ export function ArtStudio({ titulo, formato, sections, roteiro, onVoltar, onSalv
       ? usadas.map((n) => `${n.titulo} (${n.fonte}, ${n.quando})${n.resumo ? ` — ${n.resumo}` : ""}`).join("\n")
       : undefined;
 
-    await gerar({
+    const r = await gerar({
       titulo,
       formato,
       paginas: sections.map((s) => ({ texto: s.text ?? "" })),
       roteiro,
       contextoQuente: contexto,
     });
+    // Guarda NO POST, na hora. Ela não precisa lembrar de salvar nada.
+    void guardar({ resultado: r, noticias: usadas, geradoEm: new Date().toISOString() });
     setAberta(1);
+  };
+
+  const regerar = async () => {
+    const ok = await confirmar({
+      titulo: "Gerar de novo?",
+      descricao: "Isto consome mais 1 geração da sua cota de IA e substitui os prompts que já estão aqui.",
+      acao: "Gerar de novo",
+    });
+    if (!ok) return;
+    await disparar();
   };
 
   const copiar = async (p: { n: number; en: string; pt: string }) => {
@@ -253,9 +275,23 @@ export function ArtStudio({ titulo, formato, sections, roteiro, onVoltar, onSalv
             </p>
           ) : (
             <>
-              <p className="text-[10.5px] font-display font-bold uppercase tracking-wider text-muted-foreground mb-2">
-                O que vai entrar no prompt
-              </p>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <p className="text-[10.5px] font-display font-bold uppercase tracking-wider text-muted-foreground">
+                  O que vai entrar no prompt
+                </p>
+                {/* Buscar outras não custa crédito: quem cobra é o que ENTREGA
+                    (o prompt), não o que ajuda a decidir. */}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const outras = await buscarNoticias(titulo || roteiro || "");
+                    setEscolhidas(new Set(outras.map((n) => n.titulo)));
+                  }}
+                  className="inline-flex items-center gap-1 text-[11px] font-body font-bold text-primary hover:underline"
+                >
+                  <RefreshCw className="h-3 w-3" /> buscar outras
+                </button>
+              </div>
               <div className="space-y-1.5">
                 {(noticias ?? []).map((n) => {
                   const on = escolhidas.has(n.titulo);
@@ -310,17 +346,21 @@ export function ArtStudio({ titulo, formato, sections, roteiro, onVoltar, onSalv
           variant="hero"
           size="lg"
           className="w-full md:w-auto"
-          onClick={disparar}
+          onClick={() => void (resultado ? regerar() : disparar())}
           disabled={gerando}
         >
           {gerando ? (
             <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Escrevendo os prompts…</>
+          ) : resultado ? (
+            <><RefreshCw className="h-4 w-4 mr-2" /> Gerar de novo</>
           ) : (
-            <><Sparkles className="h-4 w-4 mr-2" /> {resultado ? "Gerar de novo" : `Gerar ${nPaginas > 1 ? `os ${nPaginas} prompts` : "o prompt"}`}</>
+            <><Sparkles className="h-4 w-4 mr-2" /> Gerar {nPaginas > 1 ? `os ${nPaginas} prompts` : "o prompt"}</>
           )}
         </Button>
         <p className="text-center text-[11px] font-body text-muted-foreground md:text-left">
-          consome 1 geração da sua cota de IA
+          {resultado
+            ? "os prompts ficam guardados neste post — reabrir não custa nada"
+            : "consome 1 geração da sua cota de IA"}
         </p>
       </div>
 

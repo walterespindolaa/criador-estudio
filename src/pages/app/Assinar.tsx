@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Check, Sparkles, ArrowLeft, Shield, UserCircle } from "lucide-react";
+import { Check, Sparkles, ArrowLeft, Shield, UserCircle, Gem } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useProfile } from "@/hooks/useProfile";
@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PLANS, PLAN_VALUE, type PlanId } from "@/lib/plans";
 import { PlanComparison } from "@/components/shared/PlanComparison";
+import { OrganicBlobs } from "@/components/brand/OrganicBlobs";
 import { track, newEventId } from "@/lib/metaPixel";
 
 export default function Assinar() {
@@ -125,16 +126,40 @@ export default function Assinar() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center px-4 py-16">
+    <div className="min-h-screen app-canvas flex flex-col items-center px-4 py-10 sm:py-14">
       {!isExpired && (
         <button
           onClick={() => navigate("/app")}
-          className="self-start sm:self-center flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors"
+          className="self-start flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Voltar ao app
         </button>
       )}
+
+      {/* ── O CABEÇALHO ──────────────────────────────────────────────────────
+          Esta página era uma folha BRANCA com três caixas brancas. Era a página
+          onde a pessoa decide te pagar — e era a única do sistema sem a cara do
+          Cria. Página de venda sem identidade não vende: parece formulário de
+          banco. Agora ela tem o creme, as manchas orgânicas e o laranja da marca. */}
+      <div className="relative w-full max-w-6xl overflow-hidden rounded-3xl border border-border bg-card px-5 py-7 sm:px-9 sm:py-9 mb-6 text-center">
+        <OrganicBlobs color="laranja" />
+        <div className="relative">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 text-primary px-3 py-1 mb-3">
+            <Gem className="h-3.5 w-3.5" />
+            <span className="text-[10px] font-body font-bold uppercase tracking-wider">Planos</span>
+          </span>
+          <h1 className="font-display text-2xl sm:text-4xl font-extrabold text-foreground tracking-tight">
+            Todo mundo tem as ideias.
+            <br className="hidden sm:block" />{" "}
+            <span className="text-primary">Quase ninguém tem o processo.</span>
+          </h1>
+          <p className="text-sm sm:text-[15px] font-body text-muted-foreground mt-2.5 max-w-xl mx-auto leading-relaxed">
+            Escolha até onde você quer que o cria vá com você: organizar a bagunça,
+            escrever junto, ou fazer por você.
+          </p>
+        </div>
+      </div>
 
       {isExpired && (
         <div className="mb-8 text-center">
@@ -176,8 +201,10 @@ export default function Assinar() {
             <div
               key={plan.id}
               className={cn(
-                "relative bg-card border rounded-2xl p-8 shadow-warm flex flex-col",
-                destaque ? "border-primary ring-1 ring-primary/30" : "border-border",
+                "relative overflow-hidden rounded-3xl border p-7 flex flex-col transition-shadow",
+                destaque
+                  ? "border-primary bg-card ring-2 ring-primary/20 shadow-warm-lg"
+                  : "border-border bg-card shadow-warm hover:shadow-warm-md",
               )}
             >
               {destaque && (
