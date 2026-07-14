@@ -1624,16 +1624,21 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               )}
             >
               <Tabs value={aba} onValueChange={setAba} className="h-full flex flex-col">
-                <TabsList data-tour="editor-abas" className="bg-transparent border-b border-border rounded-none px-4 sm:px-6 h-12 shrink-0 justify-start gap-0 max-w-full overflow-x-auto flex-nowrap whitespace-nowrap">
+                {/* AS ABAS EM PÍLULA.
+                    A sublinha fina cinza era herança de UI de sistema: fria, sem
+                    peso, e no celular a aba ativa quase não se distinguia das
+                    outras (a diferença era 2px de borda). Pílula resolve as duas
+                    coisas: a ativa vira um objeto sólido, e o alvo do dedo cresce. */}
+                <TabsList data-tour="editor-abas" className="mx-4 sm:mx-6 mt-3 mb-1 h-auto w-fit max-w-[calc(100%-2rem)] shrink-0 justify-start gap-1 overflow-x-auto flex-nowrap whitespace-nowrap rounded-full border border-border bg-muted/50 p-1">
                   <TabsTrigger
                     value="legenda"
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-body text-sm px-3"
+                    className="rounded-full px-3.5 py-1.5 font-body text-[13px] font-semibold text-muted-foreground transition-colors data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm hover:text-foreground"
                   >
                     <FileText className="h-3.5 w-3.5 mr-1.5" /> Legenda
                   </TabsTrigger>
                   <TabsTrigger
                     value="roteiro"
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-body text-sm px-3"
+                    className="rounded-full px-3.5 py-1.5 font-body text-[13px] font-semibold text-muted-foreground transition-colors data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm hover:text-foreground"
                   >
                     <PenLine className="h-3.5 w-3.5 mr-1.5" /> Roteiro
                   </TabsTrigger>
@@ -1643,26 +1648,26 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   <TabsTrigger
                     value="arte"
                     data-tour="editor-tab-arte"
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-body text-sm px-3"
+                    className="rounded-full px-3.5 py-1.5 font-body text-[13px] font-semibold text-muted-foreground transition-colors data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm hover:text-foreground"
                   >
                     <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Arte
                   </TabsTrigger>
                   <TabsTrigger
                     value="tarefas"
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-body text-sm px-3"
+                    className="rounded-full px-3.5 py-1.5 font-body text-[13px] font-semibold text-muted-foreground transition-colors data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm hover:text-foreground"
                   >
                     <ListChecks className="h-3.5 w-3.5 mr-1.5" /> Tarefas
                   </TabsTrigger>
                   <TabsTrigger
                     value="notas"
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-body text-sm px-3"
+                    className="rounded-full px-3.5 py-1.5 font-body text-[13px] font-semibold text-muted-foreground transition-colors data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm hover:text-foreground"
                   >
                     <StickyNote className="h-3.5 w-3.5 mr-1.5" /> Notas
                   </TabsTrigger>
                   <TabsTrigger
                     value="refs"
                     onClick={() => { setRefsOpen(true); handleAiReferences(); }}
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-body text-sm px-3"
+                    className="rounded-full px-3.5 py-1.5 font-body text-[13px] font-semibold text-muted-foreground transition-colors data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm hover:text-foreground"
                   >
                     <BookOpen className="h-3.5 w-3.5 mr-1.5" /> Refs
                   </TabsTrigger>
