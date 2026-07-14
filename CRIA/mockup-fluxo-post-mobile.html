@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup · Fluxo do post no MOBILE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#151412; --branco:#FDFBF5; --card:#fff; --linha:#E7E3DA; --mudo:#8A857C;
+  --laranja:#CE4A1D; --azul:#2A4BDF; --amarelo:#F2C21E; --verde:#3E9152;
+  --disp:'Baloo 2',sans-serif; --corpo:'Nunito Sans',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--corpo);background:#F4F2EE;color:var(--ink);line-height:1.5;padding:24px 16px 70px}
+.wrap{max-width:1200px;margin:0 auto}
+h1,h2,h3,h4{font-family:var(--disp);font-weight:800;line-height:1.15}
+
+.topo{background:#fff;border:1px solid var(--linha);border-radius:18px;padding:15px 18px;margin-bottom:20px}
+.topo h1{font-size:1.15rem}
+.topo p{font-size:.86rem;color:var(--mudo);margin-top:4px;max-width:80ch}
+.alerta{margin-top:10px;font-size:.83rem;background:rgba(206,74,29,.07);border:1px dashed rgba(206,74,29,.3);border-radius:12px;padding:10px 12px}
+.alerta b{font-family:var(--disp);color:var(--laranja)}
+
+/* trilho de telas */
+.trilho{display:flex;gap:16px;overflow-x:auto;padding-bottom:10px;align-items:flex-start}
+.item{flex:0 0 auto;width:300px}
+.cap{font-family:var(--disp);font-weight:800;font-size:.85rem;margin-bottom:2px}
+.cap i{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;background:var(--laranja);color:#fff;font-size:.68rem;font-style:normal;margin-right:6px}
+.desc{font-size:.78rem;color:var(--mudo);margin-bottom:9px;min-height:34px}
+
+/* celular */
+.fone{width:300px;height:600px;background:#111;border-radius:34px;padding:8px;box-shadow:0 20px 45px -20px rgba(0,0,0,.4)}
+.tela{width:100%;height:100%;background:var(--branco);border-radius:27px;overflow:hidden;display:flex;flex-direction:column;position:relative}
+.status{height:22px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:.6rem;color:var(--mudo);flex-shrink:0}
+.head{padding:8px 13px;border-bottom:1px solid var(--linha);display:flex;align-items:center;gap:8px;flex-shrink:0;background:#fff}
+.head .volta{width:26px;height:26px;border-radius:9px;background:#F1EFE9;display:grid;place-items:center;font-size:.8rem;color:var(--mudo);flex-shrink:0}
+.head .tt{font-family:var(--disp);font-weight:800;font-size:.82rem;line-height:1.15}
+.head .sb{font-size:.65rem;color:var(--mudo)}
+.corpo{flex:1;overflow:hidden;padding:11px 13px}
+
+/* kanban mobile: 1 coluna + tira */
+.tira{display:flex;gap:5px;overflow:hidden;margin-bottom:10px}
+.tb{font-size:.66rem;font-family:var(--disp);font-weight:700;padding:5px 9px;border-radius:999px;background:#EFEDE7;color:var(--mudo);white-space:nowrap}
+.tb.on{background:var(--laranja);color:#fff}
+.k{background:#fff;border:1px solid var(--linha);border-radius:13px;padding:10px;margin-bottom:8px}
+.k.viva{border-color:var(--laranja);box-shadow:0 6px 16px -8px rgba(206,74,29,.5)}
+.k .fmt{font-size:.6rem;font-family:var(--disp);font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--mudo)}
+.k .t{font-family:var(--disp);font-weight:700;font-size:.83rem;line-height:1.25;margin-top:1px}
+.arte{margin-top:7px;font-size:.68rem;color:var(--laranja);font-weight:700;background:rgba(206,74,29,.08);border-radius:8px;padding:4px 7px;display:inline-block}
+.arte.ok{color:var(--verde);background:rgba(62,145,82,.1)}
+
+/* abas do post */
+.abas{display:flex;gap:4px;background:#F1EFE9;border-radius:999px;padding:3px;margin-bottom:11px}
+.abas span{flex:1;text-align:center;font-family:var(--disp);font-weight:700;font-size:.7rem;color:var(--mudo);padding:5px 4px;border-radius:999px}
+.abas span.on{background:#fff;color:var(--ink)}
+.lab{font-family:var(--disp);font-weight:700;font-size:.72rem;margin-bottom:5px}
+.pgl{display:flex;gap:7px;border:1px solid var(--linha);border-radius:10px;padding:7px 9px;background:#fff;font-size:.73rem;margin-bottom:5px}
+.pgl b{color:var(--mudo);flex-shrink:0}
+.slot{border:2px dashed #D9D2C2;border-radius:14px;background:#fff;padding:16px 12px;text-align:center;margin-top:10px}
+.slot .ic{font-size:1.2rem}
+.slot p{font-size:.72rem;color:var(--mudo);margin-top:3px}
+
+.btn{display:block;width:100%;background:var(--laranja);color:#fff;border:0;border-radius:14px;padding:11px;font-family:var(--disp);font-weight:700;font-size:.82rem;margin-top:9px}
+.btn.g{background:#fff;color:var(--ink);border:1.5px solid var(--linha)}
+.btn.v{background:var(--verde)}
+.pro{font-size:.55rem;background:rgba(255,255,255,.25);border-radius:999px;padding:1px 5px;margin-left:5px;letter-spacing:.05em}
+
+/* estúdio no mobile */
+.origem{font-size:.7rem;color:var(--mudo);background:#FBF8F1;border:1px dashed #DDD6C6;border-radius:11px;padding:8px 10px;margin-bottom:10px}
+.origem b{font-family:var(--disp);color:var(--ink)}
+.esc{border:1.5px solid var(--linha);border-radius:12px;padding:9px 10px;background:#fff;margin-bottom:6px}
+.esc.on{border-color:var(--laranja);box-shadow:0 0 0 2px rgba(206,74,29,.1)}
+.esc b{font-family:var(--disp);font-size:.75rem;display:block}
+.esc span{font-size:.67rem;color:var(--mudo)}
+.chips{display:flex;gap:4px;flex-wrap:wrap;margin:8px 0}
+.chip{font-size:.62rem;font-weight:700;background:#fff;border:1px solid var(--linha);border-radius:999px;padding:2px 7px;display:flex;align-items:center;gap:4px}
+.sw{width:9px;height:9px;border-radius:3px}
+
+.acc{border:1px solid var(--linha);border-radius:12px;background:#fff;margin-bottom:6px;overflow:hidden}
+.acc-h{display:flex;align-items:center;gap:7px;padding:8px 10px;font-size:.73rem}
+.acc-n{width:18px;height:18px;border-radius:6px;background:#EFE9DC;color:#7a705c;display:grid;place-items:center;font-family:var(--disp);font-weight:800;font-size:.62rem;flex-shrink:0}
+.acc-h .tt2{font-family:var(--disp);font-weight:700;flex:1}
+.acc-h .ch{color:var(--mudo);font-size:.7rem}
+.acc-b{padding:0 10px 10px;font-size:.72rem;color:#3c3a35;border-top:1px solid #F1EEE7;padding-top:8px}
+.cpbtn{display:block;width:100%;margin-top:8px;background:rgba(206,74,29,.08);color:var(--laranja);border:1px solid rgba(206,74,29,.28);border-radius:11px;padding:9px;font-family:var(--disp);font-weight:700;font-size:.74rem}
+.rod{position:absolute;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--linha);padding:9px 13px 13px}
+.pilula{position:absolute;left:50%;transform:translateX(-50%);bottom:8px;background:#fff;border:1px solid var(--linha);border-radius:999px;padding:7px 14px;font-size:.62rem;color:var(--mudo);box-shadow:0 8px 20px -10px rgba(0,0,0,.25);display:flex;gap:11px}
+
+.notas{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:22px}
+.n{background:#fff;border:1px solid var(--linha);border-radius:16px;padding:14px 16px;font-size:.84rem}
+.n b{font-family:var(--disp);display:block;margin-bottom:3px}
+.n span{color:var(--mudo)}
+.n.bad{border-color:rgba(192,57,43,.3);background:#FFF7F6}
+.n.bad b{color:#c0392b}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topo">
+    <h1>O mesmo fluxo, no celular</h1>
+    <p>No desktop a gaveta abre por cima do post. No celular <b>isso não pode acontecer</b>: duas folhas empilhadas em tela de 390px viram um labirinto — o "voltar" do Android fecha a errada, o scroll trava uma dentro da outra, e a pessoa não sabe em que camada está.</p>
+    <div class="alerta"><b>A regra no celular:</b> uma camada só. O Estúdio não sobe <i>por cima</i> do post — ele <i>avança dentro</i> do post, como uma próxima página. Um "voltar", um lugar de cada vez.</div>
+  </div>
+
+  <div class="trilho">
+
+    <!-- 1 · CRIANDO -->
+    <div class="item">
+      <div class="cap"><i>1</i>Criando</div>
+      <div class="desc">Uma coluna por vez, arrastando a tira. O card avisa sozinho.</div>
+      <div class="fone"><div class="tela">
+        <div class="status"><span>9:41</span><span>▮▮▮</span></div>
+        <div class="head"><div><div class="tt">Criando</div><div class="sb">Seu pipeline</div></div></div>
+        <div class="corpo">
+          <div class="tira">
+            <span class="tb">Ideia</span><span class="tb">Planej.</span><span class="tb on">Produzindo</span><span class="tb">Pronto</span>
+          </div>
+          <div class="k viva">
+            <div class="fmt">Carrossel · 5 páginas</div>
+            <div class="t">3 erros que fazem seu bolo murchar</div>
+            <div class="arte">✦ falta a arte</div>
+          </div>
+          <div class="k">
+            <div class="fmt">Reels</div>
+            <div class="t">Pão de 4 ingredientes</div>
+            <div class="arte ok">✓ arte pronta</div>
+          </div>
+        </div>
+        <div class="pilula"><span>Início</span><span>Ideias</span><span>✦</span><span>Criando</span><span>☰</span></div>
+      </div></div>
+    </div>
+
+    <!-- 2 · POST -->
+    <div class="item">
+      <div class="cap"><i>2</i>O post (tela cheia)</div>
+      <div class="desc">Ocupa a tela toda. Um "voltar" só, que devolve pro Criando.</div>
+      <div class="fone"><div class="tela">
+        <div class="status"><span>9:41</span><span>▮▮▮</span></div>
+        <div class="head">
+          <div class="volta">←</div>
+          <div><div class="tt">3 erros que fazem seu bolo…</div><div class="sb">Carrossel · Produzindo</div></div>
+        </div>
+        <div class="corpo">
+          <div class="abas"><span>Conteúdo</span><span class="on">Arte</span><span>Legenda</span><span>Agenda</span></div>
+          <div class="lab">O que você escreveu</div>
+          <div class="pgl"><b>1</b> Capa — “3 erros que fazem seu bolo murchar”</div>
+          <div class="pgl"><b>2</b> Erro 1 — abrir o forno cedo demais</div>
+          <div class="pgl" style="opacity:.55"><b>3</b> …</div>
+
+          <div class="slot">
+            <div class="ic">🖼️</div>
+            <p>Nenhuma imagem ainda.</p>
+          </div>
+          <button class="btn g">↑ Subir arquivo</button>
+          <button class="btn">✦ Gerar o prompt da arte <span class="pro">PRO</span></button>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- 3 · ESTÚDIO (avança dentro do post) -->
+    <div class="item">
+      <div class="cap"><i>3</i>Estúdio — avança <u>dentro</u> do post</div>
+      <div class="desc">Não é uma folha nova por cima: é a próxima página. O "voltar" volta pro post.</div>
+      <div class="fone"><div class="tela">
+        <div class="status"><span>9:41</span><span>▮▮▮</span></div>
+        <div class="head" style="background:linear-gradient(180deg,#FCEFE9,#fff)">
+          <div class="volta">←</div>
+          <div><div class="tt">✦ Cria Estúdio</div><div class="sb">o prompt deste carrossel</div></div>
+        </div>
+        <div class="corpo" style="padding-bottom:66px">
+          <div class="origem"><b>Vou usar o que você escreveu.</b> As 5 páginas têm texto — cada prompt nasce da página, não de um chute no título.</div>
+          <div class="esc on"><b>Amarrar com o que está quente</b><span>“Alta do ovo…” · G1, há 2 dias. Fica atual, mas envelhece.</span></div>
+          <div class="esc"><b>Deixar atemporal</b><span>Serve o ano inteiro.</span></div>
+          <div class="chips">
+            <span class="chip"><i class="sw" style="background:#CE4A1D"></i>#CE4A1D</span>
+            <span class="chip"><i class="sw" style="background:#F2C21E"></i>#F2C21E</span>
+            <span class="chip">Baloo 2</span>
+          </div>
+        </div>
+        <div class="rod">
+          <button class="btn" style="margin:0">✦ Gerar os 5 prompts</button>
+          <div style="text-align:center;font-size:.6rem;color:var(--mudo);margin-top:5px">consome 1 da sua cota de IA</div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- 4 · RESULTADO -->
+    <div class="item">
+      <div class="cap"><i>4</i>Os prompts</div>
+      <div class="desc">Sanfona: uma página aberta por vez. O copiar é grande, no polegar.</div>
+      <div class="fone"><div class="tela">
+        <div class="status"><span>9:41</span><span>▮▮▮</span></div>
+        <div class="head" style="background:linear-gradient(180deg,#FCEFE9,#fff)">
+          <div class="volta">←</div>
+          <div><div class="tt">✦ Cria Estúdio</div><div class="sb">5 prompts · mesmo estilo</div></div>
+        </div>
+        <div class="corpo" style="padding-bottom:70px">
+          <div class="acc">
+            <div class="acc-h"><span class="acc-n">1</span><span class="tt2">Capa</span><span class="ch">▴</span></div>
+            <div class="acc-b">
+              Um bolo caseiro afundado no centro, sobre mármore claro, luz natural lateral, tons quentes, sem texto, close de cima.
+              <button class="cpbtn">📋 Copiar em inglês</button>
+            </div>
+          </div>
+          <div class="acc"><div class="acc-h"><span class="acc-n">2</span><span class="tt2">Erro 1 — forno cedo</span><span class="ch">▾</span></div></div>
+          <div class="acc"><div class="acc-h"><span class="acc-n">3</span><span class="tt2">Erro 2 — bater demais</span><span class="ch">▾</span></div></div>
+          <div class="acc"><div class="acc-h"><span class="acc-n">4</span><span class="tt2">Erro 3 — forma errada</span><span class="ch">▾</span></div></div>
+          <div style="font-size:.66rem;color:var(--mudo);background:rgba(62,145,82,.07);border:1px solid rgba(62,145,82,.2);border-radius:11px;padding:8px 10px;margin-top:8px">
+            🛈 Saiu das <b>suas cores</b>, sua fonte e o texto de cada página. Mostro em português; o botão copia em inglês.
+          </div>
+        </div>
+        <div class="rod">
+          <button class="btn v" style="margin:0">✓ Salvar no post e voltar</button>
+        </div>
+      </div></div>
+    </div>
+
+  </div>
+
+  <div class="notas">
+    <div class="n bad"><b>O que NÃO dá pra fazer</b><span>Empilhar gaveta sobre gaveta. Duas folhas abertas ao mesmo tempo em 390px = o gesto de voltar fecha a errada, o scroll de uma prende o da outra, e o iOS ainda coloca o teclado por cima de tudo.</span></div>
+    <div class="n"><b>Uma camada, navegação pra frente</b><span>O post abre em tela cheia. O Estúdio é a <i>próxima página</i> dentro dele. Sempre existe UM “voltar”, e ele volta exatamente um passo. É o mesmo padrão do Instagram: você entra, entra mais, e volta.</span></div>
+    <div class="n"><b>A ação principal fica presa embaixo</b><span>“Gerar” e “Salvar” não podem estar no fim de um scroll longo — ficam fixos no rodapé, na zona do polegar. É a diferença entre a pessoa usar e a pessoa desistir no meio.</span></div>
+    <div class="n"><b>Prompt longo vira sanfona</b><span>Cinco prompts abertos viram uma parede de texto. Uma página aberta por vez, o resto fechado — e o “copiar” de cada uma é um botão de largura inteira, não um linkzinho.</span></div>
+  </div>
+
+</div>
+</body>
+</html>

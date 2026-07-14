@@ -75,7 +75,7 @@ export function BottomBar() {
   const { tier } = useTier();
   const sections = profile?.role === "admin"
     ? MORE_SECTIONS.map((s) => s.title === "Mais"
-        ? { ...s, items: [...s.items, { title: "Cria Estúdio", url: "/app/estudio", icon: Wand2, desc: "Carrosséis com IA" }, { title: "Admin", url: "/app/cf-admin-panel", icon: ShieldCheck }] }
+        ? { ...s, items: [...s.items, { title: "Admin", url: "/app/cf-admin-panel", icon: ShieldCheck }] }
         : s)
     : MORE_SECTIONS;
   const allMoreItems = sections.flatMap((s) => s.items);

@@ -86,6 +86,7 @@ import {
   type CaptionScore,
 } from "@/lib/ai/claude";
 import { ScriptEditor, emptySection, type Section } from "./drawer/ScriptEditor";
+import { ArtStudio } from "./ArtStudio";
 import { RepurposeSheet } from "./RepurposeSheet";
 import { BestTimesHint } from "@/components/shared/BestTimesHint";
 import { PostPreviewModal } from "./PostPreviewModal";
@@ -1633,6 +1634,16 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   >
                     <PenLine className="h-3.5 w-3.5 mr-1.5" /> Roteiro
                   </TabsTrigger>
+                  {/* ARTE. O Cria Estúdio deixou de ser uma TELA no menu (que
+                      ninguém abria) e virou uma aba dentro do post — o minuto
+                      exato em que a pessoa trava: texto pronto, arte em branco. */}
+                  <TabsTrigger
+                    value="arte"
+                    data-tour="editor-tab-arte"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-body text-sm px-3"
+                  >
+                    <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Arte
+                  </TabsTrigger>
                   <TabsTrigger
                     value="tarefas"
                     className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-body text-sm px-3"
@@ -2217,6 +2228,17 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                       </>
                     );
                   })()}
+                </TabsContent>
+
+                {/* Tab: Arte — o Cria Estúdio */}
+                <TabsContent value="arte" className="flex-1 px-4 sm:px-6 py-5 m-0 outline-none">
+                  <ArtStudio
+                    titulo={title}
+                    formato={format}
+                    sections={sections}
+                    roteiro={[hook, script, cta].filter(Boolean).join("\n\n")}
+                    onSalvar={(texto) => setNotes((n) => (n ? `${n}\n\n${texto}` : texto))}
+                  />
                 </TabsContent>
 
                 {/* Tab: Tarefas */}

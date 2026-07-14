@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup · Fluxo de criação do post (criador)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#151412; --branco:#FDFBF5; --card:#fff; --linha:#E7E3DA; --mudo:#8A857C;
+  --laranja:#CE4A1D; --azul:#2A4BDF; --rosa:#F27EB5; --amarelo:#F2C21E; --verde:#3E9152; --lilas:#7C90F0;
+  --disp:'Baloo 2',sans-serif; --corpo:'Nunito Sans',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--corpo);background:#F4F2EE;color:var(--ink);line-height:1.55;padding:22px 16px 70px}
+.wrap{max-width:1120px;margin:0 auto}
+h1,h2,h3,h4{font-family:var(--disp);font-weight:800;line-height:1.15}
+
+.guia{background:#fff;border:1px solid var(--linha);border-radius:18px;padding:14px 18px;margin-bottom:14px}
+.guia h2{font-size:1.05rem}
+.guia p{font-size:.86rem;color:var(--mudo);margin-top:3px}
+.guia .dica{margin-top:9px;font-size:.82rem;background:rgba(206,74,29,.07);border:1px dashed rgba(206,74,29,.3);border-radius:12px;padding:9px 12px}
+.guia .dica b{font-family:var(--disp);color:var(--laranja)}
+
+/* ── kanban ── */
+.board{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px}
+@media(max-width:900px){.board{grid-template-columns:repeat(3,1fr)}}
+.col{background:#EFEDE7;border-radius:16px;padding:9px;min-height:230px}
+.col.foco{background:#FCEFE9;box-shadow:0 0 0 2px rgba(206,74,29,.35)}
+.col h4{font-size:.74rem;text-transform:uppercase;letter-spacing:.06em;color:var(--mudo);margin-bottom:8px;display:flex;justify-content:space-between}
+.col.foco h4{color:var(--laranja)}
+.k{background:#fff;border:1px solid var(--linha);border-radius:13px;padding:10px;margin-bottom:7px;font-size:.8rem}
+.k .fmt{font-size:.62rem;font-family:var(--disp);font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--mudo)}
+.k .t{font-family:var(--disp);font-weight:700;font-size:.84rem;margin-top:1px;line-height:1.25}
+.k.viva{cursor:pointer;border-color:var(--laranja);box-shadow:0 6px 18px -8px rgba(206,74,29,.5)}
+.k.viva:hover{transform:translateY(-1px)}
+.arte{margin-top:8px;display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--laranja);font-weight:700;background:rgba(206,74,29,.08);border-radius:8px;padding:4px 7px}
+.pulse{animation:pl 1.6s infinite}
+@keyframes pl{0%,100%{opacity:1}50%{opacity:.45}}
+
+/* ── camadas (gaveta) ── */
+.palco{position:relative;margin-top:16px}
+.camada{background:var(--card);border:1px solid var(--linha);border-radius:22px;overflow:hidden;box-shadow:0 24px 60px -30px rgba(30,20,10,.35)}
+.hidden{display:none}
+.c-top{display:flex;align-items:center;gap:11px;padding:15px 20px;border-bottom:1px solid var(--linha);background:var(--branco)}
+.c-top .voltar{border:0;background:#F1EFE9;border-radius:999px;padding:6px 13px;font-family:var(--disp);font-weight:700;font-size:.78rem;color:var(--mudo);cursor:pointer}
+.c-top h3{font-size:1rem}
+.c-top .mig{font-size:.74rem;color:var(--mudo)}
+.c-body{padding:18px 20px}
+
+/* editor do post */
+.abas{display:flex;gap:5px;background:#F1EFE9;border-radius:999px;padding:4px;width:fit-content;margin-bottom:14px;flex-wrap:wrap}
+.abas span{font-family:var(--disp);font-weight:700;font-size:.79rem;color:var(--mudo);padding:6px 13px;border-radius:999px}
+.abas span.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.campo{margin-bottom:12px}
+.campo label{font-family:var(--disp);font-weight:700;font-size:.78rem;display:block;margin-bottom:4px}
+.inp{width:100%;border:1.5px solid var(--linha);border-radius:12px;padding:9px 11px;font-family:var(--corpo);font-size:.85rem;background:#fff}
+textarea.inp{min-height:58px;resize:vertical}
+.pgs{display:flex;flex-direction:column;gap:6px}
+.pgl{display:flex;gap:9px;align-items:flex-start;border:1px solid var(--linha);border-radius:12px;padding:9px 11px;background:var(--branco);font-size:.83rem}
+.pgl b{font-family:var(--disp);flex-shrink:0;color:var(--mudo)}
+
+.slot{border:2px dashed #D9D2C2;border-radius:16px;background:var(--branco);padding:22px;text-align:center;margin-top:4px}
+.slot .ic{font-size:1.5rem}
+.slot p{font-size:.83rem;color:var(--mudo);margin-top:4px}
+.slot .acoes{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+
+.btn{display:inline-flex;align-items:center;gap:7px;background:var(--laranja);color:#fff;border:0;border-radius:999px;padding:10px 18px;font-family:var(--disp);font-weight:700;font-size:.85rem;cursor:pointer}
+.btn.g{background:#fff;color:var(--ink);border:1.5px solid var(--linha)}
+.btn.v{background:var(--verde)}
+.selo-pro{font-size:.6rem;background:#F1EFE9;border:1px solid var(--linha);color:var(--mudo);border-radius:999px;padding:2px 6px;font-weight:800;letter-spacing:.05em}
+
+/* gaveta do estúdio */
+.gaveta{border-color:var(--laranja);box-shadow:0 -10px 60px -20px rgba(206,74,29,.45)}
+.g-top{background:linear-gradient(180deg,#FCEFE9,#fff);border-bottom:1px solid var(--linha)}
+.puxador{width:44px;height:4px;border-radius:999px;background:#DCD5C6;margin:9px auto 0}
+.origem{font-size:.78rem;color:var(--mudo);background:#FBF8F1;border:1px dashed #DDD6C6;border-radius:12px;padding:9px 12px;margin-bottom:14px}
+.origem b{font-family:var(--disp);color:var(--ink)}
+
+.linha{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.esc{flex:1;min-width:220px;border:1.5px solid var(--linha);border-radius:14px;padding:11px 13px;cursor:pointer;background:var(--branco)}
+.esc.on{border-color:var(--laranja);background:#fff;box-shadow:0 0 0 3px rgba(206,74,29,.1)}
+.esc b{font-family:var(--disp);font-size:.85rem;display:block}
+.esc span{font-size:.75rem;color:var(--mudo)}
+
+.estilo{background:#F6F3EC;border:1px solid var(--linha);border-radius:14px;padding:11px 13px;margin:12px 0}
+.estilo .lab{font-family:var(--disp);font-weight:700;font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--mudo);margin-bottom:4px}
+.estilo p{font-size:.82rem}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.chip{font-size:.69rem;font-weight:700;background:#fff;border:1px solid var(--linha);border-radius:999px;padding:3px 9px;display:flex;align-items:center;gap:5px}
+.sw{width:10px;height:10px;border-radius:3px}
+.pg{border:1px solid var(--linha);border-radius:14px;margin-bottom:8px;background:#fff}
+.pg-h{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--branco);border-bottom:1px solid var(--linha)}
+.pg-n{width:20px;height:20px;border-radius:6px;background:#EFE9DC;color:#7a705c;display:grid;place-items:center;font-family:var(--disp);font-weight:800;font-size:.68rem}
+.pg-h .txt{font-family:var(--disp);font-weight:700;font-size:.82rem}
+.pg-h .cp{margin-left:auto;font-size:.71rem;font-family:var(--disp);font-weight:700;color:var(--laranja);border:1px solid rgba(206,74,29,.3);background:rgba(206,74,29,.06);border-radius:999px;padding:4px 9px;cursor:pointer}
+.pg-b{padding:11px 12px;font-size:.83rem;color:#3c3a35}
+.pg-b .en{margin-top:7px;padding-top:7px;border-top:1px dashed var(--linha);font-size:.76rem;color:var(--mudo);font-style:italic}
+.proc{display:flex;gap:9px;background:rgba(62,145,82,.07);border:1px solid rgba(62,145,82,.2);border-radius:13px;padding:10px 12px;font-size:.81rem;margin-top:10px}
+.proc b{font-family:var(--disp)}
+
+.legenda{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.lg{flex:1;min-width:240px;background:#fff;border:1px solid var(--linha);border-radius:16px;padding:13px 15px;font-size:.83rem}
+.lg b{font-family:var(--disp);display:block;margin-bottom:3px}
+.lg span{color:var(--mudo)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="guia">
+    <h2>O caminho do post, do começo ao fim</h2>
+    <p>Esta é a tela <b>Criando</b> que já existe. Nada muda nela. O Estúdio não é uma aba nova — é uma <b>gaveta</b> que abre por cima e fecha de volta no mesmo lugar.</p>
+    <div class="dica"><b>Clique no card laranja</b> (“3 erros que fazem seu bolo murchar”) e siga o fluxo. Dá pra voltar em qualquer passo.</div>
+  </div>
+
+  <!-- ═════ PASSO 1: O KANBAN ═════ -->
+  <div id="board">
+    <div class="board">
+      <div class="col">
+        <h4><span>Ideia</span><span>2</span></h4>
+        <div class="k"><div class="fmt">Reels</div><div class="t">Bastidores da cozinha</div></div>
+        <div class="k"><div class="fmt">Estático</div><div class="t">Bolo do mês</div></div>
+      </div>
+      <div class="col">
+        <h4><span>Planejamento</span><span>1</span></h4>
+        <div class="k"><div class="fmt">Carrossel</div><div class="t">Como guardar bolo</div></div>
+      </div>
+      <div class="col foco">
+        <h4><span>Produzindo</span><span>2</span></h4>
+        <div class="k viva" onclick="abrirPost()">
+          <div class="fmt">Carrossel · 5 páginas</div>
+          <div class="t">3 erros que fazem seu bolo murchar</div>
+          <div class="arte pulse">✦ falta a arte</div>
+        </div>
+        <div class="k">
+          <div class="fmt">Reels</div>
+          <div class="t">Pão de 4 ingredientes</div>
+          <div class="arte" style="color:var(--verde);background:rgba(62,145,82,.1)">✓ arte pronta</div>
+        </div>
+      </div>
+      <div class="col"><h4><span>Pronto</span><span>1</span></h4>
+        <div class="k"><div class="fmt">Reels</div><div class="t">Cobertura que não derrete</div></div>
+      </div>
+      <div class="col"><h4><span>Agendado</span><span>0</span></h4></div>
+      <div class="col"><h4><span>Publicado</span><span>3</span></h4>
+        <div class="k" style="opacity:.6"><div class="fmt">Carrossel</div><div class="t">5 erros no forno</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═════ PASSO 2: O EDITOR DO POST (gaveta 1) ═════ -->
+  <div class="palco">
+    <div id="editor" class="camada hidden">
+      <div class="c-top">
+        <button class="voltar" onclick="fechar('editor')">← Criando</button>
+        <div>
+          <h3>3 erros que fazem seu bolo murchar</h3>
+          <div class="mig">Carrossel · 5 páginas · Produzindo</div>
+        </div>
+      </div>
+      <div class="c-body">
+        <div class="abas">
+          <span>Conteúdo</span>
+          <span class="on">Arte</span>
+          <span>Legenda</span>
+          <span>Agenda</span>
+        </div>
+
+        <div class="campo">
+          <label>O que vai em cada página (você já escreveu)</label>
+          <div class="pgs">
+            <div class="pgl"><b>1</b> Capa — “3 erros que fazem seu bolo murchar”</div>
+            <div class="pgl"><b>2</b> Erro 1 — abrir o forno cedo demais</div>
+            <div class="pgl"><b>3</b> Erro 2 — bater a massa demais</div>
+            <div class="pgl" style="opacity:.6"><b>4</b> …</div>
+          </div>
+        </div>
+
+        <div class="campo" style="margin-top:16px">
+          <label>Arte</label>
+          <div class="slot">
+            <div class="ic">🖼️</div>
+            <p>Nenhuma imagem ainda. Suba a arte pronta — ou peça o prompt e gere no seu app favorito.</p>
+            <div class="acoes">
+              <button class="btn g">↑ Subir arquivo</button>
+              <button class="btn" onclick="abrirEstudio()">✦ Gerar o prompt da arte <span class="selo-pro">PRO</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═════ PASSO 3: A GAVETA DO ESTÚDIO (gaveta 2, por cima) ═════ -->
+    <div id="estudio" class="camada gaveta hidden" style="margin-top:12px">
+      <div class="c-top g-top" style="display:block;padding-bottom:14px">
+        <div class="puxador"></div>
+        <div style="display:flex;align-items:center;gap:11px;margin-top:10px">
+          <button class="voltar" onclick="fechar('estudio')">← voltar pro post</button>
+          <div>
+            <h3>✦ Cria Estúdio</h3>
+            <div class="mig">o prompt da arte deste carrossel</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="c-body">
+        <div class="origem">
+          <b>Vou usar o que você já escreveu.</b> As 5 páginas têm texto, então cada prompt nasce do texto da página — não de um chute em cima do título.
+        </div>
+
+        <div class="linha">
+          <div class="esc on">
+            <b>Amarrar com o que está quente</b>
+            <span>“Alta do ovo faz confeiteiras trocarem receita” · G1, há 2 dias. Fica atual, mas envelhece em semanas.</span>
+          </div>
+          <div class="esc">
+            <b>Deixar atemporal</b>
+            <span>Serve o ano inteiro. Dá pra repostar em janeiro sem parecer velho.</span>
+          </div>
+        </div>
+
+        <button class="btn">✦ Gerar os 5 prompts</button>
+        <span style="font-size:.75rem;color:var(--mudo);margin-left:9px">consome 1 da sua cota de IA</span>
+
+        <div class="estilo">
+          <div class="lab">Estilo que se repete em todas as páginas</div>
+          <p>Fotografia de comida, luz natural lateral, mármore claro, tons quentes, sem texto na imagem, clima artesanal.</p>
+          <div class="chips">
+            <span class="chip"><i class="sw" style="background:#CE4A1D"></i>#CE4A1D</span>
+            <span class="chip"><i class="sw" style="background:#F2C21E"></i>#F2C21E</span>
+            <span class="chip">Baloo 2 · títulos</span>
+            <span class="chip">tom: acolhedor</span>
+          </div>
+        </div>
+
+        <div class="pg">
+          <div class="pg-h"><span class="pg-n">1</span><span class="txt">Capa</span><button class="cp">copiar em inglês</button></div>
+          <div class="pg-b">Um bolo caseiro afundado no centro, sobre mármore claro, luz natural lateral, tons quentes, clima artesanal, sem texto, close de cima.
+            <div class="en">EN: A sunken homemade cake on light marble, natural side light, warm tones, artisanal mood, no text, overhead close-up.</div>
+          </div>
+        </div>
+        <div class="pg">
+          <div class="pg-h"><span class="pg-n">2</span><span class="txt">Erro 1 — abrir o forno cedo</span><button class="cp">copiar em inglês</button></div>
+          <div class="pg-b">Mão abrindo a porta do forno com o bolo ainda crescendo, vapor visível, mesma luz e mesmo mármore, tons quentes, sem texto.
+            <div class="en">EN: A hand opening the oven door while the cake is still rising, visible steam, same light and marble, warm tones, no text.</div>
+          </div>
+        </div>
+        <div class="pg" style="opacity:.5"><div class="pg-h"><span class="pg-n">3</span><span class="txt">Erro 2 — bater demais</span><button class="cp">copiar em inglês</button></div><div class="pg-b">…</div></div>
+
+        <div class="proc">
+          <span>🛈</span>
+          <div><b>De onde saiu:</b> suas cores, sua fonte, seu tom de voz e o texto que você escreveu em cada página.
+            Mostro em português pra você conferir; o botão copia em inglês, que é o que os geradores entendem melhor.
+            Se sair com a cara errada, o conserto é no <b>seu Brandbook</b>.</div>
+        </div>
+
+        <div style="margin-top:16px;display:flex;gap:9px;flex-wrap:wrap">
+          <button class="btn v" onclick="fechar('estudio')">✓ Salvar os prompts no post e voltar</button>
+          <button class="btn g" onclick="fechar('estudio')">Descartar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="legenda">
+    <div class="lg"><b>1 · Criando</b><span>A tela que ela já usa todo dia. O card avisa “falta a arte” — ela não precisa procurar nada.</span></div>
+    <div class="lg"><b>2 · O post</b><span>Abre por cima. O texto que ela escreveu está ali do lado; o espaço da arte está vazio. É aqui que ela trava hoje.</span></div>
+    <div class="lg"><b>3 · A gaveta do Estúdio</b><span>Sobe por cima do post. Ela gera, copia, salva e cai de volta no post. Depois fecha e está no Criando de novo. Nunca saiu do lugar.</span></div>
+  </div>
+
+  <div class="guia" style="margin-top:14px">
+    <h2>Por que gaveta e não aba</h2>
+    <p>Aba é um <b>destino</b>: você precisa lembrar que ela existe, ir até lá, e depois achar o caminho de volta — foi assim que o Cria Estúdio virou uma tela que ninguém abre. Gaveta é uma <b>ferramenta</b>: ela aparece no minuto em que a pessoa precisa e some quando acaba. O menu não ganha item novo, o kanban não ganha coluna nova, e não existe “onde eu estou agora?”.</p>
+  </div>
+
+</div>
+
+<script>
+function abrirPost(){
+  document.getElementById('editor').classList.remove('hidden');
+  document.getElementById('editor').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function abrirEstudio(){
+  document.getElementById('estudio').classList.remove('hidden');
+  document.getElementById('estudio').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function fechar(id){
+  document.getElementById(id).classList.add('hidden');
+  if(id==='estudio') document.getElementById('editor').scrollIntoView({behavior:'smooth',block:'center'});
+  else window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
+</body>
+</html>

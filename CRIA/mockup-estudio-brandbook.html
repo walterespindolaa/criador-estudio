@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup · Cria Estúdio + Brandbook por PDF</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#151412; --branco:#FDFBF5; --card:#fff; --linha:#E7E3DA; --mudo:#8A857C;
+  --laranja:#CE4A1D; --azul:#2A4BDF; --rosa:#F27EB5; --amarelo:#F2C21E; --verde:#3E9152; --lilas:#7C90F0;
+  --disp:'Baloo 2',sans-serif; --corpo:'Nunito Sans',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--corpo);background:#F4F2EE;color:var(--ink);line-height:1.55;padding:24px 16px 90px}
+.wrap{max-width:1080px;margin:0 auto}
+h1,h2,h3,h4{font-family:var(--disp);font-weight:800;line-height:1.15}
+
+/* navegação do mockup */
+.mk{display:flex;gap:6px;background:#fff;border:1px solid var(--linha);border-radius:999px;padding:5px;margin-bottom:8px;width:fit-content;flex-wrap:wrap}
+.mk button{border:0;background:transparent;font-family:var(--disp);font-weight:700;font-size:.82rem;color:var(--mudo);padding:8px 15px;border-radius:999px;cursor:pointer}
+.mk button.on{background:var(--laranja);color:#fff}
+.aviso{font-size:.78rem;color:var(--mudo);margin-bottom:20px}
+
+.tela{display:none} .tela.on{display:block}
+
+/* hero */
+.hero{position:relative;overflow:hidden;background:var(--card);border:1px solid var(--linha);border-radius:24px;padding:22px 24px;margin-bottom:16px}
+.blob{position:absolute;pointer-events:none}
+.b1{width:150px;height:150px;background:var(--rosa);border-radius:38% 62% 55% 45%/48% 42% 58% 52%;top:-55px;right:70px;opacity:.35}
+.b2{width:90px;height:90px;background:var(--amarelo);border-radius:55% 45% 40% 60%/50% 55% 45% 50%;top:26px;right:-25px;opacity:.3}
+.selo{display:inline-flex;align-items:center;gap:6px;background:rgba(206,74,29,.12);color:var(--laranja);font-family:var(--disp);font-weight:700;font-size:.68rem;letter-spacing:.09em;text-transform:uppercase;padding:5px 11px;border-radius:999px;margin-bottom:8px}
+.hero h1{font-size:1.45rem;position:relative}
+.hero p.sub{font-size:.9rem;color:var(--mudo);margin-top:4px;max-width:64ch;position:relative}
+
+/* passos */
+.passos{display:flex;flex-direction:column;gap:12px}
+.p{background:var(--card);border:1px solid var(--linha);border-radius:20px;overflow:hidden}
+.p.off{opacity:.5}
+.p-top{display:flex;align-items:flex-start;gap:12px;padding:16px 20px;border-bottom:1px solid var(--linha)}
+.p.sem-corpo .p-top{border-bottom:0}
+.num{width:26px;height:26px;border-radius:9px;background:var(--laranja);color:#fff;display:grid;place-items:center;font-family:var(--disp);font-weight:800;font-size:.82rem;flex-shrink:0;margin-top:1px}
+.num.cinza{background:#E3DFD6;color:var(--mudo)}
+.p-top h3{font-size:1rem}
+.p-top p{font-size:.82rem;color:var(--mudo);margin-top:2px;max-width:70ch}
+.opt{margin-left:auto;font-size:.68rem;font-family:var(--disp);font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--mudo);background:#F1EFE9;padding:4px 9px;border-radius:999px;flex-shrink:0}
+.p-corpo{padding:16px 20px}
+
+/* cards de post */
+.posts{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.post{border:1.5px solid var(--linha);border-radius:16px;padding:12px;cursor:pointer;background:var(--branco);transition:.15s}
+.post:hover{border-color:#c9c4b8}
+.post.on{border-color:var(--laranja);box-shadow:0 0 0 3px rgba(206,74,29,.12);background:#fff}
+.post .fmt{font-size:.66rem;font-family:var(--disp);font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--laranja)}
+.post .tit{font-family:var(--disp);font-weight:700;font-size:.92rem;margin-top:3px}
+.post .base{font-size:.74rem;color:var(--mudo);margin-top:7px;display:flex;align-items:center;gap:5px}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.d-ok{background:var(--verde)} .d-nao{background:var(--amarelo)}
+
+/* modo */
+.modo{background:#FBF8F1;border:1px dashed #DDD6C6;border-radius:14px;padding:12px 14px;margin-top:12px;font-size:.83rem;display:flex;gap:9px;align-items:flex-start}
+.modo b{font-family:var(--disp)}
+
+/* notícias */
+.news{display:flex;flex-direction:column;gap:8px}
+.n{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--linha);border-radius:14px;padding:11px 13px;background:var(--branco)}
+.n input{margin-top:3px;accent-color:var(--laranja)}
+.n .t{font-weight:700;font-size:.87rem}
+.n .f{font-size:.73rem;color:var(--mudo);margin-top:1px}
+.escolha{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.esc{flex:1;min-width:230px;border:1.5px solid var(--linha);border-radius:14px;padding:12px 14px;cursor:pointer;background:var(--branco)}
+.esc.on{border-color:var(--laranja);background:#fff;box-shadow:0 0 0 3px rgba(206,74,29,.1)}
+.esc b{font-family:var(--disp);font-size:.88rem;display:block}
+.esc span{font-size:.76rem;color:var(--mudo)}
+
+/* prompts */
+.estilo{background:#F6F3EC;border:1px solid var(--linha);border-radius:14px;padding:12px 14px;margin-bottom:12px}
+.estilo .lab{font-family:var(--disp);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--mudo);margin-bottom:5px}
+.estilo p{font-size:.83rem}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.chip{font-size:.7rem;font-weight:700;background:#fff;border:1px solid var(--linha);border-radius:999px;padding:3px 9px;display:flex;align-items:center;gap:5px}
+.sw{width:11px;height:11px;border-radius:3px;display:inline-block}
+
+.pg{border:1px solid var(--linha);border-radius:16px;margin-bottom:9px;overflow:hidden;background:#fff}
+.pg-h{display:flex;align-items:center;gap:9px;padding:10px 13px;background:var(--branco);border-bottom:1px solid var(--linha)}
+.pg-n{width:22px;height:22px;border-radius:7px;background:#EFE9DC;color:#7a705c;display:grid;place-items:center;font-family:var(--disp);font-weight:800;font-size:.72rem}
+.pg-h .txt{font-family:var(--disp);font-weight:700;font-size:.85rem}
+.pg-h .cp{margin-left:auto;font-size:.72rem;font-family:var(--disp);font-weight:700;color:var(--laranja);border:1px solid rgba(206,74,29,.3);background:rgba(206,74,29,.06);border-radius:999px;padding:4px 10px;cursor:pointer}
+.pg-b{padding:12px 13px;font-size:.84rem;color:#3c3a35}
+.pg-b .en{margin-top:8px;padding-top:8px;border-top:1px dashed var(--linha);font-size:.78rem;color:var(--mudo);font-style:italic}
+
+.proc{display:flex;gap:9px;align-items:flex-start;background:rgba(62,145,82,.07);border:1px solid rgba(62,145,82,.2);border-radius:14px;padding:11px 13px;font-size:.82rem;margin-top:12px}
+.proc b{font-family:var(--disp)}
+.proc a{color:var(--verde);font-weight:700}
+
+.btn{display:inline-flex;align-items:center;gap:7px;background:var(--laranja);color:#fff;border:0;border-radius:999px;padding:11px 20px;font-family:var(--disp);font-weight:700;font-size:.88rem;cursor:pointer}
+.btn.g{background:#fff;color:var(--ink);border:1.5px solid var(--linha)}
+.custo{font-size:.75rem;color:var(--mudo);margin-left:10px}
+
+/* ── briefing (Cria Post) ── */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:760px){.grid2{grid-template-columns:1fr}}
+.bloco{border:1px solid var(--linha);border-radius:16px;padding:14px;background:#fff}
+.bloco h4{font-size:.85rem;margin-bottom:9px}
+.paleta{display:flex;gap:8px;flex-wrap:wrap}
+.cor{text-align:center}
+.cor i{display:block;width:46px;height:46px;border-radius:12px;border:1px solid rgba(0,0,0,.06)}
+.cor span{display:block;font-size:.66rem;color:var(--mudo);margin-top:4px;font-family:var(--disp);font-weight:700}
+.fonte{padding:8px 0;border-bottom:1px dashed var(--linha);font-size:.85rem}
+.fonte:last-child{border:0}
+.fonte b{font-family:var(--disp)}
+.fonte span{color:var(--mudo);font-size:.76rem;display:block}
+.lista{font-size:.84rem;padding-left:2px}
+.lista div{display:flex;gap:7px;padding:4px 0;align-items:flex-start}
+.lista .s{font-weight:800;flex-shrink:0}
+.s-ok{color:var(--verde)} .s-no{color:#c0392b}
+.saidas{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+
+/* ── brandbook por PDF ── */
+.drop{border:2px dashed #D9D2C2;border-radius:20px;background:var(--branco);padding:30px;text-align:center}
+.drop .ic{font-size:1.8rem}
+.drop h3{margin-top:8px;font-size:1rem}
+.drop p{font-size:.83rem;color:var(--mudo);margin-top:3px}
+.drop .fmt{font-size:.74rem;color:var(--mudo);margin-top:10px}
+
+.lendo{display:flex;flex-direction:column;gap:7px;margin-top:14px}
+.step{display:flex;align-items:center;gap:9px;font-size:.85rem}
+.tick{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:.68rem;font-weight:800;flex-shrink:0}
+.t-ok{background:rgba(62,145,82,.15);color:var(--verde)}
+.t-go{background:rgba(206,74,29,.13);color:var(--laranja)}
+.t-wait{background:#EEEBE4;color:var(--mudo)}
+
+/* popup de revisão */
+.modal{background:#fff;border:1px solid var(--linha);border-radius:26px;overflow:hidden;box-shadow:0 30px 70px -30px rgba(30,20,10,.35);margin-top:16px}
+.m-top{padding:18px 22px;border-bottom:1px solid var(--linha);display:flex;gap:12px;align-items:flex-start}
+.m-top h3{font-size:1.05rem}
+.m-top p{font-size:.82rem;color:var(--mudo);margin-top:2px;max-width:62ch}
+.m-body{padding:8px 22px 4px;max-height:none}
+.campo{padding:14px 0;border-bottom:1px solid #F0EDE6}
+.campo:last-child{border:0}
+.c-lab{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.c-lab .nome{font-family:var(--disp);font-weight:700;font-size:.86rem}
+.badge{font-size:.63rem;font-family:var(--disp);font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:3px 8px;border-radius:999px}
+.b-novo{background:rgba(62,145,82,.14);color:#2c6b3c}
+.b-muda{background:rgba(242,194,30,.22);color:#8a6c04}
+.b-igual{background:#F1EFE9;color:var(--mudo)}
+.antes{font-size:.78rem;color:var(--mudo);background:#FAF8F3;border:1px solid var(--linha);border-radius:10px;padding:7px 10px;margin-bottom:6px}
+.antes s{opacity:.75}
+.entrada{width:100%;border:1.5px solid var(--linha);border-radius:12px;padding:9px 11px;font-family:var(--corpo);font-size:.86rem;background:#fff}
+.entrada:focus{outline:0;border-color:var(--laranja);box-shadow:0 0 0 3px rgba(206,74,29,.1)}
+textarea.entrada{min-height:64px;resize:vertical}
+.fonte-pg{font-size:.72rem;color:var(--mudo);margin-top:5px}
+.m-foot{padding:16px 22px;border-top:1px solid var(--linha);display:flex;align-items:center;gap:10px;background:var(--branco);flex-wrap:wrap}
+.m-foot .obs{font-size:.76rem;color:var(--mudo);margin-right:auto;max-width:44ch}
+
+.porque{background:#fff;border:1px dashed #DDD6C6;border-radius:16px;padding:14px 16px;margin-top:18px;font-size:.84rem}
+.porque b{font-family:var(--disp)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="mk">
+    <button class="on" onclick="ir(0,this)">1 · Cria Estúdio (criador)</button>
+    <button onclick="ir(1,this)">2 · Briefing de arte (Cria Post)</button>
+    <button onclick="ir(2,this)">3 · Brandbook por PDF</button>
+  </div>
+  <p class="aviso">Mockup estático — os botões trocam de tela, o resto é ilustrativo.</p>
+
+  <!-- ══════════════════ TELA 1 · CRIA ESTÚDIO ══════════════════ -->
+  <section class="tela on">
+    <div class="hero">
+      <span class="blob b1"></span><span class="blob b2"></span>
+      <span class="selo">✦ Cria Estúdio</span>
+      <h1>Você já escreveu. Falta a arte.</h1>
+      <p class="sub">O Estúdio pega o post que você está produzindo e devolve o prompt da arte — na sua paleta, na sua fonte, no seu tom. Você cola no gerador que já usa.</p>
+    </div>
+
+    <div class="passos">
+
+      <!-- passo 1 -->
+      <div class="p">
+        <div class="p-top">
+          <span class="num">1</span>
+          <div>
+            <h3>Escolha o post</h3>
+            <p>Só aparecem os que estão em <b>Produzindo</b> — é onde a arte trava.</p>
+          </div>
+        </div>
+        <div class="p-corpo">
+          <div class="posts">
+            <div class="post on">
+              <div class="fmt">Carrossel · 5 páginas</div>
+              <div class="tit">3 erros que fazem seu bolo murchar</div>
+              <div class="base"><span class="dot d-ok"></span> as 5 páginas já têm texto</div>
+            </div>
+            <div class="post">
+              <div class="fmt">Reels</div>
+              <div class="tit">Receita de pão de 4 ingredientes</div>
+              <div class="base"><span class="dot d-ok"></span> roteiro escrito</div>
+            </div>
+            <div class="post">
+              <div class="fmt">Estático</div>
+              <div class="tit">Bastidores da confeitaria</div>
+              <div class="base"><span class="dot d-nao"></span> só o título</div>
+            </div>
+          </div>
+
+          <div class="modo">
+            <span>✓</span>
+            <div><b>Vou usar o que você escreveu.</b> Esse carrossel tem as 5 páginas preenchidas, então cada prompt vai nascer do texto da página — não de um chute em cima do título.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- passo 2 -->
+      <div class="p">
+        <div class="p-top">
+          <span class="num">2</span>
+          <div>
+            <h3>Quer amarrar com o que está quente agora?</h3>
+            <p>Isso mexe no <b>conteúdo</b>, não na arte. Serve pro post pegar carona no que está sendo falado esta semana.</p>
+          </div>
+          <span class="opt">Opcional</span>
+        </div>
+        <div class="p-corpo">
+          <div class="news">
+            <label class="n"><input type="checkbox" checked>
+              <div><div class="t">Alta do ovo faz confeiteiras trocarem receita</div><div class="f">G1 · há 2 dias</div></div>
+            </label>
+            <label class="n"><input type="checkbox">
+              <div><div class="t">"Bolo de pote" volta a bombar no TikTok</div><div class="f">Exame · há 5 dias</div></div>
+            </label>
+          </div>
+
+          <div class="escolha">
+            <div class="esc on">
+              <b>Usar o que está quente</b>
+              <span>O post fica atual e pega o assunto do momento — mas envelhece em algumas semanas.</span>
+            </div>
+            <div class="esc">
+              <b>Deixar atemporal</b>
+              <span>Serve o ano inteiro. Você pode repostar em janeiro sem parecer velho.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- passo 3 -->
+      <div class="p">
+        <div class="p-top">
+          <span class="num">3</span>
+          <div>
+            <h3>Gerar o prompt da arte</h3>
+            <p>Um prompt por página, todos com o <b>mesmo estilo</b> — senão o carrossel sai com 5 imagens de 5 mundos diferentes.</p>
+          </div>
+        </div>
+        <div class="p-corpo">
+          <button class="btn">✦ Gerar os 5 prompts</button>
+          <span class="custo">consome 1 geração da sua cota de IA</span>
+
+          <div style="margin-top:16px">
+            <div class="estilo">
+              <div class="lab">Estilo que se repete em todas as páginas</div>
+              <p>Fotografia de comida, luz natural lateral, fundo de mármore claro, tons quentes, sem texto na imagem, atmosfera artesanal e caseira.</p>
+              <div class="chips">
+                <span class="chip"><i class="sw" style="background:#CE4A1D"></i>#CE4A1D</span>
+                <span class="chip"><i class="sw" style="background:#F2C21E"></i>#F2C21E</span>
+                <span class="chip"><i class="sw" style="background:#FDFBF5"></i>#FDFBF5</span>
+                <span class="chip">Baloo 2 · títulos</span>
+                <span class="chip">tom: acolhedor, sem formalidade</span>
+              </div>
+            </div>
+
+            <div class="pg">
+              <div class="pg-h"><span class="pg-n">1</span><span class="txt">Capa — “3 erros que fazem seu bolo murchar”</span><button class="cp">copiar em inglês</button></div>
+              <div class="pg-b">
+                Um bolo caseiro afundado no centro, sobre mármore claro, luz natural lateral, tons quentes de laranja e amarelo, atmosfera artesanal, sem texto na imagem, close de cima.
+                <div class="en">EN: A sunken homemade cake on a light marble surface, natural side light, warm orange and yellow tones, artisanal mood, no text, overhead close-up.</div>
+              </div>
+            </div>
+
+            <div class="pg">
+              <div class="pg-h"><span class="pg-n">2</span><span class="txt">Erro 1 — abrir o forno cedo demais</span><button class="cp">copiar em inglês</button></div>
+              <div class="pg-b">
+                Mão abrindo a porta de um forno doméstico com o bolo ainda crescendo, vapor visível, mesma luz natural lateral e mármore claro ao fundo, tons quentes, sem texto.
+                <div class="en">EN: A hand opening a home oven door while the cake is still rising, visible steam, same natural side light and light marble backdrop, warm tones, no text.</div>
+              </div>
+            </div>
+
+            <div class="pg" style="opacity:.55">
+              <div class="pg-h"><span class="pg-n">3</span><span class="txt">Erro 2 — bater a massa demais</span><button class="cp">copiar em inglês</button></div>
+              <div class="pg-b">…</div>
+            </div>
+
+            <div class="proc">
+              <span>🛈</span>
+              <div>
+                <b>De onde isso saiu:</b> das suas cores (#CE4A1D, #F2C21E), da sua fonte, do seu tom de voz e do texto que você escreveu em cada página.
+                Se a arte sair com a cara errada, o conserto é no <a href="#">seu Brandbook</a> — não em ficar tentando de novo aqui.
+                <br><span style="color:var(--mudo)">Mostramos em português pra você conferir. O botão copia em inglês, que é o que os geradores de imagem entendem melhor.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="porque">
+      <b>Por que assim:</b> o Estúdio deixa de ser uma tela separada (que ninguém lembra de visitar) e passa a viver no minuto em que a pessoa trava — post escrito, arte em branco. E ele não gera imagem: gera o prompt. Imagem por IA custa dinheiro de verdade, sai fora da identidade, e ela ia refazer no Canva de qualquer jeito.
+    </div>
+  </section>
+
+  <!-- ══════════════════ TELA 2 · BRIEFING DE ARTE ══════════════════ -->
+  <section class="tela">
+    <div class="hero">
+      <span class="blob b1" style="background:var(--lilas)"></span><span class="blob b2"></span>
+      <span class="selo" style="background:rgba(42,75,223,.1);color:var(--azul)">✦ Cria Post · Doceria da Ana</span>
+      <h1>O briefing da arte, pronto pra mandar</h1>
+      <p class="sub">Aqui você não quer um prompt — quer o que mandar pro designer. Paleta, fonte, o que pode e o que não pode, e o texto que vai na peça. Tudo do brandbook <b>deste</b> cliente.</p>
+    </div>
+
+    <div class="p sem-corpo" style="margin-bottom:12px">
+      <div class="p-top">
+        <span class="num" style="background:var(--azul)">✦</span>
+        <div>
+          <h3>Post: “Novo sabor — pistache com framboesa”</h3>
+          <p>Carrossel de 3 páginas · entrega quinta</p>
+        </div>
+        <button class="btn" style="background:var(--azul);margin-left:auto">Gerar briefing</button>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="bloco">
+        <h4>Paleta da Doceria da Ana</h4>
+        <div class="paleta">
+          <div class="cor"><i style="background:#6B4E71"></i><span>#6B4E71</span></div>
+          <div class="cor"><i style="background:#E8B4BC"></i><span>#E8B4BC</span></div>
+          <div class="cor"><i style="background:#F7EDE2"></i><span>#F7EDE2</span></div>
+          <div class="cor"><i style="background:#84A98C"></i><span>#84A98C</span></div>
+        </div>
+        <p style="font-size:.78rem;color:var(--mudo);margin-top:10px">Clique no hex pra copiar.</p>
+      </div>
+
+      <div class="bloco">
+        <h4>Tipografia</h4>
+        <div class="fonte"><b>Playfair Display</b> <span>títulos e chamadas</span></div>
+        <div class="fonte"><b>Inter</b> <span>corpo de texto e legendas na arte</span></div>
+        <div class="fonte"><b>Nunca</b> <span>fontes manuscritas ou display gordas</span></div>
+      </div>
+
+      <div class="bloco">
+        <h4>Direção de arte</h4>
+        <div class="lista">
+          <div><span class="s s-ok">✓</span> Fotografia real do produto, luz suave, fundo bege</div>
+          <div><span class="s s-ok">✓</span> Muito espaço em branco — a peça respira</div>
+          <div><span class="s s-no">✗</span> Nada de stock photo genérica</div>
+          <div><span class="s s-no">✗</span> Nada de emoji na arte</div>
+        </div>
+      </div>
+
+      <div class="bloco">
+        <h4>Texto que vai na peça</h4>
+        <div class="lista">
+          <div><span class="s" style="color:var(--mudo)">1</span> <b>Pistache com framboesa.</b> (capa)</div>
+          <div><span class="s" style="color:var(--mudo)">2</span> Doce na medida, ácido na hora certa.</div>
+          <div><span class="s" style="color:var(--mudo)">3</span> Só até domingo. Encomende pelo direct.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="saidas">
+      <button class="btn" style="background:var(--verde)">📋 Copiar briefing pro designer</button>
+      <button class="btn g">✦ Copiar como prompt de IA (inglês)</button>
+      <button class="btn g">↓ Baixar em PDF</button>
+    </div>
+
+    <div class="porque">
+      <b>Por que assim:</b> a social mídia já escreve esse briefing no WhatsApp, na mão, dez vezes por semana. Ela não quer uma imagem gerada — ela quer parar de digitar a paleta do cliente de cabeça. O prompt de IA é só <i>uma das saídas</i> do mesmo briefing.
+    </div>
+  </section>
+
+  <!-- ══════════════════ TELA 3 · BRANDBOOK POR PDF ══════════════════ -->
+  <section class="tela">
+    <div class="hero">
+      <span class="blob b1" style="background:var(--verde);opacity:.25"></span><span class="blob b2"></span>
+      <span class="selo" style="background:rgba(62,145,82,.12);color:#2c6b3c">✦ Brandbook · Doceria da Ana</span>
+      <h1>Sobe o moodboard. O Cria preenche.</h1>
+      <p class="sub">Você já tem o brandbook do cliente num PDF. Não faz sentido digitar tudo de novo num formulário de vinte campos — e é por isso que esse formulário vive vazio, e a IA do Cria acaba escrevendo genérico.</p>
+    </div>
+
+    <div class="drop">
+      <div class="ic">📄</div>
+      <h3>Arraste o moodboard do cliente aqui</h3>
+      <p>A gente lê as cores, as fontes, o tom de voz e o que pode e o que não pode.</p>
+      <div class="fmt">PDF, Word ou imagem · até 10 MB · o arquivo fica guardado nos Arquivos do cliente</div>
+    </div>
+
+    <div class="p" style="margin-top:12px">
+      <div class="p-top">
+        <span class="num cinza">⏳</span>
+        <div>
+          <h3>Lendo “brandbook-doceria-ana.pdf”</h3>
+          <p>12 páginas · leva menos de um minuto</p>
+        </div>
+      </div>
+      <div class="p-corpo">
+        <div class="lendo">
+          <div class="step"><span class="tick t-ok">✓</span> Texto extraído das 12 páginas</div>
+          <div class="step"><span class="tick t-ok">✓</span> Cores tiradas direto das páginas de paleta</div>
+          <div class="step"><span class="tick t-go">◐</span> Lendo a direção de arte e o tom de voz…</div>
+          <div class="step"><span class="tick t-wait">·</span> Montando a revisão</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- popup de revisão -->
+    <div class="modal">
+      <div class="m-top">
+        <span class="num" style="background:var(--verde)">✓</span>
+        <div>
+          <h3>Confere o que eu entendi</h3>
+          <p>Nada é salvo antes de você olhar. Onde já havia informação, mostro o que vai mudar — pra você não apagar sem querer algo que ajustou na mão.</p>
+        </div>
+      </div>
+
+      <div class="m-body">
+
+        <div class="campo">
+          <div class="c-lab"><span class="nome">Paleta</span><span class="badge b-muda">vai mudar</span></div>
+          <div class="antes">Antes: <s>#6B4E71 · #E8B4BC</s> → agora com 4 cores</div>
+          <div class="paleta">
+            <div class="cor"><i style="background:#6B4E71"></i><span>#6B4E71</span></div>
+            <div class="cor"><i style="background:#E8B4BC"></i><span>#E8B4BC</span></div>
+            <div class="cor"><i style="background:#F7EDE2"></i><span>#F7EDE2</span></div>
+            <div class="cor"><i style="background:#84A98C"></i><span>#84A98C</span></div>
+          </div>
+          <div class="fonte-pg">encontrado na página 4 do PDF</div>
+        </div>
+
+        <div class="campo">
+          <div class="c-lab"><span class="nome">Fontes</span><span class="badge b-novo">novo</span></div>
+          <input class="entrada" value="Playfair Display (títulos) · Inter (corpo)">
+          <div class="fonte-pg">encontrado na página 5</div>
+        </div>
+
+        <div class="campo">
+          <div class="c-lab"><span class="nome">Tom de voz</span><span class="badge b-novo">novo</span></div>
+          <textarea class="entrada">Afetivo e sem formalidade. Fala como quem conhece o cliente pelo nome. Evita gíria e evita "corre lá".</textarea>
+          <div class="fonte-pg">resumido das páginas 7 e 8</div>
+        </div>
+
+        <div class="campo">
+          <div class="c-lab"><span class="nome">O que nunca fazer</span><span class="badge b-novo">novo</span></div>
+          <textarea class="entrada">Sem stock photo. Sem emoji na arte. Nunca usar o roxo fora do logo.</textarea>
+          <div class="fonte-pg">encontrado na página 9</div>
+        </div>
+
+        <div class="campo">
+          <div class="c-lab"><span class="nome">Público</span><span class="badge b-igual">igual ao que já estava</span></div>
+          <input class="entrada" value="Mulheres 28–45, região da Vila Madalena, compram por encomenda">
+        </div>
+
+        <div class="campo">
+          <div class="c-lab"><span class="nome">Pilares de conteúdo</span><span class="badge b-igual">não encontrei</span></div>
+          <input class="entrada" placeholder="O PDF não trazia isso. Você pode escrever agora ou deixar pra depois." style="color:var(--mudo)">
+        </div>
+
+      </div>
+
+      <div class="m-foot">
+        <span class="obs">O PDF fica guardado nos Arquivos do cliente — você consulta quando quiser, e eu posso reler se a leitura tiver saído torta.</span>
+        <button class="btn g">Descartar</button>
+        <button class="btn" style="background:var(--verde)">Salvar no brandbook do cliente</button>
+      </div>
+    </div>
+
+    <div class="porque">
+      <b>Por que isso importa mais do que parece:</b> o brandbook é o dado do qual TODA a IA do Cria depende — legenda, roteiro, prompt, briefing. Sem ele, tudo sai genérico e a pessoa conclui que “a IA do Cria é fraca”. O formulário nunca vai ser preenchido; o PDF já existe. Trocar “digite vinte campos” por “confere o que eu entendi” é a diferença entre o brandbook existir e não existir.
+    </div>
+  </section>
+
+</div>
+
+<script>
+function ir(i,btn){
+  document.querySelectorAll('.tela').forEach((t,k)=>t.classList.toggle('on',k===i));
+  document.querySelectorAll('.mk button').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
+</body>
+</html>

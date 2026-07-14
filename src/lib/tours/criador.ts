@@ -176,9 +176,36 @@ export const TOURS_CRIADOR: TourConfig[] = [
         target: '[data-tour="editor-abas"]',
         mobileOpenFirst: '[data-tour="editor-tab-criar"]',
         title: "As abas do post",
-        body: "Legenda: o texto que vai no post. Roteiro: cena a cena do vídeo. Tarefas: o que falta fazer pra esse post sair. Notas: anotações livres. Refs: referências e links de inspiração. Um post completo mora nessas 5 abas.",
-        mobileBody: "Na área de conteúdo do post você encontra 5 abas. Legenda: o texto que vai no post. Roteiro: cena a cena do vídeo. Tarefas: o que falta pra esse post sair. Notas: anotações livres. Refs: referências e inspiração. Um post completo mora nessas 5 abas.",
+        body: "Legenda: o texto que vai no post. Roteiro: cena a cena do vídeo. Arte: o prompt da imagem, na sua marca. Tarefas: o que falta fazer pra esse post sair. Notas: anotações livres. Refs: referências e links de inspiração. Um post completo mora nessas abas.",
+        mobileBody: "Na área de conteúdo do post você encontra as abas. Legenda: o texto do post. Roteiro: cena a cena. Arte: o prompt da imagem, na sua marca. Tarefas: o que falta pra esse post sair. Notas: anotações livres. Refs: referências e inspiração.",
         placement: "bottom",
+      },
+      // ── CRIA ESTÚDIO ───────────────────────────────────────────────────
+      // Estes 3 passos existem porque este é o recurso mais fácil de ser mal
+      // entendido do sistema: a pessoa pode achar que o CRIA vai GERAR a
+      // imagem (não vai — ele entrega o prompt), e pode achar que o resultado
+      // ruim é culpa da IA (quase sempre é o Brandbook vazio).
+      {
+        target: '[data-tour="estudio-base"]',
+        // Sem isto o passo aponta pro vazio: a aba Arte está FECHADA quando o
+        // tour chega aqui. O openFirst clica nela antes de apontar.
+        openFirst: '[data-tour="editor-tab-arte"]',
+        mobileOpenFirst: '[data-tour="editor-tab-arte"]',
+        title: "Arte: o prompt, não a imagem",
+        body: "O CRIA não gera a imagem — ele escreve o PROMPT dela, com as suas cores e a sua fonte, pra você colar no gerador que já usa (Midjourney, Canva, ChatGPT). Repare nesta linha: ela diz de onde o prompt vai nascer. Se você já escreveu o texto das páginas, ele usa o SEU texto. Se não escreveu, ele parte só do título — e aí sai mais genérico.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="estudio-tempo"]',
+        title: "Atemporal ou em cima do que está quente",
+        body: "Atemporal serve o ano inteiro: você reposta em janeiro sem parecer velho. Amarrado ao que está quente conversa com o assunto do momento, mas envelhece em algumas semanas. Não existe certo — existe o que você quer daquele post.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="estudio-gerar"]',
+        title: "Um prompt por página, todos no mesmo estilo",
+        body: "Num carrossel, cada página vira um prompt — mas todos carregam o MESMO bloco de estilo, senão você recebe 5 imagens de 5 mundos diferentes. Sai em português pra você conferir, e o botão copia em inglês, que é o que os geradores entendem melhor. Custa 1 geração da sua cota de IA.",
+        placement: "top",
       },
       {
         target: '[data-tour="editor-ia"]',

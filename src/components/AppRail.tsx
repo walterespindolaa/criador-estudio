@@ -181,7 +181,6 @@ export function AppRail() {
       <div className="flex w-full flex-col items-stretch gap-1">{TOP.map(renderNode)}</div>
       <div className="my-2 h-px w-8 self-center bg-border" />
       <div className="flex w-full flex-col items-stretch gap-1">
-        {isAdmin && renderNode({ id: "estudio", label: "Cria Estúdio", icon: Wand2, to: "/app/estudio" })}
         {isAdmin && renderNode({ id: "admin", label: "Admin", icon: ShieldCheck, to: "/app/cf-admin-panel" })}
         {BOTTOM.map(renderNode)}
       </div>

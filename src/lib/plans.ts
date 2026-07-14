@@ -233,13 +233,18 @@ export const FEATURES: Record<FeatureKey, FeatureDef> = {
     ],
   },
   estudio: {
-    // O Estúdio gera imagem por IA e cada geração custa dinheiro de verdade.
-    // Ficava ABERTO pra qualquer conta logada. Trancado no admin até virar
-    // produto de fato (com cota, preço e limite definidos).
-    minimo: "admin",
-    titulo: "Cria Estúdio",
-    linha: "A geração de arte por IA ainda está em preparação. Vem aí.",
-    ganhos: [],
+    // O Estúdio deixou de ser uma TELA (rota /app/estudio, item de menu) que
+    // gerava imagem por IA — cara, fora da identidade da pessoa, e que ela ia
+    // refazer no Canva de qualquer jeito. Virou uma ABA dentro do post, que
+    // devolve o PROMPT. Custa uma geração da cota de IA, e é do Pro pra cima.
+    minimo: "pro",
+    titulo: "O prompt da arte, na sua marca",
+    linha: "Você escreveu o post e travou na arte. O Estúdio lê o que você escreveu e devolve o prompt da imagem — nas suas cores, na sua fonte, no seu tom.",
+    ganhos: [
+      "Um prompt por página do carrossel, todos no mesmo estilo",
+      "Em português pra você conferir, em inglês pra colar no gerador",
+      "Você usa o gerador que já tem: Midjourney, Canva, ChatGPT",
+    ],
   },
 };
 
@@ -267,7 +272,8 @@ export const ROUTE_FEATURE: Record<string, FeatureKey> = {
   "/app/autopilot": "cria-plano",
   "/app/stories": "stories",
   "/app/collabs": "collabs",
-  "/app/estudio": "estudio",
+  // Não existe mais "/app/estudio": o Estúdio virou aba do post. Ele não é
+  // destino nenhum — por isso não tem rota e não tem selo de menu.
 };
 
 /** O nome do plano como a pessoa lê. */

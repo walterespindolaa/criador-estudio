@@ -56,7 +56,6 @@ const Autopilot = lazy(() => import("./pages/app/Autopilot"));
 const MediaKit = lazy(() => import("./pages/app/MediaKit"));
 const Tendencias = lazy(() => import("./pages/app/Tendencias"));
 const CriaStories = lazy(() => import("./pages/app/CriaStories"));
-const CriaEstudio = lazy(() => import("./pages/app/CriaEstudio"));
 const TrocarSenha = lazy(() => import("./pages/app/TrocarSenha"));
 const Assinar = lazy(() => import("./pages/app/Assinar"));
 const BioPage = lazy(() => import("./pages/BioPage"));
@@ -234,8 +233,7 @@ const App = () => (
                 <Route path="media-kit" element={<ErrorBoundary><UpgradeGate feature="media-kit"><MediaKit /></UpgradeGate></ErrorBoundary>} />
                 <Route path="tendencias" element={<ErrorBoundary><UpgradeGate feature="tendencias"><Tendencias /></UpgradeGate></ErrorBoundary>} />
                 <Route path="stories" element={<ErrorBoundary><UpgradeGate feature="stories"><CriaStories /></UpgradeGate></ErrorBoundary>} />
-                <Route path="stories/semanastories" element={<ErrorBoundary><UpgradeGate feature="stories"><CriaStories /></UpgradeGate></ErrorBoundary>} />
-                <Route path="estudio" element={<ErrorBoundary><UpgradeGate feature="estudio"><CriaEstudio /></UpgradeGate></ErrorBoundary>} />
+                <Route path="stories/semanastories" element={<ErrorBoundary><UpgradeGate feature="stories"><CriaStories /></UpgradeGate></ErrorBoundary>} /></UpgradeGate></ErrorBoundary>} />
                 <Route path="aprovacao" element={<ErrorBoundary><Aprovacao /></ErrorBoundary>} />
                 <Route path="modulos" element={<ErrorBoundary><Modulos /></ErrorBoundary>} />
                 <Route path="feed" element={<ErrorBoundary><UpgradeGate feature="feed"><Feed /></UpgradeGate></ErrorBoundary>} />

@@ -295,7 +295,7 @@ serve(async (req) => {
     // ── Access gate: trial ativo, subscription ativa, ou admin ─────
     const { data: accessRow, error: accessErr } = await supabase
       .from("profiles")
-      .select("role, subscription_status, trial_ends_at")
+      .select("role, plan, subscription_status, trial_ends_at")
       .eq("id", user.id)
       .single();
 
@@ -321,6 +321,23 @@ serve(async (req) => {
 
     const { operation, data } = await req.json()
     const userId = user.id // use this, ignore userId from body
+
+    // ── Recursos do Pro pra cima ───────────────────────────────────
+    // A trava do frontend é UX (o selo "PRO" no botão, a vitrine). Ela não é
+    // segurança: qualquer um chama a edge function direto. Quem decide é aqui.
+    // Trial entra (ele roda como Studio de propósito — a pessoa precisa SENTIR
+    // o que perde quando acabar).
+    const PRO_OU_ACIMA = new Set(['art-prompt'])
+    if (PRO_OU_ACIMA.has(operation)) {
+      const planoOk = accessRow.plan === 'pro' || accessRow.plan === 'studio'
+      const liberado = _isAdmin || _trialOk || (_isActive && planoOk)
+      if (!liberado) {
+        return new Response(
+          JSON.stringify({ error: 'upgrade_required', message: 'O Cria Estúdio está no plano Pro.' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
 
     // ── Operações admin (não consome cota) ──
     if (operation === 'admin-system-insight') {
@@ -933,6 +950,53 @@ ${data.brandContext ? `\nMARCA DO CRIADOR:\n${data.brandContext}` : ''}`
         maxTokens = 8192
         break
       }
+      // ═══════════════════════════════════════════════════════════════════
+      // CRIA ESTÚDIO — o prompt da arte, dentro do post
+      //
+      // Não geramos imagem. Geramos o PROMPT, que a pessoa cola no gerador
+      // que ela já usa. Imagem por IA custa dinheiro de verdade, sai fora da
+      // identidade dela, e ela ia refazer no Canva de qualquer jeito.
+      //
+      // Duas decisões que estão no formato da resposta:
+      // 1. UM BLOCO DE ESTILO que se repete em TODAS as páginas. Sem isso o
+      //    carrossel sai com 5 imagens de 5 mundos diferentes — e aí ela
+      //    testa uma vez e nunca mais volta.
+      // 2. pt + en. Mostramos em português (ela precisa CONFERIR se a IA
+      //    entendeu a marca dela); o botão copia o inglês, que é o que os
+      //    geradores de imagem entendem de verdade.
+      // ═══════════════════════════════════════════════════════════════════
+      case 'art-prompt': {
+        const paginas = Array.isArray(data.paginas) ? data.paginas.slice(0, 12) : []
+        const temTexto = paginas.some((p: any) => String(p?.texto || '').trim().length > 0)
+        const n = Math.max(1, paginas.length || 1)
+
+        operationPrompt = `Você é um diretor de arte de conteúdo para Instagram no Brasil. Sua tarefa é escrever PROMPTS DE IMAGEM para um gerador de IA (Midjourney/Sora/DALL·E), respeitando a identidade visual da pessoa.
+
+REGRAS INEGOCIÁVEIS:
+- Escreva UM "estilo" que descreva a estética que se repete em TODAS as páginas (tipo de imagem, luz, fundo, textura, atmosfera, paleta). É ele que dá unidade ao carrossel.
+- Cada página repete esse estilo e muda SÓ o assunto. Nunca invente um estilo diferente por página.
+- Nada de texto dentro da imagem: a pessoa escreve o texto por cima depois. Sempre inclua "sem texto na imagem" / "no text".
+- Use as cores da marca informadas. Se não houver cores, descreva a paleta pelo tom da marca, sem inventar hex.
+- "pt" é a versão em português (a pessoa vai LER e conferir). "en" é a MESMA imagem descrita em inglês (é o que ela vai colar no gerador). As duas descrevem exatamente a mesma cena.
+- Nada de marca d'água, logo, rosto de celebridade ou pessoa real identificável.
+
+RESPONDA APENAS com JSON válido, sem texto antes ou depois:
+{"estilo":{"descricao":"1-2 frases da estética comum","en":"same style block in English"},"paginas":[{"n":1,"titulo":"do que é esta página","pt":"prompt em português","en":"prompt in English"}]}
+- Gere EXATAMENTE ${n} ${n === 1 ? 'página' : 'páginas'}.`
+
+        userPrompt = `Formato: ${data.formato || 'post'}
+Título do post: ${data.titulo || '(sem título)'}
+${temTexto
+  ? `O QUE JÁ ESTÁ ESCRITO EM CADA PÁGINA (use isto, não chute):\n${paginas.map((p: any, i: number) => `${i + 1}. ${String(p?.texto || '').slice(0, 400)}`).join('\n')}`
+  : `A pessoa ainda NÃO escreveu o conteúdo das páginas. Crie a partir do título, de forma coerente do começo ao fim.`}
+${data.roteiro ? `\nRoteiro/legenda do post: ${String(data.roteiro).slice(0, 1200)}` : ''}
+${data.cores ? `\nCores da marca: ${data.cores}` : ''}
+${data.fontes ? `Fontes da marca: ${data.fontes}` : ''}
+${data.tom ? `Tom da marca: ${data.tom}` : ''}
+${data.contextoQuente ? `\nAMARRAR COM O QUE ESTÁ EM ALTA (só se encaixar naturalmente na cena; jamais force):\n${String(data.contextoQuente).slice(0, 600)}` : ''}`
+        maxTokens = 4096
+        break
+      }
       default:
         throw new Error('Invalid operation')
     }
@@ -975,7 +1039,7 @@ ${data.brandContext ? `\nMARCA DO CRIADOR:\n${data.brandContext}` : ''}`
     const result = await response.json()
     const content = result.choices?.[0]?.message?.content || ''
 
-    if (operation === 'reference-filter' || operation === 'score-caption' || operation === 'client-report-insight' || operation === 'insights-reading' || operation === 'autopilot-cronograma' || operation === 'story-plan-generate') {
+    if (operation === 'reference-filter' || operation === 'score-caption' || operation === 'client-report-insight' || operation === 'insights-reading' || operation === 'autopilot-cronograma' || operation === 'story-plan-generate' || operation === 'art-prompt') {
       const cleaned = String(content).replace(/```json/gi, '').replace(/```/g, '').trim()
       const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
       const jsonStr = jsonMatch ? jsonMatch[0] : cleaned
