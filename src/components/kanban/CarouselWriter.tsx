@@ -11,7 +11,7 @@ import { emptySection, type Section } from "./drawer/ScriptEditor";
    ESCREVER AS LÂMINAS COM IA
 
    Isto existia no Cria Estúdio antigo e eu MATEI junto com a tela: a pessoa
-   dava o tema e ele escrevia página por página do carrossel. Foi erro meu —
+   dava o tema e ele escrevia página por página do carrossel. Foi erro meu,
    o problema era a TELA (um destino que ninguém visitava), não o recurso.
 
    Agora ele vive onde as lâminas vivem: aqui, na aba Roteiro. E ele é o que
@@ -41,7 +41,7 @@ export function CarouselWriter({ titulo, formato, pilar, sections, onChange }: P
 
   const gerar = async () => {
     if (!titulo.trim()) {
-      toast.error("Escreva o título do post primeiro — é dele que a IA parte.");
+      toast.error("Escreva o título do post primeiro, é dele que a IA parte.");
       return;
     }
     if (temTexto) {

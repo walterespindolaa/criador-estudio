@@ -10,11 +10,11 @@ import { useCrmClient } from "@/hooks/useCrm";
    ESCREVER O CONTEÚDO DO POST DO CLIENTE
 
    A social mídia escreve conteúdo pra DEZ marcas, toda semana. É o trabalho
-   mais repetitivo da rotina dela — e era o único lugar onde a IA do CRIA não
+   mais repetitivo da rotina dela, e era o único lugar onde a IA do CRIA não
    ajudava, porque o gerador de lâminas só existia do lado do criador.
 
    A diferença que faz isto valer: ele escreve no tom do CLIENTE (o brand_core
-   dele), não no tom da agência. É pra isso que serve o brandbook por PDF —
+   dele), não no tom da agência. É pra isso que serve o brandbook por PDF,
    ela sobe uma vez, e todo post daquele cliente nasce com a voz certa.
 
    Se o cliente não tem brandbook, ele AVISA em vez de escrever genérico. Texto
@@ -45,7 +45,7 @@ export function ClientContentWriter({ crmClientId, clienteNome, titulo, formato,
 
   const gerar = async () => {
     if (!titulo.trim()) {
-      toast.error("Escreva o título do post primeiro — é dele que a IA parte.");
+      toast.error("Escreva o título do post primeiro, é dele que a IA parte.");
       return;
     }
     if (valor.trim()) {
@@ -104,7 +104,7 @@ export function ClientContentWriter({ crmClientId, clienteNome, titulo, formato,
           ) : (
             <>
               <b className="font-display">{clienteNome} ainda não tem brandbook.</b>{" "}
-              Sem tom de voz e público, o texto sai genérico — preencha a marca dele (ou suba o PDF) primeiro.
+              Sem tom de voz e público, o texto sai genérico, preencha a marca dele (ou suba o PDF) primeiro.
             </>
           )}
         </p>

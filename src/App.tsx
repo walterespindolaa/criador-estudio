@@ -207,9 +207,6 @@ const App = () => (
               <Route path="/comecar-agencia" element={
                 <AuthOnlyRoute><ComecarAgencia /></AuthOnlyRoute>
               } />
-              <Route path="/app/assinar" element={
-                <AuthOnlyRoute><Assinar /></AuthOnlyRoute>
-              } />
               <Route path="/app/obrigado" element={
                 <AuthOnlyRoute><Obrigado /></AuthOnlyRoute>
               } />
@@ -220,6 +217,9 @@ const App = () => (
                 <ProtectedRoute><AppLayout /></ProtectedRoute>
               }>
                 <Route index element={<ErrorBoundary><AppHome /></ErrorBoundary>} />
+                {/* PLANOS dentro do layout: ela era a única tela do sistema que
+                    abria "fora do app", sem menu, como se fosse outro site. */}
+                <Route path="assinar" element={<ErrorBoundary><Assinar /></ErrorBoundary>} />
                 <Route path="ideias" element={<ErrorBoundary><Ideias /></ErrorBoundary>} />
                 <Route path="criando" element={<ErrorBoundary><Criando /></ErrorBoundary>} />
                 {/* ═══ TRAVAS DE PLANO ═══

@@ -135,13 +135,10 @@ export default function Assinar() {
   };
 
   return (
-    <div className="relative min-h-screen app-canvas overflow-hidden">
-      {/* O FUNDO NATIVO DO CRIA. A página estava numa folha lisa — a única do
-          sistema sem as formas orgânicas. Justo a página onde a pessoa decide
-          te pagar: ela precisa PARECER o produto que ela vai comprar. */}
-      <BgShapes styleKey="organico" />
-
-      <div className="relative z-[1] flex flex-col items-center px-4 py-10 sm:py-14">
+    <div className="relative">
+      {/* Agora ela vive DENTRO do app (menu, rail, barra), então o fundo orgânico
+          vem do próprio AppLayout. Ela deixou de ser "outro site". */}
+      <div className="flex flex-col items-center pb-16">
       {!isExpired && (
         <button
           onClick={() => navigate("/app")}
@@ -154,7 +151,7 @@ export default function Assinar() {
 
       {/* ── O CABEÇALHO ──────────────────────────────────────────────────────
           Esta página era uma folha BRANCA com três caixas brancas. Era a página
-          onde a pessoa decide te pagar — e era a única do sistema sem a cara do
+          onde a pessoa decide te pagar, e era a única do sistema sem a cara do
           Cria. Página de venda sem identidade não vende: parece formulário de
           banco. Agora ela tem o creme, as manchas orgânicas e o laranja da marca. */}
       <div className="relative w-full max-w-6xl overflow-hidden rounded-3xl border border-border bg-card px-5 py-7 sm:px-9 sm:py-9 mb-6 text-center">
@@ -205,7 +202,7 @@ export default function Assinar() {
       )}
 
       {/* pt-4 no grid: o selo "Mais escolhido" vive em -top-3 e estava sendo
-          COMEÇADO fora do container — o card cortava a metade de cima dele.
+          COMEÇADO fora do container, o card cortava a metade de cima dele.
           (E eu tinha piorado pondo overflow-hidden no card.) */}
       <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-5 pt-4 items-start">
         {PLANS.map((plan) => {
@@ -318,7 +315,7 @@ export default function Assinar() {
           <ShieldCheck className="h-5 w-5" /> Cancelar leva 2 cliques
         </p>
         <p className="text-[13.5px] font-body text-white/85 mt-1.5 max-w-xl mx-auto leading-relaxed">
-          Sem ligação, sem formulário, sem falar com ninguém — dentro do próprio app.
+          Sem ligação, sem formulário, sem falar com ninguém, dentro do próprio app.
           Se em um mês o cria não te economizar tempo, você sai e não paga o mês seguinte.
         </p>
       </div>
@@ -377,10 +374,10 @@ export default function Assinar() {
       )}
 
       {/* O FECHO. A última coisa que ela lê antes de decidir não pode ser
-          "Pagamento seguro" — isso é rodapé de e-commerce. Tem que ser o motivo. */}
+          "Pagamento seguro", isso é rodapé de e-commerce. Tem que ser o motivo. */}
       <div className="w-full max-w-2xl mt-10 text-center">
         <p className="text-[15px] font-body text-foreground leading-relaxed">
-          O que trava a maioria não é falta de ideia — é o domingo à noite olhando pro
+          O que trava a maioria não é falta de ideia, é o domingo à noite olhando pro
           calendário vazio, o post pela metade, a legenda que não sai.
           <span className="font-display font-bold"> O cria existe pra isso não acontecer de novo.</span>
         </p>

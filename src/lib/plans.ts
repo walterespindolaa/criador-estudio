@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   PLANOS E TRAVAS — FONTE ÚNICA DE VERDADE
+   PLANOS E TRAVAS, FONTE ÚNICA DE VERDADE
 
    Antes, a mesma regra ("isto é do Studio") estava escrita de TRÊS jeitos
    diferentes, cada um numa página:
@@ -9,12 +9,12 @@
    E o Cria Estúdio, que gasta crédito pago de geração de imagem, NÃO TINHA TRAVA
    NENHUMA: qualquer conta logada entrava pela URL e queimava dinheiro.
 
-   Três implementações da mesma regra são três lugares pra errar — e um deles já
+   Três implementações da mesma regra são três lugares pra errar, e um deles já
    tinha errado. Agora existe UM mapa: recurso → tier mínimo. A trava (UpgradeGate)
    lê daqui, o menu lê daqui, e a vitrine de venda lê daqui.
 
    E a trava não é mais uma porta na cara: quem clica num recurso que não tem
-   vê O QUE GANHARIA, com um CTA. A pessoa clicou porque queria — isso é a
+   vê O QUE GANHARIA, com um CTA. A pessoa clicou porque queria, isso é a
    melhor oportunidade de venda que existe, e a gente estava jogando fora com
    um redirect.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -239,7 +239,7 @@ export const FEATURES: Record<FeatureKey, FeatureDef> = {
     // devolve o PROMPT. Custa uma geração da cota de IA, e é do Pro pra cima.
     minimo: "pro",
     titulo: "O prompt da arte, na sua marca",
-    linha: "Você escreveu o post e travou na arte. O Estúdio lê o que você escreveu e devolve o prompt da imagem — nas suas cores, na sua fonte, no seu tom.",
+    linha: "Você escreveu o post e travou na arte. O Estúdio lê o que você escreveu e devolve o prompt da imagem, nas suas cores, na sua fonte, no seu tom.",
     ganhos: [
       "Um prompt por página do carrossel, todos no mesmo estilo",
       "Em português pra você conferir, em inglês pra colar no gerador",

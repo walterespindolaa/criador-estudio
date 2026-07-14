@@ -8,12 +8,12 @@ import { callAIContextBuilder } from "@/lib/ai/claude";
 import { useCrmClient } from "@/hooks/useCrm";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   BRIEFING DE ARTE — dentro do post do cliente
+   BRIEFING DE ARTE, dentro do post do cliente
 
    Aqui a social mídia NÃO quer um prompt de IA. Ela quer o que MANDAR PRO
    DESIGNER: a paleta com os hex, a fonte, o que pode e o que não pode, e o
    texto que vai na peça. Ela escreve isso no WhatsApp, na mão, dez vezes por
-   semana — e digita a paleta do cliente de cabeça toda vez.
+   semana, e digita a paleta do cliente de cabeça toda vez.
 
    O prompt de IA é só UMA DAS SAÍDAS do mesmo briefing (pra quem for gerar
    por IA em vez de mandar pro designer).
@@ -21,7 +21,7 @@ import { useCrmClient } from "@/hooks/useCrm";
    E ele só funciona se o brandbook do cliente existir. Quando não existe, esta
    tela NÃO gera um briefing genérico fingindo que está tudo bem: ela manda a
    pessoa preencher (ou subir o PDF). Briefing inventado é pior que briefing
-   nenhum — o designer entrega errado e a culpa cai no CRIA.
+   nenhum, o designer entrega errado e a culpa cai no CRIA.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 type Brief = {
@@ -97,7 +97,7 @@ export function ArtBriefDialog({
 
   // O briefing inteiro, do jeito que vai colado no WhatsApp do designer.
   const briefingTexto = brief && [
-    `BRIEFING DE ARTE — ${clienteNome}`,
+    `BRIEFING DE ARTE, ${clienteNome}`,
     `Post: ${titulo} (${formato})`,
     "",
     cores.length ? `PALETA: ${cores.join("  ")}` : "",
@@ -130,7 +130,7 @@ export function ArtBriefDialog({
 
         <div className="max-h-[62vh] overflow-y-auto px-5 py-4 space-y-4">
 
-          {/* Sem brandbook do cliente, isto não funciona — e a gente diz isso,
+          {/* Sem brandbook do cliente, isto não funciona, e a gente diz isso,
               em vez de gerar um briefing genérico que faria o designer errar. */}
           {!temMarca ? (
             <div className="rounded-2xl border border-amber-500/30 bg-amber-500/[0.06] px-4 py-4 text-center">
@@ -138,7 +138,7 @@ export function ArtBriefDialog({
                 Este cliente ainda não tem brandbook
               </p>
               <p className="text-[13px] font-body text-muted-foreground mt-1 leading-relaxed max-w-sm mx-auto">
-                Sem paleta e sem fonte, o briefing sairia genérico — e o designer entregaria
+                Sem paleta e sem fonte, o briefing sairia genérico, e o designer entregaria
                 a peça errada. Preencha a marca do cliente (ou suba o PDF do moodboard) e volte aqui.
               </p>
             </div>
@@ -203,7 +203,7 @@ export function ArtBriefDialog({
                   <div className="flex items-start gap-2.5 rounded-2xl border border-emerald-600/20 bg-emerald-600/[0.06] px-3.5 py-3">
                     <Info className="h-4 w-4 text-emerald-700 shrink-0 mt-0.5" />
                     <p className="text-[12.5px] font-body leading-relaxed">
-                      <b className="font-display">Saiu do brandbook deste cliente</b> — as cores, a fonte, o tom e o
+                      <b className="font-display">Saiu do brandbook deste cliente</b>, as cores, a fonte, o tom e o
                       que ele não faz. Se estiver errado, o conserto é na ficha do cliente, não aqui.
                     </p>
                   </div>

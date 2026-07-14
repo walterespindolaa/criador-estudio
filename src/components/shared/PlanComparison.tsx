@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
    O COMPARATIVO
 
    Os três cards dizem o que CADA plano tem. Só que a pergunta que a pessoa faz
-   na hora de decidir é outra: "o que eu PERCO se pegar o mais barato?" — e isso
+   na hora de decidir é outra: "o que eu PERCO se pegar o mais barato?", e isso
    um card sozinho não responde, porque ela teria que comparar três listas na
    cabeça.
 
@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
    olhava, via traço em quase tudo, e ia embora achando que o produto é pobre.
 
    No celular a mesma verdade vira uma ESCADA: o que já vem no Essencial, o que
-   entra no Pro, o que só tem no Studio. Zero arrasto, e o degrau fica óbvio —
+   entra no Pro, o que só tem no Studio. Zero arrasto, e o degrau fica óbvio,
    que é exatamente o que a gente quer que ela veja.
    ═══════════════════════════════════════════════════════════════════════════ */
 

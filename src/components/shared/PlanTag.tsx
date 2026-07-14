@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
    "Não dá pra saber o que é de cada plano." Era verdade: o único item marcado
    era o Cria Estúdio, e a marcação era um booleano escrito à mão. Insights,
-   Tendências, Media Kit, Relatórios, Collabs, Cria Plano, Cria Stories — todos
+   Tendências, Media Kit, Relatórios, Collabs, Cria Plano, Cria Stories, todos
    apareciam no menu como se fossem da pessoa. Ela clicava, batia na trava, e
    só ali descobria que aquilo custava mais.
 

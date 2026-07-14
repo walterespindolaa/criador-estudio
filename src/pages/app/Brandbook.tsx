@@ -185,6 +185,16 @@ const BRAND_ITEM_SECTIONS = [
   { type: "evitar", label: "Palavras que evito", icon: Ban, placeholder: "Ex: Não use gírias" },
 ];
 
+/* Os campos que a gente importa pro criador. É menos que o do cliente de
+   propósito: cor, fonte, tom e o que evitar são o que a IA REALMENTE usa pra
+   escrever no tom da pessoa. Importar vinte campos que ninguém lê é teatro. */
+const CAMPOS_CRIADOR: CampoDef[] = [
+  { chave: "colorPalette", rotulo: "Cores da marca", ajuda: "os hex" },
+  { chave: "typography", rotulo: "Fontes" },
+  { chave: "toneOfVoice", rotulo: "Tom de voz", multi: true },
+  { chave: "avoid", rotulo: "Palavras e coisas que você evita", multi: true },
+];
+
 const Brandbook = () => {
   const { entries: moodboardEntries, isLoading: moodboardLoading, saveAnswer } = useMoodboard();
   const { brandItems, createBrandItem, deleteBrandItem: deleteBrandItemMutation, isLoading: brandLoading } = useBrandItems();

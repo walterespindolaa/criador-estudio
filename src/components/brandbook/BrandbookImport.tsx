@@ -12,12 +12,12 @@ import { useBrandbookImport, type LeituraBrandbook } from "@/hooks/useBrandbookI
 
    Por que isto existe: o brandbook é o dado do qual TODA a IA do CRIA depende
    (legenda, roteiro, prompt de arte, briefing). E ele é um formulário de vinte
-   campos — que ninguém preenche. Então o campo mais importante do produto vive
+   campos, que ninguém preenche. Então o campo mais importante do produto vive
    vazio, tudo sai genérico, e a pessoa conclui que "a IA do Cria é fraca".
 
    O dado já existe: a social mídia tem o moodboard do cliente em PDF. A gente
    para de pedir pra digitar e passa a pedir o arquivo.
-   "Digite vinte campos" vira "confere o que eu entendi" — e confirmar é
+   "Digite vinte campos" vira "confere o que eu entendi", e confirmar é
    infinitamente mais fácil que criar.
 
    TRÊS REGRAS QUE NÃO SE NEGOCIAM NESTA TELA:
@@ -26,7 +26,7 @@ import { useBrandbookImport, type LeituraBrandbook } from "@/hooks/useBrandbookI
       apaga sem perceber algo que ela mesma tinha ajustado na mão.
    3. Campo que o PDF não trouxe aparece VAZIO e assumido ("não encontrei"),
       nunca preenchido no chute. Chutar é o jeito mais rápido de destruir a
-      confiança nesta tela — e o erro sairia invisível em 50 posts.
+      confiança nesta tela, e o erro sairia invisível em 50 posts.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export type CampoDef = { chave: string; rotulo: string; ajuda?: string; multi?: boolean };
@@ -115,7 +115,7 @@ export function BrandbookImport({ alvo, campos = CAMPOS_CLIENTE, atual, onSalvar
         </h3>
         <p className="text-[13px] font-body text-muted-foreground mt-1 max-w-md mx-auto leading-relaxed">
           {descricao ??
-            "Você já tem o brandbook em PDF. Não faz sentido digitar tudo de novo num formulário de vinte campos — a gente lê as cores, as fontes, o tom de voz e o que pode e o que não pode."}
+            "Você já tem o brandbook em PDF. Não faz sentido digitar tudo de novo num formulário de vinte campos, a gente lê as cores, as fontes, o tom de voz e o que pode e o que não pode."}
         </p>
 
         <input
@@ -158,7 +158,7 @@ export function BrandbookImport({ alvo, campos = CAMPOS_CLIENTE, atual, onSalvar
             />
           </div>
           <p className="text-[11.5px] font-body text-muted-foreground mt-2.5">
-            O arquivo é lido aqui no seu navegador — ele não sobe inteiro pro servidor.
+            O arquivo é lido aqui no seu navegador, ele não sobe inteiro pro servidor.
           </p>
         </div>
       )}
@@ -173,7 +173,7 @@ export function BrandbookImport({ alvo, campos = CAMPOS_CLIENTE, atual, onSalvar
             <div className="min-w-0">
               <h3 className="font-display text-base font-extrabold text-foreground">Confere o que eu entendi</h3>
               <p className="text-[12.5px] font-body text-muted-foreground mt-0.5 leading-snug">
-                Nada é salvo antes de você olhar. Onde já havia informação, eu mostro o que vai mudar —
+                Nada é salvo antes de você olhar. Onde já havia informação, eu mostro o que vai mudar,
                 pra você não apagar sem querer algo que ajustou na mão.
               </p>
             </div>
@@ -194,7 +194,7 @@ export function BrandbookImport({ alvo, campos = CAMPOS_CLIENTE, atual, onSalvar
 
           <div className="flex flex-wrap items-center gap-2 border-t border-border bg-muted/30 px-5 py-3.5">
             <p className="flex-1 min-w-[200px] text-[11.5px] font-body text-muted-foreground leading-snug">
-              O arquivo fica guardado nos Arquivos — você consulta quando quiser, e eu posso reler
+              O arquivo fica guardado nos Arquivos, você consulta quando quiser, e eu posso reler
               se a leitura tiver saído torta.
             </p>
             <Button variant="ghost" onClick={cancelar} disabled={salvando}>

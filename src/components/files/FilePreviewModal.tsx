@@ -6,13 +6,13 @@ import { toast } from "sonner";
 /* ═══════════════════════════════════════════════════════════════════════════
    VER E BAIXAR O ARQUIVO
 
-   O que existia: imagem abria num modal (sem baixar), e PDF NÃO abria — ele
+   O que existia: imagem abria num modal (sem baixar), e PDF NÃO abria, ele
    caía num window.open, que o bloqueador de pop-up do celular come na maioria
    das vezes. Na prática a pessoa via que o arquivo estava lá e não conseguia
    nem olhar nem baixar. Arquivo que você não abre não é arquivo, é lembrete.
 
    Agora: imagem e PDF abrem AQUI dentro, e existe um botão de baixar de
-   verdade (busca o blob e salva com o nome certo — o atributo `download` num
+   verdade (busca o blob e salva com o nome certo, o atributo `download` num
    link pra outro domínio é ignorado pelo navegador, então ele não serviria).
    ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -83,7 +83,7 @@ export function FilePreviewModal({ open, onOpenChange, kind, url, name }: FilePr
             <img src={url} alt={name} className="max-w-full max-h-[72vh] object-contain" />
           )}
 
-          {/* PDF: <object> em vez de <iframe> porque ele tem fallback nativo —
+          {/* PDF: <object> em vez de <iframe> porque ele tem fallback nativo,
               se o navegador (Safari do iPhone, principalmente) não souber
               renderizar inline, ele mostra o conteúdo de dentro em vez de um
               retângulo branco mudo. */}

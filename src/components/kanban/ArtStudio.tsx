@@ -13,20 +13,20 @@ import { useTier } from "@/hooks/useTier";
 import type { Section } from "./drawer/ScriptEditor";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   CRIA ESTÚDIO — dentro do post
+   CRIA ESTÚDIO, dentro do post
 
    REGRA DE OURO DESTA TELA (é o que o Walter mais temia):
    ela tem que ser DIDÁTICA sem virar uma parede de texto. O jeito de explicar
-   não é encher a tela de instruções — ninguém lê. É:
+   não é encher a tela de instruções, ninguém lê. É:
      · cada botão dizer o QUE VAI ACONTECER, não o nome do recurso;
      · cada escolha mostrar a CONSEQUÊNCIA ("fica atual mas envelhece" vs
        "serve o ano inteiro"), em vez de um toggle mudo;
-     · o resultado dizer DE ONDE SAIU — porque quando a arte sair errada, a
+     · o resultado dizer DE ONDE SAIU, porque quando a arte sair errada, a
        pessoa precisa entender que o conserto é no Brandbook, e não ficar
        clicando "gerar de novo" achando que a IA é ruim.
 
    E NO CELULAR: uma camada só. Isto NÃO abre como uma segunda folha por cima
-   do post — ele avança DENTRO do post (o post troca de conteúdo e ganha um
+   do post, ele avança DENTRO do post (o post troca de conteúdo e ganha um
    "voltar"). Duas folhas empilhadas em 390px é um labirinto: o gesto de voltar
    fecha a errada e o teclado do iOS sobe por cima das duas.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -61,12 +61,12 @@ export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar
   /* ── O RASCUNHO SOBREVIVE À TROCA DE ABA ────────────────────────────────
      As abas do post DESMONTAM o conteúdo quando você troca. Ou seja: você
      pesquisava as notícias, ia na aba Roteiro escrever as páginas (que é
-     exatamente o que a gente MANDA fazer), voltava — e a pesquisa tinha
+     exatamente o que a gente MANDA fazer), voltava, e a pesquisa tinha
      sumido. Perder o trabalho da pessoa porque ela seguiu a nossa instrução é
      o pior jeito de ensinar alguma coisa.
 
      O rascunho agora vive no cache do react-query, que não desmonta com a aba.
-     Ele é por post, e some quando a página recarrega — o que ficou de verdade
+     Ele é por post, e some quando a página recarrega, o que ficou de verdade
      (os prompts) está no banco. ── */
   const qc = useQueryClient();
   const chaveRascunho = ["art-draft", postId ?? "novo"] as const;
@@ -115,7 +115,7 @@ export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar
           já com as suas cores, a sua fonte e o seu tom. Você cola no gerador que já usa.
         </p>
         <Button variant="hero" className="mt-4" onClick={() => navigate("/app/assinar?plano=pro")}>
-          Liberar no Pro — R$ 32,90
+          Liberar no Pro, R$ 32,90
         </Button>
       </div>
     );
@@ -139,7 +139,7 @@ export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar
     // não um "converse com o que está em alta" genérico.
     const usadas = (noticias ?? []).filter((n) => escolhidas.has(n.titulo));
     const contexto = tempo === CHAVE_QUENTE && usadas.length > 0
-      ? usadas.map((n) => `${n.titulo} (${n.fonte}, ${n.quando})${n.resumo ? ` — ${n.resumo}` : ""}`).join("\n")
+      ? usadas.map((n) => `${n.titulo} (${n.fonte}, ${n.quando})${n.resumo ? `, ${n.resumo}` : ""}`).join("\n")
       : undefined;
 
     const r = await gerar({
@@ -190,7 +190,7 @@ export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar
   return (
     <div className="space-y-4">
 
-      {/* Cabeçalho — no celular ele é a barra de "voltar" (uma camada só) */}
+      {/* Cabeçalho, no celular ele é a barra de "voltar" (uma camada só) */}
       {onVoltar && (
         <div className="flex items-center gap-2.5 md:hidden">
           <button
@@ -218,13 +218,13 @@ export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar
           <>
             <b className="font-display">Vou usar o que você já escreveu.</b>{" "}
             {nPaginas === 1
-              ? "Esta página tem texto — o prompt nasce dele."
-              : `As ${nPaginas} páginas têm texto — cada prompt nasce da página, não de um chute em cima do título.`}
+              ? "Esta página tem texto, o prompt nasce dele."
+              : `As ${nPaginas} páginas têm texto, cada prompt nasce da página, não de um chute em cima do título.`}
           </>
         ) : (
           <>
             <b className="font-display">Vou criar a partir do título.</b>{" "}
-            Você ainda não escreveu o conteúdo das páginas — dá pra gerar assim, mas sai mais raso.
+            Você ainda não escreveu o conteúdo das páginas, dá pra gerar assim, mas sai mais raso.
             {/* A saída é UM CLIQUE daqui, não "vá procurar na aba Roteiro". Mandar
                 a pessoa achar sozinha o recurso que resolve o problema que a
                 gente acabou de apontar é jogar a culpa nela. */}
@@ -251,7 +251,7 @@ export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar
           <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
           <div className="text-[13px] font-body leading-relaxed">
             <b className="font-display">Seu Brandbook está sem cores e fontes.</b> Sem isso o prompt
-            sai bonito, mas genérico — com cara de qualquer marca.{" "}
+            sai bonito, mas genérico, com cara de qualquer marca.{" "}
             <button
               type="button"
               className="font-semibold text-primary underline underline-offset-2"
@@ -275,7 +275,7 @@ export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar
           {
             id: CHAVE_QUENTE,
             titulo: "Amarrar com o que está quente",
-            linha: "A arte conversa com o assunto do momento — mas envelhece em algumas semanas.",
+            linha: "A arte conversa com o assunto do momento, mas envelhece em algumas semanas.",
           },
         ].map((o) => (
           <button
@@ -298,8 +298,8 @@ export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar
       {/* ── AS NOTÍCIAS DE VERDADE ────────────────────────────────────────
              Antes isto não existia: o botão dizia "amarrar com o que está
              quente" e por baixo mandava uma instrução genérica. A pessoa não
-             via manchete nenhuma. Agora ela vê o que vai entrar — com fonte e
-             data — e desmarca o que não quiser. ── */}
+             via manchete nenhuma. Agora ela vê o que vai entrar, com fonte e
+             data, e desmarca o que não quiser. ── */}
       {tempo === CHAVE_QUENTE && (
         <div className="rounded-2xl border border-border bg-card px-3.5 py-3">
           {buscandoNoticias ? (
@@ -309,7 +309,7 @@ export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar
           ) : (noticias ?? []).length === 0 ? (
             <p className="text-[13px] font-body text-muted-foreground leading-relaxed">
               Não achei nada em alta sobre este tema nos últimos 30 dias. Sem notícia pra amarrar,
-              o prompt sai atemporal mesmo — o que não é problema nenhum.
+              o prompt sai atemporal mesmo, o que não é problema nenhum.
             </p>
           ) : (
             <>
@@ -397,7 +397,7 @@ export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar
         </Button>
         <p className="text-center text-[11px] font-body text-muted-foreground md:text-left">
           {resultado
-            ? "os prompts ficam guardados neste post — reabrir não custa nada"
+            ? "os prompts ficam guardados neste post, reabrir não custa nada"
             : "consome 1 geração da sua cota de IA"}
         </p>
       </div>
@@ -489,7 +489,7 @@ export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar
                 <button type="button" className="font-semibold text-emerald-800 underline underline-offset-2" onClick={() => navigate("/app/brandbook")}>
                   seu Brandbook
                 </button>
-                {" "}— não em gerar de novo.
+                {" "}, não em gerar de novo.
               </span>
             </div>
           </div>

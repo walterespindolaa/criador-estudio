@@ -312,7 +312,7 @@ const Arquivos = () => {
                 )}
               />
             </div>
-            {/* O CONVITE DE UPGRADE — antes era um texto FIXO no código:
+            {/* O CONVITE DE UPGRADE, antes era um texto FIXO no código:
                 "Upgrade para Pro → +250MB". Nunca acompanhou os planos: hoje o
                 Pro dá 5 GB e o Studio 15 GB, e ele ainda prometia 250 MB, pra
                 todo mundo, inclusive pra quem já estava no Studio. Preço e cota
