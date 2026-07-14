@@ -345,14 +345,23 @@ export default function ManagerLayout() {
           {
             title: "Módulos",
             items: [
-              ...modules.map((m) => ({
-                label: m.name,
-                desc: (m.status === "active" || m.status === "past_due") ? "Toque para abrir" : m.coming_soon ? "Em breve" : "Conhecer o módulo",
-                icon: (MODICONS[m.code] ?? Boxes) as LucideIcon,
-                ativo: m.status === "active" || m.status === "past_due",
-                onClick: () => openModule(m),
-              })),
-              ...(hasHubCria ? [{ label: "HUB CRIA", desc: "Analisar concorrentes e gerar ideias", icon: Sparkles as LucideIcon, ativo: true, onClick: () => navigate("/socialmidia/hubcria") }] : []),
+              // O CRIA RADAR APARECIA TRÊS VEZES no menu do celular:
+              //   1. o módulo hub_cria, vindo do banco;
+              //   2. o "Pacote Extra" (hub_extra), que também é uma linha em `modules`
+              //      — mas ele NÃO é um lugar pra abrir, é um pacote de créditos;
+              //   3. um item fixo, escrito na mão logo abaixo.
+              // Some com os dois primeiros: o Radar entra uma vez só, no item de baixo,
+              // que é o que realmente leva pra tela dele.
+              ...modules
+                .filter((m) => m.code !== "hub_extra" && !(hasHubCria && m.code === "hub_cria"))
+                .map((m) => ({
+                  label: m.name,
+                  desc: (m.status === "active" || m.status === "past_due") ? "Toque para abrir" : m.coming_soon ? "Em breve" : "Conhecer o módulo",
+                  icon: (MODICONS[m.code] ?? Boxes) as LucideIcon,
+                  ativo: m.status === "active" || m.status === "past_due",
+                  onClick: () => openModule(m),
+                })),
+              ...(hasHubCria ? [{ label: "Cria Radar", desc: "Espiar os concorrentes dos seus clientes", icon: Sparkles as LucideIcon, ativo: true, onClick: () => navigate("/socialmidia/hubcria") }] : []),
             ],
           },
           {

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { NavLink, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Home, Lightbulb, Kanban, CalendarDays,
-  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, Menu, ChevronRight, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck, Handshake, Maximize2, Minimize2, Instagram, BarChart3, ShieldCheck, PlayCircle, Clapperboard, Wand2, TrendingUp, IdCard, Trash2
+  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, Menu, ChevronRight, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck, Handshake, Maximize2, Minimize2, Instagram, BarChart3, ShieldCheck, PlayCircle, Clapperboard, Wand2, TrendingUp, IdCard, Trash2, Gem
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -52,6 +52,11 @@ const MORE_SECTIONS: { title: string; items: MoreItem[] }[] = [
   ]},
   { title: "Mais", items: [
     { title: "Parcerias", url: "/app/collabs", icon: Handshake },
+    // PLANOS. Eu tinha colocado o item só no menu lateral do DESKTOP — e a maior
+    // parte dessa gente vive no celular. Ou seja: quem quisesse fazer upgrade,
+    // pelo celular, não tinha por onde. Você não pode esconder a porta de quem
+    // está tentando te pagar.
+    { title: "Planos", url: "/app/assinar", icon: Gem, desc: "Ver planos e fazer upgrade" },
     { title: "Lixeira", url: "/app/lixeira", icon: Trash2 },
     { title: "Configurações", url: "/app/configuracoes", icon: Settings },
   ]},
