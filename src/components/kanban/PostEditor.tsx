@@ -2065,6 +2065,10 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                             pilar={pillarId ?? undefined}
                             sections={sections}
                             onChange={setSections}
+                            hook={hook}
+                            onHook={setHook}
+                            cta={cta}
+                            onCta={setCta}
                           />
                         )}
                         {formatStructure.hasDynamicSections && (

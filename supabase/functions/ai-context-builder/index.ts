@@ -1230,14 +1230,19 @@ REGRAS:
 - Nada de "página 1", "slide 2" dentro do texto.
 
 RESPONDA APENAS JSON válido:
-{"laminas":[{"n":1,"texto":"o que vai escrito nesta página"}]}
-- Exatamente ${n} itens.`
+{"hook":"o gancho, a frase que para o dedo","cta":"a ação final, concreta","laminas":[{"n":1,"texto":"o que vai escrito nesta página"}]}
+- Exatamente ${n} itens em "laminas".
+- "hook" e "cta" são os MESMOS da 1ª e da última ${ehReels ? 'cena' : 'página'}, mas escritos como campo isolado (o post tem um lugar próprio pra cada um).`
 
         userPrompt = `Formato: ${data.formato || 'carrossel'}
 Tema/título: ${data.tema || data.titulo || '(sem título)'}
 ${data.angulo ? `Ângulo que a pessoa quer: ${data.angulo}` : ''}
 ${data.pilar ? `Pilar: ${data.pilar}` : ''}
-${data.nicho ? `Nicho: ${data.nicho}` : ''}`
+${data.nicho ? `Nicho: ${data.nicho}` : ''}
+${data.tom ? `Tom da marca: ${data.tom}` : ''}
+${data.publico ? `Público: ${data.publico}` : ''}
+${data.evitar ? `NUNCA usar: ${data.evitar}` : ''}
+${data.contextoQuente ? `\nAMARRAR COM O QUE ESTÁ EM ALTA AGORA (use de verdade, cite o fato, não fale genérico):\n${String(data.contextoQuente).slice(0, 800)}` : ''}`
         maxTokens = 2500
         break
       }
@@ -1283,7 +1288,7 @@ ${data.nicho ? `Nicho: ${data.nicho}` : ''}`
     const result = await response.json()
     const content = result.choices?.[0]?.message?.content || ''
 
-    if (operation === 'reference-filter' || operation === 'score-caption' || operation === 'client-report-insight' || operation === 'insights-reading' || operation === 'autopilot-cronograma' || operation === 'story-plan-generate' || operation === 'art-prompt' || operation === 'art-brief') {
+    if (operation === 'reference-filter' || operation === 'score-caption' || operation === 'client-report-insight' || operation === 'insights-reading' || operation === 'autopilot-cronograma' || operation === 'story-plan-generate' || operation === 'art-prompt' || operation === 'art-brief' || operation === 'carousel-script') {
       const cleaned = String(content).replace(/```json/gi, '').replace(/```/g, '').trim()
       const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
       const jsonStr = jsonMatch ? jsonMatch[0] : cleaned

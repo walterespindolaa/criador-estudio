@@ -6,8 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { useQueryClient } from "@tanstack/react-query";
-import { useArtPrompt, useArtSalvo, type ArtResult, type Noticia } from "@/hooks/useArtPrompt";
+import { useArtPrompt, useArtSalvo, type ArtResult } from "@/hooks/useArtPrompt";
 import { confirmar } from "@/components/shared/Confirm";
 import { useTier } from "@/hooks/useTier";
 import type { Section } from "./drawer/ScriptEditor";
@@ -46,39 +45,16 @@ type Props = {
   onIrParaRoteiro?: () => void;
 };
 
-const CHAVE_QUENTE = "quente";
-const CHAVE_ATEMPORAL = "atemporal";
-
 export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar, onSalvar, onIrParaRoteiro }: Props) {
   const navigate = useNavigate();
   const { atLeast } = useTier();
-  const {
-    gerar, gerando, resultado: recemGerado, limpar, semMarca,
-    buscarNoticias, buscandoNoticias,
-  } = useArtPrompt();
+  const { gerar, gerando, resultado: recemGerado, limpar, semMarca } = useArtPrompt();
   const { salvo, guardar } = useArtSalvo(postId);
 
-  /* ── O RASCUNHO SOBREVIVE À TROCA DE ABA ────────────────────────────────
-     As abas do post DESMONTAM o conteúdo quando você troca. Ou seja: você
-     pesquisava as notícias, ia na aba Roteiro escrever as páginas (que é
-     exatamente o que a gente MANDA fazer), voltava, e a pesquisa tinha
-     sumido. Perder o trabalho da pessoa porque ela seguiu a nossa instrução é
-     o pior jeito de ensinar alguma coisa.
-
-     O rascunho agora vive no cache do react-query, que não desmonta com a aba.
-     Ele é por post, e some quando a página recarrega, o que ficou de verdade
-     (os prompts) está no banco. ── */
-  const qc = useQueryClient();
-  const chaveRascunho = ["art-draft", postId ?? "novo"] as const;
-  type Rascunho = { tempo: string; noticias: Noticia[] | null; escolhidas: string[] };
-  const rascunho = (qc.getQueryData(chaveRascunho) as Rascunho | undefined)
-    ?? { tempo: CHAVE_ATEMPORAL, noticias: null, escolhidas: [] };
-  const gravar = (patch: Partial<Rascunho>) =>
-    qc.setQueryData(chaveRascunho, { ...rascunho, ...patch });
-
-  const tempo = rascunho.tempo;
-  const noticias = rascunho.noticias;
-  const escolhidas = new Set(rascunho.escolhidas);
+  /* A escolha de "amarrar com o que está quente" SAIU daqui e foi pro Roteiro.
+     Notícia muda o que o post DIZ, não a cara da imagem. E como o prompt da arte
+     nasce do texto das lâminas, ele herda o assunto quente de graça: uma escolha
+     só, no lugar certo, em vez de duas escolhas parecidas em abas diferentes. */
 
   const [aberta, setAberta] = useState<number | null>(1);
   const [copiada, setCopiada] = useState<number | null>(null);
@@ -121,36 +97,15 @@ export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar
     );
   }
 
-  // Escolher "quente" DISPARA a busca na hora. Se ela precisasse clicar num
-  // segundo botão pra ver as notícias, ninguém clicaria — e o botão continuaria
-  // prometendo uma coisa que ela nunca viu.
-  const escolherTempo = async (id: string) => {
-    gravar({ tempo: id });
-    if (id === CHAVE_QUENTE && !noticias && !buscandoNoticias) {
-      const achadas = await buscarNoticias(titulo || roteiro || "");
-      // Vem tudo marcado: ela desmarca o que não quiser. Marcar 3 caixinhas
-      // pra usar um recurso é atrito à toa.
-      gravar({ tempo: id, noticias: achadas, escolhidas: achadas.map((n) => n.titulo) });
-    }
-  };
-
   const disparar = async () => {
-    // Só entra o que ela DEIXOU marcado — e o que entra é a manchete de verdade,
-    // não um "converse com o que está em alta" genérico.
-    const usadas = (noticias ?? []).filter((n) => escolhidas.has(n.titulo));
-    const contexto = tempo === CHAVE_QUENTE && usadas.length > 0
-      ? usadas.map((n) => `${n.titulo} (${n.fonte}, ${n.quando})${n.resumo ? `, ${n.resumo}` : ""}`).join("\n")
-      : undefined;
-
     const r = await gerar({
       titulo,
       formato,
       paginas: sections.map((s) => ({ texto: s.text ?? "" })),
       roteiro,
-      contextoQuente: contexto,
     });
     // Guarda NO POST, na hora. Ela não precisa lembrar de salvar nada.
-    void guardar({ resultado: r, noticias: usadas, geradoEm: new Date().toISOString() });
+    void guardar({ resultado: r, noticias: [], geradoEm: new Date().toISOString() });
     setAberta(1);
   };
 
@@ -261,112 +216,6 @@ export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar
             </button>{" "}
             leva 2 minutos e melhora tudo que a IA escreve por você daqui pra frente.
           </div>
-        </div>
-      )}
-
-      {/* ── A escolha, com a CONSEQUÊNCIA escrita. Não é um toggle mudo. ── */}
-      <div data-tour="estudio-tempo" className="grid gap-2 sm:grid-cols-2">
-        {[
-          {
-            id: CHAVE_ATEMPORAL,
-            titulo: "Deixar atemporal",
-            linha: "Serve o ano inteiro. Você pode repostar em janeiro sem parecer velho.",
-          },
-          {
-            id: CHAVE_QUENTE,
-            titulo: "Amarrar com o que está quente",
-            linha: "A arte conversa com o assunto do momento, mas envelhece em algumas semanas.",
-          },
-        ].map((o) => (
-          <button
-            key={o.id}
-            type="button"
-            onClick={() => void escolherTempo(o.id)}
-            className={cn(
-              "rounded-2xl border-[1.5px] px-3.5 py-3 text-left transition-colors",
-              tempo === o.id
-                ? "border-primary bg-primary/[0.04] ring-2 ring-primary/10"
-                : "border-border bg-card hover:border-muted-foreground/30",
-            )}
-          >
-            <span className="block font-display text-[13.5px] font-bold text-foreground">{o.titulo}</span>
-            <span className="block text-[12px] font-body text-muted-foreground mt-0.5 leading-snug">{o.linha}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* ── AS NOTÍCIAS DE VERDADE ────────────────────────────────────────
-             Antes isto não existia: o botão dizia "amarrar com o que está
-             quente" e por baixo mandava uma instrução genérica. A pessoa não
-             via manchete nenhuma. Agora ela vê o que vai entrar, com fonte e
-             data, e desmarca o que não quiser. ── */}
-      {tempo === CHAVE_QUENTE && (
-        <div className="rounded-2xl border border-border bg-card px-3.5 py-3">
-          {buscandoNoticias ? (
-            <p className="flex items-center gap-2 text-[13px] font-body text-muted-foreground">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Procurando o que está sendo falado sobre isso…
-            </p>
-          ) : (noticias ?? []).length === 0 ? (
-            <p className="text-[13px] font-body text-muted-foreground leading-relaxed">
-              Não achei nada em alta sobre este tema nos últimos 30 dias. Sem notícia pra amarrar,
-              o prompt sai atemporal mesmo, o que não é problema nenhum.
-            </p>
-          ) : (
-            <>
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <p className="text-[10.5px] font-display font-bold uppercase tracking-wider text-muted-foreground">
-                  O que vai entrar no prompt
-                </p>
-                {/* Buscar outras não custa crédito: quem cobra é o que ENTREGA
-                    (o prompt), não o que ajuda a decidir. */}
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const outras = await buscarNoticias(titulo || roteiro || "");
-                    gravar({ noticias: outras, escolhidas: outras.map((n) => n.titulo) });
-                  }}
-                  className="inline-flex items-center gap-1 text-[11px] font-body font-bold text-primary hover:underline"
-                >
-                  <RefreshCw className="h-3 w-3" /> buscar outras
-                </button>
-              </div>
-              <div className="space-y-1.5">
-                {(noticias ?? []).map((n) => {
-                  const on = escolhidas.has(n.titulo);
-                  return (
-                    <label
-                      key={n.titulo}
-                      className={cn(
-                        "flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2 transition-colors",
-                        on ? "border-primary/40 bg-primary/[0.04]" : "border-border bg-background",
-                      )}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={on}
-                        onChange={() => {
-                          const novo = new Set(escolhidas);
-                          if (novo.has(n.titulo)) novo.delete(n.titulo); else novo.add(n.titulo);
-                          gravar({ escolhidas: [...novo] });
-                        }}
-                        className="mt-0.5 h-4 w-4 shrink-0 accent-[hsl(var(--primary))]"
-                      />
-                      <span className="min-w-0">
-                        <span className="block text-[13px] font-body font-semibold text-foreground leading-snug">{n.titulo}</span>
-                        <span className="block text-[11.5px] font-body text-muted-foreground mt-0.5">
-                          {n.fonte} · {n.quando}
-                        </span>
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-              <p className="mt-2 text-[11.5px] font-body text-muted-foreground leading-snug">
-                Isto muda o <b>clima</b> da imagem, não o conteúdo do post. Pra mexer no que o post
-                <i> diz</i>, o lugar é a aba Roteiro.
-              </p>
-            </>
-          )}
         </div>
       )}
 
