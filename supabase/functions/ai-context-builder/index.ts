@@ -545,6 +545,63 @@ RESPONDA APENAS JSON válido:
       }
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // O QUE ESTÁ QUENTE SOBRE ESTE TEMA
+    //
+    // O botão "amarrar com o que está quente" existia SEM ISTO: ele só mandava
+    // uma instrução genérica pro modelo ("converse com o assunto do momento") e
+    // a pessoa não via notícia nenhuma. Promessa vazia na tela — não quebrava
+    // nada, só mentia. Que é o pior tipo de defeito, porque ninguém reporta.
+    //
+    // Agora ele busca de verdade (Perplexity, com fonte e data) e a pessoa
+    // ESCOLHE qual notícia entra. Sem chave configurada, ele não finge que
+    // funcionou: devolve lista vazia e a tela diz que não achou nada.
+    // ═══════════════════════════════════════════════════════════════════════
+    if (operation === 'hot-news') {
+      const pplxKey = Deno.env.get('PERPLEXITY_API_KEY')
+      if (!pplxKey) {
+        return new Response(JSON.stringify({ result: { noticias: [], motivo: 'sem_chave' } }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+      const tema = String(data?.tema ?? '').slice(0, 300)
+      const nicho = String(data?.nicho ?? '').slice(0, 120)
+
+      try {
+        const pr = await aiFetch('https://api.perplexity.ai/chat/completions', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${pplxKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'sonar',
+            messages: [
+              { role: 'system', content: 'Você pesquisa notícias e assuntos em alta no Brasil. Responda SOMENTE em JSON válido, sem markdown. Só inclua o que você REALMENTE encontrou, com fonte real. Se não achar nada relevante, devolva a lista vazia — jamais invente notícia.' },
+              { role: 'user', content: `Hoje é ${hoje}. Sobre o tema "${tema}"${nicho ? ` (nicho: ${nicho})` : ''}, o que está sendo falado AGORA no Brasil? Traga no máximo 3 itens dos últimos 30 dias.
+{"noticias":[{"titulo":"manchete curta","fonte":"veículo","quando":"há X dias","resumo":"1 frase do que mudou"}]}` },
+            ],
+            max_tokens: 700,
+            temperature: 0.1,
+          }),
+        })
+        if (!pr.ok) throw new Error(String(pr.status))
+        const pj = await pr.json()
+        const bruto = String(pj.choices?.[0]?.message?.content || '')
+        const limpo = bruto.replace(/```json/gi, '').replace(/```/g, '').trim()
+        const m = limpo.match(/\{[\s\S]*\}/)
+        const parsed = JSON.parse(m ? m[0] : limpo)
+        return new Response(JSON.stringify({ result: { noticias: (parsed.noticias ?? []).slice(0, 3) } }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      } catch (e) {
+        console.error('[hot-news] falhou', e)
+        // Fail-soft: o Estúdio continua funcionando sem notícia. Ele não é a
+        // funcionalidade — é um tempero.
+        return new Response(JSON.stringify({ result: { noticias: [], motivo: 'falhou' } }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+    }
+
     // Fetch user context
     let userContext = ''
     if (userId) {

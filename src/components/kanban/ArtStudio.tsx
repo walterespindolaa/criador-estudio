@@ -46,11 +46,15 @@ const CHAVE_ATEMPORAL = "atemporal";
 export function ArtStudio({ titulo, formato, sections, roteiro, onVoltar, onSalvar }: Props) {
   const navigate = useNavigate();
   const { atLeast } = useTier();
-  const { gerar, gerando, resultado, limpar, semMarca, cores, fontes } = useArtPrompt();
+  const {
+    gerar, gerando, resultado, limpar, semMarca,
+    buscarNoticias, buscandoNoticias, noticias,
+  } = useArtPrompt();
 
   const [tempo, setTempo] = useState<string>(CHAVE_ATEMPORAL);
   const [aberta, setAberta] = useState<number | null>(1);
   const [copiada, setCopiada] = useState<number | null>(null);
+  const [escolhidas, setEscolhidas] = useState<Set<string>>(new Set());
 
   const paginasComTexto = useMemo(
     () => sections.filter((s) => (s.text ?? "").trim().length > 0),
@@ -84,15 +88,33 @@ export function ArtStudio({ titulo, formato, sections, roteiro, onVoltar, onSalv
     );
   }
 
+  // Escolher "quente" DISPARA a busca na hora. Se ela precisasse clicar num
+  // segundo botão pra ver as notícias, ninguém clicaria — e o botão continuaria
+  // prometendo uma coisa que ela nunca viu.
+  const escolherTempo = async (id: string) => {
+    setTempo(id);
+    if (id === CHAVE_QUENTE && !noticias && !buscandoNoticias) {
+      const achadas = await buscarNoticias(titulo || roteiro || "");
+      // Vem tudo marcado: ela desmarca o que não quiser. Marcar 3 caixinhas
+      // pra usar um recurso é atrito à toa.
+      setEscolhidas(new Set(achadas.map((n) => n.titulo)));
+    }
+  };
+
   const disparar = async () => {
+    // Só entra o que ela DEIXOU marcado — e o que entra é a manchete de verdade,
+    // não um "converse com o que está em alta" genérico.
+    const usadas = (noticias ?? []).filter((n) => escolhidas.has(n.titulo));
+    const contexto = tempo === CHAVE_QUENTE && usadas.length > 0
+      ? usadas.map((n) => `${n.titulo} (${n.fonte}, ${n.quando})${n.resumo ? ` — ${n.resumo}` : ""}`).join("\n")
+      : undefined;
+
     await gerar({
       titulo,
       formato,
       paginas: sections.map((s) => ({ texto: s.text ?? "" })),
       roteiro,
-      contextoQuente: tempo === CHAVE_QUENTE
-        ? "A pessoa quer que a arte converse com o que está sendo falado agora sobre este tema."
-        : undefined,
+      contextoQuente: contexto,
     });
     setAberta(1);
   };
@@ -199,7 +221,7 @@ export function ArtStudio({ titulo, formato, sections, roteiro, onVoltar, onSalv
           <button
             key={o.id}
             type="button"
-            onClick={() => setTempo(o.id)}
+            onClick={() => void escolherTempo(o.id)}
             className={cn(
               "rounded-2xl border-[1.5px] px-3.5 py-3 text-left transition-colors",
               tempo === o.id
@@ -212,6 +234,67 @@ export function ArtStudio({ titulo, formato, sections, roteiro, onVoltar, onSalv
           </button>
         ))}
       </div>
+
+      {/* ── AS NOTÍCIAS DE VERDADE ────────────────────────────────────────
+             Antes isto não existia: o botão dizia "amarrar com o que está
+             quente" e por baixo mandava uma instrução genérica. A pessoa não
+             via manchete nenhuma. Agora ela vê o que vai entrar — com fonte e
+             data — e desmarca o que não quiser. ── */}
+      {tempo === CHAVE_QUENTE && (
+        <div className="rounded-2xl border border-border bg-card px-3.5 py-3">
+          {buscandoNoticias ? (
+            <p className="flex items-center gap-2 text-[13px] font-body text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Procurando o que está sendo falado sobre isso…
+            </p>
+          ) : (noticias ?? []).length === 0 ? (
+            <p className="text-[13px] font-body text-muted-foreground leading-relaxed">
+              Não achei nada em alta sobre este tema nos últimos 30 dias. Sem notícia pra amarrar,
+              o prompt sai atemporal mesmo — o que não é problema nenhum.
+            </p>
+          ) : (
+            <>
+              <p className="text-[10.5px] font-display font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                O que vai entrar no prompt
+              </p>
+              <div className="space-y-1.5">
+                {(noticias ?? []).map((n) => {
+                  const on = escolhidas.has(n.titulo);
+                  return (
+                    <label
+                      key={n.titulo}
+                      className={cn(
+                        "flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2 transition-colors",
+                        on ? "border-primary/40 bg-primary/[0.04]" : "border-border bg-background",
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        onChange={() => setEscolhidas((s) => {
+                          const novo = new Set(s);
+                          if (novo.has(n.titulo)) novo.delete(n.titulo); else novo.add(n.titulo);
+                          return novo;
+                        })}
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-[hsl(var(--primary))]"
+                      />
+                      <span className="min-w-0">
+                        <span className="block text-[13px] font-body font-semibold text-foreground leading-snug">{n.titulo}</span>
+                        <span className="block text-[11.5px] font-body text-muted-foreground mt-0.5">
+                          {n.fonte} · {n.quando}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-[11.5px] font-body text-muted-foreground leading-snug">
+                Isto muda o <b>clima</b> da imagem, não o conteúdo do post. Pra mexer no que o post
+                <i> diz</i>, o lugar é a aba Roteiro.
+              </p>
+            </>
+          )}
+        </div>
+      )}
 
       {/* ── AÇÃO. No celular ela vive presa no rodapé (zona do polegar);
              botão importante no fim de um scroll longo é botão que não existe. ── */}

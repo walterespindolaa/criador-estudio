@@ -40,6 +40,8 @@ export type ArtInput = {
   contextoQuente?: string;
 };
 
+export type Noticia = { titulo: string; fonte: string; quando: string; resumo?: string };
+
 const HEX = /#?[0-9a-f]{6}\b/i;
 
 export function useArtPrompt() {
@@ -112,11 +114,29 @@ export function useArtPrompt() {
     },
   });
 
+  // ── O que está quente sobre ESTE tema ──────────────────────────────────
+  // Antes, "amarrar com o que está quente" não buscava nada: mandava uma
+  // instrução genérica e a pessoa não via notícia nenhuma. Agora ela vê as
+  // manchetes, com fonte e data, e escolhe qual entra. Se a busca falhar, o
+  // Estúdio continua funcionando sem isso — notícia é tempero, não o prato.
+  const busca = useMutation({
+    mutationFn: async (tema: string): Promise<Noticia[]> => {
+      const r = (await callAIContextBuilder({
+        operation: "hot-news",
+        data: { tema, nicho: profile?.niche ?? "" },
+      })) as { noticias?: Noticia[] };
+      return r?.noticias ?? [];
+    },
+  });
+
   return {
     gerar: mutation.mutateAsync,
     gerando: mutation.isPending,
     resultado: mutation.data ?? null,
     limpar: mutation.reset,
+    buscarNoticias: busca.mutateAsync,
+    buscandoNoticias: busca.isPending,
+    noticias: busca.data ?? null,
     /** O brandbook está vazio? Isso muda o que a tela diz antes de gerar. */
     semMarca: cores.length === 0 && fontes.length === 0,
     cores,
