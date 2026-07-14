@@ -176,17 +176,24 @@ export default function ClienteHub() {
               <Button variant="outline" className="px-3" onClick={openPortal} title="Abrir portal do cliente em nova aba" aria-label="Abrir portal do cliente em nova aba">
                 <ExternalLink className="h-4 w-4" />
               </Button>
-              <Button variant="outline" onClick={() => setEditOpen(true)}>
-                <Settings2 className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Personalizar</span>
-              </Button>
+              {/* O botão "Personalizar" SAIU daqui.
+                  Ele abria um popup com exatamente o mesmo conteúdo da aba
+                  Portal, que fica dois centímetros abaixo. Dois caminhos pra
+                  mesma coisa não é conveniência, é dúvida: a pessoa não sabe
+                  qual é o certo, e o popup (que é apertado) ganhava por estar
+                  mais perto do dedo. Ficou UM lugar: a aba Portal. */}
             </div>
           )}
         </div>
       </div>
       <ExternalClientDialog open={editOpen} onOpenChange={setEditOpen} client={extClient} />
 
-      {/* Abas por URL */}
-      <div className="flex gap-1 border-b border-border mb-5 overflow-x-auto">
+      {/* Abas por URL, em pílula (o padrão do CRIA).
+          A sublinha de 2px era fria e, no celular, a aba ativa quase não se
+          distinguia das outras. A pílula deixa a ativa sólida e engorda o alvo
+          do dedo. A cor continua sendo a do MÓDULO, que é o que ensina a pessoa
+          a reconhecer o produto dentro da ficha. */}
+      <div className="flex gap-1 mb-5 overflow-x-auto rounded-full border border-border bg-muted/50 p-1 w-fit max-w-full">
         {visibleTabs.map((t) => {
           const on = activeTab === t.key;
           const hex = t.modulo ? CRIA_HEX[t.modulo] : null;
@@ -195,10 +202,10 @@ export default function ClienteHub() {
               key={t.key}
               onClick={() => goTab(t.key)}
               title={t.moduloNome ? `${t.label} · ${t.moduloNome}` : t.label}
-              className={`group flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap border-b-2 transition-colors ${
-                on ? "font-semibold" : "border-transparent text-muted-foreground hover:text-foreground"
+              className={`group flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-body font-semibold whitespace-nowrap transition-colors ${
+                on ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
-              style={on ? { borderBottomColor: hex ?? "hsl(var(--primary))", color: hex ?? "hsl(var(--primary))" } : undefined}
+              style={on ? { color: hex ?? "hsl(var(--primary))" } : undefined}
             >
               {/* O pontinho na cor do módulo: laranja = Cria Post, azul = Cria Caixa,
                   rosa = Cria Gestão, lilás = Cria Radar. A pessoa aprende a cor uma

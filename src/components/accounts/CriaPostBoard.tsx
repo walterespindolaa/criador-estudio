@@ -194,7 +194,9 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               {embedded && (
                 <>
                   <Button variant="outline" onClick={() => setLinkOpen(true)} disabled={copying}>{copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Link2 className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Link de aprovação</span></>}</Button>
-                  <Button variant="outline" onClick={() => setEditOpen(true)}><Settings2 className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Personalizar</span></Button>
+                  {/* Só na visão SOLTA do Cria Post. Dentro da ficha do cliente
+                      existe a aba Portal, que faz o mesmo com mais espaço. */}
+                  {!embedded && <Button variant="outline" onClick={() => setEditOpen(true)}><Settings2 className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Personalizar</span></Button>}
                 </>
               )}
               <Button variant="outline" onClick={() => setImportOpen(true)}><KanbanSquare className="h-4 w-4 mr-1.5" /> Importar do kanban</Button>

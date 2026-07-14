@@ -38,6 +38,9 @@ const MODULE_ROUTE: Record<string, string> = {
   aprovapost_externo: "/socialmidia/criapost",
   crm: "/socialmidia/criacrm",
   financeiro: "/socialmidia/criacaixa",
+  // ISTO NÃO EXISTIA. Sem rota, o clique caía no `else` e abria o popup dizendo
+  // "assinatura ativa", sem lugar nenhum pra ir. A pessoa pagava e não entrava.
+  hub_cria: "/socialmidia/hubcria",
 };
 // Mapeia o código do módulo (catálogo) → código de permissão de time.
 const MODULE_TEAM_CODE: Record<string, string> = {
@@ -56,7 +59,7 @@ const BUSINESS_NAV = [
 const HERO_TITLES: Record<string, string> = {
   "/socialmidia/clientes": "Clientes",
   "/socialmidia/agenda": "Agenda",
-  "/socialmidia/hubcria": "HUB CRIA",
+  "/socialmidia/hubcria": "Cria Radar",
   "/socialmidia/criapost": "Cria Post",
   "/socialmidia/criacrm": "Cria Gestão",
   "/socialmidia/criacaixa": "Cria Caixa",
@@ -225,7 +228,11 @@ export default function ManagerLayout() {
           {canAgenda && railNode(CalendarDays, "Agenda", { active: isActive("/socialmidia/agenda"), onClick: () => navigate("/socialmidia/agenda") })}
           {railNode(ListChecks, "Aprovações", { active: isActive("/socialmidia/aprovacoes"), onClick: () => navigate("/socialmidia/aprovacoes") })}
           {railHovered && (modules.length > 0 || hasHubCria) && <p className="px-2 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Módulos</p>}
-          {modules.map((m) => {
+          {modules
+            // hub_extra é PACOTE DE CRÉDITO, não é módulo nem destino: ele não
+            // pode virar item de menu (a pessoa clica esperando abrir algo).
+            .filter((m) => m.code !== "hub_extra")
+            .map((m) => {
             const Icon = (MODICONS[m.code] ?? Boxes) as LucideIcon;
             const active = m.status === "active" || m.status === "past_due";
             const route = MODULE_ROUTE[m.code];
@@ -241,7 +248,6 @@ export default function ManagerLayout() {
             );
             return railNode(Icon, m.name, { active: !!route && isActive(route), onClick: () => openModule(m), corner, tipBadge });
           })}
-          {hasHubCria && railNode(Sparkles, "HUB CRIA", { active: isActive("/socialmidia/hubcria"), onClick: () => navigate("/socialmidia/hubcria") })}
           <div className="my-2 h-px w-full bg-border" />
           {railHovered && <p className="px-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Negócio</p>}
           {!actingAsTeam && railNode(UserPlus, "Equipe", { active: isActive("/socialmidia/equipe"), onClick: () => navigate("/socialmidia/equipe") })}

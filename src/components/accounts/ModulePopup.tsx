@@ -4,14 +4,26 @@ import { useManageSubscription } from "@/hooks/useManageSubscription";
 import { ManagerProfileForm } from "@/components/accounts/ManagerProfileForm";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Sparkles, Check, Clock, Loader2, Send, Users2, Wallet } from "lucide-react";
+import { Sparkles, Check, Clock, Loader2, Send, Users2, Wallet, Radar, ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const brl = (c: number) => `R$ ${(c / 100).toFixed(2).replace(".", ",")}`;
-const ICONS: Record<string, typeof Sparkles> = { aprovapost_externo: Send, crm: Users2, financeiro: Wallet };
+const ICONS: Record<string, typeof Sparkles> = { aprovapost_externo: Send, crm: Users2, financeiro: Wallet, hub_cria: Radar, hub_extra: Sparkles };
+
+// Onde cada módulo ABRE. Sem isto, o popup de um módulo ativo vira um beco sem
+// saída: diz "assinatura ativa" e não oferece caminho nenhum.
+const ROTA: Record<string, string> = {
+  aprovapost_externo: "/socialmidia/criapost",
+  crm: "/socialmidia/criacrm",
+  financeiro: "/socialmidia/criacaixa",
+  hub_cria: "/socialmidia/hubcria",
+};
 const TAGLINES: Record<string, string> = {
   aprovapost_externo: "Aprovação externa por link",
   crm: "Sua carteira de clientes",
   financeiro: "Cachês e fluxo de caixa",
+  hub_cria: "Espie os concorrentes dos seus clientes",
+  hub_extra: "Mais créditos de análise no Cria Radar",
 };
 const BENEFITS: Record<string, string[]> = {
   aprovapost_externo: [
@@ -33,6 +45,20 @@ const BENEFITS: Record<string, string[]> = {
     "Fluxo de caixa e visão do mês",
     "Alertas de pagamentos pendentes",
   ],
+  // Faltavam. Por isso o popup do Cria Radar abria com "O QUE VOCÊ VAI TER" VAZIO:
+  // uma caixa cinza em branco na tela onde a pessoa decide comprar.
+  hub_cria: [
+    "Leia o que os concorrentes de cada cliente estão postando",
+    "Veja os anúncios que eles estão rodando agora",
+    "Transcreva os reels que bombaram",
+    "As pautas viram ideias no cronograma do cliente",
+    "40 análises por mês",
+  ],
+  hub_extra: [
+    "+20 análises no Cria Radar",
+    "Some à sua cota do mês",
+    "Cancele quando quiser",
+  ],
 };
 
 export function ModulePopup({ module: m, onClose }: { module: ModuleWithStatus | null; onClose: () => void }) {
@@ -46,6 +72,8 @@ export function ModulePopup({ module: m, onClose }: { module: ModuleWithStatus |
   const active = m ? (m.status === "active" || m.status === "past_due") : false;
   const benefits = m ? (BENEFITS[m.code] ?? []) : [];
   const busy = checkout.isPending || portalLoading;
+  const navigate = useNavigate();
+  const rota = m ? ROTA[m.code] : undefined;
 
   const onBuy = (code: string) => {
     if (!hasProfile) { setPending(code); setFormOpen(true); return; }
@@ -85,7 +113,17 @@ export function ModulePopup({ module: m, onClose }: { module: ModuleWithStatus |
               </p>
               <div className="mt-3">
                 {active ? (
-                  <Button variant="outline" className="w-full rounded-xl h-12" onClick={openPortal} disabled={busy}>Gerenciar assinatura</Button>
+                  // Módulo ativo: a ação principal é ENTRAR NELE. "Gerenciar
+                  // assinatura" é secundário, e vira o único botão quando não
+                  // existe destino (o pacote de créditos, por exemplo).
+                  <div className="space-y-2">
+                    {rota && (
+                      <Button className="w-full rounded-xl h-12" onClick={() => { onClose(); navigate(rota); }}>
+                        Abrir {m.name} <ArrowRight className="h-4 w-4 ml-1.5" />
+                      </Button>
+                    )}
+                    <Button variant="outline" className="w-full rounded-xl h-12" onClick={openPortal} disabled={busy}>Gerenciar assinatura</Button>
+                  </div>
                 ) : m.coming_soon ? (
                   <Button className="w-full rounded-xl h-12" disabled>Em breve</Button>
                 ) : (
