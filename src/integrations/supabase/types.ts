@@ -4859,6 +4859,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      recalc_manager_storage: { Args: { _manager: string }; Returns: undefined }
       reconcile_agency_seats: { Args: { _manager: string }; Returns: number }
       reject_proposal_by_token: {
         Args: { _note?: string; _reason?: string; _token: string }
