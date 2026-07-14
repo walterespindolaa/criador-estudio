@@ -9,8 +9,11 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
   useScrapes, useCreativeIdeas, useRunScrape, useUpdateIdeaStatus, useDeleteIdea, useDeleteScrape, useGeneratePlanFromIdeas,
+  useHubCredits, CREDITOS_POR_TIPO,
   type ScrapeType, type CreativeIdea,
 } from "@/hooks/useHubCria";
+import { OrganicBlobs } from "@/components/brand/OrganicBlobs";
+import { CRIA_HEX } from "@/lib/moduleTheme";
 import { useExternalClients } from "@/hooks/useCriaPost";
 
 type InputKind = "handle" | "url" | "hashtag";
@@ -118,6 +121,16 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
   const setLinkAt = (i: number, v: string) => setReelLinks((l) => l.map((x, idx) => (idx === i ? v : x)));
   const removeLink = (i: number) => setReelLinks((l) => (l.length <= 1 ? [""] : l.filter((_, idx) => idx !== i)));
 
+  // Saldo de créditos do mês. O HUB tem custo VARIÁVEL (o Apify cobra por
+  // resultado): sem cota, o prejuízo é do CRIA; sem MOSTRAR a cota, a surpresa
+  // é da pessoa. As duas coisas são inaceitáveis.
+  const { data: credits } = useHubCredits();
+  const quota = credits?.quota ?? 0;
+  const usados = credits?.used ?? 0;
+  const restantes = Math.max(0, quota - usados);
+  const pctUso = quota > 0 ? Math.min(100, Math.round((usados / quota) * 100)) : 0;
+  const custoSelecao = selectedItems.reduce((s, i) => s + (CREDITOS_POR_TIPO[i.key] ?? 1), 0);
+
   const doneScrapes = useMemo(() => scrapes.filter((s) => s.status === "done" && s.result_summary).slice(0, 8), [scrapes]);
   const matchesFilter = (i: CreativeIdea) => filter === "todas" || i.status === filter;
   // Agrupa as ideias por análise (scrape_id), cada pesquisa mostra as SUAS ideias, não um banco global.
@@ -160,13 +173,62 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
 
   return (
     <div className="space-y-5">
-      {/* Como funciona */}
-      <div className="flex items-start gap-2 rounded-xl bg-primary/[0.04] border border-primary/15 px-4 py-3">
-        <TrendingUp className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-        <p className="text-[13px] font-body text-foreground/80 leading-relaxed">
-          Escolha <strong>uma ou mais</strong> análises, informe o concorrente e rode. O CRIA lê os dados reais e transforma no que engajou em <strong>ideias prontas</strong> pro cliente, que você marca como "usar" e manda pro cronograma.
-        </p>
+      {/* CABEÇALHO DO MÓDULO. Antes a aba abria direto num formulário cinza, sem
+          dizer o que ela é nem o que ela vale. Agora ela se apresenta — e mostra
+          o saldo, que é o que a pessoa precisa saber ANTES de escolher a análise. */}
+      <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-5">
+        <OrganicBlobs color="lilas" />
+        <div className="relative flex items-start justify-between gap-4 flex-wrap">
+          <div className="min-w-0 flex-1">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 text-primary px-2.5 py-1 mb-2">
+              <TrendingUp className="h-3.5 w-3.5" />
+              <span className="text-[10px] font-body font-bold uppercase tracking-wider">HUB CRIA</span>
+            </span>
+            <h2 className="font-display text-xl font-extrabold text-foreground tracking-tight">
+              Chegue na pauta com inteligência, não com achismo
+            </h2>
+            <p className="text-[13px] font-body text-muted-foreground mt-1 leading-relaxed max-w-xl">
+              O CRIA lê o concorrente de verdade — o que engajou, o roteiro do reel que bombou,
+              os anúncios que ele <strong>paga</strong> pra rodar — e devolve <strong>pautas prontas</strong> pro seu cliente.
+            </p>
+          </div>
+
+          {/* SALDO. O HUB tem custo variável de verdade; a pessoa merece saber
+              quanto ainda tem antes de clicar, não depois de levar um erro. */}
+          {quota > 0 && (
+            <div className="relative shrink-0 rounded-2xl border border-border bg-background/70 backdrop-blur-sm px-4 py-3 min-w-[168px]">
+              <p className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground">Créditos deste mês</p>
+              <p className="font-display text-2xl font-extrabold text-foreground tabular-nums leading-none mt-1">
+                {restantes}<span className="text-sm font-bold text-muted-foreground">/{quota}</span>
+              </p>
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className={cn("h-full rounded-full transition-all", restantes === 0 ? "bg-destructive" : pctUso > 80 ? "bg-amber-500" : "bg-primary")}
+                  style={{ width: `${100 - pctUso}%` }}
+                />
+              </div>
+              {restantes === 0 && (
+                <p className="text-[11px] font-body text-destructive mt-1.5 leading-tight">Acabou. Compre um pacote extra.</p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* ANALISANDO. Antes o botão só girava e a pessoa não sabia o que estava
+          acontecendo — e como a análise às vezes leva minutos, ela achava que
+          tinha travado (e travava mesmo, era o bug do timeout). */}
+      {running && (
+        <div className="flex items-center gap-3 rounded-2xl border border-primary/30 bg-primary/[0.04] px-4 py-3.5">
+          <Loader2 className="h-5 w-5 shrink-0 animate-spin text-primary" />
+          <div className="min-w-0">
+            <p className="text-[13px] font-display font-bold text-foreground">Analisando: {running}</p>
+            <p className="text-[12px] font-body text-muted-foreground leading-tight">
+              Estamos lendo o perfil de verdade — isso leva de 20 segundos a 2 minutos. Pode deixar a aba aberta.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Config */}
       <div className="bg-card border border-border rounded-2xl p-4 space-y-4">
@@ -260,12 +322,22 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
                 {hasLinks && <p className="text-[10px] font-body text-secondary mt-1.5">{validLinks.length} reel(s), transcreve exatamente esses.</p>}
               </div>
             )}
-            <div className="flex items-center gap-3">
-              <Button onClick={analisar} disabled={!!running}>
+            {/* O CUSTO ANTES DO CLIQUE. A pessoa precisa saber quanto vai gastar
+                enquanto ainda pode mudar de ideia — não depois, num erro. */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <Button onClick={analisar} disabled={!!running || (quota > 0 && custoSelecao > restantes)} size="lg">
                 {running ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                {running ? `Analisando ${running}…` : `Analisar (${selectedItems.length})`}
+                {running ? `Analisando ${running}…` : `Analisar${quota > 0 ? ` · ${custoSelecao} ${custoSelecao === 1 ? "crédito" : "créditos"}` : ` (${selectedItems.length})`}`}
               </Button>
-              <p className="text-[11px] font-body text-muted-foreground">Roda um por um. Pode levar até ~1 min cada.</p>
+              {quota > 0 && custoSelecao > restantes ? (
+                <p className="text-[12px] font-body text-destructive">
+                  Você tem {restantes} {restantes === 1 ? "crédito" : "créditos"} e essa seleção custa {custoSelecao}. Tire uma análise ou compre um pacote extra.
+                </p>
+              ) : (
+                <p className="text-[11.5px] font-body text-muted-foreground">
+                  Roda uma por vez. Cada uma leva de 20s a 2 min — a gente avisa quando terminar.
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -437,12 +509,30 @@ function TopPostCard({ p, rank }: { p: any; rank: number }) {
         </div>
       </div>
 
+      {/* O RESUMO DA IA: em uma frase, do que é o reel. É o que faz a pessoa
+          decidir se vale ler o roteiro inteiro ou pular pro próximo. */}
+      {p.resumo && (
+        <div className="border-t border-border/60 px-3 py-2" style={{ background: `${CRIA_HEX.lilas}0d` }}>
+          <p className="text-[12px] font-body text-foreground leading-relaxed">
+            <strong className="font-display">Em uma frase:</strong> {p.resumo}
+          </p>
+        </div>
+      )}
+
       {/* A TRANSCRIÇÃO, é o roteiro do concorrente. É o produto desta análise. */}
       {transcricao && (
         <div className="border-t border-border/60 bg-muted/30 px-3 py-2.5">
-          <p className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1.5">
-            <FileText className="h-3 w-3" /> Roteiro (transcrição do áudio)
-          </p>
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <p className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <FileText className="h-3 w-3" /> Roteiro (áudio transcrito)
+            </p>
+            <button
+              onClick={() => { void navigator.clipboard.writeText(transcricao); toast.success("Roteiro copiado."); }}
+              className="text-[10px] font-body font-bold text-primary hover:underline shrink-0"
+            >
+              copiar roteiro
+            </button>
+          </div>
           <p className={cn("text-[12.5px] font-body text-foreground/90 leading-relaxed whitespace-pre-wrap", !aberto && "line-clamp-4")}>
             {transcricao}
           </p>
@@ -459,110 +549,203 @@ function TopPostCard({ p, rank }: { p: any; rank: number }) {
   );
 }
 
+/**
+ * A LEITURA DA ANÁLISE.
+ *
+ * O erro do que existia: a tela DESPEJAVA o dado (contagem, média, lista) e
+ * deixava a pessoa fazer a interpretação sozinha. Mas ela não paga pra ver
+ * número — paga pra ter a CONCLUSÃO. Aqui a gente lê os dados e escreve a frase
+ * que ela repetiria na reunião com o cliente.
+ */
+function lerAnalise(s: Record<string, any>): string | null {
+  const kind = s.kind;
+  const fmts: Record<string, number> = s.formats || {};
+  const total = Number(s.count) || 0;
+
+  if (kind === "comments") {
+    return total > 0
+      ? `Foram ${total} comentários lidos. As dúvidas que se repetem viraram pauta aqui embaixo — é o público dizendo o que quer ouvir.`
+      : null;
+  }
+  if (kind === "ads") {
+    return total > 0
+      ? `Ele mantém ${total} ${total === 1 ? "anúncio ativo" : "anúncios ativos"}. Isso é dinheiro dele apostando: a oferta e o ângulo abaixo já foram testados e ele decidiu pagar pra repetir.`
+      : null;
+  }
+  if (kind === "profile") return null;
+
+  if (!total) return null;
+
+  const partes: string[] = [];
+  const dominante = Object.entries(fmts).sort((a, b) => b[1] - a[1])[0];
+  if (dominante && total > 2) {
+    const nome = /clips|video/i.test(dominante[0]) ? "Reels"
+      : /sidecar|carousel/i.test(dominante[0]) ? "carrossel"
+      : /image|graph/i.test(dominante[0]) ? "foto" : dominante[0];
+    partes.push(`o formato que ele mais usa é ${nome} (${dominante[1]} de ${total})`);
+  }
+  if (s.avg_likes) partes.push(`a média é de ${fmtNum(s.avg_likes)} curtidas por post`);
+  if (s.avg_views) partes.push(`${fmtNum(s.avg_views)} views por vídeo`);
+
+  if (kind === "transcription") {
+    return `Os roteiros abaixo são o áudio transcrito dos reels que mais rodaram${partes.length ? ` — ${partes[0]}` : ""}. Leia o gancho dos primeiros segundos: é ali que a retenção é ganha ou perdida.`;
+  }
+  return partes.length ? `Lendo ${total} publicações: ${partes.join(", ")}.` : null;
+}
+
 export function SummaryCard({ summary, handle, defaultOpen = false, onDelete, ideas, onIdeaStatus, onIdeaDelete }: { summary: Record<string, unknown>; handle: string; defaultOpen?: boolean; onDelete?: () => void; ideas?: CreativeIdea[]; onIdeaStatus?: (id: string, status: CreativeIdea["status"]) => void; onIdeaDelete?: (id: string) => void }) {
   const [open, setOpen] = useState(defaultOpen);
   const s = summary as Record<string, any>;
   const kind = s.kind;
   const KIND_LABEL: Record<string, string> = {
-    profile: "Perfil", comments: "Comentários", ads: "Anúncios", stories: "Stories",
-    posts: "Posts", reels: "Reels", hashtag: "Hashtag", mentions: "Menções", transcription: "Reels + transcrição",
+    profile: "Raio-x do perfil", comments: "As dúvidas do público", ads: "Onde ele aposta dinheiro",
+    posts: "O que ele posta", reels: "Os reels dele", hashtag: "A hashtag do nicho",
+    mentions: "Quem fala dele", transcription: "O roteiro do reel que bombou",
   };
   const count = typeof s.count === "number" ? s.count : (Array.isArray(s.top) ? s.top.length : null);
   const shortHandle = handle.length > 40 ? handle.replace(/^https?:\/\/(www\.)?instagram\.com\//, "").slice(0, 30) + "…" : handle;
+  const leitura = lerAnalise(s);
+  const hex = CRIA_HEX.lilas;
+
   return (
-    <div className="bg-card border border-border rounded-2xl overflow-hidden">
-      <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 px-4 py-3 border-b border-border/60 bg-background text-left hover:bg-muted/30 transition-colors">
-        <Instagram className="h-4 w-4 text-primary shrink-0" />
-        <h3 className="text-sm font-display font-bold text-foreground truncate flex-1 min-w-0">{KIND_LABEL[kind] || "Análise"} · {shortHandle}</h3>
-        {count != null && <span className="text-[11px] font-body text-muted-foreground shrink-0">{count} {count === 1 ? "item" : "itens"}</span>}
+    <div className="bg-card border border-border rounded-3xl overflow-hidden">
+      {/* Cabeçalho na cor do HUB. O título diz o que a análise SIGNIFICA, não o
+          nome técnico dela ("Posts" → "O que ele posta"). */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/30"
+        style={{ borderLeft: `4px solid ${hex}` }}
+      >
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl" style={{ background: `${hex}1f`, color: hex }}>
+          <Instagram className="h-4 w-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[14px] font-display font-extrabold text-foreground truncate">
+            {KIND_LABEL[kind] || "Análise"}
+          </span>
+          <span className="block text-[11.5px] font-body text-muted-foreground truncate">
+            @{shortHandle.replace(/^@/, "")}
+            {count != null && ` · ${count} ${count === 1 ? "item lido" : "itens lidos"}`}
+            {ideas && ideas.length > 0 && ` · ${ideas.length} pautas geradas`}
+          </span>
+        </span>
         {onDelete && (
           <span role="button" tabIndex={0}
             onClick={(e) => { e.stopPropagation(); if (confirm("Excluir esta análise?")) onDelete(); }}
             onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); if (confirm("Excluir esta análise?")) onDelete(); } }}
-            className="shrink-0 text-muted-foreground hover:text-destructive" title="Excluir análise" aria-label="Excluir análise"><Trash2 className="h-4 w-4" /></span>
+            className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" title="Excluir análise" aria-label="Excluir análise"><Trash2 className="h-4 w-4" /></span>
         )}
         <ChevronDown className={cn("h-4 w-4 text-muted-foreground shrink-0 transition-transform", open && "rotate-180")} />
       </button>
+
       {open && (
-      <div className="p-4">
+      <div className="border-t border-border/60 p-4 sm:p-5">
+        {/* A CONCLUSÃO, antes do dado. É o que ela leva pra reunião. */}
+        {leitura && (
+          <div className="mb-4 flex items-start gap-2.5 rounded-2xl px-4 py-3" style={{ background: `${hex}0f` }}>
+            <Sparkles className="h-4 w-4 shrink-0 mt-0.5" style={{ color: hex }} />
+            <p className="text-[13px] font-body text-foreground leading-relaxed">{leitura}</p>
+          </div>
+        )}
+
         {kind === "profile" ? (
-          <div className="grid grid-cols-3 gap-3">
-            <Stat label="Seguidores" value={fmtNum(s.followers)} />
-            <Stat label="Seguindo" value={fmtNum(s.following)} />
-            <Stat label="Posts" value={fmtNum(s.posts)} />
-            {s.biography && <p className="col-span-3 text-[13px] font-body text-muted-foreground mt-1 whitespace-pre-wrap">{s.biography}</p>}
-            <div className="col-span-3 flex flex-wrap items-center gap-1.5 mt-1">
-              {s.verified && <span className="text-[10px] font-body px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">✔ Verificado</span>}
-              {s.isBusiness && <span className="text-[10px] font-body px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">Comercial</span>}
-              {s.category && <span className="text-[10px] font-body px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{s.category}</span>}
-              {s.externalUrl && <a href={s.externalUrl} target="_blank" rel="noreferrer" className="text-[11px] font-body text-primary hover:underline truncate max-w-[220px]">🔗 {String(s.externalUrl).replace(/^https?:\/\//, "")}</a>}
+          <div className="flex items-start gap-4 flex-wrap">
+            {s.avatar && (
+              <img src={s.avatar} referrerPolicy="no-referrer" alt="" className="h-16 w-16 rounded-full object-cover border border-border shrink-0" />
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="grid grid-cols-3 gap-3">
+                <Stat label="Seguidores" value={fmtNum(s.followers)} />
+                <Stat label="Seguindo" value={fmtNum(s.following)} />
+                <Stat label="Posts" value={fmtNum(s.posts)} />
+              </div>
+              {s.biography && <p className="text-[13px] font-body text-muted-foreground mt-3 whitespace-pre-wrap leading-relaxed">{s.biography}</p>}
+              <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+                {s.verified && <span className="text-[10px] font-body px-2 py-0.5 rounded-full bg-primary/10 text-primary">✔ Verificado</span>}
+                {s.isBusiness && <span className="text-[10px] font-body px-2 py-0.5 rounded-full bg-muted text-muted-foreground">Comercial</span>}
+                {s.category && <span className="text-[10px] font-body px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{s.category}</span>}
+                {s.externalUrl && <a href={s.externalUrl} target="_blank" rel="noreferrer" className="text-[11px] font-body text-primary hover:underline truncate max-w-[240px]">{String(s.externalUrl).replace(/^https?:\/\//, "")}</a>}
+              </div>
             </div>
           </div>
+
         ) : kind === "ads" ? (
-          <ListWrap title={`${fmtNum(s.count)} anúncios ativos, a oferta que ele paga pra promover`}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             {Array.isArray(s.top) && s.top.slice(0, 10).map((a: any, i: number) => (
-              <div key={i} className="flex gap-2.5 rounded-lg border border-border/60 px-2.5 py-2">
-                {a.thumbnail && (
+              <div key={i} className="flex gap-3 rounded-2xl border border-border p-3">
+                {a.thumbnail ? (
                   <a href={a.library_link || a.link || a.thumbnail} target="_blank" rel="noreferrer" className="shrink-0">
-                    <img src={a.thumbnail} referrerPolicy="no-referrer" alt="" loading="lazy" className="h-16 w-16 rounded-md object-cover border border-border/60 bg-muted" />
+                    <img src={a.thumbnail} referrerPolicy="no-referrer" alt="" loading="lazy" className="h-24 w-24 rounded-xl object-cover border border-border bg-muted" />
                   </a>
+                ) : (
+                  <div className="grid h-24 w-24 shrink-0 place-items-center rounded-xl border border-dashed border-border bg-muted/40 text-muted-foreground">
+                    <Megaphone className="h-5 w-5" />
+                  </div>
                 )}
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                    {a.active && <span className="text-[9px] font-body px-1.5 py-0.5 rounded-full bg-secondary/15 text-secondary">ativo</span>}
-                    {a.page && <span className="text-[10px] font-body text-muted-foreground">{a.page}</span>}
-                    {a.since && <span className="text-[10px] font-body text-muted-foreground">· desde {String(a.since).slice(0, 10)}</span>}
+                  <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                    {a.active && <span className="text-[9px] font-body font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600">RODANDO</span>}
+                    {a.since && <span className="text-[10px] font-body text-muted-foreground">desde {String(a.since).slice(0, 10)}</span>}
                   </div>
-                  <p className="text-[12px] font-body text-foreground leading-snug">{a.text || "(sem texto)"}</p>
-                  <div className="flex items-center gap-3 mt-1">
-                    {a.library_link && <a href={a.library_link} target="_blank" rel="noreferrer" className="text-[11px] font-body text-primary hover:underline">ver na Ads Library →</a>}
-                    {a.link && <a href={a.link} target="_blank" rel="noreferrer" className="text-[11px] font-body text-muted-foreground hover:underline">destino →</a>}
+                  <p className="text-[12.5px] font-body text-foreground leading-snug line-clamp-4">{a.text || "(anúncio sem texto)"}</p>
+                  {a.cta && (
+                    <span className="inline-block mt-1.5 text-[10px] font-display font-bold px-2 py-0.5 rounded-md bg-primary/10 text-primary">{a.cta}</span>
+                  )}
+                  <div className="flex items-center gap-3 mt-1.5">
+                    {a.library_link && <a href={a.library_link} target="_blank" rel="noreferrer" className="text-[11px] font-body font-semibold text-primary hover:underline">ver o anúncio →</a>}
+                    {a.link && <a href={a.link} target="_blank" rel="noreferrer" className="text-[11px] font-body text-muted-foreground hover:underline">pra onde leva →</a>}
                   </div>
                 </div>
               </div>
             ))}
-          </ListWrap>
-        ) : kind === "stories" ? (
-          <ListWrap title={`${fmtNum(s.count)} stories recentes`}>
-            {Array.isArray(s.top) && s.top.slice(0, 12).map((x: any, i: number) => (
-              <div key={i} className="flex items-center gap-2 rounded-lg border border-border/60 px-2.5 py-2">
-                <span className="text-[10px] font-body px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">{x.type || "story"}</span>
-                <p className="text-[12px] font-body text-foreground flex-1 min-w-0 leading-snug truncate">{x.caption || "(sem texto na tela)"}</p>
-                {x.url && <a href={x.url} target="_blank" rel="noreferrer" className="text-[11px] font-body text-primary hover:underline shrink-0">ver</a>}
-              </div>
-            ))}
-          </ListWrap>
+          </div>
+
         ) : kind === "comments" ? (
-          <ListWrap title={`${fmtNum(s.count)} comentários, as dúvidas viram pauta`}>
-            {Array.isArray(s.top) && s.top.slice(0, 12).map((c: any, i: number) => (
-              <div key={i} className="flex items-start gap-2 rounded-lg border border-border/60 px-2.5 py-2">
-                <MessageCircle className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
-                <p className="text-[12px] font-body text-foreground flex-1 min-w-0 leading-snug">{c.text}</p>
-                {c.likes > 0 && <span className="flex items-center gap-0.5 text-[11px] font-body text-muted-foreground shrink-0"><Heart className="h-3 w-3" />{fmtNum(c.likes)}</span>}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+            {Array.isArray(s.top) && s.top.slice(0, 14).map((c: any, i: number) => (
+              <div key={i} className="flex items-start gap-2.5 rounded-2xl border border-border px-3 py-2.5">
+                <MessageCircle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: hex }} />
+                <p className="text-[12.5px] font-body text-foreground flex-1 min-w-0 leading-relaxed">{c.text}</p>
+                {c.likes > 0 && (
+                  <span className="flex items-center gap-0.5 text-[11px] font-body text-muted-foreground shrink-0">
+                    <Heart className="h-3 w-3" />{fmtNum(c.likes)}
+                  </span>
+                )}
               </div>
             ))}
-          </ListWrap>
+          </div>
+
         ) : (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
-              <Stat label="Posts lidos" value={fmtNum(s.count)} />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4">
+              <Stat label={kind === "transcription" ? "Reels lidos" : "Posts lidos"} value={fmtNum(s.count)} />
               <Stat label="Média curtidas" value={fmtNum(s.avg_likes)} />
               <Stat label="Média coment." value={fmtNum(s.avg_comments)} />
-              <Stat label="Formatos" value={Object.keys(s.formats || {}).length ? `${Object.keys(s.formats).length} tipos` : "-"} />
+              <Stat label="Média views" value={s.avg_views ? fmtNum(s.avg_views) : "-"} />
             </div>
             {Array.isArray(s.top) && s.top.length > 0 && (
-              <ListWrap title="Top posts (o que mais engajou)">
-                {s.top.slice(0, 8).map((p: any, i: number) => (
+              <div className="space-y-2.5">
+                <p className="text-[11px] font-body font-bold uppercase tracking-wider text-muted-foreground">
+                  {kind === "transcription" ? "Os roteiros, do que mais rodou pro que menos" : "Do que mais engajou pro que menos"}
+                </p>
+                {s.top.slice(0, 10).map((p: any, i: number) => (
                   <TopPostCard key={i} p={p} rank={i + 1} />
                 ))}
-              </ListWrap>
+              </div>
             )}
           </>
         )}
+
+        {/* AS PAUTAS. É o produto. Antes ficavam enterradas no fim, com o mesmo
+            peso visual de tudo o resto. Agora elas são o destaque. */}
         {ideas && ideas.length > 0 && onIdeaStatus && onIdeaDelete && (
-          <div className="mt-4 pt-3 border-t border-border/60">
-            <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-primary" /> Ideias desta análise ({ideas.length})
+          <div className="mt-5 rounded-2xl border-2 border-dashed p-4" style={{ borderColor: `${hex}59`, background: `${hex}08` }}>
+            <p className="text-[13px] font-display font-extrabold text-foreground mb-0.5 flex items-center gap-1.5">
+              <Sparkles className="h-4 w-4" style={{ color: hex }} />
+              {ideas.length} {ideas.length === 1 ? "pauta pronta" : "pautas prontas"} pro seu cliente
+            </p>
+            <p className="text-[12px] font-body text-muted-foreground mb-3">
+              Marque as boas como <strong>Usar</strong> e clique em “Criar posts” lá em cima: elas entram no cronograma dele.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
               {ideas.map((idea) => (
