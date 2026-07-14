@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { Kanban } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
@@ -528,7 +530,28 @@ const Criando = () => {
           ))}
         </div>
 
-        {view === "board" && (
+        {/* O QUADRO VAZIO. Antes ele mostrava seis colunas vazias e nada mais — o
+            que parece um sistema quebrado, não um começo. Um kanban sem card não
+            ensina nada; um convite, sim. */}
+        {posts.length === 0 && (
+          <EmptyState
+            icon={Kanban}
+            cor="laranja"
+            title="Seu quadro começa aqui"
+            description="Cada post nasce como ideia e anda pelas colunas até ir pro ar: Ideia → Planejamento → Produzindo → Pronto → Agendado → Publicado. Você arrasta o card, e o CRIA cuida do resto."
+            action={{ label: "Criar meu primeiro post", onClick: openNew }}
+            secondary={
+              <a
+                href="/app/ideias"
+                className="text-[13px] font-body text-muted-foreground underline underline-offset-2 hover:text-foreground"
+              >
+                ou puxe uma ideia que você já anotou
+              </a>
+            }
+          />
+        )}
+
+        {posts.length > 0 && view === "board" && (
         /* onDragStart com vibração: o dedo SENTE que pegou o card. iOS ignora, Android responde. */
         <DragDropContext onDragStart={() => tocar(12)} onDragEnd={(r) => { tocar(8); handleDragEnd(r); }}>
         <div data-tour="criando-board" className="hidden md:flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-proximity kanban-scroll">
@@ -643,7 +666,7 @@ const Criando = () => {
         </DragDropContext>
         )}
 
-        {view === "tabela" && (
+        {posts.length > 0 && view === "tabela" && (
           <div className="hidden md:block">
             {filteredPosts.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border p-12 text-center">
@@ -716,7 +739,7 @@ const Criando = () => {
             )}
           </div>
         )}
-        {view === "calendario" && (
+        {posts.length > 0 && view === "calendario" && (
           <div className="hidden md:block">
             <div className="flex items-center gap-1 bg-card rounded-xl border border-border p-1 w-max mb-4">
               {([{ key: "mes", label: "Mês" }, { key: "semana", label: "Semana" }] as const).map(o => (

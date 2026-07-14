@@ -20,6 +20,7 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useTasks, type Task } from "@/hooks/useTasks";
 import { usePosts, type Post } from "@/hooks/usePosts";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { sanitizeText } from "@/lib/sanitize";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -180,7 +181,24 @@ const Tarefas = () => {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Três colunas vazias não ensinam nada — parecem um sistema que não
+            carregou. Aqui a tela diz o que ela É antes de pedir a primeira tarefa. */}
+        {tasks.length === 0 && (
+          <EmptyState
+            icon={ListTodo}
+            cor="verde"
+            title="O que falta pra esse post sair?"
+            description="Tarefa aqui não é lista de afazeres da vida. É o que emperra a produção: gravar, editar, escrever a legenda, mandar pro cliente aprovar. Você vê o que trava e destrava."
+            examples={[
+              "gravar o reel dos bastidores",
+              "escrever a legenda do carrossel de segunda",
+              "cobrar a aprovação da Gabi",
+            ]}
+            action={{ label: "Criar minha primeira tarefa", onClick: openNew }}
+          />
+        )}
+
+        <div className={cn("grid grid-cols-1 md:grid-cols-3 gap-6", tasks.length === 0 && "hidden")}>
           {(["pendente", "em_andamento", "concluida"] as const).map(status => (
             <div key={status} className="space-y-4">
               <div className="flex items-center justify-between px-1">

@@ -29,6 +29,7 @@ import { useIdeas, type Idea } from "@/hooks/useIdeas";
 import { hojeBR } from "@/lib/date-br";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
 import { SharedIntake } from "@/components/pwa/SharedIntake";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { usePillars } from "@/hooks/usePillars";
 import { useProfile } from "@/hooks/useProfile";
 import { usePosts, type Post } from "@/hooks/usePosts";
@@ -334,7 +335,34 @@ const Ideias = () => {
 
         {mainTab === "salvos" && <SavedRefs initialUrl={sharedUrl} />}
 
-        {mainTab === "ideias" && viewMode === "gallery" && (
+        {/* A TELA DE IDEIAS NÃO TINHA ESTADO VAZIO — e ela é a primeira coisa que
+            um criador abre. Ele via um branco e concluía que tinha quebrado.
+            Os exemplos existem porque o pior de começar é a folha em branco. */}
+        {mainTab === "ideias" && filtered.length === 0 && (
+          ideas.length === 0 ? (
+            <EmptyState
+              icon={Lightbulb}
+              cor="amarelo"
+              title="Comece pelo caos da sua cabeça"
+              description="Aqui não precisa ser bom. Joga tudo: o pensamento solto, o print que te parou, a frase que você ouviu no Uber. Depois a gente separa o que vira post."
+              examples={[
+                "aquele erro que todo mundo comete no começo",
+                "bastidor: como eu organizo minha semana",
+                "responder a pergunta que mais me fazem no direct",
+              ]}
+              action={{ label: "Anotar minha primeira ideia", onClick: openNew }}
+            />
+          ) : (
+            <EmptyState
+              icon={Lightbulb}
+              cor="amarelo"
+              title="Nenhuma ideia com esse filtro"
+              description="Você tem ideias guardadas, só não neste filtro. Troque o filtro pra ver as outras."
+            />
+          )
+        )}
+
+        {mainTab === "ideias" && filtered.length > 0 && viewMode === "gallery" && (
           <div className="columns-2 sm:columns-3 lg:columns-4 gap-3 [&>*]:mb-3">
             {filtered.map((idea) => {
               const pillar = idea.pillar_id ? pillars.find((p) => p.id === idea.pillar_id) : null;
@@ -495,7 +523,7 @@ const Ideias = () => {
           </div>
         )}
 
-        {mainTab === "ideias" && viewMode === "list" && (
+        {mainTab === "ideias" && filtered.length > 0 && viewMode === "list" && (
         <div className="bg-card border border-border rounded-xl divide-y divide-border/30 overflow-hidden">
           {filtered.map(idea => {
             const isExpanded = expandedIdeaId === idea.id;
