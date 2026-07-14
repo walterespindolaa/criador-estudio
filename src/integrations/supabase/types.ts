@@ -710,6 +710,7 @@ export type Database = {
       competitor_scrapes: {
         Row: {
           apify_run_id: string | null
+          competitor_id: string | null
           cost_usd: number | null
           created_at: string
           crm_client_id: string | null
@@ -725,6 +726,7 @@ export type Database = {
         }
         Insert: {
           apify_run_id?: string | null
+          competitor_id?: string | null
           cost_usd?: number | null
           created_at?: string
           crm_client_id?: string | null
@@ -740,6 +742,7 @@ export type Database = {
         }
         Update: {
           apify_run_id?: string | null
+          competitor_id?: string | null
           cost_usd?: number | null
           created_at?: string
           crm_client_id?: string | null
@@ -754,6 +757,13 @@ export type Database = {
           status?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "competitor_scrapes_competitor_id_fkey"
+            columns: ["competitor_id"]
+            isOneToOne: false
+            referencedRelation: "hub_competitors"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "competitor_scrapes_crm_client_id_fkey"
             columns: ["crm_client_id"]
@@ -2221,6 +2231,53 @@ export type Database = {
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hub_competitors: {
+        Row: {
+          avatar: string | null
+          created_at: string
+          crm_client_id: string | null
+          followers: number | null
+          handle: string
+          id: string
+          last_read_at: string | null
+          manager_id: string
+          name: string | null
+          notes: string | null
+        }
+        Insert: {
+          avatar?: string | null
+          created_at?: string
+          crm_client_id?: string | null
+          followers?: number | null
+          handle: string
+          id?: string
+          last_read_at?: string | null
+          manager_id: string
+          name?: string | null
+          notes?: string | null
+        }
+        Update: {
+          avatar?: string | null
+          created_at?: string
+          crm_client_id?: string | null
+          followers?: number | null
+          handle?: string
+          id?: string
+          last_read_at?: string | null
+          manager_id?: string
+          name?: string | null
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hub_competitors_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
             referencedColumns: ["id"]
           },
         ]
