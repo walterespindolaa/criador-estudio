@@ -5,6 +5,22 @@ import { cn } from "@/lib/utils";
 
 const Tabs = TabsPrimitive.Root;
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   ABAS EM PÍLULA — o padrão do CRIA
+
+   O padrão que veio do shadcn é um retângulo cinza com cantos de 2px. Ele é
+   correto e é sem alma: parece painel de configuração, não parece o Cria.
+
+   E tinha um problema de USO, não só de gosto: em várias telas a aba ativa se
+   distinguia por uma sublinha de 2px. No celular isso é praticamente invisível,
+   e o alvo do dedo ficava pequeno. A pílula resolve as duas coisas — a ativa
+   vira um objeto sólido (branco, sombra, laranja) dentro de um trilho, e a
+   área de toque cresce.
+
+   Mudar AQUI muda o sistema inteiro. As telas que passam className continuam
+   podendo sobrescrever; o que elas não passarem herda isto.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
@@ -12,7 +28,7 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
+      "inline-flex h-auto items-center justify-center gap-1 rounded-full border border-border bg-muted/50 p-1 text-muted-foreground",
       className,
     )}
     {...props}
@@ -27,7 +43,12 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+      "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5",
+      "font-body text-[13px] font-semibold ring-offset-background transition-colors",
+      "hover:text-foreground",
+      "data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm",
+      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+      "disabled:pointer-events-none disabled:opacity-50",
       className,
     )}
     {...props}
