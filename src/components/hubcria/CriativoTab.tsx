@@ -16,29 +16,43 @@ import { useExternalClients } from "@/hooks/useCriaPost";
 type InputKind = "handle" | "url" | "hashtag";
 type TypeDef = { key: ScrapeType; label: string; icon: typeof LayoutGrid; desc: string; inputKind: InputKind; cost?: string };
 
-const GROUPS: { group: string; items: TypeDef[] }[] = [
+// ═══════════════════════════════════════════════════════════════════════════
+// AS ANÁLISES
+//
+// STORIES FOI REMOVIDO. Ele nunca poderia funcionar: o scraper do Instagram não
+// enxerga stories sem uma sessão logada, e não há cookies configurados. Era um
+// botão que só sabia falhar — e botão que falha destrói a confiança no módulo
+// inteiro. Volta quando existir sessão.
+//
+// Os grupos agora seguem a INTENÇÃO da pessoa, não o tipo técnico do dado:
+// "o que ele posta" (copiar o formato), "o que o público quer" (achar pauta),
+// "onde ele aposta dinheiro" (a estratégia).
+// ═══════════════════════════════════════════════════════════════════════════
+const GROUPS: { group: string; hint: string; items: TypeDef[] }[] = [
   {
-    group: "Conteúdo do concorrente",
+    group: "O que ele posta",
+    hint: "Pra você entender o formato e o gancho que funcionam no nicho.",
     items: [
-      { key: "posts", label: "Posts do feed", icon: LayoutGrid, desc: "Os posts que mais engajaram, legenda, curtidas, comentários e formato. Base pras ideias.", inputKind: "handle" },
-      { key: "reels", label: "Reels", icon: Play, desc: "Os reels dele, views, duração e o que performou.", inputKind: "handle" },
-      { key: "transcription", label: "Reels + transcrição", icon: FileText, desc: "Transcreve o áudio pra ler o ROTEIRO. Aceita o @ (reels recentes) OU o link de um/mais reels (separados por vírgula).", inputKind: "handle", cost: "~US$0,02/reel" },
-      { key: "stories", label: "Stories", icon: CircleDashed, desc: "Os stories recentes (somem em 24h), o que ele faz no dia a dia.", inputKind: "handle" },
+      { key: "posts", label: "Posts do feed", icon: LayoutGrid, desc: "Os que mais engajaram: legenda, curtidas, formato. A base das ideias.", inputKind: "handle" },
+      { key: "reels", label: "Reels", icon: Play, desc: "Os reels dele, com views e o que performou.", inputKind: "handle" },
+      { key: "transcription", label: "Reels + roteiro", icon: FileText, desc: "Transcreve o áudio: você LÊ o roteiro do reel que bombou. Aceita o @ ou o link do reel.", inputKind: "handle", cost: "o mais caro" },
     ],
   },
   {
-    group: "Público e mercado",
+    group: "O que o público quer",
+    hint: "Pra tirar pauta da boca de quem compra, não do seu achismo.",
     items: [
-      { key: "profile", label: "Perfil (raio-x)", icon: User, desc: "Seguidores, bio, categoria e link. Só panorama, não gera ideias.", inputKind: "handle" },
-      { key: "comments", label: "Comentários", icon: MessageCircle, desc: "Os comentários de UM post → as dúvidas do público viram pauta. Precisa da URL do post.", inputKind: "url" },
-      { key: "mentions", label: "Menções / UGC", icon: AtSign, desc: "Posts que marcam o @, UGC, parceiros e oportunidades.", inputKind: "handle" },
+      { key: "comments", label: "Comentários", icon: MessageCircle, desc: "As dúvidas e objeções do público num post viram pauta. Precisa da URL do post.", inputKind: "url" },
       { key: "hashtag", label: "Hashtag", icon: Hash, desc: "O que está bombando numa hashtag do nicho.", inputKind: "hashtag" },
+      { key: "mentions", label: "Menções / UGC", icon: AtSign, desc: "Quem marca o @: UGC, parceiros e oportunidades.", inputKind: "handle" },
     ],
   },
   {
-    group: "Estratégia",
+    group: "Onde ele aposta dinheiro",
+    hint: "O que o concorrente PAGA pra promover é o que ele já testou e sabe que converte.",
     items: [
-      { key: "ads", label: "Anúncios (Meta)", icon: Megaphone, desc: "Os anúncios ATIVOS dele, a oferta e o ângulo que ele PAGA pra promover.", inputKind: "handle", cost: "~US$0,006/anúncio" },
+      { key: "ads", label: "Anúncios (Meta)", icon: Megaphone, desc: "Os anúncios ATIVOS da página dele: a oferta, o ângulo e o CTA.", inputKind: "handle", cost: "custa 2" },
+      { key: "profile", label: "Perfil (raio-x)", icon: User, desc: "Seguidores, bio, categoria e link. Só panorama, não gera pauta.", inputKind: "handle" },
     ],
   },
 ];

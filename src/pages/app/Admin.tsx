@@ -16,6 +16,7 @@ import {
   MessageSquare,
   Inbox,
   LineChart,
+  Gauge,
   Users,
   MoreVertical,
   Trash2,
@@ -59,6 +60,7 @@ import { AdminGuard } from "@/components/AdminGuard";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AdminBenchmarks } from "@/components/admin/AdminBenchmarks";
 import { AdminPartners } from "@/components/admin/AdminPartners";
 import { AdminReferrals } from "@/components/admin/AdminReferrals";
 import { AdminLogs } from "@/components/admin/AdminLogs";
@@ -282,6 +284,9 @@ const AdminInner = () => {
               { value: "recados", icon: MessageSquare, title: "Recados", desc: "Avisos pros usuários", hint: "" },
               { value: "feedback", icon: Inbox, title: "Feedback", desc: "Bugs e ideias dos usuários", hint: "" },
               { value: "crescimento", icon: LineChart, title: "Crescimento", desc: "Novos usuários e uso do app", hint: "" },
+              // Custo de IA era invisível: dava pra descobrir que estava caro só
+              // olhando a fatura. Aqui dá pra ver ANTES.
+              { value: "benchmarks", icon: Gauge, title: "Benchmarks", desc: "Uso e custo das IAs (Cria IA, HUB, Estúdio)", hint: "" },
             ].map((c) => (
               <TabsTrigger
                 key={c.value}
@@ -493,6 +498,10 @@ const AdminInner = () => {
 
           <TabsContent value="feedback">
             <AdminFeedback />
+          </TabsContent>
+
+          <TabsContent value="benchmarks">
+            <AdminBenchmarks />
           </TabsContent>
 
           <TabsContent value="crescimento">

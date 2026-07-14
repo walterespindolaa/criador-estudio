@@ -30,7 +30,7 @@ export function useHasHubCria(): { allowed: boolean; isLoading: boolean } {
   return { allowed: isAdmin || q.data === true, isLoading: !isAdmin && q.isLoading };
 }
 
-export type ScrapeType = "posts" | "reels" | "profile" | "hashtag" | "comments" | "transcription" | "stories" | "mentions" | "ads";
+export type ScrapeType = "posts" | "reels" | "profile" | "hashtag" | "comments" | "transcription" | "mentions" | "ads";
 
 export type CompetitorScrape = {
   id: string;
@@ -100,40 +100,100 @@ export function useCreativeIdeas(crmClientId?: string) {
   });
 }
 
+const erroDaEdge = async (error: { message: string; context?: Response }): Promise<string> => {
+  let detail = error.message;
+  try {
+    const ctx = error.context;
+    if (ctx?.text) { const raw = await ctx.clone().text(); const b = JSON.parse(raw); detail = b?.message || b?.error || detail; }
+  } catch { /* ignore */ }
+  return detail;
+};
+
+/**
+ * RODAR A ANÁLISE — agora em duas etapas.
+ *
+ * Antes era um request só, que ESPERAVA o scrape inteiro terminar. Uma edge
+ * function morre em ~150s e transcrever 10 reels leva minutos: a função era
+ * cortada no meio, o job ficava "running" pra sempre e a tela não mostrava nada.
+ * Esse era o motivo do "não funciona".
+ *
+ * Agora: `start` dispara e volta na hora; a gente pergunta "já?" a cada 4s até
+ * terminar. A pessoa vê o progresso em vez de uma tela morta.
+ */
 export function useRunScrape() {
   const qc = useQueryClient();
   const { agencyOwnerId } = useActiveAccount();
+
   return useMutation({
     mutationFn: async (input: { type: ScrapeType; input: string; crm_client_id?: string | null; limit?: number; since?: string }) => {
       const { data, error } = await supabase.functions.invoke("apify-scrape", {
-        body: { type: input.type, input: input.input, crm_client_id: input.crm_client_id ?? null, limit: input.limit ?? 10, since: input.since, manager_id: agencyOwnerId },
+        body: {
+          action: "start",
+          type: input.type, input: input.input,
+          crm_client_id: input.crm_client_id ?? null,
+          limit: input.limit ?? 10, since: input.since, manager_id: agencyOwnerId,
+        },
       });
-      if (error) {
-        // tenta extrair a mensagem real do corpo
-        let detail = error.message;
-        try {
-          const ctx = (error as { context?: Response }).context;
-          if (ctx?.text) { const raw = await ctx.clone().text(); const b = JSON.parse(raw); detail = b?.message || b?.error || detail; }
-        } catch { /* ignore */ }
-        throw new Error(detail || "scrape_failed");
-      }
+      if (error) throw new Error((await erroDaEdge(error)) || "scrape_failed");
       const err = (data as { error?: string })?.error;
       if (err) throw new Error((data as { message?: string })?.message || err);
-      return data as { scrape_id: string; ideas_count: number; cost_usd: number };
+
+      const res = data as { scrape_id: string; status: string; message?: string };
+      if (res.status === "error") throw new Error(res.message || "A análise falhou.");
+
+      // Poll. Até 4 minutos: o Apify raramente passa disso, e é melhor errar pra
+      // mais do que abandonar um job que ia terminar em 10 segundos.
+      const scrapeId = res.scrape_id;
+      const ate = Date.now() + 4 * 60 * 1000;
+      while (Date.now() < ate) {
+        await new Promise((r) => setTimeout(r, 4000));
+        const { data: p } = await supabase.functions.invoke("apify-scrape", {
+          body: { action: "poll", scrape_id: scrapeId, manager_id: agencyOwnerId },
+        });
+        const st = (p as { status?: string })?.status;
+        if (st === "done") return { scrape_id: scrapeId, ...(p as object) } as { scrape_id: string; ideas_count: number; cost_usd: number };
+        if (st === "error") throw new Error((p as { error?: string })?.error || "A análise não completou.");
+      }
+      throw new Error("A análise está demorando mais que o normal. Ela continua rodando: recarregue em um minuto e ela aparece no histórico.");
     },
+
     onSuccess: (res, vars) => {
       const key = vars.crm_client_id ?? "avulsa";
       qc.invalidateQueries({ queryKey: ["hubcria-scrapes", key] });
       qc.invalidateQueries({ queryKey: ["hubcria-ideas", key] });
       qc.invalidateQueries({ queryKey: ["hubcria-ideas-all"] });
-      toast.success(`Análise pronta, ${res.ideas_count} ideias geradas.`);
+      qc.invalidateQueries({ queryKey: ["hubcria-credits"] });
+      const n = (res as { ideas_count?: number })?.ideas_count ?? 0;
+      toast.success(n > 0 ? `Análise pronta: ${n} ideias no banco do cliente.` : "Análise pronta.");
     },
     onError: (e) => {
       const m = e instanceof Error ? e.message : "";
-      toast.error(m ? `Falha: ${m}` : "Não consegui rodar a análise agora.");
+      toast.error(m || "Não consegui rodar a análise agora.");
     },
   });
 }
+
+/** Saldo de créditos do mês (o HUB tem custo variável: sem cota, o prejuízo é seu). */
+export function useHubCredits() {
+  const { agencyOwnerId } = useActiveAccount();
+  return useQuery({
+    queryKey: ["hubcria-credits", agencyOwnerId],
+    enabled: !!agencyOwnerId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("hub_credits_status", { _manager: agencyOwnerId! });
+      if (error) return { used: 0, quota: 0 };
+      const r = (Array.isArray(data) ? data[0] : data) as { used: number; quota: number } | null;
+      return { used: Number(r?.used ?? 0), quota: Number(r?.quota ?? 0) };
+    },
+  });
+}
+
+/** Quanto cada análise custa em créditos. Espelha o CREDITOS da edge function. */
+export const CREDITOS_POR_TIPO: Record<string, number> = {
+  posts: 1, reels: 1, profile: 1, hashtag: 1, comments: 1, mentions: 1,
+  ads: 2,
+  transcription: 3,
+};
 
 // "Gerar plano a partir da análise": transforma as ideias marcadas "usar" em posts
 // no cronograma do cliente (Cria Post) e marca as ideias como "usada".

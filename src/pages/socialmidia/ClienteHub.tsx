@@ -33,17 +33,28 @@ import { Textarea } from "@/components/ui/textarea";
 //   Ideias    → o que postar           (dele + do HUB + suas)
 //   Pesquisa  → analisar concorrente   (Apify, só quem tem o HUB liberado)
 //   Portal    → o que o cliente vê     (era o popup "Personalizar", espremido)
-const TABS = [
+// ═══════════════════════════════════════════════════════════════════════════
+// AS ABAS DO CLIENTE — cada uma com a cor do MÓDULO a que ela pertence.
+//
+// A ficha do cliente é onde os módulos do CRIA se encontram: Posts é o Cria Post,
+// Financeiro é o Cria Caixa, Pesquisa é o HUB CRIA. Só que nada dizia isso — as
+// abas eram todas cinzas, e a pessoa não percebia que estava usando um produto
+// pago dentro da ficha. A cor faz o módulo aparecer e lembra do valor que ele
+// está entregando ali.
+// ═══════════════════════════════════════════════════════════════════════════
+type TabDef = { key: string; label: string; hub?: boolean; modulo?: CriaColor; moduloNome?: string };
+
+const TABS: TabDef[] = [
   { key: "visao-geral", label: "Visão geral" },
-  { key: "brandbook", label: "Brandbook" },
-  { key: "ideias", label: "Ideias" },
-  { key: "posts", label: "Posts" },
-  { key: "cronograma", label: "Cronograma" },
-  { key: "relatorio", label: "Relatório" },
+  { key: "brandbook", label: "Brandbook", modulo: "rosa", moduloNome: "Cria Gestão" },
+  { key: "ideias", label: "Ideias", modulo: "lilas", moduloNome: "HUB CRIA" },
+  { key: "posts", label: "Posts", modulo: "laranja", moduloNome: "Cria Post" },
+  { key: "cronograma", label: "Cronograma", modulo: "laranja", moduloNome: "Cria Post" },
+  { key: "relatorio", label: "Relatório", modulo: "laranja", moduloNome: "Cria Post" },
   { key: "instagram", label: "Instagram" },
-  { key: "financeiro", label: "Financeiro" },
-  { key: "pesquisa", label: "Pesquisa", hub: true },   // só com HUB CRIA liberado
-  { key: "portal", label: "Portal" },
+  { key: "financeiro", label: "Financeiro", modulo: "azul", moduloNome: "Cria Caixa" },
+  { key: "pesquisa", label: "Pesquisa", hub: true, modulo: "lilas", moduloNome: "HUB CRIA" },
+  { key: "portal", label: "Portal", modulo: "laranja", moduloNome: "Cria Post" },
 ];
 const OPERACIONAIS = new Set(["posts", "cronograma", "relatorio", "instagram"]);
 const WORKFLOW = new Set(["ideias", "posts", "cronograma", "relatorio"]);
@@ -60,6 +71,7 @@ const FLOW_EXPLAIN: Record<string, string> = {
   relatorio: "O relatório white-label com o resultado do que foi publicado no mês.",
 };
 const initial = (n?: string | null) => (n ? n.trim().charAt(0).toUpperCase() : "?");
+import { CRIA_HEX, type CriaColor } from "@/lib/moduleTheme";
 import { formatBRL } from "@/lib/money";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 import { useManagerProfile } from "@/hooks/useModules";
@@ -176,8 +188,29 @@ export default function ClienteHub() {
       <div className="flex gap-1 border-b border-border mb-5 overflow-x-auto">
         {visibleTabs.map((t) => {
           const on = activeTab === t.key;
+          const hex = t.modulo ? CRIA_HEX[t.modulo] : null;
           return (
-            <button key={t.key} onClick={() => goTab(t.key)} className={`px-3 py-2 text-sm whitespace-nowrap border-b-2 transition-colors ${on ? "border-primary text-primary font-medium" : "border-transparent text-muted-foreground hover:text-foreground"}`}>{t.label}</button>
+            <button
+              key={t.key}
+              onClick={() => goTab(t.key)}
+              title={t.moduloNome ? `${t.label} · ${t.moduloNome}` : t.label}
+              className={`group flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap border-b-2 transition-colors ${
+                on ? "font-semibold" : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+              style={on ? { borderBottomColor: hex ?? "hsl(var(--primary))", color: hex ?? "hsl(var(--primary))" } : undefined}
+            >
+              {/* O pontinho na cor do módulo: laranja = Cria Post, azul = Cria Caixa,
+                  rosa = Cria Gestão, lilás = HUB CRIA. A pessoa aprende a cor uma
+                  vez e passa a ver o produto dentro da ficha do cliente. */}
+              {hex && (
+                <span
+                  aria-hidden
+                  className={`h-1.5 w-1.5 rounded-full shrink-0 transition-opacity ${on ? "opacity-100" : "opacity-50 group-hover:opacity-100"}`}
+                  style={{ background: hex }}
+                />
+              )}
+              {t.label}
+            </button>
           );
         })}
       </div>
