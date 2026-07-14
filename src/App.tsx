@@ -233,7 +233,7 @@ const App = () => (
                 <Route path="media-kit" element={<ErrorBoundary><UpgradeGate feature="media-kit"><MediaKit /></UpgradeGate></ErrorBoundary>} />
                 <Route path="tendencias" element={<ErrorBoundary><UpgradeGate feature="tendencias"><Tendencias /></UpgradeGate></ErrorBoundary>} />
                 <Route path="stories" element={<ErrorBoundary><UpgradeGate feature="stories"><CriaStories /></UpgradeGate></ErrorBoundary>} />
-                <Route path="stories/semanastories" element={<ErrorBoundary><UpgradeGate feature="stories"><CriaStories /></UpgradeGate></ErrorBoundary>} /></UpgradeGate></ErrorBoundary>} />
+                <Route path="stories/semanastories" element={<ErrorBoundary><UpgradeGate feature="stories"><CriaStories /></UpgradeGate></ErrorBoundary>} />
                 <Route path="aprovacao" element={<ErrorBoundary><Aprovacao /></ErrorBoundary>} />
                 <Route path="modulos" element={<ErrorBoundary><Modulos /></ErrorBoundary>} />
                 <Route path="feed" element={<ErrorBoundary><UpgradeGate feature="feed"><Feed /></UpgradeGate></ErrorBoundary>} />
