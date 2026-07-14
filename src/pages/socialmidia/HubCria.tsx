@@ -119,7 +119,7 @@ export default function HubCria() {
           </div>
 
           {quota > 0 && (
-            <div className="relative shrink-0 rounded-2xl border border-border bg-background/70 backdrop-blur-sm px-4 py-3 min-w-[172px]">
+            <div className="relative w-full sm:w-auto sm:shrink-0 rounded-2xl border border-border bg-background/70 backdrop-blur-sm px-4 py-3 sm:min-w-[172px]">
               <p className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground">Créditos do mês</p>
               <p className="font-display text-2xl font-extrabold text-foreground tabular-nums leading-none mt-1">
                 {restantes}<span className="text-sm font-bold text-muted-foreground">/{quota}</span>

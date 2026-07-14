@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Loader2, Sparkles, Check, X, Trash2, Instagram, Heart, MessageCircle, Play, CalendarPlus,
-  LayoutGrid, FileText, CircleDashed, User, AtSign, Hash, Megaphone, TrendingUp, Plus, ChevronDown,
-  ExternalLink,
+  LayoutGrid, FileText, CircleDashed, User, AtSign, Hash, Megaphone, TrendingUp, Plus, ChevronDown, ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -299,7 +298,7 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
           {/* SALDO. O HUB tem custo variável de verdade; a pessoa merece saber
               quanto ainda tem antes de clicar, não depois de levar um erro. */}
           {quota > 0 && (
-            <div className="relative shrink-0 rounded-2xl border border-border bg-background/70 backdrop-blur-sm px-4 py-3 min-w-[168px]">
+            <div className="relative w-full sm:w-auto sm:shrink-0 rounded-2xl border border-border bg-background/70 backdrop-blur-sm px-4 py-3 sm:min-w-[168px]">
               <p className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground">Créditos deste mês</p>
               <p className="font-display text-2xl font-extrabold text-foreground tabular-nums leading-none mt-1">
                 {restantes}<span className="text-sm font-bold text-muted-foreground">/{quota}</span>
@@ -474,10 +473,12 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
           O que você quer saber
           {compAtivo && <span className="text-primary"> sobre @{compAtivo.handle}</span>}?
         </p>
-        <div className="space-y-3">
+        <div className="space-y-4">
           {GROUPS.map((g) => (
             <div key={g.group}>
-              <p className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground mb-2">{g.group}</p>
+              <p className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground">{g.group}</p>
+              {/* O `hint` do grupo existia nos dados e NUNCA era renderizado. */}
+              <p className="text-[11.5px] font-body text-muted-foreground mb-2 leading-snug">{g.hint}</p>
               <div className="flex flex-wrap gap-2">
                 {g.items.map((it) => {
                   const on = !!selected[it.key];
@@ -511,6 +512,20 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
             </div>
           ))}
         </div>
+
+        {/* O QUE A ESCOLHA SIGNIFICA — visível em qualquer tela.
+            Eu tinha jogado a descrição pro `title` (tooltip). No celular NÃO existe
+            hover: a pessoa via oito chips e nenhuma explicação. Agora o texto do
+            que está marcado aparece aqui embaixo, pra todo mundo. */}
+        {selectedItems.length > 0 && (
+          <div className="rounded-xl bg-muted/40 px-3.5 py-2.5 space-y-1.5">
+            {selectedItems.map((it) => (
+              <p key={it.key} className="text-[12px] font-body text-muted-foreground leading-snug">
+                <strong className="font-display text-foreground">{it.label}:</strong> {it.desc}
+              </p>
+            ))}
+          </div>
+        )}
 
         {/* Inputs */}
         {selectedItems.length > 0 && (
@@ -903,7 +918,7 @@ export function SummaryCard({
           nome técnico dela ("Posts" → "O que ele posta"). */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/30"
+        className="w-full flex items-center gap-2.5 sm:gap-3 px-3 sm:px-4 py-3.5 text-left transition-colors hover:bg-muted/30"
         style={{ borderLeft: `4px solid ${hex}` }}
       >
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl" style={{ background: `${hex}1f`, color: hex }}>
@@ -976,8 +991,8 @@ export function SummaryCard({
             {s.avatar && (
               <img src={s.avatar} referrerPolicy="no-referrer" alt="" className="h-16 w-16 rounded-full object-cover border border-border shrink-0" />
             )}
-            <div className="min-w-0 flex-1">
-              <div className="grid grid-cols-3 gap-3">
+            <div className="min-w-0 flex-1 w-full">
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 <Stat label="Seguidores" value={fmtNum(s.followers)} />
                 <Stat label="Seguindo" value={fmtNum(s.following)} />
                 <Stat label="Posts" value={fmtNum(s.posts)} />
@@ -1008,7 +1023,7 @@ export function SummaryCard({
                         referrerPolicy="no-referrer"
                         alt=""
                         loading="lazy"
-                        className="h-44 w-full object-cover transition-transform group-hover:scale-[1.02]"
+                        className="h-36 sm:h-44 w-full object-cover transition-transform group-hover:scale-[1.02]"
                         onError={(e) => { e.currentTarget.parentElement?.classList.add("hidden"); }}
                       />
                       <span className="absolute inset-0 grid place-items-center bg-foreground/0 transition-colors group-hover:bg-foreground/30">
