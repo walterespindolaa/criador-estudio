@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Check, Sparkles, ArrowLeft, Shield, UserCircle, Gem } from "lucide-react";
+import { Check, Sparkles, ArrowLeft, Shield, UserCircle, Gem, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useProfile } from "@/hooks/useProfile";
@@ -9,7 +9,7 @@ import { useManageSubscription } from "@/hooks/useManageSubscription";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { PLANS, PLAN_VALUE, type PlanId } from "@/lib/plans";
+import { PLANS, PLAN_VALUE, tierRank, type PlanId, type Tier } from "@/lib/plans";
 import { PlanComparison } from "@/components/shared/PlanComparison";
 import { OrganicBlobs } from "@/components/brand/OrganicBlobs";
 import { track, newEventId } from "@/lib/metaPixel";
@@ -27,6 +27,14 @@ export default function Assinar() {
   const [codeError, setCodeError] = useState(false);
 
   const isExpired = status === "trial_expired" || status === "blocked";
+
+  // ONDE A PESSOA ESTÁ HOJE. Sem isto a página é um cardápio pra estranho: ela
+  // mostrava "Assinar cria Pro" pra quem JÁ É Pro. Uma página de upgrade que não
+  // sabe o seu plano não consegue te convidar pra lugar nenhum.
+  const planoAtual: Tier | null =
+    profile?.subscription_status === "active" && profile?.plan
+      ? (profile.plan as Tier)
+      : null;
 
   // Self-subscribe: conta PF criada por uma gestora via fluxo "Assinar pra mim".
   // user_metadata.self_subscribe_plan + self_subscribe_partner_code são gravados
@@ -126,7 +134,7 @@ export default function Assinar() {
   };
 
   return (
-    <div className="min-h-screen app-canvas flex flex-col items-center px-4 py-10 sm:py-14">
+    <div className="min-h-screen flex flex-col items-center px-4 py-10 sm:py-14 bg-[#F4F2EE] dark:bg-background">
       {!isExpired && (
         <button
           onClick={() => navigate("/app")}
@@ -189,7 +197,10 @@ export default function Assinar() {
         </div>
       )}
 
-      <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* pt-4 no grid: o selo "Mais escolhido" vive em -top-3 e estava sendo
+          COMEÇADO fora do container — o card cortava a metade de cima dele.
+          (E eu tinha piorado pondo overflow-hidden no card.) */}
+      <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-5 pt-4 items-start">
         {PLANS.map((plan) => {
           const isLoading = loadingPlan === plan.id;
           // Qualquer checkout em andamento trava todos os botões (evita 2 sessões Stripe).
@@ -197,19 +208,30 @@ export default function Assinar() {
           // Veio de uma trava ("Liberar por R$ X") → destaca o plano que ela foi buscar.
           const veioPor = searchParams.get("plano") === plan.id;
           const destaque = veioPor || (plan.highlighted && !searchParams.get("plano"));
+          const atual = planoAtual === plan.id;
+          const abaixo = planoAtual ? tierRank(plan.id) < tierRank(planoAtual) : false;
           return (
             <div
               key={plan.id}
               className={cn(
-                "relative overflow-hidden rounded-3xl border p-7 flex flex-col transition-shadow",
-                destaque
-                  ? "border-primary bg-card ring-2 ring-primary/20 shadow-warm-lg"
-                  : "border-border bg-card shadow-warm hover:shadow-warm-md",
+                "relative rounded-3xl border p-7 flex flex-col transition-all",
+                atual
+                  ? "border-emerald-600/40 bg-emerald-600/[0.04]"
+                  : destaque
+                    ? "border-primary bg-card ring-2 ring-primary/15 shadow-warm-lg md:-mt-2 md:pb-9"
+                    : "border-border bg-card shadow-warm hover:shadow-warm-md hover:-translate-y-0.5",
+                abaixo && "opacity-60",
               )}
             >
-              {destaque && (
+              {atual ? (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="inline-flex items-center gap-1 bg-primary text-primary-foreground rounded-full px-3 py-1 text-[11px] font-body font-semibold shadow-sm whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1 bg-emerald-600 text-white rounded-full px-3 py-1 text-[11px] font-body font-bold shadow-sm whitespace-nowrap">
+                    <Check className="h-3 w-3" /> Seu plano hoje
+                  </span>
+                </div>
+              ) : destaque && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <span className="inline-flex items-center gap-1 bg-primary text-primary-foreground rounded-full px-3 py-1 text-[11px] font-body font-bold shadow-sm whitespace-nowrap">
                     <Sparkles className="h-3 w-3" />
                     {veioPor ? "É este que você quer" : "Mais escolhido"}
                   </span>
@@ -254,17 +276,41 @@ export default function Assinar() {
               </ul>
 
               <Button
-                variant={destaque ? "hero" : "outline"}
+                variant={atual ? "outline" : destaque ? "hero" : "outline"}
                 size="lg"
-                className="w-full text-base"
+                className={cn("w-full text-base", atual && "pointer-events-none opacity-70")}
                 onClick={() => handleSubscribe(plan.id)}
-                disabled={anyLoading}
+                disabled={anyLoading || atual}
               >
-                {isLoading ? "Redirecionando..." : `Assinar ${plan.name}`}
+                {/* O texto do botão muda com ONDE a pessoa está. "Assinar cria Pro"
+                    pra quem já é Pro é ruído; "Subir pro Studio" é um convite. */}
+                {atual
+                  ? "Você já está aqui"
+                  : isLoading
+                    ? "Redirecionando..."
+                    : planoAtual && !abaixo
+                      ? `Subir pro ${plan.name.replace("cria ", "")}`
+                      : abaixo
+                        ? `Voltar pro ${plan.name.replace("cria ", "")}`
+                        : `Assinar ${plan.name}`}
               </Button>
             </div>
           );
         })}
+      </div>
+
+      {/* ── RISCO ZERO ───────────────────────────────────────────────────────
+          A objeção real de quem está com o dedo no botão não é "quanto custa",
+          é "e se eu não usar?". Uma página de upgrade que não responde isso
+          deixa a pessoa fechar a aba e adiar pra sempre. */}
+      <div className="w-full max-w-3xl mt-8 rounded-3xl bg-emerald-700 px-6 py-6 text-center text-white">
+        <p className="inline-flex items-center gap-2 font-display text-lg font-extrabold">
+          <ShieldCheck className="h-5 w-5" /> Cancelar leva 2 cliques
+        </p>
+        <p className="text-[13.5px] font-body text-white/85 mt-1.5 max-w-xl mx-auto leading-relaxed">
+          Sem ligação, sem formulário, sem falar com ninguém — dentro do próprio app.
+          Se em um mês o cria não te economizar tempo, você sai e não paga o mês seguinte.
+        </p>
       </div>
 
       <PlanComparison className="mt-12" />
@@ -320,9 +366,18 @@ export default function Assinar() {
         </div>
       )}
 
-      <p className="text-center text-xs text-muted-foreground font-body mt-6">
-        Pagamento seguro · Cancele quando quiser
-      </p>
+      {/* O FECHO. A última coisa que ela lê antes de decidir não pode ser
+          "Pagamento seguro" — isso é rodapé de e-commerce. Tem que ser o motivo. */}
+      <div className="w-full max-w-2xl mt-10 text-center">
+        <p className="text-[15px] font-body text-foreground leading-relaxed">
+          O que trava a maioria não é falta de ideia — é o domingo à noite olhando pro
+          calendário vazio, o post pela metade, a legenda que não sai.
+          <span className="font-display font-bold"> O cria existe pra isso não acontecer de novo.</span>
+        </p>
+        <p className="text-xs text-muted-foreground font-body mt-4">
+          Pagamento seguro via Stripe · Troca de plano na hora · Sem fidelidade
+        </p>
+      </div>
     </div>
   );
 }
