@@ -284,7 +284,7 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
           <div className="min-w-0 flex-1">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 text-primary px-2.5 py-1 mb-2">
               <TrendingUp className="h-3.5 w-3.5" />
-              <span className="text-[10px] font-body font-bold uppercase tracking-wider">HUB CRIA</span>
+              <span className="text-[10px] font-body font-bold uppercase tracking-wider">Cria Radar</span>
             </span>
             <h2 className="font-display text-xl font-extrabold text-foreground tracking-tight">
               Chegue na pauta com inteligência, não com achismo

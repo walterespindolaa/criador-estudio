@@ -19,7 +19,7 @@ const initial = (n?: string | null) => (n ? n.trim().charAt(0).toUpperCase() : "
 const DIAS_FRIO = 21;
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   O DASHBOARD DO HUB CRIA
+   O DASHBOARD DO CRIA RADAR
 
    Esta página era uma LISTA DE CLIENTES. Ela não fazia nada que a tela de
    Clientes já não fizesse — era um menu pra chegar noutro lugar.
@@ -89,7 +89,7 @@ export default function HubCria() {
   if (!gateLoading && !allowed) {
     return (
       <div className="py-20 text-center">
-        <p className="text-sm font-body text-muted-foreground">Você não tem acesso ao HUB CRIA.</p>
+        <p className="text-sm font-body text-muted-foreground">Você não tem acesso ao Cria Radar.</p>
         <Button variant="outline" className="mt-4" onClick={() => navigate("/socialmidia/clientes")}>Ir para Clientes</Button>
       </div>
     );
@@ -107,7 +107,7 @@ export default function HubCria() {
           <div className="min-w-0 flex-1">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 text-primary px-3 py-1 mb-2.5">
               <Radar className="h-3.5 w-3.5" />
-              <span className="text-[10px] font-body font-bold uppercase tracking-wider">HUB CRIA</span>
+              <span className="text-[10px] font-body font-bold uppercase tracking-wider">Cria Radar</span>
             </span>
             <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
               Onde você precisa agir hoje

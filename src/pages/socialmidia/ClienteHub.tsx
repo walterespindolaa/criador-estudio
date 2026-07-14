@@ -37,7 +37,7 @@ import { Textarea } from "@/components/ui/textarea";
 // AS ABAS DO CLIENTE — cada uma com a cor do MÓDULO a que ela pertence.
 //
 // A ficha do cliente é onde os módulos do CRIA se encontram: Posts é o Cria Post,
-// Financeiro é o Cria Caixa, Pesquisa é o HUB CRIA. Só que nada dizia isso — as
+// Financeiro é o Cria Caixa, Pesquisa é o Cria Radar. Só que nada dizia isso — as
 // abas eram todas cinzas, e a pessoa não percebia que estava usando um produto
 // pago dentro da ficha. A cor faz o módulo aparecer e lembra do valor que ele
 // está entregando ali.
@@ -47,13 +47,13 @@ type TabDef = { key: string; label: string; hub?: boolean; modulo?: CriaColor; m
 const TABS: TabDef[] = [
   { key: "visao-geral", label: "Visão geral" },
   { key: "brandbook", label: "Brandbook", modulo: "rosa", moduloNome: "Cria Gestão" },
-  { key: "ideias", label: "Ideias", modulo: "lilas", moduloNome: "HUB CRIA" },
+  { key: "ideias", label: "Ideias", modulo: "lilas", moduloNome: "Cria Radar" },
   { key: "posts", label: "Posts", modulo: "laranja", moduloNome: "Cria Post" },
   { key: "cronograma", label: "Cronograma", modulo: "laranja", moduloNome: "Cria Post" },
   { key: "relatorio", label: "Relatório", modulo: "laranja", moduloNome: "Cria Post" },
   { key: "instagram", label: "Instagram" },
   { key: "financeiro", label: "Financeiro", modulo: "azul", moduloNome: "Cria Caixa" },
-  { key: "pesquisa", label: "Pesquisa", hub: true, modulo: "lilas", moduloNome: "HUB CRIA" },
+  { key: "pesquisa", label: "Pesquisa", hub: true, modulo: "lilas", moduloNome: "Cria Radar" },
   { key: "portal", label: "Portal", modulo: "laranja", moduloNome: "Cria Post" },
 ];
 const OPERACIONAIS = new Set(["posts", "cronograma", "relatorio", "instagram"]);
@@ -201,7 +201,7 @@ export default function ClienteHub() {
               style={on ? { borderBottomColor: hex ?? "hsl(var(--primary))", color: hex ?? "hsl(var(--primary))" } : undefined}
             >
               {/* O pontinho na cor do módulo: laranja = Cria Post, azul = Cria Caixa,
-                  rosa = Cria Gestão, lilás = HUB CRIA. A pessoa aprende a cor uma
+                  rosa = Cria Gestão, lilás = Cria Radar. A pessoa aprende a cor uma
                   vez e passa a ver o produto dentro da ficha do cliente. */}
               {hex && (
                 <span

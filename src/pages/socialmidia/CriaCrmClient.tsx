@@ -506,7 +506,7 @@ function ClientWorkspace() {
             <div className="rounded-2xl border border-primary/20 bg-primary/[0.03] p-4 space-y-3">
               <div className="flex items-center gap-2 flex-wrap">
                 <Target className="h-4 w-4 text-primary" />
-                <p className="text-sm font-display font-bold text-foreground">Análises do HUB Criativo</p>
+                <p className="text-sm font-display font-bold text-foreground">Análises do Cria Radar</p>
                 <span className="text-[11px] font-body text-muted-foreground">({hubDone.length})</span>
                 <Button variant="outline" size="sm" className="ml-auto h-8 text-xs" onClick={() => navigate(`/socialmidia/clientes/${id}/criativo`)}>
                   <ArrowRight className="h-3.5 w-3.5 mr-1" /> Nova análise no Criativo

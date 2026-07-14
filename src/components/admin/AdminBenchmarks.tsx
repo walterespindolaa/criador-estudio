@@ -8,7 +8,7 @@ import { formatBRL } from "@/lib/money";
    BENCHMARK DAS IAs
 
    Você paga por cada IA que roda: o gateway (legendas, roteiros, ideias), o
-   Apify (HUB CRIA) e o Higgsfield (geração de imagem). Até agora esses custos
+   Apify (Cria Radar) e o Higgsfield (geração de imagem). Até agora esses custos
    eram invisíveis — dava pra descobrir que estava caro só olhando a fatura.
 
    Esta tela responde três perguntas, que são as que decidem upgrade e preço:
@@ -59,7 +59,7 @@ export function AdminBenchmarks() {
     },
   });
 
-  // ── HUB CRIA (Apify): custo REAL, que agora vem do run ──
+  // ── Cria Radar (Apify): custo REAL, que agora vem do run ──
   const hub = useQuery({
     queryKey: ["bench-hub", dias],
     queryFn: async () => {
@@ -141,7 +141,7 @@ export function AdminBenchmarks() {
         />
         <Card
           icon={Search}
-          titulo="HUB CRIA (análises)"
+          titulo="Cria Radar (análises)"
           valor={String(hub.data?.total ?? 0)}
           sub={`${contasHub} contas · ${taxaErro}% falharam`}
           alerta={taxaErro > 15}
@@ -154,7 +154,7 @@ export function AdminBenchmarks() {
         />
         <Card
           icon={DollarSign}
-          titulo="Custo do HUB / mês"
+          titulo="Custo do Radar / mês"
           valor={formatBRL(custoTotalMes * USD_BRL)}
           sub={`US$ ${custoHubMes.toFixed(2)} de uso + US$ 49 fixos do Apify`}
           alerta={pctCusto > 50}
@@ -170,7 +170,7 @@ export function AdminBenchmarks() {
             </span>
             <div className="min-w-0">
               <p className="font-display font-bold text-foreground">
-                O uso do HUB come <strong>{pctCusto}%</strong> do que ele fatura
+                O uso do Radar come <strong>{pctCusto}%</strong> do que ele fatura
               </p>
               <p className="text-[13px] font-body text-muted-foreground mt-1 leading-relaxed">
                 {pctCusto > 50

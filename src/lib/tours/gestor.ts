@@ -116,7 +116,7 @@ export const TOURS_GESTOR: TourConfig[] = [
   {
     id: "gestor-hubcria",
     route: "/socialmidia/hubcria",
-    title: "HUB CRIA",
+    title: "Cria Radar",
     valueProp:
       "Análise de concorrentes por cliente + ideias sugeridas pro nicho dele. Você chega na reunião de pauta com inteligência, não com achismo.",
     benefits: [
