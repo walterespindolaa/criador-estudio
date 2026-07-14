@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, ExternalLink, Link2, Loader2, Plus, Settings2, Wallet, Send, Check, Pencil } from "lucide-react";
+import { ArrowLeft, ExternalLink, Link2, Loader2, Plus, Settings2, Wallet, Send, Check, Pencil, LogIn } from "lucide-react";
 import { toast } from "sonner";
 import { useCrmClient, useUpdateCrmClient } from "@/hooks/useCrm";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { useExternalClients } from "@/hooks/useCriaPost";
 import {
   useFinRecords, useCreateFinRecord, useUpdateFinRecord,
@@ -87,6 +88,7 @@ export default function ClienteHub() {
   const { allowed: hasCaixa } = useHasModule("financeiro");
   const { allowed: hasPost } = useHasModule("aprovapost_externo");
   const { data: client, isLoading } = useCrmClient(id);
+  const { setActiveAccount } = useActiveAccount();
   // A aba Pesquisa (Apify) só aparece pra quem tem o HUB liberado, se não tem,
   // a aba nem existe (não adianta mostrar porta trancada).
   const visibleTabs = useMemo(
@@ -167,6 +169,27 @@ export default function ClienteHub() {
                 : <span className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-body">Cria Post não ativado</span>}
               {pendCount > 0 && <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-body font-semibold">{pendCount} pendente{pendCount > 1 ? "s" : ""}</span>}
             </div>
+          </div>
+          <div className="flex gap-2 shrink-0 flex-wrap">
+            {/* ENTRAR NO CRIA DO CLIENTE.
+                O caminho existia (é o seletor de contas lá em cima), mas de
+                DENTRO do cliente não havia porta nenhuma: ela estava olhando a
+                ficha dele e, pra abrir o quadro dele, tinha que sair, achar o
+                seletor e escolher o nome na lista. O atalho tem que estar onde
+                a pessoa está. */}
+            {client?.cria_owner_id && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setActiveAccount(client.cria_owner_id!);
+                  navigate("/app");
+                  toast.success(`Você está no Cria de ${client.name}.`);
+                }}
+              >
+                <LogIn className="h-4 w-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Entrar no Cria dele</span>
+              </Button>
+            )}
           </div>
           {extClient && (
             <div className="flex gap-2 shrink-0 flex-wrap">
