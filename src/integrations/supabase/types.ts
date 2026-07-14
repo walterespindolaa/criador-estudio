@@ -1938,6 +1938,66 @@ export type Database = {
           },
         ]
       }
+      fin_records_backup_100x: {
+        Row: {
+          amount: number | null
+          category: string | null
+          context: string | null
+          created_at: string | null
+          crm_client_id: string | null
+          date: string | null
+          description: string | null
+          id: string | null
+          manager_id: string | null
+          payment_method: string | null
+          recurring: boolean | null
+          recurring_id: string | null
+          status: string | null
+          subcategory: string | null
+          transfer_group: string | null
+          type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount?: number | null
+          category?: string | null
+          context?: string | null
+          created_at?: string | null
+          crm_client_id?: string | null
+          date?: string | null
+          description?: string | null
+          id?: string | null
+          manager_id?: string | null
+          payment_method?: string | null
+          recurring?: boolean | null
+          recurring_id?: string | null
+          status?: string | null
+          subcategory?: string | null
+          transfer_group?: string | null
+          type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number | null
+          category?: string | null
+          context?: string | null
+          created_at?: string | null
+          crm_client_id?: string | null
+          date?: string | null
+          description?: string | null
+          id?: string | null
+          manager_id?: string | null
+          payment_method?: string | null
+          recurring?: boolean | null
+          recurring_id?: string | null
+          status?: string | null
+          subcategory?: string | null
+          transfer_group?: string | null
+          type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       fin_recurring: {
         Row: {
           active: boolean
@@ -2164,6 +2224,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      hub_credits: {
+        Row: {
+          extra: number
+          manager_id: string
+          month_start: string
+          used: number
+        }
+        Insert: {
+          extra?: number
+          manager_id: string
+          month_start: string
+          used?: number
+        }
+        Update: {
+          extra?: number
+          manager_id?: string
+          month_start?: string
+          used?: number
+        }
+        Relationships: []
       }
       ideas: {
         Row: {
@@ -4422,6 +4503,18 @@ export type Database = {
         Args: { _max: number; _user: string; _window: string }
         Returns: number
       }
+      bump_hub_credits: {
+        Args: { _cost: number; _manager: string }
+        Returns: number
+      }
+      can_client: {
+        Args: { _client: string; _module?: string; _owner: string }
+        Returns: boolean
+      }
+      can_client_ext: {
+        Args: { _external: string; _owner: string }
+        Returns: boolean
+      }
       check_and_increment_rate_limit: {
         Args: {
           _limit: number
@@ -4563,6 +4656,13 @@ export type Database = {
       get_user_details: { Args: { _user_id: string }; Returns: Json }
       has_access: { Args: never; Returns: boolean }
       has_module: { Args: { _code: string; _user?: string }; Returns: boolean }
+      hub_credits_status: {
+        Args: { _manager: string }
+        Returns: {
+          quota: number
+          used: number
+        }[]
+      }
       increment_bio_link_click: {
         Args: { link_id: string }
         Returns: undefined
