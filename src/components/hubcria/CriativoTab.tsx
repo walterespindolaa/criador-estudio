@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Loader2, Sparkles, Check, X, Trash2, Instagram, Heart, MessageCircle, Play, CalendarPlus,
   LayoutGrid, FileText, CircleDashed, User, AtSign, Hash, Megaphone, TrendingUp, Plus, ChevronDown,
@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import {
   useScrapes, useCreativeIdeas, useRunScrape, useUpdateIdeaStatus, useDeleteIdea, useDeleteScrape, useGeneratePlanFromIdeas,
   useHubCredits, CREDITOS_POR_TIPO,
+  useCompetitors, useAddCompetitor, useDeleteCompetitor, diasSemLeitura,
   type ScrapeType, type CreativeIdea,
 } from "@/hooks/useHubCria";
 import { OrganicBlobs } from "@/components/brand/OrganicBlobs";
@@ -70,6 +71,58 @@ const STATUS_META: Record<CreativeIdea["status"], { label: string; cls: string }
   descartada: { label: "Descartada", cls: "bg-destructive/10 text-destructive" },
 };
 const STATUS_FILTERS = ["todas", "novo", "usar", "usada", "descartada"] as const;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   OS FILTROS DO HISTÓRICO
+
+   Por INTENÇÃO, não pelo nome técnico do scraper. "transcription" e "ads" não
+   dizem nada pra quem usa; "roteiros" e "mercado" dizem.
+
+   E o filtro "virou post" existe por um motivo comercial: é o que a social mídia
+   abre pra mostrar pro cliente, na renovação do contrato, que a pesquisa que ela
+   cobra virou entrega.
+   ═══════════════════════════════════════════════════════════════════════════ */
+type FiltroHist = "tudo" | "conteudo" | "roteiro" | "mercado" | "virou";
+
+const FILTROS: { key: FiltroHist; label: string }[] = [
+  { key: "tudo", label: "Tudo" },
+  { key: "conteudo", label: "Conteúdo" },
+  { key: "roteiro", label: "Roteiros" },
+  { key: "mercado", label: "Mercado" },
+  { key: "virou", label: "Virou post" },
+];
+
+const GRUPO_DO_TIPO: Record<string, Exclude<FiltroHist, "tudo" | "virou">> = {
+  posts: "conteudo", reels: "conteudo", profile: "conteudo",
+  transcription: "roteiro",
+  ads: "mercado", comments: "mercado", hashtag: "mercado", mentions: "mercado",
+};
+
+function casaFiltro(
+  s: { id: string; scrape_type: string },
+  f: FiltroHist,
+  porScrape: Record<string, CreativeIdea[]>,
+): boolean {
+  if (f === "tudo") return true;
+  if (f === "virou") return (porScrape[s.id] || []).some((i) => i.status === "usada");
+  return GRUPO_DO_TIPO[s.scrape_type] === f;
+}
+
+/** Cor da faixa lateral: a pessoa aprende a cor e reconhece o tipo sem ler. */
+const COR_DO_TIPO: Record<string, string> = {
+  posts: CRIA_HEX.laranja, reels: CRIA_HEX.laranja, profile: "#D9D5CC",
+  transcription: CRIA_HEX.lilas,
+  ads: CRIA_HEX.verde, comments: CRIA_HEX.azul, hashtag: CRIA_HEX.azul, mentions: CRIA_HEX.azul,
+};
+
+function haQuanto(iso: string): string {
+  const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  if (d <= 0) return "hoje";
+  if (d === 1) return "ontem";
+  if (d < 30) return `há ${d} dias`;
+  const m = Math.floor(d / 30);
+  return m === 1 ? "há 1 mês" : `há ${m} meses`;
+}
 
 export function CriativoTab({ clientId }: { clientId?: string; clientName?: string }) {
   const [selected, setSelected] = useState<Record<string, boolean>>({ posts: true });
@@ -151,7 +204,23 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
     }
   };
 
-  const doneScrapes = useMemo(() => scrapes.filter((s) => s.status === "done" && s.result_summary).slice(0, 8), [scrapes]);
+  // O RADAR: os concorrentes salvos deste cliente.
+  const { data: competidores = [] } = useCompetitors(clientId);
+  const addComp = useAddCompetitor();
+  const delComp = useDeleteCompetitor();
+  const [compSel, setCompSel] = useState<string | null>(null);
+  const [novoComp, setNovoComp] = useState("");
+  const [addOpen, setAddOpen] = useState(false);
+
+  // Escolheu um concorrente do radar → o @ vem preenchido dele.
+  const compAtivo = competidores.find((c) => c.id === compSel) ?? null;
+  useEffect(() => {
+    if (compAtivo) setHandle("@" + compAtivo.handle);
+  }, [compAtivo?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [filtroHist, setFiltroHist] = useState<FiltroHist>("tudo");
+
+  const doneScrapes = useMemo(() => scrapes.filter((s) => s.status === "done" && s.result_summary), [scrapes]);
   const matchesFilter = (i: CreativeIdea) => filter === "todas" || i.status === filter;
   // Agrupa as ideias por análise (scrape_id), cada pesquisa mostra as SUAS ideias, não um banco global.
   const ideasByScrape = useMemo(() => {
@@ -163,6 +232,11 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
     return m;
   }, [ideas]);
   const orphanIdeas = useMemo(() => (ideasByScrape["__orphan__"] || []).filter(matchesFilter), [ideasByScrape, filter]);
+
+  const historico = useMemo(
+    () => doneScrapes.filter((s) => casaFiltro(s, filtroHist, ideasByScrape)),
+    [doneScrapes, filtroHist, ideasByScrape],
+  );
 
   const toggle = (k: string) => setSelected((s) => ({ ...s, [k]: !s[k] }));
 
@@ -186,7 +260,15 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
     for (const it of selectedItems) {
       const inp = inputFor(it);
       setRunning(it.label);
-      try { await run.mutateAsync({ type: it.key, input: inp.trim(), crm_client_id: clientId, limit, since: since || undefined }); } catch { /* toast já no hook */ }
+      try {
+        await run.mutateAsync({
+          type: it.key, input: inp.trim(), crm_client_id: clientId,
+          // Amarra a leitura ao concorrente do radar — é o que permite o
+          // "sem leitura há 31 dias" depois.
+          competitor_id: compAtivo && it.inputKind === "handle" ? compAtivo.id : null,
+          limit, since: since || undefined,
+        });
+      } catch { /* toast já no hook */ }
     }
     setRunning(null);
   };
@@ -254,6 +336,129 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
             <p className="text-[12px] font-body text-muted-foreground leading-tight">
               Estamos lendo o perfil de verdade — isso leva de 20 segundos a 2 minutos. Pode deixar a aba aberta.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ O RADAR ═══
+          Os concorrentes são um ATIVO da ficha do cliente, como o brandbook —
+          não um "passo 1" de um formulário. Antes a pessoa redigitava o @ toda
+          vez e o sistema não fazia ideia de que aquele perfil importava. É o
+          radar que permite a frase que a traz de volta sozinha: "sem leitura
+          há 31 dias". */}
+      {clientId && (
+        <div>
+          <div className="flex items-center justify-between gap-3 mb-2.5">
+            <p className="text-[11px] font-body font-bold uppercase tracking-wider text-muted-foreground">
+              Concorrentes deste cliente
+            </p>
+            {competidores.length > 0 && !addOpen && (
+              <button onClick={() => setAddOpen(true)} className="text-[12px] font-body font-bold text-primary hover:underline">
+                + adicionar
+              </button>
+            )}
+          </div>
+
+          {addOpen && (
+            <div className="flex gap-2 mb-3">
+              <Input
+                autoFocus
+                value={novoComp}
+                onChange={(e) => setNovoComp(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && novoComp.trim()) {
+                    addComp.mutate({ handle: novoComp, crm_client_id: clientId },
+                      { onSuccess: () => { setNovoComp(""); setAddOpen(false); } });
+                  }
+                  if (e.key === "Escape") { setNovoComp(""); setAddOpen(false); }
+                }}
+                placeholder="@concorrente"
+                className="h-9 max-w-xs"
+              />
+              <Button
+                size="sm" className="h-9"
+                disabled={!novoComp.trim() || addComp.isPending}
+                onClick={() => addComp.mutate({ handle: novoComp, crm_client_id: clientId },
+                  { onSuccess: () => { setNovoComp(""); setAddOpen(false); } })}
+              >
+                {addComp.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Adicionar"}
+              </Button>
+              <Button size="sm" variant="ghost" className="h-9" onClick={() => { setNovoComp(""); setAddOpen(false); }}>
+                Cancelar
+              </Button>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            {competidores.map((c) => {
+              const dias = diasSemLeitura(c);
+              const on = compSel === c.id;
+              const frio = dias != null && dias >= 21;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => setCompSel(on ? null : c.id)}
+                  className={cn(
+                    "group relative text-left rounded-2xl border-2 bg-card p-3.5 transition-all hover:-translate-y-0.5",
+                    on ? "shadow-sm" : "border-border hover:border-primary/40",
+                  )}
+                  style={on ? { borderColor: CRIA_HEX.lilas, background: `${CRIA_HEX.lilas}0a` } : undefined}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span
+                      className="grid h-9 w-9 shrink-0 place-items-center rounded-full font-display font-extrabold text-[13px] text-white"
+                      style={{ background: `linear-gradient(135deg, ${CRIA_HEX.lilas}, #a6b4f6)` }}
+                    >
+                      {c.handle.charAt(0).toUpperCase()}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13px] font-display font-bold text-foreground truncate">@{c.handle}</span>
+                      <span className="block text-[11.5px] font-body text-muted-foreground truncate">
+                        {dias == null
+                          ? "Nunca foi lido"
+                          : frio
+                            ? `Sem leitura há ${dias} dias`
+                            : `Lido ${haQuanto(c.last_read_at!)}`}
+                      </span>
+                    </span>
+                  </div>
+
+                  {/* O alerta que traz a pessoa de volta sem você mandar e-mail. */}
+                  {(frio || dias == null) && (
+                    <span className="inline-block mt-2 text-[10px] font-body font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700">
+                      {dias == null ? "esperando a 1ª leitura" : "esfriando"}
+                    </span>
+                  )}
+
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (await confirmar({ titulo: `Tirar @${c.handle} do radar?`, descricao: "As leituras que você já fez dele continuam no histórico." , acao: "Tirar do radar" })) delComp.mutate(c.id);
+                    }}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    className="absolute right-2 top-2 rounded-lg p-1 text-muted-foreground/0 group-hover:text-muted-foreground hover:!text-destructive transition-colors"
+                    aria-label="Tirar do radar"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </span>
+                </button>
+              );
+            })}
+
+            {competidores.length === 0 && !addOpen && (
+              <button
+                onClick={() => setAddOpen(true)}
+                className="rounded-2xl border-2 border-dashed border-border bg-card p-5 text-center transition-colors hover:border-primary/40"
+              >
+                <Plus className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
+                <span className="block text-[13px] font-display font-bold text-foreground">Adicionar o 1º concorrente</span>
+                <span className="block text-[11.5px] font-body text-muted-foreground mt-0.5">
+                  Ele fica salvo neste cliente. Você não digita o @ de novo.
+                </span>
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -371,70 +576,97 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
         )}
       </div>
 
-      {/* Resultados */}
-      {doneScrapes.length > 0 && (
-        <div className="space-y-3">
-          <p className="text-sm font-display font-bold text-foreground">Análises</p>
-          {doneScrapes.map((s, i) => (
-            <SummaryCard
-              key={s.id}
-              summary={s.result_summary as Record<string, unknown>}
-              handle={s.input_handle}
-              defaultOpen={i === 0}
-              onDelete={() => delScrape.mutate(s.id)}
-              ideas={(ideasByScrape[s.id] || []).filter(matchesFilter)}
-              onIdeaStatus={(id, status) => upd.mutate({ id, status })}
-              onIdeaDelete={(id) => del.mutate(id)}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Ideias, hub de ação. As ideias em si aparecem dentro de cada análise acima. */}
+      {/* ═══ O QUE JÁ FOI LIDO ═══
+          Antes existiam duas seções concorrendo: "Análises" e "Ideias de
+          conteúdo", com as ideias repetidas nas duas. Agora é UMA linha do tempo:
+          cada leitura traz a sua conclusão, e o destino das pautas que ela gerou.
+          O filtro é por INTENÇÃO (conteúdo, roteiro, mercado), não pelo nome
+          técnico do scraper — e tem o "virou post", que é o que ela mostra pro
+          cliente na hora de renovar o contrato. */}
       <div>
-        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-          <Sparkles className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-display font-bold text-foreground">Ideias de conteúdo</h3>
-          <div className="flex items-center gap-2 ml-auto flex-wrap">
-            {clientId && extClient && (
-              <Button size="sm" onClick={() => genPlan.mutate({ externalClientId: (extClient as { id: string }).id, ideas })} disabled={genPlan.isPending || usarCount === 0} title={usarCount === 0 ? "Marque ideias como 'Usar' primeiro" : ""}>
-                {genPlan.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <CalendarPlus className="h-3.5 w-3.5 mr-1.5" />}
-                Criar posts na aba Posts ({usarCount})
-              </Button>
-            )}
-            {ideas.length > 0 && (
-              <div className="flex gap-1">
-                {STATUS_FILTERS.map((f) => (
-                  <button key={f} onClick={() => setFilter(f)} className={cn("px-2.5 py-1 rounded-full text-xs font-body border capitalize transition-colors", filter === f ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground")}>{f}</button>
-                ))}
-              </div>
-            )}
+        <div className="flex items-end justify-between gap-3 flex-wrap mb-3">
+          <div>
+            <h3 className="text-sm font-display font-extrabold text-foreground">
+              {clientId ? "O que já foi lido deste cliente" : "Suas pesquisas avulsas"}
+            </h3>
+            <p className="text-[12px] font-body text-muted-foreground">
+              Cada leitura, o que ela concluiu e o que virou.
+            </p>
           </div>
-        </div>
-        {clientId && !extClient && ideas.length > 0 && (
-          <p className="text-[11px] font-body text-muted-foreground mb-2">Ative o Cria Post neste cliente (aba Posts) pra transformar as ideias em posts.</p>
-        )}
 
-        {ideas.length === 0 ? (
-          <div className="border border-dashed border-border rounded-2xl py-12 px-6 text-center">
+          {doneScrapes.length > 0 && (
+            <div className="flex gap-1.5 flex-wrap">
+              {FILTROS.map((f) => {
+                const n = f.key === "tudo" ? doneScrapes.length : doneScrapes.filter((s) => casaFiltro(s, f.key, ideasByScrape)).length;
+                if (n === 0 && f.key !== "tudo") return null;
+                return (
+                  <button
+                    key={f.key}
+                    onClick={() => setFiltroHist(f.key)}
+                    className={cn(
+                      "rounded-full border px-3 py-1 text-[12px] font-body font-semibold transition-colors",
+                      filtroHist === f.key
+                        ? "bg-foreground text-background border-foreground"
+                        : "bg-card border-border text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {f.label} <span className="opacity-60">{n}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {historico.length === 0 ? (
+          <div className="border border-dashed border-border rounded-2xl py-14 px-6 text-center">
             <Sparkles className="h-6 w-6 text-muted-foreground/40 mx-auto mb-2" strokeWidth={1.5} />
-            <p className="text-sm font-body text-foreground font-medium">Nenhuma ideia ainda</p>
-            <p className="text-xs font-body text-muted-foreground mt-1">Rode uma análise acima pra gerar ideias.</p>
+            <p className="text-sm font-display font-bold text-foreground">
+              {doneScrapes.length === 0 ? "Nada foi lido ainda" : "Nenhuma leitura desse tipo"}
+            </p>
+            <p className="text-[13px] font-body text-muted-foreground mt-1 max-w-sm mx-auto">
+              {doneScrapes.length === 0
+                ? "Escolha um concorrente aí em cima e rode a primeira leitura. Em 2 minutos você tem pauta pronta."
+                : "Troque o filtro pra ver as outras."}
+            </p>
           </div>
         ) : (
-          <>
-            <p className="text-[12px] font-body text-muted-foreground mb-3">As ideias aparecem <strong>dentro de cada análise</strong> acima, cada pesquisa gera as suas. Marque como "Usar" e clique em "Criar posts na aba Posts".</p>
-            {orphanIdeas.length > 0 && (
-              <>
-                <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-2">Ideias sem análise vinculada</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {orphanIdeas.map((idea) => (
-                    <IdeaCard key={idea.id} idea={idea} onStatus={(id, status) => upd.mutate({ id, status })} onDelete={(id) => del.mutate(id)} />
-                  ))}
-                </div>
-              </>
-            )}
-          </>
+          <div className="space-y-3">
+            {historico.map((s, i) => (
+              <SummaryCard
+                key={s.id}
+                summary={s.result_summary as Record<string, unknown>}
+                handle={s.input_handle}
+                quando={s.created_at}
+                custo={s.cost_usd}
+                defaultOpen={i === 0}
+                onDelete={() => delScrape.mutate(s.id)}
+                ideas={ideasByScrape[s.id] || []}
+                onIdeaStatus={(id, status) => upd.mutate({ id, status })}
+                onIdeaDelete={(id) => del.mutate(id)}
+                aoCriarPosts={
+                  clientId && extClient
+                    ? () => genPlan.mutate({ externalClientId: (extClient as { id: string }).id, ideas: ideasByScrape[s.id] || [] })
+                    : undefined
+                }
+                criandoPosts={genPlan.isPending}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Ideias que existem sem análise (vieram do banco de ideias antigo). */}
+        {orphanIdeas.length > 0 && (
+          <div className="mt-5">
+            <p className="text-[11px] font-body font-bold uppercase tracking-wider text-muted-foreground mb-2">
+              Pautas sem leitura vinculada
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {orphanIdeas.map((idea) => (
+                <IdeaCard key={idea.id} idea={idea} onStatus={(id, status) => upd.mutate({ id, status })} onDelete={(id) => del.mutate(id)} />
+              ))}
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -621,7 +853,18 @@ function lerAnalise(s: Record<string, any>): string | null {
   return partes.length ? `Lendo ${total} publicações: ${partes.join(", ")}.` : null;
 }
 
-export function SummaryCard({ summary, handle, defaultOpen = false, onDelete, ideas, onIdeaStatus, onIdeaDelete }: { summary: Record<string, unknown>; handle: string; defaultOpen?: boolean; onDelete?: () => void; ideas?: CreativeIdea[]; onIdeaStatus?: (id: string, status: CreativeIdea["status"]) => void; onIdeaDelete?: (id: string) => void }) {
+export function SummaryCard({
+  summary, handle, quando, custo, defaultOpen = false, onDelete, ideas, onIdeaStatus, onIdeaDelete,
+  aoCriarPosts, criandoPosts,
+}: {
+  summary: Record<string, unknown>; handle: string;
+  quando?: string; custo?: number | null;
+  defaultOpen?: boolean; onDelete?: () => void;
+  ideas?: CreativeIdea[];
+  onIdeaStatus?: (id: string, status: CreativeIdea["status"]) => void;
+  onIdeaDelete?: (id: string) => void;
+  aoCriarPosts?: () => void; criandoPosts?: boolean;
+}) {
   const [open, setOpen] = useState(defaultOpen);
   const s = summary as Record<string, any>;
   const kind = s.kind;
@@ -633,7 +876,13 @@ export function SummaryCard({ summary, handle, defaultOpen = false, onDelete, id
   const count = typeof s.count === "number" ? s.count : (Array.isArray(s.top) ? s.top.length : null);
   const shortHandle = handle.length > 40 ? handle.replace(/^https?:\/\/(www\.)?instagram\.com\//, "").slice(0, 30) + "…" : handle;
   const leitura = lerAnalise(s);
-  const hex = CRIA_HEX.lilas;
+  const hex = COR_DO_TIPO[String(kind)] ?? CRIA_HEX.lilas;
+
+  // O DESTINO das pautas. É o número que prova que a leitura de 3 créditos virou
+  // post publicado — e é o que ela mostra pro cliente na renovação do contrato.
+  const usadas = (ideas ?? []).filter((i) => i.status === "usada").length;
+  const marcadas = (ideas ?? []).filter((i) => i.status === "usar").length;
+  const novas = (ideas ?? []).filter((i) => i.status === "novo").length;
 
   return (
     <div className="bg-card border border-border rounded-3xl overflow-hidden">
@@ -654,7 +903,7 @@ export function SummaryCard({ summary, handle, defaultOpen = false, onDelete, id
           <span className="block text-[11.5px] font-body text-muted-foreground truncate">
             @{shortHandle.replace(/^@/, "")}
             {count != null && ` · ${count} ${count === 1 ? "item lido" : "itens lidos"}`}
-            {ideas && ideas.length > 0 && ` · ${ideas.length} pautas geradas`}
+            {ideas && ideas.length > 0 && ` · ${ideas.length} pautas`}
           </span>
         </span>
         {onDelete && (
@@ -663,8 +912,41 @@ export function SummaryCard({ summary, handle, defaultOpen = false, onDelete, id
             onKeyDown={async (e) => { if (e.key === "Enter") { e.stopPropagation(); if (await confirmar({ titulo: "Excluir esta análise?", descricao: "As pautas que ela gerou continuam no banco de ideias do cliente." })) onDelete(); } }}
             className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" title="Excluir análise" aria-label="Excluir análise"><Trash2 className="h-4 w-4" /></span>
         )}
+        {quando && <span className="hidden sm:block shrink-0 text-[11px] font-body text-muted-foreground">{haQuanto(quando)}</span>}
         <ChevronDown className={cn("h-4 w-4 text-muted-foreground shrink-0 transition-transform", open && "rotate-180")} />
       </button>
+
+      {/* O DESTINO, sempre visível — mesmo com o card fechado. Sem isso, a pessoa
+          não sabe quais leituras ela já aproveitou e quais estão paradas. */}
+      {ideas && ideas.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap border-t border-border/60 px-4 py-2">
+          {usadas > 0 && (
+            <span className="text-[11px] font-body font-bold px-2 py-0.5 rounded-full bg-emerald-500/12 text-emerald-700">
+              {usadas} no cronograma
+            </span>
+          )}
+          {marcadas > 0 && (
+            <span className="text-[11px] font-body font-bold px-2 py-0.5 rounded-full" style={{ background: `${CRIA_HEX.lilas}22`, color: "#4a5cc0" }}>
+              {marcadas} marcadas “usar”
+            </span>
+          )}
+          {novas > 0 && (
+            <span className="text-[11px] font-body px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+              {novas} {novas === 1 ? "nova · ninguém olhou" : "novas · ninguém olhou"}
+            </span>
+          )}
+          {aoCriarPosts && marcadas > 0 && (
+            <button
+              onClick={aoCriarPosts}
+              disabled={criandoPosts}
+              className="ml-auto inline-flex items-center gap-1.5 text-[12px] font-display font-bold text-primary hover:underline disabled:opacity-50"
+            >
+              {criandoPosts ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CalendarPlus className="h-3.5 w-3.5" />}
+              Criar {marcadas} {marcadas === 1 ? "post" : "posts"}
+            </button>
+          )}
+        </div>
+      )}
 
       {open && (
       <div className="border-t border-border/60 p-4 sm:p-5">

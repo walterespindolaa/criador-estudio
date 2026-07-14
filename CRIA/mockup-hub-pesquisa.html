@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup · HUB CRIA · Pesquisa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#151412; --branco:#FDFBF5; --card:#fff; --linha:#E7E3DA; --mudo:#8A857C;
+  --laranja:#CE4A1D; --azul:#2A4BDF; --rosa:#F27EB5; --amarelo:#F2C21E; --verde:#3E9152; --lilas:#7C90F0;
+  --disp:'Baloo 2',sans-serif; --corpo:'Nunito Sans',sans-serif; --r:16px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--corpo);background:#F4F2EE;color:var(--ink);line-height:1.55;padding:28px 16px 80px}
+.wrap{max-width:1120px;margin:0 auto}
+h1,h2,h3,h4{font-family:var(--disp);font-weight:800;line-height:1.15}
+.nota{font-size:.8rem;color:var(--mudo);margin:6px 0 22px}
+
+/* hero do módulo */
+.hero{position:relative;overflow:hidden;background:var(--card);border:1px solid var(--linha);border-radius:24px;padding:22px 24px;margin-bottom:16px}
+.blob{position:absolute;pointer-events:none;opacity:.5}
+.b1{width:150px;height:150px;background:var(--lilas);border-radius:38% 62% 55% 45%/48% 42% 58% 52%;top:-50px;right:60px}
+.b2{width:90px;height:90px;background:var(--amarelo);border-radius:55% 45% 40% 60%/50% 55% 45% 50%;top:30px;right:-25px;opacity:.35}
+.hero-top{position:relative;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:flex-start}
+.selo{display:inline-flex;align-items:center;gap:6px;background:rgba(124,144,240,.14);color:#4a5cc0;font-family:var(--disp);font-weight:700;font-size:.68rem;letter-spacing:.09em;text-transform:uppercase;padding:5px 11px;border-radius:999px;margin-bottom:8px}
+.hero h1{font-size:1.45rem}
+.hero p.sub{font-size:.9rem;color:var(--mudo);margin-top:4px;max-width:60ch}
+.creditos{background:var(--branco);border:1px solid var(--linha);border-radius:16px;padding:12px 14px;min-width:170px}
+.creditos .lab{font-size:.66rem;font-family:var(--disp);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mudo)}
+.creditos .n{font-family:var(--disp);font-weight:800;font-size:1.7rem;line-height:1;margin-top:2px}
+.creditos .n small{font-size:.85rem;color:var(--mudo)}
+.barra{height:6px;background:#EDEAE3;border-radius:999px;margin-top:8px;overflow:hidden}
+.barra i{display:block;height:100%;background:var(--lilas);border-radius:999px}
+
+/* radar */
+.rotulo{font-family:var(--disp);font-weight:700;font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;color:var(--mudo);margin:20px 0 10px}
+.radar{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.conc{background:var(--card);border:1.5px solid var(--linha);border-radius:18px;padding:14px;cursor:pointer;transition:.15s;position:relative}
+.conc:hover{border-color:#c9c4b8;transform:translateY(-1px)}
+.conc.on{border-color:var(--lilas);box-shadow:0 0 0 3px rgba(124,144,240,.14)}
+.conc .linha1{display:flex;align-items:center;gap:9px}
+.av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#7C90F0,#a6b4f6);color:#fff;display:grid;place-items:center;font-family:var(--disp);font-weight:800;font-size:.85rem;flex-shrink:0}
+.conc .at{font-family:var(--disp);font-weight:700;font-size:.9rem}
+.conc .seg{font-size:.74rem;color:var(--mudo)}
+.tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}
+.tag{font-size:.68rem;font-weight:700;padding:3px 8px;border-radius:999px}
+.t-lil{background:rgba(124,144,240,.14);color:#4a5cc0}
+.t-ver{background:rgba(62,145,82,.14);color:#2c6b3c}
+.t-ala{background:rgba(242,194,30,.2);color:#8a6c04}
+.t-cin{background:#F1EFE9;color:var(--mudo)}
+.novo{border-style:dashed;display:grid;place-items:center;text-align:center;color:var(--mudo);min-height:104px}
+.novo .mais{font-size:1.4rem;line-height:1}
+
+/* painel de pesquisa */
+.painel{background:var(--card);border:1px solid var(--linha);border-radius:20px;padding:20px 22px;margin-top:12px}
+.passo{font-family:var(--disp);font-weight:800;font-size:.95rem;margin-bottom:3px}
+.passo small{display:block;font-family:var(--corpo);font-weight:400;font-size:.8rem;color:var(--mudo);margin-top:1px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 4px}
+.chip{display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--linha);background:var(--card);border-radius:12px;padding:9px 13px;cursor:pointer;transition:.12s;font-size:.85rem;font-weight:600}
+.chip:hover{border-color:#c9c4b8}
+.chip.on{border-color:var(--lilas);background:rgba(124,144,240,.07);color:#3b4aa8}
+.chip .cr{font-size:.68rem;font-weight:700;background:#F1EFE9;color:var(--mudo);padding:2px 6px;border-radius:6px}
+.chip.on .cr{background:rgba(124,144,240,.18);color:#4a5cc0}
+.chip .pt{width:7px;height:7px;border-radius:50%;background:#D9D5CC}
+.chip.on .pt{background:var(--lilas)}
+
+.campos{border-top:1px dashed var(--linha);margin-top:16px;padding-top:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.campo label{display:block;font-family:var(--disp);font-weight:700;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--mudo);margin-bottom:5px}
+.campo input{width:100%;border:1.5px solid var(--linha);border-radius:12px;padding:10px 12px;font-family:var(--corpo);font-size:.9rem;background:var(--branco)}
+.campo input:focus{outline:none;border-color:var(--lilas)}
+.campo .dica{font-size:.72rem;color:var(--mudo);margin-top:4px}
+.some{display:none}
+
+.rodape{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:18px}
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--lilas);color:#fff;border:none;font-family:var(--disp);font-weight:800;font-size:.95rem;padding:12px 20px;border-radius:999px;cursor:pointer;box-shadow:0 4px 0 rgba(21,20,18,.85);transition:.18s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 0 rgba(21,20,18,.85)}
+.btn:disabled{opacity:.45;box-shadow:none;transform:none;cursor:not-allowed}
+.aviso{font-size:.8rem;color:var(--mudo)}
+
+/* histórico */
+.hist-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:26px 0 10px}
+.filtros{display:flex;gap:6px;flex-wrap:wrap}
+.f{border:1.5px solid var(--linha);background:var(--card);border-radius:999px;padding:6px 12px;font-size:.78rem;font-weight:700;cursor:pointer;color:var(--mudo)}
+.f.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.f .qt{opacity:.6;margin-left:4px;font-weight:600}
+
+.item{background:var(--card);border:1px solid var(--linha);border-radius:18px;padding:0;margin-bottom:10px;overflow:hidden;display:flex}
+.faixa{width:5px;flex-shrink:0}
+.item-in{padding:14px 16px;flex:1;min-width:0}
+.item-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.item-t{font-family:var(--disp);font-weight:800;font-size:.98rem}
+.item-m{font-size:.75rem;color:var(--mudo);white-space:nowrap}
+.quem{font-size:.78rem;color:var(--mudo);margin-top:1px}
+.leitura{background:rgba(124,144,240,.08);border-radius:12px;padding:10px 12px;font-size:.87rem;margin:10px 0;line-height:1.5}
+.leitura b{font-family:var(--disp)}
+.destino{display:flex;gap:6px;flex-wrap:wrap;border-top:1px dashed var(--linha);padding-top:10px;margin-top:4px;align-items:center}
+.destino .lb{font-size:.75rem;color:var(--mudo);margin-right:2px}
+.abrir{margin-left:auto;font-size:.8rem;font-weight:700;color:var(--lilas);cursor:pointer}
+.vazio{background:var(--card);border:1px dashed var(--linha);border-radius:18px;padding:34px;text-align:center;color:var(--mudo);font-size:.88rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="nota">Mockup interativo — clique nos concorrentes, nas análises e nos filtros. Os campos do passo 2 mudam conforme o que você escolhe.</p>
+
+  <!-- ALTERNADOR DE TELA -->
+  <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap">
+    <button class="f on" id="tab-a" onclick="tela('a')">Tela 1 · HUB CRIA (o módulo, antes do cliente)</button>
+    <button class="f" id="tab-b" onclick="tela('b')">Tela 2 · Dentro do cliente › Pesquisa</button>
+  </div>
+
+  <!-- ══════════ TELA A: O DASHBOARD DO HUB ══════════ -->
+  <div id="telaA">
+    <div class="hero">
+      <div class="blob b1"></div><div class="blob b2"></div>
+      <div class="hero-top">
+        <div>
+          <span class="selo">◎ HUB CRIA</span>
+          <h1>Onde você precisa agir hoje</h1>
+          <p class="sub">Os concorrentes dos seus clientes não avisam quando mudam de estratégia. Aqui você vê quem está esfriando e o que já foi lido e ninguém aproveitou.</p>
+        </div>
+        <div class="creditos">
+          <div class="lab">Créditos do mês</div>
+          <div class="n">32<small>/40</small></div>
+          <div class="barra"><i style="width:80%"></i></div>
+          <div style="font-size:.72rem;color:var(--mudo);margin-top:6px">+20 por R$ 24,90</div>
+        </div>
+      </div>
+    </div>
+
+    <p class="rotulo">Precisa de atenção</p>
+    <div class="radar">
+      <div class="conc" style="border-color:rgba(242,194,30,.5);background:rgba(242,194,30,.05)">
+        <div class="linha1"><span class="av" style="background:linear-gradient(135deg,#F2C21E,#f7d966);color:#5c4700">CB</span><div><div class="at">Clínica Bem Estar</div><div class="seg">3 concorrentes no radar</div></div></div>
+        <div class="tags"><span class="tag t-ala">1 esfriando há 31 dias</span></div>
+        <div class="seg" style="margin-top:8px">7 pautas geradas que ninguém abriu</div>
+      </div>
+      <div class="conc" style="border-color:rgba(206,74,29,.4);background:rgba(206,74,29,.04)">
+        <div class="linha1"><span class="av" style="background:linear-gradient(135deg,#CE4A1D,#e07a52)">MJ</span><div><div class="at">Moda Julia</div><div class="seg">nenhum concorrente cadastrado</div></div></div>
+        <div class="tags"><span class="tag" style="background:rgba(206,74,29,.14);color:#8f3313">nunca foi lido</span></div>
+        <div class="seg" style="margin-top:8px">Cadastre 1 concorrente pra começar</div>
+      </div>
+      <div class="conc">
+        <div class="linha1"><span class="av" style="background:linear-gradient(135deg,#3E9152,#6bbd80)">PZ</span><div><div class="at">Pizzaria Zeta</div><div class="seg">2 concorrentes no radar</div></div></div>
+        <div class="tags"><span class="tag t-ver">em dia</span></div>
+        <div class="seg" style="margin-top:8px">Lido há 4 dias · 3 pautas no cronograma</div>
+      </div>
+    </div>
+
+    <p class="rotulo">Pesquisa avulsa</p>
+    <div class="painel" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div style="flex:1;min-width:240px">
+        <div class="passo" style="margin:0">Espiar alguém que não é cliente
+          <small>Uma prospecção, uma referência de fora do nicho, um perfil que você quer entender. Fica guardado aqui no HUB — não entra na ficha de ninguém.</small>
+        </div>
+      </div>
+      <button class="btn" style="background:var(--ink)" onclick="tela('b')">Pesquisar um perfil →</button>
+    </div>
+
+    <p class="rotulo">O que o HUB já te deu</p>
+    <div class="radar" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+      <div class="conc" style="cursor:default"><div class="seg">Leituras este mês</div><div style="font-family:var(--disp);font-weight:800;font-size:1.6rem">8</div></div>
+      <div class="conc" style="cursor:default"><div class="seg">Pautas geradas</div><div style="font-family:var(--disp);font-weight:800;font-size:1.6rem">41</div></div>
+      <div class="conc" style="cursor:default"><div class="seg">Viraram post</div><div style="font-family:var(--disp);font-weight:800;font-size:1.6rem;color:var(--verde)">12</div></div>
+      <div class="conc" style="cursor:default"><div class="seg">Nunca abertas</div><div style="font-family:var(--disp);font-weight:800;font-size:1.6rem;color:var(--amarelo)">19</div></div>
+    </div>
+    <p style="font-size:.8rem;color:var(--mudo);margin-top:10px">19 pautas prontas paradas. Cada uma custou crédito e ninguém olhou — é aqui que o módulo deixa de se pagar.</p>
+  </div>
+
+  <!-- ══════════ TELA B: DENTRO DO CLIENTE ══════════ -->
+  <div id="telaB" class="some">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="blob b1"></div><div class="blob b2"></div>
+    <div class="hero-top">
+      <div>
+        <span class="selo">◎ HUB CRIA · Pesquisa</span>
+        <h1>O que os concorrentes da Clínica Bem Estar andam fazendo?</h1>
+        <p class="sub">Você lê o perfil de verdade — o que engaja, o roteiro do reel que bombou, os anúncios que ele <b>paga</b> pra rodar — e sai daqui com pauta pronta.</p>
+      </div>
+      <div class="creditos">
+        <div class="lab">Créditos do mês</div>
+        <div class="n">32<small>/40</small></div>
+        <div class="barra"><i style="width:80%"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OS CONCORRENTES SÃO UM ATIVO DO CLIENTE, não um "passo 1" de um wizard.
+       Eles ficam salvos na ficha, igual ao brandbook. E a pesquisa AVULSA não
+       mora aqui: ela não é de nenhum cliente, então vive no HUB (tela 1). -->
+  <p class="rotulo">Concorrentes desta cliente</p>
+  <div class="radar">
+    <div class="conc on" data-conc="drapaula.estetica" onclick="pickConc(this)">
+      <div class="linha1"><span class="av">DP</span><div><div class="at">@drapaula.estetica</div><div class="seg">18,4 mil seguidores</div></div></div>
+      <div class="tags"><span class="tag t-lil">4 leituras</span><span class="tag t-ver">roda anúncio</span></div>
+      <div class="seg" style="margin-top:8px">Lido há 2 dias</div>
+    </div>
+    <div class="conc" data-conc="harmoniza.sp" onclick="pickConc(this)">
+      <div class="linha1"><span class="av" style="background:linear-gradient(135deg,#F27EB5,#f7a8cb)">HS</span><div><div class="at">@harmoniza.sp</div><div class="seg">42,1 mil seguidores</div></div></div>
+      <div class="tags"><span class="tag t-cin">1 leitura</span><span class="tag t-ala">esfriando</span></div>
+      <div class="seg" style="margin-top:8px">Sem leitura há 31 dias</div>
+    </div>
+    <div class="conc novo" onclick="alert('Abriria o cadastro do concorrente na ficha do cliente.')">
+      <div><div class="mais">+</div>Adicionar concorrente<br><span style="font-size:.74rem">ele fica salvo nesta cliente</span></div>
+    </div>
+  </div>
+
+  <!-- A PESQUISA -->
+  <div class="painel">
+    <div class="passo">O que você quer saber sobre <span id="alvo" style="color:var(--lilas)">@drapaula.estetica</span>
+      <small>Cada escolha pede um dado diferente. O formulário abaixo se ajusta sozinho.</small>
+    </div>
+
+    <div class="chips" id="chips">
+      <div class="chip on" data-k="posts" data-cr="1" data-need="handle,qtd,data" onclick="pickAn(this)"><span class="pt"></span> O que ele posta <span class="cr">1</span></div>
+      <div class="chip" data-k="reels" data-cr="1" data-need="handle,qtd,data" onclick="pickAn(this)"><span class="pt"></span> Os reels dele <span class="cr">1</span></div>
+      <div class="chip" data-k="roteiro" data-cr="3" data-need="handle_ou_links,qtd" onclick="pickAn(this)"><span class="pt"></span> O roteiro dos reels <span class="cr">3</span></div>
+      <div class="chip" data-k="anuncios" data-cr="2" data-need="handle,qtd" onclick="pickAn(this)"><span class="pt"></span> Onde ele aposta dinheiro <span class="cr">2</span></div>
+      <div class="chip" data-k="comentarios" data-cr="1" data-need="url" onclick="pickAn(this)"><span class="pt"></span> As dúvidas do público <span class="cr">1</span></div>
+      <div class="chip" data-k="hashtag" data-cr="1" data-need="tag,qtd,data" onclick="pickAn(this)"><span class="pt"></span> O que bomba na hashtag <span class="cr">1</span></div>
+      <div class="chip" data-k="mencoes" data-cr="1" data-need="handle,qtd,data" onclick="pickAn(this)"><span class="pt"></span> Quem fala dele <span class="cr">1</span></div>
+      <div class="chip" data-k="perfil" data-cr="1" data-need="handle" onclick="pickAn(this)"><span class="pt"></span> Raio-x do perfil <span class="cr">1</span></div>
+    </div>
+
+    <div class="campos" id="campos">
+      <div class="campo" id="c-handle"><label>@ do concorrente</label><input value="@drapaula.estetica"><div class="dica">Já vem preenchido do radar.</div></div>
+      <div class="campo some" id="c-links"><label>Ou cole o link do reel</label><input placeholder="instagram.com/reel/..."><div class="dica">Com link, transcreve exatamente esse. Sem link, pega os mais recentes do @.</div></div>
+      <div class="campo some" id="c-url"><label>URL do post</label><input placeholder="instagram.com/p/..."><div class="dica">Os comentários vêm de UM post específico.</div></div>
+      <div class="campo some" id="c-tag"><label>Hashtag</label><input placeholder="harmonizacaofacial"><div class="dica">Sem o #.</div></div>
+      <div class="campo" id="c-qtd"><label id="l-qtd">Quantos posts</label><input type="number" value="10"><div class="dica">Máximo 20. Quanto mais, mais crédito.</div></div>
+      <div class="campo" id="c-data"><label>Ou desde a data</label><input type="date"><div class="dica">Opcional. Se preencher, ignora a quantidade.</div></div>
+    </div>
+
+    <div class="rodape">
+      <button class="btn" id="btn" onclick="alert('Rodaria a análise e mostraria o progresso.')">✦ <span id="btn-t">Ler o concorrente · 1 crédito</span></button>
+      <span class="aviso" id="aviso">Leva de 20s a 2 min. Você pode sair da tela.</span>
+    </div>
+  </div>
+
+  <!-- 3. HISTÓRICO -->
+  <div class="hist-head">
+    <div>
+      <p class="rotulo" style="margin:0">O que já foi lido desta cliente</p>
+      <p style="font-size:.82rem;color:var(--mudo)">Tudo que você pesquisou deste cliente — e o que cada leitura virou.</p>
+    </div>
+    <div class="filtros" id="filtros">
+      <button class="f on" data-f="tudo" onclick="filtrar(this)">Tudo <span class="qt">6</span></button>
+      <button class="f" data-f="conteudo" onclick="filtrar(this)">Conteúdo <span class="qt">3</span></button>
+      <button class="f" data-f="roteiro" onclick="filtrar(this)">Roteiros <span class="qt">1</span></button>
+      <button class="f" data-f="mercado" onclick="filtrar(this)">Mercado <span class="qt">2</span></button>
+      <button class="f" data-f="virou" onclick="filtrar(this)">Virou post <span class="qt">2</span></button>
+    </div>
+  </div>
+
+  <div id="lista">
+    <div class="item" data-cat="roteiro virou">
+      <div class="faixa" style="background:var(--lilas)"></div>
+      <div class="item-in">
+        <div class="item-top">
+          <div>
+            <div class="item-t">O roteiro dos reels · @drapaula.estetica</div>
+            <div class="quem">Você · 5 reels lidos · 3 créditos</div>
+          </div>
+          <div class="item-m">há 2 dias</div>
+        </div>
+        <div class="leitura"><b>A leitura:</b> o gancho que se repete nos 3 reels de maior view é uma pergunta de medo nos 2 primeiros segundos — “isso vai doer?”. Ela nunca responde no começo: só depois dos 15s.</div>
+        <div class="destino">
+          <span class="lb">6 pautas:</span>
+          <span class="tag t-ver">2 no cronograma</span>
+          <span class="tag t-lil">3 marcadas “usar”</span>
+          <span class="tag t-cin">1 nova</span>
+          <span class="abrir">abrir leitura →</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item" data-cat="mercado virou">
+      <div class="faixa" style="background:var(--verde)"></div>
+      <div class="item-in">
+        <div class="item-top">
+          <div>
+            <div class="item-t">Onde ele aposta dinheiro · @drapaula.estetica</div>
+            <div class="quem">Você · 4 anúncios ativos · 2 créditos</div>
+          </div>
+          <div class="item-m">há 9 dias</div>
+        </div>
+        <div class="leitura"><b>A leitura:</b> os 4 anúncios ativos vendem a mesma coisa — avaliação gratuita. O ângulo é sempre “antes e depois”, nunca preço.</div>
+        <div class="destino">
+          <span class="lb">5 pautas:</span>
+          <span class="tag t-ver">1 no cronograma</span>
+          <span class="tag t-cin">4 novas</span>
+          <span class="abrir">abrir leitura →</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item" data-cat="conteudo">
+      <div class="faixa" style="background:var(--laranja)"></div>
+      <div class="item-in">
+        <div class="item-top">
+          <div>
+            <div class="item-t">O que ele posta · @drapaula.estetica</div>
+            <div class="quem">Marina (colaboradora) · 10 posts · 1 crédito</div>
+          </div>
+          <div class="item-m">há 12 dias</div>
+        </div>
+        <div class="leitura"><b>A leitura:</b> lendo 10 publicações — o formato que ele mais usa é Reels (7 de 10), com média de 12,4 mil views.</div>
+        <div class="destino">
+          <span class="lb">7 pautas:</span>
+          <span class="tag t-cin">7 novas · ninguém olhou</span>
+          <span class="abrir">abrir leitura →</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item" data-cat="mercado">
+      <div class="faixa" style="background:var(--azul)"></div>
+      <div class="item-in">
+        <div class="item-top">
+          <div>
+            <div class="item-t">As dúvidas do público · post do @harmoniza.sp</div>
+            <div class="quem">Você · 20 comentários · 1 crédito</div>
+          </div>
+          <div class="item-m">há 18 dias</div>
+        </div>
+        <div class="leitura"><b>A leitura:</b> a pergunta que mais se repete é “quanto tempo dura?”. Ninguém respondeu nos comentários.</div>
+        <div class="destino">
+          <span class="lb">4 pautas:</span>
+          <span class="tag t-lil">4 marcadas “usar”</span>
+          <span class="abrir">abrir leitura →</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item" data-cat="conteudo">
+      <div class="faixa" style="background:var(--laranja)"></div>
+      <div class="item-in">
+        <div class="item-top">
+          <div>
+            <div class="item-t">O que ele posta · @harmoniza.sp</div>
+            <div class="quem">Você · 10 posts · 1 crédito</div>
+          </div>
+          <div class="item-m">há 31 dias</div>
+        </div>
+        <div class="leitura"><b>A leitura:</b> carrossel domina (6 de 10) e engaja o dobro do reel — o oposto do outro concorrente.</div>
+        <div class="destino">
+          <span class="lb">5 pautas:</span>
+          <span class="tag t-cin">5 novas</span>
+          <span class="abrir">abrir leitura →</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item" data-cat="conteudo">
+      <div class="faixa" style="background:#D9D5CC"></div>
+      <div class="item-in">
+        <div class="item-top">
+          <div>
+            <div class="item-t">Raio-x do perfil · @harmoniza.sp</div>
+            <div class="quem">Você · 1 crédito · não gera pauta</div>
+          </div>
+          <div class="item-m">há 31 dias</div>
+        </div>
+        <div class="destino" style="border:0;padding-top:2px;margin:0">
+          <span class="lb">42,1 mil seguidores · comercial · link pra WhatsApp</span>
+          <span class="abrir">abrir leitura →</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="vazio some" id="vazio">Nenhuma leitura desse tipo ainda.</div>
+
+  </div><!-- /telaB -->
+
+</div>
+
+<script>
+const LABEL_QTD = { posts:'Quantos posts', reels:'Quantos reels', roteiro:'Quantos reels', anuncios:'Quantos anúncios', hashtag:'Quantos posts da hashtag', mencoes:'Quantas menções' };
+
+function pickConc(el){
+  document.querySelectorAll('.conc').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  const h = el.dataset.conc;
+  const avulsa = h === 'avulsa';
+  document.getElementById('alvo').textContent = avulsa ? 'um perfil avulso' : '@'+h;
+  const inp = document.querySelector('#c-handle input');
+  inp.value = avulsa ? '' : '@'+h;
+  inp.placeholder = '@concorrente';
+  document.querySelector('#c-handle .dica').textContent = avulsa
+    ? 'Pesquisa avulsa: fica no HUB, não entra na ficha do cliente.'
+    : 'Já vem preenchido do radar.';
+  sync();
+}
+
+function pickAn(el){
+  el.classList.toggle('on');
+  if(!document.querySelector('.chip.on')) el.classList.add('on');
+  sync();
+}
+
+function sync(){
+  const on = [...document.querySelectorAll('.chip.on')];
+  const need = new Set();
+  let cr = 0;
+  on.forEach(c=>{ cr += +c.dataset.cr; c.dataset.need.split(',').forEach(n=>need.add(n)); });
+
+  const mostrar = (id, v) => document.getElementById(id).classList.toggle('some', !v);
+  mostrar('c-handle', need.has('handle') || need.has('handle_ou_links'));
+  mostrar('c-links',  need.has('handle_ou_links'));
+  mostrar('c-url',    need.has('url'));
+  mostrar('c-tag',    need.has('tag'));
+  mostrar('c-qtd',    need.has('qtd'));
+  mostrar('c-data',   need.has('data'));
+
+  const q = on.find(c=>LABEL_QTD[c.dataset.k]);
+  if(q) document.getElementById('l-qtd').textContent = on.length > 1 ? 'Quantos itens (cada análise)' : LABEL_QTD[q.dataset.k];
+
+  document.getElementById('btn-t').textContent =
+    (on.length > 1 ? on.length + ' leituras · ' : 'Ler o concorrente · ') + cr + (cr===1?' crédito':' créditos');
+
+  const falta = cr > 32;
+  document.getElementById('btn').disabled = falta;
+  document.getElementById('aviso').textContent = falta
+    ? 'Você tem 32 créditos e essa seleção custa ' + cr + '. Tire uma leitura ou compre +20 por R$ 24,90.'
+    : 'Leva de 20s a 2 min. Você pode sair da tela.';
+}
+
+function tela(q){
+  document.getElementById('telaA').classList.toggle('some', q !== 'a');
+  document.getElementById('telaB').classList.toggle('some', q !== 'b');
+  document.getElementById('tab-a').classList.toggle('on', q === 'a');
+  document.getElementById('tab-b').classList.toggle('on', q === 'b');
+  window.scrollTo(0,0);
+}
+
+function filtrar(b){
+  document.querySelectorAll('.f').forEach(f=>f.classList.remove('on'));
+  b.classList.add('on');
+  const f = b.dataset.f;
+  let n = 0;
+  document.querySelectorAll('#lista .item').forEach(it=>{
+    const ok = f === 'tudo' || it.dataset.cat.includes(f);
+    it.classList.toggle('some', !ok);
+    if(ok) n++;
+  });
+  document.getElementById('vazio').classList.toggle('some', n > 0);
+}
+
+sync();
+</script>
+</body>
+</html>

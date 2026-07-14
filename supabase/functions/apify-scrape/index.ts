@@ -465,8 +465,21 @@ Deno.serve(async (req) => {
       if (!c || (c as { manager_id?: string }).manager_id !== mgr) return json({ error: "forbidden_client" }, 403);
     }
 
+    // Concorrente do radar (opcional): é o que permite dizer, depois, "esse
+    // concorrente está sem leitura há 31 dias".
+    const competitorId = body?.competitor_id ? String(body.competitor_id) : null;
+    if (competitorId) {
+      const { data: comp } = await svc.from("hub_competitors")
+        .select("id, manager_id").eq("id", competitorId).maybeSingle();
+      if (!comp || (comp as { manager_id?: string }).manager_id !== mgr) {
+        return json({ error: "forbidden_competitor" }, 403);
+      }
+      await svc.from("hub_competitors")
+        .update({ last_read_at: new Date().toISOString() }).eq("id", competitorId);
+    }
+
     const { data: scrapeRow, error: insErr } = await svc.from("competitor_scrapes").insert({
-      manager_id: mgr, crm_client_id: crmClientId, scrape_type: type,
+      manager_id: mgr, crm_client_id: crmClientId, competitor_id: competitorId, scrape_type: type,
       input_handle: inputHandle, results_limit: limit, status: "running",
     }).select("id").single();
     if (insErr || !scrapeRow) return json({ error: "job_create_failed" }, 500);

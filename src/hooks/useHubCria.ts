@@ -35,6 +35,7 @@ export type ScrapeType = "posts" | "reels" | "profile" | "hashtag" | "comments" 
 export type CompetitorScrape = {
   id: string;
   crm_client_id: string | null;
+  competitor_id: string | null;
   scrape_type: ScrapeType;
   input_handle: string;
   status: "queued" | "running" | "done" | "error";
@@ -44,6 +45,108 @@ export type CompetitorScrape = {
   created_at: string;
   finished_at: string | null;
 };
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   O RADAR DE CONCORRENTES
+
+   Antes a social mídia redigitava "@fulano" toda vez, e o sistema não fazia
+   ideia de que aquele perfil importava pra aquele cliente. O concorrente virava
+   uma string perdida numa linha de histórico.
+
+   Agora ele é um ATIVO da ficha do cliente, igual ao brandbook. É isso que
+   permite a única frase que traz a pessoa de volta sozinha:
+   "esse concorrente está sem leitura há 31 dias".
+   ═══════════════════════════════════════════════════════════════════════════ */
+export type Competitor = {
+  id: string;
+  crm_client_id: string | null;
+  handle: string;
+  name: string | null;
+  followers: number | null;
+  avatar: string | null;
+  last_read_at: string | null;
+  created_at: string;
+};
+
+export function useCompetitors(crmClientId?: string) {
+  return useQuery<Competitor[]>({
+    queryKey: ["hubcria-competitors", crmClientId ?? "avulsa"],
+    queryFn: async () => {
+      let q = sbFrom("hub_competitors")
+        .select("id,crm_client_id,handle,name,followers,avatar,last_read_at,created_at");
+      q = crmClientId ? q.eq("crm_client_id", crmClientId) : q.is("crm_client_id", null);
+      const { data, error } = await q.order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as Competitor[];
+    },
+  });
+}
+
+/** Todos os concorrentes do gestor, pro dashboard do HUB (quem está esfriando). */
+export function useAllCompetitors() {
+  return useQuery<Competitor[]>({
+    queryKey: ["hubcria-competitors-all"],
+    queryFn: async () => {
+      const { data, error } = await sbFrom("hub_competitors")
+        .select("id,crm_client_id,handle,name,followers,avatar,last_read_at,created_at");
+      if (error) throw error;
+      return (data ?? []) as unknown as Competitor[];
+    },
+  });
+}
+
+export function useAddCompetitor() {
+  const qc = useQueryClient();
+  const { agencyOwnerId } = useActiveAccount();
+  return useMutation({
+    mutationFn: async (input: { handle: string; crm_client_id?: string | null; name?: string }) => {
+      const handle = input.handle.trim().replace(/^@/, "").replace(/\/+$/, "").split("/").pop() || "";
+      if (!handle) throw new Error("Informe o @ do concorrente.");
+      const { data, error } = await sbFrom("hub_competitors")
+        .insert({
+          manager_id: agencyOwnerId!,
+          crm_client_id: input.crm_client_id ?? null,
+          handle,
+          name: input.name?.trim() || null,
+        })
+        .select("*").single();
+      if (error) {
+        // A unique (manager, cliente, handle) existe justamente pra isso.
+        if (String(error.message).includes("duplicate")) throw new Error("Esse concorrente já está no radar.");
+        throw error;
+      }
+      return data as unknown as Competitor;
+    },
+    onSuccess: (_r, vars) => {
+      qc.invalidateQueries({ queryKey: ["hubcria-competitors", vars.crm_client_id ?? "avulsa"] });
+      qc.invalidateQueries({ queryKey: ["hubcria-competitors-all"] });
+      toast.success("Concorrente no radar.");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Não consegui adicionar."),
+  });
+}
+
+export function useDeleteCompetitor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await sbFrom("hub_competitors").delete().eq("id", id);
+      if (error) throw error;
+      return id;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["hubcria-competitors"] });
+      qc.invalidateQueries({ queryKey: ["hubcria-competitors-all"] });
+      toast.success("Tirei do radar. As leituras dele continuam no histórico.");
+    },
+  });
+}
+
+/** Há quantos dias esse concorrente não é lido? null = nunca foi. */
+export function diasSemLeitura(c: Competitor): number | null {
+  if (!c.last_read_at) return null;
+  return Math.floor((Date.now() - new Date(c.last_read_at).getTime()) / 86400000);
+}
 
 export type CreativeIdea = {
   id: string;
@@ -63,7 +166,7 @@ export function useScrapes(crmClientId?: string) {
     queryKey: ["hubcria-scrapes", crmClientId ?? "avulsa"],
     queryFn: async () => {
       let q = sbFrom("competitor_scrapes")
-        .select("id,crm_client_id,scrape_type,input_handle,status,result_summary,cost_usd,error,created_at,finished_at");
+        .select("id,crm_client_id,competitor_id,scrape_type,input_handle,status,result_summary,cost_usd,error,created_at,finished_at");
       q = crmClientId ? q.eq("crm_client_id", crmClientId) : q.is("crm_client_id", null);
       const { data, error } = await q.order("created_at", { ascending: false });
       if (error) throw error;
@@ -125,12 +228,13 @@ export function useRunScrape() {
   const { agencyOwnerId } = useActiveAccount();
 
   return useMutation({
-    mutationFn: async (input: { type: ScrapeType; input: string; crm_client_id?: string | null; limit?: number; since?: string }) => {
+    mutationFn: async (input: { type: ScrapeType; input: string; crm_client_id?: string | null; competitor_id?: string | null; limit?: number; since?: string }) => {
       const { data, error } = await supabase.functions.invoke("apify-scrape", {
         body: {
           action: "start",
           type: input.type, input: input.input,
           crm_client_id: input.crm_client_id ?? null,
+          competitor_id: input.competitor_id ?? null,
           limit: input.limit ?? 10, since: input.since, manager_id: agencyOwnerId,
         },
       });
@@ -163,6 +267,8 @@ export function useRunScrape() {
       qc.invalidateQueries({ queryKey: ["hubcria-ideas", key] });
       qc.invalidateQueries({ queryKey: ["hubcria-ideas-all"] });
       qc.invalidateQueries({ queryKey: ["hubcria-credits"] });
+      qc.invalidateQueries({ queryKey: ["hubcria-competitors", key] });
+      qc.invalidateQueries({ queryKey: ["hubcria-competitors-all"] });
       const n = (res as { ideas_count?: number })?.ideas_count ?? 0;
       toast.success(n > 0 ? `Análise pronta: ${n} ideias no banco do cliente.` : "Análise pronta.");
     },
