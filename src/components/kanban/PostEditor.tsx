@@ -1095,7 +1095,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
     <>
       <Dialog
         open={open}
-        onOpenChange={(o) => {
+        onOpenChange={async (o) => {
           if (!o && hasActiveUpload) {
             // Confirma fechar enquanto há upload rolando, TUS continua via context, mas
             // o ref insert do vídeo depende deste componente estar montado. Melhor avisar.
