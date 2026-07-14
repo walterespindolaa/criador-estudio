@@ -103,6 +103,7 @@ import { useBrandContext } from "@/hooks/useBrandContext";
 import { RoteiroPdfTemplate } from "@/components/pdf/RoteiroPdfTemplate";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { sanitizeText } from "@/lib/sanitize";
+import { confirmar } from "@/components/shared/Confirm";
 
 
 interface Post {
@@ -1098,9 +1099,12 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
           if (!o && hasActiveUpload) {
             // Confirma fechar enquanto há upload rolando, TUS continua via context, mas
             // o ref insert do vídeo depende deste componente estar montado. Melhor avisar.
-            const ok = window.confirm(
-              "Há um upload de vídeo em andamento. Se fechar agora, ele pode ser perdido. Fechar mesmo assim?",
-            );
+            const ok = await confirmar({
+              titulo: "Tem um vídeo subindo agora",
+              descricao: "Se você fechar, o upload pode se perder e vai ter que começar de novo.",
+              acao: "Fechar mesmo assim",
+              cancelar: "Esperar o upload",
+            });
             if (!ok) return;
           }
           onOpenChange(o);

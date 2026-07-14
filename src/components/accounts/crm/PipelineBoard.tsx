@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 
 import { formatBRL } from "@/lib/money";
 import { MoneyInput } from "@/components/shared/MoneyInput";
+import { confirmar } from "@/components/shared/Confirm";
 const brl = (v?: number | null) => formatBRL(v, { zeroAsDash: false });
 const POT: Record<string, string> = { alto: "🟢", medio: "🟡", baixo: "🔴" };
 const shortDate = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
@@ -210,7 +211,7 @@ export function PipelineBoard() {
             setDialogOpen(false);
           }}
           onUpdate={async (id, updates) => { await updateLead.mutateAsync({ id, ...updates }); setDialogOpen(false); setEditLead(null); }}
-          onDelete={async (id) => { if (confirm("Excluir este lead?")) { await delLead.mutateAsync(id); setDialogOpen(false); setEditLead(null); } }}
+          onDelete={async (id) => { if (await confirmar({ titulo: "Excluir este lead?", descricao: "O histórico da negociação some junto." })) { await delLead.mutateAsync(id); setDialogOpen(false); setEditLead(null); } }}
           saving={createLead.isPending || updateLead.isPending}
         />
       )}
@@ -357,7 +358,7 @@ function TaskEditDialog({ task, onClose }: { task: CrmTask; onClose: () => void 
     toast.success("Tarefa atualizada!");
     onClose();
   };
-  const remove = async () => { if (confirm("Excluir esta tarefa?")) { await del.mutateAsync(task.id); onClose(); } };
+  const remove = async () => { if (await confirmar({ titulo: "Excluir esta tarefa?" })) { await del.mutateAsync(task.id); onClose(); } };
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="sm:max-w-lg">

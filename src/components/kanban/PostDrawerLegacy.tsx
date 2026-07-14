@@ -41,6 +41,7 @@ import { useReferenceLibrary, useUserLibrary, type UserHook, type UserPrompt } f
 import { RoteiroPdfTemplate } from "@/components/pdf/RoteiroPdfTemplate";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { sanitizeText } from "@/lib/sanitize";
+import { confirmar } from "@/components/shared/Confirm";
 
 interface Post {
   id: string;
@@ -812,8 +813,8 @@ export function PostDrawerLegacy({ open, onOpenChange, post, pillars, userId, on
               variant="ghost"
               size="sm"
               className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
-              onClick={() => {
-                if (window.confirm(`Excluir "${title || post.title}"?`)) {
+              onClick={async () => {
+                if (await confirmar({ titulo: `Excluir "${title || post.title}"?`, descricao: "Ele vai pra lixeira e você tem 30 dias pra recuperar." })) {
                   deletePost.mutate(post.id, {
                     onSuccess: () => {
                       toast.success("Post excluído");

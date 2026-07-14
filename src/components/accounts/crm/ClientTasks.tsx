@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { confirmar } from "@/components/shared/Confirm";
 
 const PRIO_CLASS: Record<CrmTaskPriority, string> = {
   baixa: "bg-muted text-muted-foreground",
@@ -84,7 +85,7 @@ export function ClientTasks({ clientId }: { clientId: string }) {
                   </div>
                 </div>
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary shrink-0" onClick={() => setEditing(t)}><Pencil className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0" onClick={() => { if (confirm("Excluir esta tarefa?")) delTask.mutate(t.id); }}><Trash2 className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0" onClick={async () => { if (await confirmar({ titulo: "Excluir esta tarefa?" })) delTask.mutate(t.id); }}><Trash2 className="h-4 w-4" /></Button>
               </div>
             );
           })}

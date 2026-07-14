@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Send, Trash2, Megaphone } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { confirmar } from "@/components/shared/Confirm";
 
 const LEVELS = [
   { value: "info", label: "Informação" },
@@ -94,7 +95,7 @@ export function AdminRecados() {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <Switch checked={b.active} onCheckedChange={(v) => setActive.mutate({ id: b.id, active: v })} />
-                  <button onClick={() => { if (confirm("Excluir este recado?")) remove.mutate(b.id); }} className="text-destructive p-1 rounded-lg hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></button>
+                  <button onClick={async () => { if (await confirmar({ titulo: "Excluir este recado?" })) remove.mutate(b.id); }} className="text-destructive p-1 rounded-lg hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></button>
                 </div>
               </div>
             ))}

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { confirmar } from "@/components/shared/Confirm";
 
 // ═══════════════════════════════════════════════════════════════════════
 // BANCO DE IDEIAS DO CLIENTE
@@ -194,7 +195,7 @@ export function ClienteIdeias({ clientId, criaOwnerId }: { clientId: string; cri
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {meusRefs.map((r) => (
                   <RefCard key={r.id} url={r.url} thumb={r.thumbnail_url} title={r.title} author={r.author} note={r.note}
-                    onDelete={() => { if (confirm("Excluir esta referência?")) delRef.mutate(r.id); }} />
+                    onDelete={async () => { if (await confirmar({ titulo: "Excluir esta referência?" })) delRef.mutate(r.id); }} />
                 ))}
               </div>
             )}

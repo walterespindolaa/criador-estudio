@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/money";
 import { PAYMENT_METHODS } from "@/lib/finance";
 import { MoneyInput } from "@/components/shared/MoneyInput";
+import { confirmar } from "@/components/shared/Confirm";
 
 const CONSCIOUSNESS = ["Inconsciente do problema", "Consciente do problema", "Consciente da solução", "Consciente do produto", "Totalmente consciente"];
 const initial = (n?: string | null) => (n ? n.trim().charAt(0).toUpperCase() : "?");
@@ -255,7 +256,7 @@ function ClientWorkspace() {
             </span>
             {isCria && <Button variant="outline" size="sm" className="rounded-xl" onClick={() => { setActiveAccount(form.cria_owner_id!); navigate("/app"); }}>Abrir no cria <ArrowRight className="h-3.5 w-3.5 ml-1" /></Button>}
             <Button variant="outline" size="sm" className="rounded-xl" onClick={save} disabled={update.isPending}><Save className="h-3.5 w-3.5 mr-1.5" /> Salvar</Button>
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={async () => { if (confirm("Excluir este cliente?")) { await del.mutateAsync(form.id); navigate("/socialmidia/criacrm"); } }}><Trash2 className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={async () => { if (await confirmar({ titulo: "Excluir este cliente?", descricao: "A ficha, as tarefas, os contratos e o financeiro dele vão junto." })) { await del.mutateAsync(form.id); navigate("/socialmidia/criacrm"); } }}><Trash2 className="h-4 w-4" /></Button>
           </div>
         </div>
 
@@ -282,7 +283,7 @@ function ClientWorkspace() {
             </Button>
           )}
           <Button variant="ghost" size="sm" className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-            onClick={async () => { if (confirm("Excluir este cliente?")) { await del.mutateAsync(form.id); navigate("/socialmidia/criacrm"); } }}>
+            onClick={async () => { if (await confirmar({ titulo: "Excluir este cliente?", descricao: "A ficha, as tarefas, os contratos e o financeiro dele vão junto." })) { await del.mutateAsync(form.id); navigate("/socialmidia/criacrm"); } }}>
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -633,7 +634,7 @@ function TagPicker({ selected, onChange }: { selected: string[]; onChange: (tags
                     className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary shrink-0 p-1" aria-label="Editar etiqueta">
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
-                  <button type="button" onClick={() => { if (confirm(`Excluir a etiqueta "${t.name}"? Ela sai de todos os clientes.`)) delTag.mutate(t.id); }}
+                  <button type="button" onClick={async () => { if (await confirmar({ titulo: `Excluir a etiqueta "${t.name}"?`, descricao: "Ela sai de todos os clientes que a tinham." })) delTag.mutate(t.id); }}
                     className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive shrink-0 p-1" aria-label="Excluir etiqueta">
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>

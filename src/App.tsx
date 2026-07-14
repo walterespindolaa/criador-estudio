@@ -23,6 +23,7 @@ import Termos from "./pages/Termos";
 import Privacidade from "./pages/Privacidade";
 import ExcluirDados from "./pages/ExcluirDados";
 import { UpdatePrompt } from "@/components/UpdatePrompt";
+import { ConfirmHost } from "@/components/shared/Confirm";
 import { CachePersistence } from "@/components/pwa/CachePersistence";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { OfflineBanner } from "@/components/pwa/OfflineBanner";
@@ -174,6 +175,9 @@ const App = () => (
         <Toaster />
         <Sonner />
         <UpdatePrompt />
+        {/* O confirm() nativo do navegador ("app.criasocialclub.com.br diz") era a
+            pior coisa na tela de um produto onde a gente cuidou de cada borda. */}
+        <ConfirmHost />
         {/* PWA: cache persistido (abre instantâneo), aviso de offline,
             convite de instalação + notificações, e prefetch das telas. */}
         <CachePersistence />

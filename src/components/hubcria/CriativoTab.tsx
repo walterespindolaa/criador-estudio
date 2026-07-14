@@ -16,6 +16,7 @@ import { OrganicBlobs } from "@/components/brand/OrganicBlobs";
 import { CRIA_HEX } from "@/lib/moduleTheme";
 import { useExternalClients } from "@/hooks/useCriaPost";
 import { supabase } from "@/integrations/supabase/client";
+import { confirmar } from "@/components/shared/Confirm";
 
 type InputKind = "handle" | "url" | "hashtag";
 type TypeDef = { key: ScrapeType; label: string; icon: typeof LayoutGrid; desc: string; inputKind: InputKind; cost?: string };
@@ -658,8 +659,8 @@ export function SummaryCard({ summary, handle, defaultOpen = false, onDelete, id
         </span>
         {onDelete && (
           <span role="button" tabIndex={0}
-            onClick={(e) => { e.stopPropagation(); if (confirm("Excluir esta análise?")) onDelete(); }}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); if (confirm("Excluir esta análise?")) onDelete(); } }}
+            onClick={async (e) => { e.stopPropagation(); if (await confirmar({ titulo: "Excluir esta análise?", descricao: "As pautas que ela gerou continuam no banco de ideias do cliente." })) onDelete(); }}
+            onKeyDown={async (e) => { if (e.key === "Enter") { e.stopPropagation(); if (await confirmar({ titulo: "Excluir esta análise?", descricao: "As pautas que ela gerou continuam no banco de ideias do cliente." })) onDelete(); } }}
             className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" title="Excluir análise" aria-label="Excluir análise"><Trash2 className="h-4 w-4" /></span>
         )}
         <ChevronDown className={cn("h-4 w-4 text-muted-foreground shrink-0 transition-transform", open && "rotate-180")} />

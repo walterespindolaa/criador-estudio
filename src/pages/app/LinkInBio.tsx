@@ -48,6 +48,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { validateUpload } from "@/lib/upload-validation";
 import { useBioLeads } from "@/hooks/useBioLeads";
+import { confirmar } from "@/components/shared/Confirm";
 
 type BgType = "color" | "gradient" | "image";
 type ButtonStyle = "rounded" | "pill" | "square" | "outline";
@@ -462,7 +463,7 @@ const LinkInBio = () => {
     updateLink.mutate({ id, updates: patch });
 
   const handleDelete = (id: string) => {
-    if (!confirm("Remover este item?")) return;
+    if (!(await confirmar({ titulo: "Remover este item do seu link?", acao: "Remover" }))) return;
     deleteLink.mutate(id, {
       onSuccess: () => toast.success("Item removido."),
       onError: () => toast.error("Erro ao remover."),

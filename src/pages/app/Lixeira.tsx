@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Trash2, RotateCcw, X, FileText, Users, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTrashedPosts, useTrashedClients, useRestoreTrash, usePurgeTrash, type TrashRow } from "@/hooks/useTrash";
+import { confirmar } from "@/components/shared/Confirm";
 
 function daysLeft(deletedAt: string): number {
   const gone = new Date(deletedAt).getTime() + 30 * 86400000;
@@ -41,7 +42,7 @@ export default function Lixeira() {
           {all.map((row) => (
             <TrashItem key={`${row.kind}:${row.id}`} row={row}
               onRestore={() => restore.mutate({ id: row.id, kind: row.kind })}
-              onPurge={() => { if (confirm(`Excluir "${row.label}" de vez? Isso não dá pra desfazer.`)) purge.mutate({ id: row.id, kind: row.kind }); }} />
+              onPurge={async () => { if (await confirmar({ titulo: `Excluir "${row.label}" de vez?`, descricao: "Isso não dá pra desfazer — nem pela lixeira." })) purge.mutate({ id: row.id, kind: row.kind }); }} />
           ))}
         </div>
       )}

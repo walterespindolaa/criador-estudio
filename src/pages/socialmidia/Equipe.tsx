@@ -10,6 +10,7 @@ import {
   useSetMemberModule, useBuySeats, TEAM_MODULES,
 } from "@/hooks/useTeam";
 import { useCrmClients } from "@/hooks/useCrm";
+import { confirmar } from "@/components/shared/Confirm";
 
 export default function Equipe() {
   const { data: members = [], isLoading } = useTeamMembers();
@@ -110,7 +111,7 @@ export default function Equipe() {
                       className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title={paused ? "Reativar" : "Pausar"}>
                       {paused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
                     </button>
-                    <button onClick={() => { if (confirm("Remover este colaborador? Ele perde o acesso à sua conta.")) removeMember.mutate(m.id); }}
+                    <button onClick={async () => { if (await confirmar({ titulo: "Remover este colaborador?", descricao: "Ele perde o acesso à sua conta na hora. O assento volta pra você.", acao: "Remover" })) removeMember.mutate(m.id); }}
                       className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" title="Remover">
                       <Trash2 className="h-4 w-4" />
                     </button>

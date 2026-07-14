@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { confirmar } from "@/components/shared/Confirm";
 
 const COLUMNS: { key: CrmTaskStatus; label: string }[] = [
   { key: "pendente", label: "Pendentes" },
@@ -163,7 +164,7 @@ export function TasksTab() {
           onClose={() => { setDialogOpen(false); setEditing(null); }}
           onCreate={async (input) => { await createTask.mutateAsync(input); setDialogOpen(false); }}
           onUpdate={async (id, u) => { await updateTask.mutateAsync({ id, ...u }); toast.success("Tarefa atualizada!"); setDialogOpen(false); setEditing(null); }}
-          onDelete={async (id) => { if (confirm("Excluir esta tarefa?")) { await delTask.mutateAsync(id); setDialogOpen(false); setEditing(null); } }}
+          onDelete={async (id) => { if (await confirmar({ titulo: "Excluir esta tarefa?" })) { await delTask.mutateAsync(id); setDialogOpen(false); setEditing(null); } }}
         />
       )}
     </div>

@@ -70,6 +70,7 @@ import { AdminFeedback } from "@/components/admin/AdminFeedback";
 import { AdminGrowth } from "@/components/admin/AdminGrowth";
 import { UserDetailsDrawer } from "@/components/admin/UserDetailsDrawer";
 import { supabase } from "@/integrations/supabase/client";
+import { confirmar } from "@/components/shared/Confirm";
 
 const PAGE_SIZE = 20;
 
@@ -235,7 +236,7 @@ const AdminInner = () => {
 
   const handleAction = async (userId: string, action: string) => {
     const labels: Record<string, string> = { delete: "excluído", suspend: "suspenso", reactivate: "reativado", resend_access: "email de acesso enviado" };
-    if (action === "delete" && !window.confirm("Excluir permanentemente este usuário? Esta ação não pode ser desfeita.")) return;
+    if (action === "delete" && !(await confirmar({ titulo: "Excluir permanentemente este usuário?", descricao: "Tudo dele vai junto: posts, ideias, arquivos, histórico. Não dá pra desfazer." }))) return;
     try {
       await runAction.mutateAsync({ user_id: userId, action });
       toast.success(`Usuário ${labels[action] ?? "atualizado"}.`);

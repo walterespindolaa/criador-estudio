@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications, type Notification } from "@/hooks/useNotifications";
 import { generateNotifications } from "@/lib/notifications";
+import { confirmar } from "@/components/shared/Confirm";
 
 const TYPE_ICONS: Record<string, { icon: typeof Bell; color: string }> = {
   lead: { icon: UserPlus, color: "text-green-600" },
@@ -67,7 +68,7 @@ export function NotificationsBell() {
 
   const handleClearAll = () => {
     if (notifications.length === 0) return;
-    if (window.confirm("Limpar todas as notificações? Isso não pode ser desfeito.")) {
+    if (await confirmar({ titulo: "Limpar todas as notificações?", descricao: "Isso não dá pra desfazer.", acao: "Limpar" })) {
       clearAll.mutate();
     }
   };

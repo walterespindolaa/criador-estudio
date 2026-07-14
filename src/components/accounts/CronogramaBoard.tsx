@@ -18,6 +18,7 @@ import {
 import { useExternalClients } from "@/hooks/useCriaPost";
 import { SEGMENTOS, datasPara, segmentoDoTexto, type SegmentKey } from "@/lib/datasComemorativas";
 import { useCrmClients } from "@/hooks/useCrm";
+import { confirmar } from "@/components/shared/Confirm";
 
 const TYPE_COLOR: Record<string, string> = {
   "Reels": "bg-red-600", "Carrossel": "bg-green-700", "Feed": "bg-blue-700",
@@ -243,7 +244,7 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
           )}
           {/* Botão único: "Enviar pra aprovação" já marca como enviado E copia o link. */}
           <Button size="sm" onClick={sendForApproval} className="gap-1.5"><Send className="h-3.5 w-3.5" /> Enviar pra aprovação</Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => { if (confirm("Excluir este cronograma?")) onDelete(c.id); }}><Trash2 className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { if (await confirmar({ titulo: "Excluir este cronograma?", descricao: "O link público dele para de funcionar na hora." })) onDelete(c.id); }}><Trash2 className="h-4 w-4" /></Button>
         </div>
       </div>
 
@@ -300,7 +301,7 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
                           {/* Ações */}
                           <div className="flex gap-1 shrink-0 opacity-40 group-hover:opacity-100 transition-opacity">
                             <button onClick={() => openEdit(it)} className="w-7 h-7 rounded-lg border border-border grid place-items-center hover:text-primary"><Pencil className="h-3.5 w-3.5" /></button>
-                            <button onClick={() => { if (confirm("Excluir item?")) deleteItem.mutate(it.id); }} className="w-7 h-7 rounded-lg border border-border grid place-items-center hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
+                            <button onClick={async () => { if (await confirmar({ titulo: "Excluir este item do cronograma?" })) deleteItem.mutate(it.id); }} className="w-7 h-7 rounded-lg border border-border grid place-items-center hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
                           </div>
                         </div>
                       </div>

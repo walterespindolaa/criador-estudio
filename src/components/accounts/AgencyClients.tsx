@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { confirmar } from "@/components/shared/Confirm";
 
 type AgencyClient = { id: string; name: string | null; email: string | null; parked_until: string | null; created_at: string };
 
@@ -108,7 +109,7 @@ export function AgencyClients({ seatsFree }: { seatsFree: number }) {
                     {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <PauseCircle className="h-4 w-4" />}
                   </button>
                 )}
-                <button title="Excluir" aria-label="Excluir" disabled={busy} onClick={() => { if (confirm(`Excluir a conta de ${c.name || c.email}? Isso é permanente.`)) action(c.id, "delete"); }} className="p-2 rounded-lg text-destructive hover:bg-destructive/10 disabled:opacity-40"><Trash2 className="h-4 w-4" /></button>
+                <button title="Excluir" aria-label="Excluir" disabled={busy} onClick={async () => { if (await confirmar({ titulo: `Excluir a conta de ${c.name || c.email}?`, descricao: "Isso é permanente: o conteúdo, os posts e o histórico dela vão junto. Se for pausa temporária, use Pausar." })) action(c.id, "delete"); }} className="p-2 rounded-lg text-destructive hover:bg-destructive/10 disabled:opacity-40"><Trash2 className="h-4 w-4" /></button>
               </div>
             </div>
           );

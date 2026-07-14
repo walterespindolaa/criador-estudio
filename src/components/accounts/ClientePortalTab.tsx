@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { CLIENT_COLORS } from "@/components/accounts/ExternalClientDialog";
+import { confirmar } from "@/components/shared/Confirm";
 
 const PORTAL_BRAND_COLORS = ["#CE4A1D", "#2A4BDF", "#F27EB5", "#F2C21E", "#3E9152"];
 
@@ -212,7 +213,7 @@ export function ClientePortalTab({ client, onCopyLink, onOpenPortal, copying }: 
           <div className="pt-2 border-t border-border/60">
             <Button variant="ghost" className="text-destructive hover:text-destructive px-0"
               onClick={async () => {
-                if (!confirm("Desativar este cliente no Cria Post? O link para de funcionar.")) return;
+                if (!(await confirmar({ titulo: "Desativar este cliente no Cria Post?", descricao: "O link de aprovação dele para de funcionar na hora.", acao: "Desativar" }))) return;
                 await setActive.mutateAsync({ id: client.id, active: false });
                 toast.success("Cliente desativado no Cria Post.");
               }}>

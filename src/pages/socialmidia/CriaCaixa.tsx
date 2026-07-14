@@ -25,6 +25,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 const pad0 = (n: number) => String(n).padStart(2, "0");
 import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { confirmar } from "@/components/shared/Confirm";
 
 const brl = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -642,7 +643,7 @@ function CaixaInner() {
                   </select>
                   <div className="ml-auto flex items-center gap-1">
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditing(r); setDialog(true); }}><Pencil className="h-3.5 w-3.5" /></Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => { if (r.transfer_group) { if (confirm("Excluir esta transferência (Empresa e Pessoal)?")) delGroup.mutate(r.transfer_group); } else if (confirm("Excluir lançamento?")) del.mutate(r.id); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { if (r.transfer_group) { if (await confirmar({ titulo: "Excluir esta transferência?", descricao: "Ela existe nos dois lados: sai da Empresa e do Pessoal ao mesmo tempo." })) delGroup.mutate(r.transfer_group); } else if (await confirmar({ titulo: "Excluir este lançamento?" })) del.mutate(r.id); }}><Trash2 className="h-3.5 w-3.5" /></Button>
                   </div>
                 </div>
               </div>

@@ -15,6 +15,7 @@ import { toast } from "sonner";
 
 import { formatBRL, parseBRL } from "@/lib/money";
 import { MoneyInput } from "@/components/shared/MoneyInput";
+import { confirmar } from "@/components/shared/Confirm";
 const brl = (v?: number | null) => formatBRL(v, { zeroAsDash: false });
 const STATUS_LABEL: Record<string, string> = { enviado: "Enviado", fechado: "Fechado", encerrado: "Encerrado" };
 
@@ -71,7 +72,7 @@ export function ContractsTab() {
                 <Badge variant={c.status === "fechado" ? "default" : c.status === "encerrado" ? "secondary" : "outline"} className="text-[10px]">{STATUS_LABEL[c.status]}</Badge>
                 <div className="flex items-center gap-1">
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={async () => { if (confirm(`Excluir o contrato "${c.title}"?`)) await del.mutateAsync(c.id); }}><Trash2 className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={async () => { if (await confirmar({ titulo: `Excluir o contrato "${c.title}"?`, descricao: "O contrato sai do sistema. O que já foi assinado fora dele continua valendo." })) await del.mutateAsync(c.id); }}><Trash2 className="h-4 w-4" /></Button>
                 </div>
               </div>
             </div>
@@ -87,7 +88,7 @@ export function ContractsTab() {
           onClose={() => { setDialogOpen(false); setEditing(null); }}
           onCreate={async (input) => { await create.mutateAsync(input); setDialogOpen(false); }}
           onUpdate={async (id, updates) => { await update.mutateAsync({ id, ...updates }); toast.success("Contrato atualizado!"); setDialogOpen(false); setEditing(null); }}
-          onDelete={async (id) => { if (confirm("Excluir este contrato?")) { await del.mutateAsync(id); setDialogOpen(false); setEditing(null); } }}
+          onDelete={async (id) => { if (await confirmar({ titulo: "Excluir este contrato?" })) { await del.mutateAsync(id); setDialogOpen(false); setEditing(null); } }}
         />
       )}
       <ContractGeneratorDialog open={genOpen} onOpenChange={setGenOpen} />

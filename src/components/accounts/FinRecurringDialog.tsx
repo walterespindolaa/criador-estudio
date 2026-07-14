@@ -9,6 +9,7 @@ import { MoneyInput } from "@/components/shared/MoneyInput";
 import { PAYMENT_METHODS } from "@/lib/finance";
 import { useCrmClients } from "@/hooks/useCrm";
 import {
+import { confirmar } from "@/components/shared/Confirm";
   useFinRecurring, useCreateFinRecurring, useUpdateFinRecurring, useDeleteFinRecurring,
   type FinRecurring, type FinRecurringInput, type FinContext, type FinType,
 } from "@/hooks/useFinance";
@@ -84,7 +85,7 @@ export function FinRecurringDialog({ open, onOpenChange, ctx, defaultCats, custo
               itens={entradas} clientName={clientName}
               onAdd={() => startAdd("entrada")} onEdit={startEdit}
               onToggle={(t) => update.mutate({ id: t.id, active: !t.active })}
-              onDelete={(t) => { if (confirm(`Excluir "${t.description}"? Os lançamentos já criados não somem.`)) del.mutate(t.id); }}
+              onDelete={async (t) => { if (await confirmar({ titulo: `Excluir "${t.description}"?`, descricao: "Os lançamentos que já foram criados por ele continuam no caixa. Só para de gerar novos." })) del.mutate(t.id); }}
               vazio="Mensalidade fixa, retainer, aluguel de equipamento…"
             />
 
@@ -93,7 +94,7 @@ export function FinRecurringDialog({ open, onOpenChange, ctx, defaultCats, custo
               itens={despesas} clientName={clientName}
               onAdd={() => startAdd("despesa")} onEdit={startEdit}
               onToggle={(t) => update.mutate({ id: t.id, active: !t.active })}
-              onDelete={(t) => { if (confirm(`Excluir "${t.description}"? Os lançamentos já criados não somem.`)) del.mutate(t.id); }}
+              onDelete={async (t) => { if (await confirmar({ titulo: `Excluir "${t.description}"?`, descricao: "Os lançamentos que já foram criados por ele continuam no caixa. Só para de gerar novos." })) del.mutate(t.id); }}
               vazio="Canva, editor, hospedagem, contador…"
             />
           </div>
