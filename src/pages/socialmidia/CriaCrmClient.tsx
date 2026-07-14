@@ -17,6 +17,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useScrapes, useHasHubCria, useDeleteScrape } from "@/hooks/useHubCria";
 import { SummaryCard } from "@/components/hubcria/CriativoTab";
+import { BrandbookImport } from "@/components/brandbook/BrandbookImport";
 import { ClientTasks } from "@/components/accounts/crm/ClientTasks";
 import { ModuleGate } from "@/components/accounts/ModuleGate";
 import { Button } from "@/components/ui/button";
@@ -370,6 +371,30 @@ function ClientWorkspace() {
               </Button>
             </div>
           )}
+          {/* ── SUBIR O BRANDBOOK EM PDF ─────────────────────────────────────
+              Esta aba é um formulário de vinte campos. Ninguém preenche
+              formulário de vinte campos — e por isso o brandbook do cliente
+              vive vazio, e TODA a IA que depende dele (ideias, legenda, prompt
+              de arte, briefing) sai genérica.
+
+              Só que o dado já existe: a social mídia tem o moodboard do cliente
+              em PDF. Então a gente para de pedir pra digitar e passa a pedir o
+              arquivo. "Digite vinte campos" vira "confere o que eu entendi". */}
+          {!isCria && (
+            <BrandbookImport
+              alvo="cliente"
+              atual={bc as Record<string, string | undefined>}
+              titulo={`Sobe o moodboard d${form.name?.match(/^[AaEeIiOoUu]/) ? "" : "o"} ${form.name}. O Cria preenche.`}
+              descricao="Se você já tem o brandbook deste cliente em PDF, não digite nada: a gente lê as cores, as fontes, o tom de voz e a direção de arte, e você só confere."
+              onSalvar={async (valores) => {
+                const nbc = { ...bc, ...valores };
+                setForm({ ...form, brand_core: nbc });
+                await update.mutateAsync({ id: form.id, brand_core: nbc });
+                toast.success("Brandbook do cliente atualizado.");
+              }}
+            />
+          )}
+
           {/* Mensagem & estratégia, é isso que alimenta as ideias de post da IA */}
           <Card icon={<Brain />} title="Mensagem & estratégia (alimenta as ideias de post)">
             <p className="text-[11px] font-body text-muted-foreground mb-3 -mt-1">Quanto mais completo, melhores as ideias que a IA gera pra este cliente. Toque no 🎤 pra ditar por voz.</p>

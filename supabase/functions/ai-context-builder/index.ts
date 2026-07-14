@@ -327,7 +327,7 @@ serve(async (req) => {
     // segurança: qualquer um chama a edge function direto. Quem decide é aqui.
     // Trial entra (ele roda como Studio de propósito — a pessoa precisa SENTIR
     // o que perde quando acabar).
-    const PRO_OU_ACIMA = new Set(['art-prompt'])
+    const PRO_OU_ACIMA = new Set(['art-prompt'])  // art-brief é da agência (módulo Cria Post), não de plano de criador
     if (PRO_OU_ACIMA.has(operation)) {
       const planoOk = accessRow.plan === 'pro' || accessRow.plan === 'studio'
       const liberado = _isAdmin || _trialOk || (_isActive && planoOk)
@@ -451,6 +451,99 @@ Gere um insight estratégico conciso em português BR no formato:
       );
     }
     // ── fim cota ───────────────────────────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LER O BRANDBOOK DE UM PDF (visão)
+    //
+    // O brandbook é o dado do qual TODA a IA do CRIA depende: legenda, roteiro,
+    // prompt de arte, briefing. Sem ele, tudo sai genérico — e a pessoa conclui
+    // que "a IA do Cria é fraca" e cancela.
+    //
+    // Só que ele é um formulário de vinte campos, e ninguém preenche formulário
+    // de vinte campos. Resultado: o campo mais importante do produto vive vazio.
+    //
+    // O dado JÁ EXISTE: a social mídia tem o moodboard do cliente em PDF, e a
+    // criadora tem o dela. Então a gente para de pedir pra digitar e passa a
+    // pedir o arquivo. "Digite vinte campos" vira "confere o que eu entendi" —
+    // e confirmar é infinitamente mais fácil que criar.
+    //
+    // MOODBOARD É IMAGEM, NÃO TEXTO: a paleta e a tipografia moram no desenho
+    // da página, não no texto extraível. Por isso mandamos as PÁGINAS RENDERIZADAS
+    // pra um modelo que ENXERGA. Extrair só texto pegaria metade — e a metade
+    // menos importante.
+    //
+    // E NADA É SALVO AQUI. Isto só LÊ e devolve. Quem grava é a pessoa, depois
+    // de conferir campo a campo. IA gravando calada a cor errada da marca do
+    // cliente é pior que o campo vazio: o erro fica invisível e sai em 50 posts.
+    // ═══════════════════════════════════════════════════════════════════════
+    if (operation === 'brandbook-read') {
+      const imagens: string[] = Array.isArray(data?.imagens) ? data.imagens.slice(0, 8) : []
+      const alvo = data?.alvo === 'criador' ? 'criador' : 'cliente'
+      if (imagens.length === 0) {
+        return new Response(JSON.stringify({ error: 'sem_paginas', message: 'Não consegui ler nenhuma página do arquivo.' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const sys = `Você lê brandbooks/moodboards e extrai a identidade da marca. Você olha as PÁGINAS como imagens.
+
+REGRAS:
+- Só afirme o que você REALMENTE VÊ. Campo que não aparece no documento vem como null. NUNCA invente pra preencher: preencher chutando destrói a confiança e sai errado em dezenas de posts depois.
+- Cores: devolva os HEX que você vê nas páginas de paleta (ex: "#6B4E71"). Se a página mostra a cor mas não o código, estime o hex mais próximo e diga na origem que foi estimado.
+- Fontes: os nomes das famílias tipográficas, e pra que serve cada uma (título, corpo).
+- "origem": em que página do documento você viu aquilo (número). Isso é o que permite a pessoa conferir.
+
+RESPONDA APENAS JSON válido:
+{"campos":{
+ "colorPalette":{"valor":"#XXXXXX, #YYYYYY","origem":"página 4"} | null,
+ "typography":{"valor":"Playfair Display (títulos), Inter (corpo)","origem":"página 5"} | null,
+ "toneOfVoice":{"valor":"como a marca fala","origem":"página 7"} | null,
+ "personality":{"valor":"traços de personalidade da marca","origem":"..."} | null,
+ "audience":{"valor":"quem é o público","origem":"..."} | null,
+ "valueProp":{"valor":"o que a marca promete","origem":"..."} | null,
+ "avoid":{"valor":"o que NUNCA fazer (visual e verbal)","origem":"..."} | null,
+ "visualExpression":{"valor":"direção de arte: tipo de imagem, luz, composição","origem":"..."} | null,
+ "contentThemes":{"valor":"temas/pilares de conteúdo","origem":"..."} | null,
+ "archetype":{"valor":"arquétipo da marca","origem":"..."} | null
+},"resumo":"1 frase do que é esta marca"}`
+
+      const conteudo: unknown[] = [
+        { type: 'text', text: `Leia este brandbook e extraia a identidade da marca (${alvo === 'criador' ? 'de um criador de conteúdo' : 'de um cliente de agência'}). ${imagens.length} páginas.` },
+        ...imagens.map((url) => ({ type: 'image_url', image_url: { url } })),
+      ]
+
+      const r = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${lovableApiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash', // o -lite não enxerga bem; aqui a leitura É o produto
+          messages: [{ role: 'system', content: sys }, { role: 'user', content: conteudo }],
+          max_tokens: 2500,
+          temperature: 0.1, // leitura, não criação: quanto menos "criativo", melhor
+        }),
+      })
+      if (!r.ok) {
+        const t = await r.text()
+        console.error('[brandbook-read] gateway', r.status, t.slice(0, 300))
+        return new Response(JSON.stringify({ error: 'leitura_falhou', message: 'Não consegui ler o arquivo. Tente um PDF com as páginas de paleta e tipografia.' }), {
+          status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      const j = await r.json()
+      const bruto = String(j.choices?.[0]?.message?.content || '')
+      const limpo = bruto.replace(/```json/gi, '').replace(/```/g, '').trim()
+      const m = limpo.match(/\{[\s\S]*\}/)
+      try {
+        return new Response(JSON.stringify({ result: JSON.parse(m ? m[0] : limpo) }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      } catch {
+        console.error('[brandbook-read] json inválido', limpo.slice(0, 300))
+        return new Response(JSON.stringify({ error: 'leitura_falhou', message: 'Li o arquivo mas não entendi o conteúdo. Tente outro PDF.' }), {
+          status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+    }
 
     // Fetch user context
     let userContext = ''
@@ -997,6 +1090,47 @@ ${data.contextoQuente ? `\nAMARRAR COM O QUE ESTÁ EM ALTA (só se encaixar natu
         maxTokens = 4096
         break
       }
+      // ═══════════════════════════════════════════════════════════════════
+      // BRIEFING DE ARTE — dentro do post do cliente (Cria Post)
+      //
+      // Aqui a pessoa NÃO quer um prompt de IA. Ela quer o que MANDAR PRO
+      // DESIGNER: paleta com hex, fonte, o que pode e o que não pode, e o texto
+      // que vai na peça. Ela escreve isso no WhatsApp, na mão, dez vezes por
+      // semana — e digita a paleta do cliente de cabeça toda vez.
+      //
+      // O prompt de IA é só UMA DAS SAÍDAS do mesmo briefing.
+      // ═══════════════════════════════════════════════════════════════════
+      case 'art-brief': {
+        operationPrompt = `Você é um diretor de arte de uma agência de social media no Brasil. Escreva o BRIEFING DE ARTE de um post, pronto pra ser mandado pro designer no WhatsApp.
+
+REGRAS:
+- Fale com um designer humano: objetivo, concreto, sem enrolação e sem jargão de IA.
+- "direcao": 3 a 5 instruções do que FAZER na peça (composição, tipo de imagem, luz, hierarquia).
+- "evitar": 2 a 4 instruções do que NÃO fazer, tiradas da marca do cliente. Se a marca não disser nada, use o bom senso do segmento — nunca invente uma regra específica do cliente.
+- "textoPeca": o texto que vai DENTRO da arte, página por página. Curto, do jeito que cabe numa peça — não é a legenda.
+- "promptEn": o mesmo briefing traduzido em UM prompt de imagem em inglês, pra quem for gerar por IA em vez de desenhar. Sem texto na imagem ("no text").
+- Não invente cor nem fonte que não foi informada.
+
+RESPONDA APENAS JSON válido:
+{"direcao":["..."],"evitar":["..."],"textoPeca":[{"n":1,"texto":"..."}],"promptEn":"..."}`
+
+        userPrompt = `Cliente: ${data.cliente || '-'}
+Segmento: ${data.segmento || '-'}
+Post: ${data.titulo || '-'}
+Formato: ${data.formato || 'post'}
+${data.paginas ? `Conteúdo das páginas:\n${data.paginas}` : ''}
+${data.legenda ? `Legenda do post: ${String(data.legenda).slice(0, 800)}` : ''}
+
+MARCA DO CLIENTE (use SÓ o que está aqui):
+Cores: ${data.cores || '(não informado)'}
+Tipografia: ${data.fontes || '(não informado)'}
+Tom de voz: ${data.tom || '(não informado)'}
+Direção visual: ${data.visual || '(não informado)'}
+Nunca fazer: ${data.evitar || '(não informado)'}
+Público: ${data.publico || '(não informado)'}`
+        maxTokens = 2000
+        break
+      }
       default:
         throw new Error('Invalid operation')
     }
@@ -1039,7 +1173,7 @@ ${data.contextoQuente ? `\nAMARRAR COM O QUE ESTÁ EM ALTA (só se encaixar natu
     const result = await response.json()
     const content = result.choices?.[0]?.message?.content || ''
 
-    if (operation === 'reference-filter' || operation === 'score-caption' || operation === 'client-report-insight' || operation === 'insights-reading' || operation === 'autopilot-cronograma' || operation === 'story-plan-generate' || operation === 'art-prompt') {
+    if (operation === 'reference-filter' || operation === 'score-caption' || operation === 'client-report-insight' || operation === 'insights-reading' || operation === 'autopilot-cronograma' || operation === 'story-plan-generate' || operation === 'art-prompt' || operation === 'art-brief') {
       const cleaned = String(content).replace(/```json/gi, '').replace(/```/g, '').trim()
       const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
       const jsonStr = jsonMatch ? jsonMatch[0] : cleaned

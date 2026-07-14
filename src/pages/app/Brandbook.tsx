@@ -15,6 +15,7 @@ import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { toast } from "sonner";
 import { InfoTooltip } from "@/components/shared/InfoTooltip";
 import { useBrandItems } from "@/hooks/useBrandItems";
+import { BrandbookImport, type CampoDef } from "@/components/brandbook/BrandbookImport";
 import { useMoodboard } from "@/hooks/useMoodboard";
 import { usePersonas, MAX_PERSONAS } from "@/hooks/usePersonas";
 import { usePillars } from "@/hooks/usePillars";
@@ -259,6 +260,56 @@ const Brandbook = () => {
       setSaving(false);
     }
   }, [answers, saveAnswer]);
+
+  /* ═════════════════════════════════════════════════════════════════════════
+     IMPORTAR A IDENTIDADE DE UM PDF
+
+     O brandbook do criador não é um JSON: é uma lista (brand_items), uma linha
+     por cor, por fonte, por expressão. Então a leitura do PDF precisa ser
+     TRADUZIDA pra esse formato — "#6B4E71, #E8B4BC" vira duas linhas do tipo
+     "cor", e não uma linha com as duas cores dentro.
+
+     E ela NÃO apaga o que já existe: só acrescenta o que ainda não está lá.
+     Apagar a mão da pessoa por causa de uma leitura automática é o jeito mais
+     rápido de ela nunca mais usar isto.
+     ═════════════════════════════════════════════════════════════════════════ */
+  const identidadeAtual = useMemo(() => ({
+    colorPalette: brandItems.filter((i) => i.type === "cor").map((i) => i.name).join(", "),
+    typography: brandItems.filter((i) => i.type === "fonte").map((i) => i.name).join(", "),
+    toneOfVoice: brandItems.filter((i) => i.type === "tom").map((i) => i.name).join(", "),
+    avoid: brandItems.filter((i) => i.type === "evitar").map((i) => i.name).join(", "),
+  }), [brandItems]);
+
+  const salvarIdentidadeDoPdf = async (valores: Record<string, string>) => {
+    const paraLista = (v?: string) =>
+      (v ?? "").split(/[,;\n]+/).map((s) => s.trim()).filter(Boolean);
+
+    const planos: { type: string; nomes: string[] }[] = [
+      { type: "cor", nomes: paraLista(valores.colorPalette) },
+      { type: "fonte", nomes: paraLista(valores.typography) },
+      // Tom e "evitar" são frases, não listas: quebrar por vírgula picotaria a frase.
+      { type: "tom", nomes: valores.toneOfVoice?.trim() ? [valores.toneOfVoice.trim()] : [] },
+      { type: "evitar", nomes: valores.avoid?.trim() ? [valores.avoid.trim()] : [] },
+    ];
+
+    let novos = 0;
+    for (const p of planos) {
+      const jaTem = new Set(
+        brandItems.filter((i) => i.type === p.type).map((i) => i.name.trim().toLowerCase()),
+      );
+      for (const nome of p.nomes) {
+        if (jaTem.has(nome.toLowerCase())) continue; // não duplica
+        await createBrandItem.mutateAsync({
+          type: p.type,
+          name: nome,
+          value: null,
+          position: brandItems.filter((i) => i.type === p.type).length + novos,
+        });
+        novos++;
+      }
+    }
+    toast.success(novos > 0 ? `${novos} ${novos === 1 ? "item adicionado" : "itens adicionados"} ao seu Brandbook.` : "Nada de novo pra adicionar.");
+  };
 
   const addBrandItem = async (type: string) => {
     if (!newItemName.trim()) return;
@@ -690,6 +741,21 @@ const Brandbook = () => {
 
           {/* ═══ IDENTIDADE DA MARCA ═══ */}
           <TabsContent value="identidade">
+            {/* SUBIR O BRANDBOOK EM PDF.
+                Preencher cor por cor, fonte por fonte, é o que faz esta aba
+                ficar vazia — e brandbook vazio faz TODA a IA do Cria (legenda,
+                roteiro, prompt de arte) sair genérica. Quem já tem um moodboard
+                em PDF não devia digitar nada: sobe o arquivo e confere. */}
+            <div className="mb-5">
+              <BrandbookImport
+                alvo="criador"
+                campos={CAMPOS_CRIADOR}
+                atual={identidadeAtual}
+                titulo="Já tem sua identidade num PDF? Sobe aqui."
+                descricao="Se você tem um manual de marca, moodboard ou até um print da sua paleta, a gente lê as cores, as fontes e o seu tom de voz — e você só confere."
+                onSalvar={salvarIdentidadeDoPdf}
+              />
+            </div>
             <BrandValuesSection
               brandItems={brandItems}
               activeSection={activeSection}

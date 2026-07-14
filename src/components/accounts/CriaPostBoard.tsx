@@ -6,11 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ArtBriefDialog } from "./ArtBriefDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CronogramaBoard } from "@/components/accounts/CronogramaBoard";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
-import { Plus, Link2, Pencil, Loader2, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare, Eye, Clock, Settings2 } from "lucide-react";
+import { Plus, Link2, Pencil, Loader2, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare, Eye, Clock, Settings2, Palette } from "lucide-react";
 import { CriaPostMedia } from "@/components/accounts/CriaPostMedia";
 import { ImportKanbanDialog } from "@/components/accounts/ImportKanbanDialog";
 import { ClientReportDialog } from "@/components/accounts/ClientReportDialog";
@@ -87,6 +88,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   const [editing, setEditing] = useState<ExternalPost | null>(null);
   const [f, setF] = useState<ExternalPostInput>({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", scheduled_date: null, scheduled_time: null });
   const [copying, setCopying] = useState(false);
+  const [briefOpen, setBriefOpen] = useState(false);
 
   // Novo post: cria um RASCUNHO na hora. Assim o post.id já existe e a mídia pode ser
   // anexada de cara (o storage precisa do id). O rascunho não aparece pro cliente.
@@ -439,7 +441,20 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
 
             {/* 4, Mídia (direita no desktop, posição 4 no mobile) */}
             <div className="order-4 md:col-start-2 md:row-start-1 md:row-span-5">
-              <label className="text-xs font-semibold mb-1.5 block">Mídia</label>
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <label className="text-xs font-semibold">Mídia</label>
+                {/* BRIEFING DE ARTE. Ela escreve isto no WhatsApp do designer, na
+                    mão, dez vezes por semana — e digita a paleta do cliente de
+                    cabeça toda vez. O botão mora AQUI, colado no espaço da arte,
+                    que é o minuto em que ela precisa dele. */}
+                <button
+                  type="button"
+                  onClick={() => setBriefOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/[0.06] px-2.5 py-1 text-[11px] font-body font-bold text-primary hover:bg-primary/10 transition-colors"
+                >
+                  <Palette className="h-3 w-3" /> Briefing de arte
+                </button>
+              </div>
               {editing?.id ? (
                 <CriaPostMedia postId={editing.id} platform={f.platform} format={f.format}
                   caption={f.caption ?? undefined} handle={client.instagram_handle || client.name}
@@ -483,6 +498,18 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* O briefing de arte deste post, com a marca DESTE cliente. */}
+      <ArtBriefDialog
+        open={briefOpen}
+        onOpenChange={setBriefOpen}
+        crmClientId={client.crm_client_id ?? null}
+        clienteNome={client.name}
+        titulo={f.title}
+        formato={f.format}
+        legenda={f.caption ?? undefined}
+        roteiro={f.script ?? undefined}
+      />
     </div>
   );
 }
