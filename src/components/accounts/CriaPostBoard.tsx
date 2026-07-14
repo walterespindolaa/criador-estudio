@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ArtBriefDialog } from "./ArtBriefDialog";
+import { ClientContentWriter } from "./ClientContentWriter";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CronogramaBoard } from "@/components/accounts/CronogramaBoard";
@@ -492,6 +493,17 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
             {f.approval_mode !== "fast" && (
               <div className="order-6 md:col-start-1 md:row-start-5 space-y-1.5">
                 <Label className="text-xs font-body">Roteiro / conteúdo (etapa "Conteúdo")</Label>
+                {/* Ela escreve conteúdo pra DEZ marcas por semana. Era o trabalho
+                    mais repetitivo da rotina dela, e o único lugar onde a IA do
+                    CRIA não ajudava — o gerador só existia do lado do criador. */}
+                <ClientContentWriter
+                  crmClientId={client.crm_client_id ?? null}
+                  clienteNome={client.name}
+                  titulo={f.title}
+                  formato={f.format}
+                  valor={f.script ?? ""}
+                  onChange={(texto) => setF((p) => ({ ...p, script: texto }))}
+                />
                 <Textarea value={f.script ?? ""} onChange={(e) => setF((p) => ({ ...p, script: e.target.value }))} rows={4} className="rounded-xl" />
               </div>
             )}

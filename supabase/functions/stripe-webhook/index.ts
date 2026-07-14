@@ -137,6 +137,10 @@ Deno.serve(async (req) => {
               stripe_subscription_id: s.subscription as string,
               updated_at: new Date().toISOString(),
             }, { onConflict: "stripe_subscription_id" }), "module_entitlements upsert");
+            // Módulo traz ESPAÇO junto (3 GB base + 3 GB por módulo). Sem este
+            // recálculo ela compra o módulo e continua com os 500 MB de trial —
+            // bate numa parede invisível no meio da operação, com cliente esperando.
+            await supabase.rpc("recalc_manager_storage", { _manager: managerId });
           }
           break;
         }
@@ -218,6 +222,7 @@ Deno.serve(async (req) => {
               current_period_end: periodEnd,
               updated_at: new Date().toISOString(),
             }, { onConflict: "stripe_subscription_id" });
+            await supabase.rpc("recalc_manager_storage", { _manager: managerId });
           }
           break;
         }
@@ -276,6 +281,10 @@ Deno.serve(async (req) => {
           await supabase.from("module_entitlements")
             .update({ status: "canceled", updated_at: new Date().toISOString() })
             .eq("stripe_subscription_id", sub.id);
+          // Cancelou módulo → recalcula o espaço. (A função nunca DIMINUI abaixo
+          // do que ela já usa; ela só ajusta a cota — arquivo nenhum é apagado.)
+          const mid = sub.metadata?.manager_id;
+          if (mid) await supabase.rpc("recalc_manager_storage", { _manager: mid });
           break;
         }
         const userId = sub.metadata?.user_id;
