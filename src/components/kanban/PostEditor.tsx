@@ -214,6 +214,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   const [platform, setPlatform] = useState("instagram");
   const [format, setFormat] = useState("reels");
   const [pillarId, setPillarId] = useState("");
+  // Aba controlada: o Estúdio precisa conseguir MANDAR a pessoa pro Roteiro.
+  const [aba, setAba] = useState("legenda");
   const [status, setStatus] = useState("ideia");
   const [hook, setHook] = useState("");
   const [script, setScript] = useState("");
@@ -1621,7 +1623,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 mobileTab === "criar" ? "block" : "hidden md:block"
               )}
             >
-              <Tabs defaultValue="legenda" className="h-full flex flex-col">
+              <Tabs value={aba} onValueChange={setAba} className="h-full flex flex-col">
                 <TabsList data-tour="editor-abas" className="bg-transparent border-b border-border rounded-none px-4 sm:px-6 h-12 shrink-0 justify-start gap-0 max-w-full overflow-x-auto flex-nowrap whitespace-nowrap">
                   <TabsTrigger
                     value="legenda"
@@ -2253,6 +2255,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     postId={post?.id ?? null}
                     roteiro={[hook, script, cta].filter(Boolean).join("\n\n")}
                     onSalvar={(texto) => setNotes((n) => (n ? `${n}\n\n${texto}` : texto))}
+                    onIrParaRoteiro={() => setAba("roteiro")}
                   />
                 </TabsContent>
 

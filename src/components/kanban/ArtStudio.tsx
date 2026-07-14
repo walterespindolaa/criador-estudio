@@ -6,7 +6,8 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { useArtPrompt, useArtSalvo, type ArtResult } from "@/hooks/useArtPrompt";
+import { useQueryClient } from "@tanstack/react-query";
+import { useArtPrompt, useArtSalvo, type ArtResult, type Noticia } from "@/hooks/useArtPrompt";
 import { confirmar } from "@/components/shared/Confirm";
 import { useTier } from "@/hooks/useTier";
 import type { Section } from "./drawer/ScriptEditor";
@@ -41,24 +42,46 @@ type Props = {
   onVoltar?: () => void;
   /** Salva os prompts no post (campo notas/roteiro fica a cargo do pai). */
   onSalvar?: (texto: string) => void;
+  /** Leva pra aba Roteiro, onde a IA escreve o conteúdo das lâminas. */
+  onIrParaRoteiro?: () => void;
 };
 
 const CHAVE_QUENTE = "quente";
 const CHAVE_ATEMPORAL = "atemporal";
 
-export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar, onSalvar }: Props) {
+export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar, onSalvar, onIrParaRoteiro }: Props) {
   const navigate = useNavigate();
   const { atLeast } = useTier();
   const {
     gerar, gerando, resultado: recemGerado, limpar, semMarca,
-    buscarNoticias, buscandoNoticias, noticias,
+    buscarNoticias, buscandoNoticias,
   } = useArtPrompt();
   const { salvo, guardar } = useArtSalvo(postId);
 
-  const [tempo, setTempo] = useState<string>(CHAVE_ATEMPORAL);
+  /* ── O RASCUNHO SOBREVIVE À TROCA DE ABA ────────────────────────────────
+     As abas do post DESMONTAM o conteúdo quando você troca. Ou seja: você
+     pesquisava as notícias, ia na aba Roteiro escrever as páginas (que é
+     exatamente o que a gente MANDA fazer), voltava — e a pesquisa tinha
+     sumido. Perder o trabalho da pessoa porque ela seguiu a nossa instrução é
+     o pior jeito de ensinar alguma coisa.
+
+     O rascunho agora vive no cache do react-query, que não desmonta com a aba.
+     Ele é por post, e some quando a página recarrega — o que ficou de verdade
+     (os prompts) está no banco. ── */
+  const qc = useQueryClient();
+  const chaveRascunho = ["art-draft", postId ?? "novo"] as const;
+  type Rascunho = { tempo: string; noticias: Noticia[] | null; escolhidas: string[] };
+  const rascunho = (qc.getQueryData(chaveRascunho) as Rascunho | undefined)
+    ?? { tempo: CHAVE_ATEMPORAL, noticias: null, escolhidas: [] };
+  const gravar = (patch: Partial<Rascunho>) =>
+    qc.setQueryData(chaveRascunho, { ...rascunho, ...patch });
+
+  const tempo = rascunho.tempo;
+  const noticias = rascunho.noticias;
+  const escolhidas = new Set(rascunho.escolhidas);
+
   const [aberta, setAberta] = useState<number | null>(1);
   const [copiada, setCopiada] = useState<number | null>(null);
-  const [escolhidas, setEscolhidas] = useState<Set<string>>(new Set());
 
   // O que a tela mostra: o que acabou de sair da IA, ou o que ficou guardado no
   // post. Sem isto, sair do post e voltar apagava tudo — e ela pagaria outra
@@ -102,12 +125,12 @@ export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar
   // segundo botão pra ver as notícias, ninguém clicaria — e o botão continuaria
   // prometendo uma coisa que ela nunca viu.
   const escolherTempo = async (id: string) => {
-    setTempo(id);
+    gravar({ tempo: id });
     if (id === CHAVE_QUENTE && !noticias && !buscandoNoticias) {
       const achadas = await buscarNoticias(titulo || roteiro || "");
       // Vem tudo marcado: ela desmarca o que não quiser. Marcar 3 caixinhas
       // pra usar um recurso é atrito à toa.
-      setEscolhidas(new Set(achadas.map((n) => n.titulo)));
+      gravar({ tempo: id, noticias: achadas, escolhidas: achadas.map((n) => n.titulo) });
     }
   };
 
@@ -201,8 +224,23 @@ export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar
         ) : (
           <>
             <b className="font-display">Vou criar a partir do título.</b>{" "}
-            Você ainda não escreveu o conteúdo das páginas. Dá pra gerar assim, mas o
-            resultado fica mais certeiro se você escrever o texto antes.
+            Você ainda não escreveu o conteúdo das páginas — dá pra gerar assim, mas sai mais raso.
+            {/* A saída é UM CLIQUE daqui, não "vá procurar na aba Roteiro". Mandar
+                a pessoa achar sozinha o recurso que resolve o problema que a
+                gente acabou de apontar é jogar a culpa nela. */}
+            {onIrParaRoteiro && (
+              <>
+                {" "}
+                <button
+                  type="button"
+                  onClick={onIrParaRoteiro}
+                  className="font-display font-bold text-primary underline underline-offset-2"
+                >
+                  Escrever as páginas com IA →
+                </button>{" "}
+                (fica na aba Roteiro, leva 10 segundos, e o prompt sai muito melhor depois).
+              </>
+            )}
           </>
         )}
       </div>
@@ -285,7 +323,7 @@ export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar
                   type="button"
                   onClick={async () => {
                     const outras = await buscarNoticias(titulo || roteiro || "");
-                    setEscolhidas(new Set(outras.map((n) => n.titulo)));
+                    gravar({ noticias: outras, escolhidas: outras.map((n) => n.titulo) });
                   }}
                   className="inline-flex items-center gap-1 text-[11px] font-body font-bold text-primary hover:underline"
                 >
@@ -306,11 +344,11 @@ export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar
                       <input
                         type="checkbox"
                         checked={on}
-                        onChange={() => setEscolhidas((s) => {
-                          const novo = new Set(s);
+                        onChange={() => {
+                          const novo = new Set(escolhidas);
                           if (novo.has(n.titulo)) novo.delete(n.titulo); else novo.add(n.titulo);
-                          return novo;
-                        })}
+                          gravar({ escolhidas: [...novo] });
+                        }}
                         className="mt-0.5 h-4 w-4 shrink-0 accent-[hsl(var(--primary))]"
                       />
                       <span className="min-w-0">
