@@ -3222,6 +3222,7 @@ export type Database = {
           approval_status: string | null
           approval_updated_at: string | null
           archive_summary: string | null
+          art: Json | null
           calendar_synced_at: string | null
           caption: string | null
           content_blocks: Json | null
@@ -3262,6 +3263,7 @@ export type Database = {
           approval_status?: string | null
           approval_updated_at?: string | null
           archive_summary?: string | null
+          art?: Json | null
           calendar_synced_at?: string | null
           caption?: string | null
           content_blocks?: Json | null
@@ -3302,6 +3304,7 @@ export type Database = {
           approval_status?: string | null
           approval_updated_at?: string | null
           archive_summary?: string | null
+          art?: Json | null
           calendar_synced_at?: string | null
           caption?: string | null
           content_blocks?: Json | null
