@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Loader2, Sparkles, Check, X, Trash2, Instagram, Heart, MessageCircle, Play, CalendarPlus,
+<<<<<<< HEAD
   LayoutGrid, FileText, CircleDashed, User, AtSign, Hash, Megaphone, TrendingUp, Plus, ChevronDown,
   ExternalLink,
+=======
+  LayoutGrid, FileText, CircleDashed, User, AtSign, Hash, Megaphone, TrendingUp, Plus, ChevronDown, ExternalLink,
+>>>>>>> 2a62918 (fix(hub): o seletor virou chip e os anuncios ganharam capa, data e link)
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -466,32 +470,44 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
 
       {/* Config */}
       <div className="bg-card border border-border rounded-2xl p-4 space-y-4">
-        <p className="text-sm font-display font-bold text-foreground">1. O que você quer analisar?</p>
+        {/* O SELETOR VIRA CHIP.
+            Eram OITO cartões com um parágrafo de descrição cada, ocupando a tela
+            inteira pra uma decisão de 2 segundos. A explicação agora mora no
+            tooltip; na tela fica o que importa: o nome e quanto custa. */}
+        <p className="text-sm font-display font-extrabold text-foreground">
+          O que você quer saber
+          {compAtivo && <span className="text-primary"> sobre @{compAtivo.handle}</span>}?
+        </p>
         <div className="space-y-3">
           {GROUPS.map((g) => (
             <div key={g.group}>
-              <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{g.group}</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <p className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground mb-2">{g.group}</p>
+              <div className="flex flex-wrap gap-2">
                 {g.items.map((it) => {
                   const on = !!selected[it.key];
                   const Icon = it.icon;
+                  const cr = CREDITOS_POR_TIPO[it.key] ?? 1;
                   return (
                     <button
                       key={it.key}
                       onClick={() => toggle(it.key)}
-                      className={cn("flex items-start gap-2.5 text-left rounded-xl border p-3 transition-colors", on ? "border-primary bg-primary/[0.05]" : "border-border bg-card hover:border-primary/40")}
+                      title={it.desc}
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-xl border-2 px-3 py-2 text-[13px] font-body font-semibold transition-all",
+                        on ? "text-foreground" : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground",
+                      )}
+                      style={on ? { borderColor: CRIA_HEX.lilas, background: `${CRIA_HEX.lilas}0f` } : undefined}
                     >
-                      <span className={cn("mt-0.5 h-4 w-4 rounded border flex items-center justify-center shrink-0", on ? "bg-primary border-primary" : "border-muted-foreground/40")}>
-                        {on && <Check className="h-3 w-3 text-primary-foreground" />}
+                      <Icon className="h-3.5 w-3.5 shrink-0" style={on ? { color: CRIA_HEX.lilas } : undefined} />
+                      {it.label}
+                      <span
+                        className="text-[10px] font-bold px-1.5 py-0.5 rounded-md"
+                        style={on
+                          ? { background: `${CRIA_HEX.lilas}26`, color: "#4a5cc0" }
+                          : { background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }}
+                      >
+                        {cr}
                       </span>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <Icon className="h-3.5 w-3.5 text-primary shrink-0" />
-                          <span className="text-[13px] font-body font-semibold text-foreground">{it.label}</span>
-                          {it.cost && <span className="text-[9px] font-body px-1 py-0.5 rounded-full bg-amber-100 text-amber-700">pago</span>}
-                        </div>
-                        <p className="text-[11.5px] font-body text-muted-foreground leading-snug mt-0.5">{it.desc}{it.cost ? ` (${it.cost})` : ""}</p>
-                      </div>
                     </button>
                   );
                 })}
@@ -502,8 +518,8 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
 
         {/* Inputs */}
         {selectedItems.length > 0 && (
-          <div className="pt-2 border-t border-border/60 space-y-3">
-            <p className="text-sm font-display font-bold text-foreground">2. Dados da busca</p>
+          <div className="pt-3 border-t border-border/60 space-y-3">
+            <p className="text-sm font-display font-extrabold text-foreground">Dados da busca</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {needHandle && (
                 <Field label="@ do concorrente">
@@ -982,33 +998,68 @@ export function SummaryCard({
 
         ) : kind === "ads" ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            {Array.isArray(s.top) && s.top.slice(0, 10).map((a: any, i: number) => (
-              <div key={i} className="flex gap-3 rounded-2xl border border-border p-3">
-                {a.thumbnail ? (
-                  <a href={a.library_link || a.link || a.thumbnail} target="_blank" rel="noreferrer" className="shrink-0">
-                    <img src={a.thumbnail} referrerPolicy="no-referrer" alt="" loading="lazy" className="h-24 w-24 rounded-xl object-cover border border-border bg-muted" />
-                  </a>
-                ) : (
-                  <div className="grid h-24 w-24 shrink-0 place-items-center rounded-xl border border-dashed border-border bg-muted/40 text-muted-foreground">
-                    <Megaphone className="h-5 w-5" />
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                    {a.active && <span className="text-[9px] font-body font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600">RODANDO</span>}
-                    {a.since && <span className="text-[10px] font-body text-muted-foreground">desde {String(a.since).slice(0, 10)}</span>}
-                  </div>
-                  <p className="text-[12.5px] font-body text-foreground leading-snug line-clamp-4">{a.text || "(anúncio sem texto)"}</p>
-                  {a.cta && (
-                    <span className="inline-block mt-1.5 text-[10px] font-display font-bold px-2 py-0.5 rounded-md bg-primary/10 text-primary">{a.cta}</span>
-                  )}
-                  <div className="flex items-center gap-3 mt-1.5">
-                    {a.library_link && <a href={a.library_link} target="_blank" rel="noreferrer" className="text-[11px] font-body font-semibold text-primary hover:underline">ver o anúncio →</a>}
-                    {a.link && <a href={a.link} target="_blank" rel="noreferrer" className="text-[11px] font-body text-muted-foreground hover:underline">pra onde leva →</a>}
+            {Array.isArray(s.top) && s.top.slice(0, 12).map((a: any, i: number) => {
+              const abrir = a.library_link || a.link || null;
+              return (
+                <div key={i} className="rounded-2xl border border-border overflow-hidden bg-card">
+                  {/* A CAPA. Ela vinha vazia porque o criativo do anúncio mora em
+                      lugares diferentes conforme o formato, e a gente só olhava dois.
+                      Agora ela é grande: o criativo É o produto desta análise. */}
+                  {a.thumbnail ? (
+                    <a href={abrir ?? a.thumbnail} target="_blank" rel="noreferrer" className="group relative block bg-muted">
+                      <img
+                        src={a.thumbnail}
+                        referrerPolicy="no-referrer"
+                        alt=""
+                        loading="lazy"
+                        className="h-44 w-full object-cover transition-transform group-hover:scale-[1.02]"
+                        onError={(e) => { e.currentTarget.parentElement?.classList.add("hidden"); }}
+                      />
+                      <span className="absolute inset-0 grid place-items-center bg-foreground/0 transition-colors group-hover:bg-foreground/30">
+                        <ExternalLink className="h-5 w-5 text-white opacity-0 transition-opacity group-hover:opacity-100" />
+                      </span>
+                    </a>
+                  ) : null}
+
+                  <div className="p-3.5">
+                    <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+                      {a.active && (
+                        <span className="text-[9px] font-body font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700">RODANDO</span>
+                      )}
+                      {a.since && (
+                        <span className="text-[10.5px] font-body text-muted-foreground">
+                          {/* Vinha "desde 1777446000" — epoch cru na cara do usuário. */}
+                          no ar desde {new Date(a.since).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                        </span>
+                      )}
+                    </div>
+
+                    {a.titulo && (
+                      <p className="text-[13px] font-display font-bold text-foreground leading-snug mb-1">{a.titulo}</p>
+                    )}
+                    <p className="text-[12.5px] font-body text-foreground leading-relaxed line-clamp-5 whitespace-pre-wrap">
+                      {a.text || "(anúncio sem texto)"}
+                    </p>
+
+                    <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+                      {a.cta && (
+                        <span className="text-[10px] font-display font-bold px-2 py-1 rounded-lg bg-primary/10 text-primary">{a.cta}</span>
+                      )}
+                      {abrir && (
+                        <a href={abrir} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11.5px] font-body font-bold text-primary hover:underline">
+                          <ExternalLink className="h-3 w-3" /> ver o anúncio
+                        </a>
+                      )}
+                      {a.link && (
+                        <a href={a.link} target="_blank" rel="noreferrer" className="ml-auto text-[11px] font-body text-muted-foreground hover:underline truncate max-w-[45%]">
+                          leva pra {String(a.link).replace(/^https?:\/\/(www\.)?/, "").split("/")[0]} →
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
         ) : kind === "comments" ? (

@@ -125,24 +125,60 @@ function summarize(items: any[], type: string): { summary: Record<string, unknow
 
   if (type === "ads") {
     const ads = items.filter((x) => x);
+
+    // A DATA VINHA CRUA. O ator devolve epoch em SEGUNDOS ("1777446000"), e a tela
+    // mostrava "desde 1777446000". Aqui vira ISO, e a tela formata em pt-BR.
+    const dataDe = (v: unknown): string | null => {
+      if (v == null || v === "") return null;
+      const n = Number(v);
+      if (Number.isFinite(n) && n > 1000000000) {
+        // segundos ou milissegundos, os dois aparecem
+        const ms = n < 100000000000 ? n * 1000 : n;
+        return new Date(ms).toISOString();
+      }
+      const d = new Date(String(v));
+      return Number.isNaN(d.getTime()) ? null : d.toISOString();
+    };
+
+    // A CAPA NÃO APARECIA. O criativo do anúncio mora em vários lugares diferentes
+    // dependendo do formato (imagem, vídeo, carrossel), e a gente só olhava dois.
+    const capaDe = (a: any): string | null => {
+      const s = a.snapshot ?? {};
+      return (
+        s.images?.[0]?.original_image_url ||
+        s.images?.[0]?.resized_image_url ||
+        s.videos?.[0]?.video_preview_image_url ||
+        s.videos?.[0]?.video_preview_url ||
+        s.cards?.[0]?.original_image_url ||       // carrossel
+        s.cards?.[0]?.resized_image_url ||
+        s.creatives?.[0]?.image_url ||
+        a.imageUrl || a.thumbnailUrl || a.originalImageUrl || a.previewImageUrl ||
+        null
+      );
+    };
+
     return {
       summary: {
         kind: "ads",
         count: ads.length,
         top: ads.slice(0, 12).map((a: any) => {
-          const archiveId = a.adArchiveID || a.ad_archive_id || a.adid || a.snapshot?.ad_archive_id || null;
-          const pageId = a.pageId || a.snapshot?.page_id || a.page_id || null;
-          const media = a.snapshot?.images?.[0]?.original_image_url || a.snapshot?.images?.[0]?.resized_image_url
-            || a.snapshot?.videos?.[0]?.video_preview_image_url || a.imageUrl || a.thumbnailUrl || null;
+          const s = a.snapshot ?? {};
+          const archiveId = a.adArchiveID || a.ad_archive_id || a.adArchiveId || a.adid || s.ad_archive_id || null;
+          const pageId = a.pageId || s.page_id || a.page_id || null;
           return {
-            text: String(a.adText || a.snapshot?.body?.text || a.body || a.text || a.adCreativeBody || "").replace(/\s+/g, " ").slice(0, 240),
-            page: a.pageName || a.snapshot?.page_name || null,
-            since: a.startDate || a.adDeliveryStartTime || a.ad_delivery_start_time || a.startDateFormatted || null,
+            text: String(a.adText || s.body?.text || a.body || a.text || a.adCreativeBody || "").replace(/\s+/g, " ").slice(0, 400),
+            titulo: String(s.title || s.link_description || a.title || "").slice(0, 120) || null,
+            page: a.pageName || s.page_name || null,
+            since: dataDe(a.startDate ?? a.adDeliveryStartTime ?? a.ad_delivery_start_time ?? a.startDateFormatted ?? s.start_date),
             active: a.isActive ?? a.active ?? null,
-            link: a.linkUrl || a.snapshot?.link_url || a.link || null,
-            cta: a.snapshot?.cta_text || a.ctaText || null,
-            library_link: archiveId ? `https://www.facebook.com/ads/library/?id=${archiveId}` : null,
-            thumbnail: media,
+            link: a.linkUrl || s.link_url || a.link || null,
+            cta: s.cta_text || a.ctaText || s.cta_type || null,
+            // SEM LINK ela não conseguia VER o anúncio. Se não tiver o id do
+            // arquivo, cai na página do anunciante na biblioteca — melhor que nada.
+            library_link: archiveId
+              ? `https://www.facebook.com/ads/library/?id=${archiveId}`
+              : (pageId ? `https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=BR&view_all_page_id=${pageId}` : null),
+            thumbnail: capaDe(a),
           };
         }),
       },
