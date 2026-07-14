@@ -17,7 +17,8 @@ import { FilePreviewModal } from "@/components/files/FilePreviewModal";
 import { DriveMediaPreview } from "@/components/drive/DriveMediaPreview";
 import { useFiles } from "@/hooks/useFiles";
 import { cn } from "@/lib/utils";
-import { storageBytesForPlan, formatStorage } from "@/lib/plans";
+import { storageBytesForPlan, formatStorage, STORAGE_BYTES, TIER_LABEL, tierRank, type PlanId } from "@/lib/plans";
+import { useTier } from "@/hooks/useTier";
 import type { Database } from "@/integrations/supabase/types";
 
 type DriveRef = Database["public"]["Tables"]["external_media_refs"]["Row"];
@@ -102,6 +103,19 @@ const Arquivos = () => {
 
   const storageUsed = activeProfile?.storage_used_bytes ?? 0;
   const storageQuota = activeProfile?.storage_quota_bytes ?? storageBytesForPlan(null, false);
+
+  // Qual é o PRÓXIMO plano que dá mais espaço — e quanto ele dá de verdade.
+  // (Se já está no topo, não existe convite: mostrar "faça upgrade" pra quem
+  // está no Studio é insultar quem já te paga o máximo.)
+  const { tier } = useTier();
+  const upgradeStorage = (() => {
+    const escada: PlanId[] = ["essencial", "pro", "studio"];
+    const proximo = escada.find(
+      (p) => tierRank(p) > tierRank(tier) && STORAGE_BYTES[p] > storageQuota,
+    );
+    if (!proximo) return null;
+    return { plano: proximo, nome: TIER_LABEL[proximo], espaco: formatStorage(STORAGE_BYTES[proximo]) };
+  })();
   const retentionDays = activeProfile?.storage_retention_days ?? DEFAULT_RETENTION_DAYS;
   const usagePct = Math.min(100, storageQuota > 0 ? (storageUsed / storageQuota) * 100 : 0);
   const isStorageFull = storageUsed >= storageQuota;
@@ -298,14 +312,22 @@ const Arquivos = () => {
                 )}
               />
             </div>
-            <button
-              type="button"
-              onClick={() => navigate("/app/assinar")}
-              className="mt-2 text-[11px] text-muted-foreground hover:text-primary font-body inline-flex items-center gap-1 transition-colors"
-            >
-              <Crown className="h-3 w-3" />
-              Quer mais espaço? Upgrade para Pro → +250MB
-            </button>
+            {/* O CONVITE DE UPGRADE — antes era um texto FIXO no código:
+                "Upgrade para Pro → +250MB". Nunca acompanhou os planos: hoje o
+                Pro dá 5 GB e o Studio 15 GB, e ele ainda prometia 250 MB, pra
+                todo mundo, inclusive pra quem já estava no Studio. Preço e cota
+                escritos à mão numa tela é uma promessa que vence sozinha.
+                Agora ele lê a MESMA tabela que o billing usa (lib/plans.ts). */}
+            {upgradeStorage && (
+              <button
+                type="button"
+                onClick={() => navigate(`/app/assinar?plano=${upgradeStorage.plano}`)}
+                className="mt-2 text-[11px] text-muted-foreground hover:text-primary font-body inline-flex items-center gap-1 transition-colors"
+              >
+                <Crown className="h-3 w-3" />
+                Quer mais espaço? No {upgradeStorage.nome} são {upgradeStorage.espaco}
+              </button>
+            )}
           </div>
         </div>
 
