@@ -47,11 +47,14 @@ async function pdfParaDataUrls(
   onProgresso?: (lidas: number, total: number) => void,
 ): Promise<PaginaLida[]> {
   const pdfjs = await import("pdfjs-dist");
-  // O worker precisa vir do mesmo pacote; o Vite resolve a URL no build.
-  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    "pdfjs-dist/build/pdf.worker.min.mjs",
-    import.meta.url,
-  ).toString();
+  // O worker precisa vir do MESMO pacote e do MESMO build.
+  //
+  // `new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url)` funciona no
+  // dev e QUEBRA no build de produção: o Vite não resolve um especificador de
+  // pacote dentro de new URL(). O `?url` é a forma que ele entende — ele copia o
+  // arquivo pro bundle e devolve o caminho final.
+  const worker = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
+  pdfjs.GlobalWorkerOptions.workerSrc = worker;
 
   const buffer = await file.arrayBuffer();
   const doc = await pdfjs.getDocument({ data: buffer }).promise;
