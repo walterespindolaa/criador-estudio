@@ -242,3 +242,58 @@ export const FEATURES: Record<FeatureKey, FeatureDef> = {
     ganhos: [],
   },
 };
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ROTA → RECURSO  (é isto que faz o MENU saber de que plano cada coisa é)
+//
+// O menu marcava "PRO" na mão, item por item — e por isso só o Cria Estúdio
+// tinha selo. Insights, Tendências, Media Kit, Relatórios, Collabs: nenhum
+// avisava que era de outro plano. A pessoa clicava, batia numa trava e
+// descobria ali que não tinha. Descobrir o preço depois de querer é a pior
+// hora possível.
+//
+// Agora o selo sai DAQUI, do mesmo mapa que a trava usa. Recurso que muda de
+// plano no código muda de selo no menu junto, sem ninguém lembrar de nada.
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const ROUTE_FEATURE: Record<string, FeatureKey> = {
+  "/app/insights": "insights",
+  "/app/feed": "feed",
+  "/app/relatorios": "relatorios",
+  "/app/tendencias": "tendencias",
+  "/app/media-kit": "media-kit",
+  "/app/biblioteca": "biblioteca",
+  "/app/historico": "historico",
+  "/app/autopilot": "cria-plano",
+  "/app/stories": "stories",
+  "/app/collabs": "collabs",
+  "/app/estudio": "estudio",
+};
+
+/** O nome do plano como a pessoa lê. */
+export const TIER_LABEL: Record<PlanId, string> = {
+  essencial: "Essencial",
+  pro: "Pro",
+  studio: "Studio",
+};
+
+/** Tier mínimo exigido por uma rota. `null` = está em todos os planos. */
+export function minimoDaRota(to: string): Tier | "admin" | null {
+  const key = ROUTE_FEATURE[to];
+  return key ? FEATURES[key].minimo : null;
+}
+
+/**
+ * O selo que o menu deve mostrar nesta rota, pra QUEM está olhando.
+ *
+ * Regra: só marca o que a pessoa AINDA NÃO TEM. Escrever "PRO" ao lado de um
+ * item que o assinante Pro já usa não informa nada — é ruído, e ruído em menu
+ * a pessoa aprende a ignorar (aí quando o selo importar, ela não vê).
+ * `admin` nunca vira selo: não é plano, é obra.
+ */
+export function seloDaRota(to: string, atual: Tier): string | null {
+  const minimo = minimoDaRota(to);
+  if (!minimo || minimo === "admin" || minimo === "none") return null;
+  if (tierAtLeast(atual, minimo)) return null;
+  return TIER_LABEL[minimo as PlanId];
+}

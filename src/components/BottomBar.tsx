@@ -9,6 +9,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { toast } from "sonner";
 import { useCriaAI } from "@/contexts/CriaAIContext";
+import { useTier } from "@/hooks/useTier";
+import { PlanTag } from "@/components/shared/PlanTag";
+import { seloDaRota } from "@/lib/plans";
 
 const leftItems = [
   { title: "Início", url: "/app", icon: Home, exact: true },
@@ -19,13 +22,13 @@ const rightItems = [
   { title: "Criando", url: "/app/criando", icon: Kanban },
 ];
 
-type MoreItem = { title: string; url: string; icon: typeof Home; pro?: boolean; hot?: boolean; desc?: string };
+type MoreItem = { title: string; url: string; icon: typeof Home; hot?: boolean; desc?: string };
 const MORE_SECTIONS: { title: string; items: MoreItem[] }[] = [
   { title: "Criar", items: [
     { title: "Ideias", url: "/app/ideias", icon: Lightbulb, desc: "Banco de ideias e ganchos" },
     { title: "Em produção", url: "/app/criando", icon: Kanban, desc: "Seu kanban de posts" },
-    { title: "Cria Plano", url: "/app/autopilot", icon: Wand2, pro: true, hot: true, desc: "Cronograma do mês com IA" },
-    { title: "Cria Stories", url: "/app/stories", icon: Clapperboard, pro: true, desc: "Plano de stories da semana" },
+    { title: "Cria Plano", url: "/app/autopilot", icon: Wand2, hot: true, desc: "Cronograma do mês com IA" },
+    { title: "Cria Stories", url: "/app/stories", icon: Clapperboard, desc: "Plano de stories da semana" },
     { title: "Tendências", url: "/app/tendencias", icon: TrendingUp, hot: true, desc: "O que tá bombando no nicho" },
     { title: "Aprovações", url: "/app/aprovacao", icon: ClipboardCheck, desc: "O que espera seu ok" },
     { title: "Meu Feed", url: "/app/feed", icon: Grid3X3, desc: "Prévia do seu feed" },
@@ -69,9 +72,10 @@ export function BottomBar() {
   const { signOut } = useAuth();
   const { openCria } = useCriaAI();
   const { profile } = useProfile();
+  const { tier } = useTier();
   const sections = profile?.role === "admin"
     ? MORE_SECTIONS.map((s) => s.title === "Mais"
-        ? { ...s, items: [...s.items, { title: "Cria Estúdio", url: "/app/estudio", icon: Wand2, pro: true, desc: "Carrosséis com IA" }, { title: "Admin", url: "/app/cf-admin-panel", icon: ShieldCheck }] }
+        ? { ...s, items: [...s.items, { title: "Cria Estúdio", url: "/app/estudio", icon: Wand2, desc: "Carrosséis com IA" }, { title: "Admin", url: "/app/cf-admin-panel", icon: ShieldCheck }] }
         : s)
     : MORE_SECTIONS;
   const allMoreItems = sections.flatMap((s) => s.items);
@@ -152,8 +156,10 @@ export function BottomBar() {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5">
                             <span className={cn("text-[15px] font-body font-semibold truncate", active ? "text-primary" : "text-foreground")}>{item.title}</span>
-                            {item.pro && <span className="shrink-0 rounded-full bg-amber-100 text-amber-700 text-[9px] font-bold px-1.5 py-0.5 leading-none">PRO</span>}
-                            {item.hot && !item.pro && <span className="shrink-0 rounded-full bg-secondary/15 text-secondary text-[9px] font-bold px-1.5 py-0.5 leading-none">EM ALTA</span>}
+                            {/* Selo de plano vindo do mapa (lib/plans.ts), não mais
+                                de um "pro: true" escrito à mão que só existia em 2 itens. */}
+                            <PlanTag to={item.url} />
+                            {item.hot && !seloDaRota(item.url, tier) && <span className="shrink-0 rounded-full bg-secondary/15 text-secondary text-[9px] font-bold px-1.5 py-0.5 leading-none">EM ALTA</span>}
                           </div>
                           {item.desc && <p className="text-[11.5px] font-body text-muted-foreground truncate mt-0.5">{item.desc}</p>}
                         </div>

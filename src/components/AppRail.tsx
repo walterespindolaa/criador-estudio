@@ -10,12 +10,10 @@ import { cn } from "@/lib/utils";
 import { useCriaAI } from "@/contexts/CriaAIContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useT } from "@/lib/i18n";
-import { useTier } from "@/hooks/useTier";
+import { PlanTag } from "@/components/shared/PlanTag";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 
-type NavChild = { label: string; icon: LucideIcon; to: string; studio?: boolean };
+type NavChild = { label: string; icon: LucideIcon; to: string };
 type NavNode = {
   id: string; label: string; icon: LucideIcon;
   to?: string; end?: boolean; children?: NavChild[];
@@ -28,8 +26,8 @@ const TOP: NavNode[] = [
   { id: "criar", label: "nav.create", icon: PenLine, children: [
     { label: "nav.ideas", icon: Lightbulb, to: "/app/ideias" },
     { label: "nav.inProduction", icon: Kanban, to: "/app/criando" },
-    { label: "nav.criaPlan", icon: Wand2, to: "/app/autopilot", studio: true },
-    { label: "nav.criaStories", icon: Clapperboard, to: "/app/stories", studio: true },
+    { label: "nav.criaPlan", icon: Wand2, to: "/app/autopilot" },
+    { label: "nav.criaStories", icon: Clapperboard, to: "/app/stories" },
     { label: "nav.trends", icon: TrendingUp, to: "/app/tendencias" },
     { label: "nav.approvals", icon: ClipboardCheck, to: "/app/aprovacao" },
     { label: "nav.myFeed", icon: Grid3X3, to: "/app/feed" },
@@ -72,10 +70,8 @@ export function AppRail() {
   const { pathname } = useLocation();
   const { openCria } = useCriaAI();
   const { profile } = useProfile();
-  const { isStudio } = useTier();
   const isAdmin = profile?.role === "admin";
   const [openId, setOpenId] = useState<string | null>(null);
-  const [studioGate, setStudioGate] = useState(false);
   const [hovered, setHovered] = useState(false);
   const railRef = useRef<HTMLElement>(null);
   const expanded = hovered;
@@ -123,6 +119,8 @@ export function AppRail() {
         >
           <Icon className="h-[18px] w-[18px] shrink-0" />
           {expanded && <span className="flex-1 truncate text-left text-sm font-medium">{t(n.label)}</span>}
+          {/* Parcerias (Collabs) é item de 1º nível e é do Studio — passava sem selo. */}
+          {expanded && n.to && !n.children && <PlanTag to={n.to} />}
           {expanded && n.children && (
             <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", isOpen && "rotate-180")} />
           )}
@@ -150,9 +148,11 @@ export function AppRail() {
                 >
                   <CIcon className="h-4 w-4 shrink-0" />
                   <span className="flex-1 truncate">{t(c.label)}</span>
-                  {c.studio && (
-                    <span className="shrink-0 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-gradient-to-r from-primary to-purple-600 text-white">Studio</span>
-                  )}
+                  {/* O selo sai do mapa de planos, não de um booleano na mão:
+                      antes SÓ o Cria Plano e o Stories tinham marcação, e
+                      Insights / Tendências / Media Kit / Relatórios apareciam
+                      como se fossem de todo mundo. */}
+                  <PlanTag to={c.to} />
                 </button>
               );
             })}
@@ -186,30 +186,6 @@ export function AppRail() {
         {BOTTOM.map(renderNode)}
       </div>
 
-      <Dialog open={studioGate} onOpenChange={setStudioGate}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center mb-2">
-              <Wand2 className="h-6 w-6 text-white" />
-            </div>
-            <DialogTitle className="text-xl font-display font-extrabold">Cria Plano é do Cria Studio</DialogTitle>
-            <DialogDescription className="text-sm leading-relaxed pt-1">
-              Uma IA treinada na <strong>sua marca</strong> que monta um mês inteiro (ou uma semana) de conteúdo estratégico de uma vez: ideias, formatos, legendas e o melhor horário pra postar, sem repetir o que você já fez.
-            </DialogDescription>
-          </DialogHeader>
-          <ul className="space-y-2 text-sm font-body text-foreground/80 py-1">
-            <li className="flex gap-2"><Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" /> Cronograma pronto a partir do seu brandbook e histórico</li>
-            <li className="flex gap-2"><Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" /> Você escolhe tema, público e foco pra nichar de verdade</li>
-            <li className="flex gap-2"><Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" /> Edita e manda direto pro Criando, com ou sem revisão</li>
-          </ul>
-          <DialogFooter className="gap-2 sm:gap-2">
-            <Button variant="ghost" onClick={() => setStudioGate(false)}>Agora não</Button>
-            <Button variant="hero" onClick={() => { setStudioGate(false); navigate("/app/assinar"); }}>
-              <Sparkles className="h-4 w-4 mr-2" /> Conhecer o Studio
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </nav>
   );
 }
