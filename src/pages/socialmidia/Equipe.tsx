@@ -9,6 +9,7 @@ import {
   useTeamMembers, useCollabSeats, useInviteMember, useUpdateMemberStatus, useRemoveMember,
   useSetMemberModule, useBuySeats, TEAM_MODULES,
 } from "@/hooks/useTeam";
+import { useManageSubscription } from "@/hooks/useManageSubscription";
 import { useCrmClients } from "@/hooks/useCrm";
 import { confirmar } from "@/components/shared/Confirm";
 
@@ -21,6 +22,9 @@ export default function Equipe() {
   const removeMember = useRemoveMember();
   const setModule = useSetMemberModule();
   const buySeats = useBuySeats();
+  // Portal do Stripe: é onde a pessoa vê TODAS as assinaturas dela (inclusive
+  // uma órfã de antes da correção dos assentos) e cancela sozinha, sem suporte.
+  const { openPortal, isLoading: portalLoading } = useManageSubscription();
 
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -74,6 +78,13 @@ export default function Equipe() {
           {buySeats.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <CreditCard className="h-4 w-4 mr-1.5" />}
           Adicionar assento
         </Button>
+        {(seats?.paid ?? 0) > 0 && (
+          <Button variant="ghost" size="sm" onClick={() => void openPortal()} disabled={portalLoading}
+            className="text-muted-foreground hover:text-foreground">
+            {portalLoading ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
+            Gerenciar cobrança
+          </Button>
+        )}
       </div>
 
       <Button data-tour="eq-convidar" onClick={openInvite}><UserPlus className="h-4 w-4 mr-2" /> Convidar colaborador</Button>
