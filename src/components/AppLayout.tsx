@@ -1,6 +1,6 @@
 import { Suspense, useEffect } from "react";
 import { Outlet, NavLink, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { ContentSkeleton } from "@/components/shared/ContentSkeleton";
+import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { BottomBar } from "@/components/BottomBar";
 import { BroadcastBanner } from "@/components/BroadcastBanner";
 import { NotificationNudge } from "@/components/NotificationNudge";
@@ -8,6 +8,7 @@ import { FeedbackButton } from "@/components/FeedbackButton";
 import { PWAInstallBanner } from "@/components/shared/PWAInstallBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { GlobalSearch } from "@/components/shared/GlobalSearch";
+import { Logo } from "@/components/shared/Logo";
 import { PlanBadge } from "@/components/shared/PlanBadge";
 import { AppFooter } from "@/components/shared/AppFooter";
 import { Settings, Lightbulb, Plus } from "lucide-react";
@@ -172,19 +173,17 @@ const AppLayout = () => {
                 só aparece quando ela EXIGE atenção (teste acabando, sem plano) —
                 nos outros casos ela mora no menu, em "Planos". O feedback virou o
                 botão flutuante que já existe. */}
-            <header className="h-14 sticky top-0 z-40 grid grid-cols-[1fr_auto_1fr] items-center px-3 bg-background border-b border-border md:hidden">
+            <header
+              className="min-h-14 sticky top-0 z-40 grid grid-cols-[1fr_auto_1fr] items-center px-3 bg-background border-b border-border md:hidden"
+              style={{ paddingTop: "env(safe-area-inset-top)" }}
+            >
               <div className="flex items-center gap-1 justify-self-start">
                 <GlobalSearch />
                 <HelpButton />
               </div>
 
-              <NavLink to="/app" className="flex items-center justify-self-center px-2">
-                <h1
-                  className="text-xl font-display font-semibold text-foreground tracking-tight"
-                  style={{ fontVariationSettings: "'opsz' 9" }}
-                >
-                  cria
-                </h1>
+              <NavLink to="/app" className="flex items-center justify-self-center px-2" aria-label="Início">
+                <Logo className="h-6 w-auto" />
               </NavLink>
 
               <div className="flex items-center gap-1 justify-self-end">
@@ -202,7 +201,7 @@ const AppLayout = () => {
               <div className="max-w-screen-2xl mx-auto px-4 py-4 md:px-8 md:py-6">
                 <BroadcastBanner audience="criadora" />
                 <NotificationNudge />
-                <Suspense fallback={<ContentSkeleton />}>
+                <Suspense fallback={<LoadingScreen compact />}>
                   <Outlet />
                 </Suspense>
               </div>

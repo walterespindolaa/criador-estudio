@@ -55,6 +55,11 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <!-- A logo aparece no loading entre páginas. Sem preload, o PNG só baixa na
+         hora e pisca em branco na primeira vez. Pré-carrega as duas (clara e
+         escura) pra ela pintar na hora. -->
+    <link rel="preload" as="image" href="/logo-cria.png" />
+    <link rel="preload" as="image" href="/logo-cria-white.png" />
   <meta property="og:title" content="Cria Social Club — seu estúdio de conteúdo">
   <meta name="twitter:title" content="Cria Social Club — seu estúdio de conteúdo">
   <meta property="og:description" content="Da ideia ao publicado: organize, planeje e crie conteúdo para redes sociais em um só lugar.">

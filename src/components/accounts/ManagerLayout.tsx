@@ -1,6 +1,5 @@
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { Navigate, Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
-import { ContentSkeleton } from "@/components/shared/ContentSkeleton";
 import { BroadcastBanner } from "@/components/BroadcastBanner";
 import { NotificationNudge } from "@/components/NotificationNudge";
 import { FeedbackButton } from "@/components/FeedbackButton";
@@ -291,7 +290,10 @@ export default function ManagerLayout() {
             nem aprovação de cliente, nem lead. Todo o sistema de push apontava pra
             uma tela que ele não conseguia abrir.
             Mesma estrutura do lado do criador: 2 à esquerda, logo no centro, 2 à direita. */}
-        <header className="h-14 sticky top-0 z-40 grid grid-cols-[1fr_auto_1fr] items-center px-3 bg-background border-b border-border md:hidden">
+        <header
+          className="min-h-14 sticky top-0 z-40 grid grid-cols-[1fr_auto_1fr] items-center px-3 bg-background border-b border-border md:hidden"
+          style={{ paddingTop: "env(safe-area-inset-top)" }}
+        >
           <div className="flex items-center gap-1 justify-self-start">
             <GlobalSearch />
             <HelpButton />
@@ -300,10 +302,10 @@ export default function ManagerLayout() {
           <button
             type="button"
             onClick={() => navigate("/socialmidia/dashboard")}
-            className="justify-self-center px-2 text-xl font-display font-semibold tracking-tight text-foreground"
-            style={{ fontVariationSettings: "'opsz' 9" }}
+            className="justify-self-center px-2"
+            aria-label="Início"
           >
-            cria
+            <Logo className="h-6 w-auto" />
           </button>
 
           <div className="flex items-center gap-1 justify-self-end">
@@ -327,7 +329,7 @@ export default function ManagerLayout() {
           <div className="mx-auto w-full max-w-[1600px]">
             <BroadcastBanner audience="social" />
             <NotificationNudge />
-            <Suspense fallback={<ContentSkeleton />}>
+            <Suspense fallback={<LoadingScreen compact />}>
               <Outlet context={ctx} />
             </Suspense>
           </div>
