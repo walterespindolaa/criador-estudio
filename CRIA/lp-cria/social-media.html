@@ -204,10 +204,10 @@ html,body{overflow-x:clip}
   <div class="hero-blob hb-3"></div>
   <div class="container">
     <span class="kicker" style="background:var(--laranja)">Pra quem gerencia clientes</span>
-    <h1>Você não é só criador. <span class="hl">Você toca uma operação.</span>
-      <span class="hero-script">e ela merece mais que planilha</span>
+    <h1>Seu cliente paga R$1.500/mês. <span class="hl">E aprova post por print no WhatsApp?</span>
+      <span class="hero-script">isso tá te custando caro</span>
     </h1>
-    <p class="hero-sub">Prospecção, proposta, contrato, aprovação, relatório, cobrança. O CRIA Studio opera o negócio inteiro de quem vive de social media, não só o conteúdo.</p>
+    <p class="hero-sub">O CRIA transforma o seu serviço numa experiência de agência grande: portal de aprovação com a SUA marca, relatório em 1 clique, CRM e financeiro no mesmo lugar. A conta é grátis. Você ativa só o que usar.</p>
     <div class="hero-ctas">
       <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja">Começar grátis</a>
       <a href="#modulos" class="btn btn-ghost">Ver os módulos ↓</a>
@@ -216,16 +216,68 @@ html,body{overflow-x:clip}
   </div>
 </section>
 
-<section id="contexto">
-  <div class="container ctx-grid">
-    <div class="reveal">
-      <h2>Você cobra <span class="ctx-num">R$800+</span> por cliente. Sua operação roda no improviso?</h2>
+<!-- ============ DOR: a semana que ela reconhece na hora ============ -->
+<section id="semana">
+  <div class="container">
+    <div class="ciclo-head reveal" style="text-align:center">
+      <span class="kicker" style="background:var(--rosa);color:var(--ink)">Te conheço?</span>
+      <h2>A sua semana, <span class="script" style="color:var(--laranja);font-size:1.15em">sem filtro</span></h2>
     </div>
-    <div class="ctx-box reveal">
-      <p>O social media brasileiro cobra de R$800 a R$10.000 por cliente/mês, e gerencia isso com Notion, planilha e WhatsApp. Cada hora perdida em processo manual é hora que não vira cliente novo. O CRIA custa menos de 1 hora do seu trabalho.</p>
+    <div class="sem-grid">
+      <div class="sem-card reveal" style="--sc:var(--azul)"><span class="sem-dia script">domingo, 23h</span><p>Montando relatório no Canva com print de story que já expirou. De novo.</p></div>
+      <div class="sem-card reveal" style="--sc:var(--laranja)"><span class="sem-dia script">segunda</span><p>"Oi, conseguiu ver os posts?" pela 4ª vez. A resposta chega em áudio de 4 minutos.</p></div>
+      <div class="sem-card reveal" style="--sc:var(--rosa)"><span class="sem-dia script">quarta</span><p>O post voltou "com um ajustinho" que você já tinha feito. Ficou 5 dias parado e a culpa sobrou pra você.</p></div>
+      <div class="sem-card reveal" style="--sc:var(--verde)"><span class="sem-dia script">sexta</span><p>Quem pagou esse mês? A planilha não sabe. E você cobra com vergonha, como se o errado fosse você.</p></div>
+    </div>
+    <div class="sem-virada reveal">
+      <p><strong>O problema não é você. É a operação picada em 5 apps que não se falam.</strong> O Notion não sabe o que o cliente aprovou. O WhatsApp não sabe quem pagou. A planilha não sabe de nada. E o cliente, que paga R$1.500, recebe experiência de R$150.</p>
     </div>
   </div>
 </section>
+
+<!-- ============ O MOMENTO UAU: a parte que o cliente VÊ ============ -->
+<section id="uau">
+  <div class="container uau-grid">
+    <div class="reveal">
+      <span class="kicker" style="background:var(--amarelo);color:var(--ink)">Agora imagina isso</span>
+      <h2 style="color:var(--creme)">Seu cliente abre um link e vê <span class="script" style="color:var(--amarelo);font-size:1.15em">a marca dele</span></h2>
+      <p class="uau-p">Um portal com a logo dele, na cor dele, com os posts do jeito que vão ficar no feed. Ele aprova do sofá, comenta no lugar certo, e você vê a hora exata em que ele visualizou. No fim do mês, o relatório sai em 1 clique e vai direto pro WhatsApp dele.</p>
+      <p class="uau-p"><strong style="color:var(--amarelo)">E o golpe de mestre:</strong> cada cliente seu ganha uma conta CRIA Studio completa, de graça, conectada à sua. Você para de vender "uns posts" e passa a entregar uma plataforma com a sua assinatura. Quem entrega experiência de agência cobra preço de agência.</p>
+      <div class="uau-chips">
+        <span class="uau-chip">Com a SUA marca</span>
+        <span class="uau-chip">Cliente não precisa de cadastro</span>
+        <span class="uau-chip">Visto às 14h32 ✓</span>
+        <span class="uau-chip">Conta Studio grátis pro cliente</span>
+      </div>
+      <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja" style="margin-top:26px">Quero dar essa experiência</a>
+    </div>
+    <div class="uau-visual reveal-scale">
+      <div class="uau-phone">
+        <span class="uau-ph-dot"></span>
+        <span class="mod-ph" style="border-color:rgba(244,239,227,.4);color:var(--creme);background:rgba(253,251,245,.06)">[ print do portal do cliente no celular ]</span>
+      </div>
+    </div>
+  </div>
+</section>
+<style>
+#semana{padding:70px 0 55px;position:relative}
+.sem-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:34px}
+.sem-card{background:var(--branco);border:3px solid var(--sc);border-radius:24px 28px 24px 30px;padding:22px 20px;box-shadow:6px 6px 0 var(--sc);transform:rotate(-.5deg)}
+.sem-card:nth-child(even){transform:rotate(.5deg)}
+.sem-dia{display:block;font-size:1.4rem;color:var(--sc);margin-bottom:8px;line-height:1}
+.sem-card p{font-size:.92rem;line-height:1.5;opacity:.85}
+.sem-virada{max-width:640px;margin:36px auto 0;text-align:center;font-size:1.05rem;line-height:1.6}
+#uau{background:var(--ink);padding:85px 0;position:relative;overflow:hidden}
+.uau-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center}
+.uau-p{color:rgba(255,255,255,.8);margin-top:16px;font-size:1.02rem;line-height:1.65}
+.uau-chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:22px}
+.uau-chip{background:rgba(253,251,245,.1);color:var(--creme);border:2px solid var(--laranja);border-radius:999px;padding:7px 14px;font-size:.82rem;font-weight:700}
+.uau-visual{display:flex;justify-content:center}
+.uau-phone{width:260px;min-height:440px;border:3px solid rgba(244,239,227,.4);border-radius:38px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;transform:rotate(2.5deg);background:rgba(253,251,245,.04)}
+.uau-ph-dot{width:52px;height:6px;border-radius:999px;background:rgba(244,239,227,.35)}
+@media(max-width:900px){.sem-grid{grid-template-columns:1fr 1fr}.uau-grid{grid-template-columns:1fr}.uau-phone{min-height:300px}}
+@media(max-width:560px){.sem-grid{grid-template-columns:1fr}}
+</style>
 
 <section id="modulos" style="position:relative;overflow:hidden">
   <!-- Blobs orgânicos do brandbook flutuando atrás dos módulos -->
@@ -241,6 +293,7 @@ html,body{overflow-x:clip}
     <div style="text-align:center;max-width:720px;margin:0 auto 30px" class="reveal">
       <span class="kicker" style="background:var(--azul)">Os módulos do gestor</span>
       <h2>A operação inteira, <span class="script" style="color:var(--laranja);font-size:1.15em">módulo por módulo</span></h2>
+      <p style="opacity:.8;max-width:56ch;margin:12px auto 0;text-align:center">A conta de gestor é grátis e já vem com seus clientes organizados. Aí você monta a SUA operação: ativa só o módulo que resolve o seu gargalo de hoje, e o resto quando (e se) precisar.</p>
     </div>
 
     <div class="mod reveal">
@@ -398,12 +451,39 @@ html,body{overflow-x:clip}
   </div>
 </section>
 
+<!-- ============ QUEBRA DE OBJEÇÕES ============ -->
+<section id="faq-gestor">
+  <div class="container" style="max-width:760px">
+    <div class="reveal" style="text-align:center">
+      <span class="kicker" style="background:var(--azul)">Sem pegadinha</span>
+      <h2>O que você deve estar <span class="script" style="color:var(--laranja);font-size:1.15em">se perguntando</span></h2>
+    </div>
+    <div class="fq-list reveal">
+      <details class="fq"><summary>"Mais uma ferramenta pra eu configurar? Não tenho tempo."</summary><p>A maioria organiza o primeiro cliente em menos de 1 hora: cria o cliente, cola os posts, manda o link de aprovação. Sem importação complexa, sem treinamento. E o tempo volta já na primeira rodada de aprovação sem WhatsApp.</p></details>
+      <details class="fq"><summary>"Meu cliente mal responde no WhatsApp, vai usar um portal?"</summary><p>Ele não precisa aprender nada: recebe um link, abre no celular e toca em aprovar. Sem cadastro, sem senha, sem app pra baixar. É mais fácil que responder o seu "oi, conseguiu ver?".</p></details>
+      <details class="fq"><summary>"R$19,90 + R$24,90 + R$29,90... isso não vira caro?"</summary><p>Tudo ativado dá R$74,70, menos de 1 hora do seu trabalho, cobrindo aprovação, CRM e financeiro. E você não precisa de tudo: começa pelo módulo do seu maior gargalo. Sem fidelidade, cancela dentro do app.</p></details>
+      <details class="fq"><summary>"Meu cliente precisa pagar alguma coisa?"</summary><p>Não. No Modo Agência, cada cliente seu ganha uma conta Studio completa de graça, conectada à sua. Pra ele, é um benefício que veio de você.</p></details>
+      <details class="fq"><summary>"E se eu quiser sair?"</summary><p>Cancela dentro do app, em 2 cliques, módulo por módulo. Sem ligação, sem multa, sem retenção forçada. Seus dados continuam seus.</p></details>
+    </div>
+  </div>
+</section>
+<style>
+#faq-gestor{padding:70px 0 60px}
+.fq-list{margin-top:30px;display:flex;flex-direction:column;gap:12px}
+.fq{background:var(--branco);border:2px solid var(--ink);border-radius:18px 22px 18px 24px;padding:0;overflow:hidden}
+.fq summary{cursor:pointer;list-style:none;font-family:var(--font-display);font-weight:700;font-size:1rem;padding:18px 22px;position:relative}
+.fq summary::-webkit-details-marker{display:none}
+.fq summary::after{content:"+";position:absolute;right:20px;top:50%;transform:translateY(-50%);font-size:1.4rem;color:var(--laranja)}
+.fq[open] summary::after{content:"–"}
+.fq p{padding:0 22px 18px;font-size:.95rem;line-height:1.6;opacity:.85}
+</style>
+
 <section id="final">
   <div class="fs fs-1"></div>
   <div class="fs fs-2"></div>
   <div class="container">
-    <h2 class="reveal">Sua operação merece mais que planilha.</h2>
-    <span class="script reveal">comece grátis hoje</span>
+    <h2 class="reveal">Seu próximo cliente vai te ver como agência ou como freelancer?</h2>
+    <span class="script reveal">você decide hoje, de graça</span>
     <div class="reveal">
       <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja">Começar grátis</a>
       <p class="micro">Área do gestor gratuita · Módulos à parte, sem fidelidade</p>
