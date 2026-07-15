@@ -474,7 +474,7 @@ html,body{overflow-x:clip}
       <p style="opacity:.8;max-width:56ch;margin:10px auto 0">Uma ferramenta pra aprovar, outra pra relatório, um CRM adaptado e uma planilha. Você paga 4 vezes e ainda faz o trabalho de integração na mão.</p>
     </div>
     <div class="comp-wrap reveal">
-      <div class="comp-row comp-head"><div>O que você precisa</div><div>Como o mercado resolve</div><div class="comp-cria"><img src="cria-icone.png" alt="CRIA" class="comp-logo"></div></div>
+      <div class="comp-row comp-head"><div>O que você precisa</div><div>Como o mercado resolve</div><div class="comp-cria"><img src="logo-cria-white.png" alt="CRIA" class="comp-logo"></div></div>
       <div class="comp-row" style="--rc:var(--laranja)"><div class="comp-job">Aprovação de posts</div><div class="comp-mkt">Ferramenta de aprovação à parte, que não fala com o resto</div><div class="comp-cria">Cria Post R$19,90: portal com a marca do cliente + "visto às 14h32"</div></div>
       <div class="comp-row" style="--rc:var(--verde)"><div class="comp-job">Relatórios</div><div class="comp-mkt">Reportei: a partir de R$74,90/mês*</div><div class="comp-cria">Já vem no Cria Post: 1 clique, direto pro WhatsApp</div></div>
       <div class="comp-row" style="--rc:var(--azul)"><div class="comp-job">Planejamento e calendário</div><div class="comp-mkt">mLabs: a partir de R$29,90 por marca*</div><div class="comp-cria">Na conta grátis: agenda multi-cliente com arrasta e solta</div></div>
@@ -500,16 +500,24 @@ html,body{overflow-x:clip}
 .comp-row:not(.comp-head) .comp-cria::before{content:"✓";font-family:var(--font-display);font-weight:800;font-size:1.05rem;line-height:1.3;color:var(--rc,var(--laranja));flex-shrink:0}
 .comp-head>div{background:var(--ink);color:var(--creme);font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:.78rem;letter-spacing:.06em;align-items:center;justify-content:center;text-align:center}
 .comp-head .comp-cria{background:var(--laranja);color:#fff;border-left:none;padding:12px 20px}
-.comp-logo{height:36px;width:auto;filter:brightness(0) invert(1);display:block}
+.comp-logo{height:30px;width:auto;display:block}
 .comp-total>div{background:var(--amarelo);font-weight:700}
 .comp-total .comp-cria{background:var(--amarelo);border-left:3px solid var(--ink)}
 @media(max-width:760px){
+  /* No celular a tabela vira UM CARD POR TRABALHO, na cor da linha. A versão
+     empilhada anterior misturava divisórias e parecia quebrada. */
+  .comp-wrap{border:none;box-shadow:none;background:transparent;overflow:visible;border-radius:0}
   .comp-head{display:none}
-  .comp-row{grid-template-columns:1fr}
-  .comp-row>div{padding:12px 16px}
-  .comp-mkt::before{content:"Mercado: ";font-weight:700;opacity:.9}
-  .comp-row .comp-cria{border-left:none;border-top:2px solid var(--laranja)}
-  .comp-row .comp-cria::before{content:"CRIA: ";font-weight:800}
+  .comp-row{grid-template-columns:1fr;border:3px solid var(--rc,var(--ink));border-radius:20px;background:var(--branco);margin-bottom:16px;overflow:hidden;box-shadow:5px 5px 0 var(--rc,var(--ink))}
+  .comp-row>div{display:block;padding:12px 16px}
+  .comp-job{display:flex;align-items:center;background:var(--creme);font-size:1.02rem;border-bottom:1.5px dashed rgba(10,10,10,.12)}
+  .comp-mkt::before{content:"Mercado: ";font-weight:700;opacity:.95}
+  .comp-row .comp-cria{border-left:none;border-top:1.5px dashed rgba(10,10,10,.12);background:rgba(234,73,24,.05)}
+  .comp-row:not(.comp-head) .comp-cria::before{content:"✓ ";margin-right:2px}
+  .comp-total{border-color:var(--ink);box-shadow:5px 5px 0 var(--ink)}
+  .comp-total .comp-job{background:var(--amarelo);border-bottom-color:rgba(10,10,10,.2)}
+  .comp-total>div{background:var(--amarelo)}
+  .comp-total .comp-cria{border-top:2px solid var(--ink);background:var(--amarelo)}
 }
 </style>
 

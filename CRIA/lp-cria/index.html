@@ -253,9 +253,10 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
 #versus h2 .script{color:var(--amarelo)}
 /* A marca no lugar da palavra: logo branca inline no título e carimbos
    translúcidos flutuando no fundo azul. */
-.h2-logo{height:1.2em;vertical-align:-.22em;display:inline-block;filter:brightness(0) invert(1)}
-.h3-logo{height:1.25em;vertical-align:-.25em;display:inline-block;margin-left:2px}
-.h3-logo.inv{filter:brightness(0) invert(1)}
+/* O wordmark (o mesmo da barra), não o selo redondo: em tamanho de texto o
+   selo vira uma bolinha ilegível. */
+.h2-logo{height:1.15em;vertical-align:-.2em;display:inline-block}
+.h3-logo{height:1.05em;vertical-align:-.18em;display:inline-block;margin-left:2px}
 .vs-blobs{position:absolute;inset:0;pointer-events:none;z-index:0}
 .vs-mark{display:block;opacity:.14;filter:brightness(0) invert(1)}
 .mark-ink{display:block;opacity:.06}
@@ -508,6 +509,23 @@ html,body{overflow-x:clip}
     </div>
   </div>
 </section>
+
+<style>
+/* Ciclo no MOBILE: mockup de iPhone grudado no topo + etapas rolando embaixo.
+   A tela do "iPhone" troca conforme a etapa passa pelo meio da viewport. */
+@media(max-width:900px){
+  #ciclo .ciclo-grid{display:flex;flex-direction:column;gap:0}
+  #ciclo .ciclo-visual{order:-1;position:sticky;top:86px;z-index:5;width:min(232px,64vw);min-height:396px;margin:0 auto;border:7px solid var(--ink);border-radius:36px;box-shadow:0 18px 40px rgba(10,10,10,.28)}
+  #ciclo .ciclo-visual::after{content:"";position:absolute;top:10px;left:50%;transform:translateX(-50%);width:62px;height:7px;border-radius:999px;background:rgba(244,239,227,.35)}
+  #ciclo .ciclo-frame{padding:26px 18px}
+  #ciclo .ciclo-frame .big{font-size:1.55rem}
+  #ciclo .ciclo-frame .ph{padding:13px 14px;font-size:.7rem}
+  #ciclo .ciclo-steps{margin-top:24px;gap:14px;padding-bottom:10px}
+  #ciclo .ciclo-steps .step{background:var(--branco);border-radius:18px;padding:15px 16px;opacity:.5;transform:scale(.98);transition:opacity .3s,transform .3s}
+  #ciclo .ciclo-steps .step.active{opacity:1;transform:scale(1)}
+  #ciclo .ciclo-steps .step p{display:block;font-size:.85rem}
+}
+</style>
 
 <!-- ==================== CRIA PLANO (destaque) ==================== -->
 <!-- O recurso mais forte do produto não tinha seção própria: aparecia num card
@@ -807,10 +825,10 @@ html,body{overflow-x:clip}
     <span class="fblob" style="bottom:8%;right:32%;animation-duration:16s"><img class="vs-mark" src="cria-icone.png" alt="" style="width:36px;transform:rotate(-7deg)"></span>
   </div>
   <div class="container" style="position:relative;z-index:1">
-    <h2 class="reveal">O que muda quando você usa <img class="h2-logo" src="cria-icone.png" alt="o CRIA">? <span class="script">tudo, na real</span></h2>
+    <h2 class="reveal">O que muda quando você usa <img class="h2-logo" src="logo-cria-white.png" alt="o CRIA">? <span class="script">tudo, na real</span></h2>
     <div class="versus-grid">
       <div class="vs-card vs-sem reveal">
-        <h3><svg class="svgi svgi-inline" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg> Sem o <img class="h3-logo inv" src="cria-icone.png" alt="CRIA"></h3>
+        <h3><svg class="svgi svgi-inline" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg> Sem o <img class="h3-logo" src="logo-cria-white.png" alt="CRIA"></h3>
         <ul>
           <li><b>✕</b> Ideias espalhadas em notas, prints e "salvos" do Instagram</li>
           <li><b>✕</b> Posta quando dá, e "quando dá" é quase nunca</li>
@@ -820,7 +838,7 @@ html,body{overflow-x:clip}
         </ul>
       </div>
       <div class="vs-card vs-com reveal">
-        <h3><svg class="svgi svgi-inline" style="color:var(--verde)" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg> Com o <img class="h3-logo" src="cria-icone.png" alt="CRIA"></h3>
+        <h3><svg class="svgi svgi-inline" style="color:var(--verde)" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg> Com o <img class="h3-logo" src="logo-cria.png" alt="CRIA"></h3>
         <ul>
           <li><b>✓</b> Banco de ideias + Cria IA sugerindo no seu tom</li>
           <li><b>✓</b> Semana inteira planejada no kanban e calendário</li>
@@ -1091,16 +1109,23 @@ ScrollTrigger.matchMedia({
     }
   },
   '(max-width: 900px)': function(){
-    /* mobile: sem pin — frames viram slideshow automático */
+    /* MOBILE: o visual vira um "iPhone" sticky no topo e as telas trocam
+       conforme a etapa que está passando no meio da viewport. O slideshow
+       automático de antes trocava sozinho, fora de sincronia com a leitura:
+       parecia bug, não recurso. */
     gsap.set(frames[0],{opacity:1});
     activate(0);
     let cur=0;
-    setInterval(()=>{
-      const next=(cur+1)%frames.length;
-      gsap.to(frames[cur],{opacity:0,duration:.4});
-      gsap.fromTo(frames[next],{opacity:0,y:20},{opacity:1,y:0,duration:.5});
-      activate(next); cur=next;
-    },2600);
+    const mostrar=(i)=>{
+      if(i===cur) return;
+      gsap.to(frames[cur],{opacity:0,duration:.28});
+      gsap.fromTo(frames[i],{opacity:0,y:16},{opacity:1,y:0,duration:.38});
+      cur=i; activate(i);
+    };
+    const io=new IntersectionObserver((ents)=>{
+      ents.forEach(e=>{ if(e.isIntersecting) mostrar(+e.target.dataset.step); });
+    },{rootMargin:'-42% 0px -42% 0px'});
+    steps.forEach(s=>io.observe(s));
   }
 });
 
