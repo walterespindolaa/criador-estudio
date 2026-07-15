@@ -251,6 +251,11 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
 #versus{background:var(--azul);padding:60px 0 45px;position:relative;overflow:hidden}
 #versus h2{color:#fff;text-align:center;max-width:700px;margin:0 auto 32px}
 #versus h2 .script{color:var(--amarelo)}
+/* A marca no lugar da palavra: logo branca inline no título e carimbos
+   translúcidos flutuando no fundo azul. */
+.h2-logo{height:1.06em;vertical-align:-.16em;display:inline-block}
+.vs-blobs{position:absolute;inset:0;pointer-events:none;z-index:0}
+.vs-mark{display:block;opacity:.12}
 .versus-grid{display:grid;grid-template-columns:1fr 1fr;gap:26px;max-width:920px;margin:0 auto}
 .vs-card{border-radius:var(--radius-lg);padding:40px 36px}
 .vs-sem{background:rgba(21,20,18,.35);color:rgba(255,255,255,.85);border:1.5px dashed rgba(255,255,255,.3)}
@@ -785,8 +790,18 @@ html,body{overflow-x:clip}
 
 <!-- ==================== VERSUS ==================== -->
 <section id="versus">
-  <div class="container">
-    <h2 class="reveal">O que muda quando você usa o CRIA? <span class="script">tudo, na real</span></h2>
+  <!-- Blobs orgânicos + a marca do CRIA flutuando no fundo, estilo carimbo -->
+  <div class="vs-blobs" aria-hidden="true">
+    <span class="fblob" style="width:300px;height:290px;top:-100px;left:-90px;background:#fff;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;opacity:.07;animation-duration:17s"></span>
+    <span class="fblob" style="width:210px;height:200px;bottom:-70px;right:-60px;background:var(--amarelo);border-radius:55% 45% 40% 60%/50% 60% 40% 50%;opacity:.12;animation-duration:13s"></span>
+    <span class="fblob" style="width:120px;height:115px;top:24%;right:10%;background:var(--rosa);border-radius:45% 55% 60% 40%/55% 45% 55% 45%;opacity:.14;animation-duration:15s"></span>
+    <span class="fblob" style="top:14%;left:7%;animation-duration:14s"><img class="vs-mark" src="logo-cria-white.png" alt="" style="width:72px;transform:rotate(-11deg)"></span>
+    <span class="fblob" style="bottom:14%;left:16%;animation-duration:11s"><img class="vs-mark" src="logo-cria-white.png" alt="" style="width:44px;transform:rotate(9deg)"></span>
+    <span class="fblob" style="top:48%;right:4%;animation-duration:18s"><img class="vs-mark" src="logo-cria-white.png" alt="" style="width:56px;transform:rotate(14deg)"></span>
+    <span class="fblob" style="bottom:8%;right:32%;animation-duration:16s"><img class="vs-mark" src="logo-cria-white.png" alt="" style="width:36px;transform:rotate(-7deg)"></span>
+  </div>
+  <div class="container" style="position:relative;z-index:1">
+    <h2 class="reveal">O que muda quando você usa <img class="h2-logo" src="logo-cria-white.png" alt="o CRIA">? <span class="script">tudo, na real</span></h2>
     <div class="versus-grid">
       <div class="vs-card vs-sem reveal">
         <h3><svg class="svgi svgi-inline" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg> Sem o CRIA</h3>
@@ -820,7 +835,7 @@ html,body{overflow-x:clip}
       <div class="stat"><div class="n"><span class="counter" data-target="6">0</span> em 1</div><div class="l">ideias, plano, IA, stories, publicação e insights</div></div>
       <div class="stat"><div class="n"><span class="counter" data-target="7">0</span> dias</div><div class="l">grátis pra testar no seu fluxo real</div></div>
     </div>
-    <p style="text-align:center;color:rgba(255,255,255,.55);font-size:.8rem;margin-top:18px">*Comparado a planner + organização + IA de escrita + link in bio contratados separadamente. [AJUSTAR números reais: usuários, posts planejados etc.]</p>
+    <p style="text-align:center;color:rgba(255,255,255,.55);font-size:.8rem;margin-top:18px">*Comparado a planner + organização + IA de escrita + link in bio contratados separadamente.</p>
   </div>
 </section>
 
