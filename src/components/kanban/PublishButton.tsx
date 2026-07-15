@@ -66,10 +66,14 @@ export function PublishButton({ caption, mediaUrl, mediaType }: PublishButtonPro
 
   return (
     <>
-      <Button onClick={handlePublish} disabled={loading} variant="hero" className="gap-2">
+      <Button onClick={handlePublish} disabled={loading} variant="hero" className="gap-2" aria-label="Publicar">
         {loading ? <Loader2 className="h-4 w-4 animate-spin" />
           : mobile ? <Send className="h-4 w-4" /> : <Smartphone className="h-4 w-4" />}
-        {loading ? "Preparando mídia…" : mobile ? "Publicar" : "Publicar pelo celular"}
+        {/* No celular o rótulo some pra sobrar espaço no topo do post (o ícone de
+            avião já diz "publicar"); no desktop o texto aparece normalmente. */}
+        <span className={loading ? "" : "hidden sm:inline"}>
+          {loading ? "Preparando mídia…" : mobile ? "Publicar" : "Publicar pelo celular"}
+        </span>
       </Button>
 
       <AlertDialog open={driveWarnOpen} onOpenChange={setDriveWarnOpen}>

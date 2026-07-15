@@ -1174,10 +1174,10 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 )}
               </div>
 
-              {/* No mobile o espaço vazio empurra as ações pra direita. */}
-              <div className="flex-1 sm:hidden" />
-
-              <div className="flex items-center gap-1.5 shrink-0">
+              {/* ml-auto empurra as ações pra direita; flex-wrap deixa elas caírem
+                  pra segunda linha no mobile em vez de estourar a tela e cortar o
+                  botão Salvar. */}
+              <div className="flex flex-wrap items-center justify-end gap-1.5 ml-auto min-w-0">
                 {!isNew && post && (
                   <Button
                     variant="ghost"
