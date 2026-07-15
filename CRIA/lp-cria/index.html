@@ -229,11 +229,16 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
 
 /* ---------- funcionalidades ---------- */
 #func{background:var(--creme);padding:26px 0 55px}
-.func-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:28px}
-.func-card{border-radius:var(--radius-lg);padding:34px 30px;min-height:230px;display:flex;flex-direction:column;justify-content:flex-end;gap:8px;position:relative;overflow:hidden;transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+.func-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:28px}
+/* Cards com texto colado no rodapé deixavam um buraco vazio enorme no topo dos
+   cards de texto curto (o Kanban virava um retângulo amarelo oco). Agora o
+   conteúdo flui do topo: chip de ícone, título, texto. Altura vem do conteúdo,
+   e a linha se iguala sozinha pelo stretch do grid. */
+.func-card{border-radius:var(--radius-lg);padding:26px 24px;display:flex;flex-direction:column;justify-content:flex-start;gap:10px;position:relative;overflow:hidden;transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
 .func-card:hover{transform:translateY(-8px) rotate(-.5deg)}
-.func-card .icon{font-size:2rem;position:absolute;top:26px;left:28px}
-.func-card h3{font-size:1.3rem}
+.func-card .icon{display:inline-flex;width:46px;height:46px;border-radius:14px;align-items:center;justify-content:center;background:rgba(255,255,255,.22);margin-bottom:2px;flex-shrink:0}
+.fc-light .icon{background:rgba(21,20,18,.08)}
+.func-card h3{font-size:1.22rem}
 .func-card p{font-size:.92rem;line-height:1.5}
 .fc-light h3,.fc-light p{color:var(--ink)}
 .fc-dark h3,.fc-dark p{color:#fff}
@@ -344,7 +349,7 @@ footer .logo{color:var(--creme);display:block;margin-bottom:10px}
 .svgi-md{width:32px;height:32px}
 .svgi-lg{width:54px;height:54px;stroke-width:2.2}
 .svgi-inline{display:inline-block;vertical-align:-4px;width:24px;height:24px;margin-right:6px}
-.func-card .icon{position:absolute;top:28px;left:28px;font-size:0}
+.func-card .icon{position:static;font-size:0}
 .fc-dark .icon{color:#fff}
 .fc-light .icon{color:var(--ink)}
 
@@ -391,8 +396,8 @@ footer .logo{color:var(--creme);display:block;margin-bottom:10px}
   .step{padding:12px 16px;align-items:center}
   .step h3{margin-bottom:0;font-size:1.02rem}
   #func{padding:30px 0 60px}
-  .func-card{min-height:170px;padding:26px 24px}
-  .func-card .icon{top:22px;left:24px}
+  .func-card{padding:22px 20px}
+  .func-card .icon{width:40px;height:40px;border-radius:12px}
   #versus{padding:60px 0 40px}
   .vs-card{padding:30px 26px}
   #stats{padding-bottom:60px}
@@ -505,7 +510,7 @@ html,body{overflow-x:clip}
     <div class="cp-grid">
       <div class="reveal">
         <span class="kicker" style="background:var(--laranja)">A estrela do Studio</span>
-        <h2 style="color:var(--creme)">Seu mês inteiro de conteúdo, <span class="script" style="color:var(--amarelo);font-size:1.15em">montado pela IA</span></h2>
+        <h2 style="color:var(--creme)">A IA monta seu mês inteiro de conteúdo, <span class="script" style="color:var(--amarelo);font-size:1.15em">em minutos</span></h2>
         <p style="color:rgba(255,255,255,.75);margin:16px 0 26px;font-size:1.05rem;line-height:1.6">O Cria Plano lê o seu brandbook, os seus pilares e o que já performou no seu perfil, e monta a pauta da semana ou do mês inteiro. Cada post já nasce com formato, gancho e direção. Você deixa de decidir "o que postar" todo dia e passa a só produzir.</p>
         <ul class="cp-list">
           <li><span class="cp-dot" style="background:var(--laranja)"></span>Um mês de conteúdo em minutos, não em domingos perdidos</li>
