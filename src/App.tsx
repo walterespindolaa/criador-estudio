@@ -57,6 +57,8 @@ const Autopilot = lazy(() => import("./pages/app/Autopilot"));
 const MediaKit = lazy(() => import("./pages/app/MediaKit"));
 const Tendencias = lazy(() => import("./pages/app/Tendencias"));
 const CriaStories = lazy(() => import("./pages/app/CriaStories"));
+const CriaPrompter = lazy(() => import("./pages/app/CriaPrompter"));
+const PrompterGravar = lazy(() => import("./pages/app/PrompterGravar"));
 const TrocarSenha = lazy(() => import("./pages/app/TrocarSenha"));
 const Assinar = lazy(() => import("./pages/app/Assinar"));
 const BioPage = lazy(() => import("./pages/BioPage"));
@@ -241,6 +243,8 @@ const App = () => (
                 <Route path="tendencias" element={<ErrorBoundary><UpgradeGate feature="tendencias"><Tendencias /></UpgradeGate></ErrorBoundary>} />
                 <Route path="stories" element={<ErrorBoundary><UpgradeGate feature="stories"><CriaStories /></UpgradeGate></ErrorBoundary>} />
                 <Route path="stories/semanastories" element={<ErrorBoundary><UpgradeGate feature="stories"><CriaStories /></UpgradeGate></ErrorBoundary>} />
+                <Route path="prompter" element={<ErrorBoundary><UpgradeGate feature="prompter"><CriaPrompter /></UpgradeGate></ErrorBoundary>} />
+                <Route path="prompter/gravar/:id" element={<ErrorBoundary><UpgradeGate feature="prompter"><PrompterGravar /></UpgradeGate></ErrorBoundary>} />
                 <Route path="aprovacao" element={<ErrorBoundary><Aprovacao /></ErrorBoundary>} />
                 <Route path="modulos" element={<ErrorBoundary><Modulos /></ErrorBoundary>} />
                 <Route path="feed" element={<ErrorBoundary><UpgradeGate feature="feed"><Feed /></UpgradeGate></ErrorBoundary>} />

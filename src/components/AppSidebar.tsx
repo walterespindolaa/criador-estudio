@@ -22,6 +22,7 @@ import {
   Package,
   Target,
   Clapperboard,
+  Video,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
@@ -64,6 +65,7 @@ const groups = [
       { title: "Criando", url: "/app/criando", icon: Kanban },
       { title: "Tendências", url: "/app/tendencias", icon: TrendingUp, feature: "tendencias" },
       { title: "Cria Stories", url: "/app/stories", icon: Clapperboard, feature: "stories" },
+      { title: "Cria Prompter", url: "/app/prompter", icon: Video, feature: "prompter" },
       { title: "Metas", url: "/app/metas", icon: Target },
       { title: "Arquivos", url: "/app/arquivos", icon: FolderOpen },
     ],

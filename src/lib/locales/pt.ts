@@ -253,7 +253,7 @@ export const pt = {
   },
   nav: {
     home: "Início", criaAi: "Cria IA", create: "Criar", ideas: "Ideias",
-    inProduction: "Em produção", criaPlan: "Cria Plano", criaStories: "Cria Stories",
+    inProduction: "Em produção", criaPlan: "Cria Plano", criaStories: "Cria Stories", criaPrompter: "Cria Prompter",
     trends: "Tendências", approvals: "Aprovações", myFeed: "Meu Feed",
     plan: "Planejar", calendarGoals: "Calendário & Metas", tasks: "Tarefas", files: "Arquivos",
     myBrand: "Minha marca", brandbook: "Brandbook", linkInBio: "Link na bio",

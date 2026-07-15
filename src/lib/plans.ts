@@ -89,6 +89,7 @@ export const PLANS: Plan[] = [
       "Tudo do Pro",
       "Cria Plano: a IA monta o seu mês inteiro",
       "Cria Stories: o plano semanal de stories",
+      "Cria Prompter: teleprompter com comando de voz",
       "Collabs: parcerias, propostas e cachê",
       "IA: 500 gerações/mês",
       "15 GB de arquivos",
@@ -144,6 +145,7 @@ export type FeatureKey =
   | "cria-plano"
   | "stories"
   | "collabs"
+  | "prompter"
   | "estudio";
 
 export type FeatureDef = {
@@ -222,6 +224,16 @@ export const FEATURES: Record<FeatureKey, FeatureDef> = {
     linha: "O story é diário e é onde a audiência realmente te vê. É também o que mais dá branco. O Cria Stories entrega o plano da semana pronto.",
     ganhos: ["Plano semanal de stories, dia a dia", "No seu tom, com tendências do seu nicho", "Com lembrete na hora certa"],
   },
+  prompter: {
+    minimo: "studio",
+    titulo: "Grave olhando pra câmera, sem decorar nada",
+    linha: "O Cria Prompter é um teleprompter com comando de voz em português: o texto segue a SUA fala, não o contrário. O roteiro que você criou aqui já chega pronto pra gravar.",
+    ganhos: [
+      "O texto acompanha a sua voz palavra por palavra: improvisou, ele espera; voltou, ele continua",
+      "Câmera e gravação direto no CRIA, do roteiro ao vídeo salvo no celular",
+      "Apps que fazem isso cobram até R$ 500 por ano, aqui está incluso",
+    ],
+  },
   collabs: {
     minimo: "studio",
     titulo: "Transforme audiência em dinheiro",
@@ -272,6 +284,7 @@ export const ROUTE_FEATURE: Record<string, FeatureKey> = {
   "/app/autopilot": "cria-plano",
   "/app/stories": "stories",
   "/app/collabs": "collabs",
+  "/app/prompter": "prompter",
   // Não existe mais "/app/estudio": o Estúdio virou aba do post. Ele não é
   // destino nenhum — por isso não tem rota e não tem selo de menu.
 };
