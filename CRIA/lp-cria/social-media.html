@@ -99,6 +99,7 @@ h1 .hl{color:var(--amarelo)}
 .mod:nth-child(even) .mod-visual{transform:rotate(1.1deg)}
 .mod-visual:hover{transform:rotate(0deg) scale(1.015)}
 .sm-blobs{position:absolute;inset:0;pointer-events:none;z-index:0}
+.sm-mark{display:block;opacity:.06}
 .smblob{position:absolute;display:block;animation:smblob-float 14s ease-in-out infinite}
 @keyframes smblob-float{0%,100%{transform:translate(0,0) rotate(0deg) scale(1)}33%{transform:translate(16px,-20px) rotate(7deg) scale(1.05)}66%{transform:translate(-12px,14px) rotate(-6deg) scale(.97)}}
 @media(prefers-reduced-motion:reduce){.smblob{animation:none}}
@@ -233,6 +234,8 @@ html,body{overflow-x:clip}
     <span class="smblob" style="width:210px;height:200px;top:36%;left:-80px;background:var(--amarelo);border-radius:55% 45% 40% 60%/50% 60% 40% 50%;opacity:.18;animation-duration:13s"></span>
     <span class="smblob" style="width:140px;height:135px;top:62%;right:6%;background:var(--azul);border-radius:45% 55% 60% 40%/55% 45% 55% 45%;opacity:.11;animation-duration:18s"></span>
     <span class="smblob" style="width:90px;height:88px;bottom:4%;left:14%;background:var(--verde);border-radius:50% 50% 45% 55%/60% 40% 60% 40%;opacity:.15;animation-duration:11s"></span>
+    <span class="smblob" style="top:14%;left:10%;animation-duration:15s"><img class="sm-mark" src="cria-icone.png" alt="" style="width:60px;transform:rotate(-9deg)"></span>
+    <span class="smblob" style="top:48%;right:14%;animation-duration:12s"><img class="sm-mark" src="cria-icone.png" alt="" style="width:44px;transform:rotate(11deg)"></span>
   </div>
   <div class="container" style="position:relative;z-index:1">
     <div style="text-align:center;max-width:720px;margin:0 auto 30px" class="reveal">

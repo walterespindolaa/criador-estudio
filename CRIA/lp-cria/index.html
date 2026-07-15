@@ -253,9 +253,12 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
 #versus h2 .script{color:var(--amarelo)}
 /* A marca no lugar da palavra: logo branca inline no título e carimbos
    translúcidos flutuando no fundo azul. */
-.h2-logo{height:1.06em;vertical-align:-.16em;display:inline-block}
+.h2-logo{height:1.2em;vertical-align:-.22em;display:inline-block;filter:brightness(0) invert(1)}
+.h3-logo{height:1.25em;vertical-align:-.25em;display:inline-block;margin-left:2px}
+.h3-logo.inv{filter:brightness(0) invert(1)}
 .vs-blobs{position:absolute;inset:0;pointer-events:none;z-index:0}
-.vs-mark{display:block;opacity:.12}
+.vs-mark{display:block;opacity:.14;filter:brightness(0) invert(1)}
+.mark-ink{display:block;opacity:.06}
 .versus-grid{display:grid;grid-template-columns:1fr 1fr;gap:26px;max-width:920px;margin:0 auto}
 .vs-card{border-radius:var(--radius-lg);padding:40px 36px}
 .vs-sem{background:rgba(21,20,18,.35);color:rgba(255,255,255,.85);border:1.5px dashed rgba(255,255,255,.3)}
@@ -553,6 +556,8 @@ html,body{overflow-x:clip}
     <span class="fblob" style="width:150px;height:145px;bottom:12%;left:5%;background:var(--azul);border-radius:45% 55% 60% 40%/55% 45% 55% 45%;opacity:.12;animation-duration:19s"></span>
     <span class="fblob" style="width:95px;height:95px;bottom:-30px;right:22%;background:var(--verde);border-radius:50% 50% 45% 55%/60% 40% 60% 40%;opacity:.15;animation-duration:11s"></span>
     <span class="fblob" style="width:60px;height:58px;top:14%;left:44%;background:var(--laranja);border-radius:60% 40% 55% 45%/45% 55% 45% 55%;opacity:.14;animation-duration:15s"></span>
+    <span class="fblob" style="top:8%;right:16%;animation-duration:16s"><img class="mark-ink" src="cria-icone.png" alt="" style="width:64px;transform:rotate(10deg)"></span>
+    <span class="fblob" style="bottom:6%;right:40%;animation-duration:12s"><img class="mark-ink" src="cria-icone.png" alt="" style="width:42px;transform:rotate(-8deg)"></span>
   </div>
   <div class="container" style="position:relative;z-index:1">
     <div class="ciclo-head reveal">
@@ -639,6 +644,7 @@ html,body{overflow-x:clip}
     <span class="fblob" style="width:260px;height:250px;top:8%;right:-90px;background:var(--verde);border-radius:38% 62% 55% 45%/48% 42% 58% 52%;opacity:.13;animation-duration:17s"></span>
     <span class="fblob" style="width:170px;height:165px;bottom:6%;left:-60px;background:var(--rosa);border-radius:55% 45% 40% 60%/50% 60% 40% 50%;opacity:.15;animation-duration:12s"></span>
     <span class="fblob" style="width:80px;height:78px;top:20%;left:12%;background:var(--amarelo);border-radius:60% 40% 55% 45%/45% 55% 45% 55%;opacity:.2;animation-duration:14s"></span>
+    <span class="fblob" style="top:52%;left:47%;animation-duration:15s"><img class="mark-ink" src="cria-icone.png" alt="" style="width:52px;transform:rotate(7deg)"></span>
   </div>
   <div class="container" style="position:relative;z-index:1">
     <div class="ciclo-head reveal">
@@ -795,16 +801,16 @@ html,body{overflow-x:clip}
     <span class="fblob" style="width:300px;height:290px;top:-100px;left:-90px;background:#fff;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;opacity:.07;animation-duration:17s"></span>
     <span class="fblob" style="width:210px;height:200px;bottom:-70px;right:-60px;background:var(--amarelo);border-radius:55% 45% 40% 60%/50% 60% 40% 50%;opacity:.12;animation-duration:13s"></span>
     <span class="fblob" style="width:120px;height:115px;top:24%;right:10%;background:var(--rosa);border-radius:45% 55% 60% 40%/55% 45% 55% 45%;opacity:.14;animation-duration:15s"></span>
-    <span class="fblob" style="top:14%;left:7%;animation-duration:14s"><img class="vs-mark" src="logo-cria-white.png" alt="" style="width:72px;transform:rotate(-11deg)"></span>
-    <span class="fblob" style="bottom:14%;left:16%;animation-duration:11s"><img class="vs-mark" src="logo-cria-white.png" alt="" style="width:44px;transform:rotate(9deg)"></span>
-    <span class="fblob" style="top:48%;right:4%;animation-duration:18s"><img class="vs-mark" src="logo-cria-white.png" alt="" style="width:56px;transform:rotate(14deg)"></span>
-    <span class="fblob" style="bottom:8%;right:32%;animation-duration:16s"><img class="vs-mark" src="logo-cria-white.png" alt="" style="width:36px;transform:rotate(-7deg)"></span>
+    <span class="fblob" style="top:14%;left:7%;animation-duration:14s"><img class="vs-mark" src="cria-icone.png" alt="" style="width:72px;transform:rotate(-11deg)"></span>
+    <span class="fblob" style="bottom:14%;left:16%;animation-duration:11s"><img class="vs-mark" src="cria-icone.png" alt="" style="width:44px;transform:rotate(9deg)"></span>
+    <span class="fblob" style="top:48%;right:4%;animation-duration:18s"><img class="vs-mark" src="cria-icone.png" alt="" style="width:56px;transform:rotate(14deg)"></span>
+    <span class="fblob" style="bottom:8%;right:32%;animation-duration:16s"><img class="vs-mark" src="cria-icone.png" alt="" style="width:36px;transform:rotate(-7deg)"></span>
   </div>
   <div class="container" style="position:relative;z-index:1">
-    <h2 class="reveal">O que muda quando você usa <img class="h2-logo" src="logo-cria-white.png" alt="o CRIA">? <span class="script">tudo, na real</span></h2>
+    <h2 class="reveal">O que muda quando você usa <img class="h2-logo" src="cria-icone.png" alt="o CRIA">? <span class="script">tudo, na real</span></h2>
     <div class="versus-grid">
       <div class="vs-card vs-sem reveal">
-        <h3><svg class="svgi svgi-inline" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg> Sem o CRIA</h3>
+        <h3><svg class="svgi svgi-inline" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg> Sem o <img class="h3-logo inv" src="cria-icone.png" alt="CRIA"></h3>
         <ul>
           <li><b>✕</b> Ideias espalhadas em notas, prints e "salvos" do Instagram</li>
           <li><b>✕</b> Posta quando dá, e "quando dá" é quase nunca</li>
@@ -814,7 +820,7 @@ html,body{overflow-x:clip}
         </ul>
       </div>
       <div class="vs-card vs-com reveal">
-        <h3><svg class="svgi svgi-inline" style="color:var(--verde)" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg> Com o CRIA</h3>
+        <h3><svg class="svgi svgi-inline" style="color:var(--verde)" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg> Com o <img class="h3-logo" src="cria-icone.png" alt="CRIA"></h3>
         <ul>
           <li><b>✓</b> Banco de ideias + Cria IA sugerindo no seu tom</li>
           <li><b>✓</b> Semana inteira planejada no kanban e calendário</li>
