@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Download, Bell, Zap, WifiOff, Share, PlusSquare, Loader2, CheckCircle2 } from "lucide-react";
+import { X, Download, Bell, Zap, WifiOff, Share, PlusSquare, Loader2, CheckCircle2, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -202,27 +202,54 @@ export function InstallPrompt() {
             </ul>
           )}
 
-          {/* iOS não expõe API de instalação. A única saída honesta é ensinar o gesto. */}
+          {/* Instrução manual (nem iOS nem Android disparam a instalação por código
+              em todos os casos). Antes isto mostrava SEMPRE o passo do iPhone —
+              então um usuário de Android via "abra no Safari", que ele não tem. */}
           {modo === "ios" && (
             <div className="mt-4 rounded-2xl border border-border bg-background/70 p-3.5">
-              <p className="text-[12px] font-display font-bold text-foreground mb-2">No iPhone, é assim:</p>
-              <ol className="space-y-1.5">
-                <li className="flex items-center gap-2 text-[12px] font-body text-muted-foreground">
-                  <Share className="h-4 w-4 text-primary shrink-0" />
-                  1. Toque em <strong className="text-foreground">Compartilhar</strong> na barra do Safari
-                </li>
-                <li className="flex items-center gap-2 text-[12px] font-body text-muted-foreground">
-                  <PlusSquare className="h-4 w-4 text-primary shrink-0" />
-                  2. Escolha <strong className="text-foreground">Adicionar à Tela de Início</strong>
-                </li>
-                <li className="flex items-center gap-2 text-[12px] font-body text-muted-foreground">
-                  <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                  3. Abra o CRIA pelo ícone e ligue os avisos
-                </li>
-              </ol>
-              <p className="mt-2.5 text-[11px] font-body text-muted-foreground leading-relaxed">
-                No iPhone os avisos <strong>só funcionam</strong> com o app na tela de início. É uma regra da Apple, não nossa.
-              </p>
+              {ios ? (
+                <>
+                  <p className="text-[12px] font-display font-bold text-foreground mb-2">No iPhone, é assim:</p>
+                  <ol className="space-y-1.5">
+                    <li className="flex items-center gap-2 text-[12px] font-body text-muted-foreground">
+                      <Share className="h-4 w-4 text-primary shrink-0" />
+                      1. Toque em <strong className="text-foreground">Compartilhar</strong> na barra do Safari
+                    </li>
+                    <li className="flex items-center gap-2 text-[12px] font-body text-muted-foreground">
+                      <PlusSquare className="h-4 w-4 text-primary shrink-0" />
+                      2. Escolha <strong className="text-foreground">Adicionar à Tela de Início</strong>
+                    </li>
+                    <li className="flex items-center gap-2 text-[12px] font-body text-muted-foreground">
+                      <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                      3. Abra o CRIA pelo ícone e ligue os avisos
+                    </li>
+                  </ol>
+                  <p className="mt-2.5 text-[11px] font-body text-muted-foreground leading-relaxed">
+                    No iPhone os avisos <strong>só funcionam</strong> com o app na tela de início. É uma regra da Apple, não nossa.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-[12px] font-display font-bold text-foreground mb-2">No Android, é assim:</p>
+                  <ol className="space-y-1.5">
+                    <li className="flex items-center gap-2 text-[12px] font-body text-muted-foreground">
+                      <MoreVertical className="h-4 w-4 text-primary shrink-0" />
+                      1. Toque no menu <strong className="text-foreground">⋮</strong> do navegador (canto superior)
+                    </li>
+                    <li className="flex items-center gap-2 text-[12px] font-body text-muted-foreground">
+                      <Download className="h-4 w-4 text-primary shrink-0" />
+                      2. Escolha <strong className="text-foreground">Instalar app</strong> (ou "Adicionar à tela inicial")
+                    </li>
+                    <li className="flex items-center gap-2 text-[12px] font-body text-muted-foreground">
+                      <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                      3. Abra o CRIA pelo ícone e ligue os avisos
+                    </li>
+                  </ol>
+                  <p className="mt-2.5 text-[11px] font-body text-muted-foreground leading-relaxed">
+                    Os avisos chegam mesmo com o app fechado, depois que ele está na tela inicial.
+                  </p>
+                </>
+              )}
             </div>
           )}
 

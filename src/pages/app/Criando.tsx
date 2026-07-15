@@ -101,6 +101,7 @@ const Criando = () => {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
 
+
   const { byStatus, saveCover, resetCover, isSaving } = useStatusCovers();
   const ramp = statusRamp();
   const [editing, setEditing] = useState<string | null>(null);
@@ -144,6 +145,27 @@ const Criando = () => {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const overview = searchParams.get("view") === "overview";
+  // ABRIR UM POST VINDO DA BUSCA (Cmd+K → clica num post → /app/criando?post=ID).
+  // A busca NAVEGAVA certo, mas esta tela não lia o parâmetro: a pessoa caía no
+  // kanban e tinha que procurar o post na mão. Achar e não abrir é meio caminho.
+  const abriuDaBusca = useRef<string | null>(null);
+  useEffect(() => {
+    const alvo = searchParams.get("post");
+    if (!alvo || postsLoading) return;
+    if (abriuDaBusca.current === alvo) return; // não reabrir se ela fechou
+    const post = posts.find((p) => p.id === alvo);
+    if (post) {
+      abriuDaBusca.current = alvo;
+      setSelectedPost(post);
+      setDrawerOpen(true);
+      // limpa a URL pra o post não reabrir sozinho a cada render
+      const next = new URLSearchParams(searchParams);
+      next.delete("post");
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posts, postsLoading]);
+
   const goToColumn = (i: number) => {
     setActiveCol(i);
     const next = new URLSearchParams(searchParams);
