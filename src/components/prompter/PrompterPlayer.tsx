@@ -99,6 +99,16 @@ const CSS = `
 .cpr #overlay{position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:25;display:none;}
 .cpr #overlay.show{display:block;}
 .cpr #cprToast{position:absolute;bottom:calc(100px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:12px 18px;font-size:14px;z-index:50;display:none;max-width:86vw;text-align:center;}
+.cpr #saveSheet{position:absolute;inset:0;z-index:45;display:none;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.6);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);}
+.cpr #saveSheet.show{display:flex;}
+.cpr #ssCard{background:var(--panel);border:1px solid var(--border);border-bottom:none;border-radius:26px 26px 0 0;width:min(520px,100vw);padding:22px 20px calc(22px + env(safe-area-inset-bottom));animation:cprUp .28s ease;}
+@keyframes cprUp{from{transform:translateY(40px);opacity:0;}to{transform:none;opacity:1;}}
+.cpr #ssCard h3{margin:0 0 3px;font-size:19px;font-weight:800;letter-spacing:-.01em;font-family:var(--active-font-display,var(--font-display,inherit));}
+.cpr #ssMeta{margin:0 0 14px;color:var(--dim);font-size:13px;}
+.cpr #ssVideo{width:100%;max-height:36vh;border-radius:16px;background:#000;display:block;margin-bottom:14px;object-fit:contain;}
+.cpr .ssBtn{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:14px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--panel2);color:var(--txt);margin-bottom:8px;}
+.cpr .ssBtn.primary{background:var(--accent);border-color:var(--accent);color:var(--accentFg);}
+.cpr .ssBtn.ghost{background:none;border:none;color:var(--dim);font-weight:600;margin-bottom:0;padding:10px;}
 .cpr .iconbtn{background:var(--panel2);border:1px solid var(--border);color:var(--txt);border-radius:10px;padding:8px 12px;font-size:15px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;}
 .cpr .lucide{width:20px;height:20px;stroke-width:2;flex-shrink:0;}
 .cpr #shutter{width:68px;height:68px;border-radius:50%;border:4px solid #fff;background:transparent;position:relative;cursor:pointer;padding:0;flex-shrink:0;}
@@ -732,18 +742,68 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       const type = recorder!.mimeType || "video/webm";
       const ext = type.includes("mp4") ? "mp4" : "webm";
       const blob = new Blob(chunks, { type });
-      const name = "gravacao_" + new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-") + "." + ext;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click();
-      setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 4000);
-      toast("Vídeo salvo: " + name + " (" + (blob.size / 1048576).toFixed(1) + " MB)");
+      const name = "cria-prompter_" + new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-") + "." + ext;
+      showSaveSheet(blob, name, type);
     }
+
+    /* ---------- vídeo pronto: preview + salvar nas Fotos (share sheet) ----------
+       O download automático de antes caía na tela de arquivo do Safari (feia e
+       sem "Salvar Vídeo"). Agora: sheet com preview e navigator.share(files),
+       que no iPhone/Android abre o share sheet nativo — "Salvar Vídeo" manda
+       direto pro rolo da câmera. Download vira o fallback (desktop). */
+    let pendingBlob: Blob | null = null, pendingName = "", pendingType = "", pendingUrl = "";
+    function showSaveSheet(blob: Blob, name: string, type: string) {
+      pendingBlob = blob; pendingName = name; pendingType = type;
+      if (pendingUrl) URL.revokeObjectURL(pendingUrl);
+      pendingUrl = URL.createObjectURL(blob);
+      const v = $("#ssVideo") as HTMLVideoElement;
+      v.src = pendingUrl;
+      const secs = Math.max(1, Math.round((Date.now() - recT0) / 1000));
+      $("#ssMeta").textContent =
+        String(Math.floor(secs / 60)).padStart(2, "0") + ":" + String(secs % 60).padStart(2, "0") +
+        " · " + (blob.size / 1048576).toFixed(1) + " MB · " + (type.includes("mp4") ? "MP4" : "WebM");
+      const canShare = !!((navigator as any).canShare && (navigator as any).canShare({ files: [new File([""], "t.mp4", { type: "video/mp4" })] }));
+      $("#ssShare").style.display = canShare ? "flex" : "none";
+      $("#saveSheet").classList.add("show");
+    }
+    function closeSaveSheet() {
+      $("#saveSheet").classList.remove("show");
+      const v = $("#ssVideo") as HTMLVideoElement;
+      try { v.pause(); } catch { /* ok */ }
+      v.removeAttribute("src"); try { v.load(); } catch { /* ok */ }
+      if (pendingUrl) { URL.revokeObjectURL(pendingUrl); pendingUrl = ""; }
+      pendingBlob = null;
+    }
+    function downloadPending() {
+      if (!pendingBlob || !pendingUrl) return;
+      const a = document.createElement("a"); a.href = pendingUrl; a.download = pendingName;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => a.remove(), 2000);
+      toast("Baixando " + pendingName);
+    }
+    $("#ssClose").onclick = () => closeSaveSheet();
+    $("#ssDownload").onclick = () => downloadPending();
+    $("#ssShare").onclick = async () => {
+      if (!pendingBlob) return;
+      try {
+        const file = new File([pendingBlob], pendingName, { type: pendingType });
+        if ((navigator as any).canShare && (navigator as any).canShare({ files: [file] })) {
+          await (navigator as any).share({ files: [file] });
+          toast("Prontinho! Se escolheu Salvar Vídeo, ele já está na sua galeria. 🎉", 5000);
+          return;
+        }
+      } catch (e: any) {
+        if (e && e.name === "AbortError") return; /* pessoa fechou o share sheet */
+      }
+      downloadPending(); /* fallback: navegador sem share de arquivo */
+    };
 
     /* ---------- exit ---------- */
     function teardown() {
       disposed = true;
       stopPlay();
       if (recorder && recorder.state === "recording") stopRec();
+      if (pendingUrl) { URL.revokeObjectURL(pendingUrl); pendingUrl = ""; }
       stopMirrorPipe();
       stopCamera(true);
       if (micStream) { micStream.getTracks().forEach((t) => t.stop()); micStream = null; }
@@ -882,6 +942,19 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
           </select>
         </div>
         <button className="iconbtn" id="closeSettings" style={{ width: "100%", marginTop: 8 }}>Fechar</button>
+      </div>
+
+      {/* Vídeo pronto */}
+      <div id="saveSheet">
+        <div id="ssCard">
+          <h3>Vídeo pronto 🎬</h3>
+          <p id="ssMeta" />
+          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+          <video id="ssVideo" controls playsInline preload="metadata" />
+          <button className="ssBtn primary" id="ssShare">Salvar no celular</button>
+          <button className="ssBtn" id="ssDownload">Baixar arquivo</button>
+          <button className="ssBtn ghost" id="ssClose">Fechar e continuar gravando</button>
+        </div>
       </div>
 
       <div id="cprToast" />
