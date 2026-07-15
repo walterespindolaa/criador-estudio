@@ -53,7 +53,7 @@ input.erro{{border-color:var(--laranja)}}
 <body>
 
 <div class="topbar">
-  <a class="logo" href="/">CRIA<span>.</span></a>
+  <a class="logo" href="/"><img src="/logo-cria.png" alt="Cria" style="height:30px;width:auto;display:block"></a>
   <a class="voltar" href="/#planos">← Voltar pros planos</a>
 </div>
 
