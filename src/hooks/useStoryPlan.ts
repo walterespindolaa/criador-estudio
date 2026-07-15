@@ -72,6 +72,7 @@ export function useScheduledPostsInRange(fromDate: string, toDate: string) {
         .from("posts")
         .select("id,title,scheduled_date,scheduled_time,status,platform")
         .eq("user_id", userId!)
+        .is("deleted_at", null)
         .gte("scheduled_date", fromDate)
         .lte("scheduled_date", toDate)
         .order("scheduled_time", { ascending: true });

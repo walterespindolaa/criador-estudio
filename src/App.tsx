@@ -31,6 +31,7 @@ import { RoutePrefetch } from "@/components/pwa/RoutePrefetch";
 import { ScrollRestore } from "@/components/pwa/ScrollRestore";
 import { UpgradeGate } from "@/components/shared/UpgradeGate";
 import { useProfile } from "@/hooks/useProfile";
+import { deriveTier } from "@/hooks/useTier";
 import { useActiveAccount } from "@/contexts/AccountContext";
 
 const Dashboard = lazy(() => import("./pages/app/Dashboard"));
@@ -86,7 +87,13 @@ function AppHome() {
   if (isLoading || accountsLoading) return null;
   // Colaborador atuando na conta do gestor → cai na agência.
   if (actingAsTeam) return <Navigate to="/socialmidia/dashboard" replace />;
-  const isManagerAccount = profile?.account_type === "manager" || (profile?.seat_limit ?? 0) > 0 || hasManagedAccounts || isCollaborator;
+  // Quem tem plano de CRIADOR vigente é dono do próprio /app, mesmo que também
+  // gerencie clientes. Antes, um Studio que pegou UM cliente pontual perdia o
+  // acesso ao próprio dashboard: gerenciar alguém não pode rebaixar assinante.
+  const temPlanoCriador = deriveTier(profile) !== "none";
+  const isManagerAccount =
+    profile?.account_type === "manager" ||
+    (!temPlanoCriador && ((profile?.seat_limit ?? 0) > 0 || hasManagedAccounts || isCollaborator));
   // Só manda pro dashboard da agência quando o gestor está na PRÓPRIA conta.
   // Se ele entrou num cliente (isManaging), mostra o workspace do cliente.
   if (!isManaging && isManagerAccount) return <Navigate to="/socialmidia/dashboard" replace />;

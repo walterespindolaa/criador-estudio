@@ -50,6 +50,34 @@ serve(async (req) => {
     const origin = req.headers.get("origin") ?? "https://app.criasocialclub.com.br";
     const meta = { app: "cria", kind: "collab_seats", manager_id: user.id, seats: String(seats) };
 
+    // ── JÁ TEM assinatura de assentos? Atualiza a QUANTIDADE nela (pró-rata),
+    //    em vez de abrir um checkout novo. Antes, cada clique em "Adicionar
+    //    assento" criava uma assinatura paralela: o gestor pagava duas vezes
+    //    e o app só mostrava a contagem da última. ──
+    const existingSubId =
+      (profile as { collab_seats_subscription_id: string | null } | null)?.collab_seats_subscription_id ?? null;
+    if (existingSubId) {
+      try {
+        const sub = await stripe.subscriptions.retrieve(existingSubId);
+        if (sub.status === "active" || sub.status === "trialing" || sub.status === "past_due") {
+          const item = sub.items.data[0];
+          await stripe.subscriptions.update(existingSubId, {
+            items: [{ id: item.id, quantity: seats }],
+            proration_behavior: "create_prorations",
+            metadata: meta,
+          });
+          // Reflete na hora; o webhook customer.subscription.updated confirma depois.
+          await svc.from("profiles").update({ paid_collab_seats: seats }).eq("id", user.id);
+          return json({ updated: true, seats });
+        }
+      } catch (e) {
+        // Assinatura não existe mais no Stripe: limpa e segue pro checkout novo.
+        console.warn("[collab-seats-checkout] sub antiga inacessível, criando nova:", e);
+        await svc.from("profiles")
+          .update({ collab_seats_subscription_id: null, paid_collab_seats: 0 }).eq("id", user.id);
+      }
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       customer: customerId,

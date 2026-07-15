@@ -42,7 +42,7 @@ async function runGenerate(userId: string) {
   const weekEnd = toISODateBR(sunday);
 
   const [postsRes, profileRes, existingRes] = await Promise.all([
-    supabase.from("posts").select("id, status, scheduled_date, published_at").eq("user_id", userId),
+    supabase.from("posts").select("id, status, scheduled_date, published_at").eq("user_id", userId).is("deleted_at", null),
     supabase.from("profiles").select("weekly_goal").eq("id", userId).single(),
     supabase.from("notifications").select("type, created_at").eq("user_id", userId).gte("created_at", weekStart),
   ]);

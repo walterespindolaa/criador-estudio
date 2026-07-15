@@ -99,6 +99,7 @@ export function usePublishedPostsInfinite(pageSize = 40) {
         .select("*")
         .eq("user_id", userId!)
         .eq("status", "publicado")
+        .is("deleted_at", null)
         .order("published_at", { ascending: false })
         .range(from, to);
       if (error) throw error;
@@ -120,7 +121,8 @@ export function usePublishedPostsCount() {
         .from("posts")
         .select("id", { count: "exact", head: true })
         .eq("user_id", userId!)
-        .eq("status", "publicado");
+        .eq("status", "publicado")
+        .is("deleted_at", null);
       if (error) throw error;
       return count ?? 0;
     },

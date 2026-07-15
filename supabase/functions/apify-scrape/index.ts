@@ -496,6 +496,15 @@ Deno.serve(async (req) => {
       console.log("[apify-scrape] créditos", { mgr, custo, saldo });
     }
 
+    // Se a análise NÃO chegar a rodar (falha de dispatch, página não achada,
+    // erro interno), o crédito volta. Cobrar por análise que não aconteceu era
+    // o bug: o débito acontecia acima e nenhum caminho de erro devolvia.
+    const devolverCreditos = async () => {
+      if (isAdmin) return;
+      const { error } = await svc.rpc("refund_hub_credits", { _manager: mgr, _cost: custo });
+      if (error) console.error("[apify-scrape] refund error", error.message);
+    };
+
     if (crmClientId) {
       const { data: c } = await svc.from("crm_clients").select("id, manager_id").eq("id", crmClientId).maybeSingle();
       if (!c || (c as { manager_id?: string }).manager_id !== mgr) return json({ error: "forbidden_client" }, 403);
@@ -518,7 +527,7 @@ Deno.serve(async (req) => {
       manager_id: mgr, crm_client_id: crmClientId, competitor_id: competitorId, scrape_type: type,
       input_handle: inputHandle, results_limit: limit, status: "running",
     }).select("id").single();
-    if (insErr || !scrapeRow) return json({ error: "job_create_failed" }, 500);
+    if (insErr || !scrapeRow) { await devolverCreditos(); return json({ error: "job_create_failed" }, 500); }
     const scrapeId = scrapeRow.id;
 
     try {
@@ -549,7 +558,8 @@ Deno.serve(async (req) => {
             error: "Não achei a página desse anunciante na biblioteca da Meta. Ou ele não roda anúncios, ou o nome da página é diferente do @ do Instagram. Tente o nome exato da página do Facebook.",
             finished_at: new Date().toISOString(),
           }).eq("id", scrapeId);
-          return json({ ok: true, scrape_id: scrapeId, status: "error", message: "Não achei anúncios ativos dessa página." });
+          await devolverCreditos();
+          return json({ ok: true, scrape_id: scrapeId, status: "error", message: "Não achei anúncios ativos dessa página. Seus créditos foram devolvidos." });
         }
         const adUrl = `https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=BR&view_all_page_id=${pageId}`;
         input = { startUrls: [{ url: adUrl }], resultsLimit: limit, activeStatus: "active" };
@@ -569,7 +579,8 @@ Deno.serve(async (req) => {
         await svc.from("competitor_scrapes").update({
           status: "error", error: `Não consegui iniciar a análise (Apify ${runResp.status}).`, finished_at: new Date().toISOString(),
         }).eq("id", scrapeId);
-        return json({ error: "apify_failed", message: `Apify retornou ${runResp.status}.` }, 502);
+        await devolverCreditos();
+        return json({ error: "apify_failed", message: `Apify retornou ${runResp.status}. Seus créditos foram devolvidos.` }, 502);
       }
       const runId = (await runResp.json())?.data?.id;
 
@@ -580,6 +591,7 @@ Deno.serve(async (req) => {
       const msg = e instanceof Error ? e.message : String(e);
       console.error("[apify-scrape] start failed", msg);
       await svc.from("competitor_scrapes").update({ status: "error", error: msg.slice(0, 200), finished_at: new Date().toISOString() }).eq("id", scrapeId);
+      await devolverCreditos();
       return json({ error: "scrape_failed", message: msg }, 500);
     }
   } catch (e) {

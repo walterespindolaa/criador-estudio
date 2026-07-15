@@ -14,6 +14,19 @@ export function ehIOS(): boolean {
 }
 
 /**
+ * É um aparelho móvel (Android/iOS)? Importa pro convite de instalação: em
+ * desktop Firefox/Safari não existe `beforeinstallprompt` NEM o passo a passo
+ * do celular faz sentido; mostrar "toque em Compartilhar no Safari" pra quem
+ * está num PC só queima credibilidade.
+ */
+export function ehMobile(): boolean {
+  if (typeof navigator === "undefined") return false;
+  if (/android|iphone|ipad|ipod/i.test(navigator.userAgent)) return true;
+  // iPad moderno se apresenta como Mac, mas tem toque:
+  return /macintosh/i.test(navigator.userAgent) && (navigator.maxTouchPoints ?? 0) > 1;
+}
+
+/**
  * No iPhone, o push SÓ existe com o app instalado na tela de início (regra da
  * Apple). Pedir permissão no Safari em aba é garantia de falhar e queimar a
  * pergunta: o usuário nega uma vez e não dá pra pedir de novo.

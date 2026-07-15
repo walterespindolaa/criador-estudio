@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { OrganicBlobs } from "@/components/brand/OrganicBlobs";
 import { pushSupported, isPushEnabled, enablePush } from "@/lib/push";
-import { estaInstalado, ehIOS } from "@/lib/pwa";
+import { estaInstalado, ehIOS, ehMobile } from "@/lib/pwa";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    INSTALAR O APP + LIGAR AS NOTIFICAÇÕES
@@ -96,7 +96,11 @@ export function InstallPrompt() {
     if (sessao < SESSAO_MINIMA) return;
     if (foiDispensadoRecentemente()) return;
 
-    const precisaInstalar = !instalado;
+    // Só convida a instalar quem TEM como instalar: ou o navegador disparou o
+    // beforeinstallprompt (Chrome/Edge, inclusive desktop), ou é um celular
+    // (onde o passo a passo manual faz sentido). Desktop Firefox/Safari não
+    // tem nem um nem outro; antes eles viam instrução de iPhone num PC.
+    const precisaInstalar = !instalado && (!!bip || ehMobile());
     const precisaPush = pushSupported() && !pushLigado && instalado;
     if (!precisaInstalar && !precisaPush) return;
 

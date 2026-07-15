@@ -140,13 +140,23 @@ export function useSetMemberModule() {
 }
 
 export function useBuySeats() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: async (seats: number) => {
       const { data, error } = await supabase.functions.invoke("collab-seats-checkout", { body: { seats } });
       if (error) throw new Error(error.message);
+      // Assinatura existente atualizada no Stripe (pró-rata): não há checkout pra abrir.
+      if ((data as { updated?: boolean })?.updated) return { updated: true as const };
       const url = (data as { url?: string })?.url;
       if (!url) throw new Error("checkout_failed");
       window.location.href = url;
+      return { updated: false as const };
+    },
+    onSuccess: (res) => {
+      if (res?.updated) {
+        qc.invalidateQueries({ queryKey: ["collab-seats"] });
+        toast.success("Assento adicionado à sua assinatura. A diferença entra proporcional na próxima fatura.");
+      }
     },
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao abrir o checkout."),
   });

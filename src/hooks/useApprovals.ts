@@ -54,6 +54,7 @@ export function useApprovals() {
         .select("*")
         .eq("user_id", ownerId!)
         .eq("status", "editando")
+        .is("deleted_at", null)
         .order("approval_updated_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as ApprovalPost[];
