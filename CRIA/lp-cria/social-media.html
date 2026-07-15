@@ -93,7 +93,15 @@ h1 .hl{color:var(--amarelo)}
 .mod ul{list-style:none;margin-top:16px;display:flex;flex-direction:column;gap:9px;font-size:.95rem}
 .mod li{display:flex;gap:10px}
 .mod li b{color:var(--verde);flex-shrink:0}
-.mod-visual{border-radius:var(--radius-lg);min-height:320px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+/* Visual dos módulos com forma orgânica e leve inclinação: retângulo perfeito
+   é o que deixava a página com cara de template. */
+.mod-visual{border-radius:38px 52px 40px 56px;min-height:320px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;transform:rotate(-1.2deg);transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
+.mod:nth-child(even) .mod-visual{transform:rotate(1.1deg)}
+.mod-visual:hover{transform:rotate(0deg) scale(1.015)}
+.sm-blobs{position:absolute;inset:0;pointer-events:none;z-index:0}
+.smblob{position:absolute;display:block;animation:smblob-float 14s ease-in-out infinite}
+@keyframes smblob-float{0%,100%{transform:translate(0,0) rotate(0deg) scale(1)}33%{transform:translate(16px,-20px) rotate(7deg) scale(1.05)}66%{transform:translate(-12px,14px) rotate(-6deg) scale(.97)}}
+@media(prefers-reduced-motion:reduce){.smblob{animation:none}}
 .mod-ph{border:2px dashed rgba(21,20,18,.3);border-radius:18px;padding:22px 28px;font-size:.85rem;background:rgba(253,251,245,.5);text-align:center}
 .mod-visual.dark .mod-ph{border-color:rgba(244,239,227,.4);color:var(--creme);background:rgba(21,20,18,.2)}
 @media(max-width:860px){.mod{grid-template-columns:1fr;gap:20px;padding:34px 0}.mod:nth-child(even) .mod-visual{order:0}.mod-visual{min-height:220px}}
@@ -218,8 +226,15 @@ html,body{overflow-x:clip}
   </div>
 </section>
 
-<section id="modulos">
-  <div class="container">
+<section id="modulos" style="position:relative;overflow:hidden">
+  <!-- Blobs orgânicos do brandbook flutuando atrás dos módulos -->
+  <div class="sm-blobs" aria-hidden="true">
+    <span class="smblob" style="width:300px;height:290px;top:4%;right:-100px;background:var(--rosa);border-radius:38% 62% 55% 45%/48% 42% 58% 52%;opacity:.14;animation-duration:16s"></span>
+    <span class="smblob" style="width:210px;height:200px;top:36%;left:-80px;background:var(--amarelo);border-radius:55% 45% 40% 60%/50% 60% 40% 50%;opacity:.18;animation-duration:13s"></span>
+    <span class="smblob" style="width:140px;height:135px;top:62%;right:6%;background:var(--azul);border-radius:45% 55% 60% 40%/55% 45% 55% 45%;opacity:.11;animation-duration:18s"></span>
+    <span class="smblob" style="width:90px;height:88px;bottom:4%;left:14%;background:var(--verde);border-radius:50% 50% 45% 55%/60% 40% 60% 40%;opacity:.15;animation-duration:11s"></span>
+  </div>
+  <div class="container" style="position:relative;z-index:1">
     <div style="text-align:center;max-width:720px;margin:0 auto 30px" class="reveal">
       <span class="kicker" style="background:var(--azul)">Os módulos do gestor</span>
       <h2>A operação inteira, <span class="script" style="color:var(--laranja);font-size:1.15em">módulo por módulo</span></h2>

@@ -629,88 +629,103 @@ html,body{overflow-x:clip}
 </style>
 
 <!-- ==================== TUDO QUE VEM DENTRO ==================== -->
-<section id="tudo" style="background:var(--creme);padding:0 0 50px">
-  <div class="container">
+<section id="tudo" style="background:var(--creme);padding:0 0 50px;position:relative;overflow:hidden">
+  <div class="func-blobs" aria-hidden="true">
+    <span class="fblob" style="width:260px;height:250px;top:8%;right:-90px;background:var(--verde);border-radius:38% 62% 55% 45%/48% 42% 58% 52%;opacity:.13;animation-duration:17s"></span>
+    <span class="fblob" style="width:170px;height:165px;bottom:6%;left:-60px;background:var(--rosa);border-radius:55% 45% 40% 60%/50% 60% 40% 50%;opacity:.15;animation-duration:12s"></span>
+    <span class="fblob" style="width:80px;height:78px;top:20%;left:12%;background:var(--amarelo);border-radius:60% 40% 55% 45%/45% 55% 45% 55%;opacity:.2;animation-duration:14s"></span>
+  </div>
+  <div class="container" style="position:relative;z-index:1">
     <div class="ciclo-head reveal">
       <span class="kicker" style="background:var(--verde)">Sem letra miúda</span>
       <h2>Tudo que vem dentro, <span class="script" style="color:var(--laranja);font-size:1.15em">sem esconder nada</span></h2>
     </div>
     <div class="tudo-grid">
-      <div class="tudo-col reveal">
-        <!-- ANTES esta coluna dizia "tá no Pro e no Studio" e listava Cria Stories,
-             Collabs e Cria Estúdio junto — nenhum dos três está no Pro. Vender o que
-             não entrega é reembolso na certa. Agora cada item diz em que plano está. -->
+      <div class="tudo-col reveal" style="--tc:var(--azul);--tilt:-.6deg">
+        <!-- Cada item diz em que plano está: vender o que não entrega é reembolso. -->
         <div class="tudo-head">
           <h3>Pro criador</h3>
           <span class="tudo-sub">o que entra em cada plano</span>
         </div>
-        <p class="tudo-nivel">No Essencial (R$19,90), e daí pra cima:</p>
-        <div class="chips">
-          <span class="chip">Dashboard do dia</span>
-          <span class="chip">Banco de ideias</span>
-          <span class="chip">Kanban "Criando"</span>
-          <span class="chip">Calendário de conteúdo</span>
-          <span class="chip">Tarefas e metas</span>
-          <span class="chip">Brandbook da marca</span>
-          <span class="chip">Link in bio</span>
-          <span class="chip">Notificações + resumo diário</span>
-          <span class="chip">Instala como app no celular</span>
+        <div class="tudo-tier" style="--tt:var(--verde)">
+          <div class="tier-top"><span class="tier-nome script">Essencial</span><span class="tier-preco">R$19,90/mês</span></div>
+          <div class="chips">
+            <span class="chip"><i></i>Dashboard do dia</span>
+            <span class="chip"><i></i>Banco de ideias</span>
+            <span class="chip"><i></i>Kanban "Criando"</span>
+            <span class="chip"><i></i>Calendário de conteúdo</span>
+            <span class="chip"><i></i>Tarefas e metas</span>
+            <span class="chip"><i></i>Brandbook da marca</span>
+            <span class="chip"><i></i>Link in bio</span>
+            <span class="chip"><i></i>Notificações + resumo diário</span>
+            <span class="chip"><i></i>Instala como app no celular</span>
+          </div>
         </div>
-        <p class="tudo-nivel">A partir do Pro (R$32,90):</p>
-        <div class="chips">
-          <span class="chip destaque-az">Cria IA: legendas</span>
-          <span class="chip destaque-az">Cria IA: roteiros</span>
-          <span class="chip destaque-az">Avaliação de gancho</span>
-          <span class="chip destaque-az">Ideias por IA</span>
-          <span class="chip">Insights reais do Instagram</span>
-          <span class="chip">Meu Feed (preview)</span>
-          <span class="chip">Melhor horário pra postar</span>
-          <span class="chip">Tendências do seu nicho</span>
-          <span class="chip">Media Kit automático</span>
-          <span class="chip">Relatórios</span>
+        <div class="tudo-tier" style="--tt:var(--azul)">
+          <div class="tier-top"><span class="tier-nome script">Pro</span><span class="tier-preco">R$32,90/mês</span><span class="tier-extra">tudo do Essencial +</span></div>
+          <div class="chips">
+            <span class="chip"><i></i>Cria IA: legendas e roteiros</span>
+            <span class="chip"><i></i>Avaliação de gancho</span>
+            <span class="chip"><i></i>Ideias por IA</span>
+            <span class="chip"><i></i>Insights reais do Instagram</span>
+            <span class="chip"><i></i>Meu Feed (preview)</span>
+            <span class="chip"><i></i>Melhor horário pra postar</span>
+            <span class="chip"><i></i>Tendências do seu nicho</span>
+            <span class="chip"><i></i>Media Kit automático</span>
+            <span class="chip"><i></i>Relatórios</span>
+            <span class="chip"><i></i>Estúdio: prompt da arte</span>
+          </div>
         </div>
-        <p class="tudo-nivel">Só no Studio (R$49,90):</p>
-        <div class="chips">
-          <span class="chip destaque-az">Cria Plano: a IA monta seu mês</span>
-          <span class="chip destaque-az">Cria Stories: plano semanal</span>
-          <span class="chip">Collabs e publis</span>
+        <div class="tudo-tier" style="--tt:var(--laranja)">
+          <div class="tier-top"><span class="tier-nome script">Studio</span><span class="tier-preco">R$49,90/mês</span><span class="tier-extra">tudo do Pro +</span></div>
+          <div class="chips">
+            <span class="chip"><i></i>Cria Plano: a IA monta seu mês</span>
+            <span class="chip"><i></i>Cria Stories: plano semanal</span>
+            <span class="chip"><i></i>Collabs e publis</span>
+          </div>
         </div>
       </div>
-      <div class="tudo-col tudo-gestor reveal">
-        <!-- O lado gestor NÃO vem no plano do criador. São módulos comprados à
-             parte, cada um com o seu preço. Deixar isso implícito era o que fazia
-             a pessoa achar que o Studio de R$49,90 vinha com CRM e financeiro. -->
+      <div class="tudo-col tudo-gestor reveal" style="--tc:var(--laranja);--tilt:.55deg">
+        <!-- O lado gestor NÃO vem no plano do criador: são módulos à parte. -->
         <div class="tudo-head">
           <h3>Pro gestor</h3>
-          <span class="tudo-sub">a conta é grátis · cada módulo é comprado à parte</span>
+          <span class="tudo-sub">a conta é grátis · cada módulo é à parte</span>
         </div>
-        <p class="tudo-nivel" style="color:rgba(255,255,255,.6)">Cria Post · R$19,90/mês</p>
-        <div class="chips">
-          <span class="chip c-dark destaque-la">Aprovação por link, sem cadastro</span>
-          <span class="chip c-dark">Portal com a cara da sua agência</span>
-          <span class="chip c-dark">Calendário e relatório pro cliente</span>
-          <span class="chip c-dark">Você vê quando o cliente visualizou</span>
-          <span class="chip c-dark">Importa posts do CRIA do cliente</span>
-          <span class="chip c-dark">Relatório em 1 clique + WhatsApp</span>
+        <div class="tudo-tier" style="--tt:var(--laranja)">
+          <div class="tier-top"><span class="tier-nome script">Cria Post</span><span class="tier-preco">R$19,90/mês</span></div>
+          <div class="chips">
+            <span class="chip"><i></i>Aprovação por link, sem cadastro</span>
+            <span class="chip"><i></i>Portal com a cara da sua agência</span>
+            <span class="chip"><i></i>Calendário e relatório pro cliente</span>
+            <span class="chip"><i></i>Você vê quando o cliente visualizou</span>
+            <span class="chip"><i></i>Importa posts do CRIA do cliente</span>
+            <span class="chip"><i></i>Relatório em 1 clique + WhatsApp</span>
+          </div>
         </div>
-        <p class="tudo-nivel" style="color:rgba(255,255,255,.6)">Cria Gestão · R$29,90/mês</p>
-        <div class="chips">
-          <span class="chip c-dark destaque-la">Ficha completa do cliente</span>
-          <span class="chip c-dark">Pipeline de vendas</span>
-          <span class="chip c-dark">Contratos e propostas</span>
-          <span class="chip c-dark">Tarefas e calendário por cliente</span>
+        <div class="tudo-tier" style="--tt:var(--rosa)">
+          <div class="tier-top"><span class="tier-nome script">Cria Gestão</span><span class="tier-preco">R$29,90/mês</span></div>
+          <div class="chips">
+            <span class="chip"><i></i>Ficha completa do cliente</span>
+            <span class="chip"><i></i>Pipeline de vendas</span>
+            <span class="chip"><i></i>Contratos e propostas</span>
+            <span class="chip"><i></i>Tarefas e calendário por cliente</span>
+          </div>
         </div>
-        <p class="tudo-nivel" style="color:rgba(255,255,255,.6)">Cria Caixa · R$24,90/mês</p>
-        <div class="chips">
-          <span class="chip c-dark destaque-la">Margem de lucro por cliente</span>
-          <span class="chip c-dark">Imposto pelo seu regime</span>
-          <span class="chip c-dark">Recebimentos, custos e MRR</span>
-          <span class="chip c-dark">Previsão do mês + vencimentos</span>
+        <div class="tudo-tier" style="--tt:var(--verde)">
+          <div class="tier-top"><span class="tier-nome script">Cria Caixa</span><span class="tier-preco">R$24,90/mês</span></div>
+          <div class="chips">
+            <span class="chip"><i></i>Margem de lucro por cliente</span>
+            <span class="chip"><i></i>Imposto pelo seu regime</span>
+            <span class="chip"><i></i>Recebimentos, custos e MRR</span>
+            <span class="chip"><i></i>Previsão do mês + vencimentos</span>
+          </div>
         </div>
-        <p class="tudo-nivel" style="color:rgba(255,255,255,.6)">Modo Agência · R$36,90 por cliente</p>
-        <div class="chips">
-          <span class="chip c-dark">Cada cliente ganha uma conta Studio, de graça</span>
-          <span class="chip c-dark">Equipe com acesso por cliente</span>
+        <div class="tudo-tier" style="--tt:var(--amarelo)">
+          <div class="tier-top"><span class="tier-nome script">Modo Agência</span><span class="tier-preco">R$36,90/cliente</span></div>
+          <div class="chips">
+            <span class="chip"><i></i>Cada cliente ganha uma conta Studio, de graça</span>
+            <span class="chip"><i></i>Equipe com acesso por cliente</span>
+          </div>
         </div>
         <a href="social-media.html" class="tudo-link">ver o lado gestor em detalhe →</a>
       </div>
@@ -718,24 +733,29 @@ html,body{overflow-x:clip}
   </div>
 </section>
 <style>
-.tudo-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:36px}
-.tudo-col{background:var(--branco);border:2px solid var(--ink);border-radius:var(--radius-lg);padding:32px 30px;box-shadow:0 8px 0 rgba(21,20,18,.9)}
-.tudo-gestor{background:var(--ink);border-color:var(--ink);box-shadow:0 8px 0 var(--laranja)}
-.tudo-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+/* Duas colunas monolíticas de chips viravam parede. Agora cada plano/módulo é
+   um mini-card com nome manuscrito na cor dele e preço num selinho torto, na
+   mesma linguagem dos pilares. */
+.tudo-grid{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:40px}
+.tudo-col{background:var(--branco);border:3px solid var(--tc);border-radius:32px 28px 34px 30px;padding:28px 26px;box-shadow:9px 9px 0 var(--tc);transform:rotate(var(--tilt,0deg));transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
+.tudo-col:hover{transform:rotate(0deg) translateY(-6px)}
+.tudo-gestor{background:var(--ink)}
+.tudo-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:6px;flex-wrap:wrap}
 .tudo-head h3{font-size:1.4rem}
 .tudo-gestor .tudo-head h3{color:var(--creme)}
 .tudo-sub{font-family:var(--font-script);font-size:1.15rem;color:var(--azul)}
 .tudo-gestor .tudo-sub{color:var(--amarelo)}
-/* Divisor por plano/módulo: sem isso, tudo virava um monte de chips e a pessoa
-   assumia que TUDO vinha junto — que é exatamente o mal-entendido que gera
-   reembolso. */
-.tudo-nivel{font-family:var(--font-display);font-weight:700;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;opacity:.7;margin:22px 0 10px}
-.tudo-nivel:first-of-type{margin-top:16px}
-.chips{display:flex;flex-wrap:wrap;gap:9px}
-.chip{display:inline-flex;align-items:center;font-size:.86rem;font-weight:500;padding:8px 15px;border-radius:999px;background:var(--creme);border:1.5px solid rgba(21,20,18,.18)}
-.chip.destaque-az{background:var(--azul);color:#fff;border-color:var(--azul)}
-.chip.c-dark{background:rgba(253,251,245,.08);color:var(--creme);border-color:rgba(253,251,245,.25)}
-.chip.c-dark.destaque-la{background:var(--laranja);border-color:var(--laranja)}
+.tudo-tier{background:var(--creme);border-radius:20px 24px 20px 26px;padding:16px 16px 15px;margin-top:14px}
+.tudo-gestor .tudo-tier{background:rgba(253,251,245,.07)}
+.tier-top{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.tier-nome{font-size:1.55rem;color:var(--tt);line-height:1}
+.tier-preco{background:var(--amarelo);color:var(--ink);border:2px solid var(--ink);border-radius:999px;padding:4px 12px;font-size:.74rem;font-weight:800;transform:rotate(-3deg);box-shadow:2px 2px 0 var(--ink)}
+.tier-extra{font-size:.78rem;font-weight:700;opacity:.6;margin-left:auto}
+.tudo-gestor .tier-extra{color:var(--creme)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:7px;font-size:.83rem;font-weight:600;padding:7px 13px;border-radius:999px;background:var(--branco);color:var(--ink)}
+.chip i{width:8px;height:8px;border-radius:60% 40% 55% 45%/45% 55% 45% 55%;background:var(--tt);flex-shrink:0}
+.tudo-gestor .chip{background:rgba(253,251,245,.1);color:var(--creme)}
 .tudo-link{display:inline-block;margin-top:20px;color:var(--amarelo);font-weight:700;font-family:var(--font-display);font-size:.95rem}
 .tudo-link:hover{text-decoration:underline}
 @media(max-width:860px){.tudo-grid{grid-template-columns:1fr;gap:16px}.tudo-col{padding:26px 22px}.chip{font-size:.8rem;padding:7px 12px}}
