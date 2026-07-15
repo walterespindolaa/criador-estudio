@@ -20,7 +20,7 @@ const brl = (v?: number | null) =>
   v == null ? "-" : `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 const fmtDate = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 const STATUS_DOT: Record<CollabStatus, string> = {
-  lead: "#9b97ad", negociando: "#d97706", fechado: "#8B5CF6", entregue: "#16a34a", pago: "#9b97ad",
+  lead: "#9b97ad", negociando: "#d97706", fechado: "#EA4918", entregue: "#16a34a", pago: "#9b97ad",
 };
 
 export default function Collabs() {

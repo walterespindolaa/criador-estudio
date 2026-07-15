@@ -14,11 +14,11 @@ export type CriaColor = "laranja" | "verde" | "azul" | "rosa" | "amarelo" | "lil
 
 /** Hex das 6 cores da landing page. Fonte da verdade, não invente tons novos. */
 export const CRIA_HEX: Record<CriaColor, string> = {
-  laranja: "#CE4A1D",
-  verde: "#3E9152",
-  azul: "#2A4BDF",
-  rosa: "#F27EB5",
-  amarelo: "#F2C21E",
+  laranja: "#EA4918",
+  verde: "#01A652",
+  azul: "#0061EE",
+  rosa: "#FF77B9",
+  amarelo: "#FFCF03",
   lilas: "#7C90F0",
 };
 

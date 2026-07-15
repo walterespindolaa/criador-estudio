@@ -69,7 +69,7 @@ export function ClienteInstagramCria({ criaOwnerId, clientName }: { criaOwnerId:
     <div className="space-y-4">
       {/* Cabeçalho: conta conectada + última atualização */}
       <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 flex-wrap">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-500 to-purple-600 grid place-items-center shrink-0 overflow-hidden">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-500 to-pink-400 grid place-items-center shrink-0 overflow-hidden">
           {data.profile_picture_url
             ? <img src={data.profile_picture_url} alt="" className="w-full h-full object-cover" />
             : <Instagram className="h-4 w-4 text-white" />}

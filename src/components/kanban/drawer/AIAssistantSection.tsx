@@ -71,7 +71,7 @@ export function AIAssistantSection({
   return (
     <div className="border-t border-border pt-4 mt-4">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
+        <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-primary to-pink-400 flex items-center justify-center">
           <Sparkles className="h-3.5 w-3.5 text-white" />
         </div>
         <span className="text-sm font-display font-semibold text-foreground">Assistente IA</span>

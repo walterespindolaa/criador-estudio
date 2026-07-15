@@ -17,7 +17,7 @@ type Props = {
 
 const SECTIONS = [
   { key: "identidade", icon: Heart, label: "Identidade", color: "from-pink-500 to-rose-500", tab: "moodboard" },
-  { key: "visual", icon: Palette, label: "Visual", color: "from-violet-500 to-purple-500", tab: "moodboard" },
+  { key: "visual", icon: Palette, label: "Visual", color: "from-violet-500 to-pink-400", tab: "moodboard" },
   { key: "comunicacao", icon: MessageSquare, label: "Comunicação", color: "from-blue-500 to-cyan-500", tab: "linha-editorial" },
   { key: "publico", icon: Users, label: "Público-alvo", color: "from-amber-500 to-orange-500", tab: "persona" },
   { key: "valores", icon: BookOpen, label: "Valores", color: "from-emerald-500 to-teal-500", tab: "moodboard" },

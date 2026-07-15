@@ -30,7 +30,7 @@ const COURSES: Course[] = [
   {
     id: "crescimento",
     icon: TrendingUp,
-    gradient: "from-violet-500 to-purple-600",
+    gradient: "from-violet-500 to-pink-400",
     title: "Crescimento Orgânico",
     subtitle: "Estratégias reais para ganhar seguidores",
     topics: [

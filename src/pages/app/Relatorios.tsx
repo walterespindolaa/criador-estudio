@@ -51,7 +51,7 @@ const PERIOD_OPTIONS: { key: PeriodKey; label: string; days: number }[] = [
 
 const FORMAT_COLORS: Record<string, string> = {
   reels: "#FF6B6B",
-  carrossel: "#7C5CFC",
+  carrossel: "#EA4918",
   foto: "#FFBE0B",
   story: "#FF69B4",
   video: "#4DABF7",
@@ -590,7 +590,7 @@ const Relatorios = () => {
           <MetricCard
             label="Ideias no banco"
             value={ideasCount}
-            gradient="from-violet-500/15 to-purple-500/5"
+            gradient="from-violet-500/15 to-pink-400/5"
             iconBg="bg-violet-500"
           />
           <MetricCard
@@ -672,7 +672,7 @@ const Relatorios = () => {
                 />
                 <WinnerCard
                   icon={<Bookmark className="h-4 w-4 text-white" strokeWidth={1.75} />}
-                  iconBg="bg-gradient-to-br from-violet-500 to-purple-600"
+                  iconBg="bg-gradient-to-br from-violet-500 to-pink-400"
                   label="Pilar que gera saves"
                   value={byPillar[0]?.name ?? "-"}
                   valueColor={byPillar[0]?.color}
@@ -893,7 +893,7 @@ const Relatorios = () => {
           {/* AI Insight */}
           <div className="bg-gradient-to-br from-primary/10 via-purple-500/5 to-pink-500/10 rounded-xl border border-primary/15 p-5">
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-pink-400 flex items-center justify-center">
                 <Sparkles className="h-4 w-4 text-white" strokeWidth={1.75} />
               </div>
               <div>

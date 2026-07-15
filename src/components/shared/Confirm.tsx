@@ -69,7 +69,7 @@ export function ConfirmHost() {
 
   return (
     <AlertDialog open onOpenChange={(o) => { if (!o) responder(false); }}>
-      <AlertDialogContent className="rounded-3xl border-2 border-[#151412] max-w-md">
+      <AlertDialogContent className="rounded-3xl border-2 border-[#0A0A0A] max-w-md">
         <AlertDialogHeader>
           <div className="flex items-start gap-3">
             {destrutivo && (

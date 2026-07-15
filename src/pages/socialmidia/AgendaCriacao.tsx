@@ -161,7 +161,7 @@ export default function AgendaCriacao() {
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="pb-24 md:pb-0">
       <div className="flex items-center gap-3 mb-5">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 grid place-items-center shadow-sm shrink-0">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-pink-400 grid place-items-center shadow-sm shrink-0">
           <CalendarDays className="h-5 w-5 text-white" strokeWidth={1.75} />
         </div>
         <div>

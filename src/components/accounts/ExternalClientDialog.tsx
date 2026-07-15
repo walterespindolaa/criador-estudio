@@ -12,9 +12,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Loader2, Image as ImageIcon, Eye, EyeOff, Check } from "lucide-react";
 
 // Cores dos clientes no calendário geral (também usadas pelo ManagerCalendar).
-export const CLIENT_COLORS = ["#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#EF4444", "#14B8A6", "#A855F7"];
+export const CLIENT_COLORS = ["#EA4918", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#EF4444", "#14B8A6", "#A855F7"];
 // Paleta CRIA pra cor da marca do cliente no portal público.
-const PORTAL_BRAND_COLORS = ["#CE4A1D", "#2A4BDF", "#F27EB5", "#F2C21E", "#3E9152"];
+const PORTAL_BRAND_COLORS = ["#EA4918", "#0061EE", "#FF77B9", "#FFCF03", "#01A652"];
 
 // Edição do cliente de aprovação por link: logo e cor do portal, vínculo com o
 // cadastro central, notas e cor do calendário. Extraído da antiga lista do Cria Post
@@ -144,7 +144,7 @@ export function ExternalClientDialog({ open, onOpenChange, client }: {
                     className={`h-7 w-7 rounded-full transition-transform ${f.brand_color === c ? "ring-2 ring-offset-2 ring-foreground scale-110" : "hover:scale-105"}`}
                     style={{ backgroundColor: c }} aria-label={`Cor da marca ${c}`} />
                 ))}
-                <input type="color" value={f.brand_color ?? "#CE4A1D"} onChange={(e) => setF((p) => ({ ...p, brand_color: e.target.value }))}
+                <input type="color" value={f.brand_color ?? "#EA4918"} onChange={(e) => setF((p) => ({ ...p, brand_color: e.target.value }))}
                   className="h-7 w-9 rounded-lg border border-border bg-transparent p-0.5 cursor-pointer" aria-label="Cor personalizada" />
                 {f.brand_color && <button type="button" onClick={() => setF((p) => ({ ...p, brand_color: null }))} className="text-[11px] font-body text-muted-foreground hover:text-foreground">Limpar</button>}
               </div>

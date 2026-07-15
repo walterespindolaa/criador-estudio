@@ -243,7 +243,7 @@ function TabBtn({ active, onClick, icon, children }: { active: boolean; onClick:
 function Header({ lastUpdated }: { lastUpdated: Date | null }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-sm shrink-0">
+      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-pink-400 flex items-center justify-center shadow-sm shrink-0">
         <Clapperboard className="h-5 w-5 text-white" strokeWidth={1.75} />
       </div>
       <div>

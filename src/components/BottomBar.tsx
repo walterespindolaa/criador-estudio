@@ -185,7 +185,7 @@ export function BottomBar() {
           <div className="dock-pill flex items-center gap-0.5 rounded-[30px] p-1.5">
             {leftItems.map(renderNavItem)}
             <button type="button" onClick={() => openCria()} aria-label="cria"
-              className="mx-0.5 h-11 w-11 rounded-full bg-gradient-to-br from-primary to-purple-600 text-white flex items-center justify-center shadow-lg shadow-primary/30 active:scale-95 transition-transform">
+              className="mx-0.5 h-11 w-11 rounded-full bg-gradient-to-br from-primary to-pink-400 text-white flex items-center justify-center shadow-lg shadow-primary/30 active:scale-95 transition-transform">
               <Sparkles className="h-5 w-5" strokeWidth={2} />
             </button>
             {rightItems.map(renderNavItem)}
@@ -193,7 +193,7 @@ export function BottomBar() {
           {onCriando && (
             <button type="button" onClick={toggleOverview} aria-label={overview ? "Sair da visão geral" : "Visão geral"}
               className={cn("h-[52px] w-[52px] rounded-full flex items-center justify-center active:scale-95 transition-transform",
-                overview ? "bg-gradient-to-br from-primary to-purple-600 shadow-lg shadow-primary/30" : "dock-pill")}>
+                overview ? "bg-gradient-to-br from-primary to-pink-400 shadow-lg shadow-primary/30" : "dock-pill")}>
               {overview ? <Minimize2 className="h-5 w-5 text-white" strokeWidth={2} />
                         : <Maximize2 className="h-5 w-5 text-muted-foreground" strokeWidth={1.9} />}
             </button>

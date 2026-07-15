@@ -74,24 +74,24 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4EFE3] flex">
+    <div className="min-h-screen bg-[#F5F3E7] flex">
       {/* ===== Painel esquerdo: energia de "tô mudando de vida" ===== */}
-      <div className="hidden lg:flex lg:w-[44%] bg-[#CE4A1D] items-center justify-center p-12 relative overflow-hidden">
-        <div aria-hidden className="cria-blob pointer-events-none absolute -top-32 -right-24 w-96 h-96 bg-[#F2C21E] opacity-90 rounded-[38%_62%_55%_45%/48%_42%_58%_52%]" />
-        <div aria-hidden className="cria-blob cria-blob-slow pointer-events-none absolute -bottom-28 -left-20 w-72 h-72 bg-[#F27EB5] opacity-85 rounded-[55%_45%_40%_60%/50%_60%_40%_50%]" />
+      <div className="hidden lg:flex lg:w-[44%] bg-[#EA4918] items-center justify-center p-12 relative overflow-hidden">
+        <div aria-hidden className="cria-blob pointer-events-none absolute -top-32 -right-24 w-96 h-96 bg-[#FFCF03] opacity-90 rounded-[38%_62%_55%_45%/48%_42%_58%_52%]" />
+        <div aria-hidden className="cria-blob cria-blob-slow pointer-events-none absolute -bottom-28 -left-20 w-72 h-72 bg-[#FF77B9] opacity-85 rounded-[55%_45%_40%_60%/50%_60%_40%_50%]" />
         <div aria-hidden className="cria-blob cria-blob-fast pointer-events-none absolute top-[30%] right-[14%] w-16 h-16 bg-[#FDFBF5] opacity-90 rounded-full" />
-        <div aria-hidden className="cria-blob cria-blob-slow pointer-events-none absolute bottom-[24%] right-[38%] w-24 h-24 bg-[#2A4BDF] opacity-60 rounded-[45%_55%_60%_40%/55%_45%_55%_45%]" />
+        <div aria-hidden className="cria-blob cria-blob-slow pointer-events-none absolute bottom-[24%] right-[38%] w-24 h-24 bg-[#0061EE] opacity-60 rounded-[45%_55%_60%_40%/55%_45%_55%_45%]" />
         <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="max-w-md relative z-10">
           {/* A logo de verdade (versão clara), em vez de "CRIA." digitado. */}
           <Logo variant="dark" className="h-9 w-auto" />
           <h2 className="[font-family:'Baloo_2',sans-serif] font-extrabold text-white text-[2.6rem] leading-[1.08] tracking-tight mt-6 mb-2">
             Hoje é o dia em que o caos acaba.
           </h2>
-          <p className="[font-family:'Grand_Hotel',cursive] text-[#F2C21E] text-3xl -rotate-2 inline-block mb-6">bem-vindo(a) ao clube ✦</p>
+          <p className="[font-family:'Grand_Hotel',cursive] text-[#FFCF03] text-3xl -rotate-2 inline-block mb-6">bem-vindo(a) ao clube ✦</p>
           <ul className="space-y-3 text-white/95 font-body text-[15px]">
-            <li className="flex items-start gap-3"><span className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#F2C21E] text-[#1B1A17] text-[10px] font-black shrink-0">✓</span>Sua semana inteira planejada num lugar só</li>
-            <li className="flex items-start gap-3"><span className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#F2C21E] text-[#1B1A17] text-[10px] font-black shrink-0">✓</span>IA que escreve no SEU tom de voz</li>
-            <li className="flex items-start gap-3"><span className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#F2C21E] text-[#1B1A17] text-[10px] font-black shrink-0">✓</span>Insights reais do Instagram, sem achismo</li>
+            <li className="flex items-start gap-3"><span className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#FFCF03] text-[#0A0A0A] text-[10px] font-black shrink-0">✓</span>Sua semana inteira planejada num lugar só</li>
+            <li className="flex items-start gap-3"><span className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#FFCF03] text-[#0A0A0A] text-[10px] font-black shrink-0">✓</span>IA que escreve no SEU tom de voz</li>
+            <li className="flex items-start gap-3"><span className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#FFCF03] text-[#0A0A0A] text-[10px] font-black shrink-0">✓</span>Insights reais do Instagram, sem achismo</li>
           </ul>
           <p className="mt-8 text-white/60 text-xs font-body">7 dias grátis · Cancela quando quiser</p>
         </motion.div>
@@ -99,13 +99,13 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
 
       {/* ===== Lado do formulário ===== */}
       <div className="flex-1 flex items-center justify-center p-6 sm:p-8 relative overflow-hidden">
-        <div aria-hidden className="cria-blob pointer-events-none absolute -top-24 -right-20 w-64 h-64 bg-[#F27EB5] opacity-70 rounded-[38%_62%_55%_45%/48%_42%_58%_52%] lg:opacity-40" />
-        <div aria-hidden className="cria-blob cria-blob-slow pointer-events-none absolute -bottom-20 -left-16 w-52 h-52 bg-[#F2C21E] opacity-70 rounded-[55%_45%_40%_60%/50%_60%_40%_50%] lg:opacity-40" />
+        <div aria-hidden className="cria-blob pointer-events-none absolute -top-24 -right-20 w-64 h-64 bg-[#FF77B9] opacity-70 rounded-[38%_62%_55%_45%/48%_42%_58%_52%] lg:opacity-40" />
+        <div aria-hidden className="cria-blob cria-blob-slow pointer-events-none absolute -bottom-20 -left-16 w-52 h-52 bg-[#FFCF03] opacity-70 rounded-[55%_45%_40%_60%/50%_60%_40%_50%] lg:opacity-40" />
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="relative z-10 w-full max-w-md bg-[#FDFBF5] border-2 border-[#151412] rounded-[28px] shadow-[0_10px_0_rgba(21,20,18,0.9)] p-7 sm:p-9"
+          className="relative z-10 w-full max-w-md bg-[#FDFBF5] border-2 border-[#0A0A0A] rounded-[28px] shadow-[0_10px_0_rgba(21,20,18,0.9)] p-7 sm:p-9"
         >
           <Link to="/" className="mb-5 flex justify-center">
             <Logo className="h-12 w-auto" />
@@ -113,21 +113,21 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
 
           {emailSent ? (
             <div className="flex flex-col items-center text-center gap-4 py-6">
-              <div className="w-16 h-16 rounded-full bg-[#E5F2E9] border-2 border-[#3E9152] flex items-center justify-center mb-1">
-                <Mail className="h-7 w-7 text-[#3E9152]" />
+              <div className="w-16 h-16 rounded-full bg-[#E5F2E9] border-2 border-[#01A652] flex items-center justify-center mb-1">
+                <Mail className="h-7 w-7 text-[#01A652]" />
               </div>
-              <h2 className="text-2xl [font-family:'Baloo_2',sans-serif] font-extrabold text-[#151412]">
+              <h2 className="text-2xl [font-family:'Baloo_2',sans-serif] font-extrabold text-[#0A0A0A]">
                 {t("signup.confirmTitle")}
               </h2>
-              <p className="[font-family:'Grand_Hotel',cursive] text-2xl text-[#CE4A1D] -rotate-2 -mt-2">falta só um clique!</p>
-              <p className="text-[#151412]/60 font-body text-sm leading-relaxed">
+              <p className="[font-family:'Grand_Hotel',cursive] text-2xl text-[#EA4918] -rotate-2 -mt-2">falta só um clique!</p>
+              <p className="text-[#0A0A0A]/60 font-body text-sm leading-relaxed">
                 {t("signup.confirmLead")}{" "}
-                <strong className="text-[#151412]">{emailValue}</strong>{t("signup.confirmTail")}
+                <strong className="text-[#0A0A0A]">{emailValue}</strong>{t("signup.confirmTail")}
               </p>
-              <p className="text-xs text-[#151412]/50 font-body">
+              <p className="text-xs text-[#0A0A0A]/50 font-body">
                 {t("signup.notReceived")}{" "}
                 <button
-                  className="text-[#2A4BDF] underline underline-offset-2"
+                  className="text-[#0061EE] underline underline-offset-2"
                   onClick={() => setEmailSent(false)}
                 >
                   {t("signup.tryAgain")}
@@ -136,71 +136,71 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
             </div>
           ) : (
             <>
-              <h3 className="text-3xl text-center [font-family:'Baloo_2',sans-serif] font-extrabold text-[#151412] mb-1">{t("signup.title")}</h3>
-              <p className="text-center [font-family:'Grand_Hotel',cursive] text-2xl text-[#CE4A1D] -rotate-2 mb-5">sua nova fase começa agora!</p>
+              <h3 className="text-3xl text-center [font-family:'Baloo_2',sans-serif] font-extrabold text-[#0A0A0A] mb-1">{t("signup.title")}</h3>
+              <p className="text-center [font-family:'Grand_Hotel',cursive] text-2xl text-[#EA4918] -rotate-2 mb-5">sua nova fase começa agora!</p>
 
               {/* Tipo de conta */}
               <div className="mb-6">
-                <p className="text-xs [font-family:'Baloo_2',sans-serif] font-bold text-[#151412]/60 uppercase tracking-wider mb-2">Você é</p>
+                <p className="text-xs [font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]/60 uppercase tracking-wider mb-2">Você é</p>
                 <div className="grid grid-cols-2 gap-2">
                   <button type="button" onClick={() => setAccountType("creator")}
-                    className={`rounded-2xl border-2 p-3 text-left transition-all duration-200 ${accountType === "creator" ? "border-[#CE4A1D] bg-[#FBE9E1] -translate-y-0.5 shadow-[0_4px_0_rgba(21,20,18,0.85)]" : "border-[#151412]/20 hover:border-[#151412]/50"}`}>
-                    <span className="block text-sm [font-family:'Baloo_2',sans-serif] font-bold text-[#151412]">Criador de conteúdo</span>
-                    <span className="block text-[11px] font-body text-[#151412]/60 leading-snug mt-0.5">Crio pro meu próprio perfil</span>
+                    className={`rounded-2xl border-2 p-3 text-left transition-all duration-200 ${accountType === "creator" ? "border-[#EA4918] bg-[#FBE9E1] -translate-y-0.5 shadow-[0_4px_0_rgba(21,20,18,0.85)]" : "border-[#0A0A0A]/20 hover:border-[#0A0A0A]/50"}`}>
+                    <span className="block text-sm [font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]">Criador de conteúdo</span>
+                    <span className="block text-[11px] font-body text-[#0A0A0A]/60 leading-snug mt-0.5">Crio pro meu próprio perfil</span>
                   </button>
                   <button type="button" onClick={() => setAccountType("manager")}
-                    className={`rounded-2xl border-2 p-3 text-left transition-all duration-200 ${accountType === "manager" ? "border-[#CE4A1D] bg-[#FBE9E1] -translate-y-0.5 shadow-[0_4px_0_rgba(21,20,18,0.85)]" : "border-[#151412]/20 hover:border-[#151412]/50"}`}>
-                    <span className="block text-sm [font-family:'Baloo_2',sans-serif] font-bold text-[#151412]">Social mídia / agência</span>
-                    <span className="block text-[11px] font-body text-[#151412]/60 leading-snug mt-0.5">Gerencio clientes e equipe</span>
+                    className={`rounded-2xl border-2 p-3 text-left transition-all duration-200 ${accountType === "manager" ? "border-[#EA4918] bg-[#FBE9E1] -translate-y-0.5 shadow-[0_4px_0_rgba(21,20,18,0.85)]" : "border-[#0A0A0A]/20 hover:border-[#0A0A0A]/50"}`}>
+                    <span className="block text-sm [font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]">Social mídia / agência</span>
+                    <span className="block text-[11px] font-body text-[#0A0A0A]/60 leading-snug mt-0.5">Gerencio clientes e equipe</span>
                   </button>
                 </div>
               </div>
 
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="name" className="[font-family:'Baloo_2',sans-serif] font-bold text-[#151412]">{t("signup.name")}</Label>
-                  <Input id="name" type="text" placeholder={t("signup.namePlaceholder")} {...register("name")} className="rounded-2xl h-12 bg-[#FDFBF5] border-2 border-[#151412]/25 focus-visible:border-[#2A4BDF] focus-visible:ring-0 text-[#151412]" />
-                  {errors.name && <p className="text-xs text-[#CE4A1D] mt-1">{errors.name.message}</p>}
+                  <Label htmlFor="name" className="[font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]">{t("signup.name")}</Label>
+                  <Input id="name" type="text" placeholder={t("signup.namePlaceholder")} {...register("name")} className="rounded-2xl h-12 bg-[#FDFBF5] border-2 border-[#0A0A0A]/25 focus-visible:border-[#0061EE] focus-visible:ring-0 text-[#0A0A0A]" />
+                  {errors.name && <p className="text-xs text-[#EA4918] mt-1">{errors.name.message}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="email" className="[font-family:'Baloo_2',sans-serif] font-bold text-[#151412]">{t("auth.email")}</Label>
-                  <Input id="email" type="email" placeholder="seu@email.com" {...register("email")} className="rounded-2xl h-12 bg-[#FDFBF5] border-2 border-[#151412]/25 focus-visible:border-[#2A4BDF] focus-visible:ring-0 text-[#151412]" />
-                  {errors.email && <p className="text-xs text-[#CE4A1D] mt-1">{errors.email.message}</p>}
+                  <Label htmlFor="email" className="[font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]">{t("auth.email")}</Label>
+                  <Input id="email" type="email" placeholder="seu@email.com" {...register("email")} className="rounded-2xl h-12 bg-[#FDFBF5] border-2 border-[#0A0A0A]/25 focus-visible:border-[#0061EE] focus-visible:ring-0 text-[#0A0A0A]" />
+                  {errors.email && <p className="text-xs text-[#EA4918] mt-1">{errors.email.message}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="password" className="[font-family:'Baloo_2',sans-serif] font-bold text-[#151412]">{t("auth.password")}</Label>
+                  <Label htmlFor="password" className="[font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]">{t("auth.password")}</Label>
                   <div className="relative">
-                    <Input id="password" type={showPassword ? "text" : "password"} placeholder={t("signup.passwordPlaceholder")} {...register("password")} className="rounded-2xl h-12 pr-10 bg-[#FDFBF5] border-2 border-[#151412]/25 focus-visible:border-[#2A4BDF] focus-visible:ring-0 text-[#151412]" />
+                    <Input id="password" type={showPassword ? "text" : "password"} placeholder={t("signup.passwordPlaceholder")} {...register("password")} className="rounded-2xl h-12 pr-10 bg-[#FDFBF5] border-2 border-[#0A0A0A]/25 focus-visible:border-[#0061EE] focus-visible:ring-0 text-[#0A0A0A]" />
                     <button
                       type="button"
                       onClick={() => setShowPassword((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#151412]/50 hover:text-[#151412] transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0A0A0A]/50 hover:text-[#0A0A0A] transition-colors"
                       aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
                       tabIndex={-1}
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  {errors.password && <p className="text-xs text-[#CE4A1D] mt-1">{errors.password.message}</p>}
+                  {errors.password && <p className="text-xs text-[#EA4918] mt-1">{errors.password.message}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="confirmPassword" className="[font-family:'Baloo_2',sans-serif] font-bold text-[#151412]">{t("signup.confirmPassword")}</Label>
+                  <Label htmlFor="confirmPassword" className="[font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]">{t("signup.confirmPassword")}</Label>
                   <div className="relative">
-                    <Input id="confirmPassword" type={showConfirm ? "text" : "password"} placeholder={t("signup.confirmPlaceholder")} {...register("confirmPassword")} className="rounded-2xl h-12 pr-10 bg-[#FDFBF5] border-2 border-[#151412]/25 focus-visible:border-[#2A4BDF] focus-visible:ring-0 text-[#151412]" />
+                    <Input id="confirmPassword" type={showConfirm ? "text" : "password"} placeholder={t("signup.confirmPlaceholder")} {...register("confirmPassword")} className="rounded-2xl h-12 pr-10 bg-[#FDFBF5] border-2 border-[#0A0A0A]/25 focus-visible:border-[#0061EE] focus-visible:ring-0 text-[#0A0A0A]" />
                     <button
                       type="button"
                       onClick={() => setShowConfirm((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#151412]/50 hover:text-[#151412] transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0A0A0A]/50 hover:text-[#0A0A0A] transition-colors"
                       aria-label={showConfirm ? t("auth.hidePassword") : t("auth.showPassword")}
                       tabIndex={-1}
                     >
                       {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  {errors.confirmPassword && <p className="text-xs text-[#CE4A1D] mt-1">{errors.confirmPassword.message}</p>}
+                  {errors.confirmPassword && <p className="text-xs text-[#EA4918] mt-1">{errors.confirmPassword.message}</p>}
                 </div>
                 {formError && (
-                  <div className="rounded-2xl border-2 border-[#CE4A1D]/40 bg-[#FBE9E1] px-3 py-2.5 text-sm text-[#CE4A1D] font-body font-semibold">
+                  <div className="rounded-2xl border-2 border-[#EA4918]/40 bg-[#FBE9E1] px-3 py-2.5 text-sm text-[#EA4918] font-body font-semibold">
                     {formError}
                   </div>
                 )}
@@ -208,15 +208,15 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
                   type="submit"
                   size="lg"
                   disabled={loading}
-                  className="w-full h-[52px] rounded-full bg-[#CE4A1D] hover:bg-[#E2551F] text-white text-base [font-family:'Baloo_2',sans-serif] font-bold shadow-[0_6px_0_rgba(21,20,18,0.9)] hover:-translate-y-0.5 hover:shadow-[0_8px_0_rgba(21,20,18,0.9)] active:translate-y-0.5 active:shadow-[0_3px_0_rgba(21,20,18,0.9)] transition-all"
+                  className="w-full h-[52px] rounded-full bg-[#EA4918] hover:bg-[#FF5A24] text-white text-base [font-family:'Baloo_2',sans-serif] font-bold shadow-[0_6px_0_rgba(21,20,18,0.9)] hover:-translate-y-0.5 hover:shadow-[0_8px_0_rgba(21,20,18,0.9)] active:translate-y-0.5 active:shadow-[0_3px_0_rgba(21,20,18,0.9)] transition-all"
                 >
                   {loading ? t("signup.creating") : t("signup.createMyAccount")}
                 </Button>
-                <p className="text-center text-[11px] text-[#151412]/50 font-body -mt-1">7 dias grátis · Sem compromisso · Cancela em 2 cliques</p>
+                <p className="text-center text-[11px] text-[#0A0A0A]/50 font-body -mt-1">7 dias grátis · Sem compromisso · Cancela em 2 cliques</p>
               </form>
-              <p className="text-sm text-[#151412]/60 font-body mt-5 text-center">
+              <p className="text-sm text-[#0A0A0A]/60 font-body mt-5 text-center">
                 {t("signup.haveAccount")}{" "}
-                <Link to="/login" className="text-[#2A4BDF] font-medium underline underline-offset-2 hover:opacity-80">{t("auth.signIn")}</Link>
+                <Link to="/login" className="text-[#0061EE] font-medium underline underline-offset-2 hover:opacity-80">{t("auth.signIn")}</Link>
               </p>
             </>
           )}

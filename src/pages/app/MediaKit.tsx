@@ -103,7 +103,7 @@ export default function MediaKit() {
   if (!tierLoading && !isPaidOrTrial) {
     return (
       <div className="max-w-lg mx-auto text-center py-16">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center mx-auto mb-4"><Lock className="h-6 w-6 text-white" /></div>
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-pink-400 flex items-center justify-center mx-auto mb-4"><Lock className="h-6 w-6 text-white" /></div>
         <h1 className="text-2xl font-display font-extrabold text-foreground">Media Kit é dos planos Pro e Studio</h1>
         <p className="text-sm font-body text-muted-foreground mt-2">Monte um portfólio profissional com os números reais do seu Instagram (ou suba o seu PDF) pra fechar publis. Disponível a partir do plano Pro.</p>
         <Button asChild className="mt-5"><Link to="/app/assinar">Conhecer os planos</Link></Button>
@@ -114,7 +114,7 @@ export default function MediaKit() {
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="pb-24 md:pb-0">
       <div className="flex items-center gap-3 mb-5">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-sm shrink-0">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-pink-400 flex items-center justify-center shadow-sm shrink-0">
           <IdCard className="h-5 w-5 text-white" strokeWidth={1.75} />
         </div>
         <div>

@@ -18,7 +18,7 @@ interface RoteiroPdfProps {
 }
 
 const FORMAT_BADGE_COLORS: Record<string, string> = {
-  reels: "#8B5CF6",
+  reels: "#EA4918",
   shorts: "#EF4444",
   carrossel: "#F59E0B",
   video: "#3B82F6",

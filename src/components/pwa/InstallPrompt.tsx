@@ -152,7 +152,7 @@ export function InstallPrompt() {
   const modo: "instalar" | "ios" | "push" = instalado ? "push" : bip ? "instalar" : "ios";
 
   return createPortal(
-    <div className="fixed inset-0 z-[130] flex items-end sm:items-center justify-center bg-[#1B1A17]/55 backdrop-blur-[2px] p-4">
+    <div className="fixed inset-0 z-[130] flex items-end sm:items-center justify-center bg-[#0A0A0A]/55 backdrop-blur-[2px] p-4">
       <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-border bg-card p-6 shadow-2xl">
         <OrganicBlobs color="laranja" />
 

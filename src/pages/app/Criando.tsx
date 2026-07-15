@@ -106,7 +106,7 @@ const Criando = () => {
   const ramp = statusRamp();
   const [editing, setEditing] = useState<string | null>(null);
   const [editType, setEditType] = useState<"gradient" | "solid">("gradient");
-  const [editFrom, setEditFrom] = useState("#8B5CF6");
+  const [editFrom, setEditFrom] = useState("#EA4918");
   const [editTo, setEditTo] = useState("#6D3FD6");
   const [editLabel, setEditLabel] = useState("");
 

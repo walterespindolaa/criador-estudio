@@ -105,7 +105,7 @@ export function ManagerCalendar() {
     setHidden((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const chip = (p: CalPost) => {
-    const color = colorOf[p.external_client_id] ?? "#8B5CF6";
+    const color = colorOf[p.external_client_id] ?? "#EA4918";
     return (
       <Popover key={p.id}>
         <PopoverTrigger asChild>

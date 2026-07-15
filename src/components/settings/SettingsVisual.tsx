@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const FONT_OPTIONS = [
-  { key: "cria", label: "CRIA", desc: "Baloo 2 + Nunito Sans", preview: "A cara da marca", displayFont: "'Baloo 2', sans-serif", bodyFont: "'Nunito Sans', sans-serif" },
+  { key: "cria", label: "CRIA", desc: "Baloo 2 + Roboto", preview: "A cara da marca", displayFont: "'Baloo 2', sans-serif", bodyFont: "'Roboto', sans-serif" },
   { key: "moderno", label: "Moderno", desc: "Plus Jakarta Sans + Nunito Sans", preview: "Limpo e contemporâneo", displayFont: "'Plus Jakarta Sans', sans-serif", bodyFont: "'Nunito Sans', sans-serif" },
   { key: "elegante", label: "Elegante", desc: "DM Serif Display + DM Sans", preview: "Editorial sofisticado", displayFont: "'DM Serif Display', serif", bodyFont: "'DM Sans', sans-serif" },
   { key: "criativo", label: "Criativo", desc: "Space Grotesk + Outfit", preview: "Atitude criadora", displayFont: "'Space Grotesk', sans-serif", bodyFont: "'Outfit', sans-serif" },
@@ -22,7 +22,7 @@ const FONT_OPTIONS = [
 const SIDEBAR_COLORS = [
   { label: "Padrão", value: "" },
   { label: "Liquid Glass", value: "glass" },
-  { label: "Creme CRIA", value: "#F6F2E8" },
+  { label: "Creme CRIA", value: "#F5F3E7" },
   { label: "Bege", value: "#F2EDE6" },
   { label: "Branco", value: "#FAFAFA" },
   { label: "Cinza", value: "#E8E8E8" },
@@ -38,7 +38,7 @@ const SIDEBAR_COLORS = [
 export function applyThemeFont(fontKey: string) {
   localStorage.setItem("theme_font", fontKey);
   const fonts: Record<string, { display: string; body: string }> = {
-    cria: { display: "'Baloo 2', sans-serif", body: "'Nunito Sans', sans-serif" },
+    cria: { display: "'Baloo 2', sans-serif", body: "'Roboto', sans-serif" },
     moderno: { display: "'Plus Jakarta Sans', sans-serif", body: "'Nunito Sans', sans-serif" },
     elegante: { display: "'DM Serif Display', serif", body: "'DM Sans', sans-serif" },
     criativo: { display: "'Space Grotesk', sans-serif", body: "'Outfit', sans-serif" },
@@ -55,7 +55,7 @@ export function SettingsVisual() {
   const { lang, setLang, t } = useI18n();
 
   const [selectedTheme, setSelectedTheme] = useState(profile?.theme_preset || "cria");
-  const [selectedAccent, setSelectedAccent] = useState(profile?.theme_accent || "#CE4A1D");
+  const [selectedAccent, setSelectedAccent] = useState(profile?.theme_accent || "#EA4918");
   const [sidebarColor, setSidebarColor] = useState(profile?.theme_sidebar || "");
   const [selectedFont, setSelectedFont] = useState(profile?.theme_font || "moderno");
   const [selectedBg, setSelectedBg] = useState((profile as { theme_bg?: string | null } | null | undefined)?.theme_bg || "nenhum");
@@ -64,7 +64,7 @@ export function SettingsVisual() {
   useEffect(() => {
     if (profile) {
       setSelectedTheme(profile.theme_preset || "cria");
-      setSelectedAccent(profile.theme_accent || "#CE4A1D");
+      setSelectedAccent(profile.theme_accent || "#EA4918");
       setSidebarColor(profile.theme_sidebar || "");
       setSelectedFont(profile.theme_font || "moderno");
       setSelectedBg((profile as { theme_bg?: string | null }).theme_bg || "nenhum");

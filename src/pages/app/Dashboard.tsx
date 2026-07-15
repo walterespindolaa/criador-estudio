@@ -268,7 +268,7 @@ const Dashboard = () => {
 
   /* Rebranding fase 3: cada tile tem uma cor fixa da paleta CRIA
      (laranja só em ação, os módulos ganham suas próprias cores) */
-  const TILE_COLORS = ["#CE4A1D", "#D4508F", "#3E9152", "#2A4BDF", "#C99000", "#E2551F"];
+  const TILE_COLORS = ["#EA4918", "#D4508F", "#01A652", "#0061EE", "#C99000", "#FF5A24"];
   const stats = [
     { label: "Ideias", value: ideas.length, icon: Lightbulb, link: "/app/ideias" },
     { label: "Em criação", value: inCreationFiltered.length, icon: FileText, link: "/app/criando" },

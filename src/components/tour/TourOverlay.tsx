@@ -121,11 +121,11 @@ export function TourOverlay({
     <div className="fixed inset-0 z-[200] pointer-events-none" role="dialog" aria-modal="true">
       {/* ===== Card de abertura ===== */}
       {step === -1 && (
-        <div className="absolute inset-0 bg-[#1B1A17]/60 backdrop-blur-[2px] flex items-end sm:items-center justify-center p-4 pointer-events-auto">
+        <div className="absolute inset-0 bg-[#0A0A0A]/60 backdrop-blur-[2px] flex items-end sm:items-center justify-center p-4 pointer-events-auto">
           <div
             onPointerDown={(e) => e.stopPropagation()}
-            className="relative w-full max-w-md rounded-3xl border-2 border-[#151412] bg-card p-6 sm:p-8 shadow-[0_10px_0_rgba(21,20,18,0.9)] overflow-hidden">
-            <div aria-hidden className="cria-blob pointer-events-none absolute -top-14 -right-12 h-32 w-32 rounded-[38%_62%_55%_45%/48%_42%_58%_52%] bg-[#F2C21E] opacity-70" />
+            className="relative w-full max-w-md rounded-3xl border-2 border-[#0A0A0A] bg-card p-6 sm:p-8 shadow-[0_10px_0_rgba(21,20,18,0.9)] overflow-hidden">
+            <div aria-hidden className="cria-blob pointer-events-none absolute -top-14 -right-12 h-32 w-32 rounded-[38%_62%_55%_45%/48%_42%_58%_52%] bg-[#FFCF03] opacity-70" />
             <button onClick={onSkip} aria-label="Fechar" className="absolute right-4 top-4 z-10 rounded-full p-1.5 text-muted-foreground hover:bg-muted">
               <X className="h-4 w-4" />
             </button>
@@ -158,7 +158,7 @@ export function TourOverlay({
       )}
 
       {/* Dim de segurança enquanto o alvo do passo ainda não foi medido (evita flash) */}
-      {current && !rect && <div className="absolute inset-0 bg-[#1B1A17]/55 pointer-events-auto" />}
+      {current && !rect && <div className="absolute inset-0 bg-[#0A0A0A]/55 pointer-events-auto" />}
 
       {/* ===== Spotlight + tooltip dos passos ===== */}
       {current && (rect || missing) && (
@@ -177,10 +177,10 @@ export function TourOverlay({
             onPointerDown={(e) => e.stopPropagation()}
             className={
               missing
-                ? "fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[380px] max-w-[92vw] rounded-2xl border-2 border-[#151412] bg-card p-5 shadow-[0_8px_0_rgba(21,20,18,0.9)] pointer-events-auto"
+                ? "fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[380px] max-w-[92vw] rounded-2xl border-2 border-[#0A0A0A] bg-card p-5 shadow-[0_8px_0_rgba(21,20,18,0.9)] pointer-events-auto"
                 : isMobile
-                ? "fixed inset-x-0 bottom-0 rounded-t-3xl border-t-2 border-x-2 border-[#151412] bg-card p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pointer-events-auto"
-                : "fixed w-[380px] rounded-2xl border-2 border-[#151412] bg-card p-5 shadow-[0_8px_0_rgba(21,20,18,0.9)] transition-[top,left,bottom] duration-200 ease-out pointer-events-auto"
+                ? "fixed inset-x-0 bottom-0 rounded-t-3xl border-t-2 border-x-2 border-[#0A0A0A] bg-card p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pointer-events-auto"
+                : "fixed w-[380px] rounded-2xl border-2 border-[#0A0A0A] bg-card p-5 shadow-[0_8px_0_rgba(21,20,18,0.9)] transition-[top,left,bottom] duration-200 ease-out pointer-events-auto"
             }
             style={missing || isMobile ? undefined : cardStyle}
           >

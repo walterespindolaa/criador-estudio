@@ -130,7 +130,7 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
       <button key={p.id} onClick={() => openClient(c)}
         className="w-full min-w-0 max-w-full overflow-hidden text-left bg-card border border-border rounded-xl px-3 py-2.5 hover:border-primary/40 hover:shadow-sm transition-all flex items-center gap-2.5">
         <span className="relative w-8 h-8 rounded-lg grid place-items-center text-white text-xs font-display font-bold shrink-0 overflow-hidden"
-          style={{ background: c?.color || "#8B5CF6" }}>
+          style={{ background: c?.color || "#EA4918" }}>
           {initial(c?.name)}
           {c?.logo_url && <img src={c.logo_url} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 w-full h-full object-cover" />}
         </span>
@@ -168,7 +168,7 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
                 {selecionado ? (
                   <>
                     <span className="relative grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full text-xs font-display font-bold text-white"
-                      style={{ background: selecionado.client.color || "#8B5CF6" }}>
+                      style={{ background: selecionado.client.color || "#EA4918" }}>
                       {initial(selecionado.client.name)}
                       {selecionado.client.logo_url && <img src={selecionado.client.logo_url} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 h-full w-full object-cover" />}
                     </span>
@@ -224,7 +224,7 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
                       onClick={() => { setClientId(c.id); setPickerOpen(false); setBusca(""); }}
                       className={`w-full flex items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors ${clientId === c.id ? "bg-primary/10" : "active:bg-muted/60"}`}>
                       <span className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full text-xs font-display font-bold text-white"
-                        style={{ background: c.color || "#8B5CF6" }}>
+                        style={{ background: c.color || "#EA4918" }}>
                         {initial(c.name)}
                         {c.logo_url && <img src={c.logo_url} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 h-full w-full object-cover" />}
                       </span>
@@ -295,7 +295,7 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
                     <button key={c.id} type="button" onClick={() => { setClientId(c.id); setPickerOpen(false); setBusca(""); }}
                       className={`w-full flex items-center gap-3 rounded-2xl px-3 py-2.5 text-left ${clientId === c.id ? "bg-primary/10" : "active:bg-muted/60"}`}>
                       <span className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full text-xs font-display font-bold text-white"
-                        style={{ background: c.color || "#8B5CF6" }}>
+                        style={{ background: c.color || "#EA4918" }}>
                         {initial(c.name)}
                         {c.logo_url && <img src={c.logo_url} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 h-full w-full object-cover" />}
                       </span>

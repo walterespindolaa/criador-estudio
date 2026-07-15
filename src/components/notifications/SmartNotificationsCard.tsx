@@ -21,7 +21,7 @@ const TYPE_STYLES: Record<SmartNotification["type"], { border: string; chip: str
   },
   reminder: {
     border: "border-l-purple-500",
-    chip: "bg-purple-50 text-purple-700",
+    chip: "bg-purple-50 text-primary",
   },
 };
 
@@ -64,7 +64,7 @@ export function SmartNotificationsCard() {
   return (
     <div className="bg-card rounded-xl border border-border p-5">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-pink-400 flex items-center justify-center">
           <Bell className="h-4 w-4 text-white" strokeWidth={1.75} />
         </div>
         <div className="flex-1">

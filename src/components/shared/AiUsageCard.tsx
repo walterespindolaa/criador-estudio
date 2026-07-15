@@ -19,7 +19,7 @@ export function AiUsageCard({ className = "" }: { className?: string }) {
     <div className={`bg-card rounded-xl p-5 border border-border ${className}`}>
       <div className="flex items-center justify-between gap-2 mb-3">
         <h3 className="font-display font-semibold text-foreground flex items-center gap-2">
-          <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 grid place-items-center">
+          <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-pink-400 grid place-items-center">
             <Sparkles className="h-4 w-4 text-white" />
           </span>
           Uso da IA este mês
@@ -31,7 +31,7 @@ export function AiUsageCard({ className = "" }: { className?: string }) {
 
       <div className="h-2.5 rounded-full bg-muted overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all ${nearLimit ? "bg-red-500" : "bg-gradient-to-r from-primary to-purple-600"}`}
+          className={`h-full rounded-full transition-all ${nearLimit ? "bg-red-500" : "bg-gradient-to-r from-primary to-pink-400"}`}
           style={{ width: `${pct}%` }}
         />
       </div>

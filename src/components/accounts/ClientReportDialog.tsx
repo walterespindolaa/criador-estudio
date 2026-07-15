@@ -78,7 +78,7 @@ type Props = {
 // Cores fixas (hex), html2canvas não lê variáveis CSS em oklch.
 const C = {
   ink: "#1a1a2e", sub: "#6b7280", line: "#e5e7eb", soft: "#f3f4f6",
-  brand: "#8B5CF6", green: "#16a34a", amber: "#d97706", orange: "#ea580c",
+  brand: "#EA4918", green: "#16a34a", amber: "#d97706", orange: "#ea580c",
 };
 
 export function ClientReportDialog({ open, onOpenChange, client, posts, managerName, initialPeriodKey }: Props) {

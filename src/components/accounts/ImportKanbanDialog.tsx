@@ -14,7 +14,7 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const STATUS_CLS: Record<string, string> = {
   ideia: "bg-muted text-muted-foreground",
   roteiro: "bg-blue-100 text-blue-700",
-  gravando: "bg-purple-100 text-purple-700",
+  gravando: "bg-pink-100 text-primary",
   editando: "bg-green-100 text-green-700",
   agendado: "bg-amber-100 text-amber-700",
   publicado: "bg-slate-200 text-slate-600",

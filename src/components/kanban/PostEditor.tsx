@@ -1465,7 +1465,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 {/* Content Assistant */}
                 <section data-tour="editor-ia" className="rounded-2xl bg-card border border-border p-4 space-y-3">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-sm">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-pink-400 flex items-center justify-center shadow-sm">
                       <Sparkles className="h-4 w-4 text-white" />
                     </div>
                     <span className="text-base font-display font-semibold">Content Assistant</span>

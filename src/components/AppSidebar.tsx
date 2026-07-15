@@ -262,7 +262,7 @@ export function AppSidebar() {
             )}
             aria-label="cria"
           >
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-sm group-hover:shadow-glow transition-shadow flex-shrink-0">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-pink-400 flex items-center justify-center shadow-sm group-hover:shadow-glow transition-shadow flex-shrink-0">
               <Sparkles className="h-3.5 w-3.5 text-white" strokeWidth={2} />
             </div>
             {!collapsed && <span className="text-sm font-display font-semibold">cria</span>}

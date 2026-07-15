@@ -96,7 +96,7 @@ const MockupVisual = () => {
 };
 
 const bentoList = [
-  { icon: Kanban, tk: "landing.bPipelineT", dk: "landing.bPipelineD", gradient: "from-primary to-purple-600", span: "col", feature: true },
+  { icon: Kanban, tk: "landing.bPipelineT", dk: "landing.bPipelineD", gradient: "from-primary to-pink-400", span: "col", feature: true },
   { icon: Lightbulb, tk: "landing.bIdeasT", dk: "landing.bIdeasD", gradient: "from-amber-500 to-yellow-400" },
   { icon: Link2, tk: "landing.bLinkT", dk: "landing.bLinkD", gradient: "from-rose-500 to-pink-500" },
   { icon: Sparkles, tk: "landing.bAiT", dk: "landing.bAiD", gradient: "from-violet-600 to-fuchsia-600", span: "col", feature: true },
@@ -128,7 +128,7 @@ const aiList = [
 const testimonialsList = [
   { name: "Ana Vitória", handle: "@anavitoria.lifestyle", qk: "landing.testQ1", gradient: "from-pink-500 to-rose-500", initial: "A" },
   { name: "Pedro Sales", handle: "@pedro.cria", qk: "landing.testQ2", gradient: "from-blue-500 to-cyan-500", initial: "P" },
-  { name: "Carla Mendonça", handle: "@carlamendonca", qk: "landing.testQ3", gradient: "from-violet-500 to-purple-500", initial: "C" },
+  { name: "Carla Mendonça", handle: "@carlamendonca", qk: "landing.testQ3", gradient: "from-violet-500 to-pink-400", initial: "C" },
 ];
 
 const faqs = [
@@ -391,7 +391,7 @@ export default function Landing() {
                   <p className="text-sm font-display font-bold text-muted-foreground mb-3">Junho 2026</p>
                   <div className="grid grid-cols-7 gap-2">
                     {Array.from({ length: 28 }).map((_, i) => (
-                      <div key={i} className={cn("aspect-square rounded-lg", [2, 8, 12, 17, 21, 26].includes(i) ? "bg-gradient-to-br from-primary to-purple-600" : "bg-muted")} />
+                      <div key={i} className={cn("aspect-square rounded-lg", [2, 8, 12, 17, 21, 26].includes(i) ? "bg-gradient-to-br from-primary to-pink-400" : "bg-muted")} />
                     ))}
                   </div>
                 </div>
@@ -422,7 +422,7 @@ export default function Landing() {
                     <div className="h-2.5 bg-foreground/10 rounded-full mb-2 w-[90%]" />
                     <div className="h-2.5 bg-foreground/10 rounded-full w-[70%]" />
                   </div>
-                  <div className="bg-gradient-to-br from-primary to-purple-600 text-white rounded-xl p-4 text-sm font-medium">
+                  <div className="bg-gradient-to-br from-primary to-pink-400 text-white rounded-xl p-4 text-sm font-medium">
                     #rotina #produtividade #criador <span className="opacity-70">+12</span>
                   </div>
                 </div>
@@ -433,7 +433,7 @@ export default function Landing() {
 
         {/* ─── 6. DESTAQUE IA ─── */}
         <section className="py-16 sm:py-20 lg:py-28 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-purple-600/5 -z-10" />
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-pink-400/5 -z-10" />
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
             <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
               <motion.div {...fadeUp}>
@@ -656,7 +656,7 @@ export default function Landing() {
 
             <motion.div {...fadeUp} className="grid md:grid-cols-3 gap-6">
               {[
-                { icon: Kanban, title: t("landing.mg1T"), desc: t("landing.mg1D"), gradient: "from-violet-500 to-purple-600" },
+                { icon: Kanban, title: t("landing.mg1T"), desc: t("landing.mg1D"), gradient: "from-violet-500 to-pink-400" },
                 { icon: Wallet, title: t("landing.mg2T"), desc: t("landing.mg2D"), gradient: "from-emerald-500 to-teal-500" },
                 { icon: ClipboardCheck, title: t("landing.mg3T"), desc: t("landing.mg3D"), gradient: "from-blue-500 to-cyan-500" },
               ].map((m) => (
@@ -704,7 +704,7 @@ export default function Landing() {
 
         {/* ─── 11. CTA FINAL ─── */}
         <section className="py-24 lg:py-32 relative overflow-hidden border-t border-border">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/8 to-purple-600/8 -z-10" />
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/8 to-pink-400/8 -z-10" />
           <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
             <motion.div {...fadeUp}>
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display font-extrabold tracking-tight mb-6">

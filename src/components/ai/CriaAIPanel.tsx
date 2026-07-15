@@ -305,7 +305,7 @@ export function CriaAIPanel() {
                   {messages.map((msg) =>
                     msg.role === "assistant" ? (
                       <div key={msg.id} className="flex gap-2 items-start">
-                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shrink-0">
+                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-pink-400 flex items-center justify-center shrink-0">
                           <Sparkles className="h-3.5 w-3.5 text-white" />
                         </div>
                         <div className="bg-card border border-border rounded-2xl rounded-tl-md px-4 py-3 max-w-[85%] shadow-warm-sm">
@@ -327,7 +327,7 @@ export function CriaAIPanel() {
                   )}
                   {loading && (
                     <div className="flex gap-2 items-start">
-                      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shrink-0">
+                      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-pink-400 flex items-center justify-center shrink-0">
                         <Sparkles className="h-3.5 w-3.5 text-white" />
                       </div>
                       <div className="bg-card border border-border rounded-2xl rounded-tl-md px-4 py-3">
@@ -381,7 +381,7 @@ export function CriaAIPanel() {
         <button
           type="button"
           onClick={handleRestore}
-          className="fixed right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-primary to-purple-600 shadow-glow hover:shadow-glow-hover hover:scale-105 transition-all flex items-center justify-center md:bottom-6"
+          className="fixed right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-primary to-pink-400 shadow-glow hover:shadow-glow-hover hover:scale-105 transition-all flex items-center justify-center md:bottom-6"
           style={isMobile ? { bottom: 'calc(72px + env(safe-area-inset-bottom, 0px) + 12px)' } : undefined}
           aria-label="Abrir cria"
         >

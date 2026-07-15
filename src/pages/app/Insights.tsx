@@ -99,7 +99,7 @@ export default function Insights() {
     return (
       <div className="max-w-2xl">
         <div className="flex items-center gap-3 mb-6 md:hidden">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center shadow-sm shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-fuchsia-500 to-pink-400 flex items-center justify-center shadow-sm shrink-0">
             <Instagram className="h-5 w-5 text-white" strokeWidth={1.75} />
           </div>
           <div>
@@ -144,7 +144,7 @@ export default function Insights() {
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <div className="flex items-center gap-3 mb-6 md:hidden">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center shadow-sm shrink-0">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-fuchsia-500 to-pink-400 flex items-center justify-center shadow-sm shrink-0">
           <Instagram className="h-5 w-5 text-white" strokeWidth={1.75} />
         </div>
         <div>
@@ -209,7 +209,7 @@ export default function Insights() {
                     <XAxis dataKey="date" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
                     <YAxis hide domain={["dataMin - 1", "dataMax + 1"]} />
                     <Tooltip />
-                    <Line type="monotone" dataKey="v" stroke="#8B5CF6" strokeWidth={2.5} dot={{ r: 2.5, fill: "#8B5CF6" }} />
+                    <Line type="monotone" dataKey="v" stroke="#EA4918" strokeWidth={2.5} dot={{ r: 2.5, fill: "#EA4918" }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>

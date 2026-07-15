@@ -67,7 +67,7 @@ export default function PropostaPublica() {
 
   const accent = q.data?.creator?.theme_accent;
   // aplica a cor escolhida pela criadora (rota pública não carrega o tema dela sozinha)
-  useEffect(() => { applyAccent(accent || "#8B5CF6"); }, [accent]);
+  useEffect(() => { applyAccent(accent || "#EA4918"); }, [accent]);
 
   if (q.isLoading) return <Center><Loader2 className="h-6 w-6 animate-spin text-primary" /></Center>;
   const p = q.data;

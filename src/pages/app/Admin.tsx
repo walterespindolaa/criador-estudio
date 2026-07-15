@@ -328,7 +328,7 @@ const AdminInner = () => {
             icon={CheckCircle2}
             label="Onboarding completo"
             value={stats.onboarded}
-            gradient="from-violet-500/15 to-purple-500/5"
+            gradient="from-violet-500/15 to-pink-400/5"
             iconBg="bg-violet-500"
           />
           <StatCard

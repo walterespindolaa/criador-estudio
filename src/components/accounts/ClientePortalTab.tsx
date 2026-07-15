@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { CLIENT_COLORS } from "@/components/accounts/ExternalClientDialog";
 import { confirmar } from "@/components/shared/Confirm";
 
-const PORTAL_BRAND_COLORS = ["#CE4A1D", "#2A4BDF", "#F27EB5", "#F2C21E", "#3E9152"];
+const PORTAL_BRAND_COLORS = ["#EA4918", "#0061EE", "#FF77B9", "#FFCF03", "#01A652"];
 
 // ═══════════════════════════════════════════════════════════════════════
 // ABA PORTAL
@@ -82,7 +82,7 @@ export function ClientePortalTab({ client, onCopyLink, onOpenPortal, copying }: 
     finally { setUploading(false); }
   };
 
-  const brand = f.brand_color ?? "#CE4A1D";
+  const brand = f.brand_color ?? "#EA4918";
 
   return (
     <div className="space-y-5 pb-24">
@@ -154,7 +154,7 @@ export function ClientePortalTab({ client, onCopyLink, onOpenPortal, copying }: 
                   className={cn("h-7 w-7 rounded-full transition-transform", f.brand_color === c ? "ring-2 ring-offset-2 ring-foreground scale-110" : "hover:scale-105")}
                   style={{ backgroundColor: c }} aria-label={`Cor ${c}`} />
               ))}
-              <input type="color" value={f.brand_color ?? "#CE4A1D"} onChange={(e) => set({ brand_color: e.target.value })}
+              <input type="color" value={f.brand_color ?? "#EA4918"} onChange={(e) => set({ brand_color: e.target.value })}
                 className="h-7 w-9 rounded-lg border border-border bg-transparent p-0.5 cursor-pointer" aria-label="Cor personalizada" />
               {f.brand_color && <button type="button" onClick={() => set({ brand_color: null })} className="text-[11px] font-body text-muted-foreground hover:text-foreground">Limpar</button>}
             </div>

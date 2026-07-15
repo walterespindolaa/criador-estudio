@@ -211,7 +211,7 @@ export default function ManagerHome() {
       <div data-tour="gh-clientes"><ClientsGrid defaultLimit={5} /></div>
 
       {!hasAgency && (
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-purple-600 text-white p-5 sm:p-6 mt-8">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-pink-400 text-white p-5 sm:p-6 mt-8">
           <div className="flex items-center gap-2 mb-2">
             <span className="w-8 h-8 rounded-lg bg-white/15 grid place-items-center"><Users className="h-4 w-4" /></span>
             <h3 className="font-display font-extrabold text-lg">Vire uma agência no CRIA</h3>

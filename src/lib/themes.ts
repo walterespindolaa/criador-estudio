@@ -22,11 +22,11 @@ export const THEME_PRESETS: ThemePreset[] = [
     group: 'essenciais',
     mode: 'light',
     vars: {
-      background: '#F6F2E8',
+      background: '#F5F3E7',
       card: '#FDFCF8',
-      foreground: '#1B1A17',
+      foreground: '#0A0A0A',
       border: 'rgba(27,26,23,0.12)',
-      muted: '#EEE8D8',
+      muted: '#ECE8D5',
       sidebar: '#FDFCF8',
     },
   },
@@ -222,9 +222,9 @@ export const ACCENT_GROUPS = [
     { key: "lilas", label: "Lilás", value: "#D7B8E8" },
   ]},
   { group: "Vibrantes", colors: [
-    { key: "laranja-cria", label: "Laranja CRIA", value: "#CE4A1D" },
+    { key: "laranja-cria", label: "Laranja CRIA", value: "#EA4918" },
     { key: "rosa", label: "Rosa", value: "#EC4899" },
-    { key: "roxo", label: "Roxo", value: "#8B5CF6" },
+    { key: "roxo", label: "Roxo", value: "#EA4918" },
     { key: "coral", label: "Coral", value: "#F2683C" },
     { key: "azul", label: "Azul", value: "#3B82F6" },
     { key: "verde", label: "Verde", value: "#22C55E" },
@@ -241,8 +241,8 @@ export const ACCENT_GROUPS = [
 ];
 
 export const ACCENT_COLORS = [
-  { key: 'laranja-cria', label: 'Laranja CRIA', value: '#CE4A1D' },
-  { key: 'roxo', label: 'Roxo', value: '#7C5CFC' },
+  { key: 'laranja-cria', label: 'Laranja CRIA', value: '#EA4918' },
+  { key: 'roxo', label: 'Roxo', value: '#EA4918' },
   { key: 'coral', label: 'Coral', value: '#FF6B6B' },
   { key: 'rosa', label: 'Rosa', value: '#FF69B4' },
   { key: 'azul', label: 'Azul', value: '#4DABF7' },

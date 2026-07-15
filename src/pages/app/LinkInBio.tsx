@@ -154,7 +154,7 @@ const BIO_THEMES: BioThemePreset[] = [
     label: "Purple Vibes",
     bg: "#FAF5FF",
     bgGradient: "linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #fb923c 100%)",
-    buttonColor: "#8B5CF6",
+    buttonColor: "#EA4918",
     buttonTextColor: "#ffffff",
     buttonStyle: "pill",
   },
@@ -658,7 +658,7 @@ const LinkInBio = () => {
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <div className="flex items-center justify-between mb-6 gap-3">
           <div className="flex items-center gap-3 min-w-0 md:hidden">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center shadow-sm shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-pink-400 flex items-center justify-center shadow-sm shrink-0">
               <LinkIcon className="h-5 w-5 text-white" strokeWidth={1.75} />
             </div>
             <div className="min-w-0">
@@ -1422,7 +1422,7 @@ function LinkCard({
               <BarChart3 className="h-3 w-3 text-muted-foreground" />
               <div className="relative flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                 <div
-                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-pink-500 to-purple-500"
+                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-pink-500 to-pink-400"
                   style={{ width: `${widthPct}%` }}
                 />
               </div>

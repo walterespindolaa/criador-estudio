@@ -63,7 +63,7 @@ const AppLayout = () => {
   useEffect(() => {
     if (profile?.theme_preset) {
       // Accent personalizado vale pra todos (inclusive managers); fallback no laranja da marca.
-      applyTheme(profile.theme_preset, profile.theme_accent || '#CE4A1D');
+      applyTheme(profile.theme_preset, profile.theme_accent || '#EA4918');
     }
     // Apply sidebar color override AFTER theme (so it wins)
     applySidebarColor(profile?.theme_sidebar || null);

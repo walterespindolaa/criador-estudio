@@ -102,7 +102,7 @@ export default function ManagerLayout() {
   // Tema: managers agora escolhem o próprio accent (igual usuário normal). Sem trava de roxo.
   useEffect(() => {
     if (profile?.theme_preset) {
-      applyTheme(profile.theme_preset, profile.theme_accent || "#CE4A1D");
+      applyTheme(profile.theme_preset, profile.theme_accent || "#EA4918");
     }
     applySidebarColor(profile?.theme_sidebar || null);
     if (profile?.theme_font) applyThemeFont(profile.theme_font);
