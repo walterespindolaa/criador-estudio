@@ -82,7 +82,8 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
         <div aria-hidden className="cria-blob cria-blob-fast pointer-events-none absolute top-[30%] right-[14%] w-16 h-16 bg-[#FDFBF5] opacity-90 rounded-full" />
         <div aria-hidden className="cria-blob cria-blob-slow pointer-events-none absolute bottom-[24%] right-[38%] w-24 h-24 bg-[#2A4BDF] opacity-60 rounded-[45%_55%_60%_40%/55%_45%_55%_45%]" />
         <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="max-w-md relative z-10">
-          <span className="[font-family:'Baloo_2',sans-serif] font-extrabold text-3xl text-white">CRIA<span className="text-[#F2C21E]">.</span></span>
+          {/* A logo de verdade (versão clara), em vez de "CRIA." digitado. */}
+          <Logo variant="dark" className="h-9 w-auto" />
           <h2 className="[font-family:'Baloo_2',sans-serif] font-extrabold text-white text-[2.6rem] leading-[1.08] tracking-tight mt-6 mb-2">
             Hoje é o dia em que o caos acaba.
           </h2>

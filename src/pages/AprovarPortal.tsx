@@ -1,3 +1,4 @@
+import { Logo } from "@/components/shared/Logo";
 import { useEffect, useState, type CSSProperties } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -452,7 +453,11 @@ export default function AprovarPortal() {
             )}
           </motion.div>
         </AnimatePresence>
-        <p className="text-center text-[11px] text-muted-foreground font-body pt-8 pb-10">Feito com <span className="font-extrabold text-primary">CRIA</span></p>
+        {/* Crédito de rodapé com a logo de verdade (esta página o CLIENTE vê). */}
+        <div className="flex items-center justify-center gap-1.5 pt-8 pb-10">
+          <span className="text-[11px] text-muted-foreground font-body">Feito com</span>
+          <Logo className="h-3.5 w-auto opacity-80" />
+        </div>
       </main>
     </div>
   );
