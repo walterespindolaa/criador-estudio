@@ -560,13 +560,21 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     /* mic capturado 1x e roteado por WebAudio (evita vídeo mudo no iOS) */
     let micStream: MediaStream | null = null, audioCtx: AudioContext | null = null, audioDest: MediaStreamAudioDestinationNode | null = null,
       micSource: MediaStreamAudioSourceNode | null = null, micAnalyser: AnalyserNode | null = null;
-    function micLive() { const t = micStream && micStream.getAudioTracks()[0]; return !!t && t.readyState === "live"; }
+    /* "live" não basta no iOS: o sistema silencia a trilha e ela vira zumbi
+       (readyState live, muted true). Trilha muda = mic inválido. */
+    function micLive() { const t = micStream && micStream.getAudioTracks()[0]; return !!t && t.readyState === "live" && !t.muted; }
+    function forceFreshMic() {
+      try { if (sessionMic) sessionMic.getTracks().forEach((t) => t.stop()); } catch { /* ok */ }
+      sessionMic = null; micStream = null; resetAudioGraph();
+    }
     function resetAudioGraph() { try { if (micSource) micSource.disconnect(); } catch { /* ok */ } micSource = null; audioDest = null; micAnalyser = null; }
     async function ensureMic() {
       if (micLive()) return micStream;
-      /* reaproveita o mic da sessão (evita novo prompt do iOS ao reentrar) */
+      /* reaproveita o mic da sessão (evita novo prompt do iOS ao reentrar),
+         mas só se a trilha estiver viva E com som (não zumbi) */
       const st = sessionMic && sessionMic.getAudioTracks()[0];
-      if (st && st.readyState === "live") { micStream = sessionMic; resetAudioGraph(); return micStream; }
+      if (st && st.readyState === "live" && !st.muted) { micStream = sessionMic; resetAudioGraph(); return micStream; }
+      forceFreshMic();
       resetAudioGraph();
       try {
         micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
@@ -597,7 +605,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     function stopAudioWatch() { if (silIv) { clearInterval(silIv); silIv = null; } }
     function startAudioWatch() {
       stopAudioWatch(); sawSound = false;
-      if (!micAnalyser) { toast("Gravando SEM áudio (microfone indisponível).", 5000); return; }
+      if (!micAnalyser) { showMicSheet("muted"); return; }
       const buf = new Uint8Array(micAnalyser.fftSize);
       silIv = setInterval(() => {
         micAnalyser!.getByteTimeDomainData(buf);
@@ -605,10 +613,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
         if (peak > 3) sawSound = true;
       }, 200);
       setTimeout(() => {
-        if (recorder && recorder.state === "recording" && !sawSound) {
-          if (mode === "voice") $("#micSheet").classList.add("show");
-          else toast("⚠️ Microfone mudo. Confere a permissão do mic.", 9000);
-        }
+        if (recorder && recorder.state === "recording" && !sawSound) showMicSheet(mode === "voice" ? "voice" : "muted");
       }, 4000);
     }
 
@@ -804,18 +809,27 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
        No iPhone o reconhecimento de voz e o MediaRecorder disputam a sessão de
        áudio do sistema; quando o mic sai mudo, oferecemos a saída em 1 toque:
        descarta, troca pro modo Rolagem (mic livre) e regrava do começo. */
-    let discardNext = false;
+    let discardNext = false, micSheetKind: "voice" | "muted" = "voice";
+    function showMicSheet(kind: "voice" | "muted") {
+      micSheetKind = kind;
+      $("#micText").innerHTML = kind === "voice"
+        ? "O iPhone não deixa o <b>modo Por voz</b> e a <b>gravação</b> usarem o microfone ao mesmo tempo. Dá pra regravar agora em <b>modo Rolagem</b> (o texto rola sozinho na velocidade que você definir) com o áudio funcionando."
+        : "O sistema entregou o microfone <b>mudo</b> (acontece no iPhone depois de alternar apps ou trocar de modo). Dá pra recapturar o microfone e regravar agora, do começo.";
+      $("#micFix").textContent = kind === "voice" ? "Regravar em Rolagem, com áudio" : "Regravar com áudio";
+      $("#micSheet").classList.add("show");
+    }
     $("#micKeep").onclick = () => $("#micSheet").classList.remove("show");
     $("#micFix").onclick = async () => {
       $("#micSheet").classList.remove("show");
       discardNext = true;
-      stopRec();               /* onstop vê discardNext e joga fora */
-      setMode("auto");         /* solta o mic do reconhecimento de voz */
+      stopRec();                                  /* onstop vê discardNext e joga fora */
+      if (micSheetKind === "voice") setMode("auto"); /* solta o mic do reconhecimento de voz */
+      forceFreshMic();                            /* mata a trilha zumbi, captura nova */
       resetProgress();
       await sleep(500);
-      await ensureMic();       /* re-captura o mic, agora sem disputa */
+      await ensureMic();
       startRec();
-      toast("Regravando em modo Rolagem, agora com áudio. 🎙️", 4000);
+      toast(micSheetKind === "voice" ? "Regravando em modo Rolagem, agora com áudio. 🎙️" : "Regravando com o microfone renovado. 🎙️", 4000);
     };
 
     /* ---------- vídeo pronto: preview + salvar nas Fotos (share sheet) ----------
@@ -1047,10 +1061,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
         <div className="cSheetCard">
           <span className="permIcon"><i data-lucide="mic" /></span>
           <h3>O áudio não está entrando</h3>
-          <p>
-            O iPhone não deixa o <b>modo Por voz</b> e a <b>gravação</b> usarem o microfone ao mesmo tempo.
-            Dá pra regravar agora em <b>modo Rolagem</b> (o texto rola sozinho na velocidade que você definir) com o áudio funcionando.
-          </p>
+          <p id="micText" />
           <button className="ssBtn primary" id="micFix">Regravar em Rolagem, com áudio</button>
           <button className="ssBtn ghost" id="micKeep">Seguir gravando sem áudio</button>
         </div>

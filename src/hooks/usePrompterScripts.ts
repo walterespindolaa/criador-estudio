@@ -26,6 +26,12 @@ export function usePrompterScripts() {
   return useQuery<PrompterScript[]>({
     queryKey: ["prompter-scripts", userId],
     enabled: !!userId,
+    /* O global usa refetchOnMount:false (anti-pisca), mas roteiro é criado no
+       CELULAR e gravado no PC (ou vice-versa): sem revalidar ao entrar na tela,
+       o outro aparelho nunca vê o roteiro novo. "always" mostra o cache na hora
+       e busca por trás — sem esqueleto, sem dado velho. */
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data, error } = await sbFrom("prompter_scripts")
         .select("*")
@@ -43,6 +49,7 @@ export function usePrompterScript(id: string | undefined) {
   return useQuery<PrompterScript | null>({
     queryKey: ["prompter-script", id],
     enabled: !!userId && !!id,
+    refetchOnMount: "always",
     queryFn: async () => {
       const { data, error } = await sbFrom("prompter_scripts")
         .select("*")
