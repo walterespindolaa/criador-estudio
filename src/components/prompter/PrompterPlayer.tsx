@@ -25,10 +25,10 @@ type Props = {
 const SETTINGS_KEY = "cria_prompter_settings_v1";
 
 const CSS = `
-.cpr{position:fixed;inset:0;z-index:60;background:#000;color:#f2f2f5;
-  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-  --panel:#16161d;--panel2:#1f1f29;--border:#2b2b38;--txt:#f2f2f5;--dim:#9a9aa8;
-  --accent:#ffd21f;--accent2:#4f8cff;--danger:#ff4d5e;--ok:#2ecc71;--radius:14px;}
+.cpr{position:fixed;inset:0;z-index:60;background:#000;color:#f5f2ee;
+  font-family:var(--active-font-body,var(--font-body,-apple-system)),'Segoe UI',Roboto,sans-serif;
+  --panel:hsl(45 8% 10%);--panel2:hsl(45 6% 15%);--border:hsl(45 6% 22%);--txt:#f5f2ee;--dim:hsl(40 8% 62%);
+  --accent:hsl(14 88% 58%);--accentFg:#fff;--danger:#ff4d5e;--ok:hsl(149 70% 42%);--radius:14px;}
 .cpr *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 .cpr button{font-family:inherit;}
 .cpr #camVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;transform:scaleX(-1);}
@@ -45,18 +45,18 @@ const CSS = `
 .cpr.camOn #camDim{display:block;}
 .cpr #guide{position:absolute;left:0;top:var(--readpos,35%);width:0;height:0;border-top:10px solid transparent;border-bottom:10px solid transparent;border-left:14px solid var(--accent);opacity:.85;z-index:3;pointer-events:none;}
 .cpr #prompterText .w.em{color:var(--accent);font-weight:800;}
-.cpr #prompterText .w.em.done{color:rgba(255,210,31,.3);}
+.cpr #prompterText .w.em.done{color:hsl(14 88% 58% / .32);}
 .cpr .pausebreak{color:var(--accent);opacity:.75;font-size:.55em;letter-spacing:14px;margin:.5em 0;}
 .cpr.reels #prompterText{max-width:calc(100vh * 9 / 16);margin:0 auto;}
 .cpr #fgL,.cpr #fgR{position:absolute;top:0;bottom:0;background:rgba(0,0,0,.55);z-index:4;pointer-events:none;display:none;}
-.cpr #fgL{left:0;border-right:1.5px dashed rgba(255,210,31,.65);}
-.cpr #fgR{right:0;border-left:1.5px dashed rgba(255,210,31,.65);}
+.cpr #fgL{left:0;border-right:1.5px dashed hsl(14 88% 58% / .65);}
+.cpr #fgR{right:0;border-left:1.5px dashed hsl(14 88% 58% / .65);}
 .cpr.reels.camOn #fgL,.cpr.reels.camOn #fgR{display:block;}
 .cpr.cardMode #prompterViewport{background:rgba(205,205,210,.38);border-radius:18px;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);}
 .cpr.cardMode #prompterText .w{color:rgba(0,0,0,.92);text-shadow:none!important;}
 .cpr.cardMode #prompterText .w.done{color:rgba(0,0,0,.25);}
-.cpr.cardMode #prompterText .w.cur{color:#7a5c00;font-weight:800;}
-.cpr.cardMode #prompterText .w.em{color:#8a6a00;font-weight:800;}
+.cpr.cardMode #prompterText .w.cur{color:hsl(14 85% 38%);font-weight:800;}
+.cpr.cardMode #prompterText .w.em{color:hsl(14 85% 34%);font-weight:800;}
 .cpr.cardMode.cardWhite #prompterViewport{background:rgba(35,35,42,.5);}
 .cpr.cardMode.cardWhite #prompterText .w{color:rgba(255,255,255,.95);}
 .cpr.cardMode.cardWhite #prompterText .w.done{color:rgba(255,255,255,.3);}
@@ -69,14 +69,14 @@ const CSS = `
 .cpr #bottomBar{bottom:0;padding-bottom:calc(12px + env(safe-area-inset-bottom));background:linear-gradient(transparent,rgba(0,0,0,.8));justify-content:center;flex-wrap:wrap;gap:18px;}
 .cpr.barsHidden #topBar,.cpr.barsHidden #bottomBar{opacity:0;pointer-events:none;}
 .cpr .pbtn{background:rgba(40,40,52,.85);border:1px solid var(--border);color:var(--txt);border-radius:12px;padding:10px 14px;font-size:15px;cursor:pointer;backdrop-filter:blur(8px);display:inline-flex;align-items:center;justify-content:center;gap:6px;}
-.cpr .pbtn.on{background:var(--accent);color:#111;border-color:var(--accent);font-weight:700;}
+.cpr .pbtn.on{background:var(--accent);color:var(--accentFg);border-color:var(--accent);font-weight:700;}
 .cpr #playBtn{font-size:20px;padding:12px 26px;}
 @keyframes cprPulse{50%{opacity:.6;}}
 .cpr #modeMenu{position:absolute;bottom:calc(96px + env(safe-area-inset-bottom));left:14px;background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;z-index:16;display:none;min-width:170px;}
 .cpr #modeMenu.show{display:block;}
 .cpr #modeMenu button{display:flex;gap:10px;align-items:center;background:none;border:none;color:var(--txt);padding:13px 16px;font-size:15px;width:100%;cursor:pointer;text-align:left;}
 .cpr #modeMenu button.on{color:var(--accent);font-weight:700;}
-.cpr.light #modeMenu button.on{color:#a87b00;}
+.cpr.light #modeMenu button.on{color:hsl(14 83% 45%);}
 .cpr #voiceDot{width:10px;height:10px;border-radius:50%;background:var(--dim);display:inline-block;margin-right:5px;}
 .cpr #voiceDot.live{background:var(--ok);animation:cprPulse 1s infinite;}
 .cpr #recTimer{color:#fff;font-variant-numeric:tabular-nums;font-size:14px;background:rgba(255,77,94,.25);border:1px solid var(--danger);border-radius:10px;padding:6px 10px;display:none;}
@@ -95,7 +95,7 @@ const CSS = `
 .cpr .sw i{position:absolute;inset:0;background:var(--panel2);border:1px solid var(--border);border-radius:20px;transition:.2s;cursor:pointer;}
 .cpr .sw i:before{content:"";position:absolute;width:22px;height:22px;left:2px;top:2px;background:var(--dim);border-radius:50%;transition:.2s;}
 .cpr .sw input:checked+i{background:var(--accent);border-color:var(--accent);}
-.cpr .sw input:checked+i:before{background:#111;transform:translateX(20px);}
+.cpr .sw input:checked+i:before{background:#fff;transform:translateX(20px);}
 .cpr #overlay{position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:25;display:none;}
 .cpr #overlay.show{display:block;}
 .cpr #cprToast{position:absolute;bottom:calc(100px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:12px 18px;font-size:14px;z-index:50;display:none;max-width:86vw;text-align:center;}
@@ -116,7 +116,7 @@ const CSS = `
 .cpr.light{--panel:#ffffff;--panel2:#ececf1;--border:#d5d5de;--txt:#16161d;--dim:#61616e;background:#f4f4f7;color:#16161d;}
 .cpr.light:not(.camOn) #prompterText .w{color:rgba(0,0,0,.9);}
 .cpr.light:not(.camOn) #prompterText .w.done{color:rgba(0,0,0,.22);}
-.cpr.light:not(.camOn) #prompterText .w.cur,.cpr.light:not(.camOn) #prompterText .w.em{color:#a87b00;}
+.cpr.light:not(.camOn) #prompterText .w.cur,.cpr.light:not(.camOn) #prompterText .w.em{color:hsl(14 83% 45%);}
 .cpr.light #topBar{background:linear-gradient(rgba(244,244,247,.92),transparent);}
 .cpr.light #bottomBar{background:linear-gradient(transparent,rgba(244,244,247,.95));}
 .cpr.light:not(.camOn) .pbtn{background:rgba(255,255,255,.9);color:#16161d;}
