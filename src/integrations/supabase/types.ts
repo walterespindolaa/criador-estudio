@@ -4861,6 +4861,10 @@ export type Database = {
       }
       recalc_manager_storage: { Args: { _manager: string }; Returns: undefined }
       reconcile_agency_seats: { Args: { _manager: string }; Returns: number }
+      refund_hub_credits: {
+        Args: { _cost: number; _manager: string }
+        Returns: undefined
+      }
       reject_proposal_by_token: {
         Args: { _note?: string; _reason?: string; _token: string }
         Returns: undefined
