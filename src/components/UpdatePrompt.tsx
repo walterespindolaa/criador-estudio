@@ -1,66 +1,75 @@
-import { useEffect, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { useEffect } from "react";
 
-/**
- * Detecta nova versão do app (via service worker) e oferece recarregar.
- * Funciona no PWA instalado (atalho do celular) e no navegador.
- */
+/* ═══════════════════════════════════════════════════════════════════════════
+   ATUALIZAÇÃO AUTOMÁTICA E SILENCIOSA
+
+   Antes isto abria um card feio "Nova versão disponível / Atualizar" e ficava
+   esperando a pessoa clicar. Ela não sabe o que é "versão", e o popup atrapalha.
+
+   Agora é invisível: quando o service worker instala uma versão nova (ele já
+   ativa sozinho, via skipWaiting no sw.js), a gente recarrega SÓ quando o app
+   volta pro foco e não tem nada sendo digitado. Assim a pessoa nunca vê o
+   processo e nunca perde o que estava escrevendo, ela só abre o app e ele já
+   está atualizado.
+   ═══════════════════════════════════════════════════════════════════════════ */
 export function UpdatePrompt() {
-  const [show, setShow] = useState(false);
-
   useEffect(() => {
     if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
-    const hadController = !!navigator.serviceWorker.controller;
+
+    let novaVersaoPronta = false;
     let interval: ReturnType<typeof setInterval> | undefined;
+
+    // Nunca recarrega no meio de uma edição: se há um campo em foco (post,
+    // legenda, comentário), esperamos. Perder texto pra "atualizar" é o pior
+    // dos mundos.
+    const podeRecarregar = () => {
+      const el = document.activeElement;
+      const digitando = el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || (el as HTMLElement).isContentEditable);
+      return !digitando;
+    };
+
+    const recarregarSePuder = () => {
+      if (!novaVersaoPronta) return;
+      if (document.visibilityState !== "visible") return;
+      if (!podeRecarregar()) return;
+      novaVersaoPronta = false;
+      window.location.reload();
+    };
 
     navigator.serviceWorker
       .register("/sw.js")
       .then((reg) => {
-        // checa atualização de hora em hora (e ao focar a aba)
+        // Procura versão nova de hora em hora e sempre que o app ganha foco.
         interval = setInterval(() => reg.update().catch(() => {}), 60 * 60 * 1000);
         reg.addEventListener("updatefound", () => {
           const nw = reg.installing;
           if (!nw) return;
           nw.addEventListener("statechange", () => {
-            if (nw.state === "installed" && navigator.serviceWorker.controller) setShow(true);
+            // Instalou uma versão nova por cima de uma que já rodava.
+            if (nw.state === "installed" && navigator.serviceWorker.controller) {
+              novaVersaoPronta = true;
+              // Tenta na hora (se a pessoa não estiver digitando); senão espera o foco.
+              recarregarSePuder();
+            }
           });
         });
       })
       .catch(() => {});
 
-    const onControllerChange = () => { if (hadController) setShow(true); };
-    navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
-
-    const onFocus = () => navigator.serviceWorker.getRegistration().then((r) => r?.update().catch(() => {}));
+    // Quando o app volta pro foco, aproveita pra checar update e aplicar o que já baixou.
+    const onFocus = () => {
+      navigator.serviceWorker.getRegistration().then((r) => r?.update().catch(() => {}));
+      recarregarSePuder();
+    };
     window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", recarregarSePuder);
 
     return () => {
       if (interval) clearInterval(interval);
-      navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
       window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", recarregarSePuder);
     };
   }, []);
 
-  if (!show) return null;
-
-  return (
-    <div
-      className="fixed left-1/2 z-[100] -translate-x-1/2 flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-lg"
-      style={{ bottom: "calc(16px + env(safe-area-inset-bottom, 0px))", maxWidth: "92vw" }}
-    >
-      <span className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-        <RefreshCw className="h-4 w-4 text-primary" />
-      </span>
-      <div className="min-w-0">
-        <p className="text-sm font-display font-bold text-foreground leading-tight">Nova versão disponível</p>
-        <p className="text-xs text-muted-foreground font-body">Atualize para pegar as novidades.</p>
-      </div>
-      <button
-        onClick={() => window.location.reload()}
-        className="shrink-0 text-sm font-body font-semibold rounded-xl bg-primary text-primary-foreground px-3.5 py-2 hover:brightness-105 transition"
-      >
-        Atualizar
-      </button>
-    </div>
-  );
+  return null;
 }
