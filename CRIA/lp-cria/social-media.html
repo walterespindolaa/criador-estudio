@@ -98,6 +98,17 @@ h1 .hl{color:var(--amarelo)}
 .mod-visual{border-radius:38px 52px 40px 56px;min-height:320px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;transform:rotate(-1.2deg);transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
 .mod:nth-child(even) .mod-visual{transform:rotate(1.1deg)}
 .mod-visual:hover{transform:rotate(0deg) scale(1.015)}
+/* Janelinha de app: o bloco colorido vazio virava "cadê o produto?". Agora o
+   placeholder parece uma tela de verdade, até o print real chegar. */
+.mock{width:min(340px,82%);background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 18px 40px rgba(10,10,10,.28);transform:rotate(-1.5deg)}
+.mod:nth-child(even) .mock{transform:rotate(1.2deg)}
+.mock-bar{display:flex;gap:6px;padding:11px 14px;background:rgba(10,10,10,.06);border-bottom:1px solid rgba(10,10,10,.06)}
+.mock-bar i{width:9px;height:9px;border-radius:50%;background:rgba(10,10,10,.18)}
+.mock-body{padding:20px 18px 20px;display:flex;flex-direction:column;gap:10px}
+.mk-avatar{width:34px;height:34px;border-radius:50%;background:rgba(10,10,10,.12)}
+.mk-line{height:10px;border-radius:999px;background:rgba(10,10,10,.10)}
+.mk-card{height:64px;border-radius:12px;background:rgba(10,10,10,.07)}
+.mk-label{font-size:.72rem;opacity:.55;text-align:center;margin-top:4px;border:1.5px dashed rgba(10,10,10,.3);border-radius:10px;padding:6px 8px}
 .sm-blobs{position:absolute;inset:0;pointer-events:none;z-index:0}
 .sm-mark{display:block;opacity:.06}
 .smblob{position:absolute;display:block;animation:smblob-float 14s ease-in-out infinite}
@@ -114,11 +125,13 @@ h1 .hl{color:var(--amarelo)}
 .meio-box .script{color:var(--amarelo);font-size:1.5em}
 
 /* conta simples */
-#conta{background:var(--creme-2);padding:80px 0}
-.conta-grid{display:grid;grid-template-columns:1fr 1fr;gap:26px;max-width:880px;margin:36px auto 0}
-.conta-card{border-radius:var(--radius-lg);padding:38px 34px}
-.conta-vc{background:var(--branco);border:2px solid var(--ink)}
-.conta-cria{background:var(--ink);color:var(--creme);box-shadow:0 10px 0 var(--laranja)}
+#conta{background:var(--creme-2);padding:80px 0;position:relative;overflow:hidden}
+.conta-grid{display:grid;grid-template-columns:1fr 1fr;gap:30px;max-width:880px;margin:36px auto 0;position:relative;z-index:1}
+.conta-card{border-radius:28px 34px 28px 36px;padding:38px 34px;transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
+.conta-card:hover{transform:rotate(0deg) translateY(-5px)}
+.conta-vc{background:var(--branco);border:3px solid var(--ink);box-shadow:8px 8px 0 rgba(10,10,10,.85);transform:rotate(-.8deg)}
+.conta-cria{background:var(--ink);color:var(--creme);border:3px solid var(--laranja);box-shadow:8px 8px 0 var(--laranja);transform:rotate(.8deg)}
+.conta-nota{text-align:center;font-family:var(--font-script);font-size:1.6rem;color:var(--laranja);margin-top:28px;transform:rotate(-1.5deg);position:relative;z-index:1}
 .conta-card .big{font-family:var(--font-display);font-weight:800;font-size:2.4rem}
 .conta-card .big small{font-size:1rem;opacity:.7}
 @media(max-width:760px){.conta-grid{grid-template-columns:1fr}}
@@ -207,7 +220,7 @@ html,body{overflow-x:clip}
     <h1>Seu cliente paga R$1.500/mês. <span class="hl">E aprova post por print no WhatsApp?</span>
       <span class="hero-script">isso tá te custando caro</span>
     </h1>
-    <p class="hero-sub">O CRIA transforma o seu serviço numa experiência de agência grande: portal de aprovação com a SUA marca, relatório em 1 clique, CRM e financeiro no mesmo lugar. A conta é grátis. Você ativa só o que usar.</p>
+    <p class="hero-sub">O CRIA transforma o seu serviço numa experiência de agência grande: portal de aprovação com a marca de cada cliente, relatório em 1 clique, CRM e financeiro no mesmo lugar. A conta é grátis. Você ativa só o que usar.</p>
     <div class="hero-ctas">
       <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja">Começar grátis</a>
       <a href="#modulos" class="btn btn-ghost">Ver os módulos ↓</a>
@@ -241,20 +254,20 @@ html,body{overflow-x:clip}
     <div class="reveal">
       <span class="kicker" style="background:var(--amarelo);color:var(--ink)">Agora imagina isso</span>
       <h2 style="color:var(--creme)">Seu cliente abre um link e vê <span class="script" style="color:var(--amarelo);font-size:1.15em">a marca dele</span></h2>
-      <p class="uau-p">Um portal com a logo dele, na cor dele, com os posts do jeito que vão ficar no feed. Ele aprova do sofá, comenta no lugar certo, e você vê a hora exata em que ele visualizou. No fim do mês, o relatório sai em 1 clique e vai direto pro WhatsApp dele.</p>
-      <p class="uau-p"><strong style="color:var(--amarelo)">E o golpe de mestre:</strong> cada cliente seu ganha uma conta CRIA Studio completa, de graça, conectada à sua. Você para de vender "uns posts" e passa a entregar uma plataforma com a sua assinatura. Quem entrega experiência de agência cobra preço de agência.</p>
+      <p class="uau-p">Um portal dentro do CRIA com a logo e a cor DELE, com os posts do jeito que vão ficar no feed. Ele aprova do sofá, comenta no lugar certo, e você vê a hora exata em que ele visualizou. No fim do mês, o relatório sai em 1 clique e vai direto pro WhatsApp dele.</p>
+      <p class="uau-p"><strong style="color:var(--amarelo)">E o golpe de mestre:</strong> no Modo Agência, cada cliente seu ganha uma conta CRIA Studio completa, de graça, conectada à sua. Você para de vender "uns posts" e passa a entregar uma plataforma profissional junto do serviço. Quem entrega experiência de agência cobra preço de agência.</p>
       <div class="uau-chips">
-        <span class="uau-chip">Com a SUA marca</span>
+        <span class="uau-chip">Portal com a marca do SEU cliente</span>
         <span class="uau-chip">Cliente não precisa de cadastro</span>
         <span class="uau-chip">Visto às 14h32 ✓</span>
-        <span class="uau-chip">Conta Studio grátis pro cliente</span>
+        <span class="uau-chip">Studio grátis pro cliente, no Modo Agência</span>
       </div>
       <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja" style="margin-top:26px">Quero dar essa experiência</a>
     </div>
     <div class="uau-visual reveal-scale">
       <div class="uau-phone">
         <span class="uau-ph-dot"></span>
-        <span class="mod-ph" style="border-color:rgba(244,239,227,.4);color:var(--creme);background:rgba(253,251,245,.06)">[ print do portal do cliente no celular ]</span>
+        <div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><span class="mk-label">[ print do portal do cliente no celular ]</span></div></div>
       </div>
     </div>
   </div>
@@ -309,7 +322,7 @@ html,body{overflow-x:clip}
           <li><b>✓</b> Agenda de criação: captações, tarefas e posts de todos os clientes num calendário só, com arrasta e solta</li>
         </ul>
       </div>
-      <div class="mod-visual" style="background:var(--azul)" ><span class="mod-ph" style="color:#fff;border-color:rgba(255,255,255,.4);background:rgba(21,20,18,.15)">[ print do pipeline do Cria Gestão ]</span></div>
+      <div class="mod-visual" style="background:var(--azul)" ><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><span class="mk-label">[ print do pipeline do Cria Gestão ]</span></div></div></div>
     </div>
 
     <div class="mod reveal">
@@ -325,7 +338,7 @@ html,body{overflow-x:clip}
           <li><b>✓</b> Alerta de reajuste e cobrança esquecida</li>
         </ul>
       </div>
-      <div class="mod-visual" style="background:var(--verde)"><span class="mod-ph" style="color:#fff;border-color:rgba(255,255,255,.4);background:rgba(21,20,18,.15)">[ print do painel do Cria Caixa ]</span></div>
+      <div class="mod-visual" style="background:var(--verde)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><span class="mk-label">[ print do painel do Cria Caixa ]</span></div></div></div>
     </div>
 
     <div class="mod reveal">
@@ -342,7 +355,7 @@ html,body{overflow-x:clip}
           <li><b>✓</b> Relatório do mês em 1 clique, direto pro WhatsApp</li>
         </ul>
       </div>
-      <div class="mod-visual" style="background:var(--laranja)"><span class="mod-ph" style="color:#fff;border-color:rgba(255,255,255,.4);background:rgba(21,20,18,.15)">[ print da tela de aprovação do cliente ]</span></div>
+      <div class="mod-visual" style="background:var(--laranja)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><span class="mk-label">[ print da tela de aprovação do cliente ]</span></div></div></div>
     </div>
 
     <div class="mod reveal">
@@ -357,22 +370,22 @@ html,body{overflow-x:clip}
           <li><b>✓</b> Inspiração sem stalkear manualmente</li>
         </ul>
       </div>
-      <div class="mod-visual" style="background:var(--rosa)"><span class="mod-ph" style="border-color:rgba(21,20,18,.35)">[ print do Cria Radar ]</span></div>
+      <div class="mod-visual" style="background:var(--rosa)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><span class="mk-label">[ print do Cria Radar ]</span></div></div></div>
     </div>
 
     <div class="mod reveal">
       <div>
-        <span class="mod-tag" style="background:var(--verde);color:#fff"><svg class="svgi" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg> Relatórios white-label</span>
+        <span class="mod-tag" style="background:var(--verde);color:#fff"><svg class="svgi" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg> Relatórios pro cliente</span>
         <h3>O relatório que levava 3 horas sai em minutos</h3>
         <p class="mod-preco" style="color:var(--verde)">Já vem no Cria Post</p>
-        <p>Insights reais do Instagram viram um relatório profissional com a SUA marca. O cliente vê valor, você não vira a madrugada.</p>
+        <p>Insights reais do Instagram viram um relatório profissional, com a identidade do cliente. Ele vê valor, você não vira a madrugada.</p>
         <ul>
           <li><b>✓</b> Dados reais do Instagram, sem colar print</li>
-          <li><b>✓</b> Sua logo, suas cores: white-label de verdade</li>
-          <li><b>✓</b> Pronto pra enviar todo fim de mês</li>
+          <li><b>✓</b> Com a logo e a cor de cada cliente</li>
+          <li><b>✓</b> 1 clique e vai pro WhatsApp, todo fim de mês</li>
         </ul>
       </div>
-      <div class="mod-visual" style="background:var(--verde)"><span class="mod-ph" style="color:#fff;border-color:rgba(255,255,255,.4);background:rgba(21,20,18,.15)">[ print do relatório white-label ]</span></div>
+      <div class="mod-visual" style="background:var(--verde)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><span class="mk-label">[ print do relatório white-label ]</span></div></div></div>
     </div>
 
     <div class="mod reveal">
@@ -387,7 +400,7 @@ html,body{overflow-x:clip}
           <li><b>✓</b> Visão geral: o que está travado em cada conta</li>
         </ul>
       </div>
-      <div class="mod-visual dark" style="background:var(--ink)"><span class="mod-ph" style="color:var(--creme);border-color:rgba(244,239,227,.4);background:rgba(253,251,245,.06)">[ print da visão multi-cliente ]</span></div>
+      <div class="mod-visual dark" style="background:var(--ink)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><span class="mk-label">[ print da visão multi-cliente ]</span></div></div></div>
     </div>
 
     <div class="mod reveal">
@@ -400,7 +413,7 @@ html,body{overflow-x:clip}
           <li><b>✓</b> Padrão profissional, sem montar PDF na mão</li>
         </ul>
       </div>
-      <div class="mod-visual" style="background:var(--rosa)"><span class="mod-ph" style="border-color:rgba(21,20,18,.35)">[ print do envio de proposta ]</span></div>
+      <div class="mod-visual" style="background:var(--rosa)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><span class="mk-label">[ print do envio de proposta ]</span></div></div></div>
     </div>
 
     <div class="mod reveal">
@@ -413,7 +426,7 @@ html,body{overflow-x:clip}
           <li><b>✓</b> Acompanhamento de uso</li>
         </ul>
       </div>
-      <div class="mod-visual" style="background:var(--amarelo)"><span class="mod-ph" style="border-color:rgba(21,20,18,.35)">[ print da tela de cupons ]</span></div>
+      <div class="mod-visual" style="background:var(--amarelo)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><span class="mk-label">[ print da tela de cupons ]</span></div></div></div>
     </div>
   </div>
 </section>
@@ -448,8 +461,53 @@ html,body{overflow-x:clip}
         <p style="opacity:.8;margin-top:14px">Área do gestor gratuita. Você ativa <strong>módulo por módulo</strong>, e o tempo que volta vira mais um cliente na carteira.</p>
       </div>
     </div>
+    <p class="conta-nota reveal">o tempo que volta vira cliente novo</p>
   </div>
 </section>
+
+<!-- ============ COMPARATIVO: mercado picado vs. CRIA ============ -->
+<section id="comparativo">
+  <div class="container">
+    <div class="reveal" style="text-align:center">
+      <span class="kicker" style="background:var(--rosa);color:var(--ink)">CRIA vs. o combo do mercado</span>
+      <h2>O mercado te vende <span class="script" style="color:var(--laranja);font-size:1.15em">picado</span></h2>
+      <p style="opacity:.8;max-width:56ch;margin:10px auto 0">Uma ferramenta pra aprovar, outra pra relatório, um CRM adaptado e uma planilha. Você paga 4 vezes e ainda faz o trabalho de integração na mão.</p>
+    </div>
+    <div class="comp-wrap reveal">
+      <div class="comp-row comp-head"><div>O trabalho</div><div>Combo do mercado</div><div class="comp-cria">CRIA</div></div>
+      <div class="comp-row"><div class="comp-job">Aprovação de posts</div><div class="comp-mkt">Ferramenta dedicada, paga à parte, sem falar com o resto</div><div class="comp-cria">Cria Post R$19,90: portal com a marca do cliente + "visto às 14h32"</div></div>
+      <div class="comp-row"><div class="comp-job">Relatórios</div><div class="comp-mkt">Reportei: a partir de R$74,90/mês*</div><div class="comp-cria">Já vem no Cria Post: 1 clique, direto pro WhatsApp</div></div>
+      <div class="comp-row"><div class="comp-job">Planejamento e calendário</div><div class="comp-mkt">mLabs: a partir de R$29,90 por marca*</div><div class="comp-cria">Na conta grátis: agenda multi-cliente com arrasta e solta</div></div>
+      <div class="comp-row"><div class="comp-job">CRM, propostas e contratos</div><div class="comp-mkt">Notion ou planilha adaptados, nada ligado ao conteúdo</div><div class="comp-cria">Cria Gestão R$29,90: pipeline, ficha viva e contrato no mesmo lugar</div></div>
+      <div class="comp-row"><div class="comp-job">Financeiro</div><div class="comp-mkt">Planilha, sempre desatualizada</div><div class="comp-cria">Cria Caixa R$24,90: margem e imposto por cliente</div></div>
+      <div class="comp-row"><div class="comp-job">Integração entre tudo</div><div class="comp-mkt">Você. VOCÊ é a integração.</div><div class="comp-cria">Nativa: é um sistema só, o post aprovado já entra no relatório</div></div>
+      <div class="comp-row comp-total"><div class="comp-job">A conta no fim do mês</div><div class="comp-mkt">R$150+ /mês, em 4 abas diferentes</div><div class="comp-cria">R$74,70 com TUDO ativado. E começa em R$0.</div></div>
+    </div>
+    <p style="text-align:center;font-size:.78rem;opacity:.6;margin-top:14px">*Preços de entrada anunciados pelos sites das próprias ferramentas em julho de 2026. Cada uma resolve um pedaço; a comparação é do combo necessário pra cobrir a operação inteira.</p>
+  </div>
+</section>
+<style>
+#comparativo{padding:75px 0 65px}
+.comp-wrap{margin-top:36px;border:3px solid var(--ink);border-radius:26px 30px 26px 32px;overflow:hidden;background:var(--branco);box-shadow:9px 9px 0 var(--ink)}
+.comp-row{display:grid;grid-template-columns:1fr 1.15fr 1.35fr;border-bottom:1.5px dashed rgba(10,10,10,.15)}
+.comp-row:last-child{border-bottom:none}
+.comp-row>div{padding:16px 18px;font-size:.92rem;line-height:1.45}
+.comp-job{font-family:var(--font-display);font-weight:700}
+.comp-mkt{opacity:.7}
+.comp-row .comp-cria{background:rgba(234,73,24,.07);border-left:3px solid var(--laranja);font-weight:600}
+.comp-head>div{background:var(--ink);color:var(--creme);font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:.78rem;letter-spacing:.06em}
+.comp-head .comp-cria{background:var(--laranja);color:#fff;border-left:none}
+.comp-total>div{background:var(--amarelo);font-weight:700}
+.comp-total .comp-cria{background:var(--amarelo);border-left:3px solid var(--ink)}
+@media(max-width:760px){
+  .comp-head{display:none}
+  .comp-row{grid-template-columns:1fr}
+  .comp-row>div{padding:12px 16px}
+  .comp-mkt::before{content:"Mercado: ";font-weight:700;opacity:.9}
+  .comp-row .comp-cria{border-left:none;border-top:2px solid var(--laranja)}
+  .comp-row .comp-cria::before{content:"CRIA: ";font-weight:800}
+}
+</style>
 
 <!-- ============ QUEBRA DE OBJEÇÕES ============ -->
 <section id="faq-gestor">
