@@ -24,6 +24,12 @@ type Props = {
 
 const SETTINGS_KEY = "cria_prompter_settings_v1";
 
+/* Cache de SESSÃO do microfone (escopo de módulo: sobrevive a entrar/sair do
+   player). No iOS a permissão vale pela sessão da página — se a gente solta a
+   trilha ao sair, voltar pro player dispara o prompt de novo. Mantendo o mic
+   vivo, pede UMA vez por sessão. Entre aberturas do app quem decide é o iOS. */
+let sessionMic: MediaStream | null = null;
+
 const CSS = `
 .cpr{position:fixed;inset:0;z-index:60;background:#000;color:#f5f2ee;
   font-family:var(--active-font-body,var(--font-body,-apple-system)),'Segoe UI',Roboto,sans-serif;
@@ -99,12 +105,16 @@ const CSS = `
 .cpr #overlay{position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:25;display:none;}
 .cpr #overlay.show{display:block;}
 .cpr #cprToast{position:absolute;bottom:calc(100px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:12px 18px;font-size:14px;z-index:50;display:none;max-width:86vw;text-align:center;}
-.cpr #saveSheet{position:absolute;inset:0;z-index:45;display:none;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.6);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);}
-.cpr #saveSheet.show{display:flex;}
-.cpr #ssCard{background:var(--panel);border:1px solid var(--border);border-bottom:none;border-radius:26px 26px 0 0;width:min(520px,100vw);padding:22px 20px calc(22px + env(safe-area-inset-bottom));animation:cprUp .28s ease;}
+.cpr .cSheet{position:absolute;inset:0;z-index:45;display:none;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.6);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);}
+.cpr .cSheet.show{display:flex;}
+.cpr .cSheetCard{background:var(--panel);border:1px solid var(--border);border-bottom:none;border-radius:26px 26px 0 0;width:min(520px,100vw);padding:22px 20px calc(22px + env(safe-area-inset-bottom));animation:cprUp .28s ease;}
 @keyframes cprUp{from{transform:translateY(40px);opacity:0;}to{transform:none;opacity:1;}}
-.cpr #ssCard h3{margin:0 0 3px;font-size:19px;font-weight:800;letter-spacing:-.01em;font-family:var(--active-font-display,var(--font-display,inherit));}
+.cpr .cSheetCard h3{margin:0 0 3px;font-size:19px;font-weight:800;letter-spacing:-.01em;font-family:var(--active-font-display,var(--font-display,inherit));}
+.cpr .cSheetCard p{margin:0 0 14px;color:var(--dim);font-size:13.5px;line-height:1.55;}
+.cpr .cSheetCard p b{color:var(--txt);}
 .cpr #ssMeta{margin:0 0 14px;color:var(--dim);font-size:13px;}
+.cpr .permIcon{display:grid;place-items:center;width:52px;height:52px;border-radius:16px;background:hsl(14 88% 58% / .14);color:var(--accent);margin-bottom:12px;}
+.cpr .permIcon .lucide{width:26px;height:26px;}
 .cpr #ssVideo{width:100%;max-height:36vh;border-radius:16px;background:#000;display:block;margin-bottom:14px;object-fit:contain;}
 .cpr .ssBtn{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:14px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--panel2);color:var(--txt);margin-bottom:8px;}
 .cpr .ssBtn.primary{background:var(--accent);border-color:var(--accent);color:var(--accentFg);}
@@ -554,10 +564,18 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     function resetAudioGraph() { try { if (micSource) micSource.disconnect(); } catch { /* ok */ } micSource = null; audioDest = null; micAnalyser = null; }
     async function ensureMic() {
       if (micLive()) return micStream;
+      /* reaproveita o mic da sessão (evita novo prompt do iOS ao reentrar) */
+      const st = sessionMic && sessionMic.getAudioTracks()[0];
+      if (st && st.readyState === "live") { micStream = sessionMic; resetAudioGraph(); return micStream; }
       resetAudioGraph();
       try {
         micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
-      } catch (e: any) { micStream = null; toast("Sem acesso ao microfone: " + e.message, 5000); }
+        sessionMic = micStream;
+      } catch (e: any) {
+        micStream = null;
+        if (e && (e.name === "NotAllowedError" || e.name === "SecurityError")) showPermSheet("denied");
+        else toast("Sem acesso ao microfone. Confere a permissão e tenta de novo.", 5000);
+      }
       return micStream;
     }
     function micTrackForRecording() {
@@ -588,9 +606,8 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       }, 200);
       setTimeout(() => {
         if (recorder && recorder.state === "recording" && !sawSound) {
-          toast(mode === "voice"
-            ? "⚠️ Microfone mudo. O modo Por voz está segurando o mic do sistema — troque para Rolagem ou Manual para gravar com áudio."
-            : "⚠️ Microfone mudo — confira a permissão do mic.", 9000);
+          if (mode === "voice") $("#micSheet").classList.add("show");
+          else toast("⚠️ Microfone mudo. Confere a permissão do mic.", 9000);
         }
       }, 4000);
     }
@@ -602,9 +619,41 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       $("#shutterLbl").textContent = camStream ? "Gravar" : "Ligar câmera";
       refreshIcons($("#camBtn"));
     }
-    $("#camBtn").onclick = () => { camStream ? stopCamera() : startCamera(); };
+    /* ---------- permissões com cara de CRIA ----------
+       O diálogo nativo do iOS não se estiliza; o que dá pra fazer é preparar a
+       pessoa ANTES (sheet de boas-vindas) e socorrer DEPOIS (sheet de ajuda
+       quando negou), em vez de vomitar erro em inglês num toast. */
+    function showPermSheet(kind: "intro" | "denied") {
+      $("#permTitle").textContent = kind === "intro" ? "Liberar câmera e microfone" : "Permissão bloqueada";
+      $("#permText").innerHTML = kind === "intro"
+        ? "O iPhone/Android vai perguntar se o CRIA pode usar a <b>câmera</b> e o <b>microfone</b>. Toca em <b>Permitir</b> nas duas — é o que faz a mágica do teleprompter por voz e da gravação."
+        : "Sem a permissão o prompter não grava. Pra liberar:<br><b>iPhone (Safari):</b> toca em <b>AA</b> na barra de endereço → Ajustes de Site → Câmera e Microfone → <b>Permitir</b>.<br><b>App instalado:</b> feche e abra o app de novo e toque em Permitir quando ele perguntar.<br><b>Android (Chrome):</b> cadeado na barra → Permissões.";
+      $("#permGo").textContent = kind === "intro" ? "Beleza, liberar acesso" : "Tentar de novo";
+      $("#permSheet").classList.add("show");
+    }
+    $("#permClose").onclick = () => $("#permSheet").classList.remove("show");
+    $("#permGo").onclick = async () => {
+      $("#permSheet").classList.remove("show");
+      await startCamera();
+    };
+    const needsPermIntro = () => {
+      const st = sessionMic && sessionMic.getAudioTracks()[0];
+      const micOk = !!st && st.readyState === "live";
+      let seen = false;
+      try { seen = !!localStorage.getItem("cria_prompter_perm_seen"); } catch { /* ok */ }
+      return !micOk && !camStream && !seen;
+    };
+    const camFlow = async () => {
+      if (needsPermIntro()) {
+        try { localStorage.setItem("cria_prompter_perm_seen", "1"); } catch { /* ok */ }
+        showPermSheet("intro");
+        return;
+      }
+      await startCamera();
+    };
+    $("#camBtn").onclick = () => { camStream ? stopCamera() : camFlow(); };
     $("#shutter").onclick = async () => {
-      if (!camStream) { await startCamera(); return; }
+      if (!camStream) { await camFlow(); return; }
       recorder && recorder.state === "recording" ? stopRec() : startRec();
     };
     async function startCamera(restart?: boolean) {
@@ -616,7 +665,11 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
         camStream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: S.camFace, width: { ideal: w }, height: { ideal: h }, frameRate: { ideal: S.fps } },
         });
-      } catch (e: any) { toast("Não consegui acessar a câmera: " + e.message); return; }
+      } catch (e: any) {
+        if (e && (e.name === "NotAllowedError" || e.name === "SecurityError")) showPermSheet("denied");
+        else toast("Não consegui acessar a câmera: " + e.message);
+        return;
+      }
       try {
         const track = camStream.getVideoTracks()[0];
         if ((track as any).getCapabilities) {
@@ -739,12 +792,31 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     }
     function saveRecording() {
       stopMirrorPipe();
+      if (discardNext) { discardNext = false; chunks = []; return; }
       const type = recorder!.mimeType || "video/webm";
       const ext = type.includes("mp4") ? "mp4" : "webm";
       const blob = new Blob(chunks, { type });
       const name = "cria-prompter_" + new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-") + "." + ext;
       showSaveSheet(blob, name, type);
     }
+
+    /* ---------- resgate do mic mudo (limitação do iOS) ----------
+       No iPhone o reconhecimento de voz e o MediaRecorder disputam a sessão de
+       áudio do sistema; quando o mic sai mudo, oferecemos a saída em 1 toque:
+       descarta, troca pro modo Rolagem (mic livre) e regrava do começo. */
+    let discardNext = false;
+    $("#micKeep").onclick = () => $("#micSheet").classList.remove("show");
+    $("#micFix").onclick = async () => {
+      $("#micSheet").classList.remove("show");
+      discardNext = true;
+      stopRec();               /* onstop vê discardNext e joga fora */
+      setMode("auto");         /* solta o mic do reconhecimento de voz */
+      resetProgress();
+      await sleep(500);
+      await ensureMic();       /* re-captura o mic, agora sem disputa */
+      startRec();
+      toast("Regravando em modo Rolagem, agora com áudio. 🎙️", 4000);
+    };
 
     /* ---------- vídeo pronto: preview + salvar nas Fotos (share sheet) ----------
        O download automático de antes caía na tela de arquivo do Safari (feia e
@@ -806,7 +878,9 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       if (pendingUrl) { URL.revokeObjectURL(pendingUrl); pendingUrl = ""; }
       stopMirrorPipe();
       stopCamera(true);
-      if (micStream) { micStream.getTracks().forEach((t) => t.stop()); micStream = null; }
+      /* o MIC fica vivo na sessão (sessionMic) de propósito: soltar a trilha
+         faria o iOS pedir permissão de novo na próxima entrada no player */
+      micStream = null;
       resetAudioGraph();
       if (audioCtx) { audioCtx.close().catch(() => {}); audioCtx = null; }
       stopAudioWatch();
@@ -945,8 +1019,8 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       </div>
 
       {/* Vídeo pronto */}
-      <div id="saveSheet">
-        <div id="ssCard">
+      <div id="saveSheet" className="cSheet">
+        <div className="cSheetCard">
           <h3>Vídeo pronto 🎬</h3>
           <p id="ssMeta" />
           {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
@@ -954,6 +1028,31 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
           <button className="ssBtn primary" id="ssShare">Salvar no celular</button>
           <button className="ssBtn" id="ssDownload">Baixar arquivo</button>
           <button className="ssBtn ghost" id="ssClose">Fechar e continuar gravando</button>
+        </div>
+      </div>
+
+      {/* Permissões */}
+      <div id="permSheet" className="cSheet">
+        <div className="cSheetCard">
+          <span className="permIcon"><i data-lucide="camera" /></span>
+          <h3 id="permTitle">Liberar câmera e microfone</h3>
+          <p id="permText" />
+          <button className="ssBtn primary" id="permGo">Beleza, liberar acesso</button>
+          <button className="ssBtn ghost" id="permClose">Agora não</button>
+        </div>
+      </div>
+
+      {/* Mic mudo (voz + gravação no iOS) */}
+      <div id="micSheet" className="cSheet">
+        <div className="cSheetCard">
+          <span className="permIcon"><i data-lucide="mic" /></span>
+          <h3>O áudio não está entrando</h3>
+          <p>
+            O iPhone não deixa o <b>modo Por voz</b> e a <b>gravação</b> usarem o microfone ao mesmo tempo.
+            Dá pra regravar agora em <b>modo Rolagem</b> (o texto rola sozinho na velocidade que você definir) com o áudio funcionando.
+          </p>
+          <button className="ssBtn primary" id="micFix">Regravar em Rolagem, com áudio</button>
+          <button className="ssBtn ghost" id="micKeep">Seguir gravando sem áudio</button>
         </div>
       </div>
 
