@@ -474,14 +474,14 @@ html,body{overflow-x:clip}
       <p style="opacity:.8;max-width:56ch;margin:10px auto 0">Uma ferramenta pra aprovar, outra pra relatório, um CRM adaptado e uma planilha. Você paga 4 vezes e ainda faz o trabalho de integração na mão.</p>
     </div>
     <div class="comp-wrap reveal">
-      <div class="comp-row comp-head"><div>O trabalho</div><div>Combo do mercado</div><div class="comp-cria">CRIA</div></div>
-      <div class="comp-row"><div class="comp-job">Aprovação de posts</div><div class="comp-mkt">Ferramenta dedicada, paga à parte, sem falar com o resto</div><div class="comp-cria">Cria Post R$19,90: portal com a marca do cliente + "visto às 14h32"</div></div>
+      <div class="comp-row comp-head"><div>O que você precisa</div><div>Como o mercado resolve</div><div class="comp-cria"><img src="cria-icone.png" alt="CRIA" class="comp-logo"></div></div>
+      <div class="comp-row"><div class="comp-job">Aprovação de posts</div><div class="comp-mkt">Ferramenta de aprovação à parte, que não fala com o resto</div><div class="comp-cria">Cria Post R$19,90: portal com a marca do cliente + "visto às 14h32"</div></div>
       <div class="comp-row"><div class="comp-job">Relatórios</div><div class="comp-mkt">Reportei: a partir de R$74,90/mês*</div><div class="comp-cria">Já vem no Cria Post: 1 clique, direto pro WhatsApp</div></div>
       <div class="comp-row"><div class="comp-job">Planejamento e calendário</div><div class="comp-mkt">mLabs: a partir de R$29,90 por marca*</div><div class="comp-cria">Na conta grátis: agenda multi-cliente com arrasta e solta</div></div>
       <div class="comp-row"><div class="comp-job">CRM, propostas e contratos</div><div class="comp-mkt">Notion ou planilha adaptados, nada ligado ao conteúdo</div><div class="comp-cria">Cria Gestão R$29,90: pipeline, ficha viva e contrato no mesmo lugar</div></div>
-      <div class="comp-row"><div class="comp-job">Financeiro</div><div class="comp-mkt">Planilha, sempre desatualizada</div><div class="comp-cria">Cria Caixa R$24,90: margem e imposto por cliente</div></div>
+      <div class="comp-row"><div class="comp-job">Financeiro</div><div class="comp-mkt">Planilha que só você atualiza (quando lembra)</div><div class="comp-cria">Cria Caixa R$24,90: margem e imposto por cliente</div></div>
       <div class="comp-row"><div class="comp-job">Integração entre tudo</div><div class="comp-mkt">Você. VOCÊ é a integração.</div><div class="comp-cria">Nativa: é um sistema só, o post aprovado já entra no relatório</div></div>
-      <div class="comp-row comp-total"><div class="comp-job">A conta no fim do mês</div><div class="comp-mkt">R$150+ /mês, em 4 abas diferentes</div><div class="comp-cria">R$74,70 com TUDO ativado. E começa em R$0.</div></div>
+      <div class="comp-row comp-total"><div class="comp-job">A conta no fim do mês</div><div class="comp-mkt">R$150+ /mês, em 4 abas diferentes</div><div class="comp-cria">R$74,70/mês com TUDO ativado. E começa em R$0.</div></div>
     </div>
     <p style="text-align:center;font-size:.78rem;opacity:.6;margin-top:14px">*Preços de entrada anunciados pelos sites das próprias ferramentas em julho de 2026. Cada uma resolve um pedaço; a comparação é do combo necessário pra cobrir a operação inteira.</p>
   </div>
@@ -491,12 +491,16 @@ html,body{overflow-x:clip}
 .comp-wrap{margin-top:36px;border:3px solid var(--ink);border-radius:26px 30px 26px 32px;overflow:hidden;background:var(--branco);box-shadow:9px 9px 0 var(--ink)}
 .comp-row{display:grid;grid-template-columns:1fr 1.15fr 1.35fr;border-bottom:1.5px dashed rgba(10,10,10,.15)}
 .comp-row:last-child{border-bottom:none}
-.comp-row>div{padding:16px 18px;font-size:.92rem;line-height:1.45}
+.comp-row>div{padding:18px 20px;font-size:.92rem;line-height:1.45;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .comp-job{font-family:var(--font-display);font-weight:700}
+.comp-job::before{content:"";width:10px;height:10px;border-radius:60% 40% 55% 45%/45% 55% 45% 55%;background:var(--laranja);flex-shrink:0}
 .comp-mkt{opacity:.7}
+.comp-row:not(.comp-head):not(.comp-total):hover .comp-job,.comp-row:not(.comp-head):not(.comp-total):hover .comp-mkt{background:rgba(10,10,10,.025)}
 .comp-row .comp-cria{background:rgba(234,73,24,.07);border-left:3px solid var(--laranja);font-weight:600}
+.comp-row:not(.comp-head) .comp-cria::before{content:"✓";font-weight:800;color:var(--laranja)}
 .comp-head>div{background:var(--ink);color:var(--creme);font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:.78rem;letter-spacing:.06em}
 .comp-head .comp-cria{background:var(--laranja);color:#fff;border-left:none}
+.comp-logo{height:24px;width:auto;filter:brightness(0) invert(1);display:block}
 .comp-total>div{background:var(--amarelo);font-weight:700}
 .comp-total .comp-cria{background:var(--amarelo);border-left:3px solid var(--ink)}
 @media(max-width:760px){
