@@ -540,34 +540,88 @@ html,body{overflow-x:clip}
 </style>
 
 <!-- ==================== FUNCIONALIDADES ==================== -->
-<section id="func">
-  <div class="container">
+<section id="func" style="position:relative;overflow:hidden">
+  <!-- Formas orgânicas do brandbook flutuando atrás dos pilares -->
+  <div class="func-blobs" aria-hidden="true">
+    <span class="fblob" style="width:340px;height:320px;top:-90px;left:-110px;background:var(--rosa);border-radius:38% 62% 55% 45%/48% 42% 58% 52%;opacity:.16;animation-duration:16s"></span>
+    <span class="fblob" style="width:230px;height:220px;top:30%;right:-80px;background:var(--amarelo);border-radius:55% 45% 40% 60%/50% 60% 40% 50%;opacity:.2;animation-duration:13s"></span>
+    <span class="fblob" style="width:150px;height:145px;bottom:12%;left:5%;background:var(--azul);border-radius:45% 55% 60% 40%/55% 45% 55% 45%;opacity:.12;animation-duration:19s"></span>
+    <span class="fblob" style="width:95px;height:95px;bottom:-30px;right:22%;background:var(--verde);border-radius:50% 50% 45% 55%/60% 40% 60% 40%;opacity:.15;animation-duration:11s"></span>
+    <span class="fblob" style="width:60px;height:58px;top:14%;left:44%;background:var(--laranja);border-radius:60% 40% 55% 45%/45% 55% 45% 55%;opacity:.14;animation-duration:15s"></span>
+  </div>
+  <div class="container" style="position:relative;z-index:1">
     <div class="ciclo-head reveal">
       <span class="kicker" style="background:var(--rosa)">Por dentro</span>
       <h2>CRIA inteiro, aberto, <span class="script" style="color:var(--azul);font-size:1.15em">na sua mão</span></h2>
     </div>
-    <div class="func-grid">
-      <!-- A vitrine antiga tinha 9 cards e ainda vendia o Cria Estúdio como tela
-           de gerar imagem (não existe mais). Agora são 15 cards, cada um de um
-           recurso REAL do sistema, com o Cria Plano abrindo como carro-chefe. -->
-      <div class="func-card fc-dark wide reveal-scale" style="background:var(--laranja)"><span class="icon"><svg class="svgi svgi-md" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg></span><h3>Cria Plano: a IA monta o seu mês inteiro</h3><p>Domingo à noite, calendário vazio, sem saber o que postar? Nunca mais. O Cria Plano monta sua semana ou seu mês com os seus pilares, o seu brandbook e o que já performou no seu perfil. Você edita o que quiser e sai produzindo.</p></div>
-      <div class="func-card fc-dark reveal-scale" style="background:var(--verde)"><span class="icon"><svg class="svgi svgi-md" viewBox="0 0 24 24"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg></span><h3>Tendências do seu nicho</h3><p>O que está bombando chega separado pelo seu nicho, com o gancho já escrito. Vira post no seu quadro em 1 clique.</p></div>
-      <div class="func-card fc-light reveal-scale" style="background:var(--rosa)"><span class="icon"><svg class="svgi svgi-md" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3"/><path d="M12 18h.01"/></svg></span><h3>Cria Stories</h3><p>O plano da semana de stories, dia a dia, no seu tom, com lembrete na hora certa. Nunca mais "o que eu posto no story hoje?".</p></div>
-      <div class="func-card fc-light reveal-scale" style="background:var(--amarelo)"><span class="icon"><svg class="svgi svgi-md" viewBox="0 0 24 24"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg></span><h3>Brandbook, moodboard e persona</h3><p>Sua identidade viva dentro do sistema: cores, fontes, pilares, tom de voz e persona. É daqui que a IA aprende a SUA voz.</p></div>
-      <div class="func-card fc-dark wide reveal-scale" style="background:var(--azul)"><span class="icon"><svg class="svgi svgi-md" viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg></span><h3>Cria IA, treinada na SUA marca</h3><p>Legendas, roteiros, ideias e nota de gancho. Antes de escrever, ela lê seu brandbook, sua persona e seu tom de voz. Escreve como você, só que 5x mais rápido.</p></div>
-      <div class="func-card fc-light reveal-scale" style="background:var(--creme-2);border:2px solid var(--ink)"><span class="icon"><svg class="svgi svgi-md" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1.3.5 2.6 1.5 3.5.8.8 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg></span><h3>Banco de ideias + Biblioteca</h3><p>Ideias e referências guardadas, organizadas e com busca. Chega de print perdido: tudo vira post num clique.</p></div>
-      <div class="func-card fc-light reveal-scale" style="background:var(--amarelo)"><span class="icon"><svg class="svgi svgi-md" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 7v10"/><path d="M12 7v6"/><path d="M16 7v8"/></svg></span><h3>Kanban "Criando"</h3><p>Do rascunho ao publicado, cada post num card. Nada se perde no caminho.</p></div>
-      <div class="func-card fc-dark reveal-scale" style="background:var(--azul)"><span class="icon"><svg class="svgi svgi-md" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg></span><h3>Calendário de conteúdo</h3><p>Semana e mês à vista. Arrasta, solta e a constância vira rotina.</p></div>
-      <div class="func-card fc-dark reveal-scale" style="background:var(--verde)"><span class="icon"><svg class="svgi svgi-md" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg></span><h3>Insights do Instagram</h3><p>Alcance, salvamentos e compartilhamentos post a post, com o melhor horário pra postar. O que cresceu, o que repetir.</p></div>
-      <div class="func-card fc-light reveal-scale" style="background:var(--rosa)"><span class="icon"><svg class="svgi svgi-md" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><h3>Meu Feed</h3><p>A prévia da sua grade com os posts agendados no lugar. Você vê o encaixe antes de publicar, não depois.</p></div>
-      <div class="func-card fc-dark reveal-scale" style="background:var(--ink)"><span class="icon"><svg class="svgi svgi-md" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><h3>Collabs</h3><p>Propostas, contratos, entregas e cachê de cada publi. A parte que paga suas contas, organizada.</p></div>
-      <div class="func-card fc-light wide reveal-scale" style="background:var(--branco);border:2px solid var(--ink)"><span class="icon"><svg class="svgi svgi-md" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg></span><h3>Media Kit automático + Relatórios</h3><p>A marca pediu o media kit? Ele já existe, atualizado com os seus números reais, em PDF ou link na hora. E o seu mês inteiro sai num relatório de uma página.</p></div>
-      <div class="func-card fc-light reveal-scale" style="background:var(--amarelo)"><span class="icon"><svg class="svgi svgi-md" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></span><h3>Estúdio dentro do post</h3><p>Travou na arte? O Estúdio lê o que você escreveu e devolve o prompt da imagem nas suas cores e no seu estilo, pronto pra colar no Canva ou no Midjourney.</p></div>
-      <div class="func-card fc-light reveal-scale" style="background:var(--creme-2);border:2px solid var(--ink)"><span class="icon"><svg class="svgi svgi-md" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></span><h3>Histórico que recicla</h3><p>Tudo que você já publicou, com o desempenho junto. Recicle o que funcionou em vez de começar do zero.</p></div>
-      <div class="func-card fc-dark reveal-scale" style="background:var(--azul)"><span class="icon"><svg class="svgi svgi-md" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span><h3>Link in bio</h3><p>Sua vitrine de links com a sua cara, dentro do CRIA. Muda o post, muda o link, sem app extra.</p></div>
+    <!-- 15 cards iguais viravam paredão de informação. Agora são 3 pilares
+         (planejar → criar → crescer): cada um com UM destaque bem vendido e o
+         resto em chips escaneáveis. Blobs orgânicos animados no fundo, que são
+         o elemento de marca do brandbook. -->
+    <div class="pilares">
+      <article class="pilar reveal-scale" style="--pc:var(--azul);--tilt:-1.1deg">
+        <span class="pilar-word script">planejar</span>
+        <span class="pilar-badge"><svg class="svgi svgi-md" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>
+        <span class="pilar-tag">estrela do Studio</span>
+        <h3>Cria Plano: a IA monta o seu mês</h3>
+        <p>Chega de domingo à noite olhando o calendário vazio. A IA monta sua semana ou seu mês inteiro com os seus pilares e o que já performou. Você edita e sai produzindo.</p>
+        <div class="pilar-mais">
+          <span class="pilar-chip"><i></i>Cria Stories: plano semanal</span>
+          <span class="pilar-chip"><i></i>Calendário arrasta e solta</span>
+          <span class="pilar-chip"><i></i>Kanban "Criando"</span>
+          <span class="pilar-chip"><i></i>Banco de ideias + Biblioteca</span>
+          <span class="pilar-chip"><i></i>Tendências do seu nicho</span>
+        </div>
+      </article>
+      <article class="pilar reveal-scale" style="--pc:var(--laranja);--tilt:.9deg">
+        <span class="pilar-word script">criar</span>
+        <span class="pilar-badge"><svg class="svgi svgi-md" viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg></span>
+        <h3>Cria IA, treinada na SUA marca</h3>
+        <p>Legendas, roteiros, ideias e nota de gancho. Antes de escrever, ela lê seu brandbook, sua persona e seu tom de voz. Sai como você escreveria, só que 5x mais rápido.</p>
+        <div class="pilar-mais">
+          <span class="pilar-chip"><i></i>Brandbook, moodboard e persona</span>
+          <span class="pilar-chip"><i></i>Avaliação de gancho</span>
+          <span class="pilar-chip"><i></i>Estúdio: o prompt da arte na sua marca</span>
+          <span class="pilar-chip"><i></i>Roteiros de Reels</span>
+        </div>
+      </article>
+      <article class="pilar reveal-scale" style="--pc:var(--verde);--tilt:-.7deg">
+        <span class="pilar-word script">crescer</span>
+        <span class="pilar-badge"><svg class="svgi svgi-md" viewBox="0 0 24 24"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg></span>
+        <h3>Insights reais do Instagram</h3>
+        <p>Alcance, salvamentos e compartilhamentos post a post, com o melhor horário pra postar. Você para de adivinhar e passa a repetir o que funciona.</p>
+        <div class="pilar-mais">
+          <span class="pilar-chip"><i></i>Meu Feed: prévia da grade</span>
+          <span class="pilar-chip"><i></i>Media Kit automático</span>
+          <span class="pilar-chip"><i></i>Relatórios de uma página</span>
+          <span class="pilar-chip"><i></i>Collabs: publis e cachês</span>
+          <span class="pilar-chip"><i></i>Link in bio</span>
+          <span class="pilar-chip"><i></i>Histórico que recicla</span>
+        </div>
+      </article>
     </div>
   </div>
 </section>
+<style>
+/* ===== Pilares (planejar / criar / crescer) ===== */
+.pilares{display:grid;grid-template-columns:repeat(3,1fr);gap:30px;margin-top:40px}
+.pilar{background:var(--branco);border:3px solid var(--pc);border-radius:30px 34px 30px 36px;padding:30px 26px 26px;position:relative;box-shadow:9px 9px 0 var(--pc);transform:rotate(var(--tilt,0deg));transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
+.pilar:hover{transform:rotate(0deg) translateY(-7px)}
+.pilar-word{font-size:2.1rem;color:var(--pc);display:block;line-height:1;margin-bottom:10px}
+.pilar-badge{width:58px;height:58px;border-radius:46% 54% 52% 48%/55% 45% 55% 45%;background:var(--pc);color:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+.pilar-tag{position:absolute;top:-15px;right:20px;background:var(--amarelo);color:var(--ink);border:2px solid var(--ink);border-radius:999px;padding:5px 14px;font-size:.75rem;font-weight:800;transform:rotate(4deg);box-shadow:3px 3px 0 var(--ink)}
+.pilar h3{font-size:1.3rem;margin-bottom:8px}
+.pilar>p{font-size:.95rem;line-height:1.55;opacity:.85}
+.pilar-mais{margin-top:20px;padding-top:16px;border-top:2px dashed rgba(21,20,18,.18);display:flex;flex-wrap:wrap;gap:8px}
+.pilar-chip{display:inline-flex;align-items:center;gap:7px;font-size:.8rem;font-weight:700;padding:7px 13px;border-radius:999px;background:var(--creme);color:var(--ink)}
+.pilar-chip i{width:9px;height:9px;border-radius:60% 40% 55% 45%/45% 55% 45% 55%;background:var(--pc);flex-shrink:0}
+/* ===== Blobs de fundo ===== */
+.func-blobs{position:absolute;inset:0;pointer-events:none;z-index:0}
+.fblob{position:absolute;display:block;animation:fblob-float 14s ease-in-out infinite}
+@keyframes fblob-float{0%,100%{transform:translate(0,0) rotate(0deg) scale(1)}33%{transform:translate(16px,-20px) rotate(7deg) scale(1.05)}66%{transform:translate(-12px,14px) rotate(-6deg) scale(.97)}}
+@media(prefers-reduced-motion:reduce){.fblob{animation:none}}
+@media(max-width:900px){.pilares{grid-template-columns:1fr;gap:26px}.pilar{box-shadow:6px 6px 0 var(--pc)}}
+</style>
 
 <!-- ==================== TUDO QUE VEM DENTRO ==================== -->
 <section id="tudo" style="background:var(--creme);padding:0 0 50px">
