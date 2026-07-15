@@ -11,6 +11,7 @@ import { useCriaAI } from "@/contexts/CriaAIContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useT } from "@/lib/i18n";
 import { PlanTag } from "@/components/shared/PlanTag";
+import { Logo } from "@/components/shared/Logo";
 import { supabase } from "@/integrations/supabase/client";
 
 type NavChild = { label: string; icon: LucideIcon; to: string };
@@ -172,11 +173,15 @@ export function AppRail() {
         expanded ? "w-[248px] px-2.5" : "w-[64px] px-0",
       )}
     >
+      {/* A MARCA. Era um "c" digitado à mão num quadrado (não era a logo).
+          Agora usa a logo de verdade: só o ícone quando recolhido, o lettering
+          inteiro quando expande. */}
       <div className={cn("mb-2 flex items-center", expanded ? "gap-2 px-2" : "justify-center")}>
-        <div className="grid h-[38px] w-[38px] shrink-0 place-items-center rounded-[12px] bg-primary font-display text-[17px] font-extrabold text-primary-foreground">
-          c
-        </div>
-        {expanded && <span className="font-display text-lg font-extrabold text-foreground">Cria</span>}
+        {expanded ? (
+          <Logo className="h-7 w-auto" />
+        ) : (
+          <Logo icon className="h-[38px] w-[38px] rounded-[12px]" />
+        )}
       </div>
       <div className="flex w-full flex-col items-stretch gap-1">{TOP.map(renderNode)}</div>
       <div className="my-2 h-px w-8 self-center bg-border" />

@@ -16,6 +16,7 @@ import { useModules, type ModuleWithStatus } from "@/hooks/useModules";
 import { useHasHubCria } from "@/hooks/useHubCria";
 import { useMyTeamPermissions } from "@/hooks/useTeam";
 import { cn } from "@/lib/utils";
+import { Logo } from "@/components/shared/Logo";
 import { definirBadge } from "@/lib/pwa";
 import { ModulePopup } from "@/components/accounts/ModulePopup";
 import { ClientSwitcher } from "@/components/accounts/ClientSwitcher";
@@ -218,8 +219,7 @@ export default function ManagerLayout() {
         )}
       >
         <div className={cn("mb-2 flex items-center gap-2", railHovered ? "px-1" : "justify-center")}>
-          <div className="grid h-[38px] w-[38px] shrink-0 place-items-center rounded-[12px] bg-primary font-display text-[17px] font-extrabold text-primary-foreground">c</div>
-          {railHovered && <span className="font-display text-lg font-extrabold text-foreground">Cria</span>}
+          {railHovered ? <Logo className="h-7 w-auto" /> : <Logo icon className="h-[38px] w-[38px] rounded-[12px]" />}
         </div>
         <div className="flex w-full flex-col items-stretch gap-1">
           {railHovered && <p className="px-2 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Dia a dia</p>}
