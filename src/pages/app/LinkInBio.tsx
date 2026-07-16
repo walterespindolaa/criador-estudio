@@ -52,7 +52,51 @@ import { useBioLeads } from "@/hooks/useBioLeads";
 import { confirmar } from "@/components/shared/Confirm";
 
 type BgType = "color" | "gradient" | "image";
+type BgImageSize = "cover" | "contain";
+type BgImagePosition = "center" | "top" | "bottom";
 type ButtonStyle = "rounded" | "pill" | "square" | "outline";
+
+// Fontes já carregadas no index.html do projeto (sem dependência de rede nova).
+// value = family CSS; stack = pilha aplicada. "" mantém o visual atual.
+const BIO_FONTS: { label: string; value: string; stack: string }[] = [
+  { label: "Baloo 2", value: "Baloo 2", stack: "'Baloo 2', system-ui, sans-serif" },
+  { label: "Nunito", value: "Nunito", stack: "'Nunito', system-ui, sans-serif" },
+  { label: "Space Grotesk", value: "Space Grotesk", stack: "'Space Grotesk', system-ui, sans-serif" },
+  { label: "DM Serif Display", value: "DM Serif Display", stack: "'DM Serif Display', Georgia, serif" },
+  { label: "Outfit", value: "Outfit", stack: "'Outfit', system-ui, sans-serif" },
+  { label: "Quicksand", value: "Quicksand", stack: "'Quicksand', system-ui, sans-serif" },
+  { label: "Sora", value: "Sora", stack: "'Sora', system-ui, sans-serif" },
+  { label: "Bricolage Grotesque", value: "Bricolage Grotesque", stack: "'Bricolage Grotesque', system-ui, sans-serif" },
+  { label: "Grand Hotel", value: "Grand Hotel", stack: "'Grand Hotel', cursive" },
+];
+
+function fontStackFor(value: string): string | null {
+  const f = BIO_FONTS.find((x) => x.value === value);
+  return f ? f.stack : null;
+}
+
+function clamp01(n: number, max: number): number {
+  if (Number.isNaN(n)) return 0;
+  return Math.min(max, Math.max(0, n));
+}
+
+// Estilo <style> escopado: só afeta elementos dentro de .bio-font-scope.
+// stack vem de whitelist, então é seguro.
+function BioFontStyle({ stack }: { stack: string | null }) {
+  if (!stack) return null;
+  return <style>{`.bio-font-scope,.bio-font-scope *{font-family:${stack} !important}`}</style>;
+}
+
+// Sobreposição escura opcional pra legibilidade sobre imagem/gradiente.
+function BgOverlay({ amount }: { amount: number }) {
+  if (!amount || amount <= 0) return null;
+  return (
+    <div
+      className="absolute inset-0 z-0 pointer-events-none"
+      style={{ backgroundColor: `rgba(0,0,0,${amount})` }}
+    />
+  );
+}
 
 type SocialLinks = {
   instagram: string;
@@ -158,6 +202,10 @@ export type BioSettings = {
   bgColor: string;
   bgGradient: string;
   bgImage: string | null;
+  bgImageSize: BgImageSize;
+  bgImagePosition: BgImagePosition;
+  bgOverlay: number;
+  fontFamily: string;
   buttonStyle: ButtonStyle;
   buttonColor: string;
   buttonTextColor: string;
@@ -176,6 +224,10 @@ const DEFAULT_SETTINGS: BioSettings = {
   bgColor: "#FDF2F8",
   bgGradient: "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)",
   bgImage: null,
+  bgImageSize: "cover",
+  bgImagePosition: "center",
+  bgOverlay: 0,
+  fontFamily: "",
   buttonStyle: "rounded",
   buttonColor: "#FFFFFF",
   buttonTextColor: "#1F2937",
@@ -295,6 +347,12 @@ function parseSettings(raw: unknown): BioSettings {
   const t = raw as Partial<BioSettings>;
   const bgType: BgType =
     t.bgType === "gradient" || t.bgType === "image" ? t.bgType : "color";
+  const bgImageSize: BgImageSize = t.bgImageSize === "contain" ? "contain" : "cover";
+  const bgImagePosition: BgImagePosition =
+    t.bgImagePosition === "top" || t.bgImagePosition === "bottom" ? t.bgImagePosition : "center";
+  const bgOverlay = typeof t.bgOverlay === "number" ? clamp01(t.bgOverlay, 0.6) : 0;
+  const fontFamily =
+    typeof t.fontFamily === "string" && fontStackFor(t.fontFamily) ? t.fontFamily : "";
   const buttonStyle: ButtonStyle =
     t.buttonStyle === "pill" ||
     t.buttonStyle === "square" ||
@@ -309,6 +367,10 @@ function parseSettings(raw: unknown): BioSettings {
     bgColor: typeof t.bgColor === "string" ? t.bgColor : DEFAULT_SETTINGS.bgColor,
     bgGradient: typeof t.bgGradient === "string" ? t.bgGradient : DEFAULT_SETTINGS.bgGradient,
     bgImage: typeof t.bgImage === "string" && t.bgImage ? t.bgImage : null,
+    bgImageSize,
+    bgImagePosition,
+    bgOverlay,
+    fontFamily,
     buttonStyle,
     buttonColor: typeof t.buttonColor === "string" ? t.buttonColor : DEFAULT_SETTINGS.buttonColor,
     buttonTextColor:
@@ -350,11 +412,51 @@ export function backgroundStyle(settings: BioSettings): React.CSSProperties {
   if (settings.bgType === "image" && settings.bgImage) {
     return {
       backgroundImage: `url(${settings.bgImage})`,
-      backgroundSize: "cover",
-      backgroundPosition: "center",
+      backgroundSize: settings.bgImageSize,
+      backgroundPosition: settings.bgImagePosition,
+      backgroundRepeat: "no-repeat",
+      backgroundColor: settings.bgColor,
     };
   }
   return { backgroundColor: settings.bgColor };
+}
+
+// input type=color exige hex de 6 dígitos; senão cai num fallback seguro.
+function safeColorInput(value: string): string {
+  return /^#[0-9a-fA-F]{6}$/.test(value) ? value : "#000000";
+}
+
+// Seletor de cor personalizada: quadradinho (input color) + campo hex.
+function ColorField({ value, onChange, label }: { value: string; onChange: (v: string) => void; label?: string }) {
+  const [text, setText] = useState(value);
+  useEffect(() => { setText(value); }, [value]);
+  const commitText = (v: string) => {
+    setText(v);
+    const clean = v.trim();
+    if (/^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/.test(clean)) onChange(clean);
+  };
+  return (
+    <div className="space-y-1">
+      {label && <Label className="text-[11px] text-muted-foreground">{label}</Label>}
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={safeColorInput(value)}
+          onChange={(e) => { setText(e.target.value); onChange(e.target.value); }}
+          className="w-10 h-9 rounded cursor-pointer border border-border shrink-0"
+          aria-label={label ? `${label}: escolher cor` : "Escolher cor"}
+        />
+        <Input
+          value={text}
+          onChange={(e) => commitText(e.target.value)}
+          placeholder="#000000"
+          className="h-9 rounded-lg w-28 font-mono text-xs"
+          maxLength={7}
+          aria-label={label ? `${label}: código hex` : "Código hex"}
+        />
+      </div>
+    </div>
+  );
 }
 
 function normalizeSlug(input: string): string {
@@ -846,7 +948,7 @@ const LinkInBio = () => {
                 {/* Cor base */}
                 <div className="space-y-2">
                   <Label className="text-sm font-display font-semibold">Cor base</Label>
-                  <p className="text-xs text-muted-foreground -mt-1">Pinta os cards, etiquetas e detalhes.</p>
+                  <p className="text-xs text-muted-foreground -mt-1">Pinta os cards de serviço, o corpo dos produtos, etiquetas, setas e sublinhados.</p>
                   <div className="flex items-center gap-2 flex-wrap">
                     {VITRINE_COLORS.map((c) => (
                       <button
@@ -855,13 +957,18 @@ const LinkInBio = () => {
                         onClick={() => patchVitrine({ baseColor: c })}
                         className={cn(
                           "w-8 h-8 rounded-full border-2 transition-all",
-                          settings.vitrine.baseColor === c ? "border-foreground ring-2 ring-foreground/20 scale-110" : "border-border"
+                          settings.vitrine.baseColor.toLowerCase() === c.toLowerCase() ? "border-foreground ring-2 ring-foreground/20 scale-110" : "border-border"
                         )}
                         style={{ backgroundColor: c }}
                         aria-label={`Cor ${c}`}
                       />
                     ))}
                   </div>
+                  <ColorField
+                    value={settings.vitrine.baseColor}
+                    onChange={(v) => patchVitrine({ baseColor: v })}
+                    label="Cor personalizada (qualquer cor)"
+                  />
                 </div>
 
                 {/* Capa */}
@@ -1109,6 +1216,41 @@ const LinkInBio = () => {
             <Card className="p-4 md:p-5 rounded-2xl border-border space-y-6">
               <h2 className="font-display font-semibold text-foreground">Aparência</h2>
 
+              {/* Fonte */}
+              <div className="space-y-3">
+                <Label className="text-sm font-display font-semibold">Fonte</Label>
+                <p className="text-xs text-muted-foreground -mt-1">
+                  Muda a fonte da sua página pública (vale nos dois estilos). Cada opção mostra uma amostra.
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => patchSettings({ fontFamily: "" })}
+                    className={cn(
+                      "rounded-xl border px-3 py-2 text-left transition-colors",
+                      settings.fontFamily === "" ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
+                    )}
+                  >
+                    <span className="block text-sm font-semibold text-foreground">Padrão</span>
+                    <span className="block text-[11px] text-muted-foreground">Visual atual</span>
+                  </button>
+                  {BIO_FONTS.map((f) => (
+                    <button
+                      key={f.value}
+                      type="button"
+                      onClick={() => patchSettings({ fontFamily: f.value })}
+                      className={cn(
+                        "rounded-xl border px-3 py-2 text-left transition-colors",
+                        settings.fontFamily === f.value ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
+                      )}
+                    >
+                      <span className="block text-sm text-foreground leading-tight" style={{ fontFamily: f.stack }}>{f.label}</span>
+                      <span className="block text-[11px] text-muted-foreground" style={{ fontFamily: f.stack }}>Ag Bço 123</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Themes (presets) */}
               <div className="space-y-3">
                 <Label className="text-sm font-display font-semibold">Temas</Label>
@@ -1162,6 +1304,9 @@ const LinkInBio = () => {
               {/* Background */}
               <div className="space-y-3 pt-4 border-t border-border">
                 <Label className="text-sm font-display font-semibold">Fundo</Label>
+                <p className="text-xs text-muted-foreground -mt-1">
+                  Escolha cor sólida, gradiente ou imagem de fundo. Vale nos dois estilos (Clássico e Vitrine).
+                </p>
                 <div className="flex gap-2 flex-wrap">
                   {([
                     { id: "color", label: "Cor sólida" },
@@ -1185,28 +1330,28 @@ const LinkInBio = () => {
                 </div>
 
                 {settings.bgType === "color" && (
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {BG_COLOR_PRESETS.map((c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        onClick={() => patchSettings({ bgColor: c })}
-                        className={cn(
-                          "w-8 h-8 rounded-full border-2 transition-all",
-                          settings.bgColor === c
-                            ? "border-primary ring-2 ring-primary/20 scale-110"
-                            : "border-border"
-                        )}
-                        style={{ backgroundColor: c }}
-                        aria-label={`Cor ${c}`}
-                      />
-                    ))}
-                    <input
-                      type="color"
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {BG_COLOR_PRESETS.map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => patchSettings({ bgColor: c })}
+                          className={cn(
+                            "w-8 h-8 rounded-full border-2 transition-all",
+                            settings.bgColor.toLowerCase() === c.toLowerCase()
+                              ? "border-primary ring-2 ring-primary/20 scale-110"
+                              : "border-border"
+                          )}
+                          style={{ backgroundColor: c }}
+                          aria-label={`Cor ${c}`}
+                        />
+                      ))}
+                    </div>
+                    <ColorField
                       value={settings.bgColor}
-                      onChange={(e) => patchSettings({ bgColor: e.target.value })}
-                      className="w-8 h-8 rounded-full border border-border cursor-pointer"
-                      aria-label="Escolher cor de fundo"
+                      onChange={(v) => patchSettings({ bgColor: v })}
+                      label="Cor personalizada (qualquer cor)"
                     />
                   </div>
                 )}
@@ -1260,6 +1405,72 @@ const LinkInBio = () => {
                         className="w-full h-20 object-cover rounded-xl border border-border"
                       />
                     )}
+
+                    {/* Encaixe da imagem de fundo */}
+                    <div className="space-y-1 pt-1">
+                      <Label className="text-[11px] text-muted-foreground">Encaixe</Label>
+                      <div className="flex gap-2">
+                        {([
+                          { id: "cover", label: "Preencher" },
+                          { id: "contain", label: "Caber inteira" },
+                        ] as { id: BgImageSize; label: string }[]).map((o) => (
+                          <button
+                            key={o.id}
+                            type="button"
+                            onClick={() => patchSettings({ bgImageSize: o.id })}
+                            className={cn(
+                              "flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors",
+                              settings.bgImageSize === o.id ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"
+                            )}
+                          >
+                            {o.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-muted-foreground">Posição</Label>
+                      <div className="flex gap-2">
+                        {([
+                          { id: "top", label: "Topo" },
+                          { id: "center", label: "Centro" },
+                          { id: "bottom", label: "Base" },
+                        ] as { id: BgImagePosition; label: string }[]).map((o) => (
+                          <button
+                            key={o.id}
+                            type="button"
+                            onClick={() => patchSettings({ bgImagePosition: o.id })}
+                            className={cn(
+                              "flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors",
+                              settings.bgImagePosition === o.id ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"
+                            )}
+                          >
+                            {o.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Sobreposição escura (legibilidade sobre imagem/gradiente) */}
+                {(settings.bgType === "image" || settings.bgType === "gradient") && (
+                  <div className="space-y-1 pt-1">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-[11px] text-muted-foreground">Escurecer o fundo</Label>
+                      <span className="text-[11px] font-mono text-muted-foreground tabular-nums">{Math.round(settings.bgOverlay * 100)}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={0.6}
+                      step={0.05}
+                      value={settings.bgOverlay}
+                      onChange={(e) => patchSettings({ bgOverlay: clamp01(Number(e.target.value), 0.6) })}
+                      className="w-full accent-primary cursor-pointer"
+                      aria-label="Escurecer o fundo para legibilidade"
+                    />
+                    <p className="text-[11px] text-muted-foreground/70">Ajuda o texto a ficar legível quando o fundo é claro ou movimentado.</p>
                   </div>
                 )}
               </div>
@@ -1287,25 +1498,17 @@ const LinkInBio = () => {
                   ))}
                 </div>
 
-                <div className="flex gap-4 pt-1">
-                  <div className="space-y-1">
-                    <Label className="text-[11px] text-muted-foreground">Cor do botão</Label>
-                    <input
-                      type="color"
-                      value={settings.buttonColor}
-                      onChange={(e) => patchSettings({ buttonColor: e.target.value })}
-                      className="block w-12 h-9 rounded cursor-pointer border border-border"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[11px] text-muted-foreground">Cor do texto</Label>
-                    <input
-                      type="color"
-                      value={settings.buttonTextColor}
-                      onChange={(e) => patchSettings({ buttonTextColor: e.target.value })}
-                      className="block w-12 h-9 rounded cursor-pointer border border-border"
-                    />
-                  </div>
+                <div className="flex gap-4 pt-1 flex-wrap">
+                  <ColorField
+                    value={settings.buttonColor}
+                    onChange={(v) => patchSettings({ buttonColor: v })}
+                    label="Cor do botão"
+                  />
+                  <ColorField
+                    value={settings.buttonTextColor}
+                    onChange={(v) => patchSettings({ buttonTextColor: v })}
+                    label="Cor do texto"
+                  />
                 </div>
               </div>
 
@@ -1730,6 +1933,7 @@ const BioPreview = memo(function BioPreview({ profile, links, settings }: Previe
   const radius = radiusFor(settings.buttonStyle);
   const isOutline = settings.buttonStyle === "outline";
   const hasSocials = SOCIAL_FIELDS.some((f) => settings.socialLinks[f.key].trim());
+  const fontStack = fontStackFor(settings.fontFamily);
 
   if (settings.layout === "vitrine") {
     return <VitrinePreview profile={profile} settings={settings} />;
@@ -1737,10 +1941,13 @@ const BioPreview = memo(function BioPreview({ profile, links, settings }: Previe
 
   return (
     <div className="w-[300px] mx-auto bg-white rounded-[40px] border-[8px] border-gray-800 p-2 shadow-2xl">
+      <BioFontStyle stack={fontStack} />
       <div
-        className="w-full h-[560px] rounded-[32px] overflow-y-auto px-5 py-7 flex flex-col items-center"
+        className="bio-font-scope relative w-full h-[560px] rounded-[32px] overflow-y-auto"
         style={backgroundStyle(settings)}
       >
+        <BgOverlay amount={settings.bgOverlay} />
+        <div className="relative z-10 px-5 py-7 flex flex-col items-center min-h-full">
         {hasSocials && (
           <div className="flex items-center gap-2.5 mb-4">
             {SOCIAL_FIELDS.map((f) =>
@@ -1849,6 +2056,7 @@ const BioPreview = memo(function BioPreview({ profile, links, settings }: Previe
             );
           })}
         </div>
+        </div>
       </div>
     </div>
   );
@@ -1859,10 +2067,16 @@ const VitrinePreview = memo(function VitrinePreview({ profile, settings }: { pro
   const name = settings.header?.name || profile?.name || "Seu nome";
   const bio = settings.header?.bio || profile?.bio || "";
   const activeSocials = SOCIAL_FIELDS.filter((f) => settings.socialLinks[f.key].trim());
+  const fontStack = fontStackFor(settings.fontFamily);
+  const untouchedBg = settings.bgType === "color" && settings.bgColor === DEFAULT_SETTINGS.bgColor;
+  const vitrineBg: React.CSSProperties = untouchedBg ? { backgroundColor: "#F5F3E7" } : backgroundStyle(settings);
 
   return (
     <div className="w-[300px] mx-auto bg-white rounded-[40px] border-[8px] border-gray-800 p-2 shadow-2xl">
-      <div className="w-full h-[560px] rounded-[32px] overflow-y-auto" style={{ backgroundColor: "#F5F3E7" }}>
+      <BioFontStyle stack={fontStack} />
+      <div className="bio-font-scope relative w-full h-[560px] rounded-[32px] overflow-y-auto" style={vitrineBg}>
+        <BgOverlay amount={settings.bgOverlay} />
+        <div className="relative z-10">
         <div className="mx-4 mt-4">
           <div
             className="w-full h-40 rounded-2xl bg-cover bg-center shadow"
@@ -1920,6 +2134,7 @@ const VitrinePreview = memo(function VitrinePreview({ profile, settings }: { pro
           <span className="inline-flex items-center gap-1.5 text-[10px] text-gray-500">
             feito com <img src="/logo-cria.png" alt="Cria" style={{ height: 14 }} />
           </span>
+        </div>
         </div>
       </div>
     </div>

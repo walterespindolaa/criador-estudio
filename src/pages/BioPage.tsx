@@ -8,7 +8,51 @@ import { renderRichText } from "@/lib/richText";
 import { cn } from "@/lib/utils";
 
 type BgType = "color" | "gradient" | "image";
+type BgImageSize = "cover" | "contain";
+type BgImagePosition = "center" | "top" | "bottom";
 type ButtonStyle = "rounded" | "pill" | "square" | "outline";
+
+// Fontes já carregadas no index.html do projeto (sem dependência de rede nova).
+// value = family CSS; stack = pilha aplicada. "" mantém o visual atual.
+const BIO_FONTS: { label: string; value: string; stack: string }[] = [
+  { label: "Baloo 2", value: "Baloo 2", stack: "'Baloo 2', system-ui, sans-serif" },
+  { label: "Nunito", value: "Nunito", stack: "'Nunito', system-ui, sans-serif" },
+  { label: "Space Grotesk", value: "Space Grotesk", stack: "'Space Grotesk', system-ui, sans-serif" },
+  { label: "DM Serif Display", value: "DM Serif Display", stack: "'DM Serif Display', Georgia, serif" },
+  { label: "Outfit", value: "Outfit", stack: "'Outfit', system-ui, sans-serif" },
+  { label: "Quicksand", value: "Quicksand", stack: "'Quicksand', system-ui, sans-serif" },
+  { label: "Sora", value: "Sora", stack: "'Sora', system-ui, sans-serif" },
+  { label: "Bricolage Grotesque", value: "Bricolage Grotesque", stack: "'Bricolage Grotesque', system-ui, sans-serif" },
+  { label: "Grand Hotel", value: "Grand Hotel", stack: "'Grand Hotel', cursive" },
+];
+
+function fontStackFor(value: string): string | null {
+  const f = BIO_FONTS.find((x) => x.value === value);
+  return f ? f.stack : null;
+}
+
+function clamp01(n: number, max: number): number {
+  if (Number.isNaN(n)) return 0;
+  return Math.min(max, Math.max(0, n));
+}
+
+// Estilo <style> escopado: só afeta elementos dentro de .bio-font-scope,
+// sem tocar no resto do app. stack vem de whitelist, então é seguro.
+function BioFontStyle({ stack }: { stack: string | null }) {
+  if (!stack) return null;
+  return <style>{`.bio-font-scope,.bio-font-scope *{font-family:${stack} !important}`}</style>;
+}
+
+// Sobreposição escura opcional pra dar legibilidade sobre imagem/gradiente.
+function BgOverlay({ amount }: { amount: number }) {
+  if (!amount || amount <= 0) return null;
+  return (
+    <div
+      className="absolute inset-0 z-0 pointer-events-none"
+      style={{ backgroundColor: `rgba(0,0,0,${amount})` }}
+    />
+  );
+}
 
 type SocialLinks = {
   instagram: string;
@@ -107,6 +151,10 @@ type BioSettings = {
   bgColor: string;
   bgGradient: string;
   bgImage: string | null;
+  bgImageSize: BgImageSize;
+  bgImagePosition: BgImagePosition;
+  bgOverlay: number;
+  fontFamily: string;
   buttonStyle: ButtonStyle;
   buttonColor: string;
   buttonTextColor: string;
@@ -125,6 +173,10 @@ const DEFAULT_SETTINGS: BioSettings = {
   bgColor: "#FDF2F8",
   bgGradient: "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)",
   bgImage: null,
+  bgImageSize: "cover",
+  bgImagePosition: "center",
+  bgOverlay: 0,
+  fontFamily: "",
   buttonStyle: "rounded",
   buttonColor: "#FFFFFF",
   buttonTextColor: "#1F2937",
@@ -212,6 +264,12 @@ function parseSettings(raw: unknown): BioSettings {
   const t = raw as Partial<BioSettings>;
   const bgType: BgType =
     t.bgType === "gradient" || t.bgType === "image" ? t.bgType : "color";
+  const bgImageSize: BgImageSize = t.bgImageSize === "contain" ? "contain" : "cover";
+  const bgImagePosition: BgImagePosition =
+    t.bgImagePosition === "top" || t.bgImagePosition === "bottom" ? t.bgImagePosition : "center";
+  const bgOverlay = typeof t.bgOverlay === "number" ? clamp01(t.bgOverlay, 0.6) : 0;
+  const fontFamily =
+    typeof t.fontFamily === "string" && fontStackFor(t.fontFamily) ? t.fontFamily : "";
   const buttonStyle: ButtonStyle =
     t.buttonStyle === "pill" ||
     t.buttonStyle === "square" ||
@@ -226,6 +284,10 @@ function parseSettings(raw: unknown): BioSettings {
     bgColor: typeof t.bgColor === "string" ? t.bgColor : DEFAULT_SETTINGS.bgColor,
     bgGradient: typeof t.bgGradient === "string" ? t.bgGradient : DEFAULT_SETTINGS.bgGradient,
     bgImage: typeof t.bgImage === "string" && t.bgImage ? t.bgImage : null,
+    bgImageSize,
+    bgImagePosition,
+    bgOverlay,
+    fontFamily,
     buttonStyle,
     buttonColor: typeof t.buttonColor === "string" ? t.buttonColor : DEFAULT_SETTINGS.buttonColor,
     buttonTextColor:
@@ -267,8 +329,10 @@ function backgroundStyle(settings: BioSettings): React.CSSProperties {
   if (settings.bgType === "image" && settings.bgImage) {
     return {
       backgroundImage: `url(${settings.bgImage})`,
-      backgroundSize: "cover",
-      backgroundPosition: "center",
+      backgroundSize: settings.bgImageSize,
+      backgroundPosition: settings.bgImagePosition,
+      backgroundRepeat: "no-repeat",
+      backgroundColor: settings.bgColor,
     };
   }
   return { backgroundColor: settings.bgColor };
@@ -325,6 +389,7 @@ const BioPage = () => {
   const settings = useMemo(() => parseSettings(profile?.bio_settings), [profile?.bio_settings]);
   const radius = STYLE_RADIUS[settings.buttonStyle];
   const isOutline = settings.buttonStyle === "outline";
+  const fontStack = fontStackFor(settings.fontFamily);
 
   const trackClick = (id: string) => {
     void supabase.functions.invoke("bio-track", { body: { type: "click", linkId: id, slug } });
@@ -366,10 +431,12 @@ const BioPage = () => {
 
   return (
     <div
-      className="min-h-screen w-full px-5 py-10 flex flex-col items-center"
+      className="bio-font-scope relative min-h-screen w-full px-5 py-10 md:py-16 flex flex-col items-center"
       style={backgroundStyle(settings)}
     >
-      <div className="relative w-full max-w-md flex flex-col items-center">
+      <BioFontStyle stack={fontStack} />
+      <BgOverlay amount={settings.bgOverlay} />
+      <div className="relative z-10 w-full max-w-[520px] flex flex-col items-center">
         {/* Desktop: floating column of social icons to the left */}
         {activeSocials.length > 0 && (
           <motion.div
@@ -624,9 +691,19 @@ function VitrineView({
     dragState.current.down = false;
   };
 
+  const fontStack = fontStackFor(settings.fontFamily);
+  // Vitrine agora respeita o fundo escolhido (cor, gradiente ou imagem).
+  // Se ninguém mexeu no fundo, cai no creme da marca pra manter o visual atual.
+  const untouchedBg = settings.bgType === "color" && settings.bgColor === DEFAULT_SETTINGS.bgColor;
+  const vitrineBg: React.CSSProperties = untouchedBg
+    ? { backgroundColor: "#F5F3E7" }
+    : backgroundStyle(settings);
+
   return (
-    <div className="min-h-screen w-full flex flex-col items-center" style={{ backgroundColor: "#F5F3E7" }}>
-      <div className="w-full max-w-[440px] pb-10">
+    <div className="bio-font-scope relative min-h-screen w-full flex flex-col items-center" style={vitrineBg}>
+      <BioFontStyle stack={fontStack} />
+      <BgOverlay amount={settings.bgOverlay} />
+      <div className="relative z-10 w-full max-w-[520px] pb-10 md:pt-6">
         {/* Capa */}
         <div className="mx-5 mt-5">
           <div
