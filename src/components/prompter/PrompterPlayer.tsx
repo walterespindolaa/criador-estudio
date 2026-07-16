@@ -70,13 +70,13 @@ const CSS = `
 .cpr.cardMode.cardWhite #prompterText .w.em{color:var(--accent);}
 .cpr.cardMode #camDim{display:none!important;}
 .cpr.cardMode #prompterText{max-width:none;}
-.cpr #topBar,.cpr #bottomBar{position:absolute;left:0;right:0;z-index:10;display:flex;align-items:center;gap:8px;padding:12px 14px;transition:opacity .3s;}
-.cpr #topBar{top:0;padding-top:calc(10px + env(safe-area-inset-top));background:linear-gradient(rgba(0,0,0,.75),transparent);justify-content:space-between;}
-.cpr #bottomBar{bottom:0;padding-bottom:calc(12px + env(safe-area-inset-bottom));background:linear-gradient(transparent,rgba(0,0,0,.8));justify-content:center;flex-wrap:wrap;gap:18px;}
+.cpr #topBar,.cpr #bottomBar{position:absolute;left:0;right:0;z-index:10;display:flex;align-items:center;transition:opacity .3s;}
+.cpr #topBar{top:0;gap:6px;padding:10px 10px 12px;padding-top:calc(8px + env(safe-area-inset-top));background:linear-gradient(rgba(0,0,0,.75),transparent);justify-content:space-between;}
+/* barra inferior: UMA linha sempre — 5 botões flexíveis + obturador fixo no meio */
+.cpr #bottomBar{bottom:0;gap:5px;padding:10px 8px;padding-bottom:calc(10px + env(safe-area-inset-bottom));background:linear-gradient(transparent,rgba(0,0,0,.85));justify-content:space-evenly;flex-wrap:nowrap;}
 .cpr.barsHidden #topBar,.cpr.barsHidden #bottomBar{opacity:0;pointer-events:none;}
-.cpr .pbtn{background:rgba(40,40,52,.85);border:1px solid var(--border);color:var(--txt);border-radius:12px;padding:10px 14px;font-size:15px;cursor:pointer;backdrop-filter:blur(8px);display:inline-flex;align-items:center;justify-content:center;gap:6px;}
+.cpr .pbtn{background:hsl(45 8% 14% / .88);border:1px solid hsl(45 6% 26% / .8);color:var(--txt);border-radius:14px;padding:9px 12px;font-size:14px;cursor:pointer;backdrop-filter:blur(8px);display:inline-flex;align-items:center;justify-content:center;gap:6px;}
 .cpr .pbtn.on{background:var(--accent);color:var(--accentFg);border-color:var(--accent);font-weight:700;}
-.cpr #playBtn{font-size:20px;padding:12px 26px;}
 @keyframes cprPulse{50%{opacity:.6;}}
 .cpr #modeMenu{position:absolute;bottom:calc(96px + env(safe-area-inset-bottom));left:14px;background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;z-index:16;display:none;min-width:170px;}
 .cpr #modeMenu.show{display:block;}
@@ -124,18 +124,20 @@ const CSS = `
 .cpr #micBtn.hot{border-color:var(--ok);box-shadow:0 0 0 1.5px hsl(149 70% 42% / .55);}
 .cpr .iconbtn{background:var(--panel2);border:1px solid var(--border);color:var(--txt);border-radius:10px;padding:8px 12px;font-size:15px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;}
 .cpr .lucide{width:20px;height:20px;stroke-width:2;flex-shrink:0;}
-.cpr #shutter{width:68px;height:68px;border-radius:50%;border:4px solid #fff;background:transparent;position:relative;cursor:pointer;padding:0;flex-shrink:0;}
+.cpr #shutter{width:60px;height:60px;border-radius:50%;border:3.5px solid #fff;background:transparent;position:relative;cursor:pointer;padding:0;flex-shrink:0;}
 .cpr #shutter em{position:absolute;inset:5px;border-radius:50%;background:#fff;transition:all .18s;}
-.cpr #shutter.rec em{background:var(--danger);inset:17px;border-radius:9px;}
+.cpr #shutter.rec em{background:var(--danger);inset:15px;border-radius:8px;}
 .cpr #shutter.camoff em{background:var(--dim);}
 .cpr #recBtnPulse{animation:cprPulse 1.2s infinite;}
-.cpr #quickBar{display:flex;gap:5px;flex:1;justify-content:center;}
-.cpr #quickBar .pbtn{padding:6px 8px;flex-direction:column;gap:2px;}
-.cpr #quickBar .pbtn small{font-size:9px;font-weight:600;opacity:.9;}
-.cpr #bottomBar .pbtn{flex-direction:column;gap:3px;padding:8px 10px;min-width:60px;}
-.cpr #bottomBar .pbtn small{font-size:10px;font-weight:600;opacity:.9;}
-.cpr #shutterWrap{display:flex;flex-direction:column;align-items:center;gap:4px;}
-.cpr #shutterWrap small{font-size:10px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.7);}
+.cpr #quickBar{display:flex;gap:4px;flex:1;justify-content:center;min-width:0;}
+.cpr #quickBar .pbtn{padding:6px 5px;flex-direction:column;gap:2px;border-radius:12px;min-width:0;flex:0 1 52px;}
+.cpr #quickBar .pbtn small{font-size:8.5px;font-weight:600;opacity:.9;}
+.cpr #quickBar .pbtn .lucide{width:17px;height:17px;}
+.cpr #bottomBar .pbtn{flex-direction:column;gap:2px;padding:7px 2px;min-width:0;flex:1 1 0;max-width:64px;}
+.cpr #bottomBar .pbtn small{font-size:9px;font-weight:600;opacity:.9;white-space:nowrap;}
+.cpr #bottomBar .pbtn .lucide{width:18px;height:18px;}
+.cpr #shutterWrap{display:flex;flex-direction:column;align-items:center;gap:3px;flex:0 0 auto;}
+.cpr #shutterWrap small{font-size:9px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.7);white-space:nowrap;}
 .cpr.light{--panel:#ffffff;--panel2:#ececf1;--border:#d5d5de;--txt:#16161d;--dim:#61616e;background:#f4f4f7;color:#16161d;}
 .cpr.light:not(.camOn) #prompterText .w{color:rgba(0,0,0,.9);}
 .cpr.light:not(.camOn) #prompterText .w.done{color:rgba(0,0,0,.22);}
@@ -930,25 +932,40 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
        que no iPhone/Android abre o share sheet nativo — "Salvar Vídeo" manda
        direto pro rolo da câmera. Download vira o fallback (desktop). */
     let pendingBlob: Blob | null = null, pendingName = "", pendingType = "", pendingUrl = "";
+    const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && (navigator as any).maxTouchPoints > 1);
     function showSaveSheet(blob: Blob, name: string, type: string) {
       pendingBlob = blob; pendingName = name; pendingType = type;
       if (pendingUrl) URL.revokeObjectURL(pendingUrl);
       pendingUrl = URL.createObjectURL(blob);
+      const cleanType = (type.split(";")[0] || "video/mp4").trim();
       const v = $("#ssVideo") as HTMLVideoElement;
-      v.src = pendingUrl;
+      /* <source> com type explícito: sem a dica o WebKit às vezes mostra o
+         play cortado e se recusa a tocar blob de MediaRecorder */
+      v.innerHTML = "";
+      const srcEl = document.createElement("source");
+      srcEl.src = pendingUrl; srcEl.type = cleanType;
+      v.appendChild(srcEl);
+      v.onerror = () => { v.style.display = "none"; }; /* preview falhou? some, o vídeo em si está salvo no blob */
+      v.style.display = "block";
+      try { v.load(); } catch { /* ok */ }
       const secs = Math.max(1, Math.round((Date.now() - recT0) / 1000));
       $("#ssMeta").textContent =
         String(Math.floor(secs / 60)).padStart(2, "0") + ":" + String(secs % 60).padStart(2, "0") +
-        " · " + (blob.size / 1048576).toFixed(1) + " MB · " + (type.includes("mp4") ? "MP4" : "WebM");
+        " · " + (blob.size / 1048576).toFixed(1) + " MB · " + (cleanType.includes("mp4") ? "MP4" : "WebM");
       const canShare = !!((navigator as any).canShare && (navigator as any).canShare({ files: [new File([""], "t.mp4", { type: "video/mp4" })] }));
       $("#ssShare").style.display = canShare ? "flex" : "none";
+      /* no iOS o download de blob abre o visualizador de arquivo do Safari e
+         NUNCA chega na galeria — é só armadilha. Fica escondido (a não ser
+         que o share não exista, aí é o único caminho). */
+      $("#ssDownload").style.display = isIOS && canShare ? "none" : "flex";
+      $("#ssHint").style.display = isIOS && canShare ? "block" : "none";
       $("#saveSheet").classList.add("show");
     }
     function closeSaveSheet() {
       $("#saveSheet").classList.remove("show");
       const v = $("#ssVideo") as HTMLVideoElement;
       try { v.pause(); } catch { /* ok */ }
-      v.removeAttribute("src"); try { v.load(); } catch { /* ok */ }
+      v.innerHTML = ""; v.removeAttribute("src"); try { v.load(); } catch { /* ok */ }
       if (pendingUrl) { URL.revokeObjectURL(pendingUrl); pendingUrl = ""; }
       pendingBlob = null;
     }
@@ -1136,7 +1153,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
           <p id="ssMeta" />
           {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
           <video id="ssVideo" controls playsInline preload="metadata" />
-          <p className="ssHint">No iPhone: toca em <b>Salvar no celular</b> e escolhe <b>"Salvar Vídeo"</b> no menu que abrir — vai direto pra galeria.</p>
+          <p className="ssHint" id="ssHint">Toca em <b>Salvar no celular</b> e escolhe <b>"Salvar Vídeo"</b> no menu que abrir — vai direto pra sua galeria.</p>
           <button className="ssBtn primary" id="ssShare">Salvar no celular</button>
           <button className="ssBtn" id="ssDownload">Baixar arquivo</button>
           <button className="ssBtn ghost" id="ssClose">Fechar e continuar gravando</button>
