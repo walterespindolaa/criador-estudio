@@ -13,8 +13,8 @@ import { usePillars } from "@/hooks/usePillars";
 // Subset do profile renderizado no header do feed; vem direto da conta ATIVA.
 type FeedProfile = Pick<Profile, "name" | "avatar_url" | "niche" | "instagram_handle" | "bio">;
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { FeedProfileHeader } from "@/components/feed/FeedProfileHeader";
+import { FeedAddSheet } from "@/components/feed/FeedAddSheet";
 import { FeedGrid, GRID_DROPPABLE_ID } from "@/components/feed/FeedGrid";
 import { FeedSidebar, SIDEBAR_DROPPABLE_ID, type StatusFilter } from "@/components/feed/FeedSidebar";
 
@@ -226,13 +226,20 @@ const Feed = () => {
     });
   };
 
-  // Mobile: adicionar ao feed por toque (arrastar de dentro do painel não funciona).
-  const addToGrid = (postId: string) => {
-    const post = availablePosts.find((p) => p.id === postId);
-    if (!post) return;
-    setAvailablePosts((prev) => prev.filter((p) => p.id !== postId));
-    setGridPosts((prev) => (prev.some((p) => p.id === post.id) ? prev : [...prev, post]));
-    setMobileSidebarOpen(false);
+  // Mobile: adicionar em lote pelo bottom sheet (a ordem da seleção vira a
+  // ordem no feed). O drawer lateral de lista morreu no celular — no dedo,
+  // escolher post é visual, não textual.
+  const addManyToGrid = (postIds: string[]) => {
+    const toAdd = postIds
+      .map((id) => availablePosts.find((p) => p.id === id))
+      .filter((p): p is Post => !!p);
+    if (!toAdd.length) return;
+    const addIds = new Set(toAdd.map((p) => p.id));
+    setAvailablePosts((prev) => prev.filter((p) => !addIds.has(p.id)));
+    setGridPosts((prev) => {
+      const have = new Set(prev.map((p) => p.id));
+      return [...prev, ...toAdd.filter((p) => !have.has(p.id))];
+    });
   };
 
   const sidebarPanel = (
@@ -243,7 +250,6 @@ const Feed = () => {
       onStatusFilterChange={setStatusFilter}
       searchFilter={searchFilter}
       onSearchFilterChange={setSearchFilter}
-      onAdd={addToGrid}
     />
   );
 
@@ -264,20 +270,17 @@ const Feed = () => {
               </div>
             </div>
             <div className="md:hidden">
-              <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="outline" size="sm" className="shrink-0">
-                    <LayoutGrid className="h-4 w-4 mr-1.5" />
-                    Posts ({availablePosts.length})
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="p-0 w-[88%] max-w-sm flex flex-col">
-                  <SheetHeader className="px-4 py-3 border-b border-border">
-                    <SheetTitle className="text-base font-display">Posts disponíveis</SheetTitle>
-                  </SheetHeader>
-                  <div className="flex-1 overflow-hidden">{sidebarPanel}</div>
-                </SheetContent>
-              </Sheet>
+              <Button size="sm" className="shrink-0" onClick={() => setMobileSidebarOpen(true)}>
+                <LayoutGrid className="h-4 w-4 mr-1.5" />
+                Adicionar ({availablePosts.length})
+              </Button>
+              <FeedAddSheet
+                open={mobileSidebarOpen}
+                onOpenChange={setMobileSidebarOpen}
+                posts={availablePosts}
+                thumbnails={thumbnails}
+                onAddMany={addManyToGrid}
+              />
             </div>
           </div>
 
