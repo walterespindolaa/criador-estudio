@@ -87,15 +87,20 @@ const CSS = `
 .cpr #voiceDot.live{background:var(--ok);animation:cprPulse 1s infinite;}
 .cpr #recTimer{color:#fff;font-variant-numeric:tabular-nums;font-size:14px;background:rgba(255,77,94,.25);border:1px solid var(--danger);border-radius:10px;padding:6px 10px;display:none;}
 .cpr #countdown{position:absolute;inset:0;z-index:20;display:none;align-items:center;justify-content:center;font-size:120px;font-weight:800;color:var(--accent);background:rgba(0,0,0,.6);}
-.cpr #settingsPanel{position:absolute;top:0;right:0;bottom:0;width:min(360px,92vw);background:var(--panel);border-left:1px solid var(--border);z-index:30;transform:translateX(105%);transition:transform .25s;overflow-y:auto;padding:16px 16px calc(30px + env(safe-area-inset-bottom));}
+/* Ajustes = bottom sheet no padrão CRIA (mesma linguagem dos outros sheets) */
+.cpr #settingsPanel{position:absolute;left:0;right:0;bottom:0;top:auto;width:auto;max-width:520px;margin:0 auto;max-height:82vh;background:var(--panel);border:1px solid var(--border);border-bottom:none;border-radius:26px 26px 0 0;z-index:30;transform:translateY(105%);transition:transform .3s cubic-bezier(.32,.72,.25,1);overflow-y:auto;padding:10px 16px calc(24px + env(safe-area-inset-bottom));}
 .cpr #settingsPanel.open{transform:none;}
-.cpr #settingsPanel h2{font-size:17px;margin:4px 0 14px;}
-.cpr .set{margin-bottom:16px;}
-.cpr .set label{display:flex;justify-content:space-between;font-size:14px;color:var(--dim);margin-bottom:6px;}
-.cpr .set label b{color:var(--txt);}
-.cpr .set input[type=range]{width:100%;accent-color:var(--accent);}
-.cpr .set select{width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--txt);border-radius:8px;padding:9px;font-size:15px;}
-.cpr .switchrow{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);font-size:15px;}
+.cpr .shandle{width:40px;height:4.5px;border-radius:4px;background:var(--border);margin:2px auto 10px;}
+.cpr #settingsPanel h2{font-size:18px;font-weight:800;margin:0;font-family:var(--active-font-display,var(--font-display,inherit));}
+.cpr .sgTitle{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);margin:16px 4px 7px;}
+.cpr .sgCard{background:var(--panel2);border:1px solid var(--border);border-radius:16px;padding:2px 14px;}
+.cpr .set{padding:11px 0;border-bottom:1px solid var(--border);}
+.cpr .sgCard>.set:last-child,.cpr .sgCard>.switchrow:last-child{border-bottom:none;}
+.cpr .set label{display:flex;justify-content:space-between;font-size:14px;color:var(--dim);margin-bottom:7px;}
+.cpr .set label b{color:var(--txt);font-weight:700;}
+.cpr .set input[type=range]{width:100%;accent-color:var(--accent);margin:0;}
+.cpr .set select{width:100%;background:var(--panel);border:1px solid var(--border);color:var(--txt);border-radius:10px;padding:10px;font-size:15px;}
+.cpr .switchrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);font-size:14.5px;}
 .cpr .sw{position:relative;width:48px;height:28px;flex-shrink:0;}
 .cpr .sw input{opacity:0;width:0;height:0;}
 .cpr .sw i{position:absolute;inset:0;background:var(--panel2);border:1px solid var(--border);border-radius:20px;transition:.2s;cursor:pointer;}
@@ -122,7 +127,7 @@ const CSS = `
 .cpr .ssHint{color:var(--dim);font-size:12px;margin:0 0 12px;text-align:center;}
 .cpr #micBtn.off{color:var(--danger);border-color:hsl(352 100% 65% / .5);}
 .cpr #micBtn.hot{border-color:var(--ok);box-shadow:0 0 0 1.5px hsl(149 70% 42% / .55);}
-.cpr .iconbtn{background:var(--panel2);border:1px solid var(--border);color:var(--txt);border-radius:10px;padding:8px 12px;font-size:15px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;}
+.cpr .iconbtn{background:var(--accent);border:1px solid var(--accent);color:var(--accentFg);border-radius:14px;padding:13px 12px;font-size:15px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;}
 .cpr .lucide{width:20px;height:20px;stroke-width:2;flex-shrink:0;}
 .cpr #shutter{width:60px;height:60px;border-radius:50%;border:3.5px solid #fff;background:transparent;position:relative;cursor:pointer;padding:0;flex-shrink:0;}
 .cpr #shutter em{position:absolute;inset:5px;border-radius:50%;background:#fff;transition:all .18s;}
@@ -751,8 +756,13 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     };
     async function startCamera(restart?: boolean) {
       if (restart) stopCamera(true);
+      const facingUser = S.camFace === "user";
       const isMax = S.camRes === "max";
-      const [w, h] = isMax ? [3840, 2160] : S.camRes.split("x").map(Number);
+      let [w, h] = isMax ? [3840, 2160] : S.camRes.split("x").map(Number);
+      /* CÂMERA FRONTAL: teto em 1080p. Pedir os modos altos da frontal faz o
+         iOS entregar um sensor RECORTADO (campo de visão menor = cara de zoom).
+         1080p usa o FOV padrão, que é o enquadramento da câmera nativa. */
+      if (facingUser) { w = Math.min(w, 1920); h = Math.min(h, 1080); }
       await ensureMic(); /* mic separado: câmera pede SÓ vídeo */
       try {
         camStream = await navigator.mediaDevices.getUserMedia({
@@ -768,8 +778,11 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
         if ((track as any).getCapabilities) {
           const cap: any = (track as any).getCapabilities();
           const want: any = {};
-          if (isMax && cap.width && cap.height) { want.width = cap.width.max; want.height = cap.height.max; }
+          /* "máxima" só espreme a TRASEIRA; na frontal vira zoom (crop) */
+          if (isMax && !facingUser && cap.width && cap.height) { want.width = cap.width.max; want.height = cap.height.max; }
           if (cap.frameRate) want.frameRate = Math.min(cap.frameRate.max || 30, S.fps);
+          /* zoom de volta pro neutro, se o navegador expõe o controle */
+          if (cap.zoom && typeof cap.zoom.min === "number" && cap.zoom.min <= 1) want.zoom = 1;
           if (Object.keys(want).length) await (track as any).applyConstraints(want).catch(() => {});
         }
       } catch { /* ok */ }
@@ -1081,9 +1094,10 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
           <button className="pbtn" id="qMir" title="Espelhar"><i data-lucide="flip-horizontal-2" /><small>Espelho</small></button>
           <button className="pbtn" id="qTheme" title="Tema claro/escuro"><i data-lucide="sun-moon" /><small>Tema</small></button>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <span id="recTimer">00:00</span>
           <span id="voiceStatus" style={{ display: "none", color: "#fff", fontSize: 13 }}><span id="voiceDot" /></span>
+          <button className="pbtn" id="restartBtn" title="Recomeçar do início"><i data-lucide="rotate-ccw" /></button>
           <button className="pbtn" id="settingsBtn"><i data-lucide="settings" /></button>
         </div>
       </div>
@@ -1091,13 +1105,12 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       <div id="bottomBar">
         <button className="pbtn" id="modeBtn"><i data-lucide="mic" /><small>Por voz</small></button>
         <button className="pbtn" id="playBtn"><i data-lucide="play" /><small>Play</small></button>
-        <button className="pbtn" id="micBtn"><i data-lucide="mic" /><small>Mic</small></button>
         <div id="shutterWrap">
           <button id="shutter" className="camoff" title="Gravar"><em /></button>
           <small id="shutterLbl">Ligar câmera</small>
         </div>
+        <button className="pbtn" id="micBtn"><i data-lucide="mic" /><small>Mic</small></button>
         <button className="pbtn" id="camBtn" title="Câmera"><i data-lucide="camera" /><small>Câmera</small></button>
-        <button className="pbtn" id="restartBtn" title="Recomeçar"><i data-lucide="rotate-ccw" /><small>Início</small></button>
       </div>
       <div id="modeMenu">
         <button data-mode="voice"><i data-lucide="mic" />Por voz</button>
@@ -1107,59 +1120,81 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
 
       <div id="overlay" />
       <div id="settingsPanel">
-        <h2>Ajustes</h2>
-        <div className="set"><label>Tamanho da fonte <b id="vFont" /></label><input type="range" id="sFont" min={20} max={90} step={1} /></div>
-        <div className="set"><label>Margens laterais <b id="vMargin" /></label><input type="range" id="sMargin" min={0} max={30} step={1} /></div>
-        <div className="set"><label>Altura da linha <b id="vLine" /></label><input type="range" id="sLine" min={1.2} max={2.2} step={0.05} /></div>
-        <div className="set"><label>Fonte</label>
-          <select id="sFontFam" defaultValue={DEF.fontFam}>
-            <option value="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">Padrão (Sans)</option>
-            <option value="Georgia,'Times New Roman',serif">Serif</option>
-            <option value="'Courier New',monospace">Monoespaçada</option>
-            <option value="'Arial Black',Arial,sans-serif">Arial Black</option>
-            <option value="Verdana,sans-serif">Verdana</option>
-          </select>
+        <div className="shandle" />
+        <h2>Ajustes do prompter</h2>
+
+        <p className="sgTitle">Texto</p>
+        <div className="sgCard">
+          <div className="set"><label>Tamanho da fonte <b id="vFont" /></label><input type="range" id="sFont" min={20} max={90} step={1} /></div>
+          <div className="set"><label>Margens laterais <b id="vMargin" /></label><input type="range" id="sMargin" min={0} max={30} step={1} /></div>
+          <div className="set"><label>Altura da linha <b id="vLine" /></label><input type="range" id="sLine" min={1.2} max={2.2} step={0.05} /></div>
+          <div className="set"><label>Posição de leitura (altura) <b id="vRead" /></label><input type="range" id="sRead" min={12} max={50} step={1} /></div>
+          <div className="set"><label>Fonte</label>
+            <select id="sFontFam" defaultValue={DEF.fontFam}>
+              <option value="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">Padrão (Sans)</option>
+              <option value="Georgia,'Times New Roman',serif">Serif</option>
+              <option value="'Courier New',monospace">Monoespaçada</option>
+              <option value="'Arial Black',Arial,sans-serif">Arial Black</option>
+              <option value="Verdana,sans-serif">Verdana</option>
+            </select>
+          </div>
         </div>
-        <div className="set"><label>Velocidade (rolagem) <b id="vSpeed" /></label><input type="range" id="sSpeed" min={10} max={200} step={1} /></div>
-        <div className="switchrow">Usar palavras/minuto<label className="sw"><input type="checkbox" id="sUseWpm" /><i /></label></div>
-        <div className="set"><label>Palavras por minuto <b id="vWpm" /></label><input type="range" id="sWpm" min={80} max={220} step={5} /></div>
-        <div className="set"><label>Contagem regressiva <b id="vCount" /></label><input type="range" id="sCount" min={0} max={10} step={1} /></div>
-        <div className="set"><label>Posição de leitura (altura) <b id="vRead" /></label><input type="range" id="sRead" min={12} max={50} step={1} /></div>
-        <div className="switchrow">Modo Reels/Shorts 9:16<label className="sw"><input type="checkbox" id="sReels" /><i /></label></div>
-        <div className="switchrow">Modo card (estilo CapCut)<label className="sw"><input type="checkbox" id="sCardOn" /><i /></label></div>
-        <div className="set"><label>Posição do card</label>
-          <select id="sCardPos" defaultValue="top"><option value="top">Em cima</option><option value="center">Centro</option><option value="bottom">Embaixo</option></select>
+
+        <p className="sgTitle">Ritmo</p>
+        <div className="sgCard">
+          <div className="set"><label>Velocidade (rolagem) <b id="vSpeed" /></label><input type="range" id="sSpeed" min={10} max={200} step={1} /></div>
+          <div className="switchrow">Usar palavras/minuto<label className="sw"><input type="checkbox" id="sUseWpm" /><i /></label></div>
+          <div className="set"><label>Palavras por minuto <b id="vWpm" /></label><input type="range" id="sWpm" min={80} max={220} step={5} /></div>
+          <div className="set"><label>Contagem regressiva <b id="vCount" /></label><input type="range" id="sCount" min={0} max={10} step={1} /></div>
         </div>
-        <div className="set"><label>Altura do card <b id="vCardH" /></label><input type="range" id="sCardH" min={15} max={70} step={1} /></div>
-        <div className="set"><label>Largura do card <b id="vCardW" /></label><input type="range" id="sCardW" min={50} max={100} step={1} /></div>
-        <div className="set"><label>Cor do texto no card</label>
-          <select id="sCardColor" defaultValue="preto"><option value="preto">Preto</option><option value="branco">Branco</option></select>
+
+        <p className="sgTitle">Enquadramento</p>
+        <div className="sgCard">
+          <div className="switchrow">Modo Reels/Shorts 9:16<label className="sw"><input type="checkbox" id="sReels" /><i /></label></div>
+          <div className="switchrow">Espelhar horizontal (vidro)<label className="sw"><input type="checkbox" id="sMirX" /><i /></label></div>
+          <div className="switchrow">Espelhar vertical<label className="sw"><input type="checkbox" id="sMirY" /><i /></label></div>
+          <div className="switchrow">Seta guia<label className="sw"><input type="checkbox" id="sGuide" defaultChecked /><i /></label></div>
         </div>
-        <div className="switchrow">Espelhar horizontal (vidro)<label className="sw"><input type="checkbox" id="sMirX" /><i /></label></div>
-        <div className="switchrow">Espelhar vertical<label className="sw"><input type="checkbox" id="sMirY" /><i /></label></div>
-        <div className="switchrow">Seta guia<label className="sw"><input type="checkbox" id="sGuide" defaultChecked /><i /></label></div>
-        <div className="set" style={{ marginTop: 14 }}><label>Câmera</label>
-          <select id="sCamRes" defaultValue="1920x1080">
-            <option value="max">⚡ Máxima do aparelho</option>
-            <option value="1280x720">HD 720p</option>
-            <option value="1920x1080">Full HD 1080p</option>
-            <option value="3840x2160">4K</option>
-          </select>
+
+        <p className="sgTitle">Modo card (estilo CapCut)</p>
+        <div className="sgCard">
+          <div className="switchrow">Ativar modo card<label className="sw"><input type="checkbox" id="sCardOn" /><i /></label></div>
+          <div className="set"><label>Posição do card</label>
+            <select id="sCardPos" defaultValue="top"><option value="top">Em cima</option><option value="center">Centro</option><option value="bottom">Embaixo</option></select>
+          </div>
+          <div className="set"><label>Altura do card <b id="vCardH" /></label><input type="range" id="sCardH" min={15} max={70} step={1} /></div>
+          <div className="set"><label>Largura do card <b id="vCardW" /></label><input type="range" id="sCardW" min={50} max={100} step={1} /></div>
+          <div className="set"><label>Cor do texto no card</label>
+            <select id="sCardColor" defaultValue="preto"><option value="preto">Preto</option><option value="branco">Branco</option></select>
+          </div>
         </div>
-        <div className="set"><label>Quadros por segundo</label>
-          <select id="sFps" defaultValue="30">
-            <option value="30">30 fps</option>
-            <option value="60">60 fps (se suportado)</option>
-          </select>
+
+        <p className="sgTitle">Câmera</p>
+        <div className="sgCard">
+          <div className="set"><label>Qual câmera</label>
+            <select id="sCamFace" defaultValue="user">
+              <option value="user">Frontal</option>
+              <option value="environment">Traseira</option>
+            </select>
+          </div>
+          <div className="set"><label>Qualidade</label>
+            <select id="sCamRes" defaultValue="1920x1080">
+              <option value="max">⚡ Máxima do aparelho</option>
+              <option value="1280x720">HD 720p</option>
+              <option value="1920x1080">Full HD 1080p</option>
+              <option value="3840x2160">4K</option>
+            </select>
+          </div>
+          <div className="set"><label>Quadros por segundo</label>
+            <select id="sFps" defaultValue="30">
+              <option value="30">30 fps</option>
+              <option value="60">60 fps (se suportado)</option>
+            </select>
+          </div>
+          <div className="switchrow">Gravar como no espelho (frontal)<label className="sw"><input type="checkbox" id="sFixMirror" defaultChecked /><i /></label></div>
         </div>
-        <div className="switchrow">Gravar como no espelho (frontal)<label className="sw"><input type="checkbox" id="sFixMirror" defaultChecked /><i /></label></div>
-        <div className="set"><label>Qual câmera</label>
-          <select id="sCamFace" defaultValue="user">
-            <option value="user">Frontal</option>
-            <option value="environment">Traseira</option>
-          </select>
-        </div>
-        <button className="iconbtn" id="closeSettings" style={{ width: "100%", marginTop: 8 }}>Fechar</button>
+
+        <button className="iconbtn" id="closeSettings" style={{ width: "100%", marginTop: 16 }}>Fechar</button>
       </div>
 
       {/* Vídeo pronto */}
