@@ -119,6 +119,9 @@ const CSS = `
 .cpr .ssBtn{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:14px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--panel2);color:var(--txt);margin-bottom:8px;}
 .cpr .ssBtn.primary{background:var(--accent);border-color:var(--accent);color:var(--accentFg);}
 .cpr .ssBtn.ghost{background:none;border:none;color:var(--dim);font-weight:600;margin-bottom:0;padding:10px;}
+.cpr .ssHint{color:var(--dim);font-size:12px;margin:0 0 12px;text-align:center;}
+.cpr #micBtn.off{color:var(--danger);border-color:hsl(352 100% 65% / .5);}
+.cpr #micBtn.hot{border-color:var(--ok);box-shadow:0 0 0 1.5px hsl(149 70% 42% / .55);}
 .cpr .iconbtn{background:var(--panel2);border:1px solid var(--border);color:var(--txt);border-radius:10px;padding:8px 12px;font-size:15px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;}
 .cpr .lucide{width:20px;height:20px;stroke-width:2;flex-shrink:0;}
 .cpr #shutter{width:68px;height:68px;border-radius:50%;border:4px solid #fff;background:transparent;position:relative;cursor:pointer;padding:0;flex-shrink:0;}
@@ -157,6 +160,7 @@ const ICONS: Record<string, string> = {
   "sun-moon": '<path d="M12 8a2.83 2.83 0 0 0 4 4 4 4 0 1 1-4-4" /> <path d="M12 2v2" /> <path d="M12 20v2" /> <path d="m4.9 4.9 1.4 1.4" /> <path d="m17.7 17.7 1.4 1.4" /> <path d="M2 12h2" /> <path d="M20 12h2" /> <path d="m6.3 17.7-1.4 1.4" /> <path d="m19.1 4.9-1.4 1.4" />',
   settings: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /> <circle cx="12" cy="12" r="3" />',
   mic: '<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" /> <path d="M19 10v2a7 7 0 0 1-14 0v-2" /> <line x1="12" x2="12" y1="19" y2="22" />',
+  "mic-off": '<line x1="2" x2="22" y1="2" y2="22" /> <path d="M18.89 13.23A7.12 7.12 0 0 0 19 12v-2" /> <path d="M5 10v2a7 7 0 0 0 12 5" /> <path d="M15 9.34V5a3 3 0 0 0-5.68-1.33" /> <path d="M9 9v3a3 3 0 0 0 5.12 2.12" /> <line x1="12" x2="12" y1="19" y2="22" />',
   "scroll-text": '<path d="M15 12h-5" /> <path d="M15 8h-5" /> <path d="M19 17V5a2 2 0 0 0-2-2H4" /> <path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3" />',
   hand: '<path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2" /> <path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2" /> <path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8" /> <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />',
   play: '<polygon points="6 3 20 12 6 21 6 3" />',
@@ -605,6 +609,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     function stopAudioWatch() { if (silIv) { clearInterval(silIv); silIv = null; } }
     function startAudioWatch() {
       stopAudioWatch(); sawSound = false;
+      if (!micEnabled) return; /* sem áudio de propósito: não reclama */
       if (!micAnalyser) { showMicSheet("muted"); return; }
       const buf = new Uint8Array(micAnalyser.fftSize);
       silIv = setInterval(() => {
@@ -616,6 +621,40 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
         if (recorder && recorder.state === "recording" && !sawSound) showMicSheet(mode === "voice" ? "voice" : "muted");
       }, 4000);
     }
+
+    /* ---------- botão de microfone: estado visível + liga/desliga ----------
+       Pedido do Walter: a pessoa precisa VER se o mic está pegando antes de
+       gravar. Botão com 3 estados: Mic (habilitado), Mic off (desligado pela
+       pessoa) e brilho verde quando está captando som de verdade (VU). */
+    let micEnabled = true, vuIv: any = null;
+    function setMicIcon() {
+      $("#micBtn").innerHTML = '<i data-lucide="' + (micEnabled ? "mic" : "mic-off") + '"></i><small>' + (micEnabled ? "Mic" : "Mic off") + "</small>";
+      $("#micBtn").classList.toggle("off", !micEnabled);
+      if (!micEnabled) $("#micBtn").classList.remove("hot");
+      refreshIcons($("#micBtn"));
+    }
+    function stopVu() { if (vuIv) { clearInterval(vuIv); vuIv = null; } $("#micBtn")?.classList.remove("hot"); }
+    function startVu() {
+      stopVu();
+      vuIv = setInterval(() => {
+        if (disposed || !micAnalyser || !micEnabled) { $("#micBtn")?.classList.remove("hot"); return; }
+        const buf = new Uint8Array(micAnalyser.fftSize);
+        micAnalyser.getByteTimeDomainData(buf);
+        let peak = 0; for (let i = 0; i < buf.length; i++) { const d = Math.abs(buf[i] - 128); if (d > peak) peak = d; }
+        $("#micBtn")?.classList.toggle("hot", peak > 3);
+      }, 200);
+    }
+    $("#micBtn").onclick = async () => {
+      micEnabled = !micEnabled;
+      if (micEnabled) {
+        await ensureMic();
+        if (micLive()) { micTrackForRecording(); startVu(); toast("Microfone ativado. O botão brilha verde quando está captando som."); }
+        else toast("Microfone habilitado, mas ainda sem acesso. Confere a permissão.", 5000);
+      } else {
+        toast("Microfone desativado: o vídeo sai sem áudio.");
+      }
+      setMicIcon();
+    };
 
     function setCamIcon() {
       $("#camBtn").innerHTML = '<i data-lucide="' + (camStream ? "camera-off" : "camera") + '"></i><small>' + (camStream ? "Desligar" : "Câmera") + "</small>";
@@ -690,8 +729,10 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       try { await camVideo.play(); } catch { /* autoplay */ }
       root.classList.add("camOn");
       setCamIcon();
+      if (micEnabled && micLive()) { micTrackForRecording(); startVu(); } /* VU: botão Mic brilha com o som */
+      setMicIcon();
       const s = camStream.getVideoTracks()[0].getSettings();
-      toast("Câmera ligada: " + (s.width || "?") + "×" + (s.height || "?") + (micLive() ? " · mic OK" : " · SEM MIC"));
+      toast("Câmera ligada: " + (s.width || "?") + "×" + (s.height || "?") + (micEnabled && micLive() ? " · mic OK" : " · SEM MIC"));
     }
     function stopCamera(silent?: boolean) {
       if (recorder && recorder.state !== "inactive") stopRec();
@@ -740,7 +781,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     function makeRecordingStream(rawForce: boolean) {
       const mirror = S.camFace === "user" && S.fixMirror && !rawForce;
       const vTrack = mirror ? mirroredVideoTrack() : camStream!.getVideoTracks()[0];
-      const aTrack = micTrackForRecording();
+      const aTrack = micEnabled ? micTrackForRecording() : null;
       return new MediaStream(aTrack ? [vTrack, aTrack] : [vTrack]);
     }
     function stopMirrorPipe() {
@@ -773,7 +814,9 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
         toast("Qualidade máxima: o vídeo sai sem espelho (imagem real) para garantir fluidez. Se quiser espelhado, inverta no CapCut ou grave em 1080p.", 7000);
       }
       const recStream = makeRecordingStream(rawForce);
-      if (!recStream.getAudioTracks().length) toast("⚠️ Gravando sem áudio: microfone não disponível.", 6000);
+      if (!recStream.getAudioTracks().length) {
+        toast(micEnabled ? "⚠️ Gravando sem áudio: microfone não disponível." : "Gravando sem áudio (microfone desativado no botão Mic).", 6000);
+      }
       try {
         recorder = new MediaRecorder(recStream, mime ? { mimeType: mime, videoBitsPerSecond: vbr, audioBitsPerSecond: 192_000 } : {});
       } catch (e: any) { stopMirrorPipe(); toast("Gravação não suportada aqui: " + e.message); return; }
@@ -872,7 +915,10 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     $("#ssShare").onclick = async () => {
       if (!pendingBlob) return;
       try {
-        const file = new File([pendingBlob], pendingName, { type: pendingType });
+        /* tipo SEM codecs: "video/mp4;codecs=..." faz o iOS não reconhecer o
+           arquivo como vídeo e esconder o "Salvar Vídeo" do share sheet */
+        const cleanType = (pendingType.split(";")[0] || "video/mp4").trim();
+        const file = new File([pendingBlob], pendingName, { type: cleanType });
         if ((navigator as any).canShare && (navigator as any).canShare({ files: [file] })) {
           await (navigator as any).share({ files: [file] });
           toast("Prontinho! Se escolheu Salvar Vídeo, ele já está na sua galeria. 🎉", 5000);
@@ -897,7 +943,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       micStream = null;
       resetAudioGraph();
       if (audioCtx) { audioCtx.close().catch(() => {}); audioCtx = null; }
-      stopAudioWatch();
+      stopAudioWatch(); stopVu();
       clearTimeout(toastT); clearTimeout(resyncT); clearInterval(recIv);
       if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
@@ -915,6 +961,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     setMode(S.mode || "voice");
     setPlayIcon();
     setCamIcon();
+    setMicIcon();
     syncQuick();
     refreshIcons();
     requestWake();
@@ -962,6 +1009,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       <div id="bottomBar">
         <button className="pbtn" id="modeBtn"><i data-lucide="mic" /><small>Por voz</small></button>
         <button className="pbtn" id="playBtn"><i data-lucide="play" /><small>Play</small></button>
+        <button className="pbtn" id="micBtn"><i data-lucide="mic" /><small>Mic</small></button>
         <div id="shutterWrap">
           <button id="shutter" className="camoff" title="Gravar"><em /></button>
           <small id="shutterLbl">Ligar câmera</small>
@@ -1039,6 +1087,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
           <p id="ssMeta" />
           {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
           <video id="ssVideo" controls playsInline preload="metadata" />
+          <p className="ssHint">No iPhone: toca em <b>Salvar no celular</b> e escolhe <b>"Salvar Vídeo"</b> no menu que abrir — vai direto pra galeria.</p>
           <button className="ssBtn primary" id="ssShare">Salvar no celular</button>
           <button className="ssBtn" id="ssDownload">Baixar arquivo</button>
           <button className="ssBtn ghost" id="ssClose">Fechar e continuar gravando</button>
