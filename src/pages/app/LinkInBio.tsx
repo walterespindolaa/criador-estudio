@@ -910,40 +910,87 @@ const LinkInBio = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-6">
           {/* ── Editor ──────────────────────────────── */}
           <div className="space-y-5">
-            {/* ── Estilo da página ─────────────────── */}
-            <Card className="p-4 md:p-5 rounded-2xl border-border">
-              <Label className="text-xs font-display font-semibold uppercase tracking-wider text-muted-foreground/80">
-                Estilo da página
-              </Label>
-              <div className="mt-2 inline-flex gap-1 rounded-full border border-border bg-muted/40 p-1">
-                {([
-                  { id: "classic", label: "Clássico" },
-                  { id: "vitrine", label: "Vitrine" },
-                ] as { id: BioSettings["layout"]; label: string }[]).map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => patchSettings({ layout: opt.id })}
+            {/* ── Cabeçalho: seletor de estilo + salvar (fixo no topo) ─────── */}
+            <div className="sticky top-0 z-30 rounded-2xl border border-border bg-background/95 backdrop-blur-sm px-4 py-3 shadow-sm">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="inline-flex gap-1 rounded-full border border-border bg-muted/40 p-1">
+                  {([
+                    { id: "classic", label: "Clássico" },
+                    { id: "vitrine", label: "Vitrine" },
+                  ] as { id: BioSettings["layout"]; label: string }[]).map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => patchSettings({ layout: opt.id })}
+                      className={cn(
+                        "px-5 py-1.5 rounded-full text-sm font-display font-semibold transition-colors",
+                        settings.layout === opt.id
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <span
                     className={cn(
-                      "px-5 py-1.5 rounded-full text-sm font-display font-semibold transition-colors",
-                      settings.layout === opt.id
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
+                      "text-[11px] font-body hidden sm:inline",
+                      isSavingAppearance
+                        ? "text-muted-foreground"
+                        : appearanceDirty
+                          ? "text-amber-600"
+                          : "text-emerald-600"
                     )}
                   >
-                    {opt.label}
-                  </button>
-                ))}
+                    {isSavingAppearance ? "Salvando..." : appearanceDirty ? "Alterações não salvas" : "Tudo salvo"}
+                  </span>
+                  <Button
+                    onClick={handleSaveAppearance}
+                    disabled={!appearanceDirty || isSavingAppearance}
+                    size="sm"
+                    variant="hero"
+                  >
+                    <Save className="h-4 w-4 mr-1.5" />
+                    {isSavingAppearance ? "Salvando..." : "Salvar"}
+                  </Button>
+                </div>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                Escolha um estilo e edite. Trocar de estilo não apaga o conteúdo do outro.
+                Escolha um estilo e edite. Trocar de estilo não apaga o conteúdo do outro; cada estilo guarda o seu.
               </p>
-            </Card>
+            </div>
 
             {/* ── Controles da Vitrine ─────────────── */}
             {settings.layout === "vitrine" && (
+              <>
               <Card className="p-4 md:p-5 rounded-2xl border-border space-y-6">
                 <h2 className="font-display font-semibold text-foreground">Vitrine</h2>
+
+                {!settings.vitrine.cover && settings.vitrine.services.length === 0 && settings.vitrine.products.length === 0 && (
+                  <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-4">
+                    <p className="text-sm font-display font-semibold text-foreground">Monte sua vitrine em 3 passos</p>
+                    <p className="mt-0.5 mb-3 text-xs text-muted-foreground">Comece por aqui. Dá pra ajustar tudo depois.</p>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      <button type="button" onClick={() => coverInputRef.current?.click()} className="text-left rounded-xl border border-border bg-background p-3 transition-colors hover:border-primary/40">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: "#EA4918" }}>1</span>
+                        <span className="mt-2 block text-sm font-semibold text-foreground">Escolha sua capa</span>
+                        <span className="block text-[11px] text-muted-foreground">Imagem de destaque no topo</span>
+                      </button>
+                      <button type="button" onClick={addService} className="text-left rounded-xl border border-border bg-background p-3 transition-colors hover:border-primary/40">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: "#0061EE" }}>2</span>
+                        <span className="mt-2 block text-sm font-semibold text-foreground">Adicione seus serviços</span>
+                        <span className="block text-[11px] text-muted-foreground">O que você oferece</span>
+                      </button>
+                      <button type="button" onClick={addProduct} className="text-left rounded-xl border border-border bg-background p-3 transition-colors hover:border-primary/40">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: "#01A652" }}>3</span>
+                        <span className="mt-2 block text-sm font-semibold text-foreground">Adicione seus produtos</span>
+                        <span className="block text-[11px] text-muted-foreground">Infoprodutos pra vender</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Cor base */}
                 <div className="space-y-2">
@@ -1050,6 +1097,256 @@ const LinkInBio = () => {
                   {isSavingAppearance ? "Salvando..." : "Salvar alterações"}
                 </Button>
               </Card>
+
+              {/* Identidade da vitrine (nome e bio compartilhados) */}
+              <Card className="p-4 md:p-5 rounded-2xl border-border space-y-3">
+                <div>
+                  <h2 className="font-display font-semibold text-foreground mb-1">Identidade</h2>
+                  <p className="text-xs text-muted-foreground">Nome e bio que aparecem na sua vitrine. Deixe em branco para usar os dados do seu perfil.</p>
+                </div>
+                <input value={settings.header.name} onChange={(e) => patchHeader({ name: e.target.value })} placeholder={profile?.name || "Seu nome"} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+                <RichTextInput value={settings.header.bio} onChange={(v) => patchHeader({ bio: v })} placeholder={profile?.bio || "Escreva uma bio curta"} rows={3} />
+              </Card>
+
+              {/* Aparência da vitrine (fonte, fundo e redes compartilhados) */}
+              <Card className="p-4 md:p-5 rounded-2xl border-border space-y-6">
+                <h2 className="font-display font-semibold text-foreground">Aparência</h2>
+
+                {/* Fonte */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-display font-semibold">Fonte</Label>
+                  <p className="text-xs text-muted-foreground -mt-1">
+                    Muda a fonte da sua página pública (vale nos dois estilos). Cada opção mostra uma amostra.
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => patchSettings({ fontFamily: "" })}
+                      className={cn(
+                        "rounded-xl border px-3 py-2 text-left transition-colors",
+                        settings.fontFamily === "" ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
+                      )}
+                    >
+                      <span className="block text-sm font-semibold text-foreground">Padrão</span>
+                      <span className="block text-[11px] text-muted-foreground">Visual atual</span>
+                    </button>
+                    {BIO_FONTS.map((f) => (
+                      <button
+                        key={f.value}
+                        type="button"
+                        onClick={() => patchSettings({ fontFamily: f.value })}
+                        className={cn(
+                          "rounded-xl border px-3 py-2 text-left transition-colors",
+                          settings.fontFamily === f.value ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
+                        )}
+                      >
+                        <span className="block text-sm text-foreground leading-tight" style={{ fontFamily: f.stack }}>{f.label}</span>
+                        <span className="block text-[11px] text-muted-foreground" style={{ fontFamily: f.stack }}>Ag Bço 123</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Fundo */}
+                <div className="space-y-3 pt-4 border-t border-border">
+                  <Label className="text-sm font-display font-semibold">Fundo</Label>
+                  <p className="text-xs text-muted-foreground -mt-1">
+                    Escolha cor sólida, gradiente ou imagem de fundo. Vale nos dois estilos (Clássico e Vitrine).
+                  </p>
+                  <div className="flex gap-2 flex-wrap">
+                    {([
+                      { id: "color", label: "Cor sólida" },
+                      { id: "gradient", label: "Gradiente" },
+                      { id: "image", label: "Imagem" },
+                    ] as { id: BgType; label: string }[]).map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => patchSettings({ bgType: t.id })}
+                        className={cn(
+                          "px-3 py-1.5 rounded-full text-xs font-body border transition-colors",
+                          settings.bgType === t.id
+                            ? "bg-primary/10 text-primary border-primary/30"
+                            : "bg-card text-muted-foreground border-border hover:text-foreground"
+                        )}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {settings.bgType === "color" && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {BG_COLOR_PRESETS.map((c) => (
+                          <button
+                            key={c}
+                            type="button"
+                            onClick={() => patchSettings({ bgColor: c })}
+                            className={cn(
+                              "w-8 h-8 rounded-full border-2 transition-all",
+                              settings.bgColor.toLowerCase() === c.toLowerCase()
+                                ? "border-primary ring-2 ring-primary/20 scale-110"
+                                : "border-border"
+                            )}
+                            style={{ backgroundColor: c }}
+                            aria-label={`Cor ${c}`}
+                          />
+                        ))}
+                      </div>
+                      <ColorField
+                        value={settings.bgColor}
+                        onChange={(v) => patchSettings({ bgColor: v })}
+                        label="Cor personalizada (qualquer cor)"
+                      />
+                    </div>
+                  )}
+
+                  {settings.bgType === "gradient" && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {GRADIENT_PRESETS.map((g) => (
+                        <button
+                          key={g.id}
+                          type="button"
+                          onClick={() => patchSettings({ bgGradient: g.css })}
+                          className={cn(
+                            "w-10 h-10 rounded-xl border-2 transition-all",
+                            settings.bgGradient === g.css
+                              ? "border-primary ring-2 ring-primary/20"
+                              : "border-transparent"
+                          )}
+                          style={{ backgroundImage: g.css }}
+                          aria-label={g.id}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {settings.bgType === "image" && (
+                    <div className="space-y-2">
+                      <input
+                        ref={bgInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleBgImageUpload}
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => bgInputRef.current?.click()}
+                        disabled={uploadingBg}
+                        className="cursor-pointer flex items-center gap-2 px-4 py-2 rounded-xl border border-dashed border-border hover:border-primary text-sm text-muted-foreground transition-colors disabled:opacity-50"
+                      >
+                        {uploadingBg ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Upload className="h-4 w-4" />
+                        )}
+                        {uploadingBg ? "Enviando..." : "Escolher imagem de fundo"}
+                      </button>
+                      {settings.bgImage && (
+                        <img
+                          src={settings.bgImage}
+                          alt="Fundo"
+                          className="w-full h-20 object-cover rounded-xl border border-border"
+                        />
+                      )}
+
+                      {/* Encaixe da imagem de fundo */}
+                      <div className="space-y-1 pt-1">
+                        <Label className="text-[11px] text-muted-foreground">Encaixe</Label>
+                        <div className="flex gap-2">
+                          {([
+                            { id: "cover", label: "Preencher" },
+                            { id: "contain", label: "Caber inteira" },
+                          ] as { id: BgImageSize; label: string }[]).map((o) => (
+                            <button
+                              key={o.id}
+                              type="button"
+                              onClick={() => patchSettings({ bgImageSize: o.id })}
+                              className={cn(
+                                "flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors",
+                                settings.bgImageSize === o.id ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"
+                              )}
+                            >
+                              {o.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Posição</Label>
+                        <div className="flex gap-2">
+                          {([
+                            { id: "top", label: "Topo" },
+                            { id: "center", label: "Centro" },
+                            { id: "bottom", label: "Base" },
+                          ] as { id: BgImagePosition; label: string }[]).map((o) => (
+                            <button
+                              key={o.id}
+                              type="button"
+                              onClick={() => patchSettings({ bgImagePosition: o.id })}
+                              className={cn(
+                                "flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors",
+                                settings.bgImagePosition === o.id ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"
+                              )}
+                            >
+                              {o.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sobreposição escura (legibilidade sobre imagem/gradiente) */}
+                  {(settings.bgType === "image" || settings.bgType === "gradient") && (
+                    <div className="space-y-1 pt-1">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-[11px] text-muted-foreground">Escurecer o fundo</Label>
+                        <span className="text-[11px] font-mono text-muted-foreground tabular-nums">{Math.round(settings.bgOverlay * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={0.6}
+                        step={0.05}
+                        value={settings.bgOverlay}
+                        onChange={(e) => patchSettings({ bgOverlay: clamp01(Number(e.target.value), 0.6) })}
+                        className="w-full accent-primary cursor-pointer"
+                        aria-label="Escurecer o fundo para legibilidade"
+                      />
+                      <p className="text-[11px] text-muted-foreground/70">Ajuda o texto a ficar legível quando o fundo é claro ou movimentado.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Redes sociais */}
+                <div className="space-y-3 pt-4 border-t border-border">
+                  <Label className="text-sm font-display font-semibold">Redes sociais</Label>
+                  <p className="text-xs text-muted-foreground">Os ícones aparecem no topo da sua página.</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {SOCIAL_FIELDS.map((f) => (
+                      <div key={f.key} className="relative">
+                        <f.icon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          value={settings.socialLinks[f.key]}
+                          onChange={(e) => patchSocial(f.key, e.target.value)}
+                          placeholder={`${f.label}: ${f.placeholder}`}
+                          className="h-9 rounded-xl pl-9 text-sm"
+                          maxLength={120}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <Button onClick={handleSaveAppearance} disabled={!appearanceDirty || isSavingAppearance} className="w-full" variant="hero">
+                  <Save className="h-4 w-4 mr-2" />
+                  {isSavingAppearance ? "Salvando..." : "Salvar alterações"}
+                </Button>
+              </Card>
+              </>
             )}
 
             <Card className="p-4 md:p-5 rounded-2xl border-border">
@@ -1113,6 +1410,8 @@ const LinkInBio = () => {
               <p className="text-[11px] font-body text-muted-foreground/70 mt-2">Visitas contam 1x por visitante na sessão. Cliques somam todos os toques nos links.</p>
             </Card>
 
+            {settings.layout === "classic" && (
+              <>
             <Card className="p-4 md:p-5 rounded-2xl border-border">
               <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
                 <h2 className="font-display font-semibold text-foreground">Seus links</h2>
@@ -1127,9 +1426,19 @@ const LinkInBio = () => {
               </div>
 
               {sortedLinks.length === 0 ? (
-                <div className="text-center py-10 text-sm text-muted-foreground font-body">
-                  Nenhum item ainda. Adicione um <span className="font-semibold">link</span> ou um{" "}
-                  <span className="font-semibold">título</span> de seção para começar.
+                <div className="rounded-xl border border-dashed border-border bg-muted/30 p-5 text-center">
+                  <p className="text-sm font-display font-semibold text-foreground">Adicione seu primeiro link</p>
+                  <p className="mt-1 mb-3 text-xs text-muted-foreground font-body">
+                    Links levam seus seguidores pra onde importa: loja, WhatsApp, agenda, seus conteúdos.
+                  </p>
+                  <div className="flex justify-center gap-2">
+                    <Button variant="hero" size="sm" onClick={handleAddLink}>
+                      <Plus className="h-4 w-4 mr-1" /> Adicionar link
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleAddHeader}>
+                      <TypeIcon className="h-4 w-4 mr-1" /> Título
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <DragDropContext onDragEnd={handleDragEnd}>
@@ -1636,6 +1945,8 @@ const LinkInBio = () => {
                 </div>
               )}
             </Card>
+              </>
+            )}
           </div>
 
           {/* ── Preview ─────────────────────────────── */}
