@@ -562,7 +562,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
     /* mic capturado 1x e roteado por WebAudio (evita vídeo mudo no iOS) */
-    let micStream: MediaStream | null = null, audioCtx: AudioContext | null = null, audioDest: MediaStreamAudioDestinationNode | null = null,
+    let micStream: MediaStream | null = null, audioCtx: AudioContext | null = null,
       micSource: MediaStreamAudioSourceNode | null = null, micAnalyser: AnalyserNode | null = null;
     /* "live" não basta no iOS: o sistema silencia a trilha e ela vira zumbi
        (readyState live, muted true). Trilha muda = mic inválido. */
@@ -571,7 +571,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       try { if (sessionMic) sessionMic.getTracks().forEach((t) => t.stop()); } catch { /* ok */ }
       sessionMic = null; micStream = null; resetAudioGraph();
     }
-    function resetAudioGraph() { try { if (micSource) micSource.disconnect(); } catch { /* ok */ } micSource = null; audioDest = null; micAnalyser = null; }
+    function resetAudioGraph() { try { if (micSource) micSource.disconnect(); } catch { /* ok */ } micSource = null; micAnalyser = null; }
     async function ensureMic() {
       if (micLive()) return micStream;
       /* reaproveita o mic da sessão (evita novo prompt do iOS ao reentrar),
@@ -590,19 +590,29 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       }
       return micStream;
     }
-    function micTrackForRecording() {
-      if (!micLive()) return null;
+    /* Analyser SÓ pro VU (não fica no caminho da gravação). No iOS o
+       AudioContext pode acordar "interrupted"/"suspended" — qualquer estado
+       diferente de running, tenta resume (idealmente dentro de um gesto). */
+    function buildAnalyser() {
+      if (!micLive()) return;
       try {
         const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
         if (!audioCtx) audioCtx = new AC();
-        if (audioCtx!.state === "suspended") audioCtx!.resume().catch(() => {});
+        if (audioCtx!.state !== "running") audioCtx!.resume().catch(() => {});
         if (!micSource) micSource = audioCtx!.createMediaStreamSource(micStream!);
-        if (!audioDest) { audioDest = audioCtx!.createMediaStreamDestination(); micSource.connect(audioDest); }
         if (!micAnalyser) { micAnalyser = audioCtx!.createAnalyser(); micAnalyser.fftSize = 512; micSource.connect(micAnalyser); }
-        const t = audioDest.stream.getAudioTracks()[0];
-        if (t) return t;
-      } catch { /* fallback abaixo */ }
-      return micStream!.getAudioTracks()[0] || null;
+      } catch { /* VU indisponível; gravação não depende dele */ }
+    }
+    /* A GRAVAÇÃO recebe a trilha CRUA do mic, sem WebAudio no meio.
+       O túnel mic→AudioContext→MediaRecorder do protótipo era o ponto que o
+       iOS silenciava (contexto interrompido = gravação muda com mic bom).
+       Clone: o recorder ganha a própria trilha, sem brigar com o VU. */
+    function micTrackForRecording() {
+      if (!micLive()) return null;
+      buildAnalyser();
+      const t = micStream!.getAudioTracks()[0];
+      if (!t) return null;
+      try { return t.clone(); } catch { return t; }
     }
     /* vigia de silêncio */
     let silIv: any = null, sawSound = false;
@@ -618,7 +628,11 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
         if (peak > 3) sawSound = true;
       }, 200);
       setTimeout(() => {
-        if (recorder && recorder.state === "recording" && !sawSound) showMicSheet(mode === "voice" ? "voice" : "muted");
+        if (!(recorder && recorder.state === "recording") || sawSound) return;
+        /* medidor quebrado (AudioContext fora do ar) não é prova de gravação
+           muda — a trilha crua pode estar ok. Só alarma com medidor confiável. */
+        if (!audioCtx || audioCtx.state !== "running") return;
+        showMicSheet(mode === "voice" ? "voice" : "muted");
       }, 4000);
     }
 
@@ -648,8 +662,8 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       forceFreshMic();
       await ensureMic();
       if (!micLive()) return false;
-      micTrackForRecording();
-      try { if (audioCtx && audioCtx.state === "suspended") audioCtx.resume(); } catch { /* ok */ }
+      buildAnalyser();
+      try { if (audioCtx && audioCtx.state !== "running") audioCtx.resume(); } catch { /* ok */ }
       watchMicTrack(); startVu();
       return true;
     }
@@ -756,7 +770,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
          se preciso, recaptura (sem novo prompt dentro da mesma sessão) */
       if (micEnabled) {
         if (!micLive()) await refreshMicPipeline();
-        else { micTrackForRecording(); watchMicTrack(); startVu(); }
+        else { buildAnalyser(); watchMicTrack(); startVu(); }
       }
       setMicIcon();
       const s = camStream.getVideoTracks()[0].getSettings();
@@ -820,11 +834,18 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
 
     async function startRec() {
       if (!camStream) return;
-      await ensureMic();
       /* iOS: SpeechRecognition reconfigura a sessão de áudio — voz PRIMEIRO, recorder depois */
       if (!playing) {
         await new Promise<void>((res) => startPlay(res));
         if (mode === "voice") await sleep(800);
+      }
+      /* Mic NOVO no momento do REC, já com a sessão de áudio no estado final
+         (voz rodando, câmera ligada). Trilha velha capturada em outro estado é
+         exatamente a que o iOS entrega muda. Sem novo prompt na mesma sessão. */
+      if (micEnabled) {
+        forceFreshMic();
+        await ensureMic();
+        watchMicTrack(); startVu(); setMicIcon();
       }
       let vt = camStream && camStream.getVideoTracks()[0];
       if (!vt || vt.readyState !== "live" || vt.muted) {
