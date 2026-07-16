@@ -129,7 +129,7 @@ export default function ManagerHome() {
 
           {lastClient && (
             <button type="button" onClick={() => navigate(`/socialmidia/clientes/${lastClient.id}/visao-geral`)}
-              className="flex items-center gap-3 rounded-2xl border border-border bg-background/70 backdrop-blur-sm px-4 py-2.5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md shrink-0">
+              className="flex items-center gap-3 rounded-2xl border border-border bg-background/70 backdrop-blur-sm px-4 py-2.5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md w-full justify-between sm:w-auto sm:justify-start sm:shrink-0">
               <span className="relative grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full font-display font-bold text-white text-sm" style={{ background: "linear-gradient(135deg,#0F6E56,#1d9e75)" }}>
                 {initial(lastClient.name)}
                 {lastClient.logo && <img src={lastClient.logo} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 h-full w-full object-cover" />}
