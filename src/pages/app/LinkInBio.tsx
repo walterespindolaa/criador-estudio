@@ -29,6 +29,7 @@ import {
   Download,
   Check,
   X,
+  Crop,
 } from "lucide-react";
 import { toast } from "sonner";
 import { sanitizeUrl } from "@/lib/sanitize";
@@ -459,6 +460,110 @@ function ColorField({ value, onChange, label }: { value: string; onChange: (v: s
   );
 }
 
+// Campo de imagem de fundo com preview ajustável (zoom, rotação, reposição).
+// Ao escolher, abre o ImageCropModal no formato retrato (9:16) da bio; ao
+// confirmar, a imagem já sai "assada" (crop + zoom + rotação) e sobe pronta.
+// A página pública só usa bgImage com background-size cover, então não precisa
+// mais dos controles de encaixe/posição (os campos antigos seguem no parse
+// defensivo, sem quebrar quem já salvou).
+function BgImageField({
+  bgImage,
+  uploading,
+  onBake,
+  onRemove,
+}: {
+  bgImage: string | null;
+  uploading: boolean;
+  onBake: (blob: Blob) => void;
+  onRemove: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [rawSrc, setRawSrc] = useState<string | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
+
+  const handleSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const validation = validateUpload(file, "bioMedia");
+    if (!validation.ok) {
+      toast.error(validation.reason);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setRawSrc(reader.result as string);
+      setCropOpen(true);
+    };
+    reader.onerror = () => toast.error("Erro ao ler imagem.");
+    reader.readAsDataURL(file);
+  };
+
+  // Reajustar: reabre o preview. Se a imagem original desta sessão ainda estiver
+  // em memória, usa ela; senão cai na imagem já salva (best-effort via CORS).
+  const reopenAdjust = () => {
+    if (rawSrc) {
+      setCropOpen(true);
+      return;
+    }
+    if (bgImage) {
+      setRawSrc(bgImage);
+      setCropOpen(true);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <input ref={inputRef} type="file" accept="image/*" onChange={handleSelect} className="hidden" />
+      {bgImage ? (
+        <>
+          <div className="relative w-full overflow-hidden rounded-xl border border-border" style={{ aspectRatio: "9 / 16", maxHeight: 220 }}>
+            <img src={bgImage} alt="Fundo" className="h-full w-full object-cover" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" size="sm" disabled={uploading} onClick={reopenAdjust}>
+              {uploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Crop className="h-4 w-4 mr-2" />}
+              {uploading ? "Enviando..." : "Reajustar"}
+            </Button>
+            <Button type="button" variant="outline" size="sm" disabled={uploading} onClick={() => inputRef.current?.click()}>
+              <Upload className="h-4 w-4 mr-2" /> Trocar imagem
+            </Button>
+            <Button type="button" variant="ghost" size="sm" className="text-destructive" disabled={uploading} onClick={onRemove}>
+              <Trash2 className="h-4 w-4 mr-2" /> Remover
+            </Button>
+          </div>
+        </>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="cursor-pointer flex items-center gap-2 px-4 py-2 rounded-xl border border-dashed border-border hover:border-primary text-sm text-muted-foreground transition-colors disabled:opacity-50"
+        >
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          {uploading ? "Enviando..." : "Escolher imagem de fundo"}
+        </button>
+      )}
+      <p className="text-[11px] text-muted-foreground/70">
+        Ajuste zoom, rotação e posição no formato retrato (9:16), do jeito que a bio aparece no celular. A imagem é salva já ajustada.
+      </p>
+      {rawSrc && (
+        <ImageCropModal
+          open={cropOpen}
+          onOpenChange={(o) => {
+            setCropOpen(o);
+            if (!o) setRawSrc(null);
+          }}
+          imageSrc={rawSrc}
+          onCropComplete={onBake}
+          aspectRatio={9 / 16}
+          cropShape="rect"
+        />
+      )}
+    </div>
+  );
+}
+
 function normalizeSlug(input: string): string {
   return input
     .toLowerCase()
@@ -533,7 +638,6 @@ const LinkInBio = () => {
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [uploadingAbout, setUploadingAbout] = useState(false);
   const [uploadingHeader, setUploadingHeader] = useState(false);
-  const bgInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const aboutInputRef = useRef<HTMLInputElement>(null);
   const headerInputRef = useRef<HTMLInputElement>(null);
@@ -645,32 +749,23 @@ const LinkInBio = () => {
     reorderLinks.mutate(next.map((l) => l.id));
   };
 
-  const handleBgImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file || !user) return;
-
-    const validation = validateUpload(file, "bioMedia");
-    if (!validation.ok) {
-      toast.error(validation.reason);
-      return;
-    }
-
-    try {
-      setUploadingBg(true);
-      const path = `${ownerId}/bg-${Date.now()}.${file.name.split(".").pop() ?? "jpg"}`;
-      const { error: upErr } = await supabase.storage
-        .from("bio-media")
-        .upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
-      if (upErr) throw upErr;
-      const { data: urlData } = supabase.storage.from("bio-media").getPublicUrl(path);
-      setSettings((s) => ({ ...s, bgType: "image", bgImage: urlData.publicUrl }));
+  // Recebe o blob já ajustado/assado pelo preview (crop + zoom + rotação) e sobe
+  // como imagem de fundo. Como sai pronta, a página pública usa cover direto.
+  const handleBgBake = async (blob: Blob) => {
+    if (!user) return;
+    setUploadingBg(true);
+    const file = new File([blob], `bg-${Date.now()}.jpg`, { type: "image/jpeg" });
+    const url = await uploadBioImage(file, "bg");
+    if (url) {
+      setSettings((s) => ({ ...s, bgType: "image", bgImage: url }));
       setAppearanceDirty(true);
-    } catch {
-      toast.error("Erro ao enviar imagem de fundo.");
-    } finally {
-      setUploadingBg(false);
     }
+    setUploadingBg(false);
+  };
+
+  const handleBgRemove = () => {
+    setSettings((s) => ({ ...s, bgImage: null }));
+    setAppearanceDirty(true);
   };
 
   const uploadBioImage = async (file: File, prefix: string): Promise<string | null> => {
@@ -962,6 +1057,68 @@ const LinkInBio = () => {
               </p>
             </div>
 
+            {/* ── Compartilhado: link público + desempenho (vale nos dois estilos) ─── */}
+            <Card className="p-4 md:p-5 rounded-2xl border-border">
+              <Label className="text-xs font-display font-semibold uppercase tracking-wider text-muted-foreground/80">
+                Seu link público
+              </Label>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-sm font-body text-muted-foreground whitespace-nowrap">
+                  criasocialclub.com/bio/
+                </span>
+                <Input
+                  value={slug}
+                  onChange={(e) => {
+                    setSlug(e.target.value);
+                    setAppearanceDirty(true);
+                  }}
+                  placeholder="seu-nome"
+                  className="h-9 rounded-xl"
+                  maxLength={40}
+                />
+                <Button variant="outline" size="sm" onClick={handleCopy} disabled={!publicPath}>
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              {slug.trim() && (
+                <p className="mt-1.5 text-[11px] font-body flex items-center gap-1">
+                  {slugStatus === "checking" && (
+                    <span className="text-muted-foreground flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> verificando disponibilidade…</span>
+                  )}
+                  {slugStatus === "available" && (
+                    <span className="text-emerald-600 flex items-center gap-1"><Check className="h-3 w-3" /> disponível</span>
+                  )}
+                  {slugStatus === "taken" && (
+                    <span className="text-destructive flex items-center gap-1"><X className="h-3 w-3" /> já está em uso, escolha outro</span>
+                  )}
+                </p>
+              )}
+            </Card>
+
+            <Card className="p-4 md:p-5 rounded-2xl border-border">
+              <h2 className="font-display font-semibold text-foreground mb-4">Desempenho</h2>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-muted/40 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-display font-extrabold text-foreground">{bioViews.toLocaleString("pt-BR")}</p>
+                  <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide mt-0.5">Visitas</p>
+                </div>
+                <div className="bg-muted/40 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-display font-extrabold text-foreground">{totalClicks.toLocaleString("pt-BR")}</p>
+                  <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide mt-0.5">Cliques</p>
+                </div>
+                <div className="bg-muted/40 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-display font-extrabold text-foreground">{conversao}%</p>
+                  <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide mt-0.5">Conversão</p>
+                </div>
+              </div>
+              {topLink && (topLink.clicks ?? 0) > 0 && (
+                <p className="text-xs font-body text-muted-foreground mt-3">
+                  Link mais clicado: <span className="font-semibold text-foreground">{topLink.title}</span> · {topLink.clicks} cliques
+                </p>
+              )}
+              <p className="text-[11px] font-body text-muted-foreground/70 mt-2">Visitas contam 1x por visitante na sessão. Cliques somam todos os toques nos links.</p>
+            </Card>
+
             {/* ── Controles da Vitrine ─────────────── */}
             {settings.layout === "vitrine" && (
               <>
@@ -1223,80 +1380,12 @@ const LinkInBio = () => {
                   )}
 
                   {settings.bgType === "image" && (
-                    <div className="space-y-2">
-                      <input
-                        ref={bgInputRef}
-                        type="file"
-                        accept="image/*"
-                        onChange={handleBgImageUpload}
-                        className="hidden"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => bgInputRef.current?.click()}
-                        disabled={uploadingBg}
-                        className="cursor-pointer flex items-center gap-2 px-4 py-2 rounded-xl border border-dashed border-border hover:border-primary text-sm text-muted-foreground transition-colors disabled:opacity-50"
-                      >
-                        {uploadingBg ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Upload className="h-4 w-4" />
-                        )}
-                        {uploadingBg ? "Enviando..." : "Escolher imagem de fundo"}
-                      </button>
-                      {settings.bgImage && (
-                        <img
-                          src={settings.bgImage}
-                          alt="Fundo"
-                          className="w-full h-20 object-cover rounded-xl border border-border"
-                        />
-                      )}
-
-                      {/* Encaixe da imagem de fundo */}
-                      <div className="space-y-1 pt-1">
-                        <Label className="text-[11px] text-muted-foreground">Encaixe</Label>
-                        <div className="flex gap-2">
-                          {([
-                            { id: "cover", label: "Preencher" },
-                            { id: "contain", label: "Caber inteira" },
-                          ] as { id: BgImageSize; label: string }[]).map((o) => (
-                            <button
-                              key={o.id}
-                              type="button"
-                              onClick={() => patchSettings({ bgImageSize: o.id })}
-                              className={cn(
-                                "flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors",
-                                settings.bgImageSize === o.id ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"
-                              )}
-                            >
-                              {o.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground">Posição</Label>
-                        <div className="flex gap-2">
-                          {([
-                            { id: "top", label: "Topo" },
-                            { id: "center", label: "Centro" },
-                            { id: "bottom", label: "Base" },
-                          ] as { id: BgImagePosition; label: string }[]).map((o) => (
-                            <button
-                              key={o.id}
-                              type="button"
-                              onClick={() => patchSettings({ bgImagePosition: o.id })}
-                              className={cn(
-                                "flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors",
-                                settings.bgImagePosition === o.id ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"
-                              )}
-                            >
-                              {o.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
+                    <BgImageField
+                      bgImage={settings.bgImage}
+                      uploading={uploadingBg}
+                      onBake={handleBgBake}
+                      onRemove={handleBgRemove}
+                    />
                   )}
 
                   {/* Sobreposição escura (legibilidade sobre imagem/gradiente) */}
@@ -1348,67 +1437,6 @@ const LinkInBio = () => {
               </Card>
               </>
             )}
-
-            <Card className="p-4 md:p-5 rounded-2xl border-border">
-              <Label className="text-xs font-display font-semibold uppercase tracking-wider text-muted-foreground/80">
-                Seu link público
-              </Label>
-              <div className="mt-2 flex items-center gap-2">
-                <span className="text-sm font-body text-muted-foreground whitespace-nowrap">
-                  criasocialclub.com/bio/
-                </span>
-                <Input
-                  value={slug}
-                  onChange={(e) => {
-                    setSlug(e.target.value);
-                    setAppearanceDirty(true);
-                  }}
-                  placeholder="seu-nome"
-                  className="h-9 rounded-xl"
-                  maxLength={40}
-                />
-                <Button variant="outline" size="sm" onClick={handleCopy} disabled={!publicPath}>
-                  <Copy className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-              {slug.trim() && (
-                <p className="mt-1.5 text-[11px] font-body flex items-center gap-1">
-                  {slugStatus === "checking" && (
-                    <span className="text-muted-foreground flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> verificando disponibilidade…</span>
-                  )}
-                  {slugStatus === "available" && (
-                    <span className="text-emerald-600 flex items-center gap-1"><Check className="h-3 w-3" /> disponível</span>
-                  )}
-                  {slugStatus === "taken" && (
-                    <span className="text-destructive flex items-center gap-1"><X className="h-3 w-3" /> já está em uso, escolha outro</span>
-                  )}
-                </p>
-              )}
-            </Card>
-
-            <Card className="p-4 md:p-5 rounded-2xl border-border">
-              <h2 className="font-display font-semibold text-foreground mb-4">Desempenho</h2>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-muted/40 rounded-xl p-3 text-center">
-                  <p className="text-2xl font-display font-extrabold text-foreground">{bioViews.toLocaleString("pt-BR")}</p>
-                  <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide mt-0.5">Visitas</p>
-                </div>
-                <div className="bg-muted/40 rounded-xl p-3 text-center">
-                  <p className="text-2xl font-display font-extrabold text-foreground">{totalClicks.toLocaleString("pt-BR")}</p>
-                  <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide mt-0.5">Cliques</p>
-                </div>
-                <div className="bg-muted/40 rounded-xl p-3 text-center">
-                  <p className="text-2xl font-display font-extrabold text-foreground">{conversao}%</p>
-                  <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide mt-0.5">Conversão</p>
-                </div>
-              </div>
-              {topLink && (topLink.clicks ?? 0) > 0 && (
-                <p className="text-xs font-body text-muted-foreground mt-3">
-                  Link mais clicado: <span className="font-semibold text-foreground">{topLink.title}</span> · {topLink.clicks} cliques
-                </p>
-              )}
-              <p className="text-[11px] font-body text-muted-foreground/70 mt-2">Visitas contam 1x por visitante na sessão. Cliques somam todos os toques nos links.</p>
-            </Card>
 
             {settings.layout === "classic" && (
               <>
@@ -1686,80 +1714,12 @@ const LinkInBio = () => {
                 )}
 
                 {settings.bgType === "image" && (
-                  <div className="space-y-2">
-                    <input
-                      ref={bgInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleBgImageUpload}
-                      className="hidden"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => bgInputRef.current?.click()}
-                      disabled={uploadingBg}
-                      className="cursor-pointer flex items-center gap-2 px-4 py-2 rounded-xl border border-dashed border-border hover:border-primary text-sm text-muted-foreground transition-colors disabled:opacity-50"
-                    >
-                      {uploadingBg ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Upload className="h-4 w-4" />
-                      )}
-                      {uploadingBg ? "Enviando..." : "Escolher imagem de fundo"}
-                    </button>
-                    {settings.bgImage && (
-                      <img
-                        src={settings.bgImage}
-                        alt="Fundo"
-                        className="w-full h-20 object-cover rounded-xl border border-border"
-                      />
-                    )}
-
-                    {/* Encaixe da imagem de fundo */}
-                    <div className="space-y-1 pt-1">
-                      <Label className="text-[11px] text-muted-foreground">Encaixe</Label>
-                      <div className="flex gap-2">
-                        {([
-                          { id: "cover", label: "Preencher" },
-                          { id: "contain", label: "Caber inteira" },
-                        ] as { id: BgImageSize; label: string }[]).map((o) => (
-                          <button
-                            key={o.id}
-                            type="button"
-                            onClick={() => patchSettings({ bgImageSize: o.id })}
-                            className={cn(
-                              "flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors",
-                              settings.bgImageSize === o.id ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"
-                            )}
-                          >
-                            {o.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[11px] text-muted-foreground">Posição</Label>
-                      <div className="flex gap-2">
-                        {([
-                          { id: "top", label: "Topo" },
-                          { id: "center", label: "Centro" },
-                          { id: "bottom", label: "Base" },
-                        ] as { id: BgImagePosition; label: string }[]).map((o) => (
-                          <button
-                            key={o.id}
-                            type="button"
-                            onClick={() => patchSettings({ bgImagePosition: o.id })}
-                            className={cn(
-                              "flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors",
-                              settings.bgImagePosition === o.id ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"
-                            )}
-                          >
-                            {o.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                  <BgImageField
+                    bgImage={settings.bgImage}
+                    uploading={uploadingBg}
+                    onBake={handleBgBake}
+                    onRemove={handleBgRemove}
+                  />
                 )}
 
                 {/* Sobreposição escura (legibilidade sobre imagem/gradiente) */}
