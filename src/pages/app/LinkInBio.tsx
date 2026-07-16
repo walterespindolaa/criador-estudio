@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { sanitizeUrl } from "@/lib/sanitize";
+import { RichTextInput, renderRichText } from "@/lib/richText";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -66,6 +67,63 @@ type LeadFields = "email" | "phone" | "both";
 type BioAbout = { image: string | null; title: string; text: string };
 type BioHeader = { name: string; avatar: string; bio: string };
 type BioLeadForm = { title: string; subtitle: string; fields: LeadFields; buttonText: string; consentText: string };
+
+type BioLayout = "classic" | "vitrine";
+export type VitrineService = { id: string; title: string; desc: string; image: string | null; url: string };
+export type VitrineProduct = { id: string; title: string; desc: string; cover: string | null; ctaText: string; url: string };
+type VitrineSettings = { baseColor: string; cover: string | null; services: VitrineService[]; products: VitrineProduct[] };
+
+function genBioId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+const DEFAULT_VITRINE: VitrineSettings = { baseColor: "#0A0A0A", cover: null, services: [], products: [] };
+const VITRINE_COLORS = ["#0A0A0A", "#EA4918", "#0061EE", "#01A652", "#F27EB5", "#7C90F0"];
+
+function parseVitrineServices(raw: unknown): VitrineService[] {
+  if (!Array.isArray(raw)) return [];
+  const out: VitrineService[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const o = item as Record<string, unknown>;
+    out.push({
+      id: typeof o.id === "string" && o.id ? o.id : genBioId(),
+      title: typeof o.title === "string" ? o.title : "",
+      desc: typeof o.desc === "string" ? o.desc : "",
+      image: typeof o.image === "string" && o.image ? o.image : null,
+      url: typeof o.url === "string" ? o.url : "",
+    });
+  }
+  return out;
+}
+
+function parseVitrineProducts(raw: unknown): VitrineProduct[] {
+  if (!Array.isArray(raw)) return [];
+  const out: VitrineProduct[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const o = item as Record<string, unknown>;
+    out.push({
+      id: typeof o.id === "string" && o.id ? o.id : genBioId(),
+      title: typeof o.title === "string" ? o.title : "",
+      desc: typeof o.desc === "string" ? o.desc : "",
+      cover: typeof o.cover === "string" && o.cover ? o.cover : null,
+      ctaText: typeof o.ctaText === "string" && o.ctaText ? o.ctaText : "Garanta o seu",
+      url: typeof o.url === "string" ? o.url : "",
+    });
+  }
+  return out;
+}
+
+function parseVitrine(raw: unknown): VitrineSettings {
+  const v = (raw && typeof raw === "object" ? raw : {}) as Partial<VitrineSettings>;
+  return {
+    baseColor: typeof v.baseColor === "string" && v.baseColor ? v.baseColor : DEFAULT_VITRINE.baseColor,
+    cover: typeof v.cover === "string" && v.cover ? v.cover : null,
+    services: parseVitrineServices((v as { services?: unknown }).services),
+    products: parseVitrineProducts((v as { products?: unknown }).products),
+  };
+}
 
 const BIO_SECTION_IDS: BioSectionId[] = ["banner", "about", "links", "lead"];
 const SECTION_LABELS: Record<BioSectionId, string> = {
@@ -109,6 +167,8 @@ export type BioSettings = {
   header: BioHeader;
   lead: BioLeadForm;
   sections: BioSection[];
+  layout: BioLayout;
+  vitrine: VitrineSettings;
 };
 
 const DEFAULT_SETTINGS: BioSettings = {
@@ -131,6 +191,8 @@ const DEFAULT_SETTINGS: BioSettings = {
     consentText: "Ao enviar, você autoriza o uso dos seus dados para contato.",
   },
   sections: DEFAULT_SECTIONS,
+  layout: "classic",
+  vitrine: DEFAULT_VITRINE,
 };
 
 type BioThemePreset = {
@@ -276,6 +338,8 @@ function parseSettings(raw: unknown): BioSettings {
       consentText: typeof tl.consentText === "string" ? tl.consentText : DEFAULT_SETTINGS.lead.consentText,
     },
     sections: normalizeSections(t.sections),
+    layout: t.layout === "vitrine" ? "vitrine" : "classic",
+    vitrine: parseVitrine(t.vitrine),
   };
 }
 
@@ -561,6 +625,70 @@ const LinkInBio = () => {
     setAppearanceDirty(true);
   };
 
+  // ── Vitrine ──────────────────────────────────
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
+  const patchVitrine = (patch: Partial<BioSettings["vitrine"]>) => {
+    setSettings((s) => ({ ...s, vitrine: { ...s.vitrine, ...patch } }));
+    setAppearanceDirty(true);
+  };
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; e.target.value = "";
+    if (!file || !user) return;
+    setUploadingCover(true);
+    const url = await uploadBioImage(file, "cover");
+    if (url) patchVitrine({ cover: url });
+    setUploadingCover(false);
+  };
+
+  const addService = () => {
+    setSettings((s) => ({ ...s, vitrine: { ...s.vitrine, services: [...s.vitrine.services, { id: genBioId(), title: "", desc: "", image: null, url: "" }] } }));
+    setAppearanceDirty(true);
+  };
+  const updateService = (id: string, patch: Partial<VitrineService>) => {
+    setSettings((s) => ({ ...s, vitrine: { ...s.vitrine, services: s.vitrine.services.map((it) => (it.id === id ? { ...it, ...patch } : it)) } }));
+    setAppearanceDirty(true);
+  };
+  const removeService = (id: string) => {
+    setSettings((s) => ({ ...s, vitrine: { ...s.vitrine, services: s.vitrine.services.filter((it) => it.id !== id) } }));
+    setAppearanceDirty(true);
+  };
+  const moveService = (index: number, dir: -1 | 1) => {
+    setSettings((s) => {
+      const next = [...s.vitrine.services];
+      const j = index + dir;
+      if (j < 0 || j >= next.length) return s;
+      [next[index], next[j]] = [next[j], next[index]];
+      return { ...s, vitrine: { ...s.vitrine, services: next } };
+    });
+    setAppearanceDirty(true);
+  };
+
+  const addProduct = () => {
+    setSettings((s) => ({ ...s, vitrine: { ...s.vitrine, products: [...s.vitrine.products, { id: genBioId(), title: "", desc: "", cover: null, ctaText: "Garanta o seu", url: "" }] } }));
+    setAppearanceDirty(true);
+  };
+  const updateProduct = (id: string, patch: Partial<VitrineProduct>) => {
+    setSettings((s) => ({ ...s, vitrine: { ...s.vitrine, products: s.vitrine.products.map((it) => (it.id === id ? { ...it, ...patch } : it)) } }));
+    setAppearanceDirty(true);
+  };
+  const removeProduct = (id: string) => {
+    setSettings((s) => ({ ...s, vitrine: { ...s.vitrine, products: s.vitrine.products.filter((it) => it.id !== id) } }));
+    setAppearanceDirty(true);
+  };
+  const moveProduct = (index: number, dir: -1 | 1) => {
+    setSettings((s) => {
+      const next = [...s.vitrine.products];
+      const j = index + dir;
+      if (j < 0 || j >= next.length) return s;
+      [next[index], next[j]] = [next[j], next[index]];
+      return { ...s, vitrine: { ...s.vitrine, products: next } };
+    });
+    setAppearanceDirty(true);
+  };
+
   const handleSaveAppearance = async () => {
     const cleanSlug = normalizeSlug(slug);
     if (!cleanSlug) {
@@ -680,6 +808,143 @@ const LinkInBio = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-6">
           {/* ── Editor ──────────────────────────────── */}
           <div className="space-y-5">
+            {/* ── Estilo da página ─────────────────── */}
+            <Card className="p-4 md:p-5 rounded-2xl border-border">
+              <Label className="text-xs font-display font-semibold uppercase tracking-wider text-muted-foreground/80">
+                Estilo da página
+              </Label>
+              <div className="mt-2 inline-flex gap-1 rounded-full border border-border bg-muted/40 p-1">
+                {([
+                  { id: "classic", label: "Clássico" },
+                  { id: "vitrine", label: "Vitrine" },
+                ] as { id: BioSettings["layout"]; label: string }[]).map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => patchSettings({ layout: opt.id })}
+                    className={cn(
+                      "px-5 py-1.5 rounded-full text-sm font-display font-semibold transition-colors",
+                      settings.layout === opt.id
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Escolha um estilo e edite. Trocar de estilo não apaga o conteúdo do outro.
+              </p>
+            </Card>
+
+            {/* ── Controles da Vitrine ─────────────── */}
+            {settings.layout === "vitrine" && (
+              <Card className="p-4 md:p-5 rounded-2xl border-border space-y-6">
+                <h2 className="font-display font-semibold text-foreground">Vitrine</h2>
+
+                {/* Cor base */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-display font-semibold">Cor base</Label>
+                  <p className="text-xs text-muted-foreground -mt-1">Pinta os cards, etiquetas e detalhes.</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {VITRINE_COLORS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => patchVitrine({ baseColor: c })}
+                        className={cn(
+                          "w-8 h-8 rounded-full border-2 transition-all",
+                          settings.vitrine.baseColor === c ? "border-foreground ring-2 ring-foreground/20 scale-110" : "border-border"
+                        )}
+                        style={{ backgroundColor: c }}
+                        aria-label={`Cor ${c}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Capa */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-display font-semibold">Capa</Label>
+                  {settings.vitrine.cover ? (
+                    <div className="relative rounded-xl overflow-hidden border border-border">
+                      <img src={settings.vitrine.cover} alt="Capa" loading="lazy" className="w-full h-40 object-cover" />
+                      <button type="button" onClick={() => patchVitrine({ cover: null })} className="absolute top-1.5 right-1.5 bg-background/90 rounded-full p-1 shadow">
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </button>
+                    </div>
+                  ) : null}
+                  <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
+                  <Button type="button" variant="outline" size="sm" disabled={uploadingCover} onClick={() => coverInputRef.current?.click()}>
+                    <ImagePlus className="h-4 w-4 mr-2" />
+                    {uploadingCover ? "Enviando..." : settings.vitrine.cover ? "Trocar capa" : "Enviar capa"}
+                  </Button>
+                </div>
+
+                {/* Serviços */}
+                <div className="space-y-3 pt-4 border-t border-border">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-display font-semibold">Serviços</Label>
+                    <Button type="button" variant="secondary" size="sm" onClick={addService}>
+                      <Plus className="h-4 w-4 mr-1" /> Serviço
+                    </Button>
+                  </div>
+                  {settings.vitrine.services.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Nenhum serviço ainda.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {settings.vitrine.services.map((sv, i) => (
+                        <VitrineServiceEditor
+                          key={sv.id}
+                          item={sv}
+                          index={i}
+                          total={settings.vitrine.services.length}
+                          onUpdate={updateService}
+                          onRemove={removeService}
+                          onMove={moveService}
+                          onUploadImage={(file) => uploadBioImage(file, "service")}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Infoprodutos */}
+                <div className="space-y-3 pt-4 border-t border-border">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-display font-semibold">Infoprodutos</Label>
+                    <Button type="button" variant="secondary" size="sm" onClick={addProduct}>
+                      <Plus className="h-4 w-4 mr-1" /> Produto
+                    </Button>
+                  </div>
+                  {settings.vitrine.products.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Nenhum infoproduto ainda.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {settings.vitrine.products.map((pr, i) => (
+                        <VitrineProductEditor
+                          key={pr.id}
+                          item={pr}
+                          index={i}
+                          total={settings.vitrine.products.length}
+                          onUpdate={updateProduct}
+                          onRemove={removeProduct}
+                          onMove={moveProduct}
+                          onUploadImage={(file) => uploadBioImage(file, "product")}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <Button onClick={handleSaveAppearance} disabled={!appearanceDirty || isSavingAppearance} className="w-full" variant="hero">
+                  <Save className="h-4 w-4 mr-2" />
+                  {isSavingAppearance ? "Salvando..." : "Salvar alterações"}
+                </Button>
+              </Card>
+            )}
+
             <Card className="p-4 md:p-5 rounded-2xl border-border">
               <Label className="text-xs font-display font-semibold uppercase tracking-wider text-muted-foreground/80">
                 Seu link público
@@ -837,7 +1102,7 @@ const LinkInBio = () => {
                 </div>
               </div>
               <input value={settings.header.name} onChange={(e) => patchHeader({ name: e.target.value })} placeholder={profile?.name || "Seu nome"} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
-              <textarea value={settings.header.bio} onChange={(e) => patchHeader({ bio: e.target.value })} placeholder={profile?.bio || "Escreva uma bio curta"} rows={3} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm resize-y" />
+              <RichTextInput value={settings.header.bio} onChange={(v) => patchHeader({ bio: v })} placeholder={profile?.bio || "Escreva uma bio curta"} rows={3} />
             </Card>
 
             {/* ── Appearance ─────────────────────────── */}
@@ -1100,7 +1365,7 @@ const LinkInBio = () => {
                   {uploadingAbout ? "Enviando..." : settings.about.image ? "Trocar foto" : "Enviar foto"}
                 </Button>
                 <input value={settings.about.title} onChange={(e) => patchAbout({ title: e.target.value })} placeholder="Título (ex.: Sobre mim)" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
-                <textarea value={settings.about.text} onChange={(e) => patchAbout({ text: e.target.value })} placeholder="Escreva um pouco sobre você..." rows={4} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm resize-y" />
+                <RichTextInput value={settings.about.text} onChange={(v) => patchAbout({ text: v })} placeholder="Escreva um pouco sobre você..." rows={4} />
               </div>
 
               {/* Captura de lead */}
@@ -1466,6 +1731,10 @@ const BioPreview = memo(function BioPreview({ profile, links, settings }: Previe
   const isOutline = settings.buttonStyle === "outline";
   const hasSocials = SOCIAL_FIELDS.some((f) => settings.socialLinks[f.key].trim());
 
+  if (settings.layout === "vitrine") {
+    return <VitrinePreview profile={profile} settings={settings} />;
+  }
+
   return (
     <div className="w-[300px] mx-auto bg-white rounded-[40px] border-[8px] border-gray-800 p-2 shadow-2xl">
       <div
@@ -1584,5 +1853,189 @@ const BioPreview = memo(function BioPreview({ profile, links, settings }: Previe
     </div>
   );
 });
+
+const VitrinePreview = memo(function VitrinePreview({ profile, settings }: { profile: PreviewProps["profile"]; settings: BioSettings }) {
+  const base = settings.vitrine.baseColor;
+  const name = settings.header?.name || profile?.name || "Seu nome";
+  const bio = settings.header?.bio || profile?.bio || "";
+  const activeSocials = SOCIAL_FIELDS.filter((f) => settings.socialLinks[f.key].trim());
+
+  return (
+    <div className="w-[300px] mx-auto bg-white rounded-[40px] border-[8px] border-gray-800 p-2 shadow-2xl">
+      <div className="w-full h-[560px] rounded-[32px] overflow-y-auto" style={{ backgroundColor: "#F5F3E7" }}>
+        <div className="mx-4 mt-4">
+          <div
+            className="w-full h-40 rounded-2xl bg-cover bg-center shadow"
+            style={{ backgroundColor: "#cfcabb", backgroundImage: settings.vitrine.cover ? `url(${settings.vitrine.cover})` : undefined }}
+          />
+        </div>
+        <div className="px-4">
+          <h3 className="font-display font-extrabold text-lg text-gray-900 mt-3 leading-tight">{name}</h3>
+          {bio && <p className="text-xs text-gray-700 mt-1.5 whitespace-pre-line">{renderRichText(bio)}</p>}
+          {activeSocials.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2.5">
+              {activeSocials.map((f) => (
+                <span key={f.key} className="h-7 px-2.5 rounded-lg flex items-center text-[0.62rem] font-display font-bold tracking-wide text-white" style={{ backgroundColor: base }}>
+                  {f.label.toUpperCase()}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {settings.vitrine.services.length > 0 && (
+            <>
+              <p className="font-display font-extrabold text-sm text-gray-900 mt-5 mb-2">Serviços</p>
+              <div className="grid gap-2">
+                {settings.vitrine.services.map((sv) => (
+                  <div key={sv.id} className="h-14 rounded-xl overflow-hidden flex items-center justify-between" style={{ backgroundColor: base }}>
+                    <span className="text-white font-display font-bold text-xs pl-3 truncate">{sv.title || "Serviço"}</span>
+                    <span className="w-14 h-14 shrink-0 bg-cover bg-center" style={{ backgroundColor: "#b9b4a6", backgroundImage: sv.image ? `url(${sv.image})` : undefined }} />
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {settings.vitrine.products.length > 0 && (
+            <>
+              <p className="font-display font-extrabold text-sm text-gray-900 mt-5 mb-2">Infoprodutos</p>
+              <div className="flex gap-2.5 overflow-x-auto pb-2" style={{ scrollbarWidth: "none" }}>
+                {settings.vitrine.products.map((pr) => (
+                  <div key={pr.id} className="shrink-0 w-40 rounded-2xl overflow-hidden shadow" style={{ backgroundColor: base }}>
+                    <div className="h-24 bg-cover bg-center" style={{ backgroundColor: "#b9b4a6", backgroundImage: pr.cover ? `url(${pr.cover})` : undefined }} />
+                    <div className="px-2.5 py-2 text-white">
+                      <b className="font-display font-bold text-xs leading-tight block">{pr.title || "Infoproduto"}</b>
+                      {pr.desc && <p className="text-[0.62rem] text-white/80 leading-snug mt-1 whitespace-pre-line line-clamp-3">{renderRichText(pr.desc)}</p>}
+                      <span className="font-display font-bold text-[0.62rem] text-white underline decoration-2 underline-offset-2 mt-1.5 inline-block" style={{ textDecorationColor: "#FFCF03" }}>
+                        {pr.ctaText || "Garanta o seu"} →
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+        <div className="flex justify-center py-5">
+          <span className="inline-flex items-center gap-1.5 text-[10px] text-gray-500">
+            feito com <img src="/logo-cria.png" alt="Cria" style={{ height: 14 }} />
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// ────────────────────────────────────────────────────────────
+// Vitrine editors
+// ────────────────────────────────────────────────────────────
+
+function ReorderControls({ index, total, onMove }: { index: number; total: number; onMove: (index: number, dir: -1 | 1) => void }) {
+  return (
+    <div className="flex flex-col -my-1">
+      <button type="button" aria-label="Subir" onClick={() => onMove(index, -1)} disabled={index === 0} className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors">
+        <ChevronUp className="w-4 h-4" />
+      </button>
+      <button type="button" aria-label="Descer" onClick={() => onMove(index, 1)} disabled={index === total - 1} className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors">
+        <ChevronDown className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
+function VitrineServiceEditor({
+  item, index, total, onUpdate, onRemove, onMove, onUploadImage,
+}: {
+  item: VitrineService;
+  index: number;
+  total: number;
+  onUpdate: (id: string, patch: Partial<VitrineService>) => void;
+  onRemove: (id: string) => void;
+  onMove: (index: number, dir: -1 | 1) => void;
+  onUploadImage: (file: File) => Promise<string | null>;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    const url = await onUploadImage(file);
+    if (url) onUpdate(item.id, { image: url });
+    setUploading(false);
+  };
+  return (
+    <div className="rounded-xl border border-border bg-background p-3 space-y-2">
+      <div className="flex items-start gap-2">
+        <ReorderControls index={index} total={total} onMove={onMove} />
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="relative w-14 h-14 rounded-lg border border-dashed border-border bg-muted/40 hover:border-primary transition-colors flex items-center justify-center overflow-hidden shrink-0"
+          aria-label="Imagem do serviço"
+        >
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : item.image ? <img src={item.image} alt="" className="w-full h-full object-cover" /> : <ImagePlus className="h-4 w-4 text-muted-foreground" />}
+        </button>
+        <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+        <Input value={item.title} onChange={(e) => onUpdate(item.id, { title: e.target.value })} placeholder="Título do serviço" className="h-9 rounded-lg flex-1 min-w-0" maxLength={80} />
+        <button type="button" onClick={() => onRemove(item.id)} className="text-muted-foreground hover:text-red-500 transition p-1.5 rounded-lg hover:bg-red-50 shrink-0" aria-label="Remover">
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+      <RichTextInput value={item.desc} onChange={(v) => onUpdate(item.id, { desc: v })} placeholder="Descrição (opcional)" rows={2} />
+      <Input value={item.url} onChange={(e) => onUpdate(item.id, { url: e.target.value })} placeholder="https://" className="h-8 rounded-lg text-xs font-mono" maxLength={500} />
+    </div>
+  );
+}
+
+function VitrineProductEditor({
+  item, index, total, onUpdate, onRemove, onMove, onUploadImage,
+}: {
+  item: VitrineProduct;
+  index: number;
+  total: number;
+  onUpdate: (id: string, patch: Partial<VitrineProduct>) => void;
+  onRemove: (id: string) => void;
+  onMove: (index: number, dir: -1 | 1) => void;
+  onUploadImage: (file: File) => Promise<string | null>;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    const url = await onUploadImage(file);
+    if (url) onUpdate(item.id, { cover: url });
+    setUploading(false);
+  };
+  return (
+    <div className="rounded-xl border border-border bg-background p-3 space-y-2">
+      <div className="flex items-start gap-2">
+        <ReorderControls index={index} total={total} onMove={onMove} />
+        <Input value={item.title} onChange={(e) => onUpdate(item.id, { title: e.target.value })} placeholder="Título do infoproduto" className="h-9 rounded-lg flex-1 min-w-0" maxLength={80} />
+        <button type="button" onClick={() => onRemove(item.id)} className="text-muted-foreground hover:text-red-500 transition p-1.5 rounded-lg hover:bg-red-50 shrink-0" aria-label="Remover">
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+      {item.cover ? (
+        <div className="relative rounded-lg overflow-hidden border border-border">
+          <img src={item.cover} alt="Capa" loading="lazy" className="w-full h-24 object-cover" />
+          <button type="button" onClick={() => onUpdate(item.id, { cover: null })} className="absolute top-1.5 right-1.5 bg-background/90 rounded-full p-1 shadow">
+            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+          </button>
+        </div>
+      ) : null}
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+      <Button type="button" variant="outline" size="sm" disabled={uploading} onClick={() => inputRef.current?.click()}>
+        <ImagePlus className="h-4 w-4 mr-2" />
+        {uploading ? "Enviando..." : item.cover ? "Trocar capa" : "Enviar capa"}
+      </Button>
+      <RichTextInput value={item.desc} onChange={(v) => onUpdate(item.id, { desc: v })} placeholder="Descrição (opcional)" rows={2} />
+      <Input value={item.ctaText} onChange={(e) => onUpdate(item.id, { ctaText: e.target.value })} placeholder="Texto do CTA" className="h-9 rounded-lg" maxLength={40} />
+      <Input value={item.url} onChange={(e) => onUpdate(item.id, { url: e.target.value })} placeholder="https://" className="h-8 rounded-lg text-xs font-mono" maxLength={500} />
+    </div>
+  );
+}
 
 export default LinkInBio;

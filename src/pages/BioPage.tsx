@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Loader2, Instagram, Youtube, Twitter, Music2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { sanitizeUrl } from "@/lib/sanitize";
+import { renderRichText } from "@/lib/richText";
 import { cn } from "@/lib/utils";
 
 type BgType = "color" | "gradient" | "image";
@@ -22,6 +23,62 @@ type LeadFields = "email" | "phone" | "both";
 type BioAbout = { image: string | null; title: string; text: string };
 type BioHeader = { name: string; avatar: string; bio: string };
 type BioLeadForm = { title: string; subtitle: string; fields: LeadFields; buttonText: string; consentText: string };
+
+type BioLayout = "classic" | "vitrine";
+type VitrineService = { id: string; title: string; desc: string; image: string | null; url: string };
+type VitrineProduct = { id: string; title: string; desc: string; cover: string | null; ctaText: string; url: string };
+type VitrineSettings = { baseColor: string; cover: string | null; services: VitrineService[]; products: VitrineProduct[] };
+
+function genBioId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+const DEFAULT_VITRINE: VitrineSettings = { baseColor: "#0A0A0A", cover: null, services: [], products: [] };
+
+function parseVitrineServices(raw: unknown): VitrineService[] {
+  if (!Array.isArray(raw)) return [];
+  const out: VitrineService[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const o = item as Record<string, unknown>;
+    out.push({
+      id: typeof o.id === "string" && o.id ? o.id : genBioId(),
+      title: typeof o.title === "string" ? o.title : "",
+      desc: typeof o.desc === "string" ? o.desc : "",
+      image: typeof o.image === "string" && o.image ? o.image : null,
+      url: typeof o.url === "string" ? o.url : "",
+    });
+  }
+  return out;
+}
+
+function parseVitrineProducts(raw: unknown): VitrineProduct[] {
+  if (!Array.isArray(raw)) return [];
+  const out: VitrineProduct[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const o = item as Record<string, unknown>;
+    out.push({
+      id: typeof o.id === "string" && o.id ? o.id : genBioId(),
+      title: typeof o.title === "string" ? o.title : "",
+      desc: typeof o.desc === "string" ? o.desc : "",
+      cover: typeof o.cover === "string" && o.cover ? o.cover : null,
+      ctaText: typeof o.ctaText === "string" && o.ctaText ? o.ctaText : "Garanta o seu",
+      url: typeof o.url === "string" ? o.url : "",
+    });
+  }
+  return out;
+}
+
+function parseVitrine(raw: unknown): VitrineSettings {
+  const v = (raw && typeof raw === "object" ? raw : {}) as Partial<VitrineSettings>;
+  return {
+    baseColor: typeof v.baseColor === "string" && v.baseColor ? v.baseColor : DEFAULT_VITRINE.baseColor,
+    cover: typeof v.cover === "string" && v.cover ? v.cover : null,
+    services: parseVitrineServices((v as { services?: unknown }).services),
+    products: parseVitrineProducts((v as { products?: unknown }).products),
+  };
+}
 
 const BIO_SECTION_IDS: BioSectionId[] = ["banner", "about", "links", "lead"];
 const DEFAULT_SECTIONS: BioSection[] = [
@@ -59,6 +116,8 @@ type BioSettings = {
   header: BioHeader;
   lead: BioLeadForm;
   sections: BioSection[];
+  layout: BioLayout;
+  vitrine: VitrineSettings;
 };
 
 const DEFAULT_SETTINGS: BioSettings = {
@@ -81,6 +140,8 @@ const DEFAULT_SETTINGS: BioSettings = {
     consentText: "Ao enviar, você autoriza o uso dos seus dados para contato.",
   },
   sections: DEFAULT_SECTIONS,
+  layout: "classic",
+  vitrine: DEFAULT_VITRINE,
 };
 
 const STYLE_RADIUS: Record<ButtonStyle, string> = {
@@ -194,6 +255,8 @@ function parseSettings(raw: unknown): BioSettings {
       consentText: typeof tl.consentText === "string" ? tl.consentText : DEFAULT_SETTINGS.lead.consentText,
     },
     sections: normalizeSections(t.sections),
+    layout: t.layout === "vitrine" ? "vitrine" : "classic",
+    vitrine: parseVitrine(t.vitrine),
   };
 }
 
@@ -297,6 +360,10 @@ const BioPage = () => {
   const initial = headerName?.charAt(0)?.toUpperCase() || "C";
   const activeSocials = SOCIAL_FIELDS.filter((f) => settings.socialLinks[f.key].trim());
 
+  if (settings.layout === "vitrine") {
+    return <VitrineView settings={settings} headerName={headerName} headerBio={headerBio} activeSocials={activeSocials} />;
+  }
+
   return (
     <div
       className="min-h-screen w-full px-5 py-10 flex flex-col items-center"
@@ -381,7 +448,7 @@ const BioPage = () => {
           </h1>
           {headerBio && (
             <p className="text-sm text-gray-800 text-center mt-2 max-w-xs font-body whitespace-pre-line drop-shadow-sm">
-              {headerBio}
+              {renderRichText(headerBio)}
             </p>
           )}
         </motion.div>
@@ -403,7 +470,7 @@ const BioPage = () => {
                 )}
                 <div className="p-5">
                   {settings.about.title && <h2 className="font-display font-bold text-gray-900 mb-2">{settings.about.title}</h2>}
-                  {settings.about.text && <p className="text-sm text-gray-700 whitespace-pre-line font-body leading-relaxed">{settings.about.text}</p>}
+                  {settings.about.text && <p className="text-sm text-gray-700 whitespace-pre-line font-body leading-relaxed">{renderRichText(settings.about.text)}</p>}
                 </div>
               </div>
             );
@@ -495,16 +562,237 @@ const BioPage = () => {
           );
         })}
 
-        <p className="text-center text-[10px] text-gray-900/50 mt-8 font-body drop-shadow-sm">
-          Feito com 💜{" "}
-          <Link to="/" className="underline hover:text-gray-900/80 transition">
-            cria
-          </Link>
-        </p>
+        <BioFooter className="mt-8" />
       </div>
     </div>
   );
 };
+
+function BioFooter({ className }: { className?: string }) {
+  return (
+    <div className={cn("w-full flex justify-center", className)}>
+      <a
+        href="https://criasocialclub.com.br"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 text-[11px] text-gray-500 hover:opacity-80 transition-opacity"
+      >
+        <span>feito com</span>
+        <img src="/logo-cria.png" alt="Cria" style={{ height: 18 }} />
+      </a>
+    </div>
+  );
+}
+
+type SocialField = (typeof SOCIAL_FIELDS)[number];
+
+function VitrineView({
+  settings,
+  headerName,
+  headerBio,
+  activeSocials,
+}: {
+  settings: BioSettings;
+  headerName: string;
+  headerBio: string | null;
+  activeSocials: SocialField[];
+}) {
+  const base = settings.vitrine.baseColor;
+  const services = settings.vitrine.services;
+  const products = settings.vitrine.products;
+  const railRef = useRef<HTMLDivElement>(null);
+  const dragState = useRef({ down: false, startX: 0, startLeft: 0, moved: false });
+
+  const railMove = (dir: -1 | 1) => {
+    railRef.current?.scrollBy({ left: dir * 250, behavior: "smooth" });
+  };
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    const rail = railRef.current;
+    if (!rail) return;
+    dragState.current = { down: true, startX: e.pageX, startLeft: rail.scrollLeft, moved: false };
+  };
+  const onMouseMove = (e: React.MouseEvent) => {
+    const rail = railRef.current;
+    if (!rail || !dragState.current.down) return;
+    e.preventDefault();
+    const delta = e.pageX - dragState.current.startX;
+    if (Math.abs(delta) > 4) dragState.current.moved = true;
+    rail.scrollLeft = dragState.current.startLeft - delta;
+  };
+  const endDrag = () => {
+    dragState.current.down = false;
+  };
+
+  return (
+    <div className="min-h-screen w-full flex flex-col items-center" style={{ backgroundColor: "#F5F3E7" }}>
+      <div className="w-full max-w-[440px] pb-10">
+        {/* Capa */}
+        <div className="mx-5 mt-5">
+          <div
+            className="w-full h-[340px] rounded-[22px] overflow-hidden shadow-lg bg-cover bg-center"
+            style={{
+              backgroundColor: "#cfcabb",
+              backgroundImage: settings.vitrine.cover ? `url(${settings.vitrine.cover})` : undefined,
+            }}
+          />
+        </div>
+
+        <div className="px-5">
+          <h1 className="font-display font-extrabold text-[1.85rem] leading-[1.02] text-gray-900 mt-5">
+            {headerName}
+          </h1>
+          {headerBio && (
+            <p className="text-[0.95rem] text-gray-700 leading-relaxed mt-3 whitespace-pre-line">
+              {renderRichText(headerBio)}
+            </p>
+          )}
+
+          {activeSocials.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-4">
+              {activeSocials.map((f) => {
+                const handle = settings.socialLinks[f.key];
+                const href = sanitizeUrl(f.urlBuilder(handle));
+                if (!href) return null;
+                return (
+                  <a
+                    key={f.key}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="h-[34px] px-3.5 rounded-[10px] flex items-center font-display font-bold text-[0.76rem] tracking-wide text-white"
+                    style={{ backgroundColor: base }}
+                  >
+                    {f.label.toUpperCase()}
+                  </a>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Serviços */}
+          {services.length > 0 && (
+            <>
+              <div className="flex items-center gap-2 font-display font-extrabold text-[1.12rem] text-gray-900 mt-7 mb-3">
+                Serviços
+                <svg viewBox="0 0 24 24" className="w-4 h-4" style={{ fill: base }}><path d="M12 16l-6-6h12z" /></svg>
+              </div>
+              <div className="grid gap-3">
+                {services.map((s) => {
+                  const href = sanitizeUrl(s.url);
+                  const inner = (
+                    <>
+                      <span className="text-white font-display font-bold text-base pl-[18px]">{s.title}</span>
+                      <span
+                        className="w-[74px] h-[74px] shrink-0 bg-cover bg-center"
+                        style={{
+                          backgroundColor: "#b9b4a6",
+                          backgroundImage: s.image ? `url(${s.image})` : undefined,
+                        }}
+                      />
+                    </>
+                  );
+                  const cls = "h-[74px] rounded-2xl overflow-hidden flex items-center justify-between";
+                  return href ? (
+                    <a key={s.id} href={href} target="_blank" rel="noopener noreferrer" className={cls} style={{ backgroundColor: base }}>
+                      {inner}
+                    </a>
+                  ) : (
+                    <div key={s.id} className={cls} style={{ backgroundColor: base }}>
+                      {inner}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Infoprodutos */}
+        {products.length > 0 && (
+          <>
+            <div className="px-5 flex items-center gap-2 font-display font-extrabold text-[1.12rem] text-gray-900 mt-7 mb-3">
+              Infoprodutos
+              <svg viewBox="0 0 24 24" className="w-4 h-4" style={{ fill: base }}><path d="M12 16l-6-6h12z" /></svg>
+            </div>
+            <div
+              ref={railRef}
+              onMouseDown={onMouseDown}
+              onMouseMove={onMouseMove}
+              onMouseUp={endDrag}
+              onMouseLeave={endDrag}
+              className="flex gap-3.5 overflow-x-auto px-5 pb-2 cursor-grab select-none"
+              style={{ scrollSnapType: "x mandatory", scrollbarWidth: "none" }}
+            >
+              {products.map((p) => {
+                const href = sanitizeUrl(p.url);
+                return (
+                  <div
+                    key={p.id}
+                    className="shrink-0 w-[236px] rounded-[20px] overflow-hidden shadow-lg"
+                    style={{ backgroundColor: base, scrollSnapAlign: "center" }}
+                  >
+                    <div
+                      className="h-[150px] bg-cover bg-center"
+                      style={{
+                        backgroundColor: "#b9b4a6",
+                        backgroundImage: p.cover ? `url(${p.cover})` : undefined,
+                      }}
+                    />
+                    <div className="px-4 py-3.5 text-white">
+                      <b className="font-display font-bold text-[1.05rem] leading-tight block">{p.title}</b>
+                      {p.desc && (
+                        <p className="text-[0.84rem] text-white/80 leading-snug mt-1.5 mb-3 whitespace-pre-line">
+                          {renderRichText(p.desc)}
+                        </p>
+                      )}
+                      {href && (
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => {
+                            if (dragState.current.moved) e.preventDefault();
+                          }}
+                          className="font-display font-bold text-[0.9rem] text-white underline decoration-2 underline-offset-[3px]"
+                          style={{ textDecorationColor: "#FFCF03" }}
+                        >
+                          {p.ctaText} →
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="px-5 flex gap-3 pt-2.5">
+              <button
+                type="button"
+                aria-label="Anterior"
+                onClick={() => railMove(-1)}
+                className="w-[42px] h-[42px] rounded-full flex items-center justify-center"
+                style={{ backgroundColor: base }}
+              >
+                <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white"><path d="M15 5l-7 7 7 7z" /></svg>
+              </button>
+              <button
+                type="button"
+                aria-label="Próximo"
+                onClick={() => railMove(1)}
+                className="w-[42px] h-[42px] rounded-full flex items-center justify-center"
+                style={{ backgroundColor: base }}
+              >
+                <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white"><path d="M9 5l7 7-7 7z" /></svg>
+              </button>
+            </div>
+          </>
+        )}
+
+        <BioFooter className="mt-8" />
+      </div>
+    </div>
+  );
+}
 
 function LeadForm({
   slug, config, buttonColor, buttonTextColor, radius,
