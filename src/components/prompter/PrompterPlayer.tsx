@@ -628,10 +628,30 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
        pessoa) e brilho verde quando está captando som de verdade (VU). */
     let micEnabled = true, vuIv: any = null;
     function setMicIcon() {
-      $("#micBtn").innerHTML = '<i data-lucide="' + (micEnabled ? "mic" : "mic-off") + '"></i><small>' + (micEnabled ? "Mic" : "Mic off") + "</small>";
-      $("#micBtn").classList.toggle("off", !micEnabled);
+      const t = micStream && micStream.getAudioTracks()[0];
+      const muted = !!(t && (t.muted || t.readyState !== "live"));
+      const label = !micEnabled ? "Mic off" : muted ? "Mudo" : "Mic";
+      const icon = !micEnabled || muted ? "mic-off" : "mic";
+      $("#micBtn").innerHTML = '<i data-lucide="' + icon + '"></i><small>' + label + "</small>";
+      $("#micBtn").classList.toggle("off", !micEnabled || muted);
       if (!micEnabled) $("#micBtn").classList.remove("hot");
       refreshIcons($("#micBtn"));
+    }
+    /* o iOS muta/desmuta a trilha por conta própria — reflete no botão na hora */
+    function watchMicTrack() {
+      const t = micStream && micStream.getAudioTracks()[0];
+      if (!t) return;
+      t.onmute = t.onunmute = t.onended = () => { if (!disposed) setMicIcon(); };
+    }
+    /* captura nova + grafo novo + VU; usado no toggle e depois da câmera */
+    async function refreshMicPipeline() {
+      forceFreshMic();
+      await ensureMic();
+      if (!micLive()) return false;
+      micTrackForRecording();
+      try { if (audioCtx && audioCtx.state === "suspended") audioCtx.resume(); } catch { /* ok */ }
+      watchMicTrack(); startVu();
+      return true;
     }
     function stopVu() { if (vuIv) { clearInterval(vuIv); vuIv = null; } $("#micBtn")?.classList.remove("hot"); }
     function startVu() {
@@ -645,12 +665,15 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       }, 200);
     }
     $("#micBtn").onclick = async () => {
-      micEnabled = !micEnabled;
-      if (micEnabled) {
-        await ensureMic();
-        if (micLive()) { micTrackForRecording(); startVu(); toast("Microfone ativado. O botão brilha verde quando está captando som."); }
-        else toast("Microfone habilitado, mas ainda sem acesso. Confere a permissão.", 5000);
+      const t = micStream && micStream.getAudioTracks()[0];
+      const wasMuted = micEnabled && !!(t && (t.muted || t.readyState !== "live"));
+      /* botão mudo = a pessoa quer CONSERTAR, não desligar: recaptura na hora */
+      if (!micEnabled || wasMuted) {
+        micEnabled = true;
+        const ok = await refreshMicPipeline();
+        toast(ok ? "Microfone renovado. Fala algo: o botão brilha verde quando está captando. 🎙️" : "Ainda sem acesso ao microfone. Confere a permissão.", 5000);
       } else {
+        micEnabled = false;
         toast("Microfone desativado: o vídeo sai sem áudio.");
       }
       setMicIcon();
@@ -729,7 +752,12 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       try { await camVideo.play(); } catch { /* autoplay */ }
       root.classList.add("camOn");
       setCamIcon();
-      if (micEnabled && micLive()) { micTrackForRecording(); startVu(); } /* VU: botão Mic brilha com o som */
+      /* ligar a câmera às vezes derruba/silencia o mic no iOS: confere e,
+         se preciso, recaptura (sem novo prompt dentro da mesma sessão) */
+      if (micEnabled) {
+        if (!micLive()) await refreshMicPipeline();
+        else { micTrackForRecording(); watchMicTrack(); startVu(); }
+      }
       setMicIcon();
       const s = camStream.getVideoTracks()[0].getSettings();
       toast("Câmera ligada: " + (s.width || "?") + "×" + (s.height || "?") + (micEnabled && micLive() ? " · mic OK" : " · SEM MIC"));
