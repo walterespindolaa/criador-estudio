@@ -265,7 +265,17 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     function requestWake() {
       if ("wakeLock" in navigator) (navigator as any).wakeLock.request("screen").then((w: any) => (wakeLock = w)).catch(() => {});
     }
-    const onVis = () => { if (document.visibilityState === "visible" && !disposed) requestWake(); };
+    const onVis = () => {
+      if (disposed) return;
+      if (document.visibilityState === "visible") { requestWake(); return; }
+      /* app foi pro fundo sem estar gravando: solta o mic na hora (o indicador
+         laranja do iPhone apaga). Na volta, o app recaptura sem novo prompt. */
+      if (!(recorder && recorder.state === "recording")) {
+        if (sessionMic) { try { sessionMic.getTracks().forEach((t) => t.stop()); } catch { /* ok */ } sessionMic = null; }
+        micStream = null; resetAudioGraph(); stopVu();
+        try { setMicIcon(); } catch { /* ok */ }
+      }
+    };
     document.addEventListener("visibilitychange", onVis);
 
     /* ---------- settings apply ---------- */
@@ -874,7 +884,11 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       chunks = [];
       recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
       recorder.onstop = saveRecording;
-      recorder.start(1000);
+      /* iOS: gravar em BLOCO ÚNICO. Com timeslice (start(1000)) o WebKit entrega
+         fatias de MP4 sem finalização — duração 00:00, player não toca e o
+         Fotos RECUSA salvar. Era a causa raiz do "não salva na galeria".
+         Android/desktop (webm) seguem com fatias, que lá funcionam. */
+      if (isIOS) recorder.start(); else recorder.start(1000);
       startAudioWatch();
       $("#shutter").classList.add("rec"); $("#shutterLbl").textContent = "Parar";
       recT0 = Date.now(); $("#recTimer").style.display = "inline-block";
@@ -1004,8 +1018,10 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       if (pendingUrl) { URL.revokeObjectURL(pendingUrl); pendingUrl = ""; }
       stopMirrorPipe();
       stopCamera(true);
-      /* o MIC fica vivo na sessão (sessionMic) de propósito: soltar a trilha
-         faria o iOS pedir permissão de novo na próxima entrada no player */
+      /* solta TUDO ao sair: indicador de mic aceso fora do player é quebra de
+         confiança. Dentro da mesma sessão da página o iOS NÃO re-pergunta a
+         permissão no próximo getUserMedia, então o cache vivo era desnecessário. */
+      if (sessionMic) { try { sessionMic.getTracks().forEach((t) => t.stop()); } catch { /* ok */ } sessionMic = null; }
       micStream = null;
       resetAudioGraph();
       if (audioCtx) { audioCtx.close().catch(() => {}); audioCtx = null; }
