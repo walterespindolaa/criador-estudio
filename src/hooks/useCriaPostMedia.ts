@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import * as tus from "tus-js-client";
-import heic2any from "heic2any";
 import { BUNNY_CDN_HOSTNAME } from "@/lib/constants";
 
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
@@ -54,6 +53,9 @@ export function useCriaPostMedia(postId: string | null) {
     mutationFn: async (file: File) => {
       let blob: Blob = file, name = file.name, type = file.type;
       if (isHeic(file)) {
+        // Import dinâmico: o heic2any é pesado (~350 kB gzip). Só baixa quando
+        // a pessoa realmente sobe um HEIC, em vez de pesar toda abertura de post.
+        const heic2any = (await import("heic2any")).default;
         const out = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.85 });
         blob = Array.isArray(out) ? out[0] : out;
         name = name.replace(/\.(heic|heif)$/i, ".jpg"); type = "image/jpeg";

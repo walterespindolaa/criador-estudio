@@ -41,7 +41,6 @@ import { toast } from "sonner";
 import { fireConfetti } from "@/lib/confetti";
 import { FORMAT_LABELS, PLATFORMS, FORMATS, STATUS_OPTIONS, BUNNY_CDN_HOSTNAME } from "@/lib/constants";
 import * as tus from "tus-js-client";
-import heic2any from "heic2any";
 
 const VIDEO_EXTS = ["mov", "mp4", "m4v", "webm", "avi", "mkv", "hevc", "3gp"];
 const HEIC_EXTS = ["heic", "heif"];
@@ -706,6 +705,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
             console.warn("[upload] heic native decode failed, trying heic2any", { name: initialRaw.name, errNative });
             // Fallback: heic2any (libheif WASM), funciona em Chrome/Firefox/Windows.
             try {
+              // Import dinâmico: heic2any é pesado (~350 kB gzip). Só baixa no
+              // fallback real de conversão HEIC, não a cada abertura de post.
+              const heic2any = (await import("heic2any")).default;
               const out = await heic2any({ blob: raw, toType: "image/jpeg", quality: 0.85 });
               const blob = Array.isArray(out) ? out[0] : out;
               converted = new File(
