@@ -87,7 +87,7 @@ export function GoalsTab({
           </h2>
           <p className="text-xs text-muted-foreground font-body">Defina objetivos claros e acompanhe seu progresso.</p>
         </div>
-        <Button onClick={() => onShowNewGoal(true)} className="gap-1.5">
+        <Button data-tour="metas-nova" onClick={() => onShowNewGoal(true)} className="gap-1.5">
           <Plus className="h-4 w-4" /> Nova meta
         </Button>
       </div>

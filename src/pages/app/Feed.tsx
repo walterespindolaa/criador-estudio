@@ -270,7 +270,7 @@ const Feed = () => {
               </div>
             </div>
             <div className="md:hidden">
-              <Button size="sm" className="shrink-0" onClick={() => setMobileSidebarOpen(true)}>
+              <Button data-tour="feed-adicionar" size="sm" className="shrink-0" onClick={() => setMobileSidebarOpen(true)}>
                 <LayoutGrid className="h-4 w-4 mr-1.5" />
                 Adicionar ({availablePosts.length})
               </Button>
@@ -285,7 +285,7 @@ const Feed = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-4 md:gap-6">
-            <aside className="hidden md:flex flex-col h-[calc(100vh-180px)] sticky top-4 bg-card rounded-xl border border-border overflow-hidden">
+            <aside data-tour="feed-sidebar" className="hidden md:flex flex-col h-[calc(100vh-180px)] sticky top-4 bg-card rounded-xl border border-border overflow-hidden">
               <div className="px-3 py-2.5 border-b border-border">
                 <p className="text-xs font-body font-semibold uppercase tracking-widest text-muted-foreground">
                   Posts disponíveis
@@ -294,7 +294,7 @@ const Feed = () => {
               {sidebarPanel}
             </aside>
 
-            <section>
+            <section data-tour="feed-grid">
               <FeedProfileHeader profile={profile} postCount={gridPosts.length} />
               <FeedGrid
                 posts={gridPosts}

@@ -107,7 +107,7 @@ export default function Insights() {
             <p className="text-muted-foreground font-body mt-0.5 text-sm">{t("insights.subtitle")}</p>
           </div>
         </div>
-        <div className="bg-card border border-border rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-5">
+        <div data-tour="insights-conta" className="bg-card border border-border rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-5">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#515BD4] grid place-items-center shrink-0">
             <Instagram className="h-7 w-7 text-white" />
           </div>
@@ -154,7 +154,7 @@ export default function Insights() {
       </div>
 
       {/* barra da conta */}
-      <div className="bg-card border border-border rounded-2xl px-4 py-3 flex items-center gap-3 flex-wrap">
+      <div data-tour="insights-conta" className="bg-card border border-border rounded-2xl px-4 py-3 flex items-center gap-3 flex-wrap">
         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#515BD4] grid place-items-center text-white font-bold shrink-0">
           {(conn.username ?? "?").charAt(0).toUpperCase()}
         </div>
@@ -176,7 +176,7 @@ export default function Insights() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
+      <div data-tour="insights-kpis" className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
         <Kpi icon={Users} label={t("insights.kpiFollowers")} value={fmt(kpis?.followers)} delta={kpis ? `${kpis.followersDelta >= 0 ? "▲" : "▼"} ${Math.abs(kpis.followersDelta)} (30d)` : undefined} up={(kpis?.followersDelta ?? 0) >= 0} />
         <Kpi icon={Eye} label={t("insights.kpiReach")} value={fmt(kpis?.reach)} />
         <Kpi icon={Zap} label={t("insights.kpiInteractions")} value={fmt(kpis?.interactions)} />
@@ -235,7 +235,7 @@ export default function Insights() {
       )}
 
       {/* posts + vínculo manual */}
-      <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-7 mb-3">{t("insights.postsTitle")}</h2>
+      <h2 data-tour="insights-posts" className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-7 mb-3">{t("insights.postsTitle")}</h2>
       {media.length === 0 ? (
         <p className="text-sm text-muted-foreground">Nenhum post coletado ainda. Clique em “Atualizar” após conectar.</p>
       ) : (

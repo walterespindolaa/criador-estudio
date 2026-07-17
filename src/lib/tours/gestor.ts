@@ -127,14 +127,14 @@ export const TOURS_GESTOR: TourConfig[] = [
     steps: [
       {
         target: '[data-tour="hub-clientes"]',
-        title: "Escolha o cliente",
-        body: "Cada card mostra quantas ideias estão pendentes pra aquele cliente. Clicou, você entra na análise dele: os concorrentes que você cadastrou e o que eles estão postando que funciona.",
+        title: "Quem precisa de atenção",
+        body: "O HUB puxa pra cima o cliente que precisa de você: sem concorrente no radar, análise esfriando ou pautas prontas que ninguém abriu. Clicou no card, você cai na pesquisa daquele cliente.",
         placement: "bottom",
       },
       {
         target: '[data-tour="hub-avulsa"]',
-        title: "Análise avulsa",
-        body: "Quer espiar um perfil sem amarrar a um cliente (uma prospecção, uma referência)? Rode aqui. As ideias ficam guardadas no HUB e você pode aproveitar depois.",
+        title: "Espiar quem não é cliente",
+        body: "Uma prospecção, uma referência de outro nicho? Rode a análise avulsa aqui. Ela fica guardada no HUB, sem entrar na ficha de ninguém.",
         placement: "top",
       },
     ],

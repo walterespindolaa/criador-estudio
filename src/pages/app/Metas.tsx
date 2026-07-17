@@ -189,7 +189,7 @@ const Metas = () => {
           onExpandedGoalChange={setExpandedGoal}
         />
 
-        <div className="mt-8 rounded-2xl border border-border bg-card p-5">
+        <div data-tour="metas-reflexao" className="mt-8 rounded-2xl border border-border bg-card p-5">
           <div className="flex items-center gap-2 mb-4">
             <ListChecks className="h-4 w-4 text-primary" />
             <h2 className="font-display font-bold text-lg">Reflexão do mês</h2>

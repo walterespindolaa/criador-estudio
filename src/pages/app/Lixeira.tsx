@@ -21,7 +21,7 @@ export default function Lixeira() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="pb-24 md:pb-0">
-      <div className="flex items-center gap-3 mb-2">
+      <div data-tour="lixeira-header" className="flex items-center gap-3 mb-2">
         <div className="w-10 h-10 rounded-xl bg-muted grid place-items-center shrink-0"><Trash2 className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} /></div>
         <div>
           <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Lixeira</h1>
@@ -38,7 +38,7 @@ export default function Lixeira() {
           <p className="text-xs font-body text-muted-foreground mt-1">O que você excluir aparece aqui por 30 dias.</p>
         </div>
       ) : (
-        <div className="space-y-2 mt-4">
+        <div data-tour="lixeira-itens" className="space-y-2 mt-4">
           {all.map((row) => (
             <TrashItem key={`${row.kind}:${row.id}`} row={row}
               onRestore={() => restore.mutate({ id: row.id, kind: row.kind })}

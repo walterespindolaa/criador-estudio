@@ -1638,6 +1638,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   </TabsTrigger>
                   <TabsTrigger
                     value="roteiro"
+                    data-tour="editor-tab-roteiro"
                     className="rounded-full px-3.5 py-1.5 font-body text-[13px] font-semibold text-muted-foreground transition-colors data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm hover:text-foreground"
                   >
                     <PenLine className="h-3.5 w-3.5 mr-1.5" /> Roteiro

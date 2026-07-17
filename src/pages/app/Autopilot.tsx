@@ -193,7 +193,7 @@ export default function Autopilot() {
       <div className="flex flex-col md:flex-row gap-5 items-start">
         {/* Sidebar de configuração */}
         <aside className="w-full md:w-[300px] md:shrink-0 md:sticky md:top-4 space-y-3">
-          <div className="bg-card border border-border rounded-2xl p-4 space-y-4">
+          <div data-tour="plano-config" className="bg-card border border-border rounded-2xl p-4 space-y-4">
             <div>
               <p className="text-[13px] font-body text-muted-foreground mb-1.5">Período</p>
               <div className="flex rounded-lg border border-border overflow-hidden">
@@ -259,7 +259,7 @@ export default function Autopilot() {
               <p className="text-[13px] font-body text-muted-foreground mb-1.5">Público (opcional)</p>
               <input value={publico} onChange={(e) => setPublico(e.target.value)} placeholder="Ex.: mães empreendedoras 25-40" className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm font-body outline-none focus:ring-1 focus:ring-primary/30" />
             </div>
-            <Button onClick={generate} disabled={loading} className="w-full gap-2">
+            <Button data-tour="plano-gerar" onClick={generate} disabled={loading} className="w-full gap-2">
               {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Gerando…</> : <><Sparkles className="h-4 w-4" /> Gerar cronograma</>}
             </Button>
             {!hasBrandContext && <p className="text-[11px] text-muted-foreground font-body">Dica: preencha o Brandbook pra IA acertar mais o seu tom.</p>}
@@ -281,7 +281,7 @@ export default function Autopilot() {
         </aside>
 
         {/* Resultados */}
-        <section className="flex-1 min-w-0 w-full">
+        <section data-tour="plano-resultado" className="flex-1 min-w-0 w-full">
           {items.length === 0 ? (
             <div className="border border-dashed border-border rounded-2xl py-16 px-6 text-center">
               <Wand2 className="h-7 w-7 text-muted-foreground/40 mx-auto mb-3" strokeWidth={1.5} />

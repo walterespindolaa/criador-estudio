@@ -48,7 +48,7 @@ export default function Modulos() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 pb-24 md:pb-6">
-      <header className="mb-6">
+      <header data-tour="modulos-header" className="mb-6">
         <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Módulos</h1>
         <p className="text-sm text-muted-foreground font-body mt-1">
           Ferramentas extras pra sua operação. Cada módulo é uma assinatura mensal separada, contrate só o que usar, cancele quando quiser.
@@ -60,7 +60,7 @@ export default function Modulos() {
           {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-44 rounded-2xl" />)}
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div data-tour="modulos-grid" className="grid sm:grid-cols-2 gap-4">
           {modules.map((m) => (
             <ModuleCard
               key={m.code}

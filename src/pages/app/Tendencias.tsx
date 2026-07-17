@@ -51,7 +51,7 @@ export default function Tendencias() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div data-tour="tend-lista" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {trends.map((t) => {
               const k = KIND[t.kind] ?? KIND.tema;
               return (
@@ -70,7 +70,7 @@ export default function Tendencias() {
             })}
           </div>
 
-          <div className="mt-6 flex items-center gap-2 rounded-xl bg-primary/5 border border-primary/15 px-4 py-3">
+          <div data-tour="tend-plano" className="mt-6 flex items-center gap-2 rounded-xl bg-primary/5 border border-primary/15 px-4 py-3">
             <Wand2 className="h-4 w-4 text-primary shrink-0" />
             <p className="text-xs font-body text-foreground/80">
               O <Link to="/app/autopilot" className="text-primary font-medium">Cria Plano</Link> usa esse banco como contexto ao montar seu cronograma.

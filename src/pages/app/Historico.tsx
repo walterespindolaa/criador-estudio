@@ -141,7 +141,7 @@ const Historico = () => {
 
         {/* Stat cards */}
         {posts.length > 0 && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          <div data-tour="historico-stats" className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
             <div className="bg-card rounded-xl p-4 border border-border">
               <BarChart3 className="h-4 w-4 text-primary mb-1" />
               <p className="text-xl font-bold text-foreground tabular-nums tracking-tight">{stats.total}</p>
@@ -167,7 +167,7 @@ const Historico = () => {
 
         {/* Filters, barra organizada por grupo */}
         {posts.length > 0 && (
-          <div className="bg-card border border-border rounded-2xl p-3 mb-6 flex flex-col gap-3 md:flex-row md:items-center md:flex-wrap md:gap-x-6 md:gap-y-3">
+          <div data-tour="historico-filtros" className="bg-card border border-border rounded-2xl p-3 mb-6 flex flex-col gap-3 md:flex-row md:items-center md:flex-wrap md:gap-x-6 md:gap-y-3">
             {/* Plataforma */}
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider shrink-0">Plataforma</span>

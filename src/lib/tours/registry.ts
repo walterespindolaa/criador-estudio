@@ -68,20 +68,23 @@ export function findTourById(id: string): TourConfig | undefined {
 
 /** Sequência do "tour completo" (modo treinamento) por área. */
 export const TRAINING_SEQUENCES: Record<"criador" | "gestor", string[]> = {
+  // "estudio" saiu da sequência: a rota /app/estudio não existe mais (virou a
+  // aba Arte do editor de post) e o tour completo navegava pra um 404.
   criador: [
     "dashboard",
     "ideias",
     "criando",
     "tarefas",
     "metas",
+    "autopilot",
     "stories",
+    "prompter",
     "tendencias",
     "feed",
     "brandbook",
     "linkinbio",
     "media-kit",
     "biblioteca",
-    "estudio",
     "collabs",
     "aprovacao",
     "historico",

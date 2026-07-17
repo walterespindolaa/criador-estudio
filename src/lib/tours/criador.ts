@@ -180,10 +180,24 @@ export const TOURS_CRIADOR: TourConfig[] = [
         mobileBody: "Na área de conteúdo do post você encontra as abas. Legenda: o texto do post. Roteiro: cena a cena. Arte: o prompt da imagem, na sua marca. Tarefas: o que falta pra esse post sair. Notas: anotações livres. Refs: referências e inspiração.",
         placement: "bottom",
       },
+      // O "amarrar com o que está quente" MUDOU de casa: saiu da aba Arte e foi
+      // pro escritor de roteiro (CarouselWriter). O passo antigo apontava pra um
+      // data-tour="estudio-tempo" que não existe mais em lugar nenhum e caía no
+      // card centralizado genérico. Agora o passo mostra o escritor de roteiro
+      // (que só existe em formatos com páginas/cenas; num post de foto o card
+      // aparece centralizado, e o texto continua fazendo sentido).
+      {
+        target: '[data-tour="roteiro-ia"]',
+        openFirst: '[data-tour="editor-tab-roteiro"]',
+        mobileOpenFirst: '[data-tour="editor-tab-roteiro"]',
+        title: "Roteiro com IA (e o que está quente)",
+        body: "Na aba Roteiro, a IA escreve as páginas ou cenas do post no tom da sua marca. E o botão de amarrar com o que está quente puxa o assunto do momento pro texto: o post fica atual, mas envelhece em algumas semanas. Sem ele, sai atemporal, que serve o ano inteiro.",
+        placement: "bottom",
+      },
       // ── CRIA ESTÚDIO ───────────────────────────────────────────────────
-      // Estes 3 passos existem porque este é o recurso mais fácil de ser mal
+      // Estes passos existem porque este é o recurso mais fácil de ser mal
       // entendido do sistema: a pessoa pode achar que o CRIA vai GERAR a
-      // imagem (não vai — ele entrega o prompt), e pode achar que o resultado
+      // imagem (não vai, ele entrega o prompt), e pode achar que o resultado
       // ruim é culpa da IA (quase sempre é o Brandbook vazio).
       {
         target: '[data-tour="estudio-base"]',
@@ -192,19 +206,13 @@ export const TOURS_CRIADOR: TourConfig[] = [
         openFirst: '[data-tour="editor-tab-arte"]',
         mobileOpenFirst: '[data-tour="editor-tab-arte"]',
         title: "Arte: o prompt, não a imagem",
-        body: "O CRIA não gera a imagem — ele escreve o PROMPT dela, com as suas cores e a sua fonte, pra você colar no gerador que já usa (Midjourney, Canva, ChatGPT). Repare nesta linha: ela diz de onde o prompt vai nascer. Se você já escreveu o texto das páginas, ele usa o SEU texto. Se não escreveu, ele parte só do título — e aí sai mais genérico.",
-        placement: "bottom",
-      },
-      {
-        target: '[data-tour="estudio-tempo"]',
-        title: "Atemporal ou em cima do que está quente",
-        body: "Atemporal serve o ano inteiro: você reposta em janeiro sem parecer velho. Amarrado ao que está quente conversa com o assunto do momento, mas envelhece em algumas semanas. Não existe certo — existe o que você quer daquele post.",
+        body: "O CRIA não gera a imagem: ele escreve o PROMPT dela, com as suas cores e a sua fonte, pra você colar no gerador que já usa (Midjourney, Canva, ChatGPT). Repare nesta linha: ela diz de onde o prompt vai nascer. Se você já escreveu o texto das páginas, ele usa o SEU texto. Se não escreveu, ele parte só do título, e aí sai mais genérico.",
         placement: "bottom",
       },
       {
         target: '[data-tour="estudio-gerar"]',
         title: "Um prompt por página, todos no mesmo estilo",
-        body: "Num carrossel, cada página vira um prompt — mas todos carregam o MESMO bloco de estilo, senão você recebe 5 imagens de 5 mundos diferentes. Sai em português pra você conferir, e o botão copia em inglês, que é o que os geradores entendem melhor. Custa 1 geração da sua cota de IA.",
+        body: "Num carrossel, cada página vira um prompt, mas todos carregam o MESMO bloco de estilo, senão você recebe 5 imagens de 5 mundos diferentes. Sai em português pra você conferir, e o botão copia em inglês, que é o que os geradores entendem melhor. Custa 1 geração da sua cota de IA.",
         placement: "top",
       },
       {
@@ -241,15 +249,28 @@ export const TOURS_CRIADOR: TourConfig[] = [
   {
     id: "metas",
     route: "/app/metas",
-    title: "Cria Plano: suas metas",
+    title: "Metas e marcos",
     valueProp:
-      "Constância sem meta é sorte. Aqui você define quantos posts quer publicar por semana ou mês, e o CRIA acompanha: te avisa quando está atrasado e comemora quando você bate a meta.",
+      "Constância sem meta é sorte. Aqui você define objetivos claros (posts, seguidores, faturamento) e o CRIA acompanha: progresso visível, marcos por etapa e a reflexão do mês pra aprender com o que passou.",
     benefits: [
-      "Meta de publicação clara, do seu tamanho",
-      "O Dashboard te cobra a meta com carinho",
-      "Progresso visível: quanto falta pra fechar a semana",
+      "Metas claras, do seu tamanho",
+      "Marcos quebram o objetivo em etapas",
+      "Reflexão mensal pra evoluir de verdade",
     ],
-    steps: [],
+    steps: [
+      {
+        target: '[data-tour="metas-nova"]',
+        title: "Criar uma meta",
+        body: "Defina um objetivo do seu tamanho: posts por semana, seguidores, faturamento de publi. Dentro da meta, adicione marcos pra dividir em etapas menores e ver o progresso andar.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="metas-reflexao"]',
+        title: "Reflexão do mês",
+        body: "No fim do mês, responda essas perguntas rápidas: o que funcionou, o que travou, qual foi o melhor conteúdo. É o hábito que separa quem evolui de quem só posta.",
+        placement: "top",
+      },
+    ],
   },
   {
     id: "stories",
@@ -262,7 +283,27 @@ export const TOURS_CRIADOR: TourConfig[] = [
       "Mistura certa: conexão, autoridade e venda",
       "Marque como feito e acompanhe a constância",
     ],
-    steps: [],
+    steps: [
+      {
+        target: '[data-tour="stories-abas"]',
+        title: "Criar e Semana",
+        body: "Criar é onde o plano nasce. Semana é o calendário dos seus stories, dia a dia: toque num story pra editar, marque como feito e arraste pra outro dia se mudar de ideia.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="stories-config"]',
+        title: "Gere a semana de uma vez",
+        body: "Escolha quantos stories por dia, o período e a data de início, e toque em Gerar plano. A IA monta a pauta inteira no seu nicho e joga tudo na aba Semana.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="stories-tendencias"]',
+        title: "Stories em alta",
+        body: "Formatos de story que estão funcionando agora, com exemplo pronto. Puxe os que combinam com você pra sua semana, ou peça pra Cria IA adaptar pro seu tom.",
+        placement: "top",
+        aiPrompt: "Me sugira 5 ideias de stories pra esta semana no meu nicho, misturando conexão, autoridade e venda.",
+      },
+    ],
   },
   {
     id: "tendencias",
@@ -275,7 +316,21 @@ export const TOURS_CRIADOR: TourConfig[] = [
       "Ideia em alta + seu brandbook = post com cara sua",
       "Menos tempo caçando referência, mais tempo criando",
     ],
-    steps: [],
+    steps: [
+      {
+        target: '[data-tour="tend-lista"]',
+        title: "O que está em alta agora",
+        body: "Formatos, temas quentes, ganchos e datas, atualizados pela curadoria do CRIA. Em cada card, o botão Gerar ideia pede pra Cria IA adaptar a tendência pro seu tom e nicho.",
+        placement: "bottom",
+        aiPrompt: "Me dê 3 ideias de post baseadas nas tendências atuais do meu nicho, no tom da minha marca.",
+      },
+      {
+        target: '[data-tour="tend-plano"]',
+        title: "Tendência vira cronograma",
+        body: "O Cria Plano usa esse banco como contexto quando monta sua semana ou seu mês. Você surfa a onda sem esforço extra.",
+        placement: "top",
+      },
+    ],
   },
   {
     id: "feed",
@@ -288,7 +343,23 @@ export const TOURS_CRIADOR: TourConfig[] = [
       "Arraste e reordene antes de publicar",
       "Harmonia visual sem app de terceiro",
     ],
-    steps: [],
+    steps: [
+      {
+        target: '[data-tour="feed-grid"]',
+        title: "Seu grid antes de postar",
+        body: "É a prévia do seu perfil: os próximos posts na ordem em que vão aparecer. Arraste os cards pra reordenar e ache a combinação mais bonita antes de publicar.",
+        mobileBody: "É a prévia do seu perfil: os próximos posts na ordem em que vão aparecer. Segure e arraste um card pra reordenar e testar combinações.",
+        placement: "top",
+      },
+      {
+        target: '[data-tour="feed-sidebar"]',
+        mobileTarget: '[data-tour="feed-adicionar"]',
+        title: "Posts disponíveis",
+        body: "Aqui ficam os posts em edição, agendados e publicados que ainda não estão no grid. Arraste pro grid pra ver como fica no conjunto.",
+        mobileBody: "Toque em Adicionar pra ver os posts em edição, agendados e publicados que ainda não estão no grid, e mande eles pra prévia.",
+        placement: "right",
+      },
+    ],
   },
   {
     id: "aprovacao",
@@ -301,7 +372,20 @@ export const TOURS_CRIADOR: TourConfig[] = [
       "Comentários no lugar certo, com histórico",
       "Você sabe o que está aprovado e o que travou",
     ],
-    steps: [],
+    steps: [
+      {
+        target: '[data-tour="aprovacao-filtros"]',
+        title: "O status de cada post",
+        body: "Pendentes ainda esperam o OK. Em ajuste voltaram com comentário. Aprovados estão prontos pra agendar. Filtre e saiba exatamente onde cada post parou.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="aprovacao-lista"]',
+        title: "Revisar e aprovar",
+        body: "Posts movidos pra Pronto no Criando aparecem aqui automaticamente. Toque num card pra ver a arte e a legenda, aprovar ou pedir ajuste com comentário.",
+        placement: "top",
+      },
+    ],
   },
   {
     id: "brandbook",
@@ -336,7 +420,26 @@ export const TOURS_CRIADOR: TourConfig[] = [
       "Atualize na hora, sem depender de ninguém",
       "Capture contatos e direcione seu público",
     ],
-    steps: [],
+    steps: [
+      {
+        target: '[data-tour="bio-estilo"]',
+        title: "Escolha o estilo",
+        body: "Clássico é a lista de links direta ao ponto. Vitrine mostra serviços e produtos como uma lojinha. Trocar de estilo não apaga nada: cada um guarda o próprio conteúdo. E é aqui que você salva.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="bio-link"]',
+        title: "Seu endereço público",
+        body: "Escolha seu nome no link e copie pra colar na bio do Instagram. Editou a página depois? O link continua o mesmo, sempre atualizado.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="bio-desempenho"]',
+        title: "Visitas e cliques",
+        body: "Quantas pessoas visitaram sua página e o que mais clicaram. É como você descobre qual link merece o topo.",
+        placement: "top",
+      },
+    ],
   },
   {
     id: "media-kit",
@@ -349,7 +452,20 @@ export const TOURS_CRIADOR: TourConfig[] = [
       "Seus números sempre atualizados",
       "Link pronto pra enviar em qualquer negociação",
     ],
-    steps: [],
+    steps: [
+      {
+        target: '[data-tour="mediakit-automatico"]',
+        title: "Media kit automático",
+        body: "Com o Instagram conectado, o CRIA monta seu media kit com seus números reais: audiência, melhores posts, nichos. Atualize, edite os dados e baixe em PDF pra mandar pra marca.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="mediakit-personalizado"]',
+        title: "Ou use o seu PDF",
+        body: "Fez o seu no Canva? Suba o PDF aqui, ou cole o link público (Canva, Notion, Drive). Fica guardado e pronto pra compartilhar em qualquer negociação.",
+        placement: "top",
+      },
+    ],
   },
   {
     id: "biblioteca",
@@ -371,19 +487,10 @@ export const TOURS_CRIADOR: TourConfig[] = [
       },
     ],
   },
-  {
-    id: "estudio",
-    route: "/app/estudio",
-    title: "Cria Estúdio",
-    valueProp:
-      "Crie imagens com IA no estilo da sua marca, direto no CRIA. Nunca mais trave um post por falta de arte: descreva a cena e o Estúdio gera a imagem pra você.",
-    benefits: [
-      "Imagens únicas sem banco de imagem genérico",
-      "Estilo consistente com a sua estética",
-      "Da ideia à arte publicável em minutos",
-    ],
-    steps: [],
-  },
+  // O tour "estudio" (rota /app/estudio) foi REMOVIDO: a rota não existe mais.
+  // O Cria Estúdio virou a aba Arte dentro do editor de post, e é coberto pelos
+  // passos do tour "post-editor". Mantê-lo aqui fazia o tour completo navegar
+  // pra uma tela 404.
   {
     id: "collabs",
     route: "/app/collabs",
@@ -415,7 +522,20 @@ export const TOURS_CRIADOR: TourConfig[] = [
       "Recicle conteúdo que já deu certo",
       "Prova concreta da sua constância",
     ],
-    steps: [],
+    steps: [
+      {
+        target: '[data-tour="historico-stats"]',
+        title: "Sua constância em números",
+        body: "Total publicado, plataforma mais ativa, mês mais produtivo e média mensal. Prova concreta de que você está no jogo.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="historico-filtros"]',
+        title: "Encontre qualquer post",
+        body: "Filtre por plataforma, pilar e período. Perfeito pra achar aquele post que funcionou e reciclar. É aqui também que você preenche os resultados de cada post, o combustível dos Relatórios.",
+        placement: "bottom",
+      },
+    ],
   },
   {
     id: "insights",
@@ -429,7 +549,26 @@ export const TOURS_CRIADOR: TourConfig[] = [
       "Decida o próximo conteúdo com base em dados",
       "Melhores horários cada vez mais precisos",
     ],
-    steps: [],
+    steps: [
+      {
+        target: '[data-tour="insights-conta"]',
+        title: "Sua conta conectada",
+        body: "Conecte seu Instagram (conta business ou de criador) e o CRIA puxa os dados reais. Já conectou? O botão Atualizar sincroniza as métricas mais recentes.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="insights-kpis"]',
+        title: "Os 4 números que importam",
+        body: "Seguidores, alcance, interações e visitas ao perfil dos últimos 30 dias. Bateu o olho, entendeu a fase, sem abrir o app do Instagram.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="insights-posts"]',
+        title: "Post por post",
+        body: "O desempenho de cada publicação: alcance, curtidas, salvos. Vincule cada mídia ao post correspondente no CRIA pra fechar o ciclo entre planejar, publicar e aprender.",
+        placement: "top",
+      },
+    ],
   },
   {
     id: "configuracoes",
@@ -443,6 +582,188 @@ export const TOURS_CRIADOR: TourConfig[] = [
       "Pilares de conteúdo alimentam sua linha editorial",
       "Notificações e resumo diário do seu jeito",
     ],
-    steps: [],
+    steps: [
+      {
+        target: '[data-tour="config-abas"]',
+        title: "Tudo em pílulas",
+        body: "Perfil, Pilares & Hábitos, Marca & Visual, Assinatura, Conexões, Notificações, Equipe e Conta. Cada pílula é uma seção. Vale visitar todas uma vez.",
+        mobileBody: "Perfil, Pilares & Hábitos, Marca & Visual, Assinatura, Conexões, Notificações, Equipe e Conta. Deslize a tira pro lado e toque na pílula pra trocar de seção.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="config-tab-visual"]',
+        title: "Marca & Visual",
+        body: "Tema, cores, fonte e fundo decorativo do app. Deixe o CRIA com a cara da sua marca: você passa horas aqui dentro, que seja bonito.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="config-tab-assinatura"]',
+        title: "Assinatura",
+        body: "Seu plano atual, o uso de IA do mês e o portal pra trocar de plano ou atualizar o cartão. Tudo de cobrança mora nessa pílula.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="config-tab-conta"]',
+        title: "Conta",
+        body: "Senha, sair do app e exclusão de dados. O lado sério das configurações, num lugar só.",
+        placement: "bottom",
+      },
+    ],
+  },
+  // ── TELAS NOVAS ──────────────────────────────────────────────────────────
+  {
+    id: "autopilot",
+    route: "/app/autopilot",
+    title: "Cria Plano",
+    valueProp:
+      "A IA monta sua semana ou seu mês de conteúdo de uma vez, usando seu brandbook, seus pilares e o que já performou. Você revisa, ajusta e manda tudo pro kanban.",
+    benefits: [
+      "Semana ou mês de pauta em um clique",
+      "Posts já com data, hora e legenda",
+      "Você aprova antes: nada entra sem seu OK",
+    ],
+    steps: [
+      {
+        target: '[data-tour="plano-config"]',
+        title: "Configure o plano",
+        body: "Período, quantidade de posts, plataforma e horários (dos seus dados ou recomendados pro nicho). Dá pra somar um foco, tipo vender ou engajar, e um contexto, tipo um lançamento.",
+        placement: "right",
+        mobileBody: "Período, quantidade de posts, plataforma e horários (dos seus dados ou recomendados pro nicho). Some um foco, tipo vender ou engajar, e um contexto, tipo um lançamento.",
+      },
+      {
+        target: '[data-tour="plano-gerar"]',
+        title: "Gerar cronograma",
+        body: "Um clique e a IA monta a pauta inteira no seu tom. Preencheu o Brandbook? O resultado sobe de nível.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="plano-resultado"]',
+        title: "Revise e envie",
+        body: "Cada card é um post sugerido: edite título, legenda, data e hora ali mesmo. Desmarque o que não quiser e toque em Enviar. Tudo cai no seu kanban Criando, pronto pra produzir.",
+        placement: "top",
+      },
+    ],
+  },
+  {
+    id: "prompter",
+    route: "/app/prompter",
+    title: "Cria Prompter",
+    valueProp:
+      "Teleprompter pra gravar olhando pra câmera. Você cria ou cola o roteiro, aperta Gravar e o texto rola na tela enquanto você fala. O vídeo sai direto na sua galeria.",
+    benefits: [
+      "Roteiros criados aqui ou vindos do Criando",
+      "Modo por voz: o texto acompanha a sua fala",
+      "O vídeo gravado vai pra sua galeria",
+    ],
+    steps: [
+      {
+        target: '[data-tour="prompter-novo"]',
+        title: "Crie ou cole o roteiro",
+        body: "Escreva do zero ou cole um texto pronto. Seus posts na fase Produzindo e os roteiros do Cria Stories também chegam aqui com um toque, sempre na versão mais recente.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="prompter-lista"]',
+        title: "Toque em Gravar",
+        body: "Cada roteiro abre o player de gravação em tela cheia. Lá você escolhe o modo: por voz, em que o texto segue a sua fala, ou rolagem automática com velocidade ajustável. Gravou? O vídeo sai na sua galeria.",
+        placement: "top",
+      },
+      {
+        target: '[data-tour="prompter-voz"]',
+        title: "O modo por voz",
+        body: "Leu, o texto anda. Improvisou, ele espera você voltar. No roteiro, use **trecho** pra destacar em amarelo e [pausa] pra marcar um respiro.",
+        placement: "top",
+      },
+      {
+        target: '[data-tour="prompter-pastas"]',
+        title: "Organize em pastas",
+        body: "A pasta se define ao salvar o roteiro, e aqui você filtra por ela. Bom pra separar por série, campanha ou cliente.",
+        placement: "bottom",
+      },
+    ],
+  },
+  {
+    id: "relatorios",
+    route: "/app/relatorios",
+    title: "Seus Relatórios",
+    valueProp:
+      "Sua evolução como criador em números: quanto você produziu, quão constante foi e o desempenho real do que publicou. É a tela de olhar pra trás pra decidir o próximo passo.",
+    benefits: [
+      "Consistência medida contra a sua meta",
+      "Descubra o formato que mais rende",
+      "Decida o próximo mês com dados",
+    ],
+    steps: [
+      {
+        target: '[data-tour="rel-periodo"]',
+        title: "Escolha o período",
+        body: "Compare semanas, meses ou o ano. Todos os números da tela obedecem a esse filtro.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="rel-metricas"]',
+        title: "Produção e consistência",
+        body: "Publicados, em criação, ideias no banco e o percentual de semanas em que você bateu a meta. Constância é o que constrói audiência.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="rel-desempenho"]',
+        title: "O que mais rende",
+        body: "Preencha os resultados dos seus posts publicados (views, salvos, alcance) e esta seção revela o formato e o conteúdo que mais funcionam pra você.",
+        placement: "top",
+      },
+    ],
+  },
+  {
+    id: "lixeira",
+    route: "/app/lixeira",
+    title: "Lixeira",
+    valueProp:
+      "Excluiu sem querer? Respira. Tudo que você apaga fica aqui por 30 dias antes de sumir de vez.",
+    benefits: [
+      "30 dias pra se arrepender",
+      "Restaurar leva um clique",
+      "Apagar de vez só com confirmação",
+    ],
+    steps: [
+      {
+        target: '[data-tour="lixeira-header"]',
+        title: "Sua rede de segurança",
+        body: "Posts e clientes excluídos ficam aqui por 30 dias. Depois disso, somem de verdade.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="lixeira-itens"]',
+        title: "Restaurar ou apagar",
+        body: "Cada item mostra quantos dias faltam. Restaurar devolve pro lugar de origem. O X apaga de vez, e só depois de você confirmar.",
+        placement: "bottom",
+      },
+    ],
+  },
+  {
+    id: "modulos",
+    route: "/app/modulos",
+    title: "Módulos",
+    valueProp:
+      "Ferramentas extras pra quem gerencia clientes. Cada módulo é uma assinatura separada: contrate só o que usar, cancele quando quiser.",
+    benefits: [
+      "Sem pacote fechado: você escolhe",
+      "Ativa na hora, direto no cartão",
+      "Gerencie ou cancele pelo portal",
+    ],
+    steps: [
+      {
+        target: '[data-tour="modulos-header"]',
+        title: "Assinaturas independentes",
+        body: "Cada módulo é cobrado por mês, separado do seu plano. Sem fidelidade: cancelou, parou de cobrar.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="modulos-grid"]',
+        title: "Escolha os seus",
+        body: "Cada card mostra o que o módulo resolve e quanto custa. Módulo ativo ganha selo verde e o botão Gerenciar abre o portal da assinatura. Contratar é um clique.",
+        placement: "top",
+      },
+    ],
   },
 ];

@@ -114,7 +114,7 @@ export default function CriaStories() {
       <Header lastUpdated={lastUpdated} />
 
       {/* Abas */}
-      <div className="flex gap-1 mt-4 mb-5 bg-muted/40 rounded-xl p-1 w-fit">
+      <div data-tour="stories-abas" className="flex gap-1 mt-4 mb-5 bg-muted/40 rounded-xl p-1 w-fit">
         <TabBtn active={tab === "criar"} onClick={() => goTab("criar")} icon={<Wand2 className="h-4 w-4" />}>Criar</TabBtn>
         <TabBtn active={tab === "semana"} onClick={() => goTab("semana")} icon={<CalendarDays className="h-4 w-4" />}>Semana</TabBtn>
       </div>
@@ -122,7 +122,7 @@ export default function CriaStories() {
       {tab === "criar" ? (
         <>
           {/* Config + gerar */}
-          <div className="bg-card border border-border rounded-2xl p-4">
+          <div data-tour="stories-config" className="bg-card border border-border rounded-2xl p-4">
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:flex-wrap md:gap-6">
               <Field label="Stories por dia">
                 <div className="flex gap-1">
@@ -154,7 +154,7 @@ export default function CriaStories() {
           </div>
 
           {/* Banco de tendências */}
-          <div className="mt-6">
+          <div data-tour="stories-tendencias" className="mt-6">
             <div className="flex items-center gap-2 mb-3">
               <Globe className="h-4 w-4 text-primary" />
               <h2 className="text-sm font-display font-bold text-foreground">Stories em alta</h2>

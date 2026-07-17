@@ -1006,7 +1006,7 @@ const LinkInBio = () => {
           {/* ── Editor ──────────────────────────────── */}
           <div className="space-y-5">
             {/* ── Cabeçalho: seletor de estilo + salvar (fixo no topo) ─────── */}
-            <div className="sticky top-0 z-30 rounded-2xl border border-border bg-background/95 backdrop-blur-sm px-4 py-3 shadow-sm">
+            <div data-tour="bio-estilo" className="sticky top-0 z-30 rounded-2xl border border-border bg-background/95 backdrop-blur-sm px-4 py-3 shadow-sm">
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="inline-flex gap-1 rounded-full border border-border bg-muted/40 p-1">
                   {([
@@ -1058,7 +1058,7 @@ const LinkInBio = () => {
             </div>
 
             {/* ── Compartilhado: link público + desempenho (vale nos dois estilos) ─── */}
-            <Card className="p-4 md:p-5 rounded-2xl border-border">
+            <Card data-tour="bio-link" className="p-4 md:p-5 rounded-2xl border-border">
               <Label className="text-xs font-display font-semibold uppercase tracking-wider text-muted-foreground/80">
                 Seu link público
               </Label>
@@ -1095,7 +1095,7 @@ const LinkInBio = () => {
               )}
             </Card>
 
-            <Card className="p-4 md:p-5 rounded-2xl border-border">
+            <Card data-tour="bio-desempenho" className="p-4 md:p-5 rounded-2xl border-border">
               <h2 className="font-display font-semibold text-foreground mb-4">Desempenho</h2>
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-muted/40 rounded-xl p-3 text-center">

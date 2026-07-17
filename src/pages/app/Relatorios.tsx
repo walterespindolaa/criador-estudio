@@ -553,7 +553,7 @@ const Relatorios = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-0.5 bg-muted/50 rounded-full p-1 flex-wrap">
+          <div data-tour="rel-periodo" className="flex items-center gap-0.5 bg-muted/50 rounded-full p-1 flex-wrap">
             {PERIOD_OPTIONS.map((opt) => (
               <button
                 key={opt.key}
@@ -573,7 +573,7 @@ const Relatorios = () => {
         </div>
 
         {/* Metric cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
+        <div data-tour="rel-metricas" className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
           <MetricCard
             label="Posts publicados"
             value={publishedCount}
@@ -603,7 +603,7 @@ const Relatorios = () => {
         </div>
 
         {/* ─── DESEMPENHO (lê posts.result_*) ─────────── */}
-        <section className="mb-8">
+        <section data-tour="rel-desempenho" className="mb-8">
           {/* Header da seção */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
             <div className="flex items-center gap-2 flex-wrap">

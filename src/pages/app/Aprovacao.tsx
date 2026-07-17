@@ -85,7 +85,7 @@ export default function Aprovacao() {
         </p>
       </header>
 
-      <div className="flex items-center gap-1 bg-card rounded-xl border border-border p-1 mb-5 w-fit overflow-x-auto">
+      <div data-tour="aprovacao-filtros" className="flex items-center gap-1 bg-card rounded-xl border border-border p-1 mb-5 w-fit overflow-x-auto">
         {FILTERS.map((f) => {
           const n = f.key === "todos" ? queue.length : counts[f.key];
           return (
@@ -113,7 +113,7 @@ export default function Aprovacao() {
           <p className="text-xs mt-1">Posts movidos para "Pronto" no Criando aparecem aqui automaticamente.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div data-tour="aprovacao-lista" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {filtered.map((p) => {
             const thumb = thumbs[p.id];
             return (

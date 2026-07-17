@@ -124,7 +124,7 @@ export default function MediaKit() {
       </div>
 
       {/* ===== Automático ===== */}
-      <section className="mb-8">
+      <section data-tour="mediakit-automatico" className="mb-8">
         <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
           <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Media kit automático</h2>
           {conn && (
@@ -216,7 +216,7 @@ export default function MediaKit() {
       </section>
 
       {/* ===== Personalizado ===== */}
-      <section>
+      <section data-tour="mediakit-personalizado">
         <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">Media kit personalizado</h2>
         <div className="bg-card border border-border rounded-2xl p-5">
           <p className="text-sm font-body text-muted-foreground leading-relaxed mb-4">

@@ -119,7 +119,7 @@ export default function CriaPrompter() {
             </p>
           </div>
         </div>
-        <Button onClick={() => setEditor({ open: true, title: "", script: "", folder: curFolder === "all" ? "" : curFolder })}>
+        <Button data-tour="prompter-novo" onClick={() => setEditor({ open: true, title: "", script: "", folder: curFolder === "all" ? "" : curFolder })}>
           <Plus className="h-4 w-4 mr-1.5" /> Novo roteiro
         </Button>
       </div>
@@ -164,7 +164,7 @@ export default function CriaPrompter() {
       )}
 
       {/* Pastas */}
-      <div className="mt-6 flex items-center gap-2 flex-wrap">
+      <div data-tour="prompter-pastas" className="mt-6 flex items-center gap-2 flex-wrap">
         <button
           onClick={() => setCurFolder("all")}
           className={cn(
@@ -208,7 +208,7 @@ export default function CriaPrompter() {
       </div>
 
       {/* Lista */}
-      <div className="mt-4">
+      <div data-tour="prompter-lista" className="mt-4">
         {isLoading ? (
           <div className="py-12 text-center"><Loader2 className="h-5 w-5 text-primary mx-auto animate-spin" /></div>
         ) : visible.length === 0 ? (
@@ -265,7 +265,7 @@ export default function CriaPrompter() {
       </div>
 
       {/* Como funciona */}
-      <div className="mt-8 bg-card border border-border rounded-2xl p-4">
+      <div data-tour="prompter-voz" className="mt-8 bg-card border border-border rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-2">
           <Mic className="h-4 w-4 text-primary" />
           <h2 className="text-sm font-display font-bold text-foreground">Como funciona o modo Por voz</h2>
