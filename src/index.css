@@ -11,9 +11,13 @@
    tela por tela.
    ═══════════════════════════════════════════════════════════════ */
 
-/* Trava o arrasto lateral no mobile (comportamento de app nativo) */
+/* Trava o arrasto lateral no mobile (comportamento de app nativo).
+   ATENÇÃO: overflow-x HIDDEN no html/body mata o position:sticky do header
+   (o navegador vira scroll container). CLIP trava o arrasto do mesmo jeito
+   e preserva o sticky; o hidden fica só de fallback pra navegador velho. */
 html, body {
   overflow-x: hidden;
+  overflow-x: clip;
   max-width: 100%;
   overscroll-behavior-x: none;
   /* Sem isso o iOS aumenta a fonte sozinho ao girar a tela. */
