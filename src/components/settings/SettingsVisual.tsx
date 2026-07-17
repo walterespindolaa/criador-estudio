@@ -117,9 +117,11 @@ export function SettingsVisual() {
 
   return (
     <div className="w-full max-w-[1100px] mx-auto">
-      <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
-        {/* LEFT, Controls */}
-        <div className="w-full lg:flex-[0_0_45%] space-y-8 lg:space-y-10">
+      {/* Mobile: uma coluna, ordem atual. Desktop: coluna principal de controles
+          e preview fixo à direita, pra ver o efeito e salvar sem rolar. */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr,380px] gap-8 lg:gap-10 items-start">
+        {/* Coluna principal, Controls */}
+        <div className="w-full min-w-0 space-y-8 lg:space-y-10">
           {/* O seletor de IDIOMA saiu daqui.
               Ele existia só pra gravação do Meta App Review (a tela de Insights
               precisava aparecer em inglês pro analista). Pro usuário brasileiro
@@ -284,20 +286,21 @@ export function SettingsVisual() {
               </div>
               <p className="text-sm text-muted-foreground font-body">Estilo tipográfico de todo o sistema</p>
             </div>
-            <div className="flex flex-col gap-3">
+            {/* Compacto: cards menores em 2 colunas em vez de 6 cards de largura total */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {FONT_OPTIONS.map(font => (
                 <button
                   key={font.key}
                   onClick={() => handleFontSelect(font.key)}
                   className={cn(
-                    "w-full rounded-xl border-2 p-5 text-left transition-all relative flex flex-col gap-1",
+                    "w-full rounded-xl border-2 p-4 text-left transition-all relative flex flex-col gap-1",
                     selectedFont === font.key
                       ? "border-[#1A2F21] bg-[#1A2F21]/5"
                       : "border-border hover:border-[#1A2F21]/30"
                   )}
                 >
                   <div className="flex items-center justify-between">
-                    <p className="text-xl font-bold text-foreground leading-tight" style={{ fontFamily: font.displayFont }}>
+                    <p className="text-lg font-bold text-foreground leading-tight" style={{ fontFamily: font.displayFont }}>
                       {font.label}
                     </p>
                     {selectedFont === font.key && (
@@ -306,23 +309,24 @@ export function SettingsVisual() {
                       </div>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground" style={{ fontFamily: font.bodyFont }}>{font.desc}</p>
+                  <p className="text-xs text-muted-foreground" style={{ fontFamily: font.bodyFont }}>{font.desc}</p>
                 </button>
               ))}
             </div>
           </section>
 
+          {/* No desktop o salvar vive grudado no preview; aqui fica só no mobile */}
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="w-full h-[52px] bg-[#1A2F21] hover:bg-[#1A2F21]/90 text-white rounded-xl font-semibold text-lg transition-all"
+            className="lg:hidden w-full h-[52px] bg-[#1A2F21] hover:bg-[#1A2F21]/90 text-white rounded-xl font-semibold text-lg transition-all"
           >
             {saving ? "Salvando..." : "Salvar visual"}
           </Button>
         </div>
 
-        {/* RIGHT, Live Preview */}
-        <div className="hidden lg:block flex-1 sticky top-6 self-start">
+        {/* RIGHT, Live Preview + salvar, sticky pra acompanhar o scroll */}
+        <div className="hidden lg:block sticky top-24 self-start">
           <div className="mb-6">
             <h3 className="text-xl font-body font-bold text-foreground mb-1">Preview ao vivo</h3>
             <p className="text-sm text-muted-foreground font-body">Veja como ficará o seu espaço</p>
@@ -384,9 +388,17 @@ export function SettingsVisual() {
               </div>
             </div>
           )}
+
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="mt-6 w-full h-[52px] bg-[#1A2F21] hover:bg-[#1A2F21]/90 text-white rounded-xl font-semibold text-lg transition-all"
+          >
+            {saving ? "Salvando..." : "Salvar visual"}
+          </Button>
         </div>
       </div>
-      
+
       {/* Mobile Preview (Visible only on small screens) */}
       <div className="mt-12 lg:hidden">
         <div className="mb-6">

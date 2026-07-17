@@ -427,8 +427,12 @@ const Configuracoes = () => {
           <div className="w-full">
             {!isManaging && (
             <TabsContent value="perfil">
-              <form onSubmit={handleSubmit(onSubmit)} className="max-w-2xl space-y-6">
+              {/* Mobile: uma coluna, mesma ordem de sempre. Desktop (lg): duas colunas
+                  equilibradas pra aproveitar a largura em vez de um corredor estreito. */}
+              <form onSubmit={handleSubmit(onSubmit)} className="max-w-2xl lg:max-w-5xl space-y-6">
                 <SectionHeader title="Perfil" desc="Sua identidade no CRIA: foto, bio, nicho, plataformas e handles." />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                {/* Coluna esquerda: identidade (foto, nome, bio) */}
                 <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-5">
                   <h3 className="font-display font-semibold text-foreground">Meu Perfil</h3>
                   <div className="flex items-center gap-4">
@@ -462,6 +466,11 @@ const Configuracoes = () => {
                     />
                     {errors.bio && <p className="text-xs text-destructive mt-1">{errors.bio.message}</p>}
                   </div>
+                </div>
+
+                {/* Coluna direita: nicho, plataformas e meta num card; handles e chave Pix noutro */}
+                <div className="space-y-6">
+                <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-5">
 
                   {/* NICHO. Antes o formulário despejava TODAS as opções na tela, inclusive
                       as 10 que não são suas. Virava um muro de chips. Agora a tela mostra só
@@ -565,6 +574,9 @@ const Configuracoes = () => {
                     <Label className="font-body text-sm">Meta semanal: {weeklyGoal} posts <InfoTooltip text="Quantos posts você quer publicar por semana." /></Label>
                     <input type="range" min={1} max={7} value={weeklyGoal} onChange={(e) => setValue("weekly_goal", parseInt(e.target.value))} className="w-full accent-[hsl(var(--primary))]" />
                   </div>
+                </div>
+
+                <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-5">
                   <div className="space-y-3">
                     <Label className="font-body text-sm">Handles</Label>
                     <div className="flex items-center gap-2">
@@ -592,8 +604,10 @@ const Configuracoes = () => {
                     <Input placeholder="CPF, e-mail, telefone ou chave aleatória" {...register("pix_key")} className="rounded-xl" />
                     {errors.pix_key && <p className="text-xs text-destructive mt-1">{errors.pix_key.message}</p>}
                   </div>
-                  <Button type="submit" variant="hero">Salvar perfil</Button>
                 </div>
+                </div>
+                </div>
+                <Button type="submit" variant="hero">Salvar perfil</Button>
               </form>
             </TabsContent>
             )}

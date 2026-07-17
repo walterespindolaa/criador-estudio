@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Mail, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -38,10 +38,32 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
     path: ["confirmPassword"],
   });
 
-  const { register, handleSubmit, setError, formState: { errors } } = useForm<SignupFormData>({
+  const { register, handleSubmit, setError, setValue, formState: { errors } } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
   });
   const [formError, setFormError] = useState<string | null>(null);
+
+  // ── Veio do checkout da LP (Payment Link)? Guarda o session_id, pré-preenche
+  //    o e-mail do pagador e avisa que o plano está esperando a conta. ──
+  const [searchParams] = useSearchParams();
+  const [compraPaga, setCompraPaga] = useState<{ email: string; plan: string } | null>(null);
+  useEffect(() => {
+    const sid = searchParams.get("session_id");
+    if (searchParams.get("checkout") !== "success" || !sid) return;
+    try { localStorage.setItem("cria_plink_session", sid); } catch { /* modo privado */ }
+    void supabase.functions.invoke("claim-purchase", { body: { action: "peek", session_id: sid } })
+      .then(({ data }) => {
+        const d = data as { found?: boolean; email?: string; plan?: string } | null;
+        if (d?.found && d.email) {
+          setCompraPaga({ email: d.email, plan: d.plan ?? "" });
+          setValue("email", d.email);
+          setAccountType("creator");
+        }
+      })
+      .catch(() => { /* o resgate no primeiro login cobre */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const nomePlano = compraPaga?.plan === "studio" ? "Studio" : compraPaga?.plan === "pro" ? "Pro" : "Essencial";
 
   const mapSignupError = (msg: string): { field?: "email" | "password"; text: string } => {
     const m = (msg || "").toLowerCase();
@@ -138,6 +160,15 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
             <>
               <h3 className="text-3xl text-center [font-family:'Baloo_2',sans-serif] font-extrabold text-[#0A0A0A] mb-1">{t("signup.title")}</h3>
               <p className="text-center [font-family:'Grand_Hotel',cursive] text-2xl text-[#EA4918] -rotate-2 mb-5">sua nova fase começa agora!</p>
+
+              {compraPaga && (
+                <div className="mb-5 rounded-2xl border-2 border-[#01A652] bg-[#E5F2E9] px-4 py-3">
+                  <p className="text-sm [font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]">Pagamento confirmado! 🎉</p>
+                  <p className="text-[13px] font-body text-[#0A0A0A]/75 leading-snug mt-0.5">
+                    Seu plano <strong>CRIA {nomePlano}</strong> está reservado pra <strong>{compraPaga.email}</strong>. Crie a conta com esse e-mail e o acesso é liberado na hora.
+                  </p>
+                </div>
+              )}
 
               {/* Tipo de conta */}
               <div className="mb-6">

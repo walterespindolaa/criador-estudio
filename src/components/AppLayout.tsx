@@ -37,14 +37,39 @@ import { useLastSeen } from "@/hooks/useLastSeen";
 import { installOverflowDetector } from "@/lib/overflow-detector";
 import { UploadProgressProvider } from "@/contexts/UploadProgressContext";
 import { UploadProgressIndicator } from "@/components/UploadProgressIndicator";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 const AppLayout = () => {
   const { profile, isLoading } = useProfile();
   const { isManaging, activeAccountId, managedAccounts, teamAccounts } = useActiveAccount();
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   useLastSeen();
+
+  // ── Compra direta pela LP (Payment Link): quem pagou ANTES de criar a conta
+  //    tem a assinatura esperando em pending_purchases. No primeiro load logado
+  //    da sessão, o claim-purchase entrega: pelo session_id guardado no
+  //    navegador ou, sem ele, pelo e-mail da conta. Roda uma vez por sessão. ──
+  useEffect(() => {
+    if (!profile?.id) return;
+    if (profile.subscription_status === "active") return;
+    if (sessionStorage.getItem("cria_claim_tentado")) return;
+    sessionStorage.setItem("cria_claim_tentado", "1");
+    const sid = localStorage.getItem("cria_plink_session");
+    void supabase.functions.invoke("claim-purchase", {
+      body: { action: "claim", session_id: sid ?? undefined },
+    }).then(({ data }) => {
+      if ((data as { claimed?: boolean } | null)?.claimed) {
+        localStorage.removeItem("cria_plink_session");
+        queryClient.invalidateQueries({ queryKey: ["profile", profile.id] });
+        toast.success("Pagamento confirmado e plano ativado. Bem-vindo(a) ao CRIA!");
+      }
+    }).catch(() => { /* sem compra pendente, segue o jogo */ });
+  }, [profile?.id, profile?.subscription_status, queryClient]);
 
   useEffect(() => {
     installOverflowDetector();

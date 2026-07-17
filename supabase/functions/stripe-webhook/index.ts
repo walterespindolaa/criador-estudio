@@ -144,6 +144,53 @@ Deno.serve(async (req) => {
           }
           break;
         }
+        // ── COMPRA DIRETA PELA LP (Payment Link): a sessão não tem os metadados
+        //    do app porque a pessoa pode nem ter conta ainda. Guarda a compra
+        //    por e-mail + session_id; o cadastro reivindica via claim-purchase.
+        //    Se já existir conta com o e-mail do pagador, ativa na hora. ──
+        if (!s.metadata?.user_id && s.payment_link && s.subscription) {
+          const email = (s.customer_details?.email ?? "").toLowerCase();
+          let plinkPlan: string | null = null;
+          try {
+            const sub = await stripe.subscriptions.retrieve(s.subscription as string);
+            const priceId = sub.items?.data?.[0]?.price?.id ?? "";
+            if (priceId === Deno.env.get("STRIPE_PRICE_ESSENCIAL")) plinkPlan = "essencial";
+            else if (priceId === Deno.env.get("STRIPE_PRICE_PRO")) plinkPlan = "pro";
+            else if (priceId === Deno.env.get("STRIPE_PRICE_STUDIO")) plinkPlan = "studio";
+          } catch (e) { console.error("[webhook] plink sub retrieve", e); }
+          if (!plinkPlan) { console.error("[webhook] plink sem plano mapeado", s.id); break; }
+
+          await supabase.from("pending_purchases").upsert({
+            session_id: s.id,
+            email,
+            plan: plinkPlan,
+            stripe_customer_id: s.customer as string,
+            stripe_subscription_id: s.subscription as string,
+            status: "pending",
+          }, { onConflict: "session_id" });
+
+          const { data: uid } = await supabase.rpc("get_user_id_by_email", { _email: email });
+          if (uid) {
+            must(await supabase.from("profiles").update({
+              subscription_status: "active",
+              stripe_customer_id: s.customer as string,
+              stripe_subscription_id: s.subscription as string,
+              plan: plinkPlan,
+              storage_quota_bytes: STORAGE_BY_PLAN[plinkPlan] ?? 524288000,
+            }).eq("id", uid as unknown as string), "profiles plink activate");
+            await supabase.from("pending_purchases").update({
+              status: "claimed", claimed_by: uid as unknown as string, claimed_at: new Date().toISOString(),
+            }).eq("session_id", s.id);
+            try {
+              await stripe.subscriptions.update(s.subscription as string, {
+                metadata: { app: "cria", user_id: String(uid), plan: plinkPlan },
+              });
+            } catch { /* fallback por stripe_subscription_id cobre */ }
+          }
+          await sendMetaPurchase(s);
+          break;
+        }
+
         const userId = s.metadata?.user_id;
         const plan = s.metadata?.plan;
         if (!userId || !plan) break;
