@@ -27,6 +27,8 @@ const STAGE_BG: Record<CrmStage, string> = {
   lead: "bg-muted/50", contato: "bg-blue-500/5", reuniao: "bg-violet-500/5",
   proposta: "bg-primary/5", negociacao: "bg-primary/10", fechado: "bg-green-500/10", perdido: "bg-destructive/5",
 };
+// Paleta do brandbook para colorir o lead. Serve só de marcador visual no card.
+const LEAD_COLORS = ["#EA4918", "#0061EE", "#01A652", "#F27EB5", "#FFCF03", "#7C90F0", "#64748B", "#0A0A0A"] as const;
 
 export function PipelineBoard() {
   const { data: leads = [] } = useCrmLeads();
@@ -139,7 +141,7 @@ export function PipelineBoard() {
                       {(dragP, dragS) => (
                       <div ref={dragP.innerRef} {...dragP.draggableProps} {...dragP.dragHandleProps}
                         onClick={() => { setEditLead(lead); setDialogOpen(true); }}
-                        style={dragP.draggableProps.style}
+                        style={{ ...dragP.draggableProps.style, ...(lead.color ? { borderLeftColor: lead.color, borderLeftWidth: 4 } : {}) }}
                         className={cn("rounded-xl border border-border bg-card p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all", dragS.isDragging && "shadow-warm-lg ring-2 ring-primary/40")}>
                         <p className="text-xs font-display font-bold text-foreground truncate">{lead.name}</p>
                         {lead.company && <p className="text-[10px] text-muted-foreground truncate">{lead.company}</p>}
@@ -254,6 +256,33 @@ function LeadDialog({ lead, onClose, onCreate, onUpdate, onDelete, saving }: {
           </L>
           <L label="Principal dor" full><Textarea rows={2} value={f.main_pain ?? ""} onChange={(e) => set({ main_pain: e.target.value })} className="rounded-xl text-sm" /></L>
           <L label="Notas" full><Textarea rows={2} value={f.notes ?? ""} onChange={(e) => set({ notes: e.target.value })} className="rounded-xl text-sm" /></L>
+          <L label="Cor do lead" full>
+            <div className="flex flex-wrap items-center gap-2">
+              {LEAD_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => set({ color: c })}
+                  title={c}
+                  style={{ backgroundColor: c }}
+                  className={cn(
+                    "h-7 w-7 rounded-full border transition-transform hover:scale-110",
+                    f.color === c ? "ring-2 ring-offset-2 ring-foreground/60 border-transparent" : "border-border",
+                  )}
+                />
+              ))}
+              <button
+                type="button"
+                onClick={() => set({ color: null })}
+                className={cn(
+                  "h-7 rounded-full border px-3 text-[11px] font-body transition-colors",
+                  f.color ? "border-border text-muted-foreground hover:bg-muted" : "border-foreground/40 bg-muted text-foreground",
+                )}
+              >
+                Sem cor
+              </button>
+            </div>
+          </L>
           {/* Tarefas do lead: substituem "próxima ação / próximos passos". Aparecem já no cadastro. */}
           {lead
             ? <LeadTasks leadId={lead.id} />

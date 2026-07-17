@@ -363,6 +363,7 @@ export type CrmLead = {
   monthly_value: number | null; notes: string | null; lead_origin: string | null; is_referral: boolean | null;
   referred_by: string | null; main_pain: string | null; main_objection: string | null; next_steps: string | null;
   next_interaction_date: string | null; closing_potential: "alto" | "medio" | "baixo" | null;
+  color: string | null;
   created_at: string; updated_at: string;
 };
 export type CrmLeadInput = Partial<Omit<CrmLead, "id" | "manager_id" | "created_at" | "updated_at">> & { name: string };

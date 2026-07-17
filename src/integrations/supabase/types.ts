@@ -1162,6 +1162,7 @@ export type Database = {
       crm_leads: {
         Row: {
           closing_potential: string | null
+          color: string | null
           company: string | null
           created_at: string
           email: string | null
@@ -1185,6 +1186,7 @@ export type Database = {
         }
         Insert: {
           closing_potential?: string | null
+          color?: string | null
           company?: string | null
           created_at?: string
           email?: string | null
@@ -1208,6 +1210,7 @@ export type Database = {
         }
         Update: {
           closing_potential?: string | null
+          color?: string | null
           company?: string | null
           created_at?: string
           email?: string | null
