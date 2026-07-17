@@ -74,7 +74,10 @@ const CSS = `
 .cpr.cardMode #camDim{display:none!important;}
 .cpr.cardMode #prompterText{max-width:none;}
 .cpr #topBar,.cpr #bottomBar{position:absolute;left:0;right:0;z-index:10;display:flex;align-items:center;transition:opacity .3s;}
-.cpr #topBar{top:0;gap:6px;padding:10px 10px 14px;padding-top:calc(8px + env(safe-area-inset-top));background:linear-gradient(rgba(10,10,10,.72),transparent);justify-content:space-between;}
+.cpr #topBar{top:calc(6px + env(safe-area-inset-top));left:8px;right:8px;gap:6px;padding:7px 9px;background:rgba(10,10,10,.6);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--glassBrd);border-radius:26px;justify-content:space-between;}
+.cpr #quickBar .pbtn{background:transparent;border:none;}
+.cpr #topBar>div:last-child .pbtn{background:transparent;border:none;}
+.cpr #quickBar .pbtn.on{background:var(--accent);}
 /* barra inferior: UMA linha sempre — 5 botões flexíveis + obturador fixo no meio */
 .cpr #bottomBar{bottom:0;gap:5px;padding:12px 8px 10px;padding-bottom:calc(10px + env(safe-area-inset-bottom));background:linear-gradient(transparent,rgba(10,10,10,.82));justify-content:space-evenly;flex-wrap:nowrap;}
 .cpr.barsHidden #topBar,.cpr.barsHidden #bottomBar{opacity:0;pointer-events:none;}
@@ -99,6 +102,7 @@ const CSS = `
 .cpr #settingsPanel.open{transform:none;}
 .cpr .shandle{width:44px;height:5px;border-radius:99px;background:rgba(10,10,10,.18);margin:4px auto 12px;}
 .cpr #settingsPanel h2{font-size:21px;font-weight:700;margin:0 4px;color:var(--ink);font-family:var(--fontDisplay);letter-spacing:-.01em;}
+.cpr .sgSub{margin:2px 4px 0;font-size:12.5px;color:rgba(10,10,10,.55);}
 .cpr .sgCard{background:var(--paper);border:1px solid rgba(10,10,10,.08);border-radius:20px;padding:2px 16px 6px;margin-top:14px;box-shadow:0 2px 0 rgba(10,10,10,.06);}
 .cpr .sgHead{display:flex;align-items:center;gap:10px;padding:12px 0 10px;border-bottom:1px solid rgba(10,10,10,.07);}
 .cpr .sgChip{display:grid;place-items:center;width:34px;height:34px;border-radius:12px;background:var(--accent);color:#FDFBF5;flex-shrink:0;}
@@ -147,16 +151,16 @@ const CSS = `
 .cpr #micBtn.hot{border-color:var(--ok);box-shadow:0 0 0 1.5px rgba(1,166,82,.6);}
 .cpr .iconbtn{background:var(--accent);border:none;color:var(--accentFg);border-radius:16px;padding:15px 12px;font-size:16px;font-weight:700;font-family:var(--fontDisplay);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 3px 0 rgba(10,10,10,.15);}
 .cpr .lucide{width:20px;height:20px;stroke-width:2;flex-shrink:0;}
-.cpr #shutter{width:68px;height:68px;border-radius:50%;border:4px solid var(--cream);background:rgba(10,10,10,.25);position:relative;cursor:pointer;padding:0;flex-shrink:0;box-shadow:0 4px 18px rgba(0,0,0,.35);}
-.cpr #shutter em{position:absolute;inset:5px;border-radius:50%;background:var(--accent);transition:all .18s;}
-.cpr #shutter.rec em{background:var(--accent);inset:17px;border-radius:10px;animation:cprPulse 1.2s infinite;}
+.cpr #shutter{width:74px;height:74px;border-radius:50%;border:4px solid var(--cream);background:rgba(10,10,10,.25);position:relative;cursor:pointer;padding:0;flex-shrink:0;box-shadow:0 0 0 5px rgba(234,73,24,.25),0 6px 22px rgba(0,0,0,.4);}
+.cpr #shutter em{position:absolute;inset:6px;border-radius:50%;background:var(--accent);transition:all .18s;}
+.cpr #shutter.rec em{background:var(--accent);inset:20px;border-radius:12px;animation:cprPulse 1.2s infinite;}
 .cpr #shutter.camoff em{background:var(--cream);opacity:.5;}
 .cpr #recBtnPulse{animation:cprPulse 1.2s infinite;}
 .cpr #quickBar{display:flex;gap:4px;flex:1;justify-content:center;min-width:0;}
 .cpr #quickBar .pbtn{padding:6px 5px;flex-direction:column;gap:2px;border-radius:14px;min-width:0;flex:0 1 52px;}
 .cpr #quickBar .pbtn small{font-size:8.5px;font-weight:600;opacity:.95;}
 .cpr #quickBar .pbtn .lucide{width:17px;height:17px;}
-.cpr #bottomBar .pbtn{flex-direction:column;gap:2px;padding:7px 2px;min-width:0;flex:1 1 0;max-width:64px;border-radius:16px;}
+.cpr #bottomBar .pbtn{flex-direction:column;gap:3px;padding:9px 2px;min-width:0;flex:1 1 0;max-width:66px;border-radius:18px;background:rgba(245,243,231,.1);border:1px solid rgba(245,243,231,.16);}
 .cpr #bottomBar .pbtn small{font-size:9px;font-weight:600;opacity:.95;white-space:nowrap;}
 .cpr #bottomBar .pbtn .lucide{width:18px;height:18px;}
 .cpr #shutterWrap{display:flex;flex-direction:column;align-items:center;gap:4px;flex:0 0 auto;}
@@ -165,7 +169,9 @@ const CSS = `
 .cpr.light:not(.camOn) #prompterText .w{color:rgba(10,10,10,.9);}
 .cpr.light:not(.camOn) #prompterText .w.done{color:rgba(10,10,10,.24);}
 .cpr.light:not(.camOn) #prompterText .w.cur,.cpr.light:not(.camOn) #prompterText .w.em{color:var(--accent);}
-.cpr.light #topBar{background:linear-gradient(rgba(245,243,231,.94),transparent);}
+.cpr.light #topBar{background:rgba(253,251,245,.92);border-color:rgba(10,10,10,.12);}
+.cpr.light #quickBar .pbtn,.cpr.light #topBar>div:last-child .pbtn{color:#0A0A0A;background:transparent;border:none;}
+.cpr.light #prExit{color:#0A0A0A;border-color:rgba(10,10,10,.35);background:transparent;}
 .cpr.light #bottomBar{background:linear-gradient(transparent,rgba(245,243,231,.96));}
 .cpr.light:not(.camOn) .pbtn{background:rgba(253,251,245,.92);color:#0A0A0A;border-color:rgba(10,10,10,.16);}
 .cpr.light:not(.camOn) .pbtn.on{background:var(--accent);color:var(--accentFg);border-color:var(--accent);}
@@ -194,6 +200,9 @@ const ICONS: Record<string, string> = {
   camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /> <circle cx="12" cy="13" r="3" />',
   "camera-off": '<line x1="2" x2="22" y1="2" y2="22" /> <path d="M7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16" /> <path d="M9.5 4h5L17 7h3a2 2 0 0 1 2 2v7.5" /> <path d="M14.121 15.121A3 3 0 1 1 9.88 10.88" />',
   "rotate-ccw": '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /> <path d="M3 3v5h5" />',
+  type: '<polyline points="4 7 4 4 20 4 20 7" /> <line x1="9" x2="15" y1="20" y2="20" /> <line x1="12" x2="12" y1="4" y2="20" />',
+  gauge: '<path d="m12 14 4-4" /> <path d="M3.34 19a10 10 0 1 1 17.32 0" />',
+  crop: '<path d="M6 2v14a2 2 0 0 0 2 2h14" /> <path d="M18 22V8a2 2 0 0 0-2-2H2" />',
 };
 
 const DEF = {
@@ -1162,9 +1171,10 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       <div id="settingsPanel">
         <div className="shandle" />
         <h2>Ajustes do prompter</h2>
+        <p className="sgSub">Tudo é salvo na hora, neste aparelho.</p>
 
-        <p className="sgTitle">Texto</p>
         <div className="sgCard">
+          <div className="sgHead"><span className="sgChip"><i data-lucide="type" /></span><p className="sgTitle">Texto</p></div>
           <div className="set"><label>Tamanho da fonte <b id="vFont" /></label><input type="range" id="sFont" min={20} max={90} step={1} /></div>
           <div className="set"><label>Margens laterais <b id="vMargin" /></label><input type="range" id="sMargin" min={0} max={30} step={1} /></div>
           <div className="set"><label>Altura da linha <b id="vLine" /></label><input type="range" id="sLine" min={1.2} max={2.2} step={0.05} /></div>
@@ -1180,24 +1190,24 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
           </div>
         </div>
 
-        <p className="sgTitle">Ritmo</p>
         <div className="sgCard">
+          <div className="sgHead"><span className="sgChip cYellow"><i data-lucide="gauge" /></span><p className="sgTitle">Ritmo</p></div>
           <div className="set"><label>Velocidade (rolagem) <b id="vSpeed" /></label><input type="range" id="sSpeed" min={10} max={200} step={1} /></div>
           <div className="switchrow">Usar palavras/minuto<label className="sw"><input type="checkbox" id="sUseWpm" /><i /></label></div>
           <div className="set"><label>Palavras por minuto <b id="vWpm" /></label><input type="range" id="sWpm" min={80} max={220} step={5} /></div>
           <div className="set"><label>Contagem regressiva <b id="vCount" /></label><input type="range" id="sCount" min={0} max={10} step={1} /></div>
         </div>
 
-        <p className="sgTitle">Enquadramento</p>
         <div className="sgCard">
+          <div className="sgHead"><span className="sgChip cBlue"><i data-lucide="crop" /></span><p className="sgTitle">Enquadramento</p></div>
           <div className="switchrow">Modo Reels/Shorts 9:16<label className="sw"><input type="checkbox" id="sReels" /><i /></label></div>
           <div className="switchrow">Espelhar horizontal (vidro)<label className="sw"><input type="checkbox" id="sMirX" /><i /></label></div>
           <div className="switchrow">Espelhar vertical<label className="sw"><input type="checkbox" id="sMirY" /><i /></label></div>
           <div className="switchrow">Seta guia<label className="sw"><input type="checkbox" id="sGuide" defaultChecked /><i /></label></div>
         </div>
 
-        <p className="sgTitle">Modo card (estilo CapCut)</p>
         <div className="sgCard">
+          <div className="sgHead"><span className="sgChip cPink"><i data-lucide="gallery-thumbnails" /></span><p className="sgTitle">Modo card (estilo CapCut)</p></div>
           <div className="switchrow">Ativar modo card<label className="sw"><input type="checkbox" id="sCardOn" /><i /></label></div>
           <div className="set"><label>Posição do card</label>
             <select id="sCardPos" defaultValue="top"><option value="top">Em cima</option><option value="center">Centro</option><option value="bottom">Embaixo</option></select>
@@ -1209,8 +1219,8 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
           </div>
         </div>
 
-        <p className="sgTitle">Câmera</p>
         <div className="sgCard">
+          <div className="sgHead"><span className="sgChip cGreen"><i data-lucide="camera" /></span><p className="sgTitle">Câmera</p></div>
           <div className="set"><label>Qual câmera</label>
             <select id="sCamFace" defaultValue="user">
               <option value="user">Frontal</option>
@@ -1244,7 +1254,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
           <p id="ssMeta" />
           {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
           <video id="ssVideo" controls playsInline preload="metadata" />
-          <p className="ssHint" id="ssHint">Toca em <b>Salvar no celular</b> e escolhe <b>"Salvar Vídeo"</b> no menu que abrir — vai direto pra sua galeria.</p>
+          <p className="ssHint" id="ssHint">Toca em <b>Salvar no celular</b> e escolhe <b>"Salvar Vídeo"</b> no menu que abrir: vai direto pra sua galeria.</p>
           <button className="ssBtn primary" id="ssShare">Salvar no celular</button>
           <button className="ssBtn" id="ssDownload">Baixar arquivo</button>
           <button className="ssBtn ghost" id="ssClose">Fechar e continuar gravando</button>
