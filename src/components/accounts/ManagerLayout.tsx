@@ -299,11 +299,12 @@ export default function ManagerLayout() {
             <HelpButton />
           </div>
 
+          {/* A logo central sobe a página atual pro topo (não navega pra home). */}
           <button
             type="button"
-            onClick={() => navigate("/socialmidia/dashboard")}
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             className="justify-self-center px-2"
-            aria-label="Início"
+            aria-label="Subir ao topo"
           >
             <Logo className="h-6 w-auto" />
           </button>

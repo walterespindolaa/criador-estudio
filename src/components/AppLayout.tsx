@@ -207,9 +207,15 @@ const AppLayout = () => {
                 <HelpButton />
               </div>
 
-              <NavLink to="/app" className="flex items-center justify-self-center px-2" aria-label="Início">
+              {/* A logo central sobe a página atual pro topo (não navega pra home). */}
+              <button
+                type="button"
+                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                className="flex items-center justify-self-center px-2"
+                aria-label="Subir ao topo"
+              >
                 <Logo className="h-6 w-auto" />
-              </NavLink>
+              </button>
 
               <div className="flex items-center gap-1 justify-self-end">
                 <UploadProgressIndicator />
