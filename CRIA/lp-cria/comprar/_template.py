@@ -183,7 +183,7 @@ planos = {
             "Kanban da produção: da ideia ao publicado",
             "Calendário, tarefas e metas",
             "Brandbook + link in bio",
-            "Cria IA: 10 gerações/mês (pra experimentar)",
+            "Cria 10 gerações guiadas/mês (pra experimentar)",
         ])),
     "pro": dict(
         NOME="Pro", SLUG="pro", PRECO="32,90", BADGE="Mais escolhido",
@@ -192,22 +192,23 @@ planos = {
         STRIPE_LINK="",
         FEATURES=feat([
             "Tudo do Essencial, e mais:",
-            "Cria IA: 150 gerações/mês (legendas, roteiros, ganchos, score)",
+            "150 gerações/mês: legendas, roteiros, ganchos e nota",
             "Insights reais do Instagram + Meu Feed",
             "Melhor horário pra postar",
             "Tendências do seu nicho + Media Kit automático",
         ])),
     "studio": dict(
-        NOME="Studio", SLUG="studio", PRECO="49,90", BADGE="A IA cria por você",
+        NOME="Studio", SLUG="studio", PRECO="49,90", BADGE="O CRIA monta por você",
         CARD_BG="var(--branco)", CARD_FG="var(--ink)", CARD_EXTRA="border:2px solid var(--ink);",
         SCRIPT_COLOR="var(--azul)", CHECK_COLOR="var(--verde)", SELO_BG="var(--creme-2)",
         STRIPE_LINK="",
         FEATURES=feat([
             "Tudo do Pro, e mais:",
-            "Cria Plano: a IA monta o seu mês inteiro",
+            "Cria Plano: o seu mês inteiro montado",
             "Cria Stories: o plano semanal de stories",
+            "Cria Prompter: teleprompter com gravação",
             "Collabs: parcerias, propostas e cachê",
-            "Cria IA: 500 gerações/mês",
+            "Cria 500 gerações/mês",
         ])),
 }
 

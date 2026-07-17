@@ -245,7 +245,7 @@ export default function Insights() {
             return (
               <div key={mi.id} className="bg-card border border-border rounded-2xl p-3 flex gap-3">
                 <div className="w-[74px] h-[74px] rounded-xl shrink-0 grid place-items-center bg-muted overflow-hidden">
-                  {mi.thumbnail_url ? <img src={mi.thumbnail_url} referrerPolicy="no-referrer" alt="" className="w-full h-full object-cover" /> : <MI className="h-6 w-6 text-muted-foreground" />}
+                  {mi.thumbnail_url ? <img src={mi.thumbnail_url} referrerPolicy="no-referrer" alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" /> : <MI className="h-6 w-6 text-muted-foreground" />}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-[12.5px] leading-snug line-clamp-2">{mi.caption || "(sem legenda)"}</p>

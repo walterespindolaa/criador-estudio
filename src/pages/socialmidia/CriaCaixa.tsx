@@ -566,6 +566,11 @@ function CaixaInner() {
                       {c.margemPct.toFixed(0)}% de margem
                     </p>
                   </div>
+                  {/* Atalho pra aba Financeiro da ficha: é lá que se lança e edita os custos por categoria. */}
+                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-muted-foreground hover:text-primary"
+                    title="Custos e margem na ficha do cliente" onClick={() => navigate(`/socialmidia/clientes/${c.id}/financeiro`)}>
+                    <Receipt className="h-4 w-4" />
+                  </Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-muted-foreground hover:text-primary"
                     title="Abrir no Cria Gestão" onClick={() => navigate(`/socialmidia/criacrm/${c.id}`)}>
                     <ExternalLink className="h-4 w-4" />

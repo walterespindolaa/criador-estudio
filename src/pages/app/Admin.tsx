@@ -822,7 +822,7 @@ function AdminUserRow({ user, email, onRoleChange, onPlanChange, onAction, onSel
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/15 flex items-center justify-center overflow-hidden shrink-0">
             {user.avatar_url ? (
-              <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+              <img src={user.avatar_url} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
             ) : (
               <span className="text-xs font-display font-bold text-primary">{initials(user.name)}</span>
             )}

@@ -59,10 +59,10 @@ nav{position:fixed;top:18px;left:50%;transform:translateX(-50%);width:min(1120px
 @media(max-width:820px){.nav-links{display:none}.nav-login{font-size:.85rem;padding:8px 10px}}
 
 /* hero gestor — fundo ink, energia de "operação" */
-#hero{background:var(--ink);color:var(--creme);padding:150px 0 80px;position:relative;overflow:hidden}
+#hero{background:var(--azul);color:var(--creme);padding:150px 0 80px;position:relative;overflow:hidden}
 .hero-blob{position:absolute;border-radius:50%;will-change:transform;opacity:.9}
 .hb-1{width:340px;height:340px;background:var(--laranja);border-radius:42% 58% 60% 40%/45% 50% 50% 55%;top:-120px;right:-90px}
-.hb-2{width:200px;height:200px;background:var(--azul);border-radius:55% 45% 40% 60%/52% 48% 52% 48%;bottom:-60px;left:-60px}
+.hb-2{width:200px;height:200px;background:var(--rosa);border-radius:55% 45% 40% 60%/52% 48% 52% 48%;bottom:-60px;left:-60px}
 .hb-3{width:80px;height:80px;background:var(--amarelo);border-radius:50%;top:32%;left:8%}
 #hero .container{position:relative;z-index:2;text-align:center}
 h1{font-size:clamp(2.4rem,6vw,4.6rem);max-width:18ch;margin:0 auto 10px}
@@ -111,6 +111,9 @@ h1 .hl{color:var(--amarelo)}
 .mk-label{font-size:.72rem;opacity:.55;text-align:center;margin-top:4px;border:1.5px dashed rgba(10,10,10,.3);border-radius:10px;padding:6px 8px}
 .sm-blobs{position:absolute;inset:0;pointer-events:none;z-index:0}
 .sm-mark{display:block;opacity:.06}
+.selo-marks{position:absolute;inset:0;pointer-events:none;z-index:0}
+.selo-w{display:block;opacity:.07}
+.selo-w.inv{opacity:.13;filter:brightness(0) invert(1)}
 .smblob{position:absolute;display:block;animation:smblob-float 14s ease-in-out infinite}
 @keyframes smblob-float{0%,100%{transform:translate(0,0) rotate(0deg) scale(1)}33%{transform:translate(16px,-20px) rotate(7deg) scale(1.05)}66%{transform:translate(-12px,14px) rotate(-6deg) scale(.97)}}
 @media(prefers-reduced-motion:reduce){.smblob{animation:none}}
@@ -130,7 +133,7 @@ h1 .hl{color:var(--amarelo)}
 .conta-card{border-radius:28px 34px 28px 36px;padding:38px 34px;transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
 .conta-card:hover{transform:rotate(0deg) translateY(-5px)}
 .conta-vc{background:var(--branco);border:3px solid var(--ink);box-shadow:8px 8px 0 rgba(10,10,10,.85);transform:rotate(-.8deg)}
-.conta-cria{background:var(--ink);color:var(--creme);border:3px solid var(--laranja);box-shadow:8px 8px 0 var(--laranja);transform:rotate(.8deg)}
+.conta-cria{background:var(--azul);color:var(--creme);border:3px solid var(--laranja);box-shadow:8px 8px 0 var(--laranja);transform:rotate(.8deg)}
 .conta-nota{text-align:center;font-family:var(--font-script);font-size:1.6rem;color:var(--laranja);margin-top:28px;transform:rotate(-1.5deg);position:relative;z-index:1}
 .conta-card .big{font-family:var(--font-display);font-weight:800;font-size:2.4rem}
 .conta-card .big small{font-size:1rem;opacity:.7}
@@ -145,7 +148,7 @@ h1 .hl{color:var(--amarelo)}
 #final h2{font-size:clamp(2rem,5vw,3.6rem);max-width:20ch;margin:0 auto 12px}
 #final .script{color:var(--laranja);font-size:clamp(1.5rem,3vw,2.2rem);display:block;margin-bottom:24px;transform:rotate(-1.5deg)}
 
-footer{background:var(--ink);color:rgba(244,239,227,.7);padding:44px 0;text-align:center;font-size:.88rem}
+footer{background:var(--azul);color:rgba(244,239,227,.7);padding:44px 0;text-align:center;font-size:.88rem}
 footer .logo{color:var(--creme);display:block;margin-bottom:10px}
 
 /* sticky CTA mobile */
@@ -212,6 +215,7 @@ html,body{overflow-x:clip}
 </nav>
 
 <section id="hero">
+  <div class="selo-marks" aria-hidden="true"><span class="smblob" style="top:20%;left:6%;animation-duration:15s"><img class="selo-w inv" src="cria-icone.png" alt="" style="width:64px;transform:rotate(-10deg)"></span><span class="smblob" style="bottom:14%;right:8%;animation-duration:12s"><img class="selo-w inv" src="cria-icone.png" alt="" style="width:44px;transform:rotate(8deg)"></span></div>
   <div class="hero-blob hb-1"></div>
   <div class="hero-blob hb-2"></div>
   <div class="hero-blob hb-3"></div>
@@ -280,7 +284,7 @@ html,body{overflow-x:clip}
 .sem-dia{display:block;font-size:1.4rem;color:var(--sc);margin-bottom:8px;line-height:1}
 .sem-card p{font-size:.92rem;line-height:1.5;opacity:.85}
 .sem-virada{max-width:640px;margin:36px auto 0;text-align:center;font-size:1.05rem;line-height:1.6}
-#uau{background:var(--ink);padding:85px 0;position:relative;overflow:hidden}
+#uau{background:var(--azul);padding:85px 0;position:relative;overflow:hidden}
 .uau-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center}
 .uau-p{color:rgba(255,255,255,.8);margin-top:16px;font-size:1.02rem;line-height:1.65}
 .uau-chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:22px}
@@ -390,7 +394,7 @@ html,body{overflow-x:clip}
 
     <div class="mod reveal">
       <div>
-        <span class="mod-tag" style="background:var(--ink);color:#fff"><svg class="svgi" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Modo Agência</span>
+        <span class="mod-tag" style="background:var(--azul);color:#fff"><svg class="svgi" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Modo Agência</span>
         <h3>Vários clientes, uma cabeça só</h3>
         <p>Alterne entre clientes sem se perder: cada um com seu calendário, brandbook, aprovações e financeiro, e você com a visão geral de tudo.</p>
         <ul>
@@ -400,7 +404,7 @@ html,body{overflow-x:clip}
           <li><b>✓</b> Visão geral: o que está travado em cada conta</li>
         </ul>
       </div>
-      <div class="mod-visual dark" style="background:var(--ink)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><span class="mk-label">[ print da visão multi-cliente ]</span></div></div></div>
+      <div class="mod-visual dark" style="background:var(--azul)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><span class="mk-label">[ print da visão multi-cliente ]</span></div></div></div>
     </div>
 
     <div class="mod reveal">
@@ -442,6 +446,7 @@ html,body{overflow-x:clip}
 </section>
 
 <section id="conta">
+  <div class="selo-marks" aria-hidden="true"><span class="smblob" style="top:10%;right:5%;animation-duration:16s"><img class="selo-w" src="cria-icone.png" alt="" style="width:56px;transform:rotate(9deg)"></span><span class="smblob" style="bottom:8%;left:4%;animation-duration:13s"><img class="selo-w" src="cria-icone.png" alt="" style="width:40px;transform:rotate(-8deg)"></span></div>
   <div class="container">
     <div style="text-align:center;max-width:720px;margin:0 auto" class="reveal">
       <span class="kicker" style="background:var(--laranja)">Faz a conta</span>
@@ -498,7 +503,7 @@ html,body{overflow-x:clip}
 .comp-row:not(.comp-head):not(.comp-total):hover .comp-job,.comp-row:not(.comp-head):not(.comp-total):hover .comp-mkt{background:rgba(10,10,10,.025)}
 .comp-row .comp-cria{background:rgba(234,73,24,.05);border-left:3px solid var(--rc,var(--laranja));font-weight:600}
 .comp-row:not(.comp-head) .comp-cria::before{content:"✓";font-family:var(--font-display);font-weight:800;font-size:1.05rem;line-height:1.3;color:var(--rc,var(--laranja));flex-shrink:0}
-.comp-head>div{background:var(--ink);color:var(--creme);font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:.78rem;letter-spacing:.06em;align-items:center;justify-content:center;text-align:center}
+.comp-head>div{background:var(--azul);color:var(--creme);font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:.78rem;letter-spacing:.06em;align-items:center;justify-content:center;text-align:center}
 .comp-head .comp-cria{background:var(--laranja);color:#fff;border-left:none;padding:12px 20px}
 .comp-logo{height:30px;width:auto;display:block}
 .comp-total>div{background:var(--amarelo);font-weight:700}
@@ -549,6 +554,7 @@ html,body{overflow-x:clip}
 </style>
 
 <section id="final">
+  <div class="selo-marks" aria-hidden="true"><span class="smblob" style="top:12%;left:6%;animation-duration:14s"><img class="selo-w" src="cria-icone.png" alt="" style="width:60px;transform:rotate(-9deg)"></span></div>
   <div class="fs fs-1"></div>
   <div class="fs fs-2"></div>
   <div class="container">

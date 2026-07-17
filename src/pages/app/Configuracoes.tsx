@@ -61,6 +61,17 @@ const profileSchema = z.object({
 
 type ProfileFormData = z.infer<typeof profileSchema>;
 
+/* Pílulas de navegação: rótulo sempre visível (ícone sozinho não orienta ninguém)
+   e alvo de toque confortável no celular (min-h 44px). */
+const TAB_PILL = "flex items-center gap-1.5 rounded-xl px-3.5 py-2.5 min-h-[44px] text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap";
+
+const SectionHeader = ({ title, desc }: { title: string; desc: string }) => (
+  <div className="mb-5">
+    <h2 className="font-display text-lg font-bold text-foreground">{title}</h2>
+    <p className="text-sm text-muted-foreground font-body mt-0.5">{desc}</p>
+  </div>
+);
+
 const Configuracoes = () => {
   const { user, signOut } = useAuth();
   const { profile, updateProfile } = useProfile();
@@ -398,14 +409,18 @@ const Configuracoes = () => {
         )}
 
         <Tabs defaultValue={isManaging ? "pilares" : "perfil"} className="w-full">
-          <div className="overflow-x-auto mb-6 -mx-4 px-4 scrollbar-none flex justify-center sm:justify-start">
+          {/* Sem justify-center aqui: com overflow, centralizar cortava o início
+              das pílulas sem como rolar até elas. Scroll horizontal com snap. */}
+          <div className="overflow-x-auto mb-6 -mx-4 px-4 scrollbar-none scroll-snap-x">
             <TabsList className="inline-flex h-auto bg-card border border-border rounded-2xl p-1.5 gap-1 min-w-max">
-              {!isManaging && <TabsTrigger value="perfil" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><User className="h-3.5 w-3.5 shrink-0" /><span className="hidden sm:inline">Perfil</span></TabsTrigger>}
-              <TabsTrigger value="pilares" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><LayoutGrid className="h-3.5 w-3.5 shrink-0" /><span className="hidden sm:inline">Pilares & Hábitos</span></TabsTrigger>
-              {!isManaging && <TabsTrigger value="visual" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Paintbrush className="h-3.5 w-3.5 shrink-0" /><span className="hidden sm:inline">Visual</span></TabsTrigger>}
-              {!isManaging && <TabsTrigger value="integracoes" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Plug className="h-3.5 w-3.5 shrink-0" /><span className="hidden sm:inline">Integrações</span></TabsTrigger>}
-              {!isManaging && <TabsTrigger value="equipe" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Users className="h-3.5 w-3.5 shrink-0" /><span className="hidden sm:inline">Equipe</span></TabsTrigger>}
-              {!isManaging && <TabsTrigger value="seguranca" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap"><Shield className="h-3.5 w-3.5 shrink-0" /><span className="hidden sm:inline">Segurança</span></TabsTrigger>}
+              {!isManaging && <TabsTrigger value="perfil" className={TAB_PILL}><User className="h-3.5 w-3.5 shrink-0" /><span>Perfil</span></TabsTrigger>}
+              <TabsTrigger value="pilares" className={TAB_PILL}><LayoutGrid className="h-3.5 w-3.5 shrink-0" /><span>Pilares & Hábitos</span></TabsTrigger>
+              {!isManaging && <TabsTrigger value="visual" className={TAB_PILL}><Paintbrush className="h-3.5 w-3.5 shrink-0" /><span>Marca & Visual</span></TabsTrigger>}
+              {!isManaging && <TabsTrigger value="assinatura" className={TAB_PILL}><CreditCard className="h-3.5 w-3.5 shrink-0" /><span>Assinatura</span></TabsTrigger>}
+              {!isManaging && <TabsTrigger value="conexoes" className={TAB_PILL}><Plug className="h-3.5 w-3.5 shrink-0" /><span>Conexões</span></TabsTrigger>}
+              {!isManaging && <TabsTrigger value="notificacoes" className={TAB_PILL}><Bell className="h-3.5 w-3.5 shrink-0" /><span>Notificações</span></TabsTrigger>}
+              {!isManaging && <TabsTrigger value="equipe" className={TAB_PILL}><Users className="h-3.5 w-3.5 shrink-0" /><span>Equipe</span></TabsTrigger>}
+              {!isManaging && <TabsTrigger value="conta" className={TAB_PILL}><Shield className="h-3.5 w-3.5 shrink-0" /><span>Conta</span></TabsTrigger>}
             </TabsList>
           </div>
 
@@ -413,6 +428,7 @@ const Configuracoes = () => {
             {!isManaging && (
             <TabsContent value="perfil">
               <form onSubmit={handleSubmit(onSubmit)} className="max-w-2xl space-y-6">
+                <SectionHeader title="Perfil" desc="Sua identidade no CRIA: foto, bio, nicho, plataformas e handles." />
                 <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-5">
                   <h3 className="font-display font-semibold text-foreground">Meu Perfil</h3>
                   <div className="flex items-center gap-4">
@@ -584,6 +600,7 @@ const Configuracoes = () => {
 
             <TabsContent value="pilares">
               <div className="max-w-2xl space-y-6">
+                <SectionHeader title="Pilares & Hábitos" desc="A base da sua linha editorial: temas que você cobre e rotinas que sustentam a produção." />
                 <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
                   <h3 className="font-display font-semibold text-foreground">Pilares de Conteúdo</h3>
                   <p className="text-xs text-muted-foreground font-body">Máximo 7 pilares</p>
@@ -710,14 +727,15 @@ const Configuracoes = () => {
 
             {!isManaging && (
             <TabsContent value="visual">
+              <SectionHeader title="Marca & Visual" desc="Deixe o CRIA com a sua cara: tema, cores, fundo e tipografia." />
               <SettingsVisual />
             </TabsContent>
             )}
 
             {!isManaging && (
-            <TabsContent value="integracoes">
+            <TabsContent value="conexoes">
               <div className="max-w-2xl space-y-6">
-                <AiUsageCard />
+                <SectionHeader title="Conexões" desc="Serviços externos ligados à sua conta. Só leitura, você desconecta quando quiser." />
                 <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
                   <h3 className="font-display font-semibold text-foreground flex items-center gap-2"><Instagram className="h-5 w-5 text-primary" /> Instagram</h3>
                   <p className="text-sm text-muted-foreground font-body leading-relaxed">Conecte sua conta Business ou Creator pra ver seus insights (alcance, seguidores, desempenho) na página de Insights. Só leitura, o CRIA não publica por você.</p>
@@ -760,6 +778,34 @@ const Configuracoes = () => {
                     </Button>
                   )}
                 </div>
+              </div>
+            </TabsContent>
+            )}
+
+            {!isManaging && (
+            <TabsContent value="assinatura">
+              <div className="max-w-2xl space-y-6">
+                <SectionHeader title="Assinatura e armazenamento" desc="Seu plano, uso de IA e espaço de arquivos, tudo num lugar só." />
+                {profile?.stripe_customer_id && (
+                  <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
+                    <h3 className="font-display font-semibold text-foreground flex items-center gap-2">
+                      <CreditCard className="h-5 w-5" /> Assinatura
+                    </h3>
+                    <p className="text-sm text-muted-foreground font-body">
+                      Gerencie seu método de pagamento, baixe recibos, troque de plano ou cancele a qualquer momento no portal do Stripe.
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={openPortal}
+                      disabled={portalLoading}
+                      className="w-full sm:w-auto"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      {portalLoading ? "Abrindo..." : "Gerenciar assinatura"}
+                    </Button>
+                  </div>
+                )}
+                <AiUsageCard />
 
                 {(() => {
                   const storageUsed = profile?.storage_used_bytes ?? 0;
@@ -780,7 +826,7 @@ const Configuracoes = () => {
                   return (
                     <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border">
                       <section className="space-y-4">
-                        <h3 className="text-sm font-display font-semibold text-foreground">Armazenamento</h3>
+                        <h3 className="font-display font-semibold text-foreground flex items-center gap-2"><HardDrive className="h-5 w-5 text-primary" /> Armazenamento</h3>
 
                         <div className="bg-muted/30 rounded-xl p-4 space-y-3">
                           <div className="flex items-center justify-between text-sm">
@@ -855,44 +901,35 @@ const Configuracoes = () => {
             {!isManaging && (
             <TabsContent value="equipe">
               <div className="max-w-2xl">
+                <SectionHeader title="Equipe" desc="Convide colaboradores e gerencie quem tem acesso ao seu espaço." />
                 <SettingsEquipe />
               </div>
             </TabsContent>
             )}
 
             {!isManaging && (
-            <TabsContent value="seguranca">
+            <TabsContent value="notificacoes">
               <div className="max-w-2xl space-y-6">
+                <SectionHeader title="Notificações" desc="Escolha como o CRIA te avisa sobre o que importa." />
+                <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-3">
+                  <h3 className="font-display font-semibold text-foreground flex items-center gap-2"><Bell className="h-5 w-5 text-primary" /> Notificações no aparelho</h3>
+                  <p className="text-sm text-muted-foreground font-body">Receba avisos e recados no aparelho (celular/PC), mesmo com o app fechado.</p>
+                  <NotificationToggle />
+                </div>
+              </div>
+            </TabsContent>
+            )}
+
+            {!isManaging && (
+            <TabsContent value="conta">
+              <div className="max-w-2xl space-y-6">
+                <SectionHeader title="Conta" desc="Segurança, acesso e decisões definitivas sobre a sua conta." />
                 <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
-                  <h3 className="font-display font-semibold text-foreground">Segurança da Conta</h3>
+                  <h3 className="font-display font-semibold text-foreground flex items-center gap-2"><Lock className="h-5 w-5 text-primary" /> Segurança da Conta</h3>
                   <div className="space-y-4">
                     <Button variant="outline" onClick={() => setPasswordOpen(true)} className="w-full sm:w-auto"><Lock className="h-4 w-4 mr-2" /> Alterar Senha</Button>
                   </div>
                 </div>
-                <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-3">
-                  <h3 className="font-display font-semibold text-foreground flex items-center gap-2"><Bell className="h-5 w-5 text-primary" /> Notificações</h3>
-                  <p className="text-sm text-muted-foreground font-body">Receba avisos e recados no aparelho (celular/PC), mesmo com o app fechado.</p>
-                  <NotificationToggle />
-                </div>
-                {profile?.stripe_customer_id && (
-                  <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
-                    <h3 className="font-display font-semibold text-foreground flex items-center gap-2">
-                      <CreditCard className="h-5 w-5" /> Assinatura
-                    </h3>
-                    <p className="text-sm text-muted-foreground font-body">
-                      Gerencie seu método de pagamento, baixe recibos, troque de plano ou cancele a qualquer momento no portal do Stripe.
-                    </p>
-                    <Button
-                      variant="outline"
-                      onClick={openPortal}
-                      disabled={portalLoading}
-                      className="w-full sm:w-auto"
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      {portalLoading ? "Abrindo..." : "Gerenciar assinatura"}
-                    </Button>
-                  </div>
-                )}
                 <div className="bg-card border-destructive/20 rounded-2xl p-6 shadow-[var(--shadow-warm)] border space-y-4">
                   <h3 className="font-display font-semibold text-destructive flex items-center gap-2"><AlertTriangle className="h-5 w-5" /> Zona de Perigo</h3>
                   <Button variant="outline" onClick={() => setLogoutOpen(true)} className="text-destructive hover:bg-destructive/10 border-destructive/20">Sair da conta</Button>

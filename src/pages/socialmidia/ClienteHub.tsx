@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, ExternalLink, Link2, Loader2, Plus, Settings2, Wallet, Send, Check, Pencil, LogIn } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Link2, Loader2, Plus, Settings2, Trash2, Wallet, Send, Check, Pencil, LogIn } from "lucide-react";
 import { toast } from "sonner";
 import { useCrmClient, useUpdateCrmClient } from "@/hooks/useCrm";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useExternalClients } from "@/hooks/useCriaPost";
 import {
-  useFinRecords, useCreateFinRecord, useUpdateFinRecord,
-  useFinRecurring, useCreateFinRecurring, type FinType,
+  useFinRecords, useCreateFinRecord, useUpdateFinRecord, useDeleteFinRecord,
+  useFinRecurring, useCreateFinRecurring, type FinType, type FinRecord,
 } from "@/hooks/useFinance";
 import { ClienteIdeias } from "@/components/accounts/ClienteIdeias";
 import { ClientePortalTab } from "@/components/accounts/ClientePortalTab";
@@ -75,6 +75,9 @@ const FLOW_EXPLAIN: Record<string, string> = {
 const initial = (n?: string | null) => (n ? n.trim().charAt(0).toUpperCase() : "?");
 import { CRIA_HEX, type CriaColor } from "@/lib/moduleTheme";
 import { formatBRL } from "@/lib/money";
+import { hojeBR, parseDateOnly } from "@/lib/date-br";
+import { confirmar } from "@/components/shared/Confirm";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 import { useManagerProfile } from "@/hooks/useModules";
 import { isPctRegime } from "@/lib/finance";
@@ -536,6 +539,21 @@ function Info({ label, value }: { label: string; value: string }) {
 const CUSTO_CATS = ["Design", "Copy", "Edição de vídeo", "Tráfego pago", "Ferramentas", "Freelancer", "Outros"] as const;
 const ENTRADA_CATS = ["Mensalidade", "Projeto avulso", "Tráfego reembolsado", "Outras receitas"] as const;
 
+// ── MÊS DE COMPETÊNCIA ──
+// Custo de dezembro pago em janeiro tem que cair em DEZEMBRO, senão a margem
+// dos dois meses mente. O lançamento carrega o mês escolhido no `date`
+// (dia de hoje se for o mês corrente, dia 1º se for outro mês).
+const MESES_BR = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const labelMesBR = (ym: string) => { const [y, m] = ym.split("-").map(Number); return `${MESES_BR[(m ?? 1) - 1]} ${y}`; };
+// Do mês que vem até 11 meses atrás (13 opções). Datas construídas por número, nunca por string.
+function mesesCompet(mesAtual: string): string[] {
+  const [y, m] = mesAtual.split("-").map(Number);
+  return Array.from({ length: 13 }, (_, i) => {
+    const d = new Date(y, m - i, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
+}
+
 function FinanceTab({ clientId, clientName, monthlyValue }: { clientId: string; clientName: string; monthlyValue: number | null }) {
   const { data: all = [], isLoading } = useFinRecords();
   const { profile } = useManagerProfile();
@@ -544,9 +562,16 @@ function FinanceTab({ clientId, clientName, monthlyValue }: { clientId: string; 
   const records = useMemo(() => all.filter((r) => r.crm_client_id === clientId), [all, clientId]);
 
   // Recorte de tempo: o mês diz a saúde atual, o total diz a história do cliente.
+  // O mês agora é NAVEGÁVEL (setas): dá pra conferir a margem de qualquer competência.
   const [range, setRange] = useState<"mes" | "tudo">("mes");
-  const now = new Date();
-  const ymPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const hojeStr = hojeBR();
+  const mesAtual = hojeStr.slice(0, 7);            // YYYY-MM de hoje, no fuso BR
+  const [ymPrefix, setYmPrefix] = useState(mesAtual);
+  const shiftMes = (delta: number) => setYmPrefix((p) => {
+    const [y, m] = p.split("-").map(Number);
+    const d = new Date(y, m - 1 + delta, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
   const rows = useMemo(
     () => (range === "mes" ? records.filter((r) => r.date.startsWith(ymPrefix)) : records),
     [records, range, ymPrefix],
@@ -581,10 +606,17 @@ function FinanceTab({ clientId, clientName, monthlyValue }: { clientId: string; 
   const [cat, setCat] = useState<string>("Design");
   const [valor, setValor] = useState<number | null>(null);
   const [repetir, setRepetir] = useState(false);   // vira entrada/saída fixa deste cliente
+  const [compet, setCompet] = useState(mesAtual);  // mês de competência do lançamento
+  // O formulário acompanha o mês que está sendo visto no resumo.
+  useEffect(() => { if (range === "mes") setCompet(ymPrefix); }, [range, ymPrefix]);
+  const competOpts = useMemo(() => mesesCompet(mesAtual), [mesAtual]);
+  const competList = competOpts.includes(compet) ? competOpts : [compet, ...competOpts];
 
   const cats = type === "despesa" ? CUSTO_CATS : ENTRADA_CATS;
 
   const upd = useUpdateFinRecord();
+  const del = useDeleteFinRecord();
+  const [editRec, setEditRec] = useState<FinRecord | null>(null);
   const createRecurring = useCreateFinRecurring();
   const { data: allRecurring = [] } = useFinRecurring();
   const fixos = useMemo(
@@ -594,17 +626,18 @@ function FinanceTab({ clientId, clientName, monthlyValue }: { clientId: string; 
 
   const add = async () => {
     if (!desc.trim() || !valor || valor <= 0) { toast.error("Preencha descrição e valor."); return; }
-    const hoje = new Date();
+    // Competência: mês corrente entra com a data de hoje; outro mês, no dia 1º.
+    const dataLanc = compet === mesAtual ? hojeStr : `${compet}-01`;
     await create.mutateAsync({
       crm_client_id: clientId, context: "pj", type, description: desc.trim(),
       category: cat, amount: valor, status: type === "despesa" ? "pago" : "pendente",
-      date: hoje.toISOString().slice(0, 10),
+      date: dataLanc,
     });
     if (repetir) {
       await createRecurring.mutateAsync({
         context: "pj", type, description: desc.trim(), category: cat,
-        amount: valor, due_day: Math.min(28, hoje.getDate()), crm_client_id: clientId,
-        active: true, start_date: hoje.toISOString().slice(0, 10),
+        amount: valor, due_day: Math.min(28, Number(hojeStr.slice(8, 10))), crm_client_id: clientId,
+        active: true, start_date: hojeStr,
       });
       toast.success("Vai repetir todo mês. Aparece previsto no Cria Caixa.");
     } else {
@@ -615,12 +648,19 @@ function FinanceTab({ clientId, clientName, monthlyValue }: { clientId: string; 
 
   return (
     <div className="space-y-4">
-      {/* Recorte */}
-      <div className="flex items-center gap-2">
-        {([["mes", "Este mês"], ["tudo", "Desde o início"]] as const).map(([k, l]) => (
+      {/* Recorte, com navegação de mês (competência). */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {([["mes", "Por mês"], ["tudo", "Desde o início"]] as const).map(([k, l]) => (
           <button key={k} onClick={() => setRange(k)}
             className={`px-3 py-1.5 rounded-full text-xs font-body font-bold border ${range === k ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground"}`}>{l}</button>
         ))}
+        {range === "mes" && (
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => shiftMes(-1)} aria-label="Mês anterior"><ChevronLeft className="h-4 w-4" /></Button>
+            <span className="text-xs font-display font-bold text-foreground min-w-[72px] text-center">{labelMesBR(ymPrefix)}</span>
+            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => shiftMes(1)} aria-label="Próximo mês"><ChevronRight className="h-4 w-4" /></Button>
+          </div>
+        )}
         {monthlyValue ? (
           <span className="text-[11px] font-body text-muted-foreground ml-auto">Mensalidade contratada: <strong className="text-foreground">{formatBRL(monthlyValue)}</strong></span>
         ) : null}
@@ -643,7 +683,7 @@ function FinanceTab({ clientId, clientName, monthlyValue }: { clientId: string; 
         </div>
         {porCategoria.length === 0 ? (
           <p className="text-[12px] font-body text-muted-foreground py-2">
-            Nenhum custo lançado {range === "mes" ? "neste mês" : "ainda"}. Lance abaixo escolhendo a categoria (Design, Copy, Tráfego…), é assim que você descobre se o cliente dá lucro de verdade.
+            Nenhum custo lançado {range === "mes" ? `em ${labelMesBR(ymPrefix)}` : "ainda"}. Lance abaixo escolhendo a categoria (Design, Copy, Tráfego…), é assim que você descobre se o cliente dá lucro de verdade.
           </p>
         ) : (
           <div className="space-y-2">
@@ -678,6 +718,11 @@ function FinanceTab({ clientId, clientName, monthlyValue }: { clientId: string; 
           </div>
           <select value={cat} onChange={(e) => setCat(e.target.value)} className="h-10 rounded-lg border border-border bg-card px-3 text-sm shrink-0">
             {cats.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          {/* Mês de competência: em qual mês esse valor pesa na margem. */}
+          <select value={compet} onChange={(e) => setCompet(e.target.value)} title="Mês de competência"
+            className="h-10 rounded-lg border border-border bg-card px-3 text-sm shrink-0">
+            {competList.map((m) => <option key={m} value={m}>{labelMesBR(m)}</option>)}
           </select>
           <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Descrição (ex.: 4 artes do mês)" className="rounded-lg flex-1" />
           <div className="w-full sm:w-36 shrink-0"><MoneyInput value={valor} onChange={setValor} /></div>
@@ -731,7 +776,7 @@ function FinanceTab({ clientId, clientName, monthlyValue }: { clientId: string; 
       {isLoading ? (
         <div className="h-16 rounded-2xl bg-muted animate-pulse" />
       ) : rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground font-body text-center py-8">Nenhum lançamento {range === "mes" ? "neste mês" : "deste cliente ainda"}.</p>
+        <p className="text-sm text-muted-foreground font-body text-center py-8">Nenhum lançamento {range === "mes" ? `em ${labelMesBR(ymPrefix)}` : "deste cliente ainda"}.</p>
       ) : (
         <div className="space-y-2">
           {rows.map((r) => {
@@ -750,18 +795,110 @@ function FinanceTab({ clientId, clientName, monthlyValue }: { clientId: string; 
                 <div className="min-w-0 flex-1">
                   <p className={`text-sm font-body text-foreground truncate ${pago ? "" : "font-medium"}`}>{r.description}</p>
                   <p className="text-[11px] text-muted-foreground font-body truncate">
-                    {new Date(r.date + "T00:00:00").toLocaleDateString("pt-BR")} · {pago ? "pago" : r.status}{r.category ? ` · ${r.category}` : ""}
+                    {parseDateOnly(r.date).toLocaleDateString("pt-BR")} · {pago ? "pago" : r.status}{r.category ? ` · ${r.category}` : ""}
                   </p>
                 </div>
                 <span className={`text-sm font-display font-bold shrink-0 ${r.type === "entrada" ? "text-green-600" : "text-red-500"}`}>
                   {r.type === "entrada" ? "+" : "−"}{formatBRL(Number(r.amount))}
                 </span>
+                {/* Editar e excluir sem sair da ficha (antes só dava pelo Cria Caixa). */}
+                <button onClick={() => setEditRec(r)} title="Editar lançamento" aria-label="Editar lançamento"
+                  className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors">
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={async () => {
+                    if (await confirmar({ titulo: "Excluir este lançamento?", descricao: "Some daqui e do Cria Caixa.", acao: "Excluir", destrutivo: true })) del.mutate(r.id);
+                  }}
+                  title="Excluir lançamento" aria-label="Excluir lançamento"
+                  className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
               </div>
             );
           })}
         </div>
       )}
+
+      <EditarLancamento rec={editRec} onClose={() => setEditRec(null)} />
     </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// EDITAR LANÇAMENTO DO CLIENTE
+// Valor, categoria, descrição e mês de competência, sem sair da ficha.
+// É o mesmo fin_record do Cria Caixa: mudou aqui, mudou lá.
+// ═══════════════════════════════════════════════════════════════════════
+function EditarLancamento({ rec, onClose }: { rec: FinRecord | null; onClose: () => void }) {
+  const upd = useUpdateFinRecord();
+  const [desc, setDesc] = useState("");
+  const [cat, setCat] = useState("");
+  const [valor, setValor] = useState<number | null>(null);
+  const [compet, setCompet] = useState("");
+
+  useEffect(() => {
+    if (rec) {
+      setDesc(rec.description);
+      setCat(rec.category ?? "");
+      setValor(Number(rec.amount));
+      setCompet(rec.date.slice(0, 7));
+    }
+  }, [rec]);
+
+  const cats: readonly string[] = rec?.type === "entrada" ? ENTRADA_CATS : CUSTO_CATS;
+  const catList = cat && !cats.includes(cat) ? [cat, ...cats] : [...cats];
+  const opts = mesesCompet(hojeBR().slice(0, 7));
+  const competList = compet && !opts.includes(compet) ? [compet, ...opts] : opts;
+
+  const salvar = async () => {
+    if (!rec) return;
+    if (!desc.trim() || !valor || valor <= 0) { toast.error("Preencha descrição e valor."); return; }
+    // Se o mês não mudou, preserva o dia original; se mudou, cai no dia 1º.
+    const date = compet === rec.date.slice(0, 7) ? rec.date : `${compet}-01`;
+    await upd.mutateAsync({ id: rec.id, description: desc.trim(), category: cat || null, amount: valor, date });
+    toast.success("Lançamento atualizado.");
+    onClose();
+  };
+
+  return (
+    <Dialog open={!!rec} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md rounded-2xl">
+        <DialogHeader>
+          <DialogTitle className="font-display">Editar {rec?.type === "entrada" ? "entrada" : "custo"}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-body">Descrição</Label>
+            <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Ex.: 4 artes do mês" className="rounded-xl" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-body">Categoria</Label>
+              <select value={cat} onChange={(e) => setCat(e.target.value)} className="w-full h-10 rounded-xl border border-border bg-card px-3 text-sm">
+                {catList.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-body">Mês de competência</Label>
+              <select value={compet} onChange={(e) => setCompet(e.target.value)} className="w-full h-10 rounded-xl border border-border bg-card px-3 text-sm">
+                {competList.map((m) => <option key={m} value={m}>{labelMesBR(m)}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-body">Valor</Label>
+            <MoneyInput value={valor} onChange={setValor} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button onClick={salvar} disabled={upd.isPending}>
+            {upd.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}Salvar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

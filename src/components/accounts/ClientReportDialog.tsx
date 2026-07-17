@@ -224,14 +224,17 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     if (!blob) { toast.error("Não consegui gerar o PDF do relatório."); return null; }
     const slug = client.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "cliente";
     const path = `${user.id}/relatorio-${slug}-${period.key}-${Date.now()}.pdf`;
-    // Bucket dedicado "relatorios"; se ainda não existir no projeto, cai no "avatars"
-    // (público e já usado pelas gestoras pra logos), pra não travar o envio.
-    for (const bucket of ["relatorios", "avatars"]) {
-      const { error } = await supabase.storage.from(bucket).upload(path, blob, { upsert: true, contentType: "application/pdf" });
-      if (!error) {
-        const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-        setShareUrl(data.publicUrl);
-        return data.publicUrl;
+    // Bucket PRIVADO + link assinado com validade de 30 dias. URL pública em
+    // bucket aberto deixava relatório financeiro de cliente acessível a quem
+    // chutasse o caminho; link assinado expira e não é adivinhável.
+    const { error } = await supabase.storage.from("relatorios")
+      .upload(path, blob, { upsert: true, contentType: "application/pdf" });
+    if (!error) {
+      const { data, error: signErr } = await supabase.storage.from("relatorios")
+        .createSignedUrl(path, 60 * 60 * 24 * 30);
+      if (!signErr && data?.signedUrl) {
+        setShareUrl(data.signedUrl);
+        return data.signedUrl;
       }
     }
     toast.error("Não consegui publicar o link. Baixe o PDF e envie manualmente.");

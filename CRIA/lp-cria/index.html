@@ -8,7 +8,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<meta name="description" content="O CRIA junta ideias, planejamento, IA, stories e insights no mesmo lugar. Feito pro criador de conteúdo brasileiro. 7 dias grátis.">
+<meta name="description" content="O CRIA junta ideias, planejamento, produção, stories e insights no mesmo lugar. Feito pro criador de conteúdo brasileiro. 7 dias grátis.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="CRIA | Seu estúdio de conteúdo inteiro. Numa aba só.">
 <meta property="og:description" content="Ideia → planejar → produzir → aprovar → publicar → cobrar. Tudo num lugar. 7 dias grátis.">
@@ -110,7 +110,7 @@ h1 .hl{color:var(--laranja);position:relative;display:inline-block}
 .mock-placeholder strong{font-family:var(--font-display);font-size:1.1rem}
 
 /* ---------- marquee ---------- */
-.marquee-wrap{background:var(--ink);color:var(--creme);padding:20px 0;transform:rotate(-1.2deg) scale(1.02);margin:70px 0 -20px;overflow:hidden}
+.marquee-wrap{background:var(--laranja);color:var(--creme);padding:20px 0;transform:rotate(-1.2deg) scale(1.02);margin:70px 0 -20px;overflow:hidden}
 .marquee{display:flex;width:max-content;gap:0;animation:scroll 28s linear infinite}
 .marquee span{font-family:var(--font-display);font-weight:700;font-size:1.15rem;white-space:nowrap;padding:0 26px;display:flex;align-items:center;gap:26px}
 .marquee .x{color:var(--laranja-2);font-size:1.3rem}
@@ -153,6 +153,7 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
 
 <!-- ==================== HERO ==================== -->
 <section id="hero">
+  <div class="selo-marks" aria-hidden="true"><span class="fblob" style="top:16%;right:6%;animation-duration:15s"><img class="selo-w" src="cria-icone.png" alt="" style="width:64px;transform:rotate(12deg)"></span><span class="fblob" style="bottom:12%;left:5%;animation-duration:12s"><img class="selo-w" src="cria-icone.png" alt="" style="width:44px;transform:rotate(-9deg)"></span></div>
   <div class="hero-blob blob-rosa"></div>
   <div class="hero-blob blob-amarelo"></div>
   <div class="hero-blob blob-azul"></div>
@@ -163,7 +164,7 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
     <h1>Seu estúdio de conteúdo inteiro. <span class="hl">Numa aba só.</span>
       <span class="hero-script">ufa, agora faz sentido!</span>
     </h1>
-    <p class="hero-sub">O CRIA junta suas ideias, planejamento, IA, stories e insights no mesmo lugar, pra você criar com constância sem viver pulando de app em app.</p>
+    <p class="hero-sub">O CRIA junta suas ideias, planejamento, produção, stories e insights no mesmo lugar, pra você criar com constância sem viver pulando de app em app.</p>
     <div class="hero-ctas">
       <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja">Começar meus 7 dias grátis</a>
       <a href="#ciclo" class="btn btn-ghost">Ver como funciona ↓</a>
@@ -220,7 +221,7 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
 .step-num{font-family:var(--font-display);font-weight:800;font-size:1rem;width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0}
 .step h3{font-size:1.15rem;margin-bottom:4px}
 .step p{font-size:.92rem;opacity:.8}
-.ciclo-visual{position:relative;border-radius:40px;background:var(--ink);min-height:430px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.ciclo-visual{position:relative;border-radius:40px;background:var(--azul);min-height:430px;overflow:hidden;display:flex;align-items:center;justify-content:center}
 .ciclo-frame{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;opacity:0;color:var(--creme);text-align:center;padding:40px}
 .ciclo-frame .big{font-family:var(--font-display);font-weight:800;font-size:clamp(2rem,4vw,3.2rem)}
 .ciclo-frame .ph{border:2px dashed rgba(244,239,227,.35);border-radius:20px;padding:26px 34px;font-size:.85rem;opacity:.7}
@@ -260,6 +261,9 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
 .vs-blobs{position:absolute;inset:0;pointer-events:none;z-index:0}
 .vs-mark{display:block;opacity:.14;filter:brightness(0) invert(1)}
 .mark-ink{display:block;opacity:.06}
+.selo-marks{position:absolute;inset:0;pointer-events:none;z-index:0}
+.selo-w{display:block;opacity:.06}
+.selo-w.inv{opacity:.12;filter:brightness(0) invert(1)}
 .versus-grid{display:grid;grid-template-columns:1fr 1fr;gap:26px;max-width:920px;margin:0 auto}
 .vs-card{border-radius:var(--radius-lg);padding:40px 36px}
 .vs-sem{background:rgba(21,20,18,.35);color:rgba(255,255,255,.85);border:1.5px dashed rgba(255,255,255,.3)}
@@ -302,7 +306,7 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
 .plano{border-radius:var(--radius-lg);padding:40px 30px;position:relative}
 .verbo{display:block;font-family:var(--font-display);font-weight:700;font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--laranja);margin-bottom:6px}
 .plano-pro{background:var(--branco);border:2px solid var(--ink)}
-.plano-studio{background:var(--ink);color:var(--creme);box-shadow:0 12px 0 var(--laranja)}
+.plano-studio{background:var(--azul);color:var(--creme);box-shadow:0 12px 0 var(--laranja)}
 .plano .badge{position:absolute;top:-16px;right:26px;background:var(--laranja);color:#fff;font-family:var(--font-display);font-weight:700;font-size:.8rem;padding:7px 16px;border-radius:999px;transform:rotate(3deg)}
 .plano h3{font-size:1.6rem;margin-bottom:6px}
 .plano .desc{font-size:.92rem;opacity:.75;margin-bottom:22px}
@@ -346,7 +350,7 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
 .ps-box b{color:var(--amarelo)}
 
 /* ---------- footer ---------- */
-footer{background:var(--ink);color:rgba(244,239,227,.7);padding:50px 0;text-align:center;font-size:.88rem}
+footer{background:var(--azul);color:rgba(244,239,227,.7);padding:50px 0;text-align:center;font-size:.88rem}
 footer .logo{color:var(--creme);display:block;margin-bottom:10px}
 
 /* ---------- reveals ---------- */
@@ -480,7 +484,8 @@ html,body{overflow-x:clip}
 </style>
 
 <!-- ==================== CICLO CRIA ==================== -->
-<section id="ciclo">
+<section id="ciclo" style="position:relative;overflow:hidden">
+  <div class="selo-marks" aria-hidden="true"><span class="fblob" style="top:10%;left:4%;animation-duration:16s"><img class="selo-w" src="cria-icone.png" alt="" style="width:56px;transform:rotate(-8deg)"></span><span class="fblob" style="bottom:8%;right:5%;animation-duration:13s"><img class="selo-w" src="cria-icone.png" alt="" style="width:40px;transform:rotate(10deg)"></span></div>
   <div class="container" id="ciclo-inner">
     <div class="ciclo-head reveal">
       <span class="kicker" style="background:var(--azul)">O mecanismo</span>
@@ -490,17 +495,17 @@ html,body{overflow-x:clip}
     <div class="ciclo-pin" id="ciclo-pin">
       <div class="ciclo-grid">
         <div class="ciclo-steps" id="ciclo-steps">
-          <div class="step" data-step="0"><span class="step-num" style="background:var(--laranja)">1</span><div><h3>Ideia</h3><p>Banco de ideias sempre à mão + Cria IA sugerindo ideias no tom da sua marca.</p></div></div>
+          <div class="step" data-step="0"><span class="step-num" style="background:var(--laranja)">1</span><div><h3>Ideia</h3><p>Banco de ideias sempre à mão + sugestões de pauta no tom da sua marca.</p></div></div>
           <div class="step" data-step="1"><span class="step-num" style="background:var(--azul)">2</span><div><h3>Planejar</h3><p>Kanban, calendário e plano semanal de stories: a semana inteira montada de uma vez.</p></div></div>
-          <div class="step" data-step="2"><span class="step-num" style="background:var(--rosa)">3</span><div><h3>Produzir</h3><p>Cria IA escreve legenda e roteiro e avalia seu gancho, com o seu brandbook do lado.</p></div></div>
+          <div class="step" data-step="2"><span class="step-num" style="background:var(--rosa)">3</span><div><h3>Produzir</h3><p>Legenda e roteiro saem com estrutura pronta e nota de gancho, com o seu brandbook do lado.</p></div></div>
           <div class="step" data-step="3"><span class="step-num" style="background:var(--amarelo);color:var(--ink)">4</span><div><h3>Publicar</h3><p>Checklist do dia, Meu Feed pra ver como fica antes de postar, notificação pra não furar.</p></div></div>
           <div class="step" data-step="4"><span class="step-num" style="background:var(--verde)">5</span><div><h3>Analisar</h3><p>Insights reais do Instagram: o que funcionou, o que repetir, o que abandonar.</p></div></div>
-          <div class="step" data-step="5"><span class="step-num" style="background:var(--ink);border:1.5px solid rgba(255,255,255,.4)">6</span><div><h3>Evoluir</h3><p>Recicla o que deu certo e começa a próxima semana na frente. Constância sem força de vontade.</p></div></div>
+          <div class="step" data-step="5"><span class="step-num" style="background:var(--azul);border:1.5px solid rgba(255,255,255,.4)">6</span><div><h3>Evoluir</h3><p>Recicla o que deu certo e começa a próxima semana na frente. Constância sem força de vontade.</p></div></div>
         </div>
         <div class="ciclo-visual">
           <div class="ciclo-frame" data-frame="0"><span style="color:var(--laranja-2)"><svg class="svgi svgi-lg" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1.3.5 2.6 1.5 3.5.8.8 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg></span><span class="big" style="color:var(--laranja-2)">Ideia</span><span class="ph">[ print da tela de Ideias / HUB CRIA ]</span></div>
           <div class="ciclo-frame" data-frame="1"><span style="color:#7C90F0"><svg class="svgi svgi-lg" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg></span><span class="big" style="color:#7C90F0">Planejar</span><span class="ph">[ print do kanban / calendário ]</span></div>
-          <div class="ciclo-frame" data-frame="2"><span style="color:var(--rosa)"><svg class="svgi svgi-lg" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span><span class="big" style="color:var(--rosa)">Produzir</span><span class="ph">[ print da Cria IA escrevendo ]</span></div>
+          <div class="ciclo-frame" data-frame="2"><span style="color:var(--rosa)"><svg class="svgi svgi-lg" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span><span class="big" style="color:var(--rosa)">Produzir</span><span class="ph">[ print da escrita guiada ]</span></div>
           <div class="ciclo-frame" data-frame="3"><span style="color:var(--amarelo)"><svg class="svgi svgi-lg" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></span><span class="big" style="color:var(--amarelo)">Publicar</span><span class="ph">[ print do Meu Feed / checklist do dia ]</span></div>
           <div class="ciclo-frame" data-frame="4"><span style="color:#6FCF8C"><svg class="svgi svgi-lg" viewBox="0 0 24 24"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg></span><span class="big" style="color:#6FCF8C">Analisar</span><span class="ph">[ print dos insights do Instagram ]</span></div>
           <div class="ciclo-frame" data-frame="5"><span style="color:var(--creme)"><svg class="svgi svgi-lg" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></span><span class="big" style="color:var(--creme)">Evoluir</span><span class="ph">[ print do dashboard / reciclar conteúdo ]</span></div>
@@ -533,12 +538,13 @@ html,body{overflow-x:clip}
 <!-- O recurso mais forte do produto não tinha seção própria: aparecia num card
      no meio de outros oito. Quem vende piloto automático em card pequeno não
      está vendendo piloto automático. -->
-<section id="criaplano" style="background:var(--ink);padding:90px 0">
+<section id="criaplano" style="background:var(--azul);padding:90px 0;position:relative;overflow:hidden">
+  <div class="selo-marks" aria-hidden="true"><span class="fblob" style="top:12%;right:7%;animation-duration:14s"><img class="selo-w inv" src="cria-icone.png" alt="" style="width:70px;transform:rotate(10deg)"></span><span class="fblob" style="bottom:10%;left:5%;animation-duration:17s"><img class="selo-w inv" src="cria-icone.png" alt="" style="width:46px;transform:rotate(-7deg)"></span></div>
   <div class="container">
     <div class="cp-grid">
       <div class="reveal">
         <span class="kicker" style="background:var(--laranja)">A estrela do Studio</span>
-        <h2 style="color:var(--creme)">A IA monta seu mês inteiro de conteúdo, <span class="script" style="color:var(--amarelo);font-size:1.15em">em minutos</span></h2>
+        <h2 style="color:var(--creme)">Seu mês inteiro de conteúdo, <span class="script" style="color:var(--amarelo);font-size:1.15em">montado em minutos</span></h2>
         <p style="color:rgba(255,255,255,.75);margin:16px 0 26px;font-size:1.05rem;line-height:1.6">O Cria Plano lê o seu brandbook, os seus pilares e o que já performou no seu perfil, e monta a pauta da semana ou do mês inteiro. Cada post já nasce com formato, gancho e direção. Você deixa de decidir "o que postar" todo dia e passa a só produzir.</p>
         <ul class="cp-list">
           <li><span class="cp-dot" style="background:var(--laranja)"></span>Um mês de conteúdo em minutos, não em domingos perdidos</li>
@@ -593,8 +599,8 @@ html,body{overflow-x:clip}
         <span class="pilar-word script">planejar</span>
         <span class="pilar-badge"><svg class="svgi svgi-md" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>
         <span class="pilar-tag">estrela do Studio</span>
-        <h3>Cria Plano: a IA monta o seu mês</h3>
-        <p>Chega de domingo à noite olhando o calendário vazio. A IA monta sua semana ou seu mês inteiro com os seus pilares e o que já performou. Você edita e sai produzindo.</p>
+        <h3>Cria Plano: seu mês montado pra você</h3>
+        <p>Chega de domingo à noite olhando o calendário vazio. O método monta sua semana ou seu mês inteiro com os seus pilares, seu brandbook e o que já performou. Você edita e sai produzindo.</p>
         <div class="pilar-mais">
           <span class="pilar-chip"><i></i>Cria Stories: plano semanal</span>
           <span class="pilar-chip"><i></i>Calendário arrasta e solta</span>
@@ -608,13 +614,14 @@ html,body{overflow-x:clip}
       <article class="pilar reveal-scale" style="--pc:var(--laranja);--tilt:.9deg">
         <span class="pilar-word script">criar</span>
         <span class="pilar-badge"><svg class="svgi svgi-md" viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg></span>
-        <h3>Cria IA, treinada na SUA marca</h3>
-        <p>Legendas, roteiros, ideias e nota de gancho. Antes de escrever, ela lê seu brandbook, sua persona e seu tom de voz. Sai como você escreveria, só que 5x mais rápido.</p>
+        <h3>Escrita guiada, no SEU tom</h3>
+        <p>Legendas, roteiros, ideias e nota de gancho, tudo nascendo do seu brandbook, da sua persona e do seu tom de voz. Estrutura pronta: você ajusta em minutos, em vez de começar do zero.</p>
         <div class="pilar-mais">
           <span class="pilar-chip"><i></i>Brandbook, moodboard e persona</span>
           <span class="pilar-chip"><i></i>Avaliação de gancho</span>
           <span class="pilar-chip"><i></i>Estúdio: o prompt da arte na sua marca</span>
           <span class="pilar-chip"><i></i>Roteiros de Reels</span>
+          <span class="pilar-chip"><i></i>Cria Prompter: grave lendo o roteiro</span>
         </div>
       </article>
       <article class="pilar reveal-scale" style="--pc:var(--verde);--tilt:-.7deg">
@@ -695,9 +702,9 @@ html,body{overflow-x:clip}
         <div class="tudo-tier" style="--tt:var(--azul)">
           <div class="tier-top"><span class="tier-nome script">Pro</span><span class="tier-preco">R$32,90/mês</span><span class="tier-extra">tudo do Essencial +</span></div>
           <div class="chips">
-            <span class="chip"><i></i>Cria IA: legendas e roteiros</span>
+            <span class="chip"><i></i>Legendas e roteiros no seu tom</span>
             <span class="chip"><i></i>Avaliação de gancho</span>
-            <span class="chip"><i></i>Ideias por IA</span>
+            <span class="chip"><i></i>Sugestões de ideias</span>
             <span class="chip"><i></i>Insights reais do Instagram</span>
             <span class="chip"><i></i>Meu Feed (preview)</span>
             <span class="chip"><i></i>Melhor horário pra postar</span>
@@ -710,8 +717,9 @@ html,body{overflow-x:clip}
         <div class="tudo-tier" style="--tt:var(--laranja)">
           <div class="tier-top"><span class="tier-nome script">Studio</span><span class="tier-preco">R$49,90/mês</span><span class="tier-extra">tudo do Pro +</span></div>
           <div class="chips">
-            <span class="chip"><i></i>Cria Plano: a IA monta seu mês</span>
+            <span class="chip"><i></i>Cria Plano: seu mês montado</span>
             <span class="chip"><i></i>Cria Stories: plano semanal</span>
+            <span class="chip"><i></i>Cria Prompter: teleprompter de gravação</span>
             <span class="chip"><i></i>Collabs e publis</span>
           </div>
         </div>
@@ -770,7 +778,7 @@ html,body{overflow-x:clip}
 .tudo-grid{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:40px}
 .tudo-col{background:var(--branco);border:3px solid var(--tc);border-radius:32px 28px 34px 30px;padding:28px 26px;box-shadow:9px 9px 0 var(--tc);transform:rotate(var(--tilt,0deg));transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
 .tudo-col:hover{transform:rotate(0deg) translateY(-6px)}
-.tudo-gestor{background:var(--ink)}
+.tudo-gestor{background:var(--azul)}
 .tudo-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:6px;flex-wrap:wrap}
 .tudo-head h3{font-size:1.4rem}
 .tudo-gestor .tudo-head h3{color:var(--creme)}
@@ -806,7 +814,7 @@ html,body{overflow-x:clip}
   </div>
 </section>
 <style>
-.gestor-banner{display:flex;align-items:center;justify-content:space-between;gap:24px;background:var(--ink);border-radius:var(--radius-lg);padding:44px 48px;transition:transform .3s cubic-bezier(.34,1.56,.64,1),box-shadow .3s;box-shadow:0 8px 0 var(--laranja)}
+.gestor-banner{display:flex;align-items:center;justify-content:space-between;gap:24px;background:var(--azul);border-radius:var(--radius-lg);padding:44px 48px;transition:transform .3s cubic-bezier(.34,1.56,.64,1),box-shadow .3s;box-shadow:0 8px 0 var(--laranja)}
 .gestor-banner:hover{transform:translateY(-6px);box-shadow:0 14px 0 var(--laranja)}
 .gestor-banner h2{font-size:clamp(1.6rem,3.4vw,2.4rem);margin:6px 0 10px}
 .gestor-arrow{font-family:var(--font-display);font-weight:800;font-size:3rem;color:var(--amarelo);flex-shrink:0;transition:transform .3s}
@@ -842,7 +850,7 @@ html,body{overflow-x:clip}
       <div class="vs-card vs-com reveal">
         <h3><svg class="svgi svgi-inline" style="color:var(--verde)" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg> Com o <img class="h3-logo" src="logo-cria.png" alt="CRIA"></h3>
         <ul>
-          <li><b>✓</b> Banco de ideias + Cria IA sugerindo no seu tom</li>
+          <li><b>✓</b> Banco de ideias + sugestões no seu tom</li>
           <li><b>✓</b> Semana inteira planejada no kanban e calendário</li>
           <li><b>✓</b> Legenda e roteiro prontos em minutos, com o seu brandbook</li>
           <li><b>✓</b> Insights reais mostrando o que repetir</li>
@@ -858,15 +866,16 @@ html,body{overflow-x:clip}
   <div class="container">
     <div class="stats-strip reveal">
       <div class="stat"><div class="n"><span class="counter" data-target="200">0</span>+</div><div class="l">reais/mês economizados vs. o combo de ferramentas*</div></div>
-      <div class="stat"><div class="n"><span class="counter" data-target="6">0</span> em 1</div><div class="l">ideias, plano, IA, stories, publicação e insights</div></div>
+      <div class="stat"><div class="n"><span class="counter" data-target="6">0</span> em 1</div><div class="l">ideias, plano, escrita, stories, publicação e insights</div></div>
       <div class="stat"><div class="n"><span class="counter" data-target="7">0</span> dias</div><div class="l">grátis pra testar no seu fluxo real</div></div>
     </div>
-    <p style="text-align:center;color:rgba(255,255,255,.55);font-size:.8rem;margin-top:18px">*Comparado a planner + organização + IA de escrita + link in bio contratados separadamente.</p>
+    <p style="text-align:center;color:rgba(255,255,255,.55);font-size:.8rem;margin-top:18px">*Comparado a planner + organização + app de escrita + link in bio contratados separadamente.</p>
   </div>
 </section>
 
 <!-- ==================== DEPOIMENTOS ==================== -->
-<section id="depo">
+<section id="depo" style="position:relative;overflow:hidden">
+  <div class="selo-marks" aria-hidden="true"><span class="fblob" style="top:12%;right:8%;animation-duration:15s"><img class="selo-w" src="cria-icone.png" alt="" style="width:52px;transform:rotate(9deg)"></span></div>
   <div class="container">
     <div class="ciclo-head reveal">
       <span class="kicker" style="background:var(--verde)">Prova social</span>
@@ -877,7 +886,7 @@ html,body{overflow-x:clip}
     <div class="depo-grid">
       <div class="depo-card reveal-scale">
         <div class="stars">★★★★★</div>
-        <p>"Eu tinha 60 ideias espalhadas entre notas, prints e salvos. Coloquei tudo no CRIA numa tarde e hoje a Cria IA ainda sugere em cima do que é a minha cara. Nunca mais travei."</p>
+        <p>"Eu tinha 60 ideias espalhadas entre notas, prints e salvos. Coloquei tudo no CRIA numa tarde e hoje o CRIA ainda sugere pauta em cima do que é a minha cara. Nunca mais travei."</p>
         <div class="depo-who"><img class="depo-img" src="https://randomuser.me/api/portraits/women/68.jpg" alt="" loading="lazy"><div><strong>Marina Duarte</strong><small>Criadora de conteúdo · Curitiba/PR</small></div></div>
       </div>
       <div class="depo-card reveal-scale">
@@ -896,6 +905,7 @@ html,body{overflow-x:clip}
 
 <!-- ==================== PLANOS ==================== -->
 <section id="planos">
+  <div class="selo-marks" aria-hidden="true"><span class="fblob" style="top:6%;left:4%;animation-duration:16s"><img class="selo-w" src="cria-icone.png" alt="" style="width:58px;transform:rotate(-10deg)"></span><span class="fblob" style="bottom:6%;right:4%;animation-duration:12s"><img class="selo-w" src="cria-icone.png" alt="" style="width:42px;transform:rotate(8deg)"></span></div>
   <div class="container">
     <div class="ciclo-head reveal">
       <span class="kicker" style="background:var(--laranja)">Planos</span>
@@ -905,7 +915,7 @@ html,body{overflow-x:clip}
       <h3>O que você paga hoje, separado:</h3>
       <div class="stack-line"><span><span class="x">✕</span> Banco de ideias / segundo cérebro</span><span>~R$ 30/mês</span></div>
       <div class="stack-line"><span><span class="x">✕</span> Organização (Notion + templates)</span><span>~R$ 50/mês</span></div>
-      <div class="stack-line"><span><span class="x">✕</span> IA de escrita</span><span>~R$ 100/mês</span></div>
+      <div class="stack-line"><span><span class="x">✕</span> app de escrita</span><span>~R$ 100/mês</span></div>
       <div class="stack-line"><span><span class="x">✕</span> Link in bio pro</span><span>~R$ 25/mês</span></div>
       <div class="stack-total"><span>Total do combo</span><span style="color:var(--laranja)">~R$ 205/mês</span></div>
     </div>
@@ -924,7 +934,7 @@ html,body{overflow-x:clip}
           <li><b>✓</b> Kanban da produção: da ideia ao publicado</li>
           <li><b>✓</b> Calendário, tarefas e metas</li>
           <li><b>✓</b> Brandbook + link in bio</li>
-          <li><b>✓</b> Cria IA: 10 gerações/mês (pra experimentar)</li>
+          <li><b>✓</b> 10 gerações guiadas/mês (pra experimentar)</li>
         </ul>
         <a href="comprar/essencial.html" class="btn btn-ghost">Assinar o Essencial</a>
         <a href="https://app.criasocialclub.com.br/signup" class="trial-link">ou teste grátis por 7 dias →</a>
@@ -937,7 +947,7 @@ html,body{overflow-x:clip}
         <div class="preco">R$32,90<small>/mês</small></div>
         <ul>
           <li><b>✓</b> Tudo do Essencial, e mais:</li>
-          <li><b>✓</b> Cria IA: 150 gerações/mês (legendas, roteiros, ganchos, score)</li>
+          <li><b>✓</b> 150 gerações/mês: legendas, roteiros, ganchos e nota</li>
           <li><b>✓</b> Insights reais do Instagram + Meu Feed</li>
           <li><b>✓</b> Melhor horário pra postar</li>
           <li><b>✓</b> Tendências do seu nicho + Media Kit automático</li>
@@ -946,16 +956,16 @@ html,body{overflow-x:clip}
         <a href="https://app.criasocialclub.com.br/signup" class="trial-link" style="color:var(--creme)">ou teste grátis por 7 dias →</a>
       </div>
       <div class="plano plano-pro reveal">
-        <span class="verbo">A IA cria por você</span>
+        <span class="verbo">O CRIA monta por você</span>
         <h3>CRIA Studio</h3>
         <p class="desc">Pra quem vive de conteúdo e não tem tempo.</p>
         <div class="preco">R$49,90<small>/mês</small></div>
         <ul>
           <li><b>✓</b> Tudo do Pro, e mais:</li>
-          <li><b>✓</b> Cria Plano: a IA monta o seu mês inteiro</li>
+          <li><b>✓</b> Cria Plano: o seu mês inteiro montado</li>
           <li><b>✓</b> Cria Stories: o plano semanal de stories</li>
           <li><b>✓</b> Collabs: parcerias, propostas e cachê</li>
-          <li><b>✓</b> Cria IA: 500 gerações/mês</li>
+          <li><b>✓</b> 500 gerações/mês + Cria Prompter</li>
         </ul>
         <a href="comprar/studio.html" class="btn btn-ghost">Assinar o Studio</a>
         <a href="https://app.criasocialclub.com.br/signup" class="trial-link">ou teste grátis por 7 dias →</a>
@@ -980,7 +990,7 @@ html,body{overflow-x:clip}
       <div class="faq-item"><button class="faq-q">Serve pra quem tá começando?<span class="plus">+</span></button><div class="faq-a"><p>Sim. O plano Pro foi feito pro criador solo: você não precisa ter clientes pra ter processo. Quando os clientes chegarem, o CRIA cresce com você.</p></div></div>
       <div class="faq-item"><button class="faq-q">Sou social media e atendo clientes. O CRIA serve pra mim?<span class="plus">+</span></button><div class="faq-a"><p>Serve, e tem uma área inteira só sua. A <b>conta de gestor é gratuita</b>: você ativa só os módulos que for usar (Cria Post R$19,90, Cria Gestão R$29,90, Cria Caixa R$24,90). Nada disso vem no plano de criador: são coisas separadas, de propósito, pra você não pagar pelo que não usa. <a href="social-media.html" style="text-decoration:underline;font-weight:700">Conheça o lado gestor →</a></p></div></div>
       <div class="faq-item"><button class="faq-q">O CRIA publica automaticamente?<span class="plus">+</span></button><div class="faq-a"><p>Hoje o CRIA planeja, organiza a aprovação e analisa os insights reais do Instagram. A publicação automática está no roadmap.</p></div></div>
-      <div class="faq-item"><button class="faq-q">A IA funciona em português?<span class="plus">+</span></button><div class="faq-a"><p>100%. O CRIA é brasileiro, feito pro mercado BR, e a Cria IA escreve no tom da sua marca usando o brandbook.</p></div></div>
+      <div class="faq-item"><button class="faq-q">O CRIA escreve em português?<span class="plus">+</span></button><div class="faq-a"><p>100%. O CRIA é brasileiro, feito pro mercado BR, e escreve no tom da sua marca usando o brandbook.</p></div></div>
       <div class="faq-item"><button class="faq-q">Quanto tempo pra migrar minha operação?<span class="plus">+</span></button><div class="faq-a"><p>A maioria organiza o primeiro cliente em menos de 1 hora. Sem importação complexa: é colar suas ideias e seguir.</p></div></div>
       <div class="faq-item"><button class="faq-q">Como eu cancelo?<span class="plus">+</span></button><div class="faq-a"><p>Dentro do app, em 2 cliques. Sem retenção forçada, sem ligação.</p></div></div>
       <div class="faq-item"><button class="faq-q">Posso mudar de plano depois?<span class="plus">+</span></button><div class="faq-a"><p>Sim: upgrade ou downgrade a qualquer momento, direto nas configurações.</p></div></div>
@@ -990,6 +1000,7 @@ html,body{overflow-x:clip}
 
 <!-- ==================== CTA FINAL ==================== -->
 <section id="final">
+  <div class="selo-marks" aria-hidden="true"><span class="fblob" style="top:14%;left:6%;animation-duration:13s"><img class="selo-w inv" src="cria-icone.png" alt="" style="width:64px;transform:rotate(-11deg)"></span><span class="fblob" style="bottom:12%;right:7%;animation-duration:16s"><img class="selo-w inv" src="cria-icone.png" alt="" style="width:48px;transform:rotate(9deg)"></span></div>
   <div class="final-shape fs-1"></div>
   <div class="final-shape fs-2"></div>
   <div class="final-shape fs-3"></div>

@@ -2460,7 +2460,7 @@ function VitrineServiceEditor({
           className="relative w-14 h-14 rounded-lg border border-dashed border-border bg-muted/40 hover:border-primary transition-colors flex items-center justify-center overflow-hidden shrink-0"
           aria-label="Imagem do serviço"
         >
-          {uploading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : item.image ? <img src={item.image} alt="" className="w-full h-full object-cover" /> : <ImagePlus className="h-4 w-4 text-muted-foreground" />}
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : item.image ? <img src={item.image} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" /> : <ImagePlus className="h-4 w-4 text-muted-foreground" />}
         </button>
         <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
         <Input value={item.title} onChange={(e) => onUpdate(item.id, { title: e.target.value })} placeholder="Título do serviço" className="h-9 rounded-lg flex-1 min-w-0" maxLength={80} />
