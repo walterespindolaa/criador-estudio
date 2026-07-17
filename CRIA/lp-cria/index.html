@@ -517,20 +517,23 @@ html,body{overflow-x:clip}
 </section>
 
 <style>
-/* Ciclo no MOBILE: a área pina (iPhone em cima, UM card de etapa embaixo) e o
-   scroll troca a tela do iPhone e o card juntos. Nada rola por trás de nada:
-   a versão sticky anterior deixava o mockup atropelando os textos. */
+/* Ciclo no MOBILE: iPhone de verdade (moldura + dynamic island) com as telas
+   passando sozinhas e bolinhas de progresso; as 6 etapas ficam em cards
+   normais embaixo, acendendo em sincronia. Zero pin, zero sobreposição:
+   as duas versões anteriores quebravam o layout. */
 @media(max-width:900px){
-  #ciclo .ciclo-grid{display:flex;flex-direction:column;gap:0;padding:0 0 8px}
-  #ciclo .ciclo-visual{order:-1;width:min(206px,58vw);min-height:340px;margin:0 auto;border:7px solid var(--ink);border-radius:34px;box-shadow:0 16px 36px rgba(10,10,10,.26)}
-  #ciclo .ciclo-visual::after{content:"";position:absolute;top:10px;left:50%;transform:translateX(-50%);width:56px;height:6px;border-radius:999px;background:rgba(244,239,227,.35)}
-  #ciclo .ciclo-frame{padding:22px 16px}
-  #ciclo .ciclo-frame .big{font-size:1.45rem}
+  #ciclo .ciclo-grid{display:block;padding:0 0 6px}
+  #ciclo .ciclo-visual{width:min(238px,66vw);aspect-ratio:9/18.5;min-height:0;margin:8px auto 0;border:8px solid #111;border-radius:44px;box-shadow:0 18px 40px rgba(10,10,10,.28)}
+  #ciclo .ciclo-visual::after{content:"";position:absolute;top:12px;left:50%;transform:translateX(-50%);width:72px;height:20px;border-radius:999px;background:#111;z-index:3}
+  #ciclo .ciclo-frame{padding:48px 16px 22px}
+  #ciclo .ciclo-frame .big{font-size:1.4rem}
   #ciclo .ciclo-frame .ph{padding:12px 13px;font-size:.68rem}
-  /* Um card por vez: os 6 vivem empilhados no mesmo lugar, só o ativo aparece */
-  #ciclo .ciclo-steps{position:relative;margin-top:16px;min-height:158px;gap:0}
-  #ciclo .ciclo-steps .step{position:absolute;inset:0;opacity:0;pointer-events:none;background:var(--branco);border-radius:18px;padding:16px;transition:opacity .3s,transform .3s;transform:translateY(8px);box-shadow:0 6px 18px rgba(10,10,10,.08)}
-  #ciclo .ciclo-steps .step.active{opacity:1;transform:translateY(0)}
+  #ciclo .ciclo-dots{display:flex;justify-content:center;gap:7px;margin:14px 0 2px}
+  #ciclo .ciclo-dots i{width:8px;height:8px;border-radius:999px;background:rgba(10,10,10,.18);transition:all .3s}
+  #ciclo .ciclo-dots i.on{background:var(--laranja);width:22px}
+  #ciclo .ciclo-steps{margin-top:12px;display:flex;flex-direction:column;gap:12px}
+  #ciclo .ciclo-steps .step{background:var(--branco);border-radius:18px;padding:14px 16px;box-shadow:0 5px 16px rgba(10,10,10,.07);opacity:1;transform:none;transition:box-shadow .3s}
+  #ciclo .ciclo-steps .step.active{box-shadow:0 0 0 2.5px var(--laranja),0 5px 16px rgba(10,10,10,.07)}
   #ciclo .ciclo-steps .step p{display:block;font-size:.86rem}
 }
 </style>
@@ -1123,21 +1126,25 @@ ScrollTrigger.matchMedia({
     }
   },
   '(max-width: 900px)': function(){
-    /* MOBILE: pina só o bloco iPhone + card (o título rola embora) e o scroll
-       troca as 6 telas em sincronia com o card. Mesmo mecanismo do desktop,
-       layout compacto. */
+    /* MOBILE: slideshow no iPhone com bolinhas de progresso; os cards das
+       etapas acendem juntos. Estático e à prova de quebra. */
     gsap.set(frames[0],{opacity:1});
     activate(0);
-    const tl = gsap.timeline({
-      scrollTrigger:{
-        trigger:'#ciclo-pin', start:'top 84px', end:'+=1300',
-        pin:true, scrub:.5,
-        onUpdate:self=>{ activate(Math.min(5,Math.floor(self.progress*6))); }
-      }
-    });
-    for(let i=1;i<frames.length;i++){
-      tl.to(frames[i-1],{opacity:0,y:-18,duration:.4},i)
-        .fromTo(frames[i],{opacity:0,y:18},{opacity:1,y:0,duration:.4},i+.1);
+    const vis=document.querySelector('#ciclo .ciclo-visual');
+    if(vis && !document.querySelector('#ciclo .ciclo-dots')){
+      const dots=document.createElement('div');
+      dots.className='ciclo-dots';
+      frames.forEach((_,i)=>{const d=document.createElement('i');if(i===0)d.className='on';dots.appendChild(d);});
+      vis.insertAdjacentElement('afterend',dots);
+      let cur=0;
+      setInterval(()=>{
+        const n=(cur+1)%frames.length;
+        gsap.to(frames[cur],{opacity:0,duration:.35});
+        gsap.fromTo(frames[n],{opacity:0,y:14},{opacity:1,y:0,duration:.45});
+        dots.children[cur].className='';
+        dots.children[n].className='on';
+        activate(n); cur=n;
+      },3000);
     }
   }
 });
