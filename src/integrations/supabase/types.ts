@@ -3086,6 +3086,42 @@ export type Database = {
         }
         Relationships: []
       }
+      pending_purchases: {
+        Row: {
+          claimed_at: string | null
+          claimed_by: string | null
+          created_at: string
+          email: string
+          plan: string
+          session_id: string
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+        }
+        Insert: {
+          claimed_at?: string | null
+          claimed_by?: string | null
+          created_at?: string
+          email: string
+          plan: string
+          session_id: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+        }
+        Update: {
+          claimed_at?: string | null
+          claimed_by?: string | null
+          created_at?: string
+          email?: string
+          plan?: string
+          session_id?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+        }
+        Relationships: []
+      }
       personas: {
         Row: {
           age_range: string | null
@@ -3532,6 +3568,42 @@ export type Database = {
           updated_at?: string | null
           weekly_goal?: number | null
           youtube_handle?: string | null
+        }
+        Relationships: []
+      }
+      prompter_scripts: {
+        Row: {
+          created_at: string
+          folder: string | null
+          id: string
+          script: string
+          source: string
+          source_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          folder?: string | null
+          id?: string
+          script?: string
+          source?: string
+          source_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          folder?: string | null
+          id?: string
+          script?: string
+          source?: string
+          source_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -4714,6 +4786,7 @@ export type Database = {
         }[]
       }
       get_user_details: { Args: { _user_id: string }; Returns: Json }
+      get_user_id_by_email: { Args: { _email: string }; Returns: string }
       has_access: { Args: never; Returns: boolean }
       has_module: { Args: { _code: string; _user?: string }; Returns: boolean }
       hub_credits_status: {
