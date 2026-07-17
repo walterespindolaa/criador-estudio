@@ -974,7 +974,28 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       v.appendChild(srcEl);
       v.onerror = () => { v.style.display = "none"; }; /* preview falhou? some, o vídeo em si está salvo no blob */
       v.style.display = "block";
+      /* Blob de MediaRecorder não tem duração indexada: o player mostra
+         00:00/00:00 e trava no primeiro frame. O "seek hack" força o browser
+         a varrer o arquivo e calcular a duração de verdade. */
+      const fixDur = () => {
+        if (!isFinite(v.duration) || v.duration === 0) {
+          const volta = () => { v.currentTime = 0; v.removeEventListener("seeked", volta); };
+          v.addEventListener("seeked", volta);
+          try { v.currentTime = 1e7; } catch { /* ok */ }
+        }
+        v.removeEventListener("loadedmetadata", fixDur);
+      };
+      v.addEventListener("loadedmetadata", fixDur);
       try { v.load(); } catch { /* ok */ }
+      /* Alguns WebKit ignoram <source> filho pra blob: se em 1,5s nada carregou,
+         tenta o src direto no elemento. */
+      setTimeout(() => {
+        if (v.readyState < 2 && pendingUrl) {
+          v.innerHTML = ""; v.src = pendingUrl;
+          v.addEventListener("loadedmetadata", fixDur);
+          try { v.load(); } catch { /* ok */ }
+        }
+      }, 1500);
       const secs = Math.max(1, Math.round((Date.now() - recT0) / 1000));
       $("#ssMeta").textContent =
         String(Math.floor(secs / 60)).padStart(2, "0") + ":" + String(secs % 60).padStart(2, "0") +
