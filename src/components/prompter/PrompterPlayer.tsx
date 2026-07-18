@@ -461,8 +461,9 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     }
     function tick(t: number) {
       if (!playing || disposed) return;
-      const dt = (t - lastT) / 1000; lastT = t;
-      if (!userScrolling && !touchDown) vp.scrollTop += pxPerSec * dt; /* dedo no texto = rolagem livre */
+      const dt = Math.min(0.1, (t - lastT) / 1000); lastT = t; /* clamp: 1o frame ou aba dormida não dá pulo */
+      if (mode === "voice") tickVoice(t, dt);
+      else if (!userScrolling && !touchDown) vp.scrollTop += pxPerSec * dt; /* dedo no texto = rolagem livre */
       if (vp.scrollTop + vp.clientHeight >= vp.scrollHeight - 2) { stopPlay(); toast("Fim do roteiro 🎉"); }
       else rafId = requestAnimationFrame(tick);
     }
@@ -489,28 +490,74 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       return d + (a.length - i) + (b.length - j) <= 1;
     }
 
-    let rec: any = null, recActive = false;
     const LOOKAHEAD = 12, TAIL = 8;
 
+    /* ---------- VAD: rolagem gatilhada por INTENSIDADE DE VOZ ----------
+       Sem SpeechRecognition (que no iOS Safari tomava o mic com exclusividade e
+       deixava a gravação muda). Aqui o texto rola enquanto a pessoa FALA e segura
+       no silêncio, lendo o nível do MESMO micAnalyser que já alimenta o medidor.
+       O microfone vai só pro gravador + analyser, então o áudio grava em todo
+       navegador (Safari no iPhone, Chrome no Android, desktop). */
+    let vadBuf: Uint8Array | null = null;
+    let vadCalStart = 0, vadCalSum = 0, vadCalN = 0, vadCalDone = false;
+    let vadFloor = 0.02, vadEnv = 0, vadLastLoud = -1e9, vadHlT = 0;
+    const VOICE_HOLD_MS = 400; /* release: pausa curta entre palavras não para a rolagem */
+    function resetVad() {
+      vadCalStart = 0; vadCalSum = 0; vadCalN = 0; vadCalDone = false;
+      vadFloor = 0.02; vadEnv = 0; vadLastLoud = -1e9; vadHlT = 0;
+    }
+    /* nível 0..1 do microfone (RMS do desvio em torno de 128); -1 = mic não pronto */
+    function readVoiceLevel(): number {
+      if (!micAnalyser) return -1;
+      if (!vadBuf || vadBuf.length !== micAnalyser.fftSize) vadBuf = new Uint8Array(micAnalyser.fftSize);
+      micAnalyser.getByteTimeDomainData(vadBuf);
+      let sum = 0;
+      for (let i = 0; i < vadBuf.length; i++) { const d = vadBuf[i] - 128; sum += d * d; }
+      return Math.sqrt(sum / vadBuf.length) / 128;
+    }
+    function tickVoice(t: number, dt: number) {
+      const lvl = readVoiceLevel();
+      if (lvl < 0) return; /* mic ainda não pronto: segura o texto */
+      /* calibra o piso de ruído nos primeiros ~500ms com mic válido */
+      if (vadCalStart === 0) vadCalStart = t;
+      const calibrating = t - vadCalStart < 500;
+      if (calibrating) { vadCalSum += lvl; vadCalN++; vadFloor = vadCalSum / vadCalN; }
+      else if (!vadCalDone) { vadCalDone = true; if (vadCalN) vadFloor = vadCalSum / vadCalN; }
+      /* piso adaptativo: acompanha silêncios pra baixo devagar (ambiente muda) */
+      if (lvl < vadFloor) vadFloor += (lvl - vadFloor) * 0.05;
+      /* envelope com ATAQUE rápido (40ms) e RELEASE lento (250ms): sem stutter */
+      const tau = lvl > vadEnv ? 0.04 : 0.25;
+      vadEnv += (lvl - vadEnv) * (1 - Math.exp(-dt / tau));
+      const thr = vadFloor + Math.max(0.012, vadFloor * 0.8); /* limiar = piso + margem */
+      if (vadEnv > thr) vadLastLoud = t;
+      /* realce da palavra na linha de leitura, derivado da rolagem (throttle 140ms) */
+      if (t - vadHlT > 140) { vadHlT = t; const i = currentWordAtLine(); if (i !== pos) hardSetPos(i); }
+      const speaking = !calibrating && (t - vadLastLoud) < VOICE_HOLD_MS;
+      if (speaking && !userScrolling && !touchDown) {
+        const over = Math.min(1, (vadEnv - thr) / (thr + 0.02));
+        vp.scrollTop += pxPerSec * dt * (0.7 + over * 0.45); /* escala leve 0.7x..1.15x pela energia */
+      }
+    }
     function startVoice() {
-      const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (!SR) { toast("⚠️ Reconhecimento de voz não suportado neste navegador. Troquei pro modo Rolagem."); setMode("auto"); startPlay(); return; }
-      rec = new SR(); rec.lang = "pt-BR"; rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 1;
-      recActive = true;
-      rec.onresult = (e: any) => {
-        let latest = "";
-        for (let i = e.resultIndex; i < e.results.length; i++) latest += e.results[i][0].transcript + " ";
-        const toks = (latest.match(/\S+/g) || []).map(normWord).filter(Boolean);
-        if (toks.length) matchAdvance(toks.slice(-TAIL));
-      };
-      rec.onend = () => { if (recActive && !disposed) { try { rec.start(); } catch { /* já rodando */ } } else $("#voiceDot")?.classList.remove("live"); };
-      rec.onerror = (e: any) => { if (e.error === "not-allowed") { toast("Permissão de microfone negada."); recActive = false; stopPlay(); } };
-      rec.onstart = () => $("#voiceDot")?.classList.add("live");
-      try { rec.start(); } catch { /* já rodando */ }
+      resetVad();
+      computeSpeed();
+      /* garante o pipeline de microfone + analyser (VAD precisa de dado mesmo sem
+         estar gravando). ensureMic é async: o tick já segura o texto até o mic vir. */
+      if (micEnabled) {
+        void (async () => {
+          await ensureMic();
+          if (disposed) return;
+          if (micLive()) { buildAnalyser(); watchMicTrack(); startVu(); $("#voiceDot")?.classList.add("live"); }
+          else $("#voiceDot")?.classList.remove("live");
+        })();
+      } else {
+        $("#voiceDot")?.classList.remove("live");
+      }
+      lastT = performance.now();
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(tick);
     }
     function stopVoice() {
-      recActive = false;
-      if (rec) { try { rec.stop(); } catch { /* ok */ } rec = null; }
       $("#voiceDot")?.classList.remove("live");
     }
     function matchAdvance(tail: string[]) {
@@ -665,7 +712,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     function startAudioWatch() {
       stopAudioWatch(); sawSound = false;
       if (!micEnabled) return; /* sem áudio de propósito: não reclama */
-      if (!micAnalyser) { showMicSheet("muted"); return; }
+      if (!micAnalyser) { showMicSheet(); return; }
       const buf = new Uint8Array(micAnalyser.fftSize);
       silIv = setInterval(() => {
         micAnalyser!.getByteTimeDomainData(buf);
@@ -677,7 +724,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
         /* medidor quebrado (AudioContext fora do ar) não é prova de gravação
            muda — a trilha crua pode estar ok. Só alarma com medidor confiável. */
         if (!audioCtx || audioCtx.state !== "running") return;
-        showMicSheet(mode === "voice" ? "voice" : "muted");
+        showMicSheet();
       }, 4000);
     }
 
@@ -887,17 +934,17 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
 
     async function startRec() {
       if (!camStream) return;
-      /* iOS: SpeechRecognition reconfigura a sessão de áudio — voz PRIMEIRO, recorder depois */
+      /* começa a rolagem (no modo voz o VAD já segura o texto no silêncio) */
       if (!playing) {
         await new Promise<void>((res) => startPlay(res));
-        if (mode === "voice") await sleep(800);
       }
       /* Mic NOVO no momento do REC, já com a sessão de áudio no estado final
-         (voz rodando, câmera ligada). Trilha velha capturada em outro estado é
-         exatamente a que o iOS entrega muda. Sem novo prompt na mesma sessão. */
+         (câmera ligada). Trilha velha capturada em outro estado é exatamente a
+         que o iOS entrega muda. Sem novo prompt na mesma sessão. */
       if (micEnabled) {
         forceFreshMic();
         await ensureMic();
+        if (micLive()) buildAnalyser(); /* reconstrói o analyser pro VAD seguir vivo */
         watchMicTrack(); startVu(); setMicIcon();
       }
       let vt = camStream && camStream.getVideoTracks()[0];
@@ -954,17 +1001,13 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       showSaveSheet(blob, name, type);
     }
 
-    /* ---------- resgate do mic mudo (limitação do iOS) ----------
-       No iPhone o reconhecimento de voz e o MediaRecorder disputam a sessão de
-       áudio do sistema; quando o mic sai mudo, oferecemos a saída em 1 toque:
-       descarta, troca pro modo Rolagem (mic livre) e regrava do começo. */
-    let discardNext = false, micSheetKind: "voice" | "muted" = "voice";
-    function showMicSheet(kind: "voice" | "muted") {
-      micSheetKind = kind;
-      $("#micText").innerHTML = kind === "voice"
-        ? "O iPhone não deixa o <b>modo Por voz</b> e a <b>gravação</b> usarem o microfone ao mesmo tempo. Dá pra regravar agora em <b>modo Rolagem</b> (o texto rola sozinho na velocidade que você definir) com o áudio funcionando."
-        : "O sistema entregou o microfone <b>mudo</b> (acontece no iPhone depois de alternar apps ou trocar de modo). Dá pra recapturar o microfone e regravar agora, do começo.";
-      $("#micFix").textContent = kind === "voice" ? "Regravar em Rolagem, com áudio" : "Regravar com áudio";
+    /* ---------- rede de segurança: áudio não entrou ----------
+       No uso normal isso não dispara (o modo voz agora grava áudio em todo
+       navegador). Fica só como socorro se a trilha realmente não veio: recaptura
+       o microfone e regrava do começo, no mesmo modo. */
+    let discardNext = false;
+    function showMicSheet() {
+      $("#micText").textContent = "Não consegui capturar o áudio do microfone. Verifique a permissão do microfone e tente de novo.";
       $("#micSheet").classList.add("show");
     }
     $("#micKeep").onclick = () => $("#micSheet").classList.remove("show");
@@ -972,13 +1015,12 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       $("#micSheet").classList.remove("show");
       discardNext = true;
       stopRec();                                  /* onstop vê discardNext e joga fora */
-      if (micSheetKind === "voice") setMode("auto"); /* solta o mic do reconhecimento de voz */
       forceFreshMic();                            /* mata a trilha zumbi, captura nova */
       resetProgress();
       await sleep(500);
       await ensureMic();
       startRec();
-      toast(micSheetKind === "voice" ? "Regravando em modo Rolagem, agora com áudio. 🎙️" : "Regravando com o microfone renovado. 🎙️", 4000);
+      toast("Regravando com o microfone renovado. 🎙️", 4000);
     };
 
     /* ---------- vídeo pronto: preview + salvar nas Fotos (share sheet) ----------
@@ -1272,14 +1314,14 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
         </div>
       </div>
 
-      {/* Mic mudo (voz + gravação no iOS) */}
+      {/* Rede de segurança: áudio não entrou */}
       <div id="micSheet" className="cSheet">
         <div className="cSheetCard">
           <span className="permIcon"><i data-lucide="mic" /></span>
           <h3>O áudio não está entrando</h3>
           <p id="micText" />
-          <button className="ssBtn primary" id="micFix">Regravar em Rolagem, com áudio</button>
-          <button className="ssBtn ghost" id="micKeep">Seguir gravando sem áudio</button>
+          <button className="ssBtn primary" id="micFix">Tentar de novo</button>
+          <button className="ssBtn ghost" id="micKeep">Fechar</button>
         </div>
       </div>
 
