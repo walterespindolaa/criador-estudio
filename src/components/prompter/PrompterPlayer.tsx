@@ -512,11 +512,9 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
        O microfone vai só pro gravador + analyser, então o áudio grava em todo
        navegador (Safari no iPhone, Chrome no Android, desktop). */
     let vadBuf: Uint8Array | null = null;
-    let vadCalStart = 0, vadCalSum = 0, vadCalN = 0, vadCalDone = false;
     let vadFloor = 0.02, vadEnv = 0, vadLastLoud = -1e9, vadHlT = 0;
     const VOICE_HOLD_MS = 400; /* release: pausa curta entre palavras não para a rolagem */
     function resetVad() {
-      vadCalStart = 0; vadCalSum = 0; vadCalN = 0; vadCalDone = false;
       vadFloor = 0.02; vadEnv = 0; vadLastLoud = -1e9; vadHlT = 0;
     }
     /* nível 0..1 do microfone (RMS do desvio em torno de 128); -1 = mic não pronto */
@@ -529,26 +527,29 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       return Math.sqrt(sum / vadBuf.length) / 128;
     }
     function tickVoice(t: number, dt: number) {
+      /* iOS às vezes suspende o AudioContext: tenta retomar (barato, no-op se não der) */
+      if (audioCtx && audioCtx.state !== "running") { try { audioCtx.resume().catch(() => {}); } catch { /* ok */ } }
       const lvl = readVoiceLevel();
-      if (lvl < 0) return; /* mic ainda não pronto: segura o texto */
-      /* calibra o piso de ruído nos primeiros ~500ms com mic válido */
-      if (vadCalStart === 0) vadCalStart = t;
-      const calibrating = t - vadCalStart < 500;
-      if (calibrating) { vadCalSum += lvl; vadCalN++; vadFloor = vadCalSum / vadCalN; }
-      else if (!vadCalDone) { vadCalDone = true; if (vadCalN) vadFloor = vadCalSum / vadCalN; }
-      /* piso adaptativo: acompanha silêncios pra baixo devagar (ambiente muda) */
-      if (lvl < vadFloor) vadFloor += (lvl - vadFloor) * 0.05;
-      /* envelope com ATAQUE rápido (40ms) e RELEASE lento (250ms): sem stutter */
+      if (lvl < 0) return; /* analyser ainda não pronto: segura o texto */
+      /* PISO DE RUÍDO adaptativo, robusto contra "falar já no começo": desce rápido
+         pro silêncio, sobe MUITO devagar, com teto baixo pra a fala sempre passar.
+         Sem janela de calibração (ela capturava a voz como se fosse ruído e travava). */
+      if (lvl < vadFloor) vadFloor += (lvl - vadFloor) * 0.5;
+      else vadFloor += (lvl - vadFloor) * 0.002;
+      if (vadFloor > 0.03) vadFloor = 0.03;
+      /* envelope: ataque rápido (40ms), release lento (250ms), sem stutter */
       const tau = lvl > vadEnv ? 0.04 : 0.25;
       vadEnv += (lvl - vadEnv) * (1 - Math.exp(-dt / tau));
-      const thr = vadFloor + Math.max(0.012, vadFloor * 0.8); /* limiar = piso + margem */
+      /* limiar = piso + margem, com mínimo absoluto: fala real (>~0.08) sempre passa,
+         sala em silêncio (~0.01) não dispara. */
+      const thr = Math.max(0.03, vadFloor + 0.012);
       if (vadEnv > thr) vadLastLoud = t;
       /* realce da palavra na linha de leitura, derivado da rolagem (throttle 140ms) */
       if (t - vadHlT > 140) { vadHlT = t; const i = currentWordAtLine(); if (i !== pos) hardSetPos(i); }
-      const speaking = !calibrating && (t - vadLastLoud) < VOICE_HOLD_MS;
+      const speaking = (t - vadLastLoud) < VOICE_HOLD_MS;
       if (speaking && !userScrolling && !touchDown) {
-        const over = Math.min(1, (vadEnv - thr) / (thr + 0.02));
-        vp.scrollTop += pxPerSec * dt * (0.7 + over * 0.45); /* escala leve 0.7x..1.15x pela energia */
+        const over = Math.min(1, (vadEnv - thr) / 0.06);
+        vp.scrollTop += pxPerSec * dt * (0.7 + over * 0.45); /* 0.7x..1.15x pela energia */
       }
     }
     function startVoice() {
