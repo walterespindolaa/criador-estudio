@@ -211,7 +211,7 @@ const DEF = {
   speed: 60, useWpm: false, wpm: 140, count: 3, mirX: false, mirY: false, guide: true,
   camRes: "max", camFace: "user", fps: 30, readPos: 35, reels: false, fixMirror: true,
   cardOn: false, cardPos: "top", cardH: 35, cardW: 100, cardColor: "preto",
-  theme: "dark", mode: "voice",
+  theme: "dark", mode: "voice", micDeviceId: "",
 };
 
 function PrompterPlayerInner({ title, text, onExit }: Props) {
@@ -387,8 +387,21 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       $("#sCamRes").addEventListener("change", (e: any) => { S.camRes = e.target.value; save(); if (camStream) startCamera(true); });
       $("#sCamFace").addEventListener("change", (e: any) => { S.camFace = e.target.value; save(); if (camStream) startCamera(true); });
       $("#sFps").addEventListener("change", (e: any) => { S.fps = Number(e.target.value); save(); if (camStream) startCamera(true); });
+      /* trocar de microfone: salva e recaptura na hora pra valer no VU e na
+         próxima gravação, no mesmo padrão dos outros toggles de mic */
+      $("#sMicDevice").addEventListener("change", async (e: any) => {
+        S.micDeviceId = (e.target.value || "").toString(); save();
+        micEnabled = true;
+        forceFreshMic();
+        await ensureMic();
+        if (micLive()) { buildAnalyser(); watchMicTrack(); startVu(); }
+        setMicIcon();
+      });
     }
-    $("#settingsBtn").onclick = () => { $("#settingsPanel").classList.add("open"); $("#overlay").classList.add("show"); };
+    $("#settingsBtn").onclick = () => { $("#settingsPanel").classList.add("open"); $("#overlay").classList.add("show"); try { populateMicDevices(); } catch { /* ok */ } };
+    /* repopula a lista quando um mic é conectado/desconectado */
+    const onDeviceChange = () => { try { populateMicDevices(); } catch { /* ok */ } };
+    try { (navigator.mediaDevices as any)?.addEventListener?.("devicechange", onDeviceChange); } catch { /* ok */ }
     $("#closeSettings").onclick = $("#overlay").onclick = () => { $("#settingsPanel").classList.remove("open"); $("#overlay").classList.remove("show"); };
 
     /* ---------- modes ---------- */
@@ -672,14 +685,34 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       if (st && st.readyState === "live" && !st.muted) { micStream = sessionMic; resetAudioGraph(); return micStream; }
       forceFreshMic();
       resetAudioGraph();
+      const baseAudio = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
+      const wantId = (S.micDeviceId || "").toString();
+      const audioConstraints: any = wantId ? { ...baseAudio, deviceId: { exact: wantId } } : { ...baseAudio };
       try {
-        micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
         sessionMic = micStream;
       } catch (e: any) {
         micStream = null;
-        if (e && (e.name === "NotAllowedError" || e.name === "SecurityError")) showPermSheet("denied");
+        const name = e && e.name;
+        /* microfone escolhido sumiu/ocupado: cai pro padrão do sistema em vez de
+           deixar a gravação sem áudio. Só faz sentido se havia um deviceId forçado. */
+        const constraintFail = name === "OverconstrainedError" || name === "NotFoundError" || name === "NotReadableError" || name === "DevicesNotFoundError";
+        if (wantId && constraintFail) {
+          try {
+            S.micDeviceId = ""; save();
+            $("#sMicDevice") && ($("#sMicDevice").value = "");
+            micStream = await navigator.mediaDevices.getUserMedia({ audio: { ...baseAudio } });
+            sessionMic = micStream;
+            toast("Microfone escolhido indisponível, usando o padrão.", 4000);
+          } catch (e2: any) {
+            micStream = null;
+            if (e2 && (e2.name === "NotAllowedError" || e2.name === "SecurityError")) showPermSheet("denied");
+            else toast("Sem acesso ao microfone. Confere a permissão e tenta de novo.", 5000);
+          }
+        } else if (name === "NotAllowedError" || name === "SecurityError") showPermSheet("denied");
         else toast("Sem acesso ao microfone. Confere a permissão e tenta de novo.", 5000);
       }
+      if (micStream) { try { populateMicDevices(); } catch { /* ok */ } }
       return micStream;
     }
     /* Analyser SÓ pro VU (não fica no caminho da gravação). No iOS o
@@ -758,6 +791,28 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       try { if (audioCtx && audioCtx.state !== "running") audioCtx.resume(); } catch { /* ok */ }
       watchMicTrack(); startVu();
       return true;
+    }
+    /* ---------- lista de microfones (seletor de entrada de áudio) ----------
+       Os labels só vêm depois da permissão concedida; antes disso enumerateDevices
+       devolve entradas sem nome. Repopulamos ao abrir Ajustes, depois de uma
+       captura boa e quando um mic é conectado/desconectado (devicechange). */
+    async function populateMicDevices() {
+      const sel = $("#sMicDevice") as HTMLSelectElement | null;
+      if (!sel) return;
+      let list: any[] = [];
+      try { list = await (navigator.mediaDevices as any).enumerateDevices(); } catch { list = []; }
+      const mics = (list || []).filter((d: any) => d && d.kind === "audioinput");
+      const want = (S.micDeviceId || "").toString();
+      let html = '<option value="">Padrão do sistema</option>';
+      mics.forEach((d: any, i: number) => {
+        const label = (d.label && d.label.trim()) ? d.label : ("Microfone " + (i + 1));
+        const id = (d.deviceId || "").toString();
+        html += '<option value="' + id.replace(/"/g, "&quot;") + '">' + label.replace(/</g, "&lt;") + "</option>";
+      });
+      sel.innerHTML = html;
+      /* se o mic salvo ainda existe, mantém selecionado; senão volta pro padrão */
+      const exists = want && mics.some((d: any) => (d.deviceId || "").toString() === want);
+      sel.value = exists ? want : "";
     }
     function stopVu() { if (vuIv) { clearInterval(vuIv); vuIv = null; } $("#micBtn")?.classList.remove("hot"); }
     function startVu() {
@@ -1136,6 +1191,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       document.removeEventListener("visibilitychange", onVis);
       document.removeEventListener("click", onDocClick);
       window.removeEventListener("resize", onResize);
+      try { (navigator.mediaDevices as any)?.removeEventListener?.("devicechange", onDeviceChange); } catch { /* ok */ }
     }
     $("#prExit").onclick = () => { exitRef.current(); };
 
@@ -1284,6 +1340,16 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
             </select>
           </div>
           <div className="switchrow">Gravar como no espelho (frontal)<label className="sw"><input type="checkbox" id="sFixMirror" defaultChecked /><i /></label></div>
+        </div>
+
+        <div className="sgCard">
+          <div className="sgHead"><span className="sgChip"><i data-lucide="mic" /></span><p className="sgTitle">Áudio</p></div>
+          <div className="set"><label>Microfone</label>
+            <select id="sMicDevice" defaultValue="">
+              <option value="">Padrão do sistema</option>
+            </select>
+          </div>
+          <p className="sgSub" style={{ margin: "2px 4px 8px" }}>No iPhone o sistema escolhe a entrada sozinho: conecte por USB-C ou Bluetooth e ele assume. USB-C tem a melhor qualidade.</p>
         </div>
 
         <button className="iconbtn" id="closeSettings" style={{ width: "100%", marginTop: 16 }}>Fechar</button>
