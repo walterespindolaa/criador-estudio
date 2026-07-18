@@ -850,7 +850,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       const st = camStream!.getVideoTracks()[0].getSettings();
       const w = st.width || 1280, h = st.height || 720;
       mirCanvas = document.createElement("canvas"); mirCanvas.width = w; mirCanvas.height = h;
-      mirCtx = mirCanvas.getContext("2d", { alpha: false, desynchronized: true } as any);
+      mirCtx = mirCanvas.getContext("2d", { alpha: false, desynchronized: true } as any) as CanvasRenderingContext2D;
       mirCtx!.setTransform(-1, 0, 0, 1, w, 0);
       mirDrawing = true;
       mirStream = (mirCanvas as any).captureStream(0);
