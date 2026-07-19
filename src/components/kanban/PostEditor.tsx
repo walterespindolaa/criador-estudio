@@ -39,6 +39,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { fireConfetti } from "@/lib/confetti";
+import { StickerCelebration } from "@/components/shared/StickerCelebration";
 import { FORMAT_LABELS, PLATFORMS, FORMATS, STATUS_OPTIONS, BUNNY_CDN_HOSTNAME } from "@/lib/constants";
 import * as tus from "tus-js-client";
 
@@ -231,6 +232,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   const [reach, setReach] = useState("");
   const [shares, setShares] = useState("");
   const [showResults, setShowResults] = useState(false);
+  const [showPublishCeleb, setShowPublishCeleb] = useState(false);
   const [sections, setSections] = useState<Section[]>(Array(5).fill(null).map(emptySection));
   const [referenceLink, setReferenceLink] = useState("");
 
@@ -898,6 +900,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
     if (wasPublished) {
       fireConfetti();
+      setShowPublishCeleb(true);
       toast.success("Conteúdo publicado!");
       setShowResults(true);
     } else {
@@ -1099,6 +1102,13 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
   return (
     <>
+      <StickerCelebration
+        show={showPublishCeleb}
+        title="Publicado!"
+        subtitle="Mais uma da ideia ao post."
+        onDone={() => setShowPublishCeleb(false)}
+      />
+
       <Dialog
         open={open}
         onOpenChange={async (o) => {

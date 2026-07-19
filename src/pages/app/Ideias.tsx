@@ -343,6 +343,8 @@ const Ideias = () => {
             <EmptyState
               icon={Lightbulb}
               cor="amarelo"
+              sticker="criatura-lampada"
+              cornerSticker="selo-social-club-amarelo"
               title="Comece pelo caos da sua cabeça"
               description="Aqui não precisa ser bom. Joga tudo: o pensamento solto, o print que te parou, a frase que você ouviu no Uber. Depois a gente separa o que vira post."
               examples={[

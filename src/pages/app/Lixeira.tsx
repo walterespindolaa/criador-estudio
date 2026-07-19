@@ -4,6 +4,7 @@ import { Trash2, RotateCcw, X, FileText, Users, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTrashedPosts, useTrashedClients, useRestoreTrash, usePurgeTrash, type TrashRow } from "@/hooks/useTrash";
 import { confirmar } from "@/components/shared/Confirm";
+import { Sticker } from "@/components/shared/Sticker";
 
 function daysLeft(deletedAt: string): number {
   const gone = new Date(deletedAt).getTime() + 30 * 86400000;
@@ -32,8 +33,9 @@ export default function Lixeira() {
       {loading ? (
         <div className="py-20 text-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground mx-auto" /></div>
       ) : all.length === 0 ? (
-        <div className="border border-dashed border-border rounded-2xl py-16 text-center mt-4">
-          <Trash2 className="h-7 w-7 text-muted-foreground/40 mx-auto mb-2" strokeWidth={1.5} />
+        <div className="relative overflow-hidden border border-dashed border-border rounded-2xl py-16 text-center mt-4">
+          <Sticker name="selo-social-club-verde" className="absolute -bottom-5 -right-4 w-32 opacity-[0.08]" />
+          <Sticker name="selo-social-club-verde" className="mx-auto mb-3 w-[72px]" />
           <p className="text-sm font-body text-foreground font-medium">Lixeira vazia</p>
           <p className="text-xs font-body text-muted-foreground mt-1">O que você excluir aparece aqui por 30 dias.</p>
         </div>

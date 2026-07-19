@@ -2,6 +2,7 @@ import type { ElementType } from "react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { OrganicBlobs } from "@/components/brand/OrganicBlobs";
+import { Sticker, type StickerName } from "@/components/shared/Sticker";
 import type { CriaColor } from "@/lib/moduleTheme";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -34,6 +35,10 @@ type EmptyStateProps = {
   examples?: string[];
   /** Um caminho alternativo, discreto (link, "ou importe do Drive"...). */
   secondary?: ReactNode;
+  /** Sticker da marca no lugar do ícone (a CriaTura acolhe melhor que um traço). */
+  sticker?: StickerName;
+  /** Selo bem apagado num canto do container. Tempero, dose comedida. */
+  cornerSticker?: StickerName;
   /** @deprecated a cor vem do módulo agora. Mantido pra não quebrar o Collabs. */
   gradient?: string;
 };
@@ -46,15 +51,28 @@ export function EmptyState({
   cor = "laranja",
   examples,
   secondary,
+  sticker,
+  cornerSticker,
 }: EmptyStateProps) {
   return (
     <div className="relative overflow-hidden rounded-3xl border border-dashed border-border bg-card px-6 py-12 text-center">
       <OrganicBlobs color={cor} />
 
+      {cornerSticker && (
+        <Sticker
+          name={cornerSticker}
+          className="absolute -bottom-6 -right-5 w-40 opacity-[0.08]"
+        />
+      )}
+
       <div className="relative mx-auto max-w-md">
-        <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary">
-          <Icon className="h-6 w-6" strokeWidth={1.75} />
-        </span>
+        {sticker ? (
+          <Sticker name={sticker} className="mx-auto mb-3 w-[90px]" />
+        ) : (
+          <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary">
+            <Icon className="h-6 w-6" strokeWidth={1.75} />
+          </span>
+        )}
 
         <h3 className="font-display text-xl font-extrabold tracking-tight text-foreground">{title}</h3>
         <p className="mt-1.5 text-[13.5px] font-body leading-relaxed text-muted-foreground">{description}</p>
