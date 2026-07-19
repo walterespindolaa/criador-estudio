@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, Minus, Send, Sparkles, X } from "lucide-react";
+import { BarChart3, CalendarDays, Flame, Hash, Lightbulb, Loader2, Minus, PenLine, Send, X } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogPortal } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,53 +25,76 @@ type Message = {
 
 type QuickAction = {
   label: string;
-  emoji: string;
-  classes: string;
+  Icon: LucideIcon;
+  /** Cor da marca do ícone do atalho. */
+  color: string;
+  /** Ícone escuro (usado no amarelo, onde branco teria baixo contraste). */
+  dark?: boolean;
   build: (ctx: { niche: string; lastPostTitle: string; postsCount: number; ideasCount: number; weeklyGoal: number }) => string;
 };
 
 const QUICK_ACTIONS: QuickAction[] = [
   {
     label: "Ideia de post",
-    emoji: "💡",
-    classes: "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100",
+    Icon: Lightbulb,
+    color: "#FFCF03",
+    dark: true,
     build: ({ niche }) => `Me dá 3 ideias de post pro meu nicho de ${niche || "criação de conteúdo"} pra essa semana.`,
   },
   {
     label: "Escrever legenda",
-    emoji: "✍️",
-    classes: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100",
+    Icon: PenLine,
+    color: "#0061EE",
     build: ({ lastPostTitle, niche }) =>
       `Escreve uma legenda descontraída pra um reels sobre "${lastPostTitle || `o meu nicho de ${niche || "criação"}`}".`,
   },
   {
     label: "Sugerir hashtags",
-    emoji: "#️⃣",
-    classes: "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100",
+    Icon: Hash,
+    color: "#01A652",
     build: ({ niche }) => `Sugere 15 hashtags pro meu nicho de ${niche || "criação de conteúdo"} no Instagram.`,
   },
   {
     label: "Analisar perfil",
-    emoji: "📊",
-    classes: "bg-pink-50 text-pink-700 border-pink-200 hover:bg-pink-100",
+    Icon: BarChart3,
+    color: "#F27EB5",
     build: ({ postsCount, ideasCount, weeklyGoal }) =>
       `Analisa minha consistência: tenho ${postsCount} posts publicados, ${ideasCount} ideias e minha meta é ${weeklyGoal}/semana. O que você sugere?`,
   },
   {
     label: "Planejar semana",
-    emoji: "📅",
-    classes: "bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100",
+    Icon: CalendarDays,
+    color: "#7C90F0",
     build: ({ niche, weeklyGoal }) =>
       `Me ajuda a planejar minha semana de conteúdo no nicho de ${niche || "criação"} com ${weeklyGoal} posts.`,
   },
   {
     label: "Trends do momento",
-    emoji: "🔥",
-    classes: "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100",
+    Icon: Flame,
+    color: "#EA4918",
     build: ({ niche }) =>
       `Busque as 5 trends mais virais agora no Instagram/TikTok pro nicho de ${niche || "lifestyle"} no Brasil e me dê ideias de como adaptar cada uma pro meu conteúdo.`,
   },
 ];
+
+/** A criatura do Cria: a carinha da marca (amarela, olhos azuis), usada como
+    avatar da IA no chat. SVG pra escalar limpo em qualquer tamanho. */
+function CriaCreature({ className, online = false }: { className?: string; online?: boolean }) {
+  return (
+    <span className={cn("relative inline-block", className)}>
+      <svg viewBox="0 0 64 64" className="w-full h-full" style={{ filter: "drop-shadow(0 6px 14px rgba(234,73,24,0.2))" }} aria-hidden="true">
+        <path d="M32 4C46 4 58 14 58 30 58 48 47 60 32 60 17 60 6 48 6 30 6 14 18 4 32 4Z" fill="#FFCF03" />
+        <ellipse cx="24" cy="22" rx="16" ry="13" fill="#FFD93A" opacity="0.6" />
+        <ellipse cx="24" cy="30" rx="5" ry="6.5" fill="#0061EE" />
+        <ellipse cx="40" cy="30" rx="5" ry="6.5" fill="#0061EE" />
+        <circle cx="25.6" cy="27.6" r="1.7" fill="#fff" />
+        <circle cx="41.6" cy="27.6" r="1.7" fill="#fff" />
+        <path d="M25 42 Q32 49 39 42" fill="none" stroke="#EA4918" strokeWidth="3" strokeLinecap="round" />
+      </svg>
+      {online && <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-[#01A652] border-2 border-background" />}
+    </span>
+  );
+}
 
 function uid() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -269,32 +293,33 @@ export function CriaAIPanel() {
               className="flex-1 overflow-y-auto px-5 pt-5 pb-2 space-y-4 bg-muted/15"
             >
               {!hasMessages && !loading ? (
-                <div className="flex flex-col items-start pt-4 pb-2 space-y-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#0A0D12] to-[#1a1d22] flex items-center justify-center shadow-lg">
-                    <Sparkles className="h-6 w-6 text-white" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xl text-muted-foreground font-medium font-display">{greeting}</p>
-                    <p className="text-lg font-display font-medium text-foreground">Como posso ajudar?</p>
-                    <p className="text-sm text-muted-foreground font-body">
-                      {hasBrandContext
-                        ? "Já li seu Brandbook 💜 Tudo que eu gerar vai seguir seu tom de voz e identidade."
-                        : "Preencha seu Brandbook pra eu conhecer sua marca e gerar conteúdo personalizado. Por enquanto, posso te ajudar com ideias gerais!"}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 pt-2">
+                <div className="relative flex flex-col items-start pt-4 pb-2">
+                  {/* Formas orgânicas suaves da marca, no fundo. */}
+                  <span aria-hidden className="pointer-events-none absolute -top-3 -right-4 h-32 w-32 rounded-[42%_58%_55%_45%/48%_42%_58%_52%] bg-[#EA4918] opacity-[0.10] blur-[2px]" />
+                  <span aria-hidden className="pointer-events-none absolute top-40 -left-6 h-24 w-24 rounded-full bg-[#0061EE] opacity-[0.08] blur-[2px]" />
+                  <span aria-hidden className="pointer-events-none absolute top-24 right-1 h-16 w-16 rounded-full bg-[#F27EB5] opacity-[0.10] blur-[2px]" />
+
+                  <CriaCreature className="h-14 w-14 mb-3.5" online />
+                  <h2 className="relative z-[1] text-2xl font-display font-extrabold text-foreground leading-tight">{greeting}</h2>
+                  <p className="relative z-[1] text-base font-display font-bold text-foreground mt-1">Bora criar junto?</p>
+                  <p className="relative z-[1] text-sm text-muted-foreground font-body mt-1.5 leading-relaxed">
+                    {hasBrandContext
+                      ? <>Já li o seu <b className="text-[#EA4918] font-extrabold">brandbook</b>, então tudo que eu escrever sai no seu tom, com as suas cores e a sua cara.</>
+                      : "Preenche o seu brandbook pra eu conhecer a sua marca e criar com a sua cara. Por enquanto, já te ajudo com ideias gerais."}
+                  </p>
+                  <div className="relative z-[1] flex flex-wrap gap-2 pt-4">
                     {QUICK_ACTIONS.map((qa) => (
                       <button
                         key={qa.label}
                         type="button"
                         onClick={() => handleQuickAction(qa)}
                         disabled={loading}
-                        className={cn(
-                          "text-xs font-body font-medium px-3 py-1.5 rounded-full border transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed",
-                          qa.classes
-                        )}
+                        style={{ borderColor: `${qa.color}44` }}
+                        className="group inline-flex items-center gap-2 rounded-full border bg-card pl-2 pr-3.5 py-1.5 text-[13px] font-display font-bold text-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <span aria-hidden="true" className="mr-1">{qa.emoji}</span>
+                        <span className="grid h-[26px] w-[26px] place-items-center rounded-lg" style={{ background: qa.color }}>
+                          <qa.Icon className="h-[15px] w-[15px]" style={{ color: qa.dark ? "#0A0A0A" : "#fff" }} />
+                        </span>
                         {qa.label}
                       </button>
                     ))}
@@ -305,9 +330,7 @@ export function CriaAIPanel() {
                   {messages.map((msg) =>
                     msg.role === "assistant" ? (
                       <div key={msg.id} className="flex gap-2 items-start">
-                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-pink-400 flex items-center justify-center shrink-0">
-                          <Sparkles className="h-3.5 w-3.5 text-white" />
-                        </div>
+                        <CriaCreature className="h-7 w-7 shrink-0 mt-0.5" />
                         <div className="bg-card border border-border rounded-2xl rounded-tl-md px-4 py-3 max-w-[85%] shadow-warm-sm">
                           <p
                             className="text-sm font-body text-foreground leading-relaxed"
@@ -327,9 +350,7 @@ export function CriaAIPanel() {
                   )}
                   {loading && (
                     <div className="flex gap-2 items-start">
-                      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-pink-400 flex items-center justify-center shrink-0">
-                        <Sparkles className="h-3.5 w-3.5 text-white" />
-                      </div>
+                      <CriaCreature className="h-7 w-7 shrink-0 mt-0.5" />
                       <div className="bg-card border border-border rounded-2xl rounded-tl-md px-4 py-3">
                         <div className="flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" />
@@ -355,7 +376,7 @@ export function CriaAIPanel() {
                       sendMessage(input);
                     }
                   }}
-                  placeholder="Pergunte qualquer coisa..."
+                  placeholder="Me conta o que você precisa criar..."
                   disabled={loading}
                   rows={1}
                   className="rounded-2xl border-border ring-1 ring-border/50 pr-12 resize-none min-h-[44px] max-h-32 text-sm font-body"
@@ -381,11 +402,11 @@ export function CriaAIPanel() {
         <button
           type="button"
           onClick={handleRestore}
-          className="fixed right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-primary to-pink-400 shadow-glow hover:shadow-glow-hover hover:scale-105 transition-all flex items-center justify-center md:bottom-6"
+          className="fixed right-6 z-50 w-14 h-14 rounded-full bg-card p-2 shadow-glow hover:shadow-glow-hover hover:scale-105 transition-all flex items-center justify-center md:bottom-6"
           style={isMobile ? { bottom: 'calc(72px + env(safe-area-inset-bottom, 0px) + 12px)' } : undefined}
           aria-label="Abrir cria"
         >
-          <Sparkles className="h-6 w-6 text-white" strokeWidth={1.75} />
+          <CriaCreature className="h-full w-full" />
           {unread > 0 && (
             <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 rounded-full bg-pink-500 border-2 border-background flex items-center justify-center text-[10px] font-display font-bold text-white">
               {unread > 9 ? "9+" : unread}
