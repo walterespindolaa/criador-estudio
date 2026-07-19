@@ -407,6 +407,13 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     /* ---------- modes ---------- */
     const MODE_META: Record<string, [string, string]> = { voice: ["mic", "Por voz"], auto: ["scroll-text", "Rolagem"], manual: ["hand", "Manual"] };
     function setMode(m: string) {
+      /* iPhone/Safari não suporta seguir o texto pela voz. Ao escolher "Por voz"
+         no iOS, abre o aviso e cai na Rolagem automática. */
+      if (m === "voice" && isIOS) {
+        $("#iosVoiceSheet")?.classList.add("show");
+        setMode("auto");
+        return;
+      }
       mode = m; S.mode = m; save();
       const [ic, lbl] = MODE_META[m];
       $("#modeBtn").innerHTML = '<i data-lucide="' + ic + '"></i><small>' + lbl + "</small>";
@@ -420,6 +427,12 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     $$("#modeMenu button").forEach((b: any) => (b.onclick = () => { setMode(b.dataset.mode); $("#modeMenu").classList.remove("show"); }));
     const onDocClick = (e: Event) => { if (!(e.target as Element).closest("#modeMenu,#modeBtn")) $("#modeMenu")?.classList.remove("show"); };
     document.addEventListener("click", onDocClick);
+    /* aviso do iOS sobre o modo por voz: só fecha o popup (o modo já está em Rolagem) */
+    $("#iosVoiceClose").onclick = () => $("#iosVoiceSheet").classList.remove("show");
+    $("#iosVoiceSpeed").onclick = () => {
+      $("#iosVoiceSheet").classList.remove("show");
+      $("#settingsPanel").classList.add("open"); $("#overlay").classList.add("show");
+    };
 
     /* ---------- quick actions ---------- */
     function syncQuick() {
@@ -1201,7 +1214,9 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     initSettingsUI();
     applyTheme();
     applySettings();
-    setMode(S.mode || "voice");
+    /* no iPhone o modo por voz não funciona: começa em Rolagem silenciosamente,
+       sem popup no boot (o aviso só aparece quando a pessoa ativa "Por voz" de propósito) */
+    setMode(isIOS && (S.mode === "voice" || !S.mode) ? "auto" : (S.mode || "voice"));
     setPlayIcon();
     setCamIcon();
     setMicIcon();
@@ -1389,6 +1404,17 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
           <p id="micText" />
           <button className="ssBtn primary" id="micFix">Tentar de novo</button>
           <button className="ssBtn ghost" id="micKeep">Fechar</button>
+        </div>
+      </div>
+
+      {/* iPhone: modo por voz não roda no Safari */}
+      <div id="iosVoiceSheet" className="cSheet">
+        <div className="cSheetCard">
+          <span className="permIcon"><i data-lucide="mic" /></span>
+          <h3>O modo por voz não roda no iPhone</h3>
+          <p>Seguir o texto pela sua voz enquanto grava é uma limitação do Safari no iPhone. A sugestão do Cria é usar a Rolagem automática: o texto rola sozinho na velocidade que você ajusta. No Android e no computador o modo por voz funciona normalmente.</p>
+          <button className="ssBtn primary" id="iosVoiceClose">Usar Rolagem</button>
+          <button className="ssBtn ghost" id="iosVoiceSpeed">Ajustar velocidade</button>
         </div>
       </div>
 
