@@ -219,21 +219,23 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
 #adesivos p{margin-top:16px;font-size:clamp(1rem,2.4vw,1.15rem);color:var(--ink);opacity:.78;max-width:460px;margin-left:auto;margin-right:auto}
 #adesivos .ade-cta{margin-top:28px}
 #adesivos .ade-sticker{position:absolute;z-index:1;pointer-events:none;user-select:none;-webkit-user-drag:none;filter:drop-shadow(0 10px 22px rgba(21,20,18,.14))}
-.ade-s1{top:26px;left:-34px;width:190px;transform:rotate(-16deg);opacity:.95}
-.ade-s2{top:-22px;left:36%;width:104px;transform:rotate(10deg)}
-.ade-s3{top:46px;right:44px;width:98px;transform:rotate(8deg)}
-.ade-s4{bottom:-26px;left:52px;width:140px;transform:rotate(-10deg)}
-.ade-s5{bottom:22px;right:-26px;width:150px;transform:rotate(14deg)}
-.ade-s6{bottom:34px;left:42%;width:170px;transform:rotate(6deg);opacity:.95}
-.ade-s7{top:44%;left:14px;width:74px;transform:rotate(-18deg)}
+/* stickers SÓ nas laterais e cantos; o miolo (titulo, texto, botao) fica limpo */
+.ade-s1{top:34px;left:-42px;width:195px;transform:rotate(-14deg)}
+.ade-s2{bottom:40px;right:72px;width:90px;transform:rotate(7deg)}
+.ade-s3{top:40px;right:58px;width:108px;transform:rotate(9deg)}
+.ade-s4{top:46%;left:28px;width:132px;transform:rotate(-8deg)}
+.ade-s5{display:none}
+.ade-s6{top:44%;right:-48px;width:195px;transform:rotate(12deg)}
+.ade-s7{bottom:44px;left:60px;width:90px;transform:rotate(-15deg)}
 @media(max-width:640px){
   #adesivos{padding:72px 18px;min-height:360px}
-  .ade-s1{width:120px;left:-30px;top:14px}
+  /* mobile: só 3 nos cantos, bem pequenos e sangrando pra fora, miolo limpo */
+  .ade-s1{width:104px;left:-34px;top:12px}
   .ade-s2{display:none}
-  .ade-s3{width:70px;right:8px;top:18px}
-  .ade-s4{width:96px;left:-18px;bottom:-16px}
-  .ade-s5{width:96px;right:-20px;bottom:20px}
-  .ade-s6{display:none}
+  .ade-s3{width:64px;right:6px;top:14px}
+  .ade-s4{display:none}
+  .ade-s5{display:none}
+  .ade-s6{width:118px;right:-38px;bottom:-8px}
   .ade-s7{display:none}
 }
 </style>
