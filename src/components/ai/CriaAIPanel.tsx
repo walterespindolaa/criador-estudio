@@ -77,20 +77,12 @@ const QUICK_ACTIONS: QuickAction[] = [
   },
 ];
 
-/** A criatura do Cria: a carinha da marca (amarela, olhos azuis), usada como
-    avatar da IA no chat. SVG pra escalar limpo em qualquer tamanho. */
+/** A CriaTura do Cria (a lâmpada, sticker oficial da marca), usada como avatar
+    da IA no chat. PNG oficial em vez de desenho aproximado. */
 function CriaCreature({ className, online = false }: { className?: string; online?: boolean }) {
   return (
     <span className={cn("relative inline-block", className)}>
-      <svg viewBox="0 0 64 64" className="w-full h-full" style={{ filter: "drop-shadow(0 6px 14px rgba(234,73,24,0.2))" }} aria-hidden="true">
-        <path d="M32 4C46 4 58 14 58 30 58 48 47 60 32 60 17 60 6 48 6 30 6 14 18 4 32 4Z" fill="#FFCF03" />
-        <ellipse cx="24" cy="22" rx="16" ry="13" fill="#FFD93A" opacity="0.6" />
-        <ellipse cx="24" cy="30" rx="5" ry="6.5" fill="#0061EE" />
-        <ellipse cx="40" cy="30" rx="5" ry="6.5" fill="#0061EE" />
-        <circle cx="25.6" cy="27.6" r="1.7" fill="#fff" />
-        <circle cx="41.6" cy="27.6" r="1.7" fill="#fff" />
-        <path d="M25 42 Q32 49 39 42" fill="none" stroke="#EA4918" strokeWidth="3" strokeLinecap="round" />
-      </svg>
+      <img src="/stickers/criatura-lampada.png" alt="Cria" draggable={false} className="w-full h-full object-contain" />
       {online && <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-[#01A652] border-2 border-background" />}
     </span>
   );
@@ -402,7 +394,7 @@ export function CriaAIPanel() {
         <button
           type="button"
           onClick={handleRestore}
-          className="fixed right-6 z-50 w-14 h-14 rounded-full bg-card p-2 shadow-glow hover:shadow-glow-hover hover:scale-105 transition-all flex items-center justify-center md:bottom-6"
+          className="fixed right-6 z-50 w-14 h-14 rounded-full overflow-hidden shadow-glow hover:shadow-glow-hover hover:scale-105 transition-all flex items-center justify-center md:bottom-6"
           style={isMobile ? { bottom: 'calc(72px + env(safe-area-inset-bottom, 0px) + 12px)' } : undefined}
           aria-label="Abrir cria"
         >
