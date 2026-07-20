@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Loader2, Instagram, Youtube, Twitter, Music2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { sanitizeUrl } from "@/lib/sanitize";
+import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 import { renderRichText } from "@/lib/richText";
 import { cn } from "@/lib/utils";
 
@@ -340,6 +341,7 @@ function backgroundStyle(settings: BioSettings): React.CSSProperties {
 
 const BioPage = () => {
   const { slug } = useParams<{ slug: string }>();
+  useForceLightTheme();
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [profile, setProfile] = useState<ProfileLite | null>(null);

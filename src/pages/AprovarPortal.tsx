@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, RotateCcw, Loader2, ImageOff, Heart, MessageCircle, Send, Bookmark, Zap, ListChecks, ChevronDown, Clapperboard, CalendarDays, BarChart3, CheckSquare } from "lucide-react";
+import { Check, RotateCcw, Loader2, ImageOff, Heart, MessageCircle, Send, Bookmark, Zap, ListChecks, ChevronDown, Clapperboard, CalendarDays, BarChart3, CheckSquare, AlertTriangle } from "lucide-react";
 import { hexToHsl } from "@/lib/applyTheme";
 import { PostMediaCarousel } from "@/components/shared/PostMediaCarousel";
 import { StoryPreview } from "@/components/accounts/StoryPreview";
@@ -15,6 +15,7 @@ import { postAspect } from "@/lib/post-aspect";
 import { EtapasChecklist, type Stage } from "@/components/aprovar/EtapasChecklist";
 import { PortalCalendario } from "@/components/aprovar/PortalCalendario";
 import { PortalRelatorio } from "@/components/aprovar/PortalRelatorio";
+import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 
 type AnyRpc = (fn: string, args?: Record<string, unknown>) => ReturnType<typeof supabase.rpc>;
 const sbRpc = supabase.rpc.bind(supabase) as unknown as AnyRpc;
@@ -213,6 +214,8 @@ export default function AprovarPortal() {
   const { token } = useParams<{ token: string }>();
   const qc = useQueryClient();
   const inv = () => qc.invalidateQueries({ queryKey: ["portal-posts", token] });
+  // Página pública: força tema claro (o cliente pode estar no dark do sistema).
+  useForceLightTheme();
 
   const clientQ = useQuery({
     queryKey: ["portal-client", token], enabled: !!token,
@@ -268,7 +271,13 @@ export default function AprovarPortal() {
   const approveStage = useMutation({ mutationFn: async ({ id, stage }: { id: string; stage: Stage }) => { const { error } = await sbRpc("approve_stage_by_token", { _token: token, _post_id: id, _stage: stage }); if (error) throw error; }, onSuccess: () => { toast.success("Etapa aprovada!"); inv(); }, onError: () => toast.error("Não foi possível aprovar.") });
   const adjustStage = useMutation({ mutationFn: async ({ id, stage, comment }: { id: string; stage: Stage; comment: string }) => { const { error } = await sbRpc("request_stage_adjustment_by_token", { _token: token, _post_id: id, _stage: stage, _comment: comment }); if (error) throw error; }, onSuccess: () => { toast.success("Ajuste enviado!"); inv(); }, onError: () => toast.error("Não foi possível enviar.") });
 
-  const busy = approveFast.isPending || adjustFast.isPending || approveStage.isPending || adjustStage.isPending;
+  // Qual post está em ação AGORA. Só ele trava; os outros seguem clicáveis.
+  const pendingId: string | null =
+    (approveFast.isPending ? (approveFast.variables as string) : null) ??
+    (adjustFast.isPending ? adjustFast.variables?.id ?? null : null) ??
+    (approveStage.isPending ? approveStage.variables?.id ?? null : null) ??
+    (adjustStage.isPending ? adjustStage.variables?.id ?? null : null) ??
+    null;
 
   const [showApproved, setShowApproved] = useState(false);
   const [tab, setTab] = useState<PortalTab>("aprovacoes");
@@ -318,7 +327,7 @@ export default function AprovarPortal() {
   const activeTab: PortalTab = tabs.some((t) => t.key === tab) ? tab : "aprovacoes";
 
   const renderPost = (p: PortalPost, i: number) => (
-    <PostApproval key={p.post_id} client={c} post={p} index={i} busy={busy}
+    <PostApproval key={p.post_id} client={c} post={p} index={i} busy={pendingId === p.post_id}
       onApproveFast={(id) => approveFast.mutate(id)}
       onAdjustFast={(id, comment) => adjustFast.mutate({ id, comment })}
       onApproveStage={(id, stage) => approveStage.mutate({ id, stage })}
@@ -420,6 +429,15 @@ export default function AprovarPortal() {
 
                 {postsQ.isLoading ? (
                   <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+                ) : postsQ.isError ? (
+                  <div className="text-center py-16">
+                    <div className="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-4"><AlertTriangle className="h-6 w-6 text-amber-600" /></div>
+                    <p className="font-display font-bold text-foreground text-lg">Não consegui carregar seus posts</p>
+                    <p className="text-sm text-muted-foreground font-body mt-1 mb-5">Parece que a conexão falhou. Verifique sua internet e tente de novo.</p>
+                    <Button onClick={() => postsQ.refetch()} disabled={postsQ.isFetching}>
+                      {postsQ.isFetching ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-2" />} Tentar de novo
+                    </Button>
+                  </div>
                 ) : total === 0 ? (
                   <div className="text-center py-16 text-muted-foreground font-body"><Check className="h-10 w-10 mx-auto mb-3 opacity-40" /><p className="font-medium text-foreground">Tudo em dia!</p><p className="text-sm mt-1">Nenhum post aguardando sua revisão agora.</p></div>
                 ) : (

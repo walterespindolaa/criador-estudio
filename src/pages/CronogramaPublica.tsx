@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Check, X, Pencil, CheckCircle2, CalendarRange, PartyPopper } from "lucide-react";
+import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 
 type AnyRpc = (fn: string, args?: Record<string, unknown>) => ReturnType<typeof supabase.rpc>;
 const sbRpc = supabase.rpc.bind(supabase) as unknown as AnyRpc;
@@ -43,6 +44,7 @@ function periodLabel(items: Item[]): string | null {
 
 export default function CronogramaPublica() {
   const { token } = useParams<{ token: string }>();
+  useForceLightTheme();
   const qc = useQueryClient();
   const [reasonFor, setReasonFor] = useState<{ id: string; status: "recusado" | "ajuste" } | null>(null);
   const [reason, setReason] = useState("");

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Check, RotateCcw, X, Loader2, Lock, Download } from "lucide-react";
+import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 import { applyAccent } from "@/lib/applyTheme";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +30,7 @@ const fmtDate = (d: string | null) => (d ? new Date(d + "T00:00:00").toLocaleDat
 
 export default function PropostaPublica() {
   const { token } = useParams<{ token: string }>();
+  useForceLightTheme();
   const qc = useQueryClient();
   const inv = () => qc.invalidateQueries({ queryKey: ["proposal", token] });
   const [adjOpen, setAdjOpen] = useState(false);
