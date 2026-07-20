@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancela runs antigos do mesmo branch/PR quando chega um push novo.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: typecheck + build + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install deps
+        run: npm install --no-audit --no-fund
+
+      # Gate 1: tipos. tsc no ROOT é no-op (solution file), o real é tsconfig.app.json.
+      - name: Typecheck
+        run: npx tsc -p tsconfig.app.json --noEmit
+
+      # Gate 2: bundle. vite build (esbuild) — pega erros de import/sintaxe.
+      - name: Build
+        run: npx vite build
+
+      # Gate 3: testes de unidade.
+      - name: Test
+        run: npx vitest run --passWithNoTests
