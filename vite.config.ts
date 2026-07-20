@@ -24,14 +24,15 @@ export default defineConfig(({ mode }) => ({
     sourcemap: false,
     rollupOptions: {
       output: {
+        // Só agrupamos o que é REALMENTE usado no boot (vendor/query/supabase).
+        // recharts, jspdf e html2canvas são carregados sob demanda (import()
+        // dinâmico / rotas lazy); listá-los aqui forçava-os pro preload inicial
+        // e inflava o bundle de entrada. Deixar o Rollup fatiar sozinho mantém
+        // esses pacotes fora do primeiro carregamento.
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
           query: ['@tanstack/react-query'],
-          motion: ['framer-motion'],
           supabase: ['@supabase/supabase-js'],
-          charts: ['recharts'],
-          icons: ['lucide-react'],
-          pdf: ['jspdf', 'html2canvas'],
         },
       },
     },

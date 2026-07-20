@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { toast } from "sonner";
 
@@ -19,22 +18,22 @@ type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 
 export function useFinRecords() {
-  const { user } = useAuth();
+  const { agencyOwnerId } = useActiveAccount();
   return useQuery<FinRecord[]>({
-    queryKey: ["fin-records", user?.id], enabled: !!user?.id,
+    queryKey: ["fin-records", agencyOwnerId], enabled: !!agencyOwnerId,
     queryFn: async () => {
-      const { data, error } = await sbFrom("fin_records").select("*").eq("manager_id", user!.id).order("date", { ascending: false });
+      const { data, error } = await sbFrom("fin_records").select("*").eq("manager_id", agencyOwnerId!).order("date", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as FinRecord[];
     },
   });
 }
 export function useCreateFinRecord() {
-  const { user } = useAuth(); const qc = useQueryClient();
+  const { agencyOwnerId } = useActiveAccount(); const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: FinRecordInput) => {
-      if (!user?.id) throw new Error("Sem sessão");
-      const { error } = await sbFrom("fin_records").insert({ ...input, manager_id: user.id } as never);
+      if (!agencyOwnerId) throw new Error("Sem sessão");
+      const { error } = await sbFrom("fin_records").insert({ ...input, manager_id: agencyOwnerId } as never);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records"] }),
@@ -73,22 +72,22 @@ export type FinRecurring = {
 export type FinRecurringInput = Partial<Omit<FinRecurring, "id" | "manager_id" | "created_at" | "updated_at">> & { description: string };
 
 export function useFinRecurring() {
-  const { user } = useAuth();
+  const { agencyOwnerId } = useActiveAccount();
   return useQuery<FinRecurring[]>({
-    queryKey: ["fin-recurring", user?.id], enabled: !!user?.id,
+    queryKey: ["fin-recurring", agencyOwnerId], enabled: !!agencyOwnerId,
     queryFn: async () => {
-      const { data, error } = await sbFrom("fin_recurring").select("*").eq("manager_id", user!.id).order("created_at", { ascending: false });
+      const { data, error } = await sbFrom("fin_recurring").select("*").eq("manager_id", agencyOwnerId!).order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as FinRecurring[];
     },
   });
 }
 export function useCreateFinRecurring() {
-  const { user } = useAuth(); const qc = useQueryClient();
+  const { agencyOwnerId } = useActiveAccount(); const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: FinRecurringInput) => {
-      if (!user?.id) throw new Error("Sem sessão");
-      const { error } = await sbFrom("fin_recurring").insert({ ...input, manager_id: user.id } as never);
+      if (!agencyOwnerId) throw new Error("Sem sessão");
+      const { error } = await sbFrom("fin_recurring").insert({ ...input, manager_id: agencyOwnerId } as never);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-recurring"] }),
@@ -115,12 +114,12 @@ export function useDeleteFinRecurring() {
   });
 }
 export function useGenerateRecurring() {
-  const { user } = useAuth(); const qc = useQueryClient();
+  const { agencyOwnerId } = useActiveAccount(); const qc = useQueryClient();
   return useMutation({
     mutationFn: async (rows: FinRecordInput[]): Promise<number> => {
-      if (!user?.id) throw new Error("Sem sessão");
+      if (!agencyOwnerId) throw new Error("Sem sessão");
       if (rows.length === 0) return 0;
-      const payload = rows.map((r) => ({ ...r, manager_id: user.id }));
+      const payload = rows.map((r) => ({ ...r, manager_id: agencyOwnerId }));
       const { error } = await sbFrom("fin_records").insert(payload as never);
       if (error) throw error;
       return rows.length;
@@ -133,12 +132,12 @@ export function useGenerateRecurring() {
 // ===================== TRANSFERÊNCIA PJ→PF =====================
 export type TransferKind = "Pró-labore" | "Distribuição de lucros";
 export function useCreateFinTransfer() {
-  const { user } = useAuth(); const qc = useQueryClient();
+  const { agencyOwnerId } = useActiveAccount(); const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { kind: TransferKind; amount: number; date: string; description: string }) => {
-      if (!user?.id) throw new Error("Sem sessão");
+      if (!agencyOwnerId) throw new Error("Sem sessão");
       const group = crypto.randomUUID();
-      const base = { manager_id: user.id, amount: input.amount, status: "pago", date: input.date, transfer_group: group };
+      const base = { manager_id: agencyOwnerId, amount: input.amount, status: "pago", date: input.date, transfer_group: group };
       const rows = [
         { ...base, context: "pj", type: "despesa", category: input.kind === "Pró-labore" ? "Pró-labore" : "Distribuição", description: input.description || `${input.kind} (saída)` },
         { ...base, context: "pf", type: "entrada", category: input.kind === "Pró-labore" ? "Pró-labore" : "Distribuição de lucros", description: input.description || input.kind },

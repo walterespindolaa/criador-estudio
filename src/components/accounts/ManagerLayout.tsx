@@ -46,6 +46,7 @@ const MODULE_ROUTE: Record<string, string> = {
 const MODULE_TEAM_CODE: Record<string, string> = {
   aprovapost_externo: "cria_post",
   crm: "cria_gestao",
+  financeiro: "cria_caixa",
 };
 
 // Seção "Negócio" do rail (Equipe e Comissões têm tratamento próprio no render).

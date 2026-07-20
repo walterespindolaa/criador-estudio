@@ -11,17 +11,20 @@ import { AuthOnlyRoute, ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import MetaPixelTracker from "@/components/MetaPixelTracker";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import ResetPassword from "./pages/ResetPassword";
-import Onboarding from "./pages/Onboarding";
-import ComecarAgencia from "./pages/ComecarAgencia";
-import Obrigado from "./pages/Obrigado";
 import AppLayout from "./components/AppLayout";
-import NotFound from "./pages/NotFound";
-import Termos from "./pages/Termos";
-import Privacidade from "./pages/Privacidade";
-import ExcluirDados from "./pages/ExcluirDados";
+// Telas públicas/auth agora são lazy: não puxam framer-motion no boot de quem já
+// está logado (nem no primeiro paint de quem só quer entrar). Todas caem no mesmo
+// <Suspense> do topo. Login/Signup são o caminho crítico do primeiro acesso.
+const Login = lazy(() => import("./pages/Login"));
+const Signup = lazy(() => import("./pages/Signup"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Onboarding = lazy(() => import("./pages/Onboarding"));
+const ComecarAgencia = lazy(() => import("./pages/ComecarAgencia"));
+const Obrigado = lazy(() => import("./pages/Obrigado"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Termos = lazy(() => import("./pages/Termos"));
+const Privacidade = lazy(() => import("./pages/Privacidade"));
+const ExcluirDados = lazy(() => import("./pages/ExcluirDados"));
 import { UpdatePrompt } from "@/components/UpdatePrompt";
 import { ConfirmHost } from "@/components/shared/Confirm";
 import { CachePersistence } from "@/components/pwa/CachePersistence";

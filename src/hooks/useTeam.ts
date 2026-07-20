@@ -12,8 +12,12 @@ export const TEAM_MODULES = [
   { code: "cria_post", label: "Cria Post (posts + aprovação)" },
   { code: "hub_cria", label: "HUB Criativo (análises)" },
   { code: "agenda", label: "Agenda de criação" },
+  { code: "cria_caixa", label: "Cria Caixa" },
 ] as const;
 export type TeamModuleCode = (typeof TEAM_MODULES)[number]["code"];
+// Módulo financeiro (sensível): NÃO entra marcado por padrão no convite.
+// Libera só o financeiro da EMPRESA; o Pessoal do dono nunca aparece pro colaborador.
+export const TEAM_MODULE_DEFAULT = TEAM_MODULES.filter((m) => m.code !== "cria_caixa").map((m) => m.code);
 
 export type MemberPermission = {
   id: string; member_row_id: string; module_code: string; all_clients: boolean; client_ids: string[];

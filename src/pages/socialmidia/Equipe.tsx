@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, UserPlus, Users, Plus, Trash2, Pause, Play, Check, CreditCard, Info } from "lucide-react";
+import { Loader2, UserPlus, Users, Plus, Trash2, Pause, Play, Check, CreditCard, Info, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { cn } from "@/lib/utils";
 import {
   useTeamMembers, useCollabSeats, useInviteMember, useUpdateMemberStatus, useRemoveMember,
-  useSetMemberModule, useBuySeats, TEAM_MODULES,
+  useSetMemberModule, useBuySeats, TEAM_MODULES, TEAM_MODULE_DEFAULT,
 } from "@/hooks/useTeam";
 import { useManageSubscription } from "@/hooks/useManageSubscription";
 import { useCrmClients } from "@/hooks/useCrm";
@@ -29,7 +29,7 @@ export default function Equipe() {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [mods, setMods] = useState<Set<string>>(new Set(TEAM_MODULES.map((m) => m.code)));
+  const [mods, setMods] = useState<Set<string>>(new Set(TEAM_MODULE_DEFAULT));
   const [scope, setScope] = useState<"all" | "some">("all");
   const [cliIds, setCliIds] = useState<Set<string>>(new Set());
 
@@ -37,7 +37,7 @@ export default function Equipe() {
   const total = seats?.total ?? 1;
   const full = used >= total;
 
-  const resetForm = () => { setEmail(""); setName(""); setMods(new Set(TEAM_MODULES.map((m) => m.code))); setScope("all"); setCliIds(new Set()); };
+  const resetForm = () => { setEmail(""); setName(""); setMods(new Set(TEAM_MODULE_DEFAULT)); setScope("all"); setCliIds(new Set()); };
   const openInvite = () => {
     if (full) { toast.error("Sem assentos livres. Adicione um assento primeiro."); return; }
     resetForm(); setOpen(true);
@@ -181,10 +181,21 @@ export default function Equipe() {
                       className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[12px] font-body border transition-colors",
                         on ? "bg-primary/10 border-primary text-primary" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
                       {on && <Check className="h-3 w-3" />} {mod.label}
+                      {mod.code === "cria_caixa" && (
+                        <span className="ml-0.5 rounded px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-500/15">financeiro</span>
+                      )}
                     </button>
                   );
                 })}
               </div>
+              {mods.has("cria_caixa") && (
+                <div className="mt-2 flex items-start gap-2 rounded-xl bg-amber-500/[0.08] border border-amber-500/25 px-3 py-2">
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-600 mt-0.5 shrink-0" />
+                  <p className="text-[11.5px] font-body text-amber-900/80 leading-relaxed">
+                    O <strong>Cria Caixa</strong> libera o financeiro da <strong>empresa</strong> (faturamento, despesas e mensalidades dos clientes). O colaborador <strong>não vê o seu financeiro pessoal</strong>.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Escopo de clientes */}

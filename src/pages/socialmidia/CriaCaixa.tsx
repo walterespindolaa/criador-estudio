@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Plus, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, Pencil, Building2, User, Check, Repeat, ArrowLeftRight, RotateCcw, SkipForward, ExternalLink, Receipt } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, Pencil, Building2, User, Check, Repeat, ArrowLeftRight, RotateCcw, SkipForward, ExternalLink, Receipt, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import {
   useFinRecords, useCreateFinRecord, useUpdateFinRecord, useDeleteFinRecord, useFinRecurring, useCreateFinRecurring, useGenerateRecurring, useDeleteFinByGroup,
@@ -12,6 +12,7 @@ import { PAYMENT_METHODS, taxOfMonth, taxOfClient, regimeLabel, isPctRegime } fr
 import { useCrmClients } from "@/hooks/useCrm";
 import { useManagerProfile } from "@/hooks/useModules";
 import { ModuleGate } from "@/components/accounts/ModuleGate";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { ModuleHero, type SubTab } from "@/components/brand/ModuleHero";
 import { FinCompanyDialog } from "@/components/accounts/FinCompanyDialog";
 import { FinRecurringDialog } from "@/components/accounts/FinRecurringDialog";
@@ -64,7 +65,7 @@ const DEFAULT_SUBCATS: Record<FinContext, Record<FinType, Record<string, string[
 };
 
 export default function CriaCaixa() {
-  return <ModuleGate code="financeiro"><CaixaInner /></ModuleGate>;
+  return <ModuleGate code="financeiro" teamCode="cria_caixa"><CaixaInner /></ModuleGate>;
 }
 
 function CaixaInner() {
@@ -81,23 +82,33 @@ function CaixaInner() {
   const now = new Date();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  // Colaborador (acesso de equipe) só enxerga o financeiro da EMPRESA (PJ).
+  // O Pessoal (PF) é privado do dono da conta.
+  const { actingAsTeam } = useActiveAccount();
 
   // ── ROTA: /socialmidia/criacaixa/<empresa|pessoal>/<seção> ──
   // Antes tudo caía numa página só e a informação ficava jogada. Agora cada
   // seção tem URL própria: dá pra favoritar, compartilhar e o "voltar" funciona.
   const parts = pathname.split("/").filter(Boolean);           // [socialmidia, criacaixa, ctx, sec]
   const ctxSeg = parts[2] ?? "";
-  const ctx: FinContext = ctxSeg === "pessoal" || ctxSeg === "pessoafisica" ? "pf" : "pj";
+  const wantsPf = ctxSeg === "pessoal" || ctxSeg === "pessoafisica";
+  // Colaborador nunca fica no contexto PF, mesmo digitando a URL direto.
+  const ctx: FinContext = actingAsTeam ? "pj" : (wantsPf ? "pf" : "pj");
   const section = parts[3] ?? "visao";
 
   // Normaliza a URL (inclusive os links antigos /pessoafisica).
   useEffect(() => {
+    // Colaborador tentando abrir /pessoal cai de volta na Empresa.
+    if (actingAsTeam && wantsPf) {
+      navigate(`/socialmidia/criacaixa/empresa/${section}`, { replace: true });
+      return;
+    }
     if (parts.length < 4) {
-      const c = ctxSeg === "pessoal" || ctxSeg === "pessoafisica" ? "pessoal" : "empresa";
+      const c = wantsPf ? "pessoal" : "empresa";
       navigate(`/socialmidia/criacaixa/${c}/visao`, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
+  }, [pathname, actingAsTeam]);
 
   const [ym, setYm] = useState({ y: now.getFullYear(), m: now.getMonth() });
   const [typeF, setTypeF] = useState<FinType | "todos">("todos");
@@ -288,10 +299,14 @@ function CaixaInner() {
         { to: `${base}/relatorios`, label: "Relatórios" },
       ];
 
+  // Colaborador só tem Empresa; o dono continua com Empresa + Pessoal.
+  const ctxOptions: Array<[FinContext, string, typeof Building2]> = actingAsTeam
+    ? [["pj", "Empresa", Building2]]
+    : [["pj", "Empresa", Building2], ["pf", "Pessoal", User]];
   const seletorPjPf = (
     <div className="flex items-center justify-between gap-3 flex-wrap">
       <div className="inline-flex items-center gap-1 rounded-2xl border border-border bg-background/70 backdrop-blur-sm p-1">
-        {([["pj", "Empresa", Building2], ["pf", "Pessoal", User]] as const).map(([v, l, Icon]) => (
+        {ctxOptions.map(([v, l, Icon]) => (
           <button key={v} onClick={() => navigate(`/socialmidia/criacaixa/${v === "pj" ? "empresa" : "pessoal"}/visao`)}
             className={cn("flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-body font-bold transition-colors", ctx === v ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground")}>
             <Icon className="h-4 w-4" /> {l}
@@ -320,7 +335,7 @@ function CaixaInner() {
             <Button size="sm" onClick={() => { setEditing(null); setDialog(true); }}>
               <Plus className="h-3.5 w-3.5 mr-1.5" /> Novo lançamento
             </Button>
-            {isPj && <Button variant="outline" size="sm" className="bg-background/70" onClick={() => setTransferOpen(true)}><ArrowLeftRight className="h-3.5 w-3.5 mr-1.5" /> Transferir p/ PF</Button>}
+            {isPj && !actingAsTeam && <Button variant="outline" size="sm" className="bg-background/70" onClick={() => setTransferOpen(true)}><ArrowLeftRight className="h-3.5 w-3.5 mr-1.5" /> Transferir p/ PF</Button>}
             <Button variant="outline" size="sm" className="bg-background/70" onClick={() => setRecurringOpen(true)}><Repeat className="h-3.5 w-3.5 mr-1.5" /> Recorrentes</Button>
             <Button variant="outline" size="sm" className="bg-background/70" onClick={() => setCompanyOpen(true)}><Building2 className="h-3.5 w-3.5 mr-1.5" /> Minha empresa</Button>
           </>
@@ -328,6 +343,16 @@ function CaixaInner() {
       >
         {seletorPjPf}
       </ModuleHero>
+
+      {/* Colaborador: aviso de que só o financeiro da empresa está visível. */}
+      {actingAsTeam && (
+        <div className="mb-5 flex items-start gap-2 rounded-2xl bg-amber-500/[0.08] border border-amber-500/25 px-4 py-3">
+          <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+          <p className="text-[13px] font-body text-amber-900/80 leading-relaxed">
+            Você vê só o financeiro <strong>da empresa</strong>. O <strong>Pessoal</strong> é privado do dono da conta e não aparece aqui.
+          </p>
+        </div>
+      )}
 
       {/* O aviso de recorrente pendente aparece em qualquer seção, é ação, não informação. */}
       {pendingRecurring.length > 0 && (
