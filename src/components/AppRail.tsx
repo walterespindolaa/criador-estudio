@@ -4,7 +4,7 @@ import {
   LayoutDashboard, PenLine, Lightbulb, ClipboardCheck, Grid3X3, ListTodo,
   CalendarRange, Kanban, Target, FolderOpen, Palette, BookOpen, BookMarked,
   Link2, Sparkles, BadgeDollarSign, BarChart3, Archive, GraduationCap,
-  PlayCircle, Settings, LogOut, Instagram, ShieldCheck, ChevronDown, Wand2, IdCard, TrendingUp, Clapperboard, Trash2, Gem, Video, type LucideIcon,
+  PlayCircle, Settings, LogOut, Instagram, ShieldCheck, ChevronDown, Wand2, IdCard, TrendingUp, Clapperboard, Trash2, Gem, Video, Globe, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCriaAI } from "@/contexts/CriaAIContext";
@@ -29,12 +29,14 @@ const TOP: NavNode[] = [
     { label: "nav.inProduction", icon: Kanban, to: "/app/criando" },
     { label: "nav.criaPlan", icon: Wand2, to: "/app/autopilot" },
     { label: "nav.criaStories", icon: Clapperboard, to: "/app/stories" },
-    { label: "nav.criaPrompter", icon: Video, to: "/app/prompter" },
+  ]},
+  { id: "mundo", label: "nav.world", icon: Globe, children: [
     { label: "nav.trends", icon: TrendingUp, to: "/app/tendencias" },
-    { label: "nav.approvals", icon: ClipboardCheck, to: "/app/aprovacao" },
-    { label: "nav.myFeed", icon: Grid3X3, to: "/app/feed" },
+    { label: "nav.criaPrompter", icon: Video, to: "/app/prompter" },
   ]},
   { id: "planejar", label: "nav.plan", icon: CalendarRange, children: [
+    { label: "nav.myFeed", icon: Grid3X3, to: "/app/feed" },
+    { label: "nav.approvals", icon: ClipboardCheck, to: "/app/aprovacao" },
     { label: "nav.calendarGoals", icon: Target, to: "/app/metas" },
     { label: "nav.tasks", icon: ListTodo, to: "/app/tarefas" },
     { label: "nav.files", icon: FolderOpen, to: "/app/arquivos" },

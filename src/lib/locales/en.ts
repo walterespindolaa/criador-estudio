@@ -255,6 +255,7 @@ export const en = {
     home: "Home", criaAi: "Cria AI", create: "Create", ideas: "Ideas",
     inProduction: "In production", criaPlan: "Cria Plan", criaStories: "Cria Stories", criaPrompter: "Cria Prompter",
     trends: "Trends", approvals: "Approvals", myFeed: "My Feed",
+    world: "CRIA World",
     plan: "Plan", calendarGoals: "Calendar & Goals", tasks: "Tasks", files: "Files",
     myBrand: "My brand", brandbook: "Brandbook", linkInBio: "Link in bio",
     mediaKit: "Media Kit", library: "Library",
