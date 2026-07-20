@@ -146,7 +146,7 @@ export function NotificationsBell() {
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-[380px] p-0" align="end">
+      <PopoverContent className="w-[min(380px,calc(100vw-1rem))] p-0" align="end" collisionPadding={8}>
         <div className="p-4 border-b border-border flex items-center justify-between gap-2">
           <h3 className="font-display font-semibold text-foreground text-sm">Notificações</h3>
           <div className="flex items-center gap-1">

@@ -190,18 +190,18 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="name" className="[font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]">{t("signup.name")}</Label>
-                  <Input id="name" type="text" placeholder={t("signup.namePlaceholder")} {...register("name")} className="rounded-2xl h-12 bg-[#FDFBF5] border-2 border-[#0A0A0A]/25 focus-visible:border-[#0061EE] focus-visible:ring-0 text-[#0A0A0A]" />
+                  <Input id="name" type="text" autoComplete="name" placeholder={t("signup.namePlaceholder")} {...register("name")} className="rounded-2xl h-12 bg-[#FDFBF5] border-2 border-[#0A0A0A]/25 focus-visible:border-[#0061EE] focus-visible:ring-0 text-[#0A0A0A]" />
                   {errors.name && <p className="text-xs text-[#EA4918] mt-1">{errors.name.message}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="email" className="[font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]">{t("auth.email")}</Label>
-                  <Input id="email" type="email" placeholder="seu@email.com" {...register("email")} className="rounded-2xl h-12 bg-[#FDFBF5] border-2 border-[#0A0A0A]/25 focus-visible:border-[#0061EE] focus-visible:ring-0 text-[#0A0A0A]" />
+                  <Input id="email" type="email" autoComplete="email" inputMode="email" placeholder="seu@email.com" {...register("email")} className="rounded-2xl h-12 bg-[#FDFBF5] border-2 border-[#0A0A0A]/25 focus-visible:border-[#0061EE] focus-visible:ring-0 text-[#0A0A0A]" />
                   {errors.email && <p className="text-xs text-[#EA4918] mt-1">{errors.email.message}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="password" className="[font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]">{t("auth.password")}</Label>
                   <div className="relative">
-                    <Input id="password" type={showPassword ? "text" : "password"} placeholder={t("signup.passwordPlaceholder")} {...register("password")} className="rounded-2xl h-12 pr-10 bg-[#FDFBF5] border-2 border-[#0A0A0A]/25 focus-visible:border-[#0061EE] focus-visible:ring-0 text-[#0A0A0A]" />
+                    <Input id="password" type={showPassword ? "text" : "password"} autoComplete="new-password" placeholder={t("signup.passwordPlaceholder")} {...register("password")} className="rounded-2xl h-12 pr-10 bg-[#FDFBF5] border-2 border-[#0A0A0A]/25 focus-visible:border-[#0061EE] focus-visible:ring-0 text-[#0A0A0A]" />
                     <button
                       type="button"
                       onClick={() => setShowPassword((v) => !v)}
@@ -217,7 +217,7 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
                 <div className="space-y-1.5">
                   <Label htmlFor="confirmPassword" className="[font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]">{t("signup.confirmPassword")}</Label>
                   <div className="relative">
-                    <Input id="confirmPassword" type={showConfirm ? "text" : "password"} placeholder={t("signup.confirmPlaceholder")} {...register("confirmPassword")} className="rounded-2xl h-12 pr-10 bg-[#FDFBF5] border-2 border-[#0A0A0A]/25 focus-visible:border-[#0061EE] focus-visible:ring-0 text-[#0A0A0A]" />
+                    <Input id="confirmPassword" type={showConfirm ? "text" : "password"} autoComplete="new-password" placeholder={t("signup.confirmPlaceholder")} {...register("confirmPassword")} className="rounded-2xl h-12 pr-10 bg-[#FDFBF5] border-2 border-[#0A0A0A]/25 focus-visible:border-[#0061EE] focus-visible:ring-0 text-[#0A0A0A]" />
                     <button
                       type="button"
                       onClick={() => setShowConfirm((v) => !v)}

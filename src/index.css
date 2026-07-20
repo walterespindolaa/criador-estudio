@@ -302,3 +302,14 @@ html[data-bar="glass"] .cria-rail-capsule {
   backdrop-filter: blur(20px);
   --sidebar-foreground: var(--foreground);
 }
+
+/* Acessibilidade: quem ativou "reduzir movimento" no sistema recebe transições e
+   animações encurtadas (evita enjoo/desconforto). Padrão recomendado. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

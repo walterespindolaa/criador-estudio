@@ -98,7 +98,7 @@ const Login = () => {
         <form onSubmit={handleSubmit(onSubmitLogin)} className="space-y-5">
           <div className="space-y-2">
             <Label htmlFor="email" className="[font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]">{t("auth.email")}</Label>
-            <Input id="email" type="email" placeholder="seu@email.com" {...register("email")} className="rounded-2xl h-12 bg-[#FDFBF5] border-2 border-[#0A0A0A]/25 focus-visible:border-[#0061EE] focus-visible:ring-0 text-[#0A0A0A]" />
+            <Input id="email" type="email" autoComplete="email" inputMode="email" placeholder="seu@email.com" {...register("email")} className="rounded-2xl h-12 bg-[#FDFBF5] border-2 border-[#0A0A0A]/25 focus-visible:border-[#0061EE] focus-visible:ring-0 text-[#0A0A0A]" />
             {errors.email && <p className="text-xs text-[#EA4918] mt-1">{errors.email.message}</p>}
           </div>
           <div className="space-y-2">
@@ -113,7 +113,7 @@ const Login = () => {
               </button>
             </div>
             <div className="relative">
-              <Input id="password" type={showPassword ? "text" : "password"} placeholder="••••••••" {...register("password")} className="rounded-2xl h-12 pr-10 bg-[#FDFBF5] border-2 border-[#0A0A0A]/25 focus-visible:border-[#0061EE] focus-visible:ring-0 text-[#0A0A0A]" />
+              <Input id="password" type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="••••••••" {...register("password")} className="rounded-2xl h-12 pr-10 bg-[#FDFBF5] border-2 border-[#0A0A0A]/25 focus-visible:border-[#0061EE] focus-visible:ring-0 text-[#0A0A0A]" />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
@@ -160,6 +160,8 @@ const Login = () => {
               <div>
                 <Input
                   type="email"
+                  autoComplete="email"
+                  inputMode="email"
                   placeholder="seu@email.com"
                   defaultValue={emailValue}
                   {...registerForgot("email")}
