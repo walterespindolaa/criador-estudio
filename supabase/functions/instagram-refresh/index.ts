@@ -21,6 +21,9 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   );
 
+  // Heartbeat: registra que este cron executou (visível no admin). Não-fatal.
+  await admin.from('cron_runs').upsert({ job: 'instagram-refresh', last_run_at: new Date().toISOString(), ok: true } as never, { onConflict: 'job' } as never);
+
   const cutoff = new Date(Date.now() + REFRESH_WINDOW_DAYS * 86400000).toISOString();
 
   // Conexões que expiram na janela (ou sem data conhecida), renova todas.

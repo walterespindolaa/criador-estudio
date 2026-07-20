@@ -16,6 +16,8 @@ Deno.serve(async (req) => {
     if (!secret || secret !== Deno.env.get("INTERNAL_PUSH_SECRET")) return json({ error: "unauthorized" }, 401);
 
     const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    // Heartbeat: registra que este cron executou (visível no admin). Não-fatal.
+    await svc.from("cron_runs").upsert({ job: "story-notifications", last_run_at: new Date().toISOString(), ok: true }, { onConflict: "job" });
 
     // Agora no fuso de Brasília (UTC-3).
     const br = new Date(Date.now() - 3 * 3600 * 1000);
