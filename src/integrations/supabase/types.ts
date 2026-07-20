@@ -1359,6 +1359,27 @@ export type Database = {
           },
         ]
       }
+      cron_runs: {
+        Row: {
+          detail: string | null
+          job: string
+          last_run_at: string
+          ok: boolean
+        }
+        Insert: {
+          detail?: string | null
+          job: string
+          last_run_at?: string
+          ok?: boolean
+        }
+        Update: {
+          detail?: string | null
+          job?: string
+          last_run_at?: string
+          ok?: boolean
+        }
+        Relationships: []
+      }
       cronograma_datas: {
         Row: {
           created_at: string | null
@@ -4791,6 +4812,10 @@ export type Database = {
       get_user_details: { Args: { _user_id: string }; Returns: Json }
       get_user_id_by_email: { Args: { _email: string }; Returns: string }
       has_access: { Args: never; Returns: boolean }
+      has_member_module: {
+        Args: { code: string; target: string }
+        Returns: boolean
+      }
       has_module: { Args: { _code: string; _user?: string }; Returns: boolean }
       hub_credits_status: {
         Args: { _manager: string }

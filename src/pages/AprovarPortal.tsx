@@ -272,12 +272,16 @@ export default function AprovarPortal() {
   const adjustStage = useMutation({ mutationFn: async ({ id, stage, comment }: { id: string; stage: Stage; comment: string }) => { const { error } = await sbRpc("request_stage_adjustment_by_token", { _token: token, _post_id: id, _stage: stage, _comment: comment }); if (error) throw error; }, onSuccess: () => { toast.success("Ajuste enviado!"); inv(); }, onError: () => toast.error("Não foi possível enviar.") });
 
   // Qual post está em ação AGORA. Só ele trava; os outros seguem clicáveis.
-  const pendingId: string | null =
-    (approveFast.isPending ? (approveFast.variables as string) : null) ??
-    (adjustFast.isPending ? adjustFast.variables?.id ?? null : null) ??
-    (approveStage.isPending ? approveStage.variables?.id ?? null : null) ??
-    (adjustStage.isPending ? adjustStage.variables?.id ?? null : null) ??
-    null;
+  let pendingId: string | null = null;
+  if (approveFast.isPending && approveFast.variables) {
+    pendingId = approveFast.variables;
+  } else if (adjustFast.isPending && adjustFast.variables) {
+    pendingId = adjustFast.variables.id;
+  } else if (approveStage.isPending && approveStage.variables) {
+    pendingId = approveStage.variables.id;
+  } else if (adjustStage.isPending && adjustStage.variables) {
+    pendingId = adjustStage.variables.id;
+  }
 
   const [showApproved, setShowApproved] = useState(false);
   const [tab, setTab] = useState<PortalTab>("aprovacoes");
