@@ -605,7 +605,7 @@ const Criando = () => {
                     const pillar = getPillar(post.pillar_id);
                     const tc = taskCounts.get(post.id);
                     const approvalStatus = (post as unknown as { approval_status?: string | null }).approval_status ?? null;
-                    const showApprovalBadge = post.status === "editando" && approvalStatus !== "aprovado";
+                    const showApprovalBadge = post.status === "editando" && (approvalStatus === "pendente" || approvalStatus === "ajuste_solicitado");
                     const allDone = tc && tc.count > 0 && tc.done === tc.count;
                     const pendingTasks = tc ? tc.count - tc.done : 0;
                     const blocks = (post.content_blocks ?? null) as ContentBlocks | null;
@@ -630,8 +630,8 @@ const Criando = () => {
                           {showApprovalBadge && (
                             <span
                               className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-yellow-400 text-yellow-950 text-[10px] font-bold mr-1 align-middle"
-                              title="Aguardando aprovação do cliente"
-                              aria-label="Aguardando aprovação do cliente"
+                              title={approvalStatus === "ajuste_solicitado" ? "Cliente pediu ajustes" : "Aguardando aprovação do cliente"}
+                              aria-label={approvalStatus === "ajuste_solicitado" ? "Cliente pediu ajustes" : "Aguardando aprovação do cliente"}
                             >!</span>
                           )}
                           {post.title}
@@ -992,7 +992,7 @@ const Criando = () => {
                         const pillar = getPillar(post.pillar_id);
                         const tc = taskCounts.get(post.id);
                         const approvalStatus = (post as unknown as { approval_status?: string | null }).approval_status ?? null;
-                        const showApprovalBadge = post.status === "editando" && approvalStatus !== "aprovado";
+                        const showApprovalBadge = post.status === "editando" && (approvalStatus === "pendente" || approvalStatus === "ajuste_solicitado");
                         const allDone = tc && tc.count > 0 && tc.done === tc.count;
                         const pendingTasks = tc ? tc.count - tc.done : 0;
                         const blocks = (post.content_blocks ?? null) as ContentBlocks | null;
@@ -1015,8 +1015,8 @@ const Criando = () => {
                               {showApprovalBadge && (
                                 <span
                                   className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-yellow-400 text-yellow-950 text-[10px] font-bold mr-1 align-middle"
-                                  title="Aguardando aprovação do cliente"
-                                  aria-label="Aguardando aprovação do cliente"
+                                  title={approvalStatus === "ajuste_solicitado" ? "Cliente pediu ajustes" : "Aguardando aprovação do cliente"}
+                                  aria-label={approvalStatus === "ajuste_solicitado" ? "Cliente pediu ajustes" : "Aguardando aprovação do cliente"}
                                 >!</span>
                               )}
                               {post.title}
