@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const cors = {
@@ -8,7 +7,7 @@ const cors = {
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
     // Só o agendador (cron) chama, com o segredo interno.
