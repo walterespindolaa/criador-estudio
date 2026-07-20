@@ -137,7 +137,7 @@ const CSS = `
 .cpr .cSheetCard{background:#161511;border:1px solid rgba(245,243,231,.12);border-bottom:none;border-radius:28px 28px 0 0;width:min(520px,100vw);padding:22px 20px calc(22px + env(safe-area-inset-bottom));animation:cprUp .28s ease;}
 @keyframes cprUp{from{transform:translateY(40px);opacity:0;}to{transform:none;opacity:1;}}
 .cpr .cSheetCard h3{margin:0 0 3px;font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--cream);font-family:var(--fontDisplay);}
-.cpr .cSheetCard p{margin:0 0 14px;color:var(--dim);font-size:13.5px;line-height:1.55;}
+.cpr .cSheetCard p{margin:0 0 14px;color:rgba(245,243,231,.75);font-size:13.5px;line-height:1.55;}
 .cpr .cSheetCard p b{color:var(--cream);}
 .cpr #ssMeta{margin:0 0 14px;color:var(--dim);font-size:13px;font-family:var(--fontDisplay);}
 .cpr .permIcon{display:grid;place-items:center;width:52px;height:52px;border-radius:16px;background:rgba(234,73,24,.16);color:var(--accent);margin-bottom:12px;}
@@ -145,7 +145,7 @@ const CSS = `
 .cpr #ssVideo{width:100%;max-height:36vh;border-radius:16px;background:#000;display:block;margin-bottom:14px;object-fit:contain;}
 .cpr .ssBtn{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:16px;padding:14px;font-size:15px;font-weight:700;font-family:var(--fontDisplay);cursor:pointer;border:1px solid rgba(245,243,231,.16);background:rgba(245,243,231,.08);color:var(--cream);margin-bottom:8px;}
 .cpr .ssBtn.primary{background:var(--accent);border-color:var(--accent);color:var(--accentFg);box-shadow:0 4px 16px rgba(234,73,24,.4);}
-.cpr .ssBtn.ghost{background:none;border:none;color:var(--dim);font-weight:600;margin-bottom:0;padding:10px;box-shadow:none;}
+.cpr .ssBtn.ghost{background:none;border:none;color:rgba(245,243,231,.62);font-weight:600;margin-bottom:0;padding:10px;box-shadow:none;}
 .cpr .ssHint{color:var(--dim);font-size:12px;margin:0 0 12px;text-align:center;}
 .cpr #micBtn.off{color:var(--danger);border-color:rgba(255,77,94,.55);}
 .cpr #micBtn.hot{border-color:var(--ok);box-shadow:0 0 0 1.5px rgba(1,166,82,.6);}

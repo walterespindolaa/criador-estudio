@@ -88,6 +88,7 @@ import {
 import { ScriptEditor, emptySection, type Section } from "./drawer/ScriptEditor";
 import { ArtStudio } from "./ArtStudio";
 import { CarouselWriter } from "./CarouselWriter";
+import { EmojiPicker } from "@/components/shared/EmojiPicker";
 import { RepurposeSheet } from "./RepurposeSheet";
 import { BestTimesHint } from "@/components/shared/BestTimesHint";
 import { PostPreviewModal } from "./PostPreviewModal";
@@ -220,6 +221,20 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   const [hook, setHook] = useState("");
   const [script, setScript] = useState("");
   const [caption, setCaption] = useState("");
+  const captionRef = useRef<HTMLTextAreaElement>(null);
+  // Insere o emoji na posição do cursor da legenda (não só no fim).
+  const insertEmoji = (emoji: string) => {
+    const ta = captionRef.current;
+    if (!ta) { setCaption((c) => c + emoji); return; }
+    const start = ta.selectionStart ?? caption.length;
+    const end = ta.selectionEnd ?? caption.length;
+    setCaption(caption.slice(0, start) + emoji + caption.slice(end));
+    requestAnimationFrame(() => {
+      ta.focus();
+      const pos = start + emoji.length;
+      ta.setSelectionRange(pos, pos);
+    });
+  };
   const [cta, setCta] = useState("");
   const [scheduledDate, setScheduledDate] = useState("");
   const [scheduledTime, setScheduledTime] = useState("");
@@ -1690,11 +1705,15 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 <TabsContent value="legenda" className="flex-1 px-4 sm:px-6 py-5 m-0 outline-none space-y-5">
                   <div className="relative">
                     <textarea
+                      ref={captionRef}
                       placeholder="Escreva sua legenda aqui ou gere com IA…"
                       value={caption}
                       onChange={(e) => setCaption(e.target.value)}
                       className="w-full min-h-[280px] bg-transparent border-none outline-none focus:outline-none focus:ring-0 font-body text-base text-foreground placeholder:text-muted-foreground/40 resize-none leading-relaxed"
                     />
+                    <div className="absolute bottom-1.5 left-0 flex items-center gap-1">
+                      <EmojiPicker onPick={insertEmoji} />
+                    </div>
                     <span className="absolute bottom-2 right-2 text-[10px] text-muted-foreground/70 font-mono tabular-nums">
                       {captionLen}/{captionMax}
                     </span>
