@@ -225,6 +225,13 @@ export function useEnsureMonthly() {
       const { error } = await sbFrom("fin_monthly")
         .upsert(rows as never, { onConflict: "crm_client_id,month_ref", ignoreDuplicates: true } as never);
       if (error) throw error;
+      // O upsert acima NÃO atualiza instâncias que já existem. Então mudar o
+      // "Dia de pagamento" ou o valor mensal do cliente não refletia no mês.
+      // Aqui sincronizamos SÓ as instâncias pendentes com o valor/dia atual.
+      for (const r of rows) {
+        await sbFrom("fin_monthly").update({ due_date: r.due_date, amount: r.amount } as never)
+          .eq("crm_client_id", r.crm_client_id).eq("month_ref", r.month_ref).eq("status", "pendente");
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-monthly"] }),
   });

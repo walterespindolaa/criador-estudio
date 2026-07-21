@@ -62,8 +62,8 @@ const WORKFLOW = new Set(["ideias", "posts", "cronograma", "relatorio"]);
 type FlowStep = { key: string; n: number; label: string; gated?: boolean };
 const FLOW_STEPS: FlowStep[] = [
   { key: "ideias", n: 1, label: "Ideias" },
-  { key: "posts", n: 2, label: "Montar & aprovar" },
-  { key: "cronograma", n: 3, label: "Calendário do mês" },
+  { key: "cronograma", n: 2, label: "Calendário do mês" },
+  { key: "posts", n: 3, label: "Posts prontos" },
   { key: "relatorio", n: 4, label: "Resultado" },
 ];
 const FLOW_EXPLAIN: Record<string, string> = {

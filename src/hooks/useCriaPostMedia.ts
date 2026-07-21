@@ -23,6 +23,21 @@ export interface CriaMedia {
 
 const isHeic = (f: File) => /heic|heif/i.test(f.type) || /\.(heic|heif)$/i.test(f.name);
 
+// O invoke retorna "Edge Function returned a non-2xx status code" e esconde a
+// causa real. Aqui lemos o corpo da resposta pra mostrar o erro de verdade.
+async function edgeErrText(err: unknown, fallback: string): Promise<string> {
+  const ctx = (err as { context?: Response })?.context;
+  try {
+    const body = await ctx?.clone().json();
+    if (body?.error) return String(body.error);
+  } catch { /* corpo não era JSON */ }
+  try {
+    const txt = await ctx?.clone().text();
+    if (txt) return txt.slice(0, 300);
+  } catch { /* ignora */ }
+  return (err as { message?: string })?.message || fallback;
+}
+
 async function fileToBase64(file: Blob): Promise<string> {
   const bytes = new Uint8Array(await file.arrayBuffer());
   let bin = ""; const chunk = 0x8000;
@@ -64,7 +79,7 @@ export function useCriaPostMedia(postId: string | null) {
       const { data, error } = await supabase.functions.invoke("criapost-image-upload", {
         body: { post_id: postId, file_name: name, file_type: type, data_base64 },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrText(error, "Não consegui subir a imagem."));
       if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
       return data;
     },
@@ -77,7 +92,7 @@ export function useCriaPostMedia(postId: string | null) {
       const { data: sig, error: sigErr } = await supabase.functions.invoke("bunny-create-video", {
         body: { fileName: file.name, accountId: uid.user?.id, scope: "criapost" },
       });
-      if (sigErr) throw sigErr;
+      if (sigErr) throw new Error(await edgeErrText(sigErr, "Não consegui preparar o envio do vídeo."));
       const { videoGuid, libraryId, signature, expiration } = sig as {
         videoGuid: string; libraryId: string | number; signature: string; expiration: number;
       };

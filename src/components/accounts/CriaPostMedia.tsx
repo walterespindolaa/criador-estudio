@@ -106,6 +106,12 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
   const vertical = aspect === "9 / 16";
   const isStory = (format || "").toLowerCase() === "story";
   const h = handle ? (handle.startsWith("@") ? handle : "@" + handle) : "@cliente";
+  // Normaliza a legenda pra prévia: tira espaços no fim de cada linha, colapsa
+  // 3+ quebras em no máximo 2 (uma linha em branco) e dá trim nas pontas.
+  const cap = (caption ?? "")
+    .replace(/[ \t]+$/gm, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
   const onReady = () => toast.success("Vídeo pronto!");
 
   return (
@@ -169,9 +175,9 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
             <div className="absolute right-3 bottom-14 z-10 flex flex-col items-center gap-3.5 text-white pointer-events-none [filter:drop-shadow(0_1px_2px_rgba(0,0,0,.6))]">
               <Heart className="h-6 w-6" /><MessageCircle className="h-6 w-6" /><Send className="h-6 w-6" /><Bookmark className="h-6 w-6" />
             </div>
-            {caption?.trim() && (
+            {cap && (
               <div className="absolute left-3 right-14 bottom-3 z-10 text-white text-[12px] leading-snug pointer-events-none line-clamp-2 [text-shadow:0_1px_3px_rgba(0,0,0,.6)]">
-                <span className="font-bold mr-1">{h}</span>{caption}
+                <span className="font-bold mr-1">{h}</span>{cap}
               </div>
             )}
           </div>
@@ -181,8 +187,8 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
             <div className="flex items-center gap-4 px-3.5 pt-3 pb-1.5 text-foreground/80">
               <Heart className="h-5 w-5" /><MessageCircle className="h-5 w-5" /><Send className="h-5 w-5" /><Bookmark className="h-5 w-5 ml-auto" />
             </div>
-            {caption?.trim()
-              ? <p className="px-3.5 pb-3.5 text-[13px] leading-snug text-foreground whitespace-pre-wrap"><span className="font-bold mr-1.5">{h}</span>{caption}</p>
+            {cap
+              ? <p className="px-3.5 pb-3.5 text-[13px] leading-snug text-foreground whitespace-pre-wrap"><span className="font-bold mr-1.5">{h}</span>{cap}</p>
               : <p className="px-3.5 pb-3.5 text-xs text-muted-foreground">A legenda aparece aqui.</p>}
           </>
         )}

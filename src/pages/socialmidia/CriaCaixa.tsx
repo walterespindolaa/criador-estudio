@@ -1136,8 +1136,14 @@ function CalendarioFinanceiro({ monthlies, records, recurring, pendingRecurring,
     }
 
     // 2) Lançamentos reais do mês, entradas E despesas (antes só vinham as despesas).
+    //    Pula os records materializados a partir de uma mensalidade (loop 1 já
+    //    mostra esse item com o nome do cliente), senão o dia duplica.
+    const fromMonthly = new Set(
+      monthlies.map((m) => (m as { fin_record_id?: string | null }).fin_record_id).filter(Boolean) as string[],
+    );
     for (const r of records) {
       if ((r.context ?? "pj") !== ctx) continue;
+      if (fromMonthly.has(r.id)) continue;
       const d = new Date(r.date + "T00:00:00");
       if (d.getFullYear() !== ym.y || d.getMonth() !== ym.m) continue;
       out.push({
