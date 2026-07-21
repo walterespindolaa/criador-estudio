@@ -506,7 +506,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
 
             {/* 6, Roteiro / copy — sempre disponível (também no Simplificada), pra ter
                 onde escrever a copy do carrossel ou o roteiro do reels. */}
-            <div className="order-6 md:col-start-1 md:row-start-5 space-y-1.5">
+            <div className="order-6 md:col-start-1 md:row-start-6 space-y-1.5">
               <Label className="text-xs font-body">{f.approval_mode !== "fast" ? "Roteiro / conteúdo (etapa \"Conteúdo\")" : "Roteiro / copy (carrossel, reels...)"}</Label>
               {/* Ela escreve conteúdo pra DEZ marcas por semana. O gerador de IA só
                   aparece nos modos com etapa de conteúdo; no Simplificado fica só o campo. */}
