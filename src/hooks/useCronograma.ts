@@ -98,6 +98,11 @@ export function useCronogramaItems(cronogramaId: string | null) {
   const list = useQuery<CronogramaItem[]>({
     queryKey: ["cronograma-items", cronogramaId],
     enabled: !!cronogramaId,
+    // O cliente aprova numa sessão pública; sem isto o gestor ficava com o
+    // "pendente" cacheado. Revalida ao abrir/focar pra refletir a aprovação.
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data, error } = await sbFrom("cronograma_items")
         .select("*").eq("cronograma_id", cronogramaId!).order("sort_order", { ascending: true });
@@ -163,6 +168,10 @@ export function useCronogramaDatas(cronogramaId: string | null) {
   const list = useQuery<CronogramaData[]>({
     queryKey: ["cronograma-datas", cronogramaId],
     enabled: !!cronogramaId,
+    // Idem: o cliente marca as datas no link; revalida pra o gestor ver.
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data, error } = await sbFrom("cronograma_datas")
         .select("*").eq("cronograma_id", cronogramaId!).order("sort_order", { ascending: true });

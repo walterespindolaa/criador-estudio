@@ -60,6 +60,9 @@ function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
   const aspect = postAspect(post.platform, post.format);
   const vertical = aspect === "9 / 16";
   const brand = client.brand_color ?? null;
+  // Legenda: no modo "Ambas"/detalhado o texto vai pro campo de conteúdo (script),
+  // então caímos nele quando a legenda estiver vazia — senão o cliente não vê nada.
+  const legenda = post.caption || post.script || null;
   // Story tem preview próprio: tela cheia 9:16, sem legenda e sem ações de feed.
   if ((post.format || "").toLowerCase() === "story") {
     return (
@@ -96,9 +99,9 @@ function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
           <div className="absolute right-3 bottom-16 z-10 flex flex-col items-center gap-4 text-white pointer-events-none [filter:drop-shadow(0_1px_2px_rgba(0,0,0,.6))]">
             <Heart className="h-7 w-7" /><MessageCircle className="h-7 w-7" /><Send className="h-7 w-7" /><Bookmark className="h-7 w-7" />
           </div>
-          {post.caption && (
+          {legenda && (
             <div className="absolute left-3.5 right-16 bottom-3.5 z-10 text-white text-[13px] leading-snug pointer-events-none line-clamp-3 [text-shadow:0_1px_3px_rgba(0,0,0,.6)]">
-              <span className="font-bold mr-1.5">{handle}</span>{post.caption}
+              <span className="font-bold mr-1.5">{handle}</span>{legenda}
             </div>
           )}
         </div>
@@ -108,7 +111,7 @@ function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
           <div className="flex items-center gap-4 px-3.5 pt-3 pb-1.5 text-foreground">
             <Heart className="h-6 w-6" /><MessageCircle className="h-6 w-6" /><Send className="h-6 w-6" /><Bookmark className="h-6 w-6 ml-auto" />
           </div>
-          {post.caption && <p className="px-3.5 pb-4 text-[13.5px] leading-snug text-foreground whitespace-pre-wrap"><span className="font-bold mr-1.5">{handle}</span>{post.caption}</p>}
+          {legenda && <p className="px-3.5 pb-4 text-[13.5px] leading-snug text-foreground whitespace-pre-wrap"><span className="font-bold mr-1.5">{handle}</span>{legenda}</p>}
         </>
       )}
     </article>
@@ -148,7 +151,10 @@ function PostApproval({ client, post, index, busy, onApproveFast, onAdjustFast, 
             <h3 className="text-lg font-display font-extrabold text-foreground">Esta publicação</h3>
             <span className={`text-[11px] font-bold px-3 py-1 rounded-full ${STATUS[post.approval_status].cls}`}>{STATUS[post.approval_status].label}</span>
           </div>
-          <p className="text-xs text-muted-foreground font-body mb-4 capitalize">{post.format} · {post.platform}</p>
+          <p className="text-xs text-muted-foreground font-body mb-4 capitalize">
+            {post.format} · {post.platform}
+            {post.scheduled_date && <span className="normal-case"> · {new Date(post.scheduled_date + "T00:00:00").toLocaleDateString("pt-BR")}{post.scheduled_time ? ` às ${String(post.scheduled_time).slice(0, 5)}` : ""}</span>}
+          </p>
           {post.last_comment && post.last_comment_role === "cliente_externo" && (
             <div className="text-xs font-body text-orange-700 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2.5 mb-4">Você pediu: "{post.last_comment}"</div>
           )}
@@ -195,10 +201,10 @@ function PostApproval({ client, post, index, busy, onApproveFast, onAdjustFast, 
         </div>
         <div className="min-w-0">
           {/* Legenda em texto corrido só no desktop (no mobile ela já vive no preview). */}
-          {!isStory && post.caption && (
+          {!isStory && (post.caption || post.script) && (
             <div className="hidden lg:block mb-5">
               <p className="text-[11px] font-body font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Legenda</p>
-              <p className="text-sm font-body text-foreground/90 leading-relaxed whitespace-pre-wrap bg-muted/40 rounded-2xl px-4 py-3">{post.caption}</p>
+              <p className="text-sm font-body text-foreground/90 leading-relaxed whitespace-pre-wrap bg-muted/40 rounded-2xl px-4 py-3">{post.caption || post.script}</p>
             </div>
           )}
           <div className="bg-card border border-border rounded-3xl p-4 sm:p-6 mt-3 shadow-[0_8px_30px_rgba(27,26,24,0.05)] lg:bg-transparent lg:border-0 lg:rounded-none lg:p-0 lg:mt-0 lg:shadow-none">

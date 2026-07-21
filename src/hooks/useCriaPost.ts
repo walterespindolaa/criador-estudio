@@ -53,6 +53,7 @@ export function useExternalClients() {
   const pendingQ = useQuery({
     queryKey: ["external-pending", agencyOwnerId],
     enabled: !!agencyOwnerId,
+    staleTime: 0, refetchOnMount: "always", refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data, error } = await sbFrom("posts").select("external_client_id, approval_status")
         .eq("user_id", agencyOwnerId!).not("external_client_id", "is", null).in("approval_status", ["pendente", "ajuste_solicitado"]);
@@ -169,6 +170,9 @@ export function useExternalPosts(clientId: string | null) {
   const postsQ = useQuery({
     queryKey: key,
     enabled: !!agencyOwnerId && !!clientId,
+    // Revalida ao abrir/focar: o cliente aprova por link e o kanban do gestor
+    // precisa refletir (senão fica no "pendente" cacheado).
+    staleTime: 0, refetchOnMount: "always", refetchOnWindowFocus: true,
     queryFn: async () => {
       // Rascunhos (is_draft) NÃO aparecem no kanban/calendário nem vão pro cliente.
       const { data, error } = await sbFrom("posts").select("*").eq("external_client_id", clientId!)
@@ -304,6 +308,8 @@ export function useAllExternalPosts() {
   return useQuery({
     queryKey: ["external-posts-all", agencyOwnerId],
     enabled: !!agencyOwnerId,
+    // O cliente aprova por link; revalida pra o painel do gestor sair do "pendente".
+    staleTime: 0, refetchOnMount: "always", refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data, error } = await sbFrom("posts").select("*")
         .eq("user_id", agencyOwnerId!)
