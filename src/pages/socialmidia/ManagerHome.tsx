@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Camera, ArrowRight, Ticket, Settings, Users, Sparkles, Check, Gift, Wallet, Send, CalendarDays } from "lucide-react";
+import { Camera, ArrowRight, Ticket, Settings, Users, Sparkles, Check, Gift, Wallet, Send, CalendarDays, Eye, EyeOff } from "lucide-react";
 import { OrganicBlobs } from "@/components/brand/OrganicBlobs";
 import { CRIA_HEX, type CriaColor } from "@/lib/moduleTheme";
 import { formatBRL } from "@/lib/money";
@@ -22,18 +22,27 @@ import { useCrmClients } from "@/hooks/useCrm";
 
 // Card do painel. A cor é a do módulo pra onde ele leva: a pessoa aprende
 // a cor uma vez e depois navega no automático, sem ler.
-function Painel({ color, icon: Icon, valor, label, to, destaque }: {
-  color: CriaColor; icon: typeof Users; valor: string; label: string; to: string; destaque?: boolean;
+function Painel({ color, icon: Icon, valor, label, to, destaque, hideable }: {
+  color: CriaColor; icon: typeof Users; valor: string; label: string; to: string; destaque?: boolean; hideable?: boolean;
 }) {
   const hex = CRIA_HEX[color];
+  const [hidden, setHidden] = useState(false);
   return (
     <Link to={to}
-      className="group rounded-2xl border border-border bg-background/70 backdrop-blur-sm p-3.5 transition-all hover:-translate-y-0.5 hover:shadow-md"
+      className="group relative rounded-2xl border border-border bg-background/70 backdrop-blur-sm p-3.5 transition-all hover:-translate-y-0.5 hover:shadow-md"
       style={{ borderLeftWidth: 3, borderLeftColor: hex, ...(destaque ? { background: `${hex}0f` } : {}) }}>
       <span className="grid h-9 w-9 place-items-center rounded-xl mb-2" style={{ background: `${hex}1f`, color: hex }}>
         <Icon className="h-4 w-4" />
       </span>
-      <p className="text-xl font-display font-extrabold text-foreground leading-none tabular-nums">{valor}</p>
+      {hideable && (
+        <button type="button"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setHidden((h) => !h); }}
+          className="absolute top-3 right-3 grid h-7 w-7 place-items-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+          aria-label={hidden ? "Mostrar valor" : "Ocultar valor"}>
+          {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      )}
+      <p className="text-xl font-display font-extrabold text-foreground leading-none tabular-nums">{hideable && hidden ? "R$ ••••••" : valor}</p>
       <p className="text-[11px] font-body text-muted-foreground mt-1 leading-tight">{label}</p>
     </Link>
   );
@@ -149,7 +158,7 @@ export default function ManagerHome() {
         {/* Os números que importam. Antes o dashboard não mostrava NENHUM. */}
         <div data-tour="gh-numeros" className="relative grid grid-cols-2 lg:grid-cols-4 gap-2.5 mt-6">
           <Painel color="rosa" icon={Users} valor={String(ativos)} label={ativos === 1 ? "cliente ativo" : "clientes ativos"} to="/socialmidia/clientes" />
-          <Painel color="azul" icon={Wallet} valor={formatBRL(mrr)} label="por mês na carteira" to="/socialmidia/criacaixa/empresa/visao" />
+          <Painel color="azul" icon={Wallet} valor={formatBRL(mrr)} label="por mês na carteira" to="/socialmidia/criacaixa/empresa/visao" hideable />
           <Painel color="laranja" icon={Send} valor={String(pendentes)} label={pendentes === 1 ? "post esperando o cliente" : "posts esperando o cliente"} to="/socialmidia/criapost/aprovacoes" destaque={pendentes > 0} />
           <Painel color="amarelo" icon={CalendarDays} valor="Agenda" label="a sua semana" to="/socialmidia/agenda" />
         </div>
