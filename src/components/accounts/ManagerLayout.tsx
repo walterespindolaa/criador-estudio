@@ -28,6 +28,7 @@ import { GlobalSearch } from "@/components/shared/GlobalSearch";
 import { applyTheme } from "@/lib/applyTheme";
 import { BgShapes } from "@/components/BgShapes";
 import { TourProvider } from "@/components/tour/TourProvider";
+import { VideoPublicConfirmProvider } from "@/contexts/VideoPublicConfirmContext";
 import { HelpButton } from "@/components/tour/HelpButton";
 import { applySidebarColor } from "@/lib/sidebarTheme";
 import { applyThemeFont } from "@/components/settings/SettingsVisual";
@@ -206,6 +207,7 @@ export default function ManagerLayout() {
   ) : null;
 
   return (
+    <VideoPublicConfirmProvider>
     <TourProvider>
     <div className="min-h-screen app-canvas relative" style={{ ["--active-font-display" as string]: "'Bricolage Grotesque', 'Plus Jakarta Sans', sans-serif" }}>
       <BgShapes styleKey={(profile as { theme_bg?: string | null } | null | undefined)?.theme_bg} />
@@ -465,5 +467,6 @@ export default function ManagerLayout() {
       <SettingsManagerDrawer open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
     </TourProvider>
+    </VideoPublicConfirmProvider>
   );
 }
