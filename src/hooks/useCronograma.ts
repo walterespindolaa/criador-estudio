@@ -42,6 +42,7 @@ export type CronogramaItem = {
   description: string | null;
   date: string | null;
   type: string | null;
+  ref_url: string | null;
   approval_status: ItemStatus;
   client_comment: string | null;
   converted_post_id: string | null;
@@ -208,5 +209,26 @@ export function useCronogramaDatas(cronogramaId: string | null) {
     onError: () => toast.error("Erro ao excluir data."),
   });
 
-  return { datas: list.data ?? [], isLoading: list.isLoading, addData, addManyDatas, updateData, deleteData };
+  // Reordenar as datas (arrastar). Grava sort_order de todas e reflete na hora.
+  const reorder = useMutation({
+    mutationFn: async (ordered: CronogramaData[]) => {
+      await Promise.all(
+        ordered.map((d, i) => sbFrom("cronograma_datas").update({ sort_order: i } as never).eq("id", d.id)),
+      );
+    },
+    onMutate: async (ordered: CronogramaData[]) => {
+      await qc.cancelQueries({ queryKey: ["cronograma-datas", cronogramaId] });
+      const prev = qc.getQueryData<CronogramaData[]>(["cronograma-datas", cronogramaId]);
+      qc.setQueryData(["cronograma-datas", cronogramaId], ordered.map((d, i) => ({ ...d, sort_order: i })));
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      const c = ctx as { prev?: CronogramaData[] } | undefined;
+      if (c?.prev) qc.setQueryData(["cronograma-datas", cronogramaId], c.prev);
+      toast.error("Não consegui reordenar.");
+    },
+    onSettled: invalidate,
+  });
+
+  return { datas: list.data ?? [], isLoading: list.isLoading, addData, addManyDatas, updateData, deleteData, reorder };
 }

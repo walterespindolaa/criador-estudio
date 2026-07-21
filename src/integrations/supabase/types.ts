@@ -1429,6 +1429,7 @@ export type Database = {
           date: string | null
           description: string | null
           id: string
+          ref_url: string | null
           sort_order: number
           type: string | null
           updated_at: string | null
@@ -1443,6 +1444,7 @@ export type Database = {
           date?: string | null
           description?: string | null
           id?: string
+          ref_url?: string | null
           sort_order?: number
           type?: string | null
           updated_at?: string | null
@@ -1457,6 +1459,7 @@ export type Database = {
           date?: string | null
           description?: string | null
           id?: string
+          ref_url?: string | null
           sort_order?: number
           type?: string | null
           updated_at?: string | null

@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import {
   useCronogramas, useCronogramaItems, useCronogramaDatas, CRONOGRAMA_TYPES,
   type Cronograma, type CronogramaItem, type ItemStatus,
@@ -205,8 +207,8 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
   const openNew = () => { setEditing(null); setF({ type: "Reels" }); setFormOpen(true); };
   const openEdit = (it: CronogramaItem) => { setEditing(it); setF(it); setFormOpen(true); };
   const saveItem = async () => {
-    if (editing) await updateItem.mutateAsync({ id: editing.id, copy: f.copy ?? null, description: f.description ?? null, date: f.date ?? null, type: f.type ?? null });
-    else await addItem.mutateAsync({ copy: f.copy ?? null, description: f.description ?? null, date: f.date ?? null, type: f.type ?? null });
+    if (editing) await updateItem.mutateAsync({ id: editing.id, copy: f.copy ?? null, description: f.description ?? null, date: f.date ?? null, type: f.type ?? null, ref_url: f.ref_url ?? null });
+    else await addItem.mutateAsync({ copy: f.copy ?? null, description: f.description ?? null, date: f.date ?? null, type: f.type ?? null, ref_url: f.ref_url ?? null });
     setFormOpen(false);
   };
 
@@ -342,6 +344,7 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
                 </Select>
               </div>
             </div>
+            <div><Label className="text-xs">Referência (link de inspiração)</Label><Input value={f.ref_url ?? ""} onChange={(e) => setF((p) => ({ ...p, ref_url: e.target.value }))} placeholder="Cole um link de referência (Drive, post, Pinterest...)" className="rounded-xl" /></div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFormOpen(false)} className="rounded-xl">Cancelar</Button>
@@ -354,15 +357,24 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
 }
 
 function DatasComemorativasSection({ cronogramaId, clientSegment }: { cronogramaId: string; clientSegment?: string | null }) {
-  const { datas, addData, addManyDatas, deleteData } = useCronogramaDatas(cronogramaId);
+  const { datas, addData, addManyDatas, deleteData, reorder } = useCronogramaDatas(cronogramaId);
   const [label, setLabel] = useState("");
   const [day, setDay] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [calOpen, setCalOpen] = useState(false);
 
   const addCustom = async () => {
     if (!label.trim()) return;
     await addData.mutateAsync({ label: label.trim(), day_label: day.trim() || null });
     setLabel(""); setDay("");
+  };
+
+  const onDragEnd = (r: DropResult) => {
+    if (!r.destination || r.destination.index === r.source.index) return;
+    const next = Array.from(datas);
+    const [moved] = next.splice(r.source.index, 1);
+    next.splice(r.destination.index, 0, moved);
+    reorder.mutate(next);
   };
 
   const existingLabels = new Set(datas.map((d) => d.label.toLowerCase()));
@@ -378,26 +390,49 @@ function DatasComemorativasSection({ cronogramaId, clientSegment }: { cronograma
         <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)} className="gap-1.5"><Plus className="h-3.5 w-3.5" /> Lista anual</Button>
       </div>
 
-      <p className="text-xs text-muted-foreground mb-3">Adicione datas pro cliente marcar quais quer trabalhar. Ele dá check no link.</p>
+      <p className="text-xs text-muted-foreground mb-3">Adicione datas pro cliente marcar quais quer trabalhar. Ele dá check no link. Arraste pela alça pra reordenar.</p>
 
       {datas.length > 0 && (
-        <div className="flex flex-col gap-1.5 mb-3">
-          {datas.map((d) => (
-            <div key={d.id} className={cn("flex items-center gap-2.5 rounded-lg border px-3 py-2 group", d.selected ? "border-primary/40 bg-primary/[0.04]" : "border-border")}>
-              {d.selected
-                ? <span className="w-4 h-4 rounded bg-primary grid place-items-center shrink-0"><Check className="h-3 w-3 text-primary-foreground" strokeWidth={3} /></span>
-                : <span className="w-4 h-4 rounded border border-border shrink-0" />}
-              <span className="text-sm text-foreground">{d.label}</span>
-              {d.day_label && <span className="text-xs text-muted-foreground">{d.day_label}</span>}
-              <button onClick={() => deleteData.mutate(d.id)} className="ml-auto opacity-100 md:opacity-0 md:group-hover:opacity-100 text-destructive transition-opacity"><Trash2 className="h-3.5 w-3.5" /></button>
-            </div>
-          ))}
-        </div>
+        <DragDropContext onDragEnd={onDragEnd}>
+          <Droppable droppableId="datas-comemorativas">
+            {(dp) => (
+              <div ref={dp.innerRef} {...dp.droppableProps} className="flex flex-col gap-1.5 mb-3">
+                {datas.map((d, idx) => (
+                  <Draggable key={d.id} draggableId={d.id} index={idx}>
+                    {(dr, snap) => (
+                      <div ref={dr.innerRef} {...dr.draggableProps}
+                        className={cn("flex items-center gap-2 rounded-lg border px-3 py-2 group bg-card", d.selected ? "border-primary/40 bg-primary/[0.04]" : "border-border", snap.isDragging && "shadow-lg")}>
+                        <button {...dr.dragHandleProps} className="text-muted-foreground/60 hover:text-muted-foreground cursor-grab active:cursor-grabbing shrink-0" aria-label="Arrastar"><GripVertical className="h-4 w-4" /></button>
+                        {d.selected
+                          ? <span className="w-4 h-4 rounded bg-primary grid place-items-center shrink-0"><Check className="h-3 w-3 text-primary-foreground" strokeWidth={3} /></span>
+                          : <span className="w-4 h-4 rounded border border-border shrink-0" />}
+                        <span className="text-sm text-foreground">{d.label}</span>
+                        {d.day_label && <span className="text-xs text-muted-foreground">{d.day_label}</span>}
+                        <button onClick={() => deleteData.mutate(d.id)} className="ml-auto opacity-100 md:opacity-0 md:group-hover:opacity-100 text-destructive transition-opacity"><Trash2 className="h-3.5 w-3.5" /></button>
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {dp.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
       )}
 
       <div className="flex gap-2 flex-wrap">
         <Input value={label} onChange={(e) => setLabel(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addCustom()} placeholder="Ex.: Dia do Café" className="rounded-xl flex-1 min-w-[160px] h-9" />
-        <Input value={day} onChange={(e) => setDay(maskDay(e.target.value))} onKeyDown={(e) => e.key === "Enter" && addCustom()} placeholder="14/04" inputMode="numeric" className="rounded-xl w-24 h-9" />
+        <div className="flex items-center gap-1">
+          <Input value={day} onChange={(e) => setDay(maskDay(e.target.value))} onKeyDown={(e) => e.key === "Enter" && addCustom()} placeholder="14/04" inputMode="numeric" className="rounded-xl w-20 h-9" />
+          <Popover open={calOpen} onOpenChange={setCalOpen}>
+            <PopoverTrigger asChild>
+              <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-xl shrink-0" aria-label="Escolher no calendário"><CalendarRange className="h-4 w-4" /></Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar mode="single" onSelect={(dt) => { if (dt) { setDay(`${String(dt.getDate()).padStart(2, "0")}/${String(dt.getMonth() + 1).padStart(2, "0")}`); setCalOpen(false); } }} />
+            </PopoverContent>
+          </Popover>
+        </div>
         <Button onClick={addCustom} disabled={!label.trim()} className="rounded-xl h-9 gap-1.5"><Plus className="h-4 w-4" /> Adicionar</Button>
       </div>
 
