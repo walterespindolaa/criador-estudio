@@ -189,7 +189,7 @@ export function useGoogleDrive() {
       const appId = clientId.split("-")[0];
 
       const picker = new window.google.picker.PickerBuilder()
-        .addView(new window.google.picker.DocsView().setIncludeFolders(false).setSelectFolderEnabled(false))
+        .addView(new window.google.picker.DocsView().setIncludeFolders(true).setSelectFolderEnabled(false))
         .addView(new window.google.picker.DocsView(window.google.picker.ViewId.DOCS_IMAGES))
         .addView(new window.google.picker.DocsView(window.google.picker.ViewId.DOCS_VIDEOS))
         .setOAuthToken(accessToken)

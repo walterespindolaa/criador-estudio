@@ -172,7 +172,7 @@ export function useCriaPostMedia(postId: string | null) {
   const remove = useMutation({
     mutationFn: async (mediaId: string) => {
       const { data, error } = await supabase.functions.invoke("criapost-media-delete", { body: { media_id: mediaId } });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrText(error, "Não consegui remover a mídia."));
       if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
     },
     onSuccess: invalidate,

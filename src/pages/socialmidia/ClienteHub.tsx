@@ -49,8 +49,8 @@ const TABS: TabDef[] = [
   { key: "visao-geral", label: "Visão geral" },
   { key: "brandbook", label: "Brandbook", modulo: "rosa", moduloNome: "Cria Gestão" },
   { key: "ideias", label: "Ideias", modulo: "lilas", moduloNome: "Cria Radar" },
-  { key: "posts", label: "Posts", modulo: "laranja", moduloNome: "Cria Post" },
   { key: "cronograma", label: "Cronograma", modulo: "laranja", moduloNome: "Cria Post" },
+  { key: "posts", label: "Posts", modulo: "laranja", moduloNome: "Cria Post" },
   { key: "relatorio", label: "Relatório", modulo: "laranja", moduloNome: "Cria Post" },
   { key: "instagram", label: "Instagram" },
   { key: "financeiro", label: "Financeiro", modulo: "azul", moduloNome: "Cria Caixa" },
@@ -196,9 +196,6 @@ export default function ClienteHub() {
           </div>
           {extClient && (
             <div className="flex gap-2 shrink-0 flex-wrap">
-              <Button onClick={doCopyLink} disabled={copying}>
-                {copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Link2 className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Link de aprovação</span></>}
-              </Button>
               <Button variant="outline" className="px-3" onClick={openPortal} title="Abrir portal do cliente em nova aba" aria-label="Abrir portal do cliente em nova aba">
                 <ExternalLink className="h-4 w-4" />
               </Button>

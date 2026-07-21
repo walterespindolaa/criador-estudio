@@ -18,7 +18,9 @@ Deno.serve(async (req) => {
     const { data: ref } = await svc.from("external_media_refs").select("id, post_id, provider, external_file_id, bunny_video_id").eq("id", media_id).maybeSingle();
     if (!ref) return json({ ok: true });
     const { data: post } = await svc.from("posts").select("user_id, external_client_id").eq("id", ref.post_id).maybeSingle();
-    if (!post || post.user_id !== userId || !post.external_client_id) return json({ error: "Sem permissão" }, 403);
+    // A posse já é garantida por user_id. NÃO exigir external_client_id: o rascunho
+    // (Novo post) nasce sem cliente vinculado e a pessoa anexa/remove mídia nele.
+    if (!post || post.user_id !== userId) return json({ error: "Sem permissão" }, 403);
 
     // Só remove a ref do banco se o delete no Bunny confirmar (ou o recurso já não existir).
     // Sem isto, um 401/500 do Bunny era engolido e a ref sumia → mídia órfã cobrada pra sempre.

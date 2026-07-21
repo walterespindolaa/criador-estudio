@@ -8,6 +8,16 @@ import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 type AnyRpc = (fn: string, args?: Record<string, unknown>) => ReturnType<typeof supabase.rpc>;
 const sbRpc = supabase.rpc.bind(supabase) as unknown as AnyRpc;
 
+// Transforma URLs em texto num link clicável (sem HTML cru, seguro).
+function linkify(text: string) {
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+  return parts.map((p, i) =>
+    /^https?:\/\//.test(p)
+      ? <a key={i} href={p} target="_blank" rel="noopener noreferrer" style={{ color: "#0061EE", textDecoration: "underline", wordBreak: "break-all" }}>{p}</a>
+      : <span key={i}>{p}</span>,
+  );
+}
+
 type Item = { id: string; copy: string | null; description: string | null; date: string | null; type: string | null; approval_status: string; client_comment: string | null };
 type Data = { id: string; label: string; day_label: string | null; selected: boolean };
 type Cron = {
@@ -173,7 +183,7 @@ export default function CronogramaPublica() {
               </div>
               <div style={{ fontWeight: 800, fontSize: 14.5, color: "#2A2440" }}>{it.copy || "(sem título)"}</div>
               {/* pre-wrap: preserva os parágrafos/quebras que o social mídia escreveu. */}
-              {it.description && <div style={{ fontSize: 13, color: "#5b5470", marginTop: 2, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{it.description}</div>}
+              {it.description && <div style={{ fontSize: 13, color: "#5b5470", marginTop: 2, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{linkify(it.description)}</div>}
               {it.client_comment && <div style={{ fontSize: 12, color: "#B45309", background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 8, padding: "6px 9px", marginTop: 8 }}>"{it.client_comment}"</div>}
 
               {!isApproved && !isReason && (
