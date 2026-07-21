@@ -554,6 +554,9 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove }: {
   onMove: (id: string, day: string) => void;
 }) {
   const [anchor, setAnchor] = useState(() => new Date());
+  // Drag nativo (HTML5): o @hello-pangea/dnd não funciona em grid de calendário.
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overDay, setOverDay] = useState<string | null>(null);
 
   const days = (() => {
     const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
@@ -573,15 +576,10 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove }: {
   }
 
   const today = calYmd(new Date());
-  const onDragEnd = (r: DropResult) => {
-    if (!r.destination) return;
-    const day = r.destination.droppableId;
-    if (day === "sem-data" || day === r.source.droppableId) return;
-    onMove(r.draggableId, day);
-  };
+  const dropOn = (day: string) => { if (dragId) onMove(dragId, day); setDragId(null); setOverDay(null); };
 
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
+    <div>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1">
           <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setAnchor((a) => { const n = new Date(a); n.setMonth(n.getMonth() - 1); return n; })}>‹</Button>
@@ -602,37 +600,32 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove }: {
           const isToday = iso === today;
           const outMonth = d.getMonth() !== anchor.getMonth();
           return (
-            <Droppable droppableId={iso} key={iso}>
-              {(dropP, dropS) => (
-                <div ref={dropP.innerRef} {...dropP.droppableProps}
-                  className={`min-h-[104px] rounded-xl border p-2 flex flex-col gap-1.5 transition-colors
-                    ${isToday ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-background"}
-                    ${outMonth ? "opacity-45" : ""}
-                    ${dropS.isDraggingOver ? "ring-2 ring-primary/40 border-primary/60 bg-primary/5" : ""}`}>
-                  <div className="flex items-center justify-between">
-                    <span className={`text-sm font-display font-bold ${isToday ? "text-primary" : "text-foreground"}`}>{d.getDate()}</span>
-                    <button onClick={() => onNewAt(iso)} className="text-muted-foreground hover:text-primary" aria-label="Novo post neste dia"><Plus className="h-3.5 w-3.5" /></button>
-                  </div>
-                  {list.map((p, idx) => {
-                    const st = STATUS[(p.approval_status ?? "pendente") as ApprovalKey];
-                    return (
-                      <Draggable key={p.id} draggableId={p.id} index={idx}>
-                        {(dragP, dragS) => (
-                          <button ref={dragP.innerRef} {...dragP.draggableProps} {...dragP.dragHandleProps}
-                            type="button" onClick={() => onOpen(p)}
-                            className={`rounded-lg border border-border bg-card px-1.5 py-1 text-left hover:bg-muted/40 transition-colors ${dragS.isDragging ? "shadow-lg ring-2 ring-primary/40" : ""}`}>
-                            <span className={`text-[9px] font-body font-bold px-1.5 py-0.5 rounded-full ${st?.cls ?? ""}`}>{st?.label ?? "Pendente"}</span>
-                            <p className="text-[11px] font-body font-semibold text-foreground leading-tight truncate mt-0.5">{p.title}</p>
-                            <p className="text-[9px] font-body text-muted-foreground uppercase">{cap(p.format)}</p>
-                          </button>
-                        )}
-                      </Draggable>
-                    );
-                  })}
-                  {dropP.placeholder}
-                </div>
-              )}
-            </Droppable>
+            <div key={iso}
+              onDragOver={(e) => { e.preventDefault(); if (overDay !== iso) setOverDay(iso); }}
+              onDragLeave={() => setOverDay((o) => (o === iso ? null : o))}
+              onDrop={() => dropOn(iso)}
+              className={`min-h-[104px] rounded-xl border p-2 flex flex-col gap-1.5 transition-colors
+                ${isToday ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-background"}
+                ${outMonth ? "opacity-45" : ""}
+                ${overDay === iso ? "ring-2 ring-primary/40 border-primary/60 bg-primary/5" : ""}`}>
+              <div className="flex items-center justify-between">
+                <span className={`text-sm font-display font-bold ${isToday ? "text-primary" : "text-foreground"}`}>{d.getDate()}</span>
+                <button onClick={() => onNewAt(iso)} className="text-muted-foreground hover:text-primary" aria-label="Novo post neste dia"><Plus className="h-3.5 w-3.5" /></button>
+              </div>
+              {list.map((p) => {
+                const st = STATUS[(p.approval_status ?? "pendente") as ApprovalKey];
+                return (
+                  <button key={p.id} draggable
+                    onDragStart={() => setDragId(p.id)} onDragEnd={() => { setDragId(null); setOverDay(null); }}
+                    type="button" onClick={() => onOpen(p)}
+                    className={`rounded-lg border border-border bg-card px-1.5 py-1 text-left hover:bg-muted/40 transition-shadow cursor-grab active:cursor-grabbing ${dragId === p.id ? "opacity-50 shadow-lg" : ""}`}>
+                    <span className={`text-[9px] font-body font-bold px-1.5 py-0.5 rounded-full ${st?.cls ?? ""}`}>{st?.label ?? "Pendente"}</span>
+                    <p className="text-[11px] font-body font-semibold text-foreground leading-tight truncate mt-0.5">{p.title}</p>
+                    <p className="text-[9px] font-body text-muted-foreground uppercase">{cap(p.format)}</p>
+                  </button>
+                );
+              })}
+            </div>
           );
         })}
       </div>
@@ -641,27 +634,19 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove }: {
       {semData.length > 0 && (
         <div className="mt-4 rounded-xl border border-dashed border-border p-3">
           <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-2">Sem data ({semData.length}), arraste pra um dia</p>
-          <Droppable droppableId="sem-data" direction="horizontal">
-            {(dropP) => (
-              <div ref={dropP.innerRef} {...dropP.droppableProps} className="flex gap-2 flex-wrap">
-                {semData.map((p, idx) => (
-                  <Draggable key={p.id} draggableId={p.id} index={idx}>
-                    {(dragP, dragS) => (
-                      <button ref={dragP.innerRef} {...dragP.draggableProps} {...dragP.dragHandleProps}
-                        type="button" onClick={() => onOpen(p)}
-                        className={`rounded-lg border border-border bg-card px-2 py-1.5 text-left hover:bg-muted/40 transition-colors ${dragS.isDragging ? "shadow-lg ring-2 ring-primary/40" : ""}`}>
-                        <p className="text-[11px] font-body font-semibold text-foreground truncate max-w-[160px]">{p.title}</p>
-                        <p className="text-[9px] font-body text-muted-foreground uppercase">{cap(p.format)}</p>
-                      </button>
-                    )}
-                  </Draggable>
-                ))}
-                {dropP.placeholder}
-              </div>
-            )}
-          </Droppable>
+          <div className="flex gap-2 flex-wrap">
+            {semData.map((p) => (
+              <button key={p.id} draggable
+                onDragStart={() => setDragId(p.id)} onDragEnd={() => { setDragId(null); setOverDay(null); }}
+                type="button" onClick={() => onOpen(p)}
+                className={`rounded-lg border border-border bg-card px-2 py-1.5 text-left hover:bg-muted/40 transition-shadow cursor-grab active:cursor-grabbing ${dragId === p.id ? "opacity-50 shadow-lg" : ""}`}>
+                <p className="text-[11px] font-body font-semibold text-foreground truncate max-w-[160px]">{p.title}</p>
+                <p className="text-[9px] font-body text-muted-foreground uppercase">{cap(p.format)}</p>
+              </button>
+            ))}
+          </div>
         </div>
       )}
-    </DragDropContext>
+    </div>
   );
 }

@@ -105,7 +105,7 @@ export function PipelineBoard() {
           { label: "Pipeline ativo", value: brl(metrics.pipeline) },
           { label: "Em negociação", value: brl(metrics.negoVal) },
           { label: "Fechados", value: String(metrics.fechados) },
-          { label: "MRR (clientes)", value: brl(metrics.mrr) },
+          { label: "Receita mensal", value: brl(metrics.mrr) },
         ].map((m) => (
           <div key={m.label} className="rounded-2xl border border-border bg-card p-4">
             <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-body font-semibold">{m.label}</p>

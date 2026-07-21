@@ -444,7 +444,7 @@ function CaixaInner() {
         <div className="rounded-2xl border border-border bg-card p-4 mb-5">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <h3 className="text-sm font-display font-bold text-foreground">Mensalidades do mês</h3>
-            <span className="text-[11px] text-muted-foreground font-body">MRR ativo: <span className="font-bold text-foreground">{brl(mrr)}</span></span>
+            <span className="text-[11px] text-muted-foreground font-body">Receita mensal: <span className="font-bold text-foreground">{brl(mrr)}</span></span>
           </div>
           <div className="space-y-1">
             {monthlies.map((m) => {
