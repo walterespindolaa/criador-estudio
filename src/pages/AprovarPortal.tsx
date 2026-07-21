@@ -75,8 +75,9 @@ function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
     <article className="bg-white border border-border rounded-3xl overflow-hidden shadow-[0_8px_30px_rgba(27,26,24,0.07)]">
       <div className="flex items-center gap-2.5 px-3.5 py-3">
         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary via-purple-600 to-pink-500 p-[2px] shrink-0">
-          <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-            {client.client_logo ? <img src={client.client_logo} alt="" className="w-full h-full object-cover" /> : <span className="text-xs font-extrabold text-primary">{(client.client_name || "?").charAt(0).toUpperCase()}</span>}
+          <div className="relative w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
+            <span className="text-xs font-extrabold text-primary">{(client.client_name || "?").charAt(0).toUpperCase()}</span>
+            {client.client_logo?.trim() && <img src={client.client_logo} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 w-full h-full object-cover" />}
           </div>
         </div>
         <div className="min-w-0"><p className="text-[13px] font-bold text-foreground truncate leading-tight">{handle}</p><p className="text-[11px] text-muted-foreground leading-tight">Original audio</p></div>
@@ -367,8 +368,9 @@ export default function AprovarPortal() {
       {/* ── Header mobile: barra compacta e fixa (como sempre foi) ── */}
       <header className="lg:hidden border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-20">
         <div className="max-w-md mx-auto px-4 py-3 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary/10 ring-2 ring-primary/25 overflow-hidden flex items-center justify-center shrink-0">
-            {c.client_logo ? <img src={c.client_logo} alt="" className="w-full h-full object-cover" /> : <span className="font-display font-extrabold text-primary">{(c.client_name || "?").charAt(0).toUpperCase()}</span>}
+          <div className="relative w-10 h-10 rounded-full bg-primary/10 ring-2 ring-primary/25 overflow-hidden flex items-center justify-center shrink-0">
+            <span className="font-display font-extrabold text-primary">{(c.client_name || "?").charAt(0).toUpperCase()}</span>
+            {c.client_logo?.trim() && <img src={c.client_logo} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 w-full h-full object-cover" />}
           </div>
           <div className="min-w-0 flex-1">
             <p className="font-display font-bold text-foreground truncate leading-tight">{c.client_name}</p>
@@ -391,10 +393,9 @@ export default function AprovarPortal() {
       <div className="hidden lg:block" style={{ background: heroBg }}>
         <div className="max-w-5xl mx-auto px-8 pt-12 pb-10">
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: "easeOut" }} className="flex items-center gap-6">
-            <div className="w-20 h-20 rounded-3xl bg-white shadow-lg overflow-hidden flex items-center justify-center shrink-0">
-              {c.client_logo
-                ? <img src={c.client_logo} alt="" className="w-full h-full object-cover" />
-                : <span className="font-display font-extrabold text-3xl" style={{ color: brand ?? "hsl(var(--primary))" }}>{(c.client_name || "?").charAt(0).toUpperCase()}</span>}
+            <div className="relative w-20 h-20 rounded-3xl bg-white shadow-lg overflow-hidden flex items-center justify-center shrink-0">
+              <span className="font-display font-extrabold text-3xl" style={{ color: brand ?? "hsl(var(--primary))" }}>{(c.client_name || "?").charAt(0).toUpperCase()}</span>
+              {c.client_logo?.trim() && <img src={c.client_logo} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 w-full h-full object-cover" />}
             </div>
             <div className="min-w-0 flex-1">
               <h1 className="font-display font-extrabold text-white text-3xl tracking-tight truncate">{c.client_name}</h1>

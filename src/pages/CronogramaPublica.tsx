@@ -130,8 +130,8 @@ export default function CronogramaPublica() {
         <div style={{ background: accent, borderRadius: 22, padding: "24px 20px 20px", textAlign: "center", color: onAccent, boxShadow: "0 16px 36px -18px rgba(234,73,24,.55)" }}>
           {(cron.logo || cron.client_logo) && (
             <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginBottom: 10 }}>
-              {cron.logo && <img src={cron.logo} alt="" style={{ width: 54, height: 54, borderRadius: "50%", objectFit: "cover", background: "#fff", padding: 3, boxSizing: "border-box" }} />}
-              {cron.client_logo && <img src={cron.client_logo} alt="" style={{ width: 54, height: 54, borderRadius: "50%", objectFit: "cover", background: "#fff", padding: 3, boxSizing: "border-box" }} />}
+              {cron.logo?.trim() && <img src={cron.logo} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: 54, height: 54, borderRadius: "50%", objectFit: "cover", background: "#fff", padding: 3, boxSizing: "border-box" }} />}
+              {cron.client_logo?.trim() && <img src={cron.client_logo} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: 54, height: 54, borderRadius: "50%", objectFit: "cover", background: "#fff", padding: 3, boxSizing: "border-box" }} />}
             </div>
           )}
           <p style={{ fontSize: 11.5, letterSpacing: ".14em", color: onAccentSoft, margin: 0, textTransform: "uppercase" }}>Cronograma de conteúdo</p>
