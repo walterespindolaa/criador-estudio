@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Trash2, Mail, Clock, CheckCircle2 } from "lucide-react";
+import { Trash2, Mail, Clock, CheckCircle2, Sparkles, Send, CalendarRange, PenLine, TrendingUp, BarChart3 } from "lucide-react";
 
 type Member = {
   id: string; member_email: string; member_id: string | null;
@@ -65,8 +65,41 @@ export function SettingsEquipe() {
     onError: () => toast.error("Erro ao revogar"),
   });
 
+  const flyerItems: { icon: typeof Send; color: string; bg: string; title: string; desc: string }[] = [
+    { icon: Send, color: "#EA4918", bg: "rgba(234,73,24,.12)", title: "Posts prontos, você só aprova", desc: "Ela monta cada post e te manda aprovar por link. Chega de ida e volta no WhatsApp." },
+    { icon: CalendarRange, color: "#0061EE", bg: "rgba(0,97,238,.12)", title: "Cronograma do mês", desc: "Um calendário público com tudo que vai sair, e as datas comemorativas do seu nicho." },
+    { icon: PenLine, color: "#01A652", bg: "rgba(1,166,82,.12)", title: "Legendas e roteiros com IA", desc: "Textos no seu tom de voz, reescritos, encurtados ou expandidos em um clique." },
+    { icon: TrendingUp, color: "#7C90F0", bg: "rgba(124,144,240,.14)", title: "Tendências e concorrentes", desc: "Ela acompanha o que está bombando e o que os concorrentes fazem pra te dar ideias." },
+    { icon: BarChart3, color: "#FF77B9", bg: "rgba(255,119,185,.14)", title: "Relatório do resultado", desc: "No fim do mês, um relatório bonito do que foi publicado e do que performou." },
+    { icon: Sparkles, color: "#FFCF03", bg: "rgba(255,207,3,.18)", title: "Tudo num lugar só", desc: "Ela trabalha dentro do seu Cria. Você acompanha sem perder o controle da sua conta." },
+  ];
+
   return (
     <div className="space-y-6">
+      {/* Flyer: o que uma social media entrega dentro do seu Cria */}
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-card">
+        <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full" style={{ background: "rgba(255,119,185,.12)" }} />
+        <div className="absolute -bottom-10 -left-10 w-44 h-44 rounded-full" style={{ background: "rgba(0,97,238,.08)" }} />
+        <div className="relative p-5 sm:p-6">
+          <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-body font-bold mb-3" style={{ background: "rgba(234,73,24,.12)", color: "#EA4918" }}>
+            <Sparkles className="h-3.5 w-3.5" /> POR QUE TER UMA SOCIAL MEDIA
+          </div>
+          <h2 className="font-display font-extrabold text-foreground text-xl sm:text-2xl leading-tight mb-1">Ela cuida do seu conteúdo. Você cuida do seu negócio.</h2>
+          <p className="text-sm text-muted-foreground font-body mb-5 max-w-2xl">Convide quem gerencia suas redes pra trabalhar dentro do seu Cria. Veja o que ela passa a entregar pra você:</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {flyerItems.map((it) => (
+              <div key={it.title} className="flex items-start gap-3 rounded-xl border border-border/70 bg-background/60 p-3">
+                <span className="grid h-9 w-9 place-items-center rounded-lg shrink-0" style={{ background: it.bg, color: it.color }}><it.icon className="h-4 w-4" /></span>
+                <div className="min-w-0">
+                  <p className="font-display font-bold text-[13.5px] text-foreground leading-snug">{it.title}</p>
+                  <p className="text-[12px] text-muted-foreground font-body leading-snug mt-0.5">{it.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       <div>
         <h3 className="font-display font-bold text-foreground mb-1">Convidar social media</h3>
         <p className="text-sm text-muted-foreground font-body mb-3">

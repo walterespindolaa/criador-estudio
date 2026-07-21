@@ -1704,16 +1704,17 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 {/* Tab: Legenda */}
                 <TabsContent value="legenda" className="flex-1 px-4 sm:px-6 py-5 m-0 outline-none space-y-5">
                   <div className="relative">
+                    {/* Emoji sempre visível no canto superior direito da legenda. */}
+                    <div className="absolute top-0 right-0 z-10 rounded-full bg-card/90 backdrop-blur-sm shadow-sm border border-border">
+                      <EmojiPicker onPick={insertEmoji} />
+                    </div>
                     <textarea
                       ref={captionRef}
                       placeholder="Escreva sua legenda aqui ou gere com IA…"
                       value={caption}
                       onChange={(e) => setCaption(e.target.value)}
-                      className="w-full min-h-[280px] bg-transparent border-none outline-none focus:outline-none focus:ring-0 font-body text-base text-foreground placeholder:text-muted-foreground/40 resize-none leading-relaxed"
+                      className="w-full min-h-[280px] bg-transparent border-none outline-none focus:outline-none focus:ring-0 font-body text-base text-foreground placeholder:text-muted-foreground/40 resize-none leading-relaxed pr-10"
                     />
-                    <div className="absolute bottom-1.5 left-0 flex items-center gap-1">
-                      <EmojiPicker onPick={insertEmoji} />
-                    </div>
                     <span className="absolute bottom-2 right-2 text-[10px] text-muted-foreground/70 font-mono tabular-nums">
                       {captionLen}/{captionMax}
                     </span>
