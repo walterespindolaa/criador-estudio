@@ -32,6 +32,8 @@ const ST_CLASS: Record<ItemStatus, string> = {
   recusado: "bg-red-100 text-red-700", ajuste: "bg-amber-100 text-amber-700",
 };
 
+const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
 // máscara DD/MM enquanto digita (ex.: "1505" -> "15/05")
 const maskDay = (v: string) => {
   const d = v.replace(/\D/g, "").slice(0, 4);
@@ -151,6 +153,9 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
   onDelete: (id: string) => void;
 }) {
   const { items, addItem, updateItem, deleteItem, reorder } = useCronogramaItems(c.id);
+  const [mes, setMes] = useState("all"); // "all" | "YYYY-MM" — filtra por período antes de enviar
+  const mesesDisp = Array.from(new Set(items.map((it) => it.date?.slice(0, 7)).filter(Boolean) as string[])).sort();
+  const visible = mes === "all" ? items : items.filter((it) => (it.date ?? "").slice(0, 7) === mes);
 
   // Segmento do cliente (do CRM), usado pra sugerir as datas comemorativas do nicho.
   const { clients: extClients } = useExternalClients();
@@ -254,15 +259,23 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
 
       {/* Itens em CAIXINHAS separadas e arrastáveis, arrastar muda o número (#4 vira #1). */}
       <div className="space-y-2">
+        {mesesDisp.length > 1 && (
+          <div className="flex gap-1.5 flex-wrap mb-1">
+            <button onClick={() => setMes("all")} className={cn("text-xs font-body font-semibold px-3 py-1.5 rounded-full border transition-colors", mes === "all" ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:text-foreground")}>Tudo</button>
+            {mesesDisp.map((k) => (
+              <button key={k} onClick={() => setMes(k)} className={cn("text-xs font-body font-semibold px-3 py-1.5 rounded-full border transition-colors", mes === k ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:text-foreground")}>{MESES[Number(k.slice(5, 7)) - 1]}</button>
+            ))}
+          </div>
+        )}
         {items.length > 0 && (
-          <p className="text-[11px] font-body text-muted-foreground">Arraste pelo <GripVertical className="inline h-3 w-3 -mt-0.5" /> pra reordenar. O número acompanha a ordem.</p>
+          <p className="text-[11px] font-body text-muted-foreground">{mes === "all" ? <>Arraste pelo <GripVertical className="inline h-3 w-3 -mt-0.5" /> pra reordenar. O número acompanha a ordem.</> : "Filtrando por mês. Volte pra “Tudo” pra reordenar."}</p>
         )}
         <DragDropContext onDragEnd={onReorder}>
           <Droppable droppableId="cronograma-itens">
             {(dropP) => (
               <div ref={dropP.innerRef} {...dropP.droppableProps} className="space-y-2.5">
-                {items.map((it, i) => (
-                  <Draggable key={it.id} draggableId={it.id} index={i}>
+                {visible.map((it, i) => (
+                  <Draggable key={it.id} draggableId={it.id} index={i} isDragDisabled={mes !== "all"}>
                     {(dragP, dragS) => (
                       <div ref={dragP.innerRef} {...dragP.draggableProps}
                         className={cn("group bg-card border border-border rounded-2xl p-3.5 transition-shadow",

@@ -28,6 +28,7 @@ const FORMATS = ["reels", "carrossel", "foto", "story", "video"];
 // CLIENT_COLORS mudou de casa (ExternalClientDialog), re-export mantém imports antigos.
 export { CLIENT_COLORS } from "@/components/accounts/ExternalClientDialog";
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const MES_ABBR = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 function relTimeBR(iso: string): string {
   const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
   if (min < 1) return "agora mesmo";
@@ -51,6 +52,10 @@ type ApprovalKey = (typeof APPROVAL_COLS)[number];
 
 export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange }: { client: ExternalClient; onBack?: () => void; embedded?: boolean; activeTab?: string; onTabChange?: (t: string) => void }) {
   const { posts, isLoading, create, createDraft, update, remove, moveStatus, setDate } = useExternalPosts(client.id);
+  // Filtro por mês (período) pra revisar/enviar só o que interessa.
+  const [mesPost, setMesPost] = useState("all"); // "all" | "YYYY-MM"
+  const mesesPost = Array.from(new Set(posts.map((p) => p.scheduled_date?.slice(0, 7)).filter(Boolean) as string[])).sort();
+  const viewPosts = mesPost === "all" ? posts : posts.filter((p) => (p.scheduled_date ?? "").slice(0, 7) === mesPost);
   // Guarda o id do rascunho aberto: se o usuário cancelar, apagamos (não vira lixo).
   const [draftId, setDraftId] = useState<string | null>(null);
   // Kanban (padrão) ou Calendário. Preferência salva por dispositivo.
@@ -203,22 +208,30 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               <Button onClick={() => openNew()}><Plus className="h-4 w-4 mr-1.5" /> Novo post</Button>
             </div>
           </div>
+      {mesesPost.length > 1 && (
+        <div className="flex gap-1.5 flex-wrap mb-3">
+          <button onClick={() => setMesPost("all")} className={`text-xs font-body font-semibold px-3 py-1.5 rounded-full border transition-colors ${mesPost === "all" ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}>Tudo</button>
+          {mesesPost.map((k) => (
+            <button key={k} onClick={() => setMesPost(k)} className={`text-xs font-body font-semibold px-3 py-1.5 rounded-full border transition-colors ${mesPost === k ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}>{MES_ABBR[Number(k.slice(5, 7)) - 1]}/{k.slice(2, 4)}</button>
+          ))}
+        </div>
+      )}
       {view === "calendario" ? (
-        <PostsCalendar posts={posts} onOpen={openEdit} onNewAt={(d) => openNew(d)}
+        <PostsCalendar posts={viewPosts} onOpen={openEdit} onNewAt={(d) => openNew(d)}
           onMove={(id, d) => setDate.mutate({ id, scheduled_date: d })} />
       ) : isLoading ? (
         <div className="space-y-3">{[0, 1].map((i) => <div key={i} className="h-20 rounded-2xl bg-muted animate-pulse" />)}</div>
-      ) : posts.length === 0 ? (
+      ) : viewPosts.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border p-10 text-center">
-          <p className="text-sm font-body text-foreground font-medium">Nenhum post ainda</p>
-          <p className="text-xs text-muted-foreground font-body mt-1">Crie um post e ele já entra na fila de aprovação do cliente.</p>
+          <p className="text-sm font-body text-foreground font-medium">{mesPost === "all" ? "Nenhum post ainda" : "Nenhum post neste mês"}</p>
+          <p className="text-xs text-muted-foreground font-body mt-1">{mesPost === "all" ? "Crie um post e ele já entra na fila de aprovação do cliente." : "Troque o filtro de mês ou crie um post."}</p>
         </div>
       ) : (
         <DragDropContext onDragEnd={handleApprovalDragEnd}>
           <div className="flex gap-3 overflow-x-auto pb-4 -mx-1 px-1 kanban-scroll">
             {APPROVAL_COLS.map((colKey) => {
               const st = STATUS[colKey];
-              const colPosts = posts.filter((p) => (p.approval_status ?? "pendente") === colKey);
+              const colPosts = viewPosts.filter((p) => (p.approval_status ?? "pendente") === colKey);
               return (
                 <div key={colKey} className="w-[80vw] max-w-[300px] sm:w-72 shrink-0">
                   <div className="flex items-center justify-between px-2 py-2">
