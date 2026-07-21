@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { Loader2, ShieldCheck, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,8 +13,13 @@ export default function Ativar() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
+  // Token de uso único: garante que o verifyOtp roda UMA vez só (re-render,
+  // StrictMode ou identidade de params mudando não podem consumir o token 2x).
+  const ran = useRef(false);
 
   useEffect(() => {
+    if (ran.current) return;
+    ran.current = true;
     const th = params.get("th");
     const type = (params.get("type") || "invite") as OtpType;
     const to = params.get("to") || "/app";
