@@ -114,7 +114,7 @@ export function CrmCalendarTab() {
           <div className="w-full lg:w-72 shrink-0 rounded-2xl border border-border bg-card p-4 self-start">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-display font-bold text-foreground">{new Date(selected + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "long" })}</p>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSelected(null)}><X className="h-3.5 w-3.5" /></Button>
+              <Button variant="ghost" size="icon" className="h-9 w-9 md:h-6 md:w-6" onClick={() => setSelected(null)}><X className="h-4 w-4 md:h-3.5 md:w-3.5" /></Button>
             </div>
             {selectedEvents.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-6">Nada neste dia</p>

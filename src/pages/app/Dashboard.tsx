@@ -507,7 +507,7 @@ const Dashboard = () => {
                           <span className={cn("text-sm font-body", done && "line-through text-muted-foreground")}>{h.name}</span>
                         )}
                       </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                         <button aria-label="Editar hábito" onClick={() => { setEditingHabitId(h.id); setEditingHabitName(h.name); }} className="p-1 hover:bg-accent rounded text-muted-foreground"><Pencil className="h-3 w-3" /></button>
                         <button aria-label="Excluir hábito" onClick={() => handleDeleteHabit(h.id)} className="p-1 hover:bg-destructive/10 rounded text-destructive"><Trash2 className="h-3 w-3" /></button>
                       </div>

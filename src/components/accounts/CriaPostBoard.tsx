@@ -242,7 +242,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                             <input type="date" value={p.scheduled_date ?? ""}
                               onClick={(e) => e.stopPropagation()}
                               onChange={(e) => { e.stopPropagation(); setDate.mutate({ id: p.id, scheduled_date: e.target.value || null }); }}
-                              className="mt-1 h-6 w-full rounded-md border border-border bg-card px-1.5 text-[11px] font-body text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+                              className="mt-1 h-9 md:h-6 w-full rounded-md border border-border bg-card px-1.5 text-[11px] font-body text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
                             {p.caption && <p className="text-xs text-muted-foreground font-body line-clamp-2 mt-0.5">{p.caption}</p>}
                             {p.approval_status === "ajuste_solicitado" && p.last_comment && p.last_comment_role === "cliente_externo" && (
                               <div className="mt-2 text-xs font-body text-orange-700 bg-orange-50 border border-orange-100 rounded-lg px-2.5 py-1.5">Cliente pediu: "{p.last_comment}"</div>
@@ -265,9 +265,9 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                             })()}
                             <span className="inline-block mt-2 text-[9px] font-body font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">{p.approval_mode === "flow" ? "Detalhada" : p.approval_mode === "both" ? "Ambas" : "Simplificada"}</span>
                           </div>
-                          <div className="flex flex-col gap-1 shrink-0">
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEdit(p)} aria-label="Editar"><Pencil className="h-3.5 w-3.5" /></Button>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => setConfirmDelete(p.id)} aria-label="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button>
+                          <div className="flex flex-col gap-1.5 md:gap-1 shrink-0">
+                            <Button variant="ghost" size="sm" className="h-9 w-9 md:h-7 md:w-7 p-0" onClick={() => openEdit(p)} aria-label="Editar"><Pencil className="h-4 w-4 md:h-3.5 md:w-3.5" /></Button>
+                            <Button variant="ghost" size="sm" className="h-9 w-9 md:h-7 md:w-7 p-0 text-destructive" onClick={() => setConfirmDelete(p.id)} aria-label="Excluir"><Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" /></Button>
                           </div>
                         </div>
                       </div>

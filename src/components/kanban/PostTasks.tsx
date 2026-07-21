@@ -98,7 +98,7 @@ export function PostTasks({ postId }: PostTasksProps) {
               <Calendar className="h-2.5 w-2.5" /> {task.due_date}
             </span>
           )}
-          <button onClick={() => handleDelete(task.id)} className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-all">
+          <button onClick={() => handleDelete(task.id)} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-all">
             <Trash2 className="h-3 w-3 text-destructive" />
           </button>
         </div>

@@ -264,7 +264,7 @@ const Tarefas = () => {
                         <button
                           aria-label="Excluir tarefa"
                           onClick={() => handleDelete(task.id)}
-                          className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-destructive/10 rounded transition-all"
+                          className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1.5 hover:bg-destructive/10 rounded transition-all"
                         >
                           <Trash2 className="h-3.5 w-3.5 text-destructive" />
                         </button>

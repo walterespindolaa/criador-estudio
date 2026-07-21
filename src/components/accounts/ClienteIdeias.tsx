@@ -244,7 +244,7 @@ function RefCard({ url, thumb, title, author, note, onDelete }: {
       </a>
       {onDelete && (
         <button onClick={onDelete}
-          className="absolute top-2 right-2 h-7 w-7 grid place-items-center rounded-lg bg-background/90 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute top-2 right-2 h-7 w-7 grid place-items-center rounded-lg bg-background/90 text-muted-foreground hover:text-destructive opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
           aria-label="Excluir referência">
           <Trash2 className="h-3.5 w-3.5" />
         </button>

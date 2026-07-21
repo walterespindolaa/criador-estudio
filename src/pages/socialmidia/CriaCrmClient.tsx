@@ -656,11 +656,11 @@ function TagPicker({ selected, onChange }: { selected: string[]; onChange: (tags
                     <span className={cn("text-[12px] font-body px-2 py-0.5 rounded-full border truncate", TAG_COLOR_CLS[t.color] ?? TAG_COLOR_CLS.slate)}>{t.name}</span>
                   </button>
                   <button type="button" onClick={() => { setEditId(t.id); setEditName(t.name); }}
-                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary shrink-0 p-1" aria-label="Editar etiqueta">
+                    className="opacity-100 md:opacity-0 md:group-hover:opacity-100 text-muted-foreground hover:text-primary shrink-0 p-1" aria-label="Editar etiqueta">
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
                   <button type="button" onClick={async () => { if (await confirmar({ titulo: `Excluir a etiqueta "${t.name}"?`, descricao: "Ela sai de todos os clientes que a tinham." })) delTag.mutate(t.id); }}
-                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive shrink-0 p-1" aria-label="Excluir etiqueta">
+                    className="opacity-100 md:opacity-0 md:group-hover:opacity-100 text-muted-foreground hover:text-destructive shrink-0 p-1" aria-label="Excluir etiqueta">
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
@@ -756,7 +756,7 @@ function Moodboard({ clientId }: { clientId: string }) {
           {refs.map((r) => (
             <div key={r.id} className="relative group aspect-square rounded-xl overflow-hidden border border-border">
               <img src={r.image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
-              <button onClick={() => delRef.mutate(r)} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><X className="h-3.5 w-3.5" /></button>
+              <button onClick={() => delRef.mutate(r)} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"><X className="h-3.5 w-3.5" /></button>
             </div>
           ))}
         </div>

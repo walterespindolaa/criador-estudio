@@ -389,7 +389,7 @@ function DatasComemorativasSection({ cronogramaId, clientSegment }: { cronograma
                 : <span className="w-4 h-4 rounded border border-border shrink-0" />}
               <span className="text-sm text-foreground">{d.label}</span>
               {d.day_label && <span className="text-xs text-muted-foreground">{d.day_label}</span>}
-              <button onClick={() => deleteData.mutate(d.id)} className="ml-auto opacity-0 group-hover:opacity-100 text-destructive transition-opacity"><Trash2 className="h-3.5 w-3.5" /></button>
+              <button onClick={() => deleteData.mutate(d.id)} className="ml-auto opacity-100 md:opacity-0 md:group-hover:opacity-100 text-destructive transition-opacity"><Trash2 className="h-3.5 w-3.5" /></button>
             </div>
           ))}
         </div>

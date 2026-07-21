@@ -438,7 +438,7 @@ const Configuracoes = () => {
                   <div className="flex items-center gap-4">
                     <button type="button" onClick={() => fileInputRef.current?.click()} className="relative w-20 h-20 rounded-full bg-muted flex items-center justify-center overflow-hidden border-2 border-border hover:border-primary transition-colors group">
                       {avatarUrl ? <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : <Camera className="h-6 w-6 text-muted-foreground group-hover:text-primary" />}
-                      <div className="absolute inset-0 bg-foreground/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"><Camera className="h-5 w-5 text-primary-foreground" /></div>
+                      <div className="absolute inset-0 bg-foreground/20 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center justify-center"><Camera className="h-5 w-5 text-primary-foreground" /></div>
                     </button>
                     <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarSelect} />
                     <div>
@@ -654,7 +654,7 @@ const Configuracoes = () => {
                           <button
                             type="button"
                             onClick={() => { setEditingPillarId(p.id); setEditingPillarName(p.name); }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-muted"
+                            className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-muted"
                             aria-label="Editar pilar"
                           >
                             <Pencil className="h-3 w-3 text-muted-foreground" />

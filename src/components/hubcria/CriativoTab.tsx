@@ -764,7 +764,7 @@ function TopPostCard({ p, rank }: { p: any; rank: number }) {
               ? <img src={p.thumbnail} referrerPolicy="no-referrer" alt="" loading="lazy" className="h-full w-full object-cover group-hover:scale-105 transition-transform" />
               : <Instagram className="h-5 w-5 text-muted-foreground/40" />}
             <span className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/30 transition-colors grid place-items-center">
-              <ExternalLink className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+              <ExternalLink className="h-4 w-4 text-white opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
             </span>
           </a>
         ) : (
