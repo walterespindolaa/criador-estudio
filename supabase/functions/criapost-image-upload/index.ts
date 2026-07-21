@@ -20,8 +20,9 @@ Deno.serve(async (req) => {
     const { post_id, file_name, file_type, data_base64 } = await req.json();
     if (!post_id || !data_base64) return json({ error: "post_id e arquivo obrigatórios" }, 400);
 
-    const { data: post } = await userClient.from("posts").select("user_id, external_client_id").eq("id", post_id).maybeSingle();
-    if (!post || post.user_id !== userId || !post.external_client_id) return json({ error: "Sem permissão" }, 403);
+    const { data: post } = await userClient.from("posts").select("user_id").eq("id", post_id).maybeSingle();
+    // O rascunho (Novo post) nasce sem external_client_id. A posse é suficiente.
+    if (!post || post.user_id !== userId) return json({ error: "Sem permissão" }, 403);
     const { data: hasMod } = await userClient.rpc("has_module", { _code: "aprovapost_externo", _user: userId });
     if (!hasMod) return json({ error: "Módulo inativo" }, 403);
 
