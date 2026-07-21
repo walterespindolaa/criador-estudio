@@ -977,6 +977,7 @@ export type Database = {
           birthday: string | null
           brand_core: Json
           cnpj: string | null
+          color: string | null
           company_name: string | null
           competitors: Json
           contract_date: string | null
@@ -1013,6 +1014,7 @@ export type Database = {
           birthday?: string | null
           brand_core?: Json
           cnpj?: string | null
+          color?: string | null
           company_name?: string | null
           competitors?: Json
           contract_date?: string | null
@@ -1049,6 +1051,7 @@ export type Database = {
           birthday?: string | null
           brand_core?: Json
           cnpj?: string | null
+          color?: string | null
           company_name?: string | null
           competitors?: Json
           contract_date?: string | null

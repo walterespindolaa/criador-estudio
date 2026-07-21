@@ -90,6 +90,7 @@ export default function AgendaCriacao() {
   const qc = useQueryClient();
 
   const [addDay, setAddDay] = useState<string | null>(null);
+  const [addKind, setAddKind] = useState<"criacao" | "tarefa" | "captacao">("criacao");
   const [capOpen, setCapOpen] = useState(false);
   const [editCap, setEditCap] = useState<Capture | null>(null);
   const [editTask, setEditTask] = useState<CrmTask | null>(null);
@@ -233,7 +234,7 @@ export default function AgendaCriacao() {
                           {view === "semana" && <span className={cn("text-[11px] uppercase tracking-wider font-body font-semibold", isToday ? "text-primary" : "text-muted-foreground")}>{WD[i % 7]}</span>}{" "}
                           <span className={cn("text-base font-display font-bold", isToday ? "text-primary" : "text-foreground")}>{d.getDate()}</span>
                         </div>
-                        <button onClick={() => setAddDay(iso)} className="text-muted-foreground hover:text-primary" aria-label="Adicionar"><Plus className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => { setAddKind("criacao"); setAddDay(iso); }} className="text-muted-foreground hover:text-primary" aria-label="Adicionar"><Plus className="h-3.5 w-3.5" /></button>
                       </div>
                       {caps.map((c, idx) => (
                         <Draggable key={`cap:${c.id}`} draggableId={`cap:${c.id}`} index={idx}>
@@ -299,7 +300,7 @@ export default function AgendaCriacao() {
                         </Draggable>
                       ))}
                       {dropProvided.placeholder}
-                      {list.length === 0 && caps.length === 0 && dayTasks.length === 0 && <button onClick={() => setAddDay(iso)} className="text-[11px] font-body text-muted-foreground/60 hover:text-primary py-1">+ cliente</button>}
+                      {list.length === 0 && caps.length === 0 && dayTasks.length === 0 && <button onClick={() => { setAddKind("criacao"); setAddDay(iso); }} className="text-[11px] font-body text-muted-foreground/60 hover:text-primary py-1">+ cliente</button>}
                     </div>
                   )}
                 </Droppable>
@@ -312,8 +313,11 @@ export default function AgendaCriacao() {
       {/* Captações */}
       <div id="captacoes-section" data-tour="ag-captacoes" className="rounded-2xl border border-border bg-card p-4 mt-4 scroll-mt-20">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-display font-bold text-foreground">Captações</p>
-          <Button size="sm" className="h-8" onClick={() => setCapOpen(true)}><Plus className="h-3.5 w-3.5 mr-1" /> Nova captação</Button>
+          <p className="text-sm font-display font-bold text-foreground">Captações e tarefas</p>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" className="h-8" onClick={() => { setAddKind("tarefa"); setAddDay(new Date().toLocaleDateString("sv-SE")); }}><Plus className="h-3.5 w-3.5 mr-1" /> Nova tarefa</Button>
+            <Button size="sm" className="h-8" onClick={() => setCapOpen(true)}><Plus className="h-3.5 w-3.5 mr-1" /> Nova captação</Button>
+          </div>
         </div>
         {upcoming.length === 0 ? (
           <p className="text-[12px] font-body text-muted-foreground py-4 text-center">Nenhuma captação agendada. Clique em "Nova captação".</p>
@@ -353,7 +357,7 @@ export default function AgendaCriacao() {
       </div>
 
       {/* "+" do dia: escolhe o TIPO (criação / tarefa / captação) antes de preencher. */}
-      <AddAnyDialog open={!!addDay} day={addDay} clients={clients} teamNames={teamNames}
+      <AddAnyDialog open={!!addDay} day={addDay} clients={clients} teamNames={teamNames} initialKind={addKind}
         onClose={() => setAddDay(null)}
         onCreation={(crm, name, team, note) => { if (addDay) addCreation.mutate({ day: addDay, crm_client_id: crm, client_name: name, team, note }); setAddDay(null); }}
         onTask={(v) => { createTask.mutate(v, { onSuccess: () => toast.success("Tarefa criada.") }); setAddDay(null); }}
@@ -447,8 +451,9 @@ function AddCreationDialog({ open, day, initial, clients, teamNames, onClose, on
 }
 
 // "+" do dia: primeiro escolhe O QUE é (criação / tarefa / captação), depois preenche.
-function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTask, onCapture }: {
+function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTask, onCapture, initialKind = "criacao" }: {
   open: boolean; day: string | null; clients: Client[]; teamNames: string[]; onClose: () => void;
+  initialKind?: "criacao" | "tarefa" | "captacao";
   onCreation: (crm: string | null, name: string | null, team: string | null, note: string | null) => void;
   onTask: (v: { title: string; description: string | null; crm_client_id: string | null; priority: CrmTaskPriority; status: CrmTaskStatus; due_date: string }) => void;
   onCapture: (v: { capture_date: string; capture_time?: string | null; location?: string | null; crm_client_id?: string | null; client_name?: string | null; team?: string | null; note?: string | null }) => void;
@@ -466,7 +471,7 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
 
   if (open && day && seeded !== day) {
     setSeeded(day);
-    setKind("criacao"); setCrm(null); setName(""); setTeam(""); setNote(""); setTitle(""); setPrio("media"); setTime(""); setLoc("");
+    setKind(initialKind); setCrm(null); setName(""); setTeam(""); setNote(""); setTitle(""); setPrio("media"); setTime(""); setLoc("");
   }
   if (!open && seeded) setSeeded("");
 

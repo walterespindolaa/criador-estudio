@@ -253,6 +253,16 @@ export function useGoogleDrive() {
     let blockedByPolicy = 0;
     let scopeIssue = 0;
 
+    // Continua a numeração do carrossel a partir do que já existe no post,
+    // pra a ordem não zerar (senão a mídia nova entra sem position/ordem).
+    let basePos = 0;
+    if (postId) {
+      const { data: last } = await supabase.from("external_media_refs")
+        .select("position").eq("post_id", postId)
+        .order("position", { ascending: false, nullsFirst: false }).limit(1).maybeSingle();
+      basePos = (((last as { position?: number | null } | null)?.position) ?? -1) + 1;
+    }
+
     for (const f of files) {
       try {
         if (isVideoMime(f.mimeType)) {
@@ -309,6 +319,7 @@ export function useGoogleDrive() {
             thumbnail_url: f.thumbnailUrl || null,
             view_url: f.url,
             download_url: `https://drive.google.com/uc?export=download&id=${f.id}`,
+            position: basePos + imported,
           });
           if (error) throw error;
         } else {
@@ -335,6 +346,7 @@ export function useGoogleDrive() {
             file_size: compressed.size,
             thumbnail_url: publicUrl,
             view_url: publicUrl,
+            position: basePos + imported,
           });
           if (insErr) throw insErr;
         }

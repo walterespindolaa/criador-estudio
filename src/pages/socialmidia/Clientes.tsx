@@ -104,6 +104,7 @@ export default function Clientes() {
             return (
               <div key={c.id} role="button" tabIndex={0} onClick={() => open(c.id)}
                 onKeyDown={(e) => { if (e.key === "Enter") open(c.id); }}
+                style={(c as { color?: string | null }).color ? { borderColor: (c as { color?: string | null }).color!, borderWidth: 2 } : undefined}
                 className={`group flex flex-col items-center text-center bg-card border border-border rounded-3xl p-4 sm:p-5 cursor-pointer transition-all hover:border-primary/40 hover:shadow-lg hover:-translate-y-0.5 ${inactive ? "opacity-70" : ""}`}>
                 <span className="relative w-16 h-16 rounded-full grid place-items-center text-white text-xl font-display font-bold overflow-hidden mb-3 ring-2 ring-border/60 group-hover:ring-primary/30 transition-all" style={{ background: "linear-gradient(135deg,#0F6E56,#1d9e75)" }}>
                   {initial(c.name)}

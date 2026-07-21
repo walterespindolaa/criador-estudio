@@ -3,7 +3,8 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Link2, Loader2, Plus, Settings2, Trash2, Wallet, Send, Check, Pencil, LogIn } from "lucide-react";
 import { toast } from "sonner";
-import { useCrmClient, useUpdateCrmClient } from "@/hooks/useCrm";
+import { useCrmClient, useUpdateCrmClient, useUploadCrmAsset } from "@/hooks/useCrm";
+import { Camera } from "lucide-react";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useExternalClients } from "@/hooks/useCriaPost";
 import {
@@ -103,6 +104,18 @@ export default function ClienteHub() {
   const { data: criaProfiles } = useCriaClientProfiles();
   const criaAvatar = client?.cria_owner_id ? (criaProfiles?.[client.cria_owner_id]?.avatar_url ?? null) : null;
   const avatarUrl = criaAvatar ?? client?.logo ?? null;
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const uploadAsset = useUploadCrmAsset();
+  const updateClient = useUpdateCrmClient();
+  const onPickAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; e.target.value = "";
+    if (!file || !client) return;
+    try {
+      const url = await uploadAsset.mutateAsync({ clientId: client.id, file, kind: "avatar" });
+      await updateClient.mutateAsync({ id: client.id, logo: url });
+      toast.success("Foto atualizada!");
+    } catch { /* hook já avisa */ }
+  };
   const { clients: ext, create: createExt, pending, copyLink } = useExternalClients();
   const extClient = useMemo(() => ext.find((e) => e.crm_client_id === id) ?? null, [ext, id]);
   const pendCount = extClient ? (pending[extClient.id] ?? 0) : 0;
@@ -156,11 +169,14 @@ export default function ClienteHub() {
       {/* Cabeçalho no padrão vitrine: logo grande, badges de status e ações sempre visíveis. */}
       <div className="mb-4 rounded-3xl border border-border bg-card p-4 sm:p-5">
         <div className="flex flex-wrap items-center gap-4">
-          <span className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-full grid place-items-center text-white text-xl font-display font-bold shrink-0 overflow-hidden ring-2 ring-border/60" style={{ background: "linear-gradient(135deg,#0F6E56,#1d9e75)" }}>
+          <button type="button" onClick={() => avatarInputRef.current?.click()} aria-label="Trocar foto do cliente"
+            className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-full grid place-items-center text-white text-xl font-display font-bold shrink-0 overflow-hidden ring-2 ring-border/60 hover:ring-primary/40 transition-all group/av" style={{ background: "linear-gradient(135deg,#0F6E56,#1d9e75)" }}>
             {initial(client.name)}
             {/* Avatar do CRIA do cliente → logo manual → inicial. */}
             {avatarUrl && <img src={avatarUrl} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 w-full h-full object-cover" />}
-          </span>
+            <span className="absolute inset-0 bg-black/40 opacity-0 group-hover/av:opacity-100 transition-opacity grid place-items-center"><Camera className="h-4 w-4 text-white" /></span>
+          </button>
+          <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={onPickAvatar} />
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-display font-extrabold text-foreground tracking-tight truncate">{client.name}</h1>
             <p className="text-sm text-muted-foreground font-body truncate">

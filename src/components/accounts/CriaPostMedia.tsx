@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Reorder } from "framer-motion";
 import { useCriaPostMedia, type CriaMedia } from "@/hooks/useCriaPostMedia";
+import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 import { PostMediaCarousel } from "@/components/shared/PostMediaCarousel";
 import { StoryPreview } from "@/components/accounts/StoryPreview";
 import { CriaPostPublishButton } from "@/components/accounts/CriaPostPublishButton";
@@ -44,6 +46,8 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
   postId: string; platform: string; format: string; caption?: string; handle?: string; approved?: boolean;
 }) {
   const { list, uploadImage, uploadVideo, addDriveLink, remove, reorder } = useCriaPostMedia(postId);
+  const qc = useQueryClient();
+  const { pickAndSave, picking } = useGoogleDrive();
   const imgRef = useRef<HTMLInputElement>(null);
   const vidRef = useRef<HTMLInputElement>(null);
   const [driveUrl, setDriveUrl] = useState("");
@@ -102,6 +106,16 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
     catch (err) { toast.error(err instanceof Error ? err.message : "Falha ao remover"); }
   };
 
+  // Seleciona do Drive (multi): abre o seletor do Google, entra em pastas e marca
+  // várias fotos de uma vez. Ideal pro carrossel. Depois recarrega a mídia.
+  const onDrivePicker = async () => {
+    if (remaining() <= 0) { toast.error(`Máximo de ${MAX_MEDIA} mídias por post.`); return; }
+    try {
+      await pickAndSave(postId);
+      qc.invalidateQueries({ queryKey: ["criapost-media", postId] });
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Não consegui abrir o Drive"); }
+  };
+
   const aspect = postAspect(platform, format);
   const vertical = aspect === "9 / 16";
   const isStory = (format || "").toLowerCase() === "story";
@@ -128,6 +142,7 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
         <input ref={vidRef} type="file" accept="video/*" multiple hidden onChange={(e) => onPick(e, "video")} />
         <Button type="button" size="sm" variant="outline" disabled={busy || full} onClick={() => imgRef.current?.click()}><ImagePlus className="h-4 w-4 mr-1.5" /> Imagem</Button>
         <Button type="button" size="sm" variant="outline" disabled={busy || full} onClick={() => vidRef.current?.click()}><Video className="h-4 w-4 mr-1.5" /> Vídeo</Button>
+        <Button type="button" size="sm" variant="outline" disabled={busy || full || picking} onClick={onDrivePicker}>{picking ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <FileImage className="h-4 w-4 mr-1.5" />} Selecionar do Drive</Button>
         <Button type="button" size="sm" variant="outline" disabled={busy || full} onClick={() => setShowDrive((s) => !s)}><Link2 className="h-4 w-4 mr-1.5" /> Link Drive</Button>
         {busy && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
         <span className={`ml-auto text-xs font-body ${full ? "text-orange-600 font-bold" : "text-muted-foreground"}`}>{count}/{MAX_MEDIA}</span>

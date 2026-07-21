@@ -11,7 +11,7 @@ import {
   useCrmClient, useUpdateCrmClient, useDeleteCrmClient, useCrmClientRefs, useAddCrmRef, useDeleteCrmRef,
   useUploadCrmAsset, useSyncCrmFromCria, useCrmTags, useCreateCrmTag, useDeleteCrmTag,
   useUpdateCrmTag, useSeedDefaultCrmTags, DEFAULT_CRM_TAGS,
-  CLIENT_STATUSES, CLIENT_STATUS_META, TAG_COLORS, TAG_COLOR_CLS,
+  CLIENT_STATUSES, CLIENT_STATUS_META, TAG_COLORS, TAG_COLOR_CLS, CLIENT_COLORS,
   type CrmClient, type ClientStatus, type CrmTag,
 } from "@/hooks/useCrm";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -37,7 +37,7 @@ const initial = (n?: string | null) => (n ? n.trim().charAt(0).toUpperCase() : "
 const payloadOf = (f: CrmClient) => ({
   name: f.name, instagram: f.instagram, email: f.email, phone: f.phone,
   segment: f.segment, monthly_value: f.monthly_value, contract_date: f.contract_date,
-  renewal_date: f.renewal_date, notes: f.notes, logo: f.logo,
+  renewal_date: f.renewal_date, notes: f.notes, logo: f.logo, color: f.color,
   company_name: f.company_name, cnpj: f.cnpj, owner_name: f.owner_name, whatsapp: f.whatsapp, address: f.address,
   plan_name: f.plan_name, payment_day: f.payment_day, payment_method: f.payment_method, birthday: f.birthday,
   status: f.status, tags: f.tags,
@@ -319,6 +319,16 @@ function ClientWorkspace() {
               <F label="WhatsApp"><Input value={form.whatsapp ?? ""} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} placeholder="(DDD) 90000-0000" className="rounded-xl" /></F>
               <F label="Endereço" className="sm:col-span-2"><Input value={form.address ?? ""} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Rua, nº, sala, bairro / cidade" className="rounded-xl" /></F>
               <F label="Aniversário (lembrete)"><BirthdayPicker value={form.birthday ?? null} onChange={(v) => setForm({ ...form, birthday: v })} /></F>
+              <F label="Cor do cliente (destaque no card)" className="sm:col-span-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {CLIENT_COLORS.map((c) => (
+                    <button key={c} type="button" onClick={() => setForm({ ...form, color: form.color === c ? null : c })}
+                      className={cn("h-7 w-7 rounded-full border-2 transition-transform hover:scale-110", form.color === c ? "border-foreground ring-2 ring-offset-2 ring-foreground/30" : "border-white shadow-sm")}
+                      style={{ background: c }} aria-label={`Cor ${c}`} />
+                  ))}
+                  {form.color && <button type="button" onClick={() => setForm({ ...form, color: null })} className="text-xs text-muted-foreground underline">limpar</button>}
+                </div>
+              </F>
             </div>
           </Card>
 
