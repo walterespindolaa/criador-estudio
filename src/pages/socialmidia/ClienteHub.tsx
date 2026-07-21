@@ -285,7 +285,7 @@ export default function ClienteHub() {
               valor={client.segment} placeholder="Ex.: Nutrição, Odonto…"
               campo="segment" />
             <CampoCliente clientId={client.id} label="WhatsApp" tipo="texto"
-              valor={client.whatsapp || client.phone} placeholder="47 98853-7969"
+              valor={client.whatsapp || client.phone} placeholder="(DDD) 90000-0000"
               campo={client.whatsapp || !client.phone ? "whatsapp" : "phone"} />
             {/* monthly_value é em REAIS (não centavos). */}
             <CampoCliente clientId={client.id} label="Mensalidade" tipo="dinheiro"

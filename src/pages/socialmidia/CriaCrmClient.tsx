@@ -316,9 +316,9 @@ function ClientWorkspace() {
               <F label="Nome da empresa (razão social)"><Input value={form.company_name ?? ""} onChange={(e) => setForm({ ...form, company_name: e.target.value })} className="rounded-xl" /></F>
               <F label="CNPJ"><Input value={form.cnpj ?? ""} onChange={(e) => setForm({ ...form, cnpj: e.target.value })} placeholder="00.000.000/0001-00" className="rounded-xl" /></F>
               <F label="Responsável principal"><Input value={form.owner_name ?? ""} onChange={(e) => setForm({ ...form, owner_name: e.target.value })} className="rounded-xl" /></F>
-              <F label="WhatsApp"><Input value={form.whatsapp ?? ""} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} placeholder="47 98853-7969" className="rounded-xl" /></F>
+              <F label="WhatsApp"><Input value={form.whatsapp ?? ""} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} placeholder="(DDD) 90000-0000" className="rounded-xl" /></F>
               <F label="Endereço" className="sm:col-span-2"><Input value={form.address ?? ""} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Rua, nº, sala, bairro / cidade" className="rounded-xl" /></F>
-              <F label="Aniversário (lembrete)"><Input type="date" value={form.birthday ?? ""} onChange={(e) => setForm({ ...form, birthday: e.target.value || null })} className="rounded-xl" /></F>
+              <F label="Aniversário (lembrete)"><BirthdayPicker value={form.birthday ?? null} onChange={(v) => setForm({ ...form, birthday: v })} /></F>
             </div>
           </Card>
 
@@ -717,6 +717,31 @@ function Card({ icon, title, children }: { icon: React.ReactNode; title: string;
 }
 function F({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
   return <div className={cn("space-y-1.5", className)}><Label className="text-xs text-muted-foreground">{label}</Label>{children}</div>;
+}
+// Aniversário só precisa de dia e mês (o ano é ignorado no lembrete). Guarda como
+// "2000-MM-DD" pra manter a coluna date e tudo que lê birthday (calendário/robô).
+const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+function BirthdayPicker({ value, onChange }: { value: string | null; onChange: (v: string | null) => void }) {
+  const parts = (value ?? "").split("-"); // ["YYYY","MM","DD"]
+  const mm = parts.length === 3 ? parts[1] : "";
+  const dd = parts.length === 3 ? parts[2] : "";
+  const set = (nd: string, nm: string) => {
+    if (!nd || !nm) { onChange(null); return; }
+    onChange(`2000-${nm}-${nd.padStart(2, "0")}`);
+  };
+  const selCls = "h-10 rounded-xl border border-input bg-background px-2 text-sm";
+  return (
+    <div className="flex gap-2">
+      <select value={dd} onChange={(e) => set(e.target.value, mm)} className={cn(selCls, "w-[88px]")} aria-label="Dia">
+        <option value="">Dia</option>
+        {Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, "0")).map((d) => <option key={d} value={d}>{d}</option>)}
+      </select>
+      <select value={mm} onChange={(e) => set(dd, e.target.value)} className={cn(selCls, "flex-1")} aria-label="Mês">
+        <option value="">Mês</option>
+        {MESES.map((nome, i) => <option key={nome} value={String(i + 1).padStart(2, "0")}>{nome}</option>)}
+      </select>
+    </div>
+  );
 }
 function CF({ label, v, on }: { label: string; v: string; on: (x: string) => void }) {
   return <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">{label}</Label><Input value={v} onChange={(e) => on(e.target.value)} className="rounded-lg h-9 text-sm" /></div>;
