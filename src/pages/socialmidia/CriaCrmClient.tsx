@@ -15,6 +15,7 @@ import {
   type CrmClient, type ClientStatus, type CrmTag,
 } from "@/hooks/useCrm";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { useScrapes, useHasHubCria, useDeleteScrape } from "@/hooks/useHubCria";
 import { SummaryCard } from "@/components/hubcria/CriativoTab";
 import { BrandbookImport } from "@/components/brandbook/BrandbookImport";
@@ -107,6 +108,7 @@ function ClientWorkspace() {
   const [personaIdx, setPersonaIdx] = useState(0);
   const lastServer = useRef<string>("");   // último estado vindo do servidor
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
 
   // Sincroniza do servidor SEM atropelar o que o usuário está digitando.
   // (Antes, qualquer refetch resetava o form → "coloco a info, saio e volta zerado".)
@@ -188,10 +190,19 @@ function ClientWorkspace() {
     setTimeout(() => setSaveState("idle"), 1600);
   };
 
-  const onPickAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onPickAvatar = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; e.target.value = "";
     if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Selecione uma imagem."); return; }
+    const reader = new FileReader();
+    reader.onload = () => setCropSrc(reader.result as string);
+    reader.onerror = () => toast.error("Erro ao ler a imagem.");
+    reader.readAsDataURL(file);
+  };
+  const onCroppedAvatar = async (blob: Blob) => {
+    setCropSrc(null);
     try {
+      const file = new File([blob], "logo.jpg", { type: "image/jpeg" });
       const url = await uploadAsset.mutateAsync({ clientId: form.id, file, kind: "avatar" });
       await update.mutateAsync({ id: form.id, logo: url });
       setForm({ ...form, logo: url });
@@ -237,6 +248,7 @@ function ClientWorkspace() {
             <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary border-2 border-background flex items-center justify-center shadow-sm"><Camera className="h-3.5 w-3.5 text-primary-foreground" /></div>
           </button>
           <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={onPickAvatar} />
+          <ImageCropModal open={!!cropSrc} onOpenChange={(o) => { if (!o) setCropSrc(null); }} imageSrc={cropSrc ?? ""} onCropComplete={onCroppedAvatar} aspectRatio={1} />
 
           <div className="flex-1 min-w-0 pt-0.5">
             <h1 className="font-display font-bold text-xl sm:text-3xl tracking-tight text-foreground leading-tight">{form.name || "Sem nome"}</h1>

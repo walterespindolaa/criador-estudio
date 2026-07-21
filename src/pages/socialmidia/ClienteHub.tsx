@@ -5,6 +5,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Link2, Loader2, Plu
 import { toast } from "sonner";
 import { useCrmClient, useUpdateCrmClient, useUploadCrmAsset } from "@/hooks/useCrm";
 import { Camera } from "lucide-react";
+import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useExternalClients } from "@/hooks/useCriaPost";
 import {
@@ -107,10 +108,21 @@ export default function ClienteHub() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const uploadAsset = useUploadCrmAsset();
   const updateClient = useUpdateCrmClient();
-  const onPickAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const onPickAvatar = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; e.target.value = "";
     if (!file || !client) return;
+    if (!file.type.startsWith("image/")) { toast.error("Selecione uma imagem."); return; }
+    const reader = new FileReader();
+    reader.onload = () => setCropSrc(reader.result as string);
+    reader.onerror = () => toast.error("Erro ao ler a imagem.");
+    reader.readAsDataURL(file);
+  };
+  const onCroppedAvatar = async (blob: Blob) => {
+    if (!client) return;
+    setCropSrc(null);
     try {
+      const file = new File([blob], "logo.jpg", { type: "image/jpeg" });
       const url = await uploadAsset.mutateAsync({ clientId: client.id, file, kind: "avatar" });
       await updateClient.mutateAsync({ id: client.id, logo: url });
       toast.success("Foto atualizada!");
@@ -181,6 +193,7 @@ export default function ClienteHub() {
             <span className="absolute inset-0 bg-black/40 opacity-0 group-hover/av:opacity-100 transition-opacity grid place-items-center"><Camera className="h-4 w-4 text-white" /></span>
           </button>
           <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={onPickAvatar} />
+          <ImageCropModal open={!!cropSrc} onOpenChange={(o) => { if (!o) setCropSrc(null); }} imageSrc={cropSrc ?? ""} onCropComplete={onCroppedAvatar} aspectRatio={1} />
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-display font-extrabold text-foreground tracking-tight truncate">{client.name}</h1>
             <p className="text-sm text-muted-foreground font-body truncate">

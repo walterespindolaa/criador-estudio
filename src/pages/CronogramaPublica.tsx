@@ -23,6 +23,7 @@ type Data = { id: string; label: string; day_label: string | null; selected: boo
 type Cron = {
   title: string; client_label: string | null; client_handle: string | null; status: string;
   accent: string | null; logo: string | null; by: string | null; items: Item[]; datas: Data[];
+  client_color?: string | null; client_logo?: string | null;
 };
 
 const TYPE_COLOR: Record<string, string> = {
@@ -97,7 +98,8 @@ export default function CronogramaPublica() {
     );
   }
 
-  const accent = cron.accent || FALLBACK_ACCENT;
+  // Cor por CLIENTE tem prioridade (ex.: cliente homem não recebe rosa da agência).
+  const accent = cron.client_color || cron.accent || FALLBACK_ACCENT;
   const onAccent = isDark(accent) ? "#ffffff" : "#1A1626";
   const onAccentSoft = isDark(accent) ? "rgba(255,255,255,.82)" : "rgba(26,22,38,.7)";
   const datas = cron.datas ?? [];
@@ -126,7 +128,12 @@ export default function CronogramaPublica() {
       <div style={{ position: "relative", maxWidth: 480, margin: "0 auto" }}>
 
         <div style={{ background: accent, borderRadius: 22, padding: "24px 20px 20px", textAlign: "center", color: onAccent, boxShadow: "0 16px 36px -18px rgba(234,73,24,.55)" }}>
-          {cron.logo && <img src={cron.logo} alt="" style={{ height: 44, width: "auto", maxWidth: 160, objectFit: "contain", margin: "0 auto 10px", display: "block" }} />}
+          {(cron.logo || cron.client_logo) && (
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginBottom: 10 }}>
+              {cron.logo && <img src={cron.logo} alt="" style={{ width: 54, height: 54, borderRadius: "50%", objectFit: "cover", background: "#fff", padding: 3, boxSizing: "border-box" }} />}
+              {cron.client_logo && <img src={cron.client_logo} alt="" style={{ width: 54, height: 54, borderRadius: "50%", objectFit: "cover", background: "#fff", padding: 3, boxSizing: "border-box" }} />}
+            </div>
+          )}
           <p style={{ fontSize: 11.5, letterSpacing: ".14em", color: onAccentSoft, margin: 0, textTransform: "uppercase" }}>Cronograma de conteúdo</p>
           <h1 style={{ fontFamily: "'Grand Hotel', cursive", fontSize: 38, fontWeight: 400, lineHeight: 1.05, margin: "2px 0 0" }}>{handle}</h1>
           <p style={{ fontSize: 13, color: onAccentSoft, marginTop: 4 }}>{period_ ? period_ : cron.title}{cron.by ? ` · por ${cron.by}` : ""}</p>
