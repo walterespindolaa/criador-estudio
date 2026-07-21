@@ -504,13 +504,13 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               )}
             </div>
 
-            {/* 6, Roteiro / conteúdo */}
-            {f.approval_mode !== "fast" && (
-              <div className="order-6 md:col-start-1 md:row-start-5 space-y-1.5">
-                <Label className="text-xs font-body">Roteiro / conteúdo (etapa "Conteúdo")</Label>
-                {/* Ela escreve conteúdo pra DEZ marcas por semana. Era o trabalho
-                    mais repetitivo da rotina dela, e o único lugar onde a IA do
-                    CRIA não ajudava — o gerador só existia do lado do criador. */}
+            {/* 6, Roteiro / copy — sempre disponível (também no Simplificada), pra ter
+                onde escrever a copy do carrossel ou o roteiro do reels. */}
+            <div className="order-6 md:col-start-1 md:row-start-5 space-y-1.5">
+              <Label className="text-xs font-body">{f.approval_mode !== "fast" ? "Roteiro / conteúdo (etapa \"Conteúdo\")" : "Roteiro / copy (carrossel, reels...)"}</Label>
+              {/* Ela escreve conteúdo pra DEZ marcas por semana. O gerador de IA só
+                  aparece nos modos com etapa de conteúdo; no Simplificado fica só o campo. */}
+              {f.approval_mode !== "fast" && (
                 <ClientContentWriter
                   crmClientId={client.crm_client_id ?? null}
                   clienteNome={client.name}
@@ -519,9 +519,9 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                   valor={f.script ?? ""}
                   onChange={(texto) => setF((p) => ({ ...p, script: texto }))}
                 />
-                <Textarea value={f.script ?? ""} onChange={(e) => setF((p) => ({ ...p, script: e.target.value }))} rows={4} className="rounded-xl" />
-              </div>
-            )}
+              )}
+              <Textarea value={f.script ?? ""} onChange={(e) => setF((p) => ({ ...p, script: e.target.value }))} rows={5} placeholder="Copy do carrossel slide a slide, ou o roteiro do reels..." className="rounded-xl" />
+            </div>
           </div>
         </DialogContent>
       </Dialog>
