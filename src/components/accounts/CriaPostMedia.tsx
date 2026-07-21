@@ -10,8 +10,9 @@ import { postAspect } from "@/lib/post-aspect";
 import { getDisplayImageUrl, getDriveImageFallbackUrl, isDriveMedia, isVideoMedia } from "@/lib/driveMedia";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ImagePlus, Video, FileImage, Link2, Loader2, Heart, MessageCircle, Send, Bookmark, GripVertical, X, Play } from "lucide-react";
+import { ImagePlus, Video, FileImage, Link2, Loader2, Heart, MessageCircle, Send, Bookmark, GripVertical, X, Play, Download } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const MAX_MEDIA = 20;
 const ACCEPTED_MSG = "Formato não aceito. Use imagens (JPG, PNG, WebP, GIF, HEIC) ou vídeos (MP4, MOV, WebM).";
@@ -116,6 +117,25 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
     } catch (err) { toast.error(err instanceof Error ? err.message : "Não consegui abrir o Drive"); }
   };
 
+  const [zipping, setZipping] = useState(false);
+  // Baixa todas as mídias (qualidade original) numeradas + legenda.txt num .zip.
+  const onDownloadZip = async () => {
+    setZipping(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("criapost-download-zip", { body: { post_id: postId } });
+      if (error) throw error;
+      const d = data as { filename: string; zip_base64: string; skipped?: number };
+      const bytes = Uint8Array.from(atob(d.zip_base64), (c) => c.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: "application/zip" }));
+      const a = document.createElement("a"); a.href = url; a.download = d.filename; a.click();
+      URL.revokeObjectURL(url);
+      if (d.skipped) toast.warning(`${d.skipped} mídia(s) não baixaram (ex.: vídeo). Veja _avisos.txt no zip.`);
+      else toast.success("Download pronto!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Não consegui gerar o zip.");
+    } finally { setZipping(false); }
+  };
+
   const aspect = postAspect(platform, format);
   const vertical = aspect === "9 / 16";
   const isStory = (format || "").toLowerCase() === "story";
@@ -133,7 +153,10 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
       {approved && (
         <div className="rounded-2xl border border-green-200 bg-green-50 p-3 space-y-2">
           <p className="text-xs font-body font-bold text-green-800">Aprovado pelo cliente, pronto pra publicar.</p>
-          <CriaPostPublishButton caption={caption ?? ""} media={ordered} />
+          <div className="flex items-center gap-2 flex-wrap">
+            <CriaPostPublishButton caption={caption ?? ""} media={ordered} />
+            <Button type="button" size="sm" variant="outline" disabled={zipping || count === 0} onClick={onDownloadZip}>{zipping ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Download className="h-4 w-4 mr-1.5" />} Baixar tudo (.zip)</Button>
+          </div>
         </div>
       )}
 

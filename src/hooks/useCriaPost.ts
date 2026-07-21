@@ -76,6 +76,21 @@ export function useExternalClients() {
         if (e0) throw e0;
         crmId = (crm as { id: string }).id;
       }
+      // DEDUP: se esse cliente já tem vínculo no Cria Post, REUSA (não cria outra
+      // linha). Sem isso, "Ativar Cria Post" 2x criava "2 Anna" e o conteúdo antigo
+      // sumia (o .find pegava a linha nova).
+      if (crmId) {
+        const { data: existing } = await sbFrom("external_clients")
+          .select("*").eq("manager_id", agencyOwnerId!).eq("crm_client_id", crmId)
+          .order("created_at", { ascending: true }).limit(1).maybeSingle();
+        if (existing) {
+          // Garante que está ativo de novo (caso tenha sido desativado).
+          if (!(existing as ExternalClient).active) {
+            await sbFrom("external_clients").update({ active: true }).eq("id", (existing as ExternalClient).id);
+          }
+          return existing as ExternalClient;
+        }
+      }
       const { data, error } = await sbFrom("external_clients")
         .insert({ manager_id: agencyOwnerId!, ...rest, crm_client_id: crmId }).select().single();
       if (error) throw error; return data as ExternalClient;

@@ -150,6 +150,10 @@ export default function ClienteHub() {
   const enableCriaPost = async () => {
     if (!client) return;
     if (!hasPost) { setUpsell("aprovapost_externo"); return; }
+    // Já ativado? Não cria outra linha (evita "2 Anna"). O create também deduplica,
+    // mas guardamos aqui pra nem disparar mutation à toa.
+    if (extClient) { toast.success("Cliente já está ativo no Cria Post."); return; }
+    if (createExt.isPending) return;
     await createExt.mutateAsync({ name: client.name, crm_client_id: id, instagram_handle: client.instagram });
     toast.success("Cliente ativado no Cria Post!");
   };
