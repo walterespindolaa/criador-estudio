@@ -93,6 +93,14 @@ const AppLayout = () => {
     // Apply sidebar color override AFTER theme (so it wins)
     applySidebarColor(profile?.theme_sidebar || null);
     if (profile?.theme_font) applyThemeFont(profile.theme_font);
+    // Cacheia o tema pro próximo boot aplicar na hora (sem flash do padrão).
+    try {
+      if (profile?.theme_preset) localStorage.setItem("theme_preset", profile.theme_preset);
+      if (profile?.theme_accent) localStorage.setItem("theme_accent", profile.theme_accent);
+      if (profile?.theme_sidebar) localStorage.setItem("theme_sidebar", profile.theme_sidebar);
+      else localStorage.removeItem("theme_sidebar");
+      if (profile?.theme_font) localStorage.setItem("theme_font", profile.theme_font);
+    } catch { /* ignore */ }
   }, [profile]);
 
   if (!isLoading && profile?.must_change_password === true && location.pathname !== "/app/trocar-senha") {

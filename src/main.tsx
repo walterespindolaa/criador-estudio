@@ -4,8 +4,21 @@ import { I18nProvider } from "./lib/i18n";
 import App from "./App.tsx";
 import "./index.css";
 import { installGlobalErrorLogging } from "./lib/logError";
+import { applyTheme, applyAccent } from "./lib/applyTheme";
+import { applySidebarColor } from "./lib/sidebarTheme";
 
 installGlobalErrorLogging();
+
+// Tema salvo aplicado IMEDIATAMENTE (antes do React montar), pra não ter o flash
+// do laranja padrão trocando pra cor do usuário só quando o perfil chega.
+try {
+  const savedPreset = localStorage.getItem("theme_preset");
+  const savedAccent = localStorage.getItem("theme_accent");
+  if (savedPreset) applyTheme(savedPreset, savedAccent || "#EA4918");
+  else if (savedAccent) applyAccent(savedAccent);
+  const savedSidebar = localStorage.getItem("theme_sidebar");
+  if (savedSidebar) applySidebarColor(savedSidebar);
+} catch { /* localStorage indisponível: segue com o padrão */ }
 
 // Apply saved font immediately to avoid flash of unstyled text
 const savedFont = localStorage.getItem("theme_font");
