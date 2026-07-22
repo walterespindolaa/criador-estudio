@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Camera, ArrowRight, Ticket, Settings, Users, Sparkles, Check, Gift, Wallet, Send, CalendarDays, Eye, EyeOff } from "lucide-react";
+import { Camera, ArrowRight, Ticket, Settings, Users, Sparkles, Check, Gift, Wallet, Send, CalendarDays, Eye, EyeOff, Heart, Clock } from "lucide-react";
+import { useOperationSignals, DOMAIN_HEX, type OpDomain, type OpUrgency, type HealthLevel } from "@/hooks/useOperationSignals";
 import { OrganicBlobs } from "@/components/brand/OrganicBlobs";
 import { CRIA_HEX, type CriaColor } from "@/lib/moduleTheme";
 import { formatBRL } from "@/lib/money";
@@ -15,7 +16,6 @@ import { validateUpload } from "@/lib/upload-validation";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { ApprovalTracker } from "@/components/accounts/ApprovalTracker";
 import { CopyButton } from "@/components/shared/CopyButton";
-import { ClientsGrid } from "@/components/accounts/ClientsGrid";
 import { useManagerOutlet } from "@/components/accounts/ManagerLayout";
 import { readLastClient } from "@/components/accounts/ClientSwitcher";
 import { useCrmClients } from "@/hooks/useCrm";
@@ -40,6 +40,13 @@ function Painel({ color, icon: Icon, valor, label, to, destaque, masked }: {
 }
 
 function initial(name?: string | null) { return name ? name.trim().charAt(0).toUpperCase() : "?"; }
+const DOMAIN_ICON: Record<OpDomain, typeof Users> = { conteudo: Send, financeiro: Wallet, relacionamento: Heart, prazo: Clock };
+const URG: Record<OpUrgency, { label: string; cls: string }> = {
+  hi: { label: "Urgente", cls: "bg-red-100 text-red-700" },
+  mid: { label: "Atenção", cls: "bg-amber-100 text-amber-700" },
+  ok: { label: "No radar", cls: "bg-emerald-100 text-emerald-700" },
+};
+const HEALTH_HEX: Record<HealthLevel, string> = { g: "#01A652", y: "#e0a500", r: "#d64545" };
 function greeting(name?: string | null) {
   const first = (name ?? "").trim().split(/\s+/)[0] || "social media";
   const h = new Date().getHours();
@@ -76,6 +83,18 @@ export default function ManagerHome() {
     .reduce((s, c) => s + (Number(c.monthly_value) || 0), 0);
   const { overview } = useManagerApprovalOverview();
   const pendentes = overview.reduce((s, r) => s + (r.pendentes ?? 0), 0);
+  // Motor de sinais: alimenta o feed "Sua operação hoje" e a saúde dos clientes.
+  const { signals, health, counts } = useOperationSignals();
+
+  // Módulos: só os ativos viram card. O resto vira upsell discreto — e o "pacote
+  // extra" some se o módulo-base já está ativo (era o "Cria Radar" duplicado).
+  const activeMods = modules.filter((m) => m.status === "active" || m.status === "past_due");
+  const upsellMods = modules.filter((m) =>
+    m.status !== "active" && m.status !== "past_due" && !m.coming_soon &&
+    !activeMods.some((a) => m.name.startsWith(a.name)),
+  );
+  // Clientes do CRM (todos, não só os que usam o Cria), pro grid da home.
+  const clientesHome = crmClients.filter((c) => (c.status ?? "ativo") !== "inativo").slice(0, 6);
 
   const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; e.target.value = "";
@@ -122,10 +141,10 @@ export default function ManagerHome() {
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">{greeting(profile?.name)}</h1>
             <p className="text-sm text-muted-foreground font-body mt-1">
-              {pendentes > 0
-                ? <><strong className="text-foreground">{pendentes}</strong> {pendentes === 1 ? "post esperando" : "posts esperando"} o cliente aprovar. O resto está em dia.</>
+              {counts.total > 0
+                ? <><strong className="text-foreground">{counts.total}</strong> {counts.total === 1 ? "coisa precisa" : "coisas precisam"} de você hoje{counts.red > 0 ? <> · <strong className="text-red-600">{counts.red} urgente{counts.red > 1 ? "s" : ""}</strong></> : null}. Comece pelo topo da lista.</>
                 : ativos > 0
-                  ? <>Nada travado. Bom momento pra adiantar a semana.</>
+                  ? <>Tudo em dia. Bom momento pra adiantar a semana.</>
                   : <>Bora colocar a sua operação de pé.</>}
             </p>
           </div>
@@ -167,24 +186,86 @@ export default function ManagerHome() {
         </div>
       </section>
 
+      {/* ═══ SUA OPERAÇÃO HOJE ═══
+          Feed único e priorizado: junta conteúdo, financeiro, relacionamento e
+          prazo, ordenado por urgência. A cor fica só no ícone da categoria. */}
+      {signals.length > 0 && (
+        <section className="mb-8">
+          <div className="flex items-center gap-2 mb-3">
+            <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider">Sua operação hoje</h2>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-foreground text-background">{signals.length}</span>
+          </div>
+          <div className="rounded-2xl border border-border bg-card overflow-hidden">
+            {signals.slice(0, 8).map((s) => {
+              const Icon = DOMAIN_ICON[s.domain];
+              const urg = URG[s.urgency];
+              return (
+                <button key={s.id} type="button" onClick={() => navigate(s.to)}
+                  className="w-full flex items-center gap-3 px-4 py-3 border-b border-border last:border-b-0 text-left transition-colors hover:bg-muted/40">
+                  <span className="grid h-10 w-10 place-items-center rounded-xl text-white shrink-0" style={{ background: DOMAIN_HEX[s.domain] }}><Icon className="h-4 w-4" /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[14.5px] font-body font-bold text-foreground leading-tight">{s.title}</span>
+                    <span className="block text-[12.5px] font-body text-muted-foreground truncate mt-0.5">
+                      <span className="font-bold text-foreground">{s.clientName}</span> · {s.sub}
+                    </span>
+                  </span>
+                  <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full shrink-0 ${urg.cls}`}>{urg.label}</span>
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[12px] font-bold text-foreground shrink-0">{s.actionLabel}<ArrowRight className="h-3.5 w-3.5" /></span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* ═══ SAÚDE DOS CLIENTES ═══ radar de retenção */}
+      {health.length > 0 && (
+        <section className="mb-8">
+          <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">Saúde dos clientes</h2>
+          <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-1 px-1">
+            {health.map((h) => (
+              <button key={h.clientId} type="button" onClick={() => navigate(`/socialmidia/clientes/${h.clientId}/visao-geral`)}
+                className="flex-none w-[190px] rounded-2xl border border-border bg-card p-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-md">
+                <div className="flex items-center gap-2">
+                  <span className="relative grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full text-white text-xs font-display font-bold" style={{ background: h.color || "#0F6E56" }}>
+                    {initial(h.name)}
+                    {h.logo && <img src={h.logo} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 h-full w-full object-cover" />}
+                  </span>
+                  <span className="text-[13.5px] font-display font-bold text-foreground truncate flex-1">{h.name}</span>
+                  <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: HEALTH_HEX[h.level] }} />
+                </div>
+                <p className="text-[11.5px] font-body text-muted-foreground mt-2 leading-snug line-clamp-2">{h.reason}</p>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
       <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">Seus módulos</h2>
-      <div data-tour="gh-modulos" className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
-        {modules.map((m) => {
-          const active = m.status === "active" || m.status === "past_due";
-          return (
-            <button key={m.code} type="button" onClick={() => openModule(m)}
-              className="text-left bg-card border border-border rounded-2xl p-4 hover:border-primary/40 transition-colors">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="font-display font-bold text-foreground text-sm">{m.name}</span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${active ? "bg-green-100 text-green-700" : m.coming_soon ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"}`}>
-                  {active ? "Ativo" : m.coming_soon ? "Em breve" : "Adquirir"}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground font-body">{active ? "Toque para abrir" : m.coming_soon ? "Em desenvolvimento" : "Toque para conhecer"}</p>
-            </button>
-          );
-        })}
+      <div data-tour="gh-modulos" className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+        {activeMods.map((m) => (
+          <button key={m.code} type="button" onClick={() => openModule(m)}
+            className="text-left bg-card border border-border rounded-2xl p-4 hover:border-primary/40 transition-colors">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="font-display font-bold text-foreground text-sm">{m.name}</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">Ativo</span>
+            </div>
+            <p className="text-xs text-muted-foreground font-body">Toque para abrir</p>
+          </button>
+        ))}
       </div>
+      {/* Upsell discreto, em UMA linha, sem card duplicado no meio dos ativos. */}
+      {upsellMods.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap rounded-2xl border border-dashed border-border bg-card/60 px-4 py-3 mb-8">
+          <span className="text-xs font-body font-bold text-foreground">Amplie seu plano:</span>
+          {upsellMods.map((m) => (
+            <button key={m.code} type="button" onClick={() => openModule(m)}
+              className="text-xs font-body font-semibold rounded-full border border-border bg-card px-3 py-1.5 text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
+              {m.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider">Aprovações recentes</h2>
@@ -219,8 +300,34 @@ export default function ManagerHome() {
         </button>
       )}
 
-      <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">Seus clientes</h2>
-      <div data-tour="gh-clientes"><ClientsGrid defaultLimit={5} /></div>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider">Seus clientes</h2>
+        <button onClick={() => navigate("/socialmidia/clientes")} className="text-primary font-body font-bold text-xs flex items-center gap-1 hover:underline">Ver todos <ArrowRight className="h-3 w-3" /></button>
+      </div>
+      <div data-tour="gh-clientes" className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
+        {clientesHome.map((c) => {
+          const cor = (c as { color?: string | null }).color || "#0F6E56";
+          return (
+            <button key={c.id} type="button" onClick={() => navigate(`/socialmidia/clientes/${c.id}/visao-geral`)}
+              className="relative overflow-hidden text-left bg-card border border-border rounded-2xl p-4 pt-5 transition-all hover:-translate-y-0.5 hover:shadow-md">
+              <span aria-hidden className="absolute top-0 inset-x-0 h-1.5" style={{ background: cor }} />
+              <div className="flex items-center gap-2.5">
+                <span className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full text-white text-sm font-display font-bold" style={{ background: cor }}>
+                  {initial(c.name)}
+                  {c.logo && <img src={c.logo} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 h-full w-full object-cover" />}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-display font-bold text-foreground truncate">{c.name || "Sem nome"}</span>
+                  {c.instagram && <span className="block text-[11px] font-body text-muted-foreground truncate">@{c.instagram.replace(/^@/, "")}</span>}
+                </span>
+              </div>
+              <div className="flex gap-1.5 mt-2.5 flex-wrap">
+                <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full ${c.cria_owner_id ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>{c.cria_owner_id ? "Usa o Cria" : "Aprova por link"}</span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
 
       {!hasAgency && (
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-pink-400 text-white p-5 sm:p-6 mt-8">

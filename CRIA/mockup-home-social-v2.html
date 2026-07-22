@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CRIA · Home operação (mockup v2)</title>
+<style>
+  :root{--laranja:#EA4918;--amarelo:#FFCF03;--azul:#0061EE;--rosa:#FF77B9;--verde:#01A652;--lilas:#7C90F0;--roxo:#4B3FA8;
+    --tinta:#181815;--cinza:#5c5d63;--linha:#e9e6da;--creme:#F5F3E7;--card:#fff;--vermelho:#d64545;}
+  *{box-sizing:border-box}
+  body{margin:0;background:#FDFBF5;color:var(--tinta);font-family:'Plus Jakarta Sans',-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px}
+  /* Formas orgânicas do Cria, bem suaves, passando no fundo. */
+  .bgshapes{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+  .bgshapes b{position:absolute;border-radius:50%;filter:blur(60px);opacity:.16}
+  .b1{width:420px;height:420px;background:var(--laranja);top:-120px;right:-80px}
+  .b2{width:360px;height:360px;background:var(--rosa);top:32%;left:-140px;opacity:.13}
+  .b3{width:300px;height:300px;background:var(--amarelo);bottom:-100px;right:12%;opacity:.14}
+  .b4{width:340px;height:340px;background:var(--lilas);bottom:8%;left:20%;opacity:.10}
+  .wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:20px 18px 60px}
+  svg.ic{width:16px;height:16px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:none}
+  .sec{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.11em;color:#a29e8f;margin:24px 2px 11px;display:flex;align-items:center;gap:8px}
+  .sec .cnt{background:var(--tinta);color:#fff;border-radius:999px;font-size:10px;padding:1px 7px}
+  /* HERO com resumo do dia (IA) */
+  .hero{display:flex;gap:16px;align-items:center;background:var(--card);border:1px solid var(--linha);border-radius:20px;padding:18px 20px;box-shadow:0 8px 24px rgba(0,0,0,.04)}
+  .hero .av{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,#EA4918,#c93c14);color:#fff;display:grid;place-items:center;font-weight:800;font-size:20px;flex:none}
+  .hero h1{margin:0;font-size:21px;font-weight:800;letter-spacing:-.3px}
+  .hero .ai{font-size:13.5px;color:var(--cinza);margin-top:3px}
+  .hero .ai b{color:var(--tinta)}
+  .hero .spark{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:var(--roxo);background:#EDEBFB;border-radius:999px;padding:5px 11px;flex:none}
+  /* OPERAÇÃO HOJE — feed priorizado */
+  .ops{background:var(--card);border:1px solid var(--linha);border-radius:18px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.04)}
+  .op{display:flex;align-items:center;gap:13px;padding:13px 16px;border-bottom:1px solid var(--linha)}
+  .op:last-child{border-bottom:none}
+  .op:hover{background:#fcfbf7}
+  .op .dom{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:#fff;flex:none}
+  .op .body{min-width:0;flex:1}
+  .op .t{font-size:14.5px;font-weight:700;line-height:1.25}
+  .op .s{font-size:12.5px;color:var(--cinza);margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .op .cli{display:inline-flex;align-items:center;gap:5px;font-weight:700;color:var(--tinta)}
+  .op .cav{width:16px;height:16px;border-radius:50%;color:#fff;font-size:8px;display:grid;place-items:center;font-weight:800}
+  .urg{font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px}
+  .urg.hi{background:#FBE3E3;color:var(--vermelho)}.urg.mid{background:#FFF1D6;color:#9a6b00}.urg.ok{background:#E7F6ED;color:var(--verde)}
+  .op .go{flex:none;border:none;border-radius:11px;padding:9px 15px;font:inherit;font-weight:800;font-size:12.5px;color:#fff;background:var(--tinta);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .op .go:hover{opacity:.9}
+  /* SAÚDE DOS CLIENTES */
+  .health{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
+  .hc{flex:none;min-width:184px;background:var(--card);border:1px solid var(--linha);border-radius:15px;padding:13px;box-shadow:0 5px 16px rgba(0,0,0,.03)}
+  .hc .top{display:flex;align-items:center;gap:9px}
+  .hc .av{width:34px;height:34px;border-radius:50%;color:#fff;display:grid;place-items:center;font-weight:800;font-size:13px;flex:none;overflow:hidden;position:relative}
+  .hc .av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .hc .nm{font-size:13.5px;font-weight:800;line-height:1}
+  .hc .dot{width:9px;height:9px;border-radius:50%;margin-left:auto}
+  .hc .rs{font-size:11.5px;color:var(--cinza);margin-top:9px;line-height:1.35}
+  .dot.g{background:var(--verde)}.dot.y{background:var(--amarelo)}.dot.r{background:var(--vermelho)}
+  /* BORA CRIAR */
+  .create{display:grid;grid-template-columns:1.3fr 1fr;gap:12px}
+  @media(max-width:820px){.create{grid-template-columns:1fr}}
+  .cbox{background:var(--card);border:1px solid var(--linha);border-radius:16px;padding:16px;box-shadow:0 5px 16px rgba(0,0,0,.03)}
+  .cbox h3{margin:0 0 3px;font-size:15.5px;font-weight:800}
+  .cbox p{margin:0 0 12px;font-size:13px;color:var(--cinza)}
+  .queue{display:flex;flex-direction:column;gap:8px}
+  .qi{display:flex;align-items:center;gap:10px;border:1px solid var(--linha);border-radius:12px;padding:9px 11px;background:#fdfdfb}
+  .qi .fmt{font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--creme);color:var(--cinza)}
+  .qi .qt{font-size:13px;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cta{border:none;border-radius:12px;padding:11px 0;width:100%;font:inherit;font-weight:800;font-size:13.5px;color:#fff;background:var(--laranja);cursor:pointer;margin-top:12px}
+  .mods{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .mod{border:1px solid var(--linha);border-radius:13px;padding:12px;cursor:pointer;display:flex;align-items:center;gap:10px}
+  .mod:hover{border-color:var(--laranja)}
+  .mod .mi{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;color:#fff}
+  .mod .mt{font-size:13.5px;font-weight:800}
+  .vertudo{margin-left:auto;font-size:12px;font-weight:800;color:var(--laranja);cursor:pointer}
+  .note{background:#fff;border:1px dashed var(--linha);border-radius:14px;padding:13px 15px;margin-top:20px;font-size:13px;color:var(--cinza);line-height:1.5}
+  .note b{color:var(--tinta)}
+</style></head>
+<body>
+<div class="bgshapes"><b class="b1"></b><b class="b2"></b><b class="b3"></b><b class="b4"></b></div>
+<div class="wrap">
+
+  <!-- HERO + resumo do dia -->
+  <div class="hero">
+    <div class="av">G</div>
+    <div style="min-width:0">
+      <h1>Boa tarde, Gabriela</h1>
+      <div class="ai">O Cria sugere: feche as <b>3 aprovações paradas</b>, cobre o pagamento da <b>TK</b> e grave os <b>Reels da Marina</b>. 12 min de trabalho tiram o dia do vermelho.</div>
+    </div>
+    <span class="spark"><svg class="ic" style="width:13px;height:13px"><use href="#i-spark"/></svg> Resumo do dia</span>
+  </div>
+
+  <!-- SUA OPERAÇÃO HOJE -->
+  <div class="sec">Sua operação hoje <span class="cnt">6</span></div>
+  <div class="ops">
+    <div class="op">
+      <span class="dom" style="background:var(--laranja)"><svg class="ic"><use href="#i-check"/></svg></span>
+      <div class="body"><div class="t">Reels "Bastidores" espera aprovação há 4 dias</div>
+        <div class="s"><span class="cli"><span class="cav" style="background:var(--laranja)">W</span>Walter</span> · o cliente ainda não abriu o link <span class="urg hi">Atrasado</span></div></div>
+      <button class="go">Cutucar cliente</button>
+    </div>
+    <div class="op">
+      <span class="dom" style="background:var(--azul)"><svg class="ic"><use href="#i-wallet"/></svg></span>
+      <div class="body"><div class="t">Mensalidade da TK Clínica vence hoje</div>
+        <div class="s"><span class="cli"><span class="cav" style="background:var(--rosa)">T</span>TK Clínica</span> · R$ 1.500 <span class="urg hi">Hoje</span></div></div>
+      <button class="go">Enviar cobrança</button>
+    </div>
+    <div class="op">
+      <span class="dom" style="background:var(--rosa)"><svg class="ic"><use href="#i-heart"/></svg></span>
+      <div class="body"><div class="t">Contrato da Beatriz renova em 5 dias</div>
+        <div class="s"><span class="cli"><span class="cav" style="background:var(--verde)">B</span>Beatriz</span> · hora de falar de renovação <span class="urg mid">5 dias</span></div></div>
+      <button class="go">Preparar conversa</button>
+    </div>
+    <div class="op">
+      <span class="dom" style="background:var(--verde)"><svg class="ic"><use href="#i-chart"/></svg></span>
+      <div class="body"><div class="t">Relatório de julho da Marina está pronto</div>
+        <div class="s"><span class="cli"><span class="cav" style="background:var(--verde)">M</span>Marina</span> · 1 toque pra enviar e parecer proativa <span class="urg ok">Pronto</span></div></div>
+      <button class="go">Enviar relatório</button>
+    </div>
+    <div class="op">
+      <span class="dom" style="background:var(--amarelo);color:#1c1c1a"><svg class="ic"><use href="#i-cam"/></svg></span>
+      <div class="body"><div class="t">Captação com a Marina amanhã, 10h</div>
+        <div class="s">Estúdio · leve o roteiro dos 3 Reels <span class="urg mid">Amanhã</span></div></div>
+      <button class="go">Ver roteiro</button>
+    </div>
+    <div class="op">
+      <span class="dom" style="background:var(--lilas)"><svg class="ic"><use href="#i-search"/></svg></span>
+      <div class="body"><div class="t">Concorrente da Beatriz emplacou um Reels (18k)</div>
+        <div class="s"><span class="cli"><span class="cav" style="background:var(--verde)">B</span>Beatriz</span> · vale adaptar o gancho <span class="urg ok">Oportunidade</span></div></div>
+      <button class="go">Virar ideia</button>
+    </div>
+  </div>
+
+  <!-- SAÚDE DOS CLIENTES -->
+  <div class="sec">Saúde dos clientes · seu radar de retenção</div>
+  <div class="health">
+    <div class="hc"><div class="top"><div class="av" style="background:var(--laranja)">W<img src="https://i.pravatar.cc/60?img=12"></div><div class="nm">Walter</div><span class="dot y"></span></div><div class="rs">Aprovação parada há 4 dias. Cutuque pra não travar a semana.</div></div>
+    <div class="hc"><div class="top"><div class="av" style="background:var(--rosa)">T</div><div class="nm">TK Clínica</div><span class="dot r"></span></div><div class="rs">Pagamento vence hoje + sem post agendado. Atenção.</div></div>
+    <div class="hc"><div class="top"><div class="av" style="background:var(--verde)">B</div><div class="nm">Beatriz</div><span class="dot g"></span></div><div class="rs">Tudo em dia. Contrato renova em 5 dias, boa hora pra elogiar resultado.</div></div>
+    <div class="hc"><div class="top"><div class="av" style="background:var(--azul)">G</div><div class="nm">Gabriela</div><span class="dot g"></span></div><div class="rs">Em dia. 1 post em ajuste, nada urgente.</div></div>
+  </div>
+
+  <!-- BORA CRIAR + módulos -->
+  <div class="sec">Bora criar</div>
+  <div class="create">
+    <div class="cbox">
+      <h3>Seu bloco de produção de hoje</h3>
+      <p>4 posts aprovados/planejados esperando você produzir. Grave em lote.</p>
+      <div class="queue">
+        <div class="qi"><span class="fmt">Reels</span><span class="qt">Marina · Bastidores do lançamento</span></div>
+        <div class="qi"><span class="fmt">Reels</span><span class="qt">Marina · Trend do momento</span></div>
+        <div class="qi"><span class="fmt">Carrossel</span><span class="qt">Walter · 5 erros de quem começa</span></div>
+        <div class="qi"><span class="fmt">Foto</span><span class="qt">Beatriz · Depoimento</span></div>
+      </div>
+      <button class="cta">Entrar no modo produção →</button>
+    </div>
+    <div class="cbox">
+      <h3>Seus Cria</h3>
+      <p>Atalho pros seus módulos ativos.</p>
+      <div class="mods">
+        <div class="mod"><span class="mi" style="background:var(--laranja)"><svg class="ic"><use href="#i-layers"/></svg></span><span class="mt">Cria Post</span></div>
+        <div class="mod"><span class="mi" style="background:var(--rosa)"><svg class="ic"><use href="#i-book"/></svg></span><span class="mt">Cria Gestão</span></div>
+        <div class="mod"><span class="mi" style="background:var(--azul)"><svg class="ic"><use href="#i-wallet"/></svg></span><span class="mt">Cria Caixa</span></div>
+        <div class="mod"><span class="mi" style="background:var(--lilas)"><svg class="ic"><use href="#i-search"/></svg></span><span class="mt">Cria Radar</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note"><b>A virada:</b> a home deixa de ser vitrine de números e vira o <b>copiloto de operação</b> da social mídia. Um lugar que junta o que hoje está espalhado (conteúdo, relacionamento, dinheiro, prazo), prioriza por urgência e resolve com 1 toque, protege a retenção com o radar de saúde, e ainda empurra pra produção em lote. É isso que agrega na vida dela: menos "será que esqueci algo?", mais "o Cria já me disse o que fazer".</div>
+</div>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+  <g id="i-spark"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></g>
+  <g id="i-check"><polyline points="4 12 9 17 20 6"/></g>
+  <g id="i-wallet"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M16 11h3"/></g>
+  <g id="i-heart"><path d="M12 20s-7-4.5-9.5-9A4.5 4.5 0 0 1 12 6a4.5 4.5 0 0 1 9.5 5c-2.5 4.5-9.5 9-9.5 9z"/></g>
+  <g id="i-chart"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></g>
+  <g id="i-cam"><path d="M23 7l-7 5 7 5z"/><rect x="1" y="5" width="15" height="14" rx="2.5"/></g>
+  <g id="i-search"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></g>
+  <g id="i-layers"><polygon points="12 3 21 8 12 13 3 8"/><polyline points="3 13 12 18 21 13"/></g>
+  <g id="i-book"><path d="M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2V4z"/><path d="M5 16h13"/></g>
+</defs></svg>
+</body></html>
