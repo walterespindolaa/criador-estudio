@@ -58,8 +58,13 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   const { posts, isLoading, create, createDraft, update, remove, moveStatus, setDate } = useExternalPosts(client.id);
   // Filtro por mês (período) pra revisar/enviar só o que interessa.
   const [mesPost, setMesPost] = useState("all"); // "all" | "YYYY-MM"
+  const [fmtFilter, setFmtFilter] = useState("all"); // "all" | format
   const mesesPost = Array.from(new Set(posts.map((p) => p.scheduled_date?.slice(0, 7)).filter(Boolean) as string[])).sort();
-  const viewPosts = mesPost === "all" ? posts : posts.filter((p) => (p.scheduled_date ?? "").slice(0, 7) === mesPost);
+  const formatosPost = Array.from(new Set(posts.map((p) => p.format).filter(Boolean) as string[]));
+  const viewPosts = posts.filter((p) =>
+    (mesPost === "all" || (p.scheduled_date ?? "").slice(0, 7) === mesPost) &&
+    (fmtFilter === "all" || p.format === fmtFilter),
+  );
   // Guarda o id do rascunho aberto: se o usuário cancelar, apagamos (não vira lixo).
   const [draftId, setDraftId] = useState<string | null>(null);
   // Kanban (padrão) ou Calendário. Preferência salva por dispositivo.
@@ -217,6 +222,15 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
           <button onClick={() => setMesPost("all")} className={`text-xs font-body font-semibold px-3 py-1.5 rounded-full border transition-colors ${mesPost === "all" ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}>Tudo</button>
           {mesesPost.map((k) => (
             <button key={k} onClick={() => setMesPost(k)} className={`text-xs font-body font-semibold px-3 py-1.5 rounded-full border transition-colors ${mesPost === k ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}>{MES_ABBR[Number(k.slice(5, 7)) - 1]}/{k.slice(2, 4)}</button>
+          ))}
+        </div>
+      )}
+      {/* Filtro por formato: aparece quando há mais de um formato na fila. */}
+      {formatosPost.length > 1 && (
+        <div className="flex gap-1.5 flex-wrap mb-3">
+          <button onClick={() => setFmtFilter("all")} className={`text-xs font-body font-semibold px-3 py-1.5 rounded-full border transition-colors ${fmtFilter === "all" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>Todos os formatos</button>
+          {formatosPost.map((fmt) => (
+            <button key={fmt} onClick={() => setFmtFilter(fmt)} className={`text-xs font-body font-semibold px-3 py-1.5 rounded-full border transition-colors ${fmtFilter === fmt ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>{FORMAT_LABELS[fmt] ?? fmt}</button>
           ))}
         </div>
       )}

@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CRIA · Agenda da social mídia (mockup)</title>
+<style>
+  :root{--laranja:#EA4918;--amarelo:#FFCF03;--azul:#0061EE;--rosa:#FF77B9;--verde:#01A652;--lilas:#7C90F0;--roxo:#4B3FA8;
+    --tinta:#1c1c1a;--cinza:#6b6b66;--linha:#ece9dd;--creme:#F5F3E7;--card:#fff;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--creme);color:var(--tinta);font-family:'Plus Jakarta Sans',-apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:1160px;margin:0 auto;padding:20px 18px 60px}
+  svg.ic{width:16px;height:16px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:none}
+  .head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  .head .ig{width:40px;height:40px;border-radius:12px;background:var(--roxo);display:grid;place-items:center;color:#fff}
+  .head h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.3px}
+  .head p{margin:2px 0 0;font-size:13px;color:var(--cinza)}
+  /* filtro */
+  .filters{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid var(--linha);border-radius:16px;padding:10px 12px;margin-bottom:12px}
+  .flt{border:1px solid var(--linha);background:#fdfdfb;border-radius:999px;padding:8px 14px;font:inherit;font-weight:700;font-size:12.5px;cursor:pointer;color:var(--cinza);display:inline-flex;align-items:center;gap:7px}
+  .flt .dot{width:9px;height:9px;border-radius:50%}
+  .flt.on{color:#fff;border-color:transparent}
+  .flt.on.tarefas{background:var(--azul)}.flt.on.capta{background:var(--rosa)}.flt.on.posts{background:var(--laranja)}
+  .sep{width:1px;height:22px;background:var(--linha);margin:0 2px}
+  .wknav{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--cinza)}
+  .wknav button{border:1px solid var(--linha);background:#fff;border-radius:9px;width:30px;height:30px;display:grid;place-items:center;cursor:pointer;color:var(--tinta)}
+  /* multiselect clientes */
+  .clients{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#fff;border:1px dashed var(--linha);border-radius:14px;padding:9px 12px;margin-bottom:14px}
+  .clients .lb{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#b3b0a4}
+  .cchip{border:1px solid var(--linha);background:#fdfdfb;border-radius:999px;padding:6px 12px;font:inherit;font-weight:700;font-size:12px;cursor:pointer;color:var(--tinta);display:inline-flex;align-items:center;gap:7px}
+  .cchip .av{width:16px;height:16px;border-radius:50%;color:#fff;font-size:8px;display:grid;place-items:center;font-weight:800}
+  .cchip.on{box-shadow:0 0 0 2px var(--tinta) inset}
+  .hide{display:none!important}
+  /* semana */
+  .week{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+  @media(max-width:860px){.week{grid-template-columns:1fr 1fr}}
+  .day{background:#fff;border:1px solid var(--linha);border-radius:14px;padding:9px 8px;min-height:200px;max-height:340px;display:flex;flex-direction:column}
+  .day.today{box-shadow:0 0 0 1.5px var(--roxo) inset}
+  .day .dh{display:flex;align-items:baseline;gap:5px;margin-bottom:8px;cursor:pointer}
+  .day .dh .wd{font-size:10px;font-weight:800;text-transform:uppercase;color:#b3b0a4}
+  .day .dh .dd{font-size:14px;font-weight:800}
+  .day .dh .cnt{margin-left:auto;font-size:10px;font-weight:800;color:#b3b0a4;background:var(--creme);border-radius:999px;padding:1px 7px}
+  .day .body{flex:1;overflow:hidden;display:flex;flex-direction:column}
+  .more{margin-top:auto;border:none;background:var(--creme);border-radius:9px;padding:6px;font:inherit;font-weight:800;font-size:11px;cursor:pointer;color:var(--tinta)}
+  .more:hover{background:#ece7d6}
+  /* modal do dia */
+  .overlay{position:fixed;inset:0;background:rgba(20,18,14,.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
+  .overlay.open{display:flex}
+  .sheet{background:#fff;border-radius:22px;width:100%;max-width:460px;max-height:82vh;overflow-y:auto;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.2)}
+  .sheet .sh{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+  .sheet h3{margin:0;font-size:17px;font-weight:800}
+  .sheet .sc{font-size:12.5px;color:var(--cinza);margin:0 0 14px}
+  .sheet .close{margin-left:auto;border:none;background:var(--creme);border-radius:9px;width:30px;height:30px;cursor:pointer;font-size:15px;color:var(--tinta)}
+  .grp{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#b3b0a4;margin:12px 0 6px}
+  .item{border-radius:9px;padding:6px 8px;margin-bottom:6px;font-size:11px;line-height:1.25;border-left:3px solid;cursor:pointer;transition:.12s}
+  .sheet .item:hover{transform:translateX(2px);filter:brightness(.97)}
+  .item .tt{font-weight:700}
+  .item.tarefa{background:#EAF1FF;border-color:var(--azul)}
+  .item.capta{background:#FFECF5;border-color:var(--rosa)}
+  .item.post{background:#FFF3EE;border-color:var(--laranja)}
+  .item .meta{display:flex;align-items:center;gap:5px;margin-top:3px;color:var(--cinza);font-size:10px}
+  .item .cli{display:inline-flex;align-items:center;gap:4px;font-weight:700}
+  .item .cav{width:12px;height:12px;border-radius:50%;color:#fff;font-size:7px;display:grid;place-items:center;font-weight:800}
+  .st{font-size:9px;font-weight:800;padding:1px 6px;border-radius:999px}
+  .st.prod{background:#EDE9FE;color:#6d28d9}.st.aguard{background:#FEF3C7;color:#92600a}.st.aprov{background:#DCFCE7;color:#15803d}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;font-size:11.5px;color:var(--cinza)}
+  .legend span{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+  .legend i{width:10px;height:10px;border-radius:3px}
+  .note{background:#fff;border:1px dashed var(--linha);border-radius:14px;padding:12px 14px;margin-top:16px;font-size:12.5px;color:var(--cinza)}
+  .note b{color:var(--tinta)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <span class="ig"><svg class="ic"><use href="#i-cal"/></svg></span>
+    <div><h1>Agenda</h1><p>Sua semana num lugar só: tarefas, captações e os posts de cada cliente.</p></div>
+  </div>
+
+  <!-- FILTROS -->
+  <div class="filters">
+    <button class="flt tarefas on" data-f="tarefas"><span class="dot" style="background:var(--azul)"></span>Tarefas</button>
+    <button class="flt capta on" data-f="capta"><span class="dot" style="background:var(--rosa)"></span>Captações</button>
+    <button class="flt posts on" data-f="posts"><span class="dot" style="background:var(--laranja)"></span>Posts</button>
+    <div class="wknav">
+      <button>‹</button><span>20 – 26 jul</span><button>›</button>
+    </div>
+  </div>
+
+  <!-- MULTISELECT DE CLIENTES (aparece quando Posts está ligado) -->
+  <div class="clients" id="clientsBar">
+    <span class="lb">Posts de:</span>
+    <button class="cchip on" data-c="all">Todos</button>
+    <button class="cchip" data-c="marina"><span class="av" style="background:var(--verde)">M</span>Marina</button>
+    <button class="cchip" data-c="walter"><span class="av" style="background:var(--laranja)">W</span>Walter</button>
+    <button class="cchip" data-c="gabi"><span class="av" style="background:var(--azul)">G</span>Gabriela</button>
+    <button class="cchip" data-c="tk"><span class="av" style="background:var(--rosa)">T</span>TK Clínica</button>
+  </div>
+
+  <!-- SEMANA -->
+  <div class="week" id="week"></div>
+
+  <div class="legend">
+    <span><i style="background:var(--azul)"></i>Tarefa</span>
+    <span><i style="background:var(--rosa)"></i>Captação</span>
+    <span><i style="background:var(--laranja)"></i>Post</span>
+    <span><span class="st prod">Produção</span></span>
+    <span><span class="st aguard">Aguardando</span></span>
+    <span><span class="st aprov">Aprovado</span></span>
+  </div>
+
+  <div class="note"><b>Dia cheio:</b> cada dia mostra 3 itens e um <b>"Ver todos (N)"</b>; clicando abre o painel com tudo daquele dia, separado por Tarefas, Captações e Posts, e cada item é clicável pra editar. Clica em <b>qua 22</b> pra testar. <b>Na versão real</b> você ainda arrasta um item de um dia pro outro e isso reprograma automático (post muda a data no Cria Post, tarefa/captação muda na agenda do cliente).</div>
+</div>
+
+<!-- MODAL DO DIA -->
+<div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+  <g id="i-cal"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9h18M8 3v3M16 3v3"/></g>
+</defs></svg>
+
+<script>
+  const CLI={marina:{n:'Marina',c:'var(--verde)',i:'M'},walter:{n:'Walter',c:'var(--laranja)',i:'W'},gabi:{n:'Gabriela',c:'var(--azul)',i:'G'},tk:{n:'TK',c:'var(--rosa)',i:'T'}};
+  const DAYS=[
+    {wd:'seg',dd:20},{wd:'ter',dd:21},{wd:'qua',dd:22,today:true},{wd:'qui',dd:23},{wd:'sex',dd:24},{wd:'sáb',dd:25},{wd:'dom',dd:26}
+  ];
+  // itens: {day, type, title, cli?, status?}
+  const ITEMS=[
+    {day:0,type:'tarefa',title:'Roteirizar Reels da semana'},
+    {day:0,type:'post',title:'Reels · Bastidores',cli:'marina',status:'prod'},
+    {day:1,type:'capta',title:'Gravação com a Marina',cli:'marina'},
+    {day:1,type:'post',title:'Carrossel · 5 erros',cli:'walter',status:'aguard'},
+    {day:2,type:'tarefa',title:'Aprovar artes do designer'},
+    {day:2,type:'post',title:'Post · Depoimento',cli:'gabi',status:'aguard'},
+    {day:2,type:'post',title:'Reels · Dica rápida',cli:'walter',status:'aprov'},
+    {day:2,type:'post',title:'Carrossel · Skincare de inverno',cli:'marina',status:'prod'},
+    {day:2,type:'post',title:'Reels · Antes e depois',cli:'tk',status:'aguard'},
+    {day:2,type:'capta',title:'Regravar abertura do Reels',cli:'walter'},
+    {day:2,type:'tarefa',title:'Responder DMs da agência'},
+    {day:3,type:'post',title:'Carrossel · Skincare',cli:'marina',status:'prod'},
+    {day:4,type:'capta',title:'Ensaio de fotos · TK',cli:'tk'},
+    {day:4,type:'post',title:'Reels · Trend',cli:'tk',status:'prod'},
+    {day:4,type:'tarefa',title:'Enviar relatório mensal'},
+    {day:5,type:'post',title:'Post · Dia do Amigo',cli:'gabi',status:'aprov'},
+    {day:6,type:'tarefa',title:'Planejar semana seguinte'},
+  ];
+  const ST={prod:['prod','Produção'],aguard:['aguard','Aguardando'],aprov:['aprov','Aprovado']};
+  let filters={tarefa:true,capta:true,post:true};
+  let clients={all:true,marina:false,walter:false,gabi:false,tk:false};
+
+  const MAX=3;
+  function typeKey(f){return f==='tarefas'?'tarefa':f==='capta'?'capta':'post'}
+  function visibleItems(di){
+    return ITEMS.filter(it=>{
+      if(!filters[it.type])return false;
+      if(it.type==='post' && !clients.all){ if(!it.cli||!clients[it.cli])return false; }
+      return it.day===di;
+    });
+  }
+  function itemHtml(it){
+    const c=it.cli?CLI[it.cli]:null;const st=it.status?ST[it.status]:null;
+    return `<div class="item ${it.type}"><div class="tt">${it.title}</div>
+      <div class="meta">${c?`<span class="cli"><span class="cav" style="background:${c.c}">${c.i}</span>${c.n}</span>`:''}${st?`<span class="st ${st[0]}">${st[1]}</span>`:''}</div></div>`;
+  }
+  function render(){
+    document.getElementById('clientsBar').classList.toggle('hide',!filters.post);
+    const W=document.getElementById('week');W.innerHTML='';
+    DAYS.forEach((d,di)=>{
+      const items=visibleItems(di);
+      const shown=items.slice(0,MAX);const extra=items.length-shown.length;
+      const el=document.createElement('div');el.className='day'+(d.today?' today':'');
+      el.innerHTML=`<div class="dh" data-day="${di}"><span class="wd">${d.wd}</span><span class="dd">${d.dd}</span>${items.length?`<span class="cnt">${items.length}</span>`:''}</div>
+        <div class="body">${shown.map(itemHtml).join('')}${extra>0?`<button class="more" data-day="${di}">Ver todos (${items.length})</button>`:''}</div>`;
+      W.appendChild(el);
+    });
+    W.querySelectorAll('[data-day]').forEach(el=>el.addEventListener('click',()=>openDay(Number(el.dataset.day))));
+  }
+  function openDay(di){
+    const d=DAYS[di];const items=visibleItems(di);
+    const byType=t=>items.filter(it=>it.type===t);
+    const sec=(label,t)=>{const arr=byType(t);return arr.length?`<div class="grp">${label}</div>${arr.map(itemHtml).join('')}`:'';};
+    document.getElementById('sheet').innerHTML=
+      `<div class="sh"><h3>${d.wd} ${d.dd} de julho</h3><button class="close" onclick="document.getElementById('overlay').classList.remove('open')">✕</button></div>
+       <p class="sc">${items.length} item(ns) neste dia · clique num item pra editar</p>
+       ${sec('Tarefas','tarefa')}${sec('Captações','capta')}${sec('Posts','post')}
+       ${items.length===0?'<p class="sc">Nada neste dia com os filtros atuais.</p>':''}`;
+    document.getElementById('overlay').classList.add('open');
+  }
+  document.getElementById('overlay').addEventListener('click',e=>{if(e.target.id==='overlay')e.currentTarget.classList.remove('open');});
+  document.querySelectorAll('.flt').forEach(b=>b.addEventListener('click',()=>{
+    const k=typeKey(b.dataset.f);filters[k]=!filters[k];b.classList.toggle('on',filters[k]);render();
+  }));
+  document.querySelectorAll('.cchip').forEach(b=>b.addEventListener('click',()=>{
+    const c=b.dataset.c;
+    if(c==='all'){clients={all:true,marina:false,walter:false,gabi:false,tk:false};}
+    else{clients.all=false;clients[c]=!clients[c];
+      if(!clients.marina&&!clients.walter&&!clients.gabi&&!clients.tk){clients.all=true;}}
+    document.querySelectorAll('.cchip').forEach(x=>x.classList.toggle('on',clients[x.dataset.c]));
+    render();
+  }));
+  render();
+</script>
+</body>
+</html>
