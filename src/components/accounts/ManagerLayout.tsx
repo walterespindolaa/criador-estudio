@@ -5,7 +5,7 @@ import { NotificationNudge } from "@/components/NotificationNudge";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import {
   Home, Boxes, Handshake, DollarSign, Users, ListChecks, Menu, ChevronRight, Gift,
-  Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, Sparkles, CalendarDays, Trash2, UserPlus, type LucideIcon,
+  Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, Sparkles, CalendarDays, Trash2, UserPlus, Search, type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -34,7 +34,7 @@ import { applySidebarColor } from "@/lib/sidebarTheme";
 import { applyThemeFont } from "@/components/settings/SettingsVisual";
 
 const brl = (c: number) => `R$ ${(c / 100).toFixed(2).replace(".", ",")}`;
-const MODICONS: Record<string, typeof Send> = { aprovapost_externo: Send, crm: Users2, financeiro: Wallet };
+const MODICONS: Record<string, typeof Send> = { aprovapost_externo: Send, crm: Users2, financeiro: Wallet, hub_cria: Search };
 const MODULE_ROUTE: Record<string, string> = {
   aprovapost_externo: "/socialmidia/criapost",
   crm: "/socialmidia/criacrm",
@@ -373,7 +373,7 @@ export default function ManagerLayout() {
                   ativo: m.status === "active" || m.status === "past_due",
                   onClick: () => openModule(m),
                 })),
-              ...(hasHubCria ? [{ label: "Cria Radar", desc: "Espiar os concorrentes dos seus clientes", icon: Sparkles as LucideIcon, ativo: true, onClick: () => navigate("/socialmidia/hubcria") }] : []),
+              ...(hasHubCria ? [{ label: "Cria Radar", desc: "Espiar os concorrentes dos seus clientes", icon: Search as LucideIcon, ativo: true, onClick: () => navigate("/socialmidia/hubcria") }] : []),
             ],
           },
           {

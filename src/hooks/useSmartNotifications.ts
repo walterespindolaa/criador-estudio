@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { differenceInDays, endOfWeek, startOfWeek } from "date-fns";
+import { AlertTriangle, CalendarDays, PartyPopper, Target, BarChart3, Lightbulb, RefreshCw, User, type LucideIcon } from "lucide-react";
 import { usePosts } from "./usePosts";
 import { useIdeas } from "./useIdeas";
 import { usePillars } from "./usePillars";
@@ -8,7 +9,7 @@ import { useProfile } from "./useProfile";
 export type SmartNotification = {
   id: string;
   type: "warning" | "tip" | "achievement" | "reminder";
-  icon: string;
+  icon: LucideIcon;
   title: string;
   message: string;
   action?: { label: string; url: string };
@@ -66,7 +67,7 @@ export function useSmartNotifications() {
       notifs.push({
         id: "no-post-7d",
         type: "warning",
-        icon: "⚠️",
+        icon: AlertTriangle,
         title: `Faz ${daysSinceLastPost} dias sem publicar`,
         message: "Consistência é tudo! Que tal pegar uma ideia do banco e transformar em post?",
         action: { label: "Ver ideias", url: "/app/ideias" },
@@ -76,7 +77,7 @@ export function useSmartNotifications() {
       notifs.push({
         id: "no-post-3d",
         type: "reminder",
-        icon: "📅",
+        icon: CalendarDays,
         title: `${daysSinceLastPost} dias sem publicar`,
         message: "Bora manter o ritmo? Você tem posts em criação esperando.",
         action: { label: "Ver pipeline", url: "/app/criando" },
@@ -89,7 +90,7 @@ export function useSmartNotifications() {
       notifs.push({
         id: "goal-reached",
         type: "achievement",
-        icon: "🎉",
+        icon: PartyPopper,
         title: "Meta da semana batida!",
         message: `Você publicou ${postsThisWeek}/${weekGoal} posts. Parabéns pela consistência!`,
         priority: 1,
@@ -101,7 +102,7 @@ export function useSmartNotifications() {
         notifs.push({
           id: "goal-behind",
           type: "warning",
-          icon: "🎯",
+          icon: Target,
           title: `Faltam ${remaining} posts pra meta`,
           message: `Já é ${DAY_LABELS[dayOfWeek]} e falta${remaining > 1 ? "m" : ""} ${remaining} post${remaining > 1 ? "s" : ""}.`,
           action: { label: "Criar post", url: "/app/criando" },
@@ -121,7 +122,7 @@ export function useSmartNotifications() {
         notifs.push({
           id: "pillar-abandoned",
           type: "tip",
-          icon: "📊",
+          icon: BarChart3,
           title: `Pilar "${abandoned[0].name}" sem posts`,
           message: "Tente equilibrar seus pilares de conteúdo pra alcançar públicos diferentes.",
           action: { label: "Criar ideia", url: "/app/ideias" },
@@ -137,7 +138,7 @@ export function useSmartNotifications() {
         notifs.push({
           id: "ideas-piling",
           type: "tip",
-          icon: "💡",
+          icon: Lightbulb,
           title: `${notPromoted} ideias esperando`,
           message: "Seu banco de ideias está cheio! Transforme as melhores em posts.",
           action: { label: "Ver ideias", url: "/app/ideias" },
@@ -151,7 +152,7 @@ export function useSmartNotifications() {
       notifs.push({
         id: "pipeline-stuck",
         type: "reminder",
-        icon: "🔄",
+        icon: RefreshCw,
         title: `${postsInProgress} posts em andamento`,
         message: "Muitos posts no pipeline sem publicar. Foque em finalizar antes de criar novos.",
         action: { label: "Ver pipeline", url: "/app/criando" },
@@ -164,7 +165,7 @@ export function useSmartNotifications() {
       notifs.push({
         id: "profile-incomplete",
         type: "tip",
-        icon: "👤",
+        icon: User,
         title: "Perfil incompleto",
         message: "Complete seu perfil pra IA gerar sugestões mais personalizadas.",
         action: { label: "Configurações", url: "/app/configuracoes" },

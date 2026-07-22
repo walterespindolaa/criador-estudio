@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink } from "lucide-react";
+import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,7 +20,17 @@ import {
   useCreations, useAddCreation, useUpdateCreation, useDeleteCreation,
   useCaptures, useAddCapture, useUpdateCapture, useDeleteCapture, useCollaboratorNames, type Capture, type Creation,
 } from "@/hooks/useAgenda";
+import { useAllExternalPosts, useExternalClients, useMoveExternalPostDate, type ExternalPostWithClient } from "@/hooks/useCriaPost";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
+
+// Status dos posts na agenda (mesmas cores do kanban de 5 status).
+const POST_STATUS: Record<string, { label: string; cls: string }> = {
+  em_producao: { label: "Produção", cls: "bg-violet-100 text-violet-700" },
+  pendente: { label: "Aguardando", cls: "bg-amber-100 text-amber-700" },
+  ajuste_solicitado: { label: "Ajuste", cls: "bg-orange-100 text-orange-700" },
+  aprovado: { label: "Aprovado", cls: "bg-green-100 text-green-700" },
+  postado: { label: "Postado", cls: "bg-slate-200 text-slate-600" },
+};
 
 const WD = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 // Inverso de parseDateOnly: formata um Date de meia-noite LOCAL de volta para YYYY-MM-DD.
@@ -49,14 +59,23 @@ export default function AgendaCriacao() {
     setView(v);
     try { localStorage.setItem("agenda_view", v); } catch { /* segue */ }
   };
-  // Toggle: mostrar as tarefas dos clientes (CRM) na grade, persistido por dispositivo
-  const [showTasks, setShowTasks] = useState(() => {
-    try { return localStorage.getItem("agenda_show_tasks") === "1"; } catch { return false; }
+  // Filtros por tipo de item na grade (criação, tarefa, captação, post), persistidos.
+  const [filters, setFilters] = useState<{ criacao: boolean; tarefa: boolean; capta: boolean; post: boolean }>(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem("agenda_filters") || "{}");
+      return { criacao: s.criacao ?? true, tarefa: s.tarefa ?? true, capta: s.capta ?? true, post: s.post ?? true };
+    } catch { return { criacao: true, tarefa: true, capta: true, post: true }; }
   });
-  const toggleTasks = (v: boolean) => {
-    setShowTasks(v);
-    try { localStorage.setItem("agenda_show_tasks", v ? "1" : "0"); } catch { /* segue */ }
-  };
+  const toggleFilter = (k: "criacao" | "tarefa" | "capta" | "post") =>
+    setFilters((f) => { const nf = { ...f, [k]: !f[k] }; try { localStorage.setItem("agenda_filters", JSON.stringify(nf)); } catch { /* segue */ } return nf; });
+  // Multi-seleção de clientes para os posts (vazio = todos).
+  const [postClients, setPostClients] = useState<Set<string>>(new Set());
+  const togglePostClient = (id: string | null) => setPostClients((prev) => {
+    if (id === null) return new Set();
+    const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
+  });
+  // Painel "ver todos" de um dia cheio.
+  const [dayModal, setDayModal] = useState<string | null>(null);
   // Semana = 7 dias a partir da segunda. Mês = grade completa (segunda a domingo) cobrindo o mês do anchor.
   const days = useMemo(() => {
     if (view === "semana") {
@@ -87,7 +106,17 @@ export default function AgendaCriacao() {
   const delCapture = useDeleteCapture();
   const updCreation = useUpdateCreation();
   const updTask = useUpdateCrmTask();
+  const { data: allPosts = [] } = useAllExternalPosts();
+  const { clients: extClients } = useExternalClients();
+  const movePost = useMoveExternalPostDate();
   const qc = useQueryClient();
+
+  // external_client_id -> dados do cliente (nome, cor, crm_client_id pra abrir a ficha).
+  const extById = useMemo(() => {
+    const m = new Map<string, { name: string; color: string | null; crm_client_id: string | null }>();
+    extClients.forEach((e) => m.set(e.id, { name: e.name, color: e.color ?? null, crm_client_id: e.crm_client_id ?? null }));
+    return m;
+  }, [extClients]);
 
   const [addDay, setAddDay] = useState<string | null>(null);
   const [addKind, setAddKind] = useState<"criacao" | "tarefa" | "captacao">("criacao");
@@ -117,18 +146,41 @@ export default function AgendaCriacao() {
     } else if (kind === "cria") {
       qc.setQueriesData<Creation[]>({ queryKey: ["agenda-creations"] }, (old) => old?.map((c) => (c.id === id ? { ...c, day } : c)));
       updCreation.mutate({ id, patch: { day } }, { onSuccess: ok, onError: fail, onSettled: () => qc.invalidateQueries({ queryKey: ["agenda-creations"] }) });
+    } else if (kind === "post") {
+      // Arrastar um post reprograma a data no Cria Post (reflete no kanban/calendário do cliente).
+      qc.setQueriesData<ExternalPostWithClient[]>({ queryKey: ["external-posts-all"] }, (old) => old?.map((p) => (p.id === id ? { ...p, scheduled_date: day } : p)));
+      movePost.mutate({ id, scheduled_date: day }, { onSuccess: ok, onError: fail });
     }
+  };
+  // Abrir a produção do cliente ao clicar num post (é lá que ele é editado).
+  const openPost = (p: ExternalPostWithClient) => {
+    const crm = extById.get(p.external_client_id)?.crm_client_id;
+    navigate(crm ? `/socialmidia/clientes/${crm}/posts` : "/socialmidia/criapost/aprovacoes");
   };
 
   const byDay = useMemo(() => {
     const m = new Map<string, typeof creations>();
+    if (!filters.criacao) return m;
     for (const c of creations) (m.get(c.day) ?? m.set(c.day, []).get(c.day)!).push(c);
     return m;
-  }, [creations]);
+  }, [creations, filters.criacao]);
+
+  // Posts (Cria Post) com data no período, por dia. Multi-cliente aplicado aqui.
+  const postsByDay = useMemo(() => {
+    const m = new Map<string, ExternalPostWithClient[]>();
+    if (!filters.post) return m;
+    for (const p of allPosts) {
+      if (!p.scheduled_date || p.scheduled_date < from || p.scheduled_date > to) continue;
+      if (postClients.size > 0 && !postClients.has(p.external_client_id)) continue;
+      (m.get(p.scheduled_date) ?? m.set(p.scheduled_date, []).get(p.scheduled_date)!).push(p);
+    }
+    return m;
+  }, [allPosts, from, to, filters.post, postClients]);
 
   // Captações da semana exibida, indexadas por dia (YYYY-MM-DD), para aparecerem na grade.
   const capturesByDay = useMemo(() => {
     const m = new Map<string, Capture[]>();
+    if (!filters.capta) return m;
     for (const c of captures) {
       if (c.status === "cancelada") continue;
       if (c.capture_date < from || c.capture_date > to) continue;
@@ -136,7 +188,7 @@ export default function AgendaCriacao() {
     }
     for (const arr of m.values()) arr.sort((a, b) => (a.capture_time ?? "99:99").localeCompare(b.capture_time ?? "99:99"));
     return m;
-  }, [captures, from, to]);
+  }, [captures, from, to, filters.capta]);
 
   const nameOf = (crmId: string | null, fallback: string | null) =>
     (crmId ? clients.find((c) => c.id === crmId)?.name : null) || fallback || "Cliente";
@@ -146,7 +198,7 @@ export default function AgendaCriacao() {
   // Concluídas ficam de fora: a grade é sobre o que ainda precisa acontecer.
   const tasksByDay = useMemo(() => {
     const m = new Map<string, CrmTask[]>();
-    if (!showTasks) return m;
+    if (!filters.tarefa) return m;
     const prioOrder: Record<string, number> = { urgente: 0, alta: 1, media: 2, baixa: 3 };
     for (const t of crmTasks) {
       if (!t.due_date || t.status === "concluida") continue;
@@ -155,7 +207,7 @@ export default function AgendaCriacao() {
     }
     for (const arr of m.values()) arr.sort((a, b) => (prioOrder[a.priority] ?? 9) - (prioOrder[b.priority] ?? 9));
     return m;
-  }, [crmTasks, from, to, showTasks]);
+  }, [crmTasks, from, to, filters.tarefa]);
 
   const upcoming = useMemo(() => captures.filter((c) => c.status !== "cancelada" && c.capture_date >= today).slice(0, 30), [captures, today]);
 
@@ -174,12 +226,18 @@ export default function AgendaCriacao() {
       {/* Agenda de criação */}
       <div data-tour="ag-quadro" className="rounded-2xl border border-border bg-card p-4">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
             <p className="text-sm font-display font-bold text-foreground">Agenda de criação</p>
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <Switch checked={showTasks} onCheckedChange={toggleTasks} aria-label="Mostrar tarefas dos clientes" />
-              <span className="text-xs font-body font-semibold text-muted-foreground">Tarefas dos clientes</span>
-            </label>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {([["criacao", "Criações", "#4B3FA8"], ["tarefa", "Tarefas", "#0061EE"], ["capta", "Captações", "#FF77B9"], ["post", "Posts", "#EA4918"]] as const).map(([k, label, color]) => (
+                <button key={k} type="button" onClick={() => toggleFilter(k)}
+                  className={cn("flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-body font-semibold transition-colors",
+                    filters[k] ? "text-white border-transparent" : "bg-card border-border text-muted-foreground hover:text-foreground")}
+                  style={filters[k] ? { background: color } : undefined}>
+                  <span className="h-2 w-2 rounded-full" style={{ background: filters[k] ? "#fff" : color }} />{label}
+                </button>
+              ))}
+            </div>
           </div>
           <div data-tour="ag-navegacao" className="flex items-center gap-2 flex-wrap">
             {/* Semana (padrão) / Mês */}
@@ -206,6 +264,17 @@ export default function AgendaCriacao() {
             </div>
           </div>
         </div>
+        {filters.post && extClients.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap mb-3 rounded-xl border border-dashed border-border bg-background/60 px-3 py-2">
+            <span className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground">Posts de:</span>
+            <button type="button" onClick={() => togglePostClient(null)} className={cn("rounded-full border px-2.5 py-1 text-[11px] font-body font-semibold transition-colors", postClients.size === 0 ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground hover:text-foreground")}>Todos</button>
+            {extClients.map((e) => (
+              <button key={e.id} type="button" onClick={() => togglePostClient(e.id)} className={cn("flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-body font-semibold transition-colors", postClients.has(e.id) ? "border-foreground text-foreground bg-muted/40" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
+                <span className="grid h-3.5 w-3.5 place-items-center rounded-full text-white text-[7px] font-bold" style={{ background: e.color || "#EA4918" }}>{e.name.trim().charAt(0).toUpperCase()}</span>{e.name}
+              </button>
+            ))}
+          </div>
+        )}
         <DragDropContext onDragEnd={handleDragEnd}>
           {view === "mes" && (
             <div className="hidden lg:grid lg:grid-cols-7 gap-2 mb-1">
@@ -218,7 +287,7 @@ export default function AgendaCriacao() {
               : "flex gap-2 overflow-x-auto pb-2 lg:grid lg:grid-cols-7 lg:overflow-visible lg:pb-0",
           )}>
             {days.map((d, i) => {
-              const iso = ymd(d); const list = byDay.get(iso) ?? []; const caps = capturesByDay.get(iso) ?? []; const dayTasks = tasksByDay.get(iso) ?? []; const isToday = iso === today;
+              const iso = ymd(d); const list = byDay.get(iso) ?? []; const caps = capturesByDay.get(iso) ?? []; const dayTasks = tasksByDay.get(iso) ?? []; const dayPosts = postsByDay.get(iso) ?? []; const totalDay = caps.length + dayTasks.length + list.length + dayPosts.length; const isToday = iso === today;
               const outOfMonth = view === "mes" && d.getMonth() !== curMonth;
               return (
                 <Droppable droppableId={iso} key={iso}>
@@ -234,7 +303,10 @@ export default function AgendaCriacao() {
                           {view === "semana" && <span className={cn("text-[11px] uppercase tracking-wider font-body font-semibold", isToday ? "text-primary" : "text-muted-foreground")}>{WD[i % 7]}</span>}{" "}
                           <span className={cn("text-base font-display font-bold", isToday ? "text-primary" : "text-foreground")}>{d.getDate()}</span>
                         </div>
-                        <button onClick={() => { setAddKind("criacao"); setAddDay(iso); }} className="text-muted-foreground hover:text-primary" aria-label="Adicionar"><Plus className="h-3.5 w-3.5" /></button>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {totalDay > 4 && <button onClick={() => setDayModal(iso)} className="text-[10px] font-body font-bold text-primary hover:underline" aria-label="Ver todos do dia">Ver todos ({totalDay})</button>}
+                          <button onClick={() => { setAddKind("criacao"); setAddDay(iso); }} className="text-muted-foreground hover:text-primary" aria-label="Adicionar"><Plus className="h-3.5 w-3.5" /></button>
+                        </div>
                       </div>
                       {caps.map((c, idx) => (
                         <Draggable key={`cap:${c.id}`} draggableId={`cap:${c.id}`} index={idx}>
@@ -299,8 +371,29 @@ export default function AgendaCriacao() {
                           )}
                         </Draggable>
                       ))}
+                      {dayPosts.map((p, idx) => {
+                        const cli = extById.get(p.external_client_id);
+                        const st = POST_STATUS[p.approval_status ?? "em_producao"];
+                        return (
+                          <Draggable key={`post:${p.id}`} draggableId={`post:${p.id}`} index={caps.length + dayTasks.length + list.length + idx}>
+                            {(dragProvided, dragSnapshot) => (
+                              <button ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
+                                type="button" title={p.title ?? undefined} onClick={() => openPost(p)}
+                                className={cn("rounded-lg border border-orange-500/40 bg-orange-500/10 hover:bg-orange-500/15 px-2 py-1.5 text-left transition-colors w-full",
+                                  dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
+                                <div className="flex items-center gap-1 text-orange-700 dark:text-orange-300">
+                                  <Send className="h-3 w-3 shrink-0" />
+                                  <span className="text-[10px] font-body font-bold truncate">{cli?.name ?? "Post"}</span>
+                                  {st && <span className={cn("ml-auto shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}
+                                </div>
+                                <p className="text-[12px] font-body font-semibold text-foreground leading-tight truncate">{p.title || "Post"}</p>
+                              </button>
+                            )}
+                          </Draggable>
+                        );
+                      })}
                       {dropProvided.placeholder}
-                      {list.length === 0 && caps.length === 0 && dayTasks.length === 0 && <button onClick={() => { setAddKind("criacao"); setAddDay(iso); }} className="text-[11px] font-body text-muted-foreground/60 hover:text-primary py-1">+ cliente</button>}
+                      {totalDay === 0 && <button onClick={() => { setAddKind("criacao"); setAddDay(iso); }} className="text-[11px] font-body text-muted-foreground/60 hover:text-primary py-1">+ cliente</button>}
                     </div>
                   )}
                 </Droppable>
@@ -393,6 +486,30 @@ export default function AgendaCriacao() {
           }
           setEditTask(null);
         }} />
+
+      {/* Painel "Ver todos" de um dia cheio: lista tudo, cada item clicável pra editar. */}
+      {dayModal && (() => {
+        const iso = dayModal;
+        const caps = capturesByDay.get(iso) ?? []; const tks = tasksByDay.get(iso) ?? [];
+        const cri = byDay.get(iso) ?? []; const pts = postsByDay.get(iso) ?? [];
+        const d = parseDateOnly(iso);
+        const rowCls = "w-full flex items-center gap-2.5 rounded-xl border border-border p-2.5 text-left hover:border-primary/50 hover:bg-primary/5 transition-colors";
+        const dot = (c: string) => <span className="h-2 w-2 rounded-full shrink-0" style={{ background: c }} />;
+        return (
+          <Dialog open onOpenChange={(o) => { if (!o) setDayModal(null); }}>
+            <DialogContent className="sm:max-w-md rounded-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader><DialogTitle className="font-display capitalize">{d.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}</DialogTitle></DialogHeader>
+              <p className="text-[12px] font-body text-muted-foreground -mt-2">{caps.length + tks.length + cri.length + pts.length} item(ns) · clique pra editar</p>
+              <div className="space-y-1.5 mt-1">
+                {cri.map((c) => <button key={`c${c.id}`} onClick={() => { setDayModal(null); setEditCreation(c); }} className={rowCls}>{dot("#4B3FA8")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}</span><span className="ml-auto text-[10px] text-muted-foreground">Criação</span></button>)}
+                {tks.map((t) => <button key={`t${t.id}`} onClick={() => { setDayModal(null); setEditTask(t); }} className={rowCls}>{dot("#0061EE")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{t.title}</span><span className="ml-auto text-[10px] text-muted-foreground">Tarefa</span></button>)}
+                {caps.map((c) => <button key={`p${c.id}`} onClick={() => { setDayModal(null); setEditCap(c); }} className={rowCls}>{dot("#FF77B9")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}{c.capture_time ? ` · ${c.capture_time.slice(0, 5)}` : ""}</span><span className="ml-auto text-[10px] text-muted-foreground">Captação</span></button>)}
+                {pts.map((p) => { const st = POST_STATUS[p.approval_status ?? "em_producao"]; return <button key={`o${p.id}`} onClick={() => { setDayModal(null); openPost(p); }} className={rowCls}>{dot("#EA4918")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{p.title || "Post"}</span>{st && <span className={cn("ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}</button>; })}
+              </div>
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
     </motion.div>
   );
 }

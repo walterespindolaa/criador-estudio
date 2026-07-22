@@ -88,8 +88,8 @@ export function SmartNotificationsCard() {
               )}
             >
               <div className="flex items-start gap-2">
-                <span className="text-base leading-none mt-0.5 shrink-0" aria-hidden="true">
-                  {notif.icon}
+                <span className="mt-0.5 shrink-0 text-muted-foreground" aria-hidden="true">
+                  <notif.icon className="h-4 w-4" />
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 mb-0.5">

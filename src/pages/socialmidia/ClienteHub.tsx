@@ -101,7 +101,7 @@ const GROUPS: Grp[] = [
   { key: "cria-post", label: "Cria Post", modulo: "laranja", icon: Layers, landing: true, subs: ["posts", "cronograma", "relatorio", "portal"] },
   { key: "cria-gestao", label: "Cria Gestão", modulo: "rosa", icon: BookOpen, subs: ["brandbook"] },
   { key: "cria-caixa", label: "Cria Caixa", modulo: "azul", icon: Wallet, subs: ["financeiro"] },
-  { key: "cria-radar", label: "Cria Radar", modulo: "lilas", icon: Compass, landing: true, subs: ["ideias", "pesquisa"] },
+  { key: "cria-radar", label: "Cria Radar", modulo: "lilas", icon: Search, landing: true, subs: ["ideias", "pesquisa"] },
   { key: "instagram", label: "Instagram", icon: Instagram, subs: ["instagram"] },
 ];
 import { CRIA_HEX, type CriaColor } from "@/lib/moduleTheme";

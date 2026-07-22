@@ -331,6 +331,23 @@ export function useAllExternalPosts() {
   });
 }
 
+// Move a data de um post (de qualquer cliente) — usado na Agenda ao arrastar.
+// Reprograma no Cria Post e reflete no kanban/calendário do cliente.
+export function useMoveExternalPostDate() {
+  const { agencyOwnerId } = useActiveAccount();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, scheduled_date }: { id: string; scheduled_date: string | null }) => {
+      const { error } = await sbFrom("posts").update({ scheduled_date }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["external-posts-all", agencyOwnerId] });
+      qc.invalidateQueries({ queryKey: ["cria-posts"] });
+    },
+  });
+}
+
 // Última vez que o cliente abriu o portal de aprovação (last_viewed_at do token ativo).
 export function usePortalActivity(clientId: string | null) {
   return useQuery({
