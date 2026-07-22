@@ -38,7 +38,13 @@ export function usePosts(options?: { limit?: number }) {
         .order("created_at", { ascending: false })
         .limit(limit);
       if (error) throw error;
-      return ((data ?? []) as Post[]).reverse();
+      // Ordena pela ordem manual do kanban (board_order asc), created_at como desempate.
+      return ((data ?? []) as Post[]).slice().sort((a, b) => {
+        const ao = (a as { board_order?: number }).board_order ?? 0;
+        const bo = (b as { board_order?: number }).board_order ?? 0;
+        if (ao !== bo) return ao - bo;
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      });
     },
     enabled: !!userId,
   });

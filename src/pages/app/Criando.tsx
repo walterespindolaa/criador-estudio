@@ -263,12 +263,41 @@ const Criando = () => {
     }
   };
 
-  // Drag estilo Trello (@hello-pangea/dnd): solta o card e arrasta com o dedo.
+  // Drag estilo Trello: reordena DENTRO da coluna e move ENTRE colunas, gravando
+  // a ordem manual (board_order). Card fica onde você soltou, não vai mais pro fim.
   const handleDragEnd = (result: DropResult) => {
-    const { source, destination, draggableId } = result;
+    const { destination, draggableId } = result;
     if (!destination) return;
-    if (source.droppableId === destination.droppableId) return;
-    void movePostStatus(draggableId, destination.droppableId);
+    const destStatus = destination.droppableId;
+    const moved = posts.find((p) => p.id === draggableId);
+    if (!moved) return;
+    const changedStatus = (moved.status ?? "ideia") !== destStatus;
+
+    // Coluna de destino na ordem atual, sem o card arrastado; insere na posição solta.
+    const col = filteredPosts.filter((p) => (p.status ?? "ideia") === destStatus && p.id !== draggableId);
+    col.splice(destination.index, 0, moved);
+
+    // Renumera board_order (0..n) e persiste só o que mudou; troca o status do movido.
+    col.forEach((p, idx) => {
+      const isMoved = p.id === draggableId;
+      const curOrder = (p as { board_order?: number }).board_order ?? -1;
+      if (!isMoved && curOrder === idx) return;
+      const updates: Record<string, unknown> = { board_order: idx };
+      if (isMoved && changedStatus) {
+        updates.status = destStatus;
+        if (destStatus === "publicado") updates.published_at = new Date().toISOString();
+      }
+      updatePost.mutate({ id: p.id, updates: updates as never });
+    });
+
+    // Publicou: confetti + audit, como no fluxo antigo.
+    if (changedStatus && destStatus === "publicado" && user) {
+      void (async () => {
+        const { fireConfetti } = await import("@/lib/confetti");
+        fireConfetti();
+        await supabase.from("audit_log").insert({ user_id: user.id, action: "post_published", entity_type: "post", entity_id: draggableId } as never);
+      })();
+    }
   };
 
   const getPillar = (id: string | null) => pillars.find(p => p.id === id);
