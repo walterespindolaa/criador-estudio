@@ -36,7 +36,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "criador-estudio"
+const SITE_NAME = "criasocialclub"
 const SENDER_DOMAIN = "notify.criasocialclub.com.br"
 const ROOT_DOMAIN = "criasocialclub.com.br"
 const FROM_DOMAIN = "criasocialclub.com.br" // Domain shown in From address (may be root or sender subdomain)
@@ -46,7 +46,7 @@ const FROM_DOMAIN = "criasocialclub.com.br" // Domain shown in From address (may
 // The sample email uses a fixed placeholder (RFC 6761 .test TLD) so the Go backend
 // can always find-and-replace it with the actual recipient when sending test emails,
 // even if the project's domain has changed since the template was scaffolded.
-const SAMPLE_PROJECT_URL = "https://criador-estudio.lovable.app"
+const SAMPLE_PROJECT_URL = "https://criasocialclub.lovable.app"
 const SAMPLE_EMAIL = "user@example.test"
 const SAMPLE_DATA: Record<string, object> = {
   signup: {
@@ -207,8 +207,7 @@ async function handleWebhook(req: Request): Promise<Response> {
   // The email action type is in payload.data.action_type (e.g., "signup", "recovery")
   // payload.type is the hook event type ("auth")
   const emailType = payload.data.action_type
-  // Não logar o e-mail (PII/LGPD), run_id basta pra rastrear.
-  console.log('Received auth event', { emailType, run_id })
+  console.log('Received auth event', { emailType, email: payload.data.email, run_id })
 
   const EmailTemplate = EMAIL_TEMPLATES[emailType]
   if (!EmailTemplate) {
@@ -285,7 +284,7 @@ async function handleWebhook(req: Request): Promise<Response> {
     })
   }
 
-  console.log('Auth email enqueued', { emailType, run_id })
+  console.log('Auth email enqueued', { emailType, email: payload.data.email, run_id })
 
   return new Response(
     JSON.stringify({ success: true, queued: true }),
