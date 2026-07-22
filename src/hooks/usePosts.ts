@@ -86,7 +86,32 @@ export function usePosts(options?: { limit?: number }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["posts", userId] }),
   });
 
-  return { posts, isLoading, error, createPost, updatePost, deletePost };
+  // Reorder do kanban com UPDATE OTIMISTA: a UI move o card na hora (patch + re-sort
+  // do cache), e a persistência roda em segundo plano. Sem isso o card "voltava e
+  // pulava" depois do refetch.
+  const reorderPosts = (changes: { id: string; board_order: number; status?: string; published_at?: string }[]) => {
+    if (!changes.length) return;
+    const byId = new Map(changes.map((c) => [c.id, c]));
+    queryClient.setQueriesData<Post[]>({ queryKey: ["posts", userId] }, (old) => {
+      if (!Array.isArray(old)) return old;
+      const next = old.map((p) => {
+        const c = byId.get(p.id);
+        return c ? ({ ...p, board_order: c.board_order, ...(c.status ? { status: c.status } : {}), ...(c.published_at ? { published_at: c.published_at } : {}) } as Post) : p;
+      });
+      next.sort((a, b) => {
+        const ao = (a as { board_order?: number }).board_order ?? 0;
+        const bo = (b as { board_order?: number }).board_order ?? 0;
+        if (ao !== bo) return ao - bo;
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      });
+      return next;
+    });
+    void Promise.all(changes.map((c) =>
+      supabase.from("posts").update({ board_order: c.board_order, ...(c.status ? { status: c.status } : {}), ...(c.published_at ? { published_at: c.published_at } : {}) } as never).eq("id", c.id),
+    )).catch(() => queryClient.invalidateQueries({ queryKey: ["posts", userId] }));
+  };
+
+  return { posts, isLoading, error, createPost, updatePost, deletePost, reorderPosts };
 }
 
 // Lista paginada de posts publicados (Histórico), carrega em lotes com "Carregar mais".

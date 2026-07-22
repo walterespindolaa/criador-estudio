@@ -86,7 +86,7 @@ type ContentBlocks = { tema?: string; roteiro?: string; midia?: string; legenda?
 const Criando = () => {
   const { user } = useAuth();
   const { activeAccountId } = useActiveAccount();
-  const { posts, updatePost, deletePost, isLoading: postsLoading } = usePosts();
+  const { posts, updatePost, deletePost, reorderPosts, isLoading: postsLoading } = usePosts();
   const { pillars } = usePillars();
   const { tasks } = useTasks();
 
@@ -278,18 +278,20 @@ const Criando = () => {
     const col = filteredPosts.filter((p) => (p.status ?? "ideia") === destStatus && p.id !== draggableId);
     col.splice(destination.index, 0, moved);
 
-    // Renumera board_order (0..n) e persiste só o que mudou; troca o status do movido.
+    // Renumera board_order (0..n) e junta o que mudou num só reorder otimista.
+    const changes: { id: string; board_order: number; status?: string; published_at?: string }[] = [];
     col.forEach((p, idx) => {
       const isMoved = p.id === draggableId;
       const curOrder = (p as { board_order?: number }).board_order ?? -1;
       if (!isMoved && curOrder === idx) return;
-      const updates: Record<string, unknown> = { board_order: idx };
+      const ch: { id: string; board_order: number; status?: string; published_at?: string } = { id: p.id, board_order: idx };
       if (isMoved && changedStatus) {
-        updates.status = destStatus;
-        if (destStatus === "publicado") updates.published_at = new Date().toISOString();
+        ch.status = destStatus;
+        if (destStatus === "publicado") ch.published_at = new Date().toISOString();
       }
-      updatePost.mutate({ id: p.id, updates: updates as never });
+      changes.push(ch);
     });
+    reorderPosts(changes);
 
     // Publicou: confetti + audit, como no fluxo antigo.
     if (changedStatus && destStatus === "publicado" && user) {
