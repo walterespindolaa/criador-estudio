@@ -8,7 +8,8 @@ import { useCrmClient, useUpdateCrmClient, useUploadCrmAsset } from "@/hooks/use
 import { Camera } from "lucide-react";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { useActiveAccount } from "@/contexts/AccountContext";
-import { useExternalClients } from "@/hooks/useCriaPost";
+import { useExternalClients, useExternalPosts } from "@/hooks/useCriaPost";
+import { datasPara, segmentoDoTexto, DATAS_COMEMORATIVAS } from "@/lib/datasComemorativas";
 import {
   useFinRecords, useCreateFinRecord, useUpdateFinRecord, useDeleteFinRecord,
   useFinRecurring, useCreateFinRecurring, type FinType, type FinRecord,
@@ -190,6 +191,7 @@ export default function ClienteHub() {
     if (g.landing) return goTab(g.key);
     return goTab(g.subs[0]);
   };
+  const openGroupKey = (k: string) => { const g = GROUPS.find((x) => x.key === k); if (g) openGroup(g); };
 
   // Último cliente visitado: alimenta o seletor global e o "Continuar em {cliente}" do dashboard.
   useEffect(() => {
@@ -414,31 +416,17 @@ export default function ClienteHub() {
               editável aqui, que é onde a pessoa procura por elas. */}
           <NotasCliente clientId={client.id} notes={client.notes} />
 
-          {/* Os Cria deste cliente: um atalho por módulo, pra pilotar tudo daqui.
-              Os que a pessoa não assina aparecem com cadeado (convite, não porta fria). */}
-          <div>
-            <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide mb-2 px-1">Os Cria deste cliente</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {GROUPS.filter((g) => g.modulo).map((g) => {
-                const hex = CRIA_HEX[g.modulo!];
-                const Icon = g.icon;
-                const locked = groupLocked(g);
-                return (
-                  <button key={g.key} onClick={() => openGroup(g)}
-                    className="group text-left bg-card border border-border rounded-2xl p-4 transition-all hover:border-primary/40 hover:-translate-y-0.5 hover:shadow-md">
-                    <div className="flex items-center gap-3">
-                      <span className="grid h-9 w-9 place-items-center rounded-xl text-white shrink-0" style={{ background: hex }}><Icon className="h-4 w-4" /></span>
-                      <span className="font-display font-bold text-foreground">{g.label}</span>
-                      {locked ? <Lock className="h-4 w-4 text-muted-foreground/50 ml-auto" /> : <ArrowRight className="h-4 w-4 text-muted-foreground/50 ml-auto group-hover:text-foreground transition-colors" />}
-                    </div>
-                    <p className="text-[12px] font-body text-muted-foreground mt-2 leading-relaxed">
-                      {g.subs.filter(subVisible).map((s) => SUB_META[s]?.label).filter(Boolean).join(" · ")}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          {/* DESTAQUES — o cockpit: o resumo de cada Cria, com número de verdade.
+              O detalhe continua em cada módulo lá em cima. */}
+          <Destaques
+            clientId={client.id}
+            clientSegment={client.segment}
+            clientBirthday={client.birthday}
+            renewalDate={client.renewal_date}
+            extClientId={extClient?.id ?? null}
+            hasCaixa={hasCaixa}
+            onOpen={openGroupKey}
+          />
 
           <div className="flex gap-2 flex-wrap">
             <Button variant="outline" asChild><Link to={`/socialmidia/criacrm/${id}`}><ExternalLink className="h-4 w-4 mr-1.5" /> Ficha completa (CRM)</Link></Button>
@@ -558,6 +546,164 @@ function NotasCliente({ clientId, notes }: { clientId: string; notes: string | n
       <Textarea rows={3} value={txt} onChange={(e) => setTxt(e.target.value)}
         placeholder="Contexto, combinados, senhas de acesso, o que o cliente odeia…"
         className="rounded-xl text-sm" />
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// DESTAQUES DA VISÃO GERAL (o cockpit)
+//
+// O resumo de cada Cria com número de verdade: o que espera o cliente (Cria Post),
+// a saúde financeira do mês (Cria Caixa) e as próximas datas (comemorativas do
+// segmento + aniversário). O detalhe fica em cada módulo; aqui é o "bate o olho".
+// ═══════════════════════════════════════════════════════════════════════
+const STATUS_LABEL: Record<string, string> = { pendente: "Aguardando", ajuste_solicitado: "Em ajuste" };
+
+// Próximas datas: comemorativas do segmento (dia em "DD/MM") + aniversário do cliente.
+function proximasDatas(segment: string | null, birthday: string | null): { label: string; date: Date; tipo: string }[] {
+  const hoje = new Date(hojeBR() + "T00:00:00");
+  const y = hoje.getFullYear();
+  const seg = segmentoDoTexto(segment);
+  const groups = seg ? datasPara(["geral", seg]) : DATAS_COMEMORATIVAS;
+  const out: { label: string; date: Date; tipo: string }[] = [];
+  for (const g of groups) {
+    for (const it of g.items) {
+      const m = /^(\d{2})\/(\d{2})$/.exec(it.day);
+      if (!m) continue; // "data móvel" e afins ficam de fora
+      const d = Number(m[1]); const mon = Number(m[2]) - 1;
+      let dt = new Date(y, mon, d);
+      if (dt < hoje) dt = new Date(y + 1, mon, d);
+      out.push({ label: it.label, date: dt, tipo: "comemorativa" });
+    }
+  }
+  const b = birthday ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(birthday) : null;
+  if (b) {
+    const mon = Number(b[2]) - 1; const d = Number(b[3]);
+    let dt = new Date(y, mon, d);
+    if (dt < hoje) dt = new Date(y + 1, mon, d);
+    out.push({ label: "Aniversário do cliente", date: dt, tipo: "cliente" });
+  }
+  return out.sort((a, b2) => a.date.getTime() - b2.date.getTime()).slice(0, 4);
+}
+
+function Destaques({ clientId, clientSegment, clientBirthday, renewalDate, extClientId, hasCaixa, onOpen }: {
+  clientId: string;
+  clientSegment: string | null;
+  clientBirthday: string | null;
+  renewalDate: string | null;
+  extClientId: string | null;
+  hasCaixa: boolean;
+  onOpen: (key: string) => void;
+}) {
+  const { posts } = useExternalPosts(extClientId);
+  const { data: finAll = [] } = useFinRecords();
+
+  const pendentes = posts.filter((p) => p.approval_status === "pendente" || p.approval_status === "ajuste_solicitado");
+
+  const ym = hojeBR().slice(0, 7);
+  const recs = useMemo(() => finAll.filter((r) => r.crm_client_id === clientId && r.date.startsWith(ym)), [finAll, clientId, ym]);
+  const aReceber = recs.filter((r) => r.type === "entrada" && r.status !== "pago").reduce((s, r) => s + Number(r.amount), 0);
+  const recebido = recs.filter((r) => r.type === "entrada" && r.status === "pago").reduce((s, r) => s + Number(r.amount), 0);
+  const custo = recs.filter((r) => r.type === "despesa").reduce((s, r) => s + Number(r.amount), 0);
+  const receita = recebido + aReceber;
+  const margemPct = receita > 0 ? ((receita - custo) / receita) * 100 : 0;
+
+  const datas = useMemo(() => proximasDatas(clientSegment, clientBirthday), [clientSegment, clientBirthday]);
+
+  const laranja = CRIA_HEX.laranja; const azul = CRIA_HEX.azul;
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-2 px-1">
+        <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide">Destaques</p>
+        <span className="text-[11px] font-body text-muted-foreground/70">o resumo, o detalhe fica em cada Cria acima</span>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+
+        {/* PRECISA DE VOCÊ (Cria Post) */}
+        {extClientId && (
+          <div className="bg-card border border-border rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-2.5">
+              <span className="h-2 w-2 rounded-full shrink-0" style={{ background: laranja }} />
+              <p className="text-sm font-display font-bold text-foreground">Precisa de você</p>
+              <button onClick={() => onOpen("cria-post")} className="ml-auto flex items-center gap-1 text-[11.5px] font-body font-semibold text-muted-foreground hover:text-foreground">
+                Abrir Cria Post <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            {pendentes.length === 0 ? (
+              <p className="text-[12.5px] font-body text-muted-foreground py-1">Tudo aprovado, nada esperando você agora.</p>
+            ) : (
+              <div className="space-y-2">
+                {pendentes.slice(0, 3).map((p) => (
+                  <button key={p.id} onClick={() => onOpen("cria-post")} className="w-full flex items-center gap-2.5 rounded-xl border border-border bg-muted/30 px-3 py-2 text-left hover:border-primary/40 transition-colors">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-body font-semibold text-foreground truncate">{p.title || "Post"}</p>
+                      {p.format && <p className="text-[11px] font-body text-muted-foreground truncate">{p.format}</p>}
+                    </div>
+                    <span className={`text-[10px] font-body font-bold px-2 py-0.5 rounded-full shrink-0 ${p.approval_status === "ajuste_solicitado" ? "bg-pink-100 text-pink-700" : "bg-amber-100 text-amber-700"}`}>
+                      {STATUS_LABEL[p.approval_status ?? "pendente"]}
+                    </span>
+                  </button>
+                ))}
+                {pendentes.length > 3 && <p className="text-[11px] font-body text-muted-foreground px-1">+{pendentes.length - 3} esperando</p>}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* CAIXA DO CLIENTE (Cria Caixa) */}
+        {hasCaixa && (
+          <div className="bg-card border border-border rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-2.5">
+              <span className="h-2 w-2 rounded-full shrink-0" style={{ background: azul }} />
+              <p className="text-sm font-display font-bold text-foreground">Caixa deste cliente</p>
+              <button onClick={() => onOpen("cria-caixa")} className="ml-auto flex items-center gap-1 text-[11.5px] font-body font-semibold text-muted-foreground hover:text-foreground">
+                Abrir Cria Caixa <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <MiniStat k="A receber" v={formatBRL(aReceber)} tone="green" />
+              <MiniStat k="Custo do mês" v={formatBRL(custo)} tone="plain" />
+              <MiniStat k="Rentabilidade" v={receita > 0 ? `${margemPct.toFixed(0)}%` : "-"} tone={margemPct >= 0 ? "green" : "red"} />
+              <MiniStat k="Renova em" v={renewalDate ? new Date(renewalDate + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "-"} tone="plain" />
+            </div>
+          </div>
+        )}
+
+        {/* PRÓXIMAS DATAS */}
+        <div className="bg-card border border-border rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="h-2 w-2 rounded-full shrink-0" style={{ background: laranja }} />
+            <p className="text-sm font-display font-bold text-foreground">Próximas datas</p>
+          </div>
+          <p className="text-[11px] font-body text-muted-foreground mb-2.5">Comemorativas do nicho + aniversário do cliente.</p>
+          {datas.length === 0 ? (
+            <p className="text-[12.5px] font-body text-muted-foreground py-1">Sem datas próximas. Preencha o segmento e o aniversário do cliente.</p>
+          ) : (
+            <div className="divide-y divide-dashed divide-border">
+              {datas.map((d, i) => (
+                <div key={i} className="flex items-center gap-2 py-2 first:pt-0 last:pb-0">
+                  <p className="text-[13px] font-body font-medium text-foreground truncate flex-1">{d.label}</p>
+                  <span className="text-[11px] font-body text-muted-foreground shrink-0 capitalize">
+                    {d.date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}{d.tipo === "cliente" ? " · cliente" : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+function MiniStat({ k, v, tone }: { k: string; v: string; tone: "green" | "red" | "plain" }) {
+  const c = tone === "green" ? "text-green-600" : tone === "red" ? "text-red-500" : "text-foreground";
+  return (
+    <div className="border border-border rounded-xl px-3 py-2 bg-muted/30">
+      <p className="text-[11px] font-body text-muted-foreground">{k}</p>
+      <p className={`text-[17px] font-display font-extrabold mt-0.5 ${c}`}>{v}</p>
     </div>
   );
 }
