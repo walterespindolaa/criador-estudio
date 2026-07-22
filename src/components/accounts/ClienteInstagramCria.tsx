@@ -149,38 +149,38 @@ export function ClienteInstagramCria({ criaOwnerId, clientName, extClientId }: {
                 <p className="text-sm font-display font-bold text-foreground">Análise por post</p>
                 {extClientId && <p className="text-[11px] font-body text-muted-foreground">Vincule cada publicação ao post que você fez no Cria pra cruzar o resultado.</p>}
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5">
                 {media.map((mi) => {
                   const Icon = MEDIA_ICON(mi.media_type);
                   const eng = engOf(mi);
                   const linked = mi.post_id ? postById[mi.post_id] : null;
                   return (
-                    <div key={mi.id} className="bg-card border border-border rounded-2xl overflow-hidden flex flex-col">
+                    <div key={mi.id} className="bg-card border border-border rounded-xl overflow-hidden flex flex-col">
                       <div className="relative aspect-square bg-muted">
                         {mi.thumbnail_url && <img src={mi.thumbnail_url} referrerPolicy="no-referrer" alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />}
-                        <span className="absolute top-2 left-2 flex items-center gap-1 text-[10px] font-body font-semibold px-1.5 py-0.5 rounded-full bg-black/55 text-white"><Icon className="h-3 w-3" /> {mi.media_type ? (MEDIA_LABEL[mi.media_type] ?? mi.media_type) : "Post"}</span>
-                        {mi.metrics?.reach != null && <span className="absolute bottom-2 left-2 text-[10px] font-body font-bold px-2 py-0.5 rounded-full bg-black/60 text-white">{eng.toFixed(1)}% engaj.</span>}
-                        {mi.permalink && <a href={mi.permalink} target="_blank" rel="noreferrer" aria-label="Abrir no Instagram" className="absolute top-2 right-2 grid h-6 w-6 place-items-center rounded-full bg-black/55 text-white hover:bg-black/75 transition-colors"><ExternalLink className="h-3 w-3" /></a>}
+                        <span className="absolute top-1.5 left-1.5 flex items-center gap-1 text-[9px] font-body font-semibold px-1.5 py-0.5 rounded-full bg-black/55 text-white"><Icon className="h-2.5 w-2.5" /> {mi.media_type ? (MEDIA_LABEL[mi.media_type] ?? mi.media_type) : "Post"}</span>
+                        {mi.metrics?.reach != null && <span className="absolute bottom-1.5 left-1.5 text-[9px] font-body font-bold px-1.5 py-0.5 rounded-full bg-black/60 text-white">{eng.toFixed(1)}%</span>}
+                        {mi.permalink && <a href={mi.permalink} target="_blank" rel="noreferrer" aria-label="Abrir no Instagram" className="absolute top-1.5 right-1.5 grid h-5 w-5 place-items-center rounded-full bg-black/55 text-white hover:bg-black/75 transition-colors"><ExternalLink className="h-2.5 w-2.5" /></a>}
                       </div>
-                      <div className="p-3 flex flex-col gap-2 flex-1">
-                        {mi.posted_at && <p className="text-[11px] font-body font-semibold text-foreground flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-primary" /> {dataBR(mi.posted_at)}</p>}
-                        <p className="text-xs font-body text-muted-foreground line-clamp-2 flex-1">{mi.caption || "(sem legenda)"}</p>
-                        <div className="flex items-center gap-3 text-[11px] font-body text-muted-foreground flex-wrap">
-                          <span className="flex items-center gap-1"><Heart className="h-3 w-3" />{fmt(m(mi, "likes"))}</span>
-                          <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" />{fmt(m(mi, "comments"))}</span>
-                          <span className="flex items-center gap-1"><Eye className="h-3 w-3" />{fmt(m(mi, "reach"))}</span>
-                          <span className="flex items-center gap-1"><Bookmark className="h-3 w-3" />{fmt(m(mi, "saved") + m(mi, "saves"))}</span>
+                      <div className="p-2 flex flex-col gap-1.5 flex-1">
+                        {mi.posted_at && <p className="text-[10px] font-body font-semibold text-foreground flex items-center gap-1"><CalendarDays className="h-3 w-3 text-primary shrink-0" /> {dataBR(mi.posted_at)}</p>}
+                        <p className="text-[10.5px] font-body text-muted-foreground line-clamp-1">{mi.caption || "(sem legenda)"}</p>
+                        <div className="flex items-center gap-2 text-[10px] font-body text-muted-foreground flex-wrap">
+                          <span className="flex items-center gap-0.5"><Heart className="h-2.5 w-2.5" />{fmt(m(mi, "likes"))}</span>
+                          <span className="flex items-center gap-0.5"><MessageCircle className="h-2.5 w-2.5" />{fmt(m(mi, "comments"))}</span>
+                          <span className="flex items-center gap-0.5"><Eye className="h-2.5 w-2.5" />{fmt(m(mi, "reach"))}</span>
+                          <span className="flex items-center gap-0.5"><Bookmark className="h-2.5 w-2.5" />{fmt(m(mi, "saved") + m(mi, "saves"))}</span>
                         </div>
                         {/* Vínculo com o post do Cria */}
                         {extClientId && (linked ? (
-                          <div className="flex items-center gap-1.5 rounded-lg bg-primary/8 px-2 py-1.5">
-                            <Layers className="h-3.5 w-3.5 text-primary shrink-0" />
-                            <span className="text-[11px] font-body font-semibold text-foreground truncate flex-1">Feito no Cria · {MEDIA_LABEL[linked.format] ?? linked.format}</span>
-                            <button onClick={() => unlink(mi)} title="Desvincular" aria-label="Desvincular" className="text-muted-foreground/60 hover:text-destructive"><X className="h-3.5 w-3.5" /></button>
+                          <div className="flex items-center gap-1 rounded-md bg-primary/8 px-1.5 py-1">
+                            <Layers className="h-3 w-3 text-primary shrink-0" />
+                            <span className="text-[9.5px] font-body font-semibold text-foreground truncate flex-1">Cria · {MEDIA_LABEL[linked.format] ?? linked.format}</span>
+                            <button onClick={() => unlink(mi)} title="Desvincular" aria-label="Desvincular" className="text-muted-foreground/60 hover:text-destructive"><X className="h-3 w-3" /></button>
                           </div>
                         ) : (
-                          <button onClick={() => setLinkingMedia(mi)} className="flex items-center gap-1.5 rounded-lg border border-dashed border-border px-2 py-1.5 text-[11px] font-body font-semibold text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
-                            <Link2 className="h-3.5 w-3.5" /> Vincular a um post do Cria
+                          <button onClick={() => setLinkingMedia(mi)} className="flex items-center gap-1 rounded-md border border-dashed border-border px-1.5 py-1 text-[9.5px] font-body font-semibold text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
+                            <Link2 className="h-3 w-3 shrink-0" /> Vincular ao Cria
                           </button>
                         ))}
                       </div>
