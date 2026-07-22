@@ -22,11 +22,10 @@ import { useCrmClients } from "@/hooks/useCrm";
 
 // Card do painel. A cor é a do módulo pra onde ele leva: a pessoa aprende
 // a cor uma vez e depois navega no automático, sem ler.
-function Painel({ color, icon: Icon, valor, label, to, destaque, hideable }: {
-  color: CriaColor; icon: typeof Users; valor: string; label: string; to: string; destaque?: boolean; hideable?: boolean;
+function Painel({ color, icon: Icon, valor, label, to, destaque, masked }: {
+  color: CriaColor; icon: typeof Users; valor: string; label: string; to: string; destaque?: boolean; masked?: boolean;
 }) {
   const hex = CRIA_HEX[color];
-  const [hidden, setHidden] = useState(false);
   return (
     <Link to={to}
       className="group relative rounded-2xl border border-border bg-background/70 backdrop-blur-sm p-3.5 transition-all hover:-translate-y-0.5 hover:shadow-md"
@@ -34,15 +33,7 @@ function Painel({ color, icon: Icon, valor, label, to, destaque, hideable }: {
       <span className="grid h-9 w-9 place-items-center rounded-xl mb-2" style={{ background: `${hex}1f`, color: hex }}>
         <Icon className="h-4 w-4" />
       </span>
-      {hideable && (
-        <button type="button"
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setHidden((h) => !h); }}
-          className="absolute top-3 right-3 grid h-7 w-7 place-items-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-          aria-label={hidden ? "Mostrar valor" : "Ocultar valor"}>
-          {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-        </button>
-      )}
-      <p className="text-xl font-display font-extrabold text-foreground leading-none tabular-nums">{hideable && hidden ? "R$ ••••••" : valor}</p>
+      <p className="text-xl font-display font-extrabold text-foreground leading-none tabular-nums">{masked ? "••••" : valor}</p>
       <p className="text-[11px] font-body text-muted-foreground mt-1 leading-tight">{label}</p>
     </Link>
   );
@@ -67,6 +58,9 @@ export default function ManagerHome() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
   const [cropOpen, setCropOpen] = useState(false);
+  // Modo privacidade: um olho oculta TODOS os números dos cards (útil pra gravar
+  // tela ou mostrar pra alguém sem expor faturamento/pendências).
+  const [masked, setMasked] = useState(false);
   const hasAgency = (profile?.seat_limit ?? 0) > 0;
 
   // Atalho "Continuar em {cliente}": retoma o último cliente visitado no hub.
@@ -156,11 +150,20 @@ export default function ManagerHome() {
         </div>
 
         {/* Os números que importam. Antes o dashboard não mostrava NENHUM. */}
-        <div data-tour="gh-numeros" className="relative grid grid-cols-2 lg:grid-cols-4 gap-2.5 mt-6">
-          <Painel color="rosa" icon={Users} valor={String(ativos)} label={ativos === 1 ? "cliente ativo" : "clientes ativos"} to="/socialmidia/clientes" />
-          <Painel color="azul" icon={Wallet} valor={formatBRL(mrr)} label="por mês na carteira" to="/socialmidia/criacaixa/empresa/visao" hideable />
-          <Painel color="laranja" icon={Send} valor={String(pendentes)} label={pendentes === 1 ? "post esperando o cliente" : "posts esperando o cliente"} to="/socialmidia/criapost/aprovacoes" destaque={pendentes > 0} />
-          <Painel color="amarelo" icon={CalendarDays} valor="Agenda" label="a sua semana" to="/socialmidia/agenda" />
+        <div data-tour="gh-numeros" className="relative mt-6">
+          {/* Olho único: oculta TODOS os números dos cards de uma vez. */}
+          <button type="button" onClick={() => setMasked((v) => !v)}
+            className="absolute -top-6 right-0 flex items-center gap-1.5 text-[11px] font-body font-semibold text-muted-foreground hover:text-foreground transition-colors"
+            aria-label={masked ? "Mostrar números" : "Ocultar números"}>
+            {masked ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            {masked ? "Mostrar" : "Ocultar"}
+          </button>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <Painel color="rosa" icon={Users} valor={String(ativos)} label={ativos === 1 ? "cliente ativo" : "clientes ativos"} to="/socialmidia/clientes" masked={masked} />
+            <Painel color="azul" icon={Wallet} valor={formatBRL(mrr)} label="por mês na carteira" to="/socialmidia/criacaixa/empresa/visao" masked={masked} />
+            <Painel color="laranja" icon={Send} valor={String(pendentes)} label={pendentes === 1 ? "post esperando o cliente" : "posts esperando o cliente"} to="/socialmidia/criapost/aprovacoes" destaque={pendentes > 0} masked={masked} />
+            <Painel color="amarelo" icon={CalendarDays} valor="Agenda" label="a sua semana" to="/socialmidia/agenda" />
+          </div>
         </div>
       </section>
 

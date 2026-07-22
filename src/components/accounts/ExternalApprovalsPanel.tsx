@@ -5,7 +5,7 @@ import { useExternalClients, useAllExternalPosts, type ExternalClient, type Exte
 import { ExternalClientDialog } from "@/components/accounts/ExternalClientDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Clock, RotateCcw, CheckCircle2, ChevronRight, ChevronsUpDown, Contact, Send } from "lucide-react";
 
 // Painel de aprovações por link (Cria Post): visão do fluxo por status, com filtro
@@ -161,8 +161,8 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
           botão. A lista com as contagens abre dentro dele, com busca. */}
       {!compact && summary.length > 0 && (
         <div className="mb-4">
-          <Sheet open={pickerOpen} onOpenChange={setPickerOpen}>
-            <SheetTrigger asChild>
+          <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+            <DialogTrigger asChild>
               <button type="button"
                 className="w-full flex items-center gap-3 rounded-2xl border border-border bg-card px-3 py-2.5 text-left transition-colors hover:border-primary/40">
                 {selecionado ? (
@@ -197,10 +197,10 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
                 )}
                 <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
               </button>
-            </SheetTrigger>
+            </DialogTrigger>
 
-            <SheetContent side="bottom" className="rounded-t-[28px] max-h-[80vh] overflow-y-auto">
-              <SheetHeader><SheetTitle className="font-display text-left">Escolha o cliente</SheetTitle></SheetHeader>
+            <DialogContent className="sm:max-w-md rounded-3xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader><DialogTitle className="font-display text-left">Escolha o cliente</DialogTitle></DialogHeader>
 
               <div className="mt-3">
                 <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar cliente…" className="rounded-xl" />
@@ -242,8 +242,8 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
                     </button>
                   ))}
               </div>
-            </SheetContent>
-          </Sheet>
+            </DialogContent>
+          </Dialog>
         </div>
       )}
 
@@ -265,8 +265,8 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
       {/* No modo compacto (página Aprovações) o filtro é o mesmo seletor, mas enxuto. */}
       {compact && activeClients.length > 1 && (
         <div className="mb-3">
-          <Sheet open={pickerOpen} onOpenChange={setPickerOpen}>
-            <SheetTrigger asChild>
+          <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+            <DialogTrigger asChild>
               <button type="button"
                 className="w-full flex items-center gap-2.5 rounded-xl border border-border bg-card px-3 py-2.5 text-left transition-colors hover:border-primary/40">
                 <span className="min-w-0 flex-1 truncate text-sm font-body font-semibold text-foreground">
@@ -277,9 +277,9 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
                 )}
                 <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
               </button>
-            </SheetTrigger>
-            <SheetContent side="bottom" className="rounded-t-[28px] max-h-[80vh] overflow-y-auto">
-              <SheetHeader><SheetTitle className="font-display text-left">Escolha o cliente</SheetTitle></SheetHeader>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md rounded-3xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader><DialogTitle className="font-display text-left">Escolha o cliente</DialogTitle></DialogHeader>
               <div className="mt-3">
                 <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar cliente…" className="rounded-xl" />
               </div>
@@ -312,8 +312,8 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
                     </button>
                   ))}
               </div>
-            </SheetContent>
-          </Sheet>
+            </DialogContent>
+          </Dialog>
         </div>
       )}
       {/* min-w-0 no grid E na coluna: item de grid nasce com `min-width: auto`,

@@ -48,13 +48,16 @@ export function QuickReportCard() {
   if (active.length === 0) return null;
 
   return (
-    <div className="rounded-2xl border border-border bg-card shadow-warm-sm p-4 sm:p-5 mb-5">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-lg bg-primary/10 grid place-items-center shrink-0">
-          <Zap className="h-4 w-4 text-primary" strokeWidth={1.75} />
+    <div className="relative overflow-hidden rounded-2xl border-2 border-primary/25 bg-gradient-to-br from-primary/[0.09] via-primary/[0.04] to-transparent shadow-warm-sm p-4 sm:p-5 mb-5">
+      {/* Fundo destacado no estilo Cria pra deixar claro: isto é o gerador de
+          relatório, não o filtro da página. */}
+      <span aria-hidden className="pointer-events-none absolute -top-10 -right-10 w-32 h-32 rounded-full bg-primary/10 blur-2xl" />
+      <div className="relative flex items-center gap-2.5 mb-3">
+        <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground grid place-items-center shrink-0 shadow-sm">
+          <Zap className="h-4 w-4" strokeWidth={2} />
         </div>
         <div>
-          <h2 className="text-sm font-display font-bold text-foreground">Relatório rápido</h2>
+          <h2 className="text-sm font-display font-extrabold text-foreground">Gerar relatório do cliente</h2>
           <p className="text-[11px] font-body text-muted-foreground">Escolha o cliente e o período, o relatório sai pronto pra enviar.</p>
         </div>
       </div>
