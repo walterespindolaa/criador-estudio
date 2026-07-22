@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveAccount } from "@/contexts/AccountContext";
 
@@ -51,6 +51,7 @@ export type CriaClientIgMedia = {
   thumbnail_url: string | null;
   posted_at: string | null;
   metrics: Record<string, number> | null;
+  post_id?: string | null;   // vínculo com o post do Cria Post (se houver)
 };
 export type CriaClientInstagram = {
   connected: boolean;
@@ -69,6 +70,24 @@ export function useCriaClientInstagram(criaOwnerId: string | null | undefined) {
       const { data, error } = await sbRpc("manager_client_instagram", { client_owner_id: criaOwnerId! });
       if (error) throw new Error(error.message);
       return (data as CriaClientInstagram | null) ?? { connected: false };
+    },
+  });
+}
+
+// Gestor vincula (ou desvincula, postId null) uma mídia do IG do cliente a um
+// post que ele fez no Cria Post. O resultado real volta pro post no banco.
+export function useLinkClientMedia(criaOwnerId: string | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ mediaId, postId }: { mediaId: string; postId: string | null }) => {
+      const { error } = await sbRpc("manager_link_client_media", {
+        client_owner_id: criaOwnerId, media_id: mediaId, link_post_id: postId,
+      });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["cria-client-instagram", criaOwnerId] });
+      qc.invalidateQueries({ queryKey: ["cria-posts"] });
     },
   });
 }

@@ -1,67 +1,99 @@
-import { useMemo } from "react";
-import { Instagram, Heart, MessageCircle, Eye, Bookmark, Users, Play, Image as ImageIcon, Images, ExternalLink, RefreshCw } from "lucide-react";
-import { useCriaClientInstagram, type CriaClientIgMedia } from "@/hooks/useManagerClientCria";
+import { useMemo, useState } from "react";
+import { Instagram, Heart, MessageCircle, Eye, Bookmark, Users, Play, Image as ImageIcon, Images, ExternalLink, RefreshCw, Zap, Link2, Layers, TrendingUp, X, Check, Loader2, CalendarDays } from "lucide-react";
+import { toast } from "sonner";
+import { useCriaClientInstagram, useLinkClientMedia, type CriaClientIgMedia } from "@/hooks/useManagerClientCria";
+import { useExternalPosts } from "@/hooks/useCriaPost";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 // Aba Instagram da ficha do cliente que USA O CRIA: mostra os dados que o pipeline
 // do próprio cliente já sincronizou (social_metrics_daily + social_insights), em
-// modo leitura. Nada de sync novo aqui, quem atualiza é o cliente no CRIA dele.
+// modo leitura. Aqui o social mídia também VINCULA cada publicação ao post que ele
+// fez no Cria Post, pra cruzar o resultado real com o que foi produzido.
 
 const fmt = (n: number | null | undefined) =>
   n == null ? "-" : n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1).replace(".0", "")}M` : n >= 1000 ? `${(n / 1000).toFixed(1).replace(".0", "")}k` : String(n);
 const m = (mi: CriaClientIgMedia, k: string) => Number(mi.metrics?.[k] ?? 0);
+const interactionsOf = (mi: CriaClientIgMedia) => m(mi, "likes") + m(mi, "comments") + m(mi, "saved") + m(mi, "saves") + m(mi, "shares");
+const engOf = (mi: CriaClientIgMedia) => { const r = m(mi, "reach"); return r > 0 ? (interactionsOf(mi) / r) * 100 : 0; };
 const MEDIA_ICON = (t: string | null) => (t === "VIDEO" || t === "REELS" ? Play : t === "CAROUSEL_ALBUM" ? Images : ImageIcon);
 const MEDIA_LABEL: Record<string, string> = { IMAGE: "Foto", VIDEO: "Vídeo", REELS: "Reels", CAROUSEL_ALBUM: "Carrossel" };
+const dataBR = (s: string | null) => (s ? new Date(s).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }) : null);
 
-export function ClienteInstagramCria({ criaOwnerId, clientName }: { criaOwnerId: string; clientName?: string }) {
+export function ClienteInstagramCria({ criaOwnerId, clientName, extClientId }: { criaOwnerId: string; clientName?: string; extClientId?: string | null }) {
   const { data, isLoading, isError } = useCriaClientInstagram(criaOwnerId);
+  const { posts: criaPosts } = useExternalPosts(extClientId ?? null);
+  const link = useLinkClientMedia(criaOwnerId);
+  const [linkingMedia, setLinkingMedia] = useState<CriaClientIgMedia | null>(null);
+
+  // Mapa post_id -> post do Cria (pra badge "Feito no Cria" e análise por formato).
+  const postById = useMemo(() => {
+    const mm: Record<string, { title: string; format: string; hook: string | null }> = {};
+    criaPosts.forEach((p) => { mm[p.id] = { title: p.title, format: p.format, hook: p.hook }; });
+    return mm;
+  }, [criaPosts]);
+
+  const media = data?.media ?? [];
 
   const kpis = useMemo(() => {
     if (!data?.connected) return null;
     const daily = data.daily ?? [];
-    const media = data.media ?? [];
     const withFollowers = daily.filter((d) => d.followers != null);
     const followers = withFollowers.length ? withFollowers[withFollowers.length - 1].followers : null;
     const followersDelta = withFollowers.length > 1
       ? (withFollowers[withFollowers.length - 1].followers ?? 0) - (withFollowers[0].followers ?? 0)
       : 0;
-    // Mesmo cálculo da tela Insights do criador: alcance/interações somados dos posts.
     const reach = media.reduce((a, mi) => a + m(mi, "reach"), 0);
-    const interactions = media.reduce((a, mi) => a + m(mi, "likes") + m(mi, "comments") + m(mi, "saved") + m(mi, "shares"), 0);
-    return { followers, followersDelta, reach, interactions };
-  }, [data]);
+    const interactions = media.reduce((a, mi) => a + interactionsOf(mi), 0);
+    const eng = reach > 0 ? (interactions / reach) * 100 : 0;
+    return { followers, followersDelta, reach, interactions, eng };
+  }, [data, media]);
+
+  // Análise cruzada: alcance médio por formato, só dos posts vinculados ao Cria.
+  const porFormato = useMemo(() => {
+    const acc: Record<string, { soma: number; n: number }> = {};
+    media.forEach((mi) => {
+      if (!mi.post_id || !postById[mi.post_id]) return;
+      const f = postById[mi.post_id].format || "Outro";
+      acc[f] = acc[f] ?? { soma: 0, n: 0 };
+      acc[f].soma += m(mi, "reach"); acc[f].n += 1;
+    });
+    const rows = Object.entries(acc).map(([f, v]) => ({ f, media: Math.round(v.soma / v.n), n: v.n }));
+    rows.sort((a, b) => b.media - a.media);
+    const max = rows.length ? rows[0].media : 0;
+    return { rows, max };
+  }, [media, postById]);
+
+  const vinculados = media.filter((mi) => mi.post_id && postById[mi.post_id!]).length;
+
+  const doLink = async (postId: string | null) => {
+    if (!linkingMedia) return;
+    try {
+      await link.mutateAsync({ mediaId: linkingMedia.id, postId });
+      toast.success(postId ? "Publicação vinculada ao post do Cria!" : "Vínculo removido.");
+      setLinkingMedia(null);
+    } catch (e) { toast.error((e as Error)?.message ?? "Não foi possível vincular."); }
+  };
+  const unlink = async (mi: CriaClientIgMedia) => {
+    try { await link.mutateAsync({ mediaId: mi.id, postId: null }); toast.success("Vínculo removido."); }
+    catch (e) { toast.error((e as Error)?.message ?? "Erro ao remover."); }
+  };
 
   if (isLoading) {
-    return (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[0, 1, 2, 3].map((i) => <div key={i} className="h-24 rounded-2xl bg-muted animate-pulse" />)}
-      </div>
-    );
+    return <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">{[0, 1, 2, 3].map((i) => <div key={i} className="h-24 rounded-2xl bg-muted animate-pulse" />)}</div>;
   }
-
   if (isError) {
-    return (
-      <div className="rounded-2xl border border-border bg-card p-6 text-center">
-        <p className="text-sm font-body text-muted-foreground">Não foi possível carregar os insights agora. Tente de novo em instantes.</p>
-      </div>
-    );
+    return <div className="rounded-2xl border border-border bg-card p-6 text-center"><p className="text-sm font-body text-muted-foreground">Não foi possível carregar os insights agora. Tente de novo em instantes.</p></div>;
   }
-
-  // Cliente ainda não conectou o Instagram na conta CRIA dele.
   if (!data?.connected) {
     return (
       <div className="rounded-2xl border border-dashed border-border p-10 text-center">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#515BD4] grid place-items-center mx-auto mb-3">
-          <Instagram className="h-7 w-7 text-white" />
-        </div>
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#515BD4] grid place-items-center mx-auto mb-3"><Instagram className="h-7 w-7 text-white" /></div>
         <p className="text-sm font-body text-foreground font-medium">Instagram ainda não conectado</p>
-        <p className="text-xs text-muted-foreground font-body mt-1 max-w-sm mx-auto">
-          Peça pro cliente conectar o Instagram no CRIA dele (menu Insights). Assim que ele conectar, os números aparecem aqui automaticamente.
-        </p>
+        <p className="text-xs text-muted-foreground font-body mt-1 max-w-sm mx-auto">Peça pro cliente conectar o Instagram no CRIA dele (menu Insights). Assim que ele conectar, os números aparecem aqui automaticamente.</p>
       </div>
     );
   }
 
-  const media = data.media ?? [];
   const hasData = media.length > 0 || (data.daily ?? []).length > 0;
   const lastSync = data.last_sync ? new Date(data.last_sync).toLocaleString("pt-BR") : null;
 
@@ -70,69 +102,87 @@ export function ClienteInstagramCria({ criaOwnerId, clientName }: { criaOwnerId:
       {/* Cabeçalho: conta conectada + última atualização */}
       <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 flex-wrap">
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-500 to-pink-400 grid place-items-center shrink-0 overflow-hidden">
-          {data.profile_picture_url
-            ? <img src={data.profile_picture_url} alt="" className="w-full h-full object-cover" />
-            : <Instagram className="h-4 w-4 text-white" />}
+          {data.profile_picture_url ? <img src={data.profile_picture_url} alt="" className="w-full h-full object-cover" /> : <Instagram className="h-4 w-4 text-white" />}
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-display font-bold text-foreground truncate">@{data.username ?? clientName ?? "conta"}</p>
-          <p className="text-[11px] font-body text-muted-foreground flex items-center gap-1">
-            <RefreshCw className="h-3 w-3" /> {lastSync ? `Atualizado em ${lastSync}` : "Aguardando primeira sincronização"} · sincronizado pelo cliente no CRIA dele
-          </p>
+          <p className="text-[11px] font-body text-muted-foreground flex items-center gap-1"><RefreshCw className="h-3 w-3" /> {lastSync ? `Atualizado em ${lastSync}` : "Aguardando primeira sincronização"} · sincronizado pelo cliente no CRIA dele</p>
         </div>
       </div>
 
       {!hasData ? (
         <div className="rounded-2xl border border-dashed border-border p-8 text-center">
           <p className="text-sm font-body text-foreground font-medium">Conectado, mas ainda sem dados</p>
-          <p className="text-xs text-muted-foreground font-body mt-1 max-w-sm mx-auto">
-            O Instagram está conectado, só falta o cliente abrir a tela Insights no CRIA dele e clicar em "Atualizar" pra puxar os primeiros números.
-          </p>
+          <p className="text-xs text-muted-foreground font-body mt-1 max-w-sm mx-auto">O Instagram está conectado, só falta o cliente abrir a tela Insights no CRIA dele e clicar em "Atualizar" pra puxar os primeiros números.</p>
         </div>
       ) : (
         <>
-          {/* Cards de resumo */}
+          {/* KPIs (com engajamento) */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <KpiCard icon={Users} label="Seguidores" value={fmt(kpis?.followers)}
-              sub={kpis && kpis.followersDelta !== 0 ? `${kpis.followersDelta > 0 ? "+" : ""}${fmt(kpis.followersDelta)} no período` : undefined} />
+            <KpiCard icon={Users} label="Seguidores" value={fmt(kpis?.followers)} sub={kpis && kpis.followersDelta !== 0 ? `${kpis.followersDelta > 0 ? "+" : ""}${fmt(kpis.followersDelta)} no período` : undefined} />
             <KpiCard icon={Eye} label="Alcance (posts)" value={fmt(kpis?.reach)} />
             <KpiCard icon={Heart} label="Interações" value={fmt(kpis?.interactions)} />
-            <KpiCard icon={ImageIcon} label="Posts sincronizados" value={String(media.length)} />
+            <KpiCard icon={Zap} label="Engajamento" value={kpis && kpis.reach > 0 ? `${kpis.eng.toFixed(1)}%` : "-"} sub="interações ÷ alcance" />
           </div>
 
-          {/* Últimos posts com métricas */}
+          {/* Análise cruzada: o que funciona pra este cliente */}
+          {porFormato.rows.length > 0 && (
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <div className="flex items-center gap-2 mb-1"><TrendingUp className="h-4 w-4 text-primary" /><p className="text-sm font-display font-bold text-foreground">O que funciona pra este cliente</p></div>
+              <p className="text-[11.5px] font-body text-muted-foreground mb-3">Alcance médio por formato, só dos {vinculados} post{vinculados > 1 ? "s" : ""} vinculado{vinculados > 1 ? "s" : ""} ao Cria.</p>
+              <div className="space-y-2.5">
+                {porFormato.rows.map((r) => (
+                  <div key={r.f} className="flex items-center gap-3">
+                    <span className="w-20 text-[12.5px] font-body font-semibold text-foreground shrink-0 truncate">{MEDIA_LABEL[r.f] ?? r.f}</span>
+                    <span className="flex-1 h-2 rounded-full bg-muted overflow-hidden"><span className="block h-full rounded-full bg-primary" style={{ width: `${porFormato.max > 0 ? Math.max(4, (r.media / porFormato.max) * 100) : 0}%` }} /></span>
+                    <span className="w-24 text-right text-[12px] font-body shrink-0"><b className="text-foreground">{fmt(r.media)}</b> <span className="text-muted-foreground">· {r.n}</span></span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Análise por post */}
           {media.length > 0 && (
             <div>
-              <p className="text-sm font-display font-bold text-foreground mb-2">Últimos posts</p>
+              <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                <p className="text-sm font-display font-bold text-foreground">Análise por post</p>
+                {extClientId && <p className="text-[11px] font-body text-muted-foreground">Vincule cada publicação ao post que você fez no Cria pra cruzar o resultado.</p>}
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {media.map((mi) => {
                   const Icon = MEDIA_ICON(mi.media_type);
+                  const eng = engOf(mi);
+                  const linked = mi.post_id ? postById[mi.post_id] : null;
                   return (
                     <div key={mi.id} className="bg-card border border-border rounded-2xl overflow-hidden flex flex-col">
                       <div className="relative aspect-square bg-muted">
-                        {mi.thumbnail_url && (
-                          <img src={mi.thumbnail_url} referrerPolicy="no-referrer" alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover"
-                            onError={(e) => { e.currentTarget.style.display = "none"; }} />
-                        )}
-                        <span className="absolute top-2 left-2 flex items-center gap-1 text-[10px] font-body font-semibold px-1.5 py-0.5 rounded-full bg-black/55 text-white">
-                          <Icon className="h-3 w-3" /> {mi.media_type ? (MEDIA_LABEL[mi.media_type] ?? mi.media_type) : "Post"}
-                        </span>
-                        {mi.permalink && (
-                          <a href={mi.permalink} target="_blank" rel="noreferrer" aria-label="Abrir no Instagram"
-                            className="absolute top-2 right-2 grid h-6 w-6 place-items-center rounded-full bg-black/55 text-white hover:bg-black/75 transition-colors">
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
-                        )}
+                        {mi.thumbnail_url && <img src={mi.thumbnail_url} referrerPolicy="no-referrer" alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />}
+                        <span className="absolute top-2 left-2 flex items-center gap-1 text-[10px] font-body font-semibold px-1.5 py-0.5 rounded-full bg-black/55 text-white"><Icon className="h-3 w-3" /> {mi.media_type ? (MEDIA_LABEL[mi.media_type] ?? mi.media_type) : "Post"}</span>
+                        {mi.metrics?.reach != null && <span className="absolute bottom-2 left-2 text-[10px] font-body font-bold px-2 py-0.5 rounded-full bg-black/60 text-white">{eng.toFixed(1)}% engaj.</span>}
+                        {mi.permalink && <a href={mi.permalink} target="_blank" rel="noreferrer" aria-label="Abrir no Instagram" className="absolute top-2 right-2 grid h-6 w-6 place-items-center rounded-full bg-black/55 text-white hover:bg-black/75 transition-colors"><ExternalLink className="h-3 w-3" /></a>}
                       </div>
                       <div className="p-3 flex flex-col gap-2 flex-1">
-                        <p className="text-xs font-body text-foreground line-clamp-2 flex-1">{mi.caption || "(sem legenda)"}</p>
+                        {mi.posted_at && <p className="text-[11px] font-body font-semibold text-foreground flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-primary" /> {dataBR(mi.posted_at)}</p>}
+                        <p className="text-xs font-body text-muted-foreground line-clamp-2 flex-1">{mi.caption || "(sem legenda)"}</p>
                         <div className="flex items-center gap-3 text-[11px] font-body text-muted-foreground flex-wrap">
                           <span className="flex items-center gap-1"><Heart className="h-3 w-3" />{fmt(m(mi, "likes"))}</span>
                           <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" />{fmt(m(mi, "comments"))}</span>
                           <span className="flex items-center gap-1"><Eye className="h-3 w-3" />{fmt(m(mi, "reach"))}</span>
                           <span className="flex items-center gap-1"><Bookmark className="h-3 w-3" />{fmt(m(mi, "saved") + m(mi, "saves"))}</span>
                         </div>
-                        {mi.posted_at && <p className="text-[10px] font-body text-muted-foreground/70">{new Date(mi.posted_at).toLocaleDateString("pt-BR")}</p>}
+                        {/* Vínculo com o post do Cria */}
+                        {extClientId && (linked ? (
+                          <div className="flex items-center gap-1.5 rounded-lg bg-primary/8 px-2 py-1.5">
+                            <Layers className="h-3.5 w-3.5 text-primary shrink-0" />
+                            <span className="text-[11px] font-body font-semibold text-foreground truncate flex-1">Feito no Cria · {MEDIA_LABEL[linked.format] ?? linked.format}</span>
+                            <button onClick={() => unlink(mi)} title="Desvincular" aria-label="Desvincular" className="text-muted-foreground/60 hover:text-destructive"><X className="h-3.5 w-3.5" /></button>
+                          </div>
+                        ) : (
+                          <button onClick={() => setLinkingMedia(mi)} className="flex items-center gap-1.5 rounded-lg border border-dashed border-border px-2 py-1.5 text-[11px] font-body font-semibold text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
+                            <Link2 className="h-3.5 w-3.5" /> Vincular a um post do Cria
+                          </button>
+                        ))}
                       </div>
                     </div>
                   );
@@ -142,6 +192,31 @@ export function ClienteInstagramCria({ criaOwnerId, clientName }: { criaOwnerId:
           )}
         </>
       )}
+
+      {/* Modal de vínculo */}
+      <Dialog open={!!linkingMedia} onOpenChange={(o) => !o && setLinkingMedia(null)}>
+        <DialogContent className="sm:max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-display">Vincular ao post do Cria</DialogTitle>
+            <DialogDescription className="font-body text-sm">Escolha qual post que você produziu no Cria Post virou esta publicação. O resultado real volta pro post e entra na análise.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 mt-1 max-h-[52vh] overflow-y-auto">
+            {criaPosts.length === 0 ? (
+              <p className="text-sm font-body text-muted-foreground py-6 text-center">Nenhum post no Cria Post deste cliente ainda.</p>
+            ) : criaPosts.map((p) => (
+              <button key={p.id} onClick={() => doLink(p.id)} disabled={link.isPending}
+                className="w-full flex items-center gap-3 rounded-xl border border-border p-3 text-left hover:border-primary/50 hover:bg-primary/5 transition-colors disabled:opacity-60">
+                <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary text-[10px] font-display font-bold shrink-0">{(MEDIA_LABEL[p.format] ?? p.format ?? "POST").slice(0, 4).toUpperCase()}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[13px] font-body font-semibold text-foreground truncate">{p.title || "Post"}</span>
+                  <span className="block text-[11px] font-body text-muted-foreground truncate">{MEDIA_LABEL[p.format] ?? p.format}{p.scheduled_date ? ` · ${new Date(p.scheduled_date + "T00:00:00").toLocaleDateString("pt-BR")}` : ""}</span>
+                </span>
+                {link.isPending ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" /> : <Check className="h-4 w-4 text-muted-foreground/40 shrink-0" />}
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -149,12 +224,9 @@ export function ClienteInstagramCria({ criaOwnerId, clientName }: { criaOwnerId:
 function KpiCard({ icon: Icon, label, value, sub }: { icon: typeof Users; label: string; value: string; sub?: string }) {
   return (
     <div className="bg-card border border-border rounded-2xl p-4">
-      <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-        <Icon className="h-3.5 w-3.5" />
-        <p className="text-[11px] font-body uppercase tracking-wide">{label}</p>
-      </div>
+      <div className="flex items-center gap-1.5 text-muted-foreground mb-1"><Icon className="h-3.5 w-3.5" /><p className="text-[11px] font-body uppercase tracking-wide">{label}</p></div>
       <p className="text-xl font-display font-extrabold text-foreground">{value}</p>
-      {sub && <p className="text-[11px] font-body text-emerald-600 mt-0.5">{sub}</p>}
+      {sub && <p className="text-[11px] font-body text-muted-foreground mt-0.5">{sub}</p>}
     </div>
   );
 }

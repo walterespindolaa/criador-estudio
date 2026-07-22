@@ -468,7 +468,7 @@ export default function ClienteHub() {
       {/* Instagram de cliente que USA O CRIA: dados reais sincronizados pelo próprio
           cliente (independe do Cria Post estar ativado). Os demais casos seguem no ClientDetail. */}
       {activeTab === "instagram" && client.cria_owner_id ? (
-        <ClienteInstagramCria criaOwnerId={client.cria_owner_id} clientName={client.name} />
+        <ClienteInstagramCria criaOwnerId={client.cria_owner_id} clientName={client.name} extClientId={extClient?.id ?? null} />
       ) : OPERACIONAIS.has(activeTab) && (
         extClient ? (
           <ClientDetail client={extClient} embedded activeTab={activeTab} onTabChange={goTab} />
