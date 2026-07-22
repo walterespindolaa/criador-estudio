@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CRIA · Clientes repaginado (mockup)</title>
+<style>
+  :root{--laranja:#EA4918;--amarelo:#FFCF03;--azul:#0061EE;--rosa:#FF77B9;--verde:#01A652;--lilas:#7C90F0;
+    --tinta:#1c1c1a;--cinza:#6b6b66;--linha:#ece9dd;--creme:#F5F3E7;--card:#fff;--roxo:#4B3FA8;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--creme);color:var(--tinta);font-family:'Plus Jakarta Sans',-apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:1160px;margin:0 auto;padding:22px 20px 60px}
+  svg.ic{width:16px;height:16px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:none}
+  /* header */
+  .top{display:flex;align-items:flex-start;gap:16px;margin-bottom:18px;flex-wrap:wrap}
+  .top h1{margin:0;font-size:26px;font-weight:800;letter-spacing:-.4px}
+  .top p{margin:4px 0 0;font-size:13.5px;color:var(--cinza)}
+  .newbtn{margin-left:auto;border:none;background:var(--roxo);color:#fff;border-radius:14px;padding:12px 18px;font:inherit;font-weight:800;font-size:13.5px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 8px 20px rgba(75,63,168,.25)}
+  .toolbar{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+  .searchbox{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--linha);border-radius:12px;padding:9px 13px;min-width:230px;flex:1;max-width:320px}
+  .searchbox input{border:none;outline:none;font:inherit;font-size:13.5px;width:100%;background:transparent}
+  .chips{display:flex;gap:7px;flex-wrap:wrap}
+  .chip{border:1px solid var(--linha);background:#fff;border-radius:999px;padding:8px 14px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;color:var(--cinza)}
+  .chip.on{background:var(--tinta);color:#fff;border-color:var(--tinta)}
+  /* grid */
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  @media(max-width:1000px){.grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:620px){.grid{grid-template-columns:1fr}}
+  .cli{position:relative;background:var(--card);border:1px solid var(--linha);border-radius:20px;padding:18px 16px 15px;
+    box-shadow:0 6px 20px rgba(0,0,0,.04);overflow:hidden;transition:.15s}
+  .cli:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(0,0,0,.09)}
+  .cli .accent{position:absolute;top:0;left:0;right:0;height:5px}
+  .cli .glow{position:absolute;top:-40px;right:-40px;width:110px;height:110px;border-radius:50%;opacity:.10;filter:blur(6px)}
+  .cli .av{width:60px;height:60px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800;font-size:22px;margin:6px auto 10px;
+    box-shadow:0 6px 16px rgba(0,0,0,.14);overflow:hidden;position:relative;z-index:1}
+  .cli .av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .cli .nm{text-align:center;font-size:15.5px;font-weight:800;line-height:1.2}
+  .cli .hd{text-align:center;font-size:12px;color:var(--cinza);margin-top:2px}
+  .cli .sub{text-align:center;font-size:11.5px;color:var(--cinza);margin-top:5px;min-height:15px}
+  .cli .pend{text-align:center;font-size:11.5px;font-weight:800;color:var(--laranja);margin-top:5px}
+  .cli .badges{display:flex;justify-content:center;gap:6px;margin-top:9px;flex-wrap:wrap}
+  .bdg{font-size:10.5px;font-weight:800;padding:3px 10px;border-radius:999px}
+  .bdg.cria{background:#EDEBFB;color:var(--roxo)}
+  .bdg.link{background:var(--creme);color:var(--cinza)}
+  .bdg.live{background:#E9F7EF;color:var(--verde)}
+  .cli .acts{display:flex;gap:7px;margin-top:13px}
+  .cli .prim{flex:1;border:none;border-radius:11px;padding:9px 0;font:inherit;font-weight:800;font-size:12.5px;cursor:pointer;color:#fff;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+  .cli .icobtn{width:38px;border:1px solid var(--linha);background:#fdfdfb;border-radius:11px;display:grid;place-items:center;cursor:pointer;color:var(--cinza)}
+  .cli .icobtn:hover{color:var(--tinta);background:var(--creme)}
+  /* seletor de cor (na ficha) */
+  .demo{margin-top:34px;background:#fff;border:1px solid var(--linha);border-radius:20px;padding:20px;box-shadow:0 6px 20px rgba(0,0,0,.04)}
+  .demo h2{margin:0 0 3px;font-size:15px;font-weight:800}
+  .demo p{margin:0 0 16px;font-size:12.5px;color:var(--cinza)}
+  .fichahead{display:flex;align-items:center;gap:14px;border:1px solid var(--linha);border-radius:16px;padding:14px 16px;position:relative}
+  .fichahead .fav{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:20px;overflow:hidden;position:relative}
+  .fichahead .fav img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .fichahead .fn{font-size:17px;font-weight:800}
+  .fichahead .fs{font-size:12.5px;color:var(--cinza)}
+  .colorbtn{margin-left:auto;border:1px solid var(--linha);background:#fdfdfb;border-radius:11px;padding:8px 12px;font:inherit;font-weight:700;font-size:12px;cursor:pointer;color:var(--tinta);display:inline-flex;align-items:center;gap:8px}
+  .colorbtn .sw{width:16px;height:16px;border-radius:5px}
+  .pop{margin-top:12px;border:1px dashed var(--linha);border-radius:14px;padding:14px}
+  .pop .lb{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#b3b0a4;margin-bottom:9px}
+  .swatches{display:flex;gap:10px;flex-wrap:wrap}
+  .swatch{width:34px;height:34px;border-radius:10px;cursor:pointer;border:2px solid transparent;position:relative}
+  .swatch.on{border-color:var(--tinta)}
+  .swatch.on::after{content:"";position:absolute;inset:0;margin:auto;width:12px;height:12px;border-radius:3px;background:rgba(255,255,255,.9)}
+  .note{background:#fff;border:1px dashed var(--linha);border-radius:14px;padding:12px 14px;margin-top:16px;font-size:12.5px;color:var(--cinza)}
+  .note b{color:var(--tinta)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div>
+      <h1>Clientes</h1>
+      <p>Todos os seus clientes num lugar só. Cada um com a sua cor, pra bater o olho e achar rápido.</p>
+    </div>
+    <button class="newbtn"><svg class="ic"><use href="#i-plus"/></svg> Novo cliente</button>
+  </div>
+
+  <div class="toolbar">
+    <div class="searchbox"><svg class="ic" style="color:var(--cinza)"><use href="#i-search"/></svg><input placeholder="Buscar cliente ou @…"></div>
+    <div class="chips">
+      <button class="chip on">Todos</button>
+      <button class="chip">Usam o Cria</button>
+      <button class="chip">Aprovam por link</button>
+      <button class="chip">Com pendências</button>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <!-- SELETOR DE COR (na ficha do cliente) -->
+  <div class="demo">
+    <h2>Onde a cor é escolhida</h2>
+    <p>Dentro da ficha do cliente, no cabeçalho: um botão "Cor" abre a paleta. A cor escolhida pinta o acento do card na lista, a logo e o link público do cronograma.</p>
+    <div class="fichahead">
+      <div class="fav" id="fav" style="background:var(--rosa)">TK<img src="https://i.pravatar.cc/100?img=5" alt=""></div>
+      <div>
+        <div class="fn">TK Clínica Estética</div>
+        <div class="fs">@tkclinica · usa o Cria</div>
+      </div>
+      <button class="colorbtn" id="colorbtn"><span class="sw" id="swpreview" style="background:var(--rosa)"></span> Cor do cliente</button>
+    </div>
+    <div class="pop">
+      <div class="lb">Escolha a cor</div>
+      <div class="swatches" id="swatches"></div>
+    </div>
+  </div>
+
+  <div class="note"><b>O que muda:</b> hoje os cards são todos iguais (avatar verde padrão). Com a cor por cliente, a lista fica escaneável: você associa cada marca a uma cor e acha na hora. O acento colorido, a busca e o filtro "Com pendências" são os atalhos novos.</div>
+</div>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+  <g id="i-plus"><path d="M12 5v14M5 12h14"/></g>
+  <g id="i-search"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></g>
+  <g id="i-link"><path d="M9 15l6-6"/><path d="M10.5 6.5l1.5-1.5a4 4 0 0 1 6 6l-2 2"/><path d="M13.5 17.5l-1.5 1.5a4 4 0 0 1-6-6l2-2"/></g>
+  <g id="i-post"><path d="M12 5v14M5 12h14"/></g>
+  <g id="i-arrow"><path d="M5 12h14"/><polyline points="13 6 19 12 13 18"/></g>
+</defs></svg>
+
+<script>
+  const COLORS=[
+    {n:'Laranja',c:'#EA4918'},{n:'Amarelo',c:'#FFCF03'},{n:'Azul',c:'#0061EE'},
+    {n:'Rosa',c:'#FF77B9'},{n:'Verde',c:'#01A652'},{n:'Lilás',c:'#7C90F0'},
+    {n:'Roxo',c:'#4B3FA8'},{n:'Grafite',c:'#3A3A38'},
+  ];
+  const CLIENTES=[
+    {nm:'Beatriz',hd:'@xxx',sub:'Skincare',color:'#FF77B9',cria:false,pend:0,img:null,ini:'B'},
+    {nm:'123',hd:'@nutri',sub:'Nutrição',color:'#01A652',cria:false,pend:0,img:null,ini:'1'},
+    {nm:'Anna Júlia Spanholi',hd:'@nutriannaspanholi',sub:'Nutricionista Foco em Qualidade',color:'#0061EE',cria:false,pend:0,img:null,ini:'A'},
+    {nm:'Teste 123',hd:'@teste123',sub:'Aprovações em dia',color:'#7C90F0',cria:false,pend:0,img:null,ini:'T'},
+    {nm:'Walter Espindola',hd:'@walterespindola_',sub:'Tecnologia e negócios',color:'#EA4918',cria:true,pend:5,img:'https://i.pravatar.cc/100?img=12',ini:'W'},
+    {nm:'Clínica Lorem',hd:'@clinicalorem',sub:'Estética',color:'#4B3FA8',cria:true,pend:0,img:null,ini:'C'},
+  ];
+  function icon(id){return `<svg class="ic"><use href="#${id}"/></svg>`}
+  function render(){
+    document.getElementById('grid').innerHTML=CLIENTES.map(c=>`
+      <div class="cli">
+        <div class="accent" style="background:${c.color}"></div>
+        <div class="glow" style="background:${c.color}"></div>
+        <div class="av" style="background:${c.color}">${c.ini}${c.img?`<img src="${c.img}" alt="">`:''}</div>
+        <div class="nm">${c.nm}</div>
+        <div class="hd">${c.hd}</div>
+        <div class="sub">${c.sub}</div>
+        <div class="pend">${c.pend?`${c.pend} posts aguardando`:''}</div>
+        <div class="badges">
+          ${c.cria?'<span class="bdg cria">Usa o Cria</span>':'<span class="bdg link">Aprova por link</span>'}
+          ${c.pend?'':'<span class="bdg live">Em dia</span>'}
+        </div>
+        <div class="acts">
+          <button class="prim" style="background:${c.color}">Abrir ficha ${icon('i-arrow')}</button>
+          <button class="icobtn" title="Copiar link de aprovação">${icon('i-link')}</button>
+          <button class="icobtn" title="Novo post">${icon('i-post')}</button>
+        </div>
+      </div>`).join('');
+  }
+  function renderSwatches(){
+    const S=document.getElementById('swatches');
+    S.innerHTML=COLORS.map((x,i)=>`<div class="swatch ${x.c==='#FF77B9'?'on':''}" title="${x.n}" style="background:${x.c}" data-c="${x.c}"></div>`).join('');
+    S.querySelectorAll('.swatch').forEach(el=>el.addEventListener('click',()=>{
+      S.querySelectorAll('.swatch').forEach(x=>x.classList.remove('on'));el.classList.add('on');
+      const c=el.dataset.c;
+      document.getElementById('swpreview').style.background=c;
+      document.getElementById('fav').style.background=c;
+    }));
+  }
+  render();renderSwatches();
+</script>
+</body>
+</html>

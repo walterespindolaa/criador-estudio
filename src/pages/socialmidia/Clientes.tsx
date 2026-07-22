@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Plus, Users, Loader2, Link2 } from "lucide-react";
+import { Plus, Users, Loader2, Link2, Search, Send } from "lucide-react";
 import { toast } from "sonner";
 import { useCrmClients, useCreateCrmClient, type CrmClient } from "@/hooks/useCrm";
 import { useExternalClients, type ExternalClient } from "@/hooks/useCriaPost";
@@ -14,6 +14,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 const initial = (n?: string | null) => (n ? n.trim().charAt(0).toUpperCase() : "?");
 // "Inativo" cobre tanto o status do CRM quanto a flag antiga.
 const isInactive = (c: CrmClient) => c.status === "inativo" || c.active === false;
+// Texto legível sobre a cor do cliente (amarelo pede texto escuro).
+const textOn = (hex: string) => {
+  const h = hex.replace("#", "");
+  if (h.length < 6) return "#ffffff";
+  const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  return 0.299 * r + 0.587 * g + 0.114 * b > 165 ? "#1c1c1a" : "#ffffff";
+};
+const clientColor = (c: CrmClient) => (c as { color?: string | null }).color || null;
 
 export default function Clientes() {
   const navigate = useNavigate();
@@ -30,6 +38,8 @@ export default function Clientes() {
   const [filter, setFilter] = useState<"todos" | "cria" | "link">("todos");
   // Filtro Ativos/Inativos: clicar de novo no chip selecionado limpa o filtro.
   const [statusF, setStatusF] = useState<"" | "ativos" | "inativos">("");
+  const [q, setQ] = useState("");
+  const [onlyPend, setOnlyPend] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
   const [nName, setNName] = useState("");
   const [nIg, setNIg] = useState("");
@@ -53,8 +63,14 @@ export default function Clientes() {
     if (filter === "link" && c.cria_owner_id) return false;
     if (statusF === "ativos" && isInactive(c)) return false;
     if (statusF === "inativos" && !isInactive(c)) return false;
+    if (onlyPend && !((pendingByCrm[c.id] ?? 0) > 0)) return false;
+    const term = q.trim().toLowerCase();
+    if (term) {
+      const hay = `${c.name ?? ""} ${c.instagram ?? ""} ${c.segment ?? ""}`.toLowerCase();
+      if (!hay.includes(term)) return false;
+    }
     return true;
-  }), [clients, filter, statusF]);
+  }), [clients, filter, statusF, onlyPend, q, pendingByCrm]);
 
   const open = (id: string) => navigate(`/socialmidia/clientes/${id}/visao-geral`);
 
@@ -76,10 +92,19 @@ export default function Clientes() {
         <Button data-tour="cli-novo" onClick={() => setNewOpen(true)} className="shrink-0"><Plus className="h-4 w-4 mr-1.5" /> Novo cliente</Button>
       </div>
 
-      <div data-tour="cli-filtros" className="flex items-center gap-2 my-4 flex-wrap">
+      <div className="flex items-center gap-2 mt-4 mb-3 flex-wrap">
+        <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 flex-1 min-w-[220px] max-w-sm">
+          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar cliente ou @…"
+            className="w-full bg-transparent outline-none text-sm font-body placeholder:text-muted-foreground/70" />
+        </div>
+      </div>
+
+      <div data-tour="cli-filtros" className="flex items-center gap-2 mb-4 flex-wrap">
         {([["todos", "Todos"], ["cria", "Usam o Cria"], ["link", "Aprovam por link"]] as const).map(([k, l]) => (
           <button key={k} onClick={() => setFilter(k)} className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${filter === k ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground"}`}>{l}</button>
         ))}
+        <button onClick={() => setOnlyPend((v) => !v)} className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${onlyPend ? "bg-amber-500 text-white border-amber-500" : "bg-card border-border text-muted-foreground hover:text-foreground"}`}>Com pendências</button>
         <span className="h-4 w-px bg-border mx-0.5" aria-hidden />
         {([["ativos", "Ativos"], ["inativos", "Inativos"]] as const).map(([k, l]) => (
           <button key={k} onClick={() => setStatusF(statusF === k ? "" : k)} className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${statusF === k ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground"}`}>{l}</button>
@@ -101,12 +126,17 @@ export default function Clientes() {
             const aguardando = pendingByCrm[c.id] ?? 0;
             const extc = extByCrm[c.id] ?? null;
             const inactive = isInactive(c);
+            const cor = clientColor(c);                       // cor escolhida na ficha
+            const accent = cor ?? "#0F6E56";                  // fallback: verde padrão de hoje
             return (
               <div key={c.id} role="button" tabIndex={0} onClick={() => open(c.id)}
                 onKeyDown={(e) => { if (e.key === "Enter") open(c.id); }}
-                style={(c as { color?: string | null }).color ? { borderColor: (c as { color?: string | null }).color!, borderWidth: 2 } : undefined}
-                className={`group flex flex-col items-center text-center bg-card border border-border rounded-3xl p-4 sm:p-5 cursor-pointer transition-all hover:border-primary/40 hover:shadow-lg hover:-translate-y-0.5 ${inactive ? "opacity-70" : ""}`}>
-                <span className="relative w-16 h-16 rounded-full grid place-items-center text-white text-xl font-display font-bold overflow-hidden mb-3 ring-2 ring-border/60 group-hover:ring-primary/30 transition-all" style={{ background: "linear-gradient(135deg,#0F6E56,#1d9e75)" }}>
+                className={`group relative flex flex-col items-center text-center bg-card border border-border rounded-3xl p-4 sm:p-5 pt-6 cursor-pointer overflow-hidden transition-all hover:shadow-lg hover:-translate-y-0.5 ${inactive ? "opacity-70" : ""}`}>
+                {/* Acento na cor do cliente: barra no topo + brilho suave. */}
+                <span aria-hidden className="absolute top-0 inset-x-0 h-1.5" style={{ background: accent }} />
+                <span aria-hidden className="absolute -top-10 -right-10 w-28 h-28 rounded-full blur-xl opacity-10 pointer-events-none" style={{ background: accent }} />
+                <span className="relative w-16 h-16 rounded-full grid place-items-center text-xl font-display font-bold overflow-hidden mb-3 ring-2 ring-white shadow-md transition-all"
+                  style={{ background: cor ? accent : "linear-gradient(135deg,#0F6E56,#1d9e75)", color: cor ? textOn(accent) : "#fff" }}>
                   {initial(c.name)}
                   {avatarOf(c) && <img src={avatarOf(c)!} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 w-full h-full object-cover" />}
                 </span>
@@ -122,10 +152,16 @@ export default function Clientes() {
                 <div className="flex items-center gap-1.5 mt-3">
                   <Button size="sm" className="h-8 rounded-xl px-3 text-xs" onClick={(e) => { e.stopPropagation(); open(c.id); }}>Abrir ficha</Button>
                   {extc && (
-                    <Button size="sm" variant="outline" className="h-8 w-8 rounded-xl p-0" title="Copiar link de aprovação" aria-label="Copiar link de aprovação"
-                      onClick={(e) => { e.stopPropagation(); void copyLink(extc.id); }}>
-                      <Link2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <>
+                      <Button size="sm" variant="outline" className="h-8 w-8 rounded-xl p-0" title="Copiar link de aprovação" aria-label="Copiar link de aprovação"
+                        onClick={(e) => { e.stopPropagation(); void copyLink(extc.id); }}>
+                        <Link2 className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-8 w-8 rounded-xl p-0" title="Ir para os posts" aria-label="Ir para os posts"
+                        onClick={(e) => { e.stopPropagation(); navigate(`/socialmidia/clientes/${c.id}/posts`); }}>
+                        <Send className="h-3.5 w-3.5" />
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
