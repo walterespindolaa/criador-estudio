@@ -31,6 +31,7 @@ import { FORMAT_LABELS, STATUS_OPTIONS, FORMATS } from "@/lib/constants";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, parseISO, isWithinInterval } from "date-fns";
 import { usePosts, type Post } from "@/hooks/usePosts";
 import { toast } from "sonner";
@@ -1108,13 +1109,13 @@ const Criando = () => {
 
       <FormatPicker open={pickerOpen} onPick={startFromFormat} onBlank={startBlank} onOpenChange={setPickerOpen} />
 
-      <Sheet open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
-        <SheetContent side="bottom" className="rounded-t-2xl">
-          <SheetHeader className="text-left">
-            <SheetTitle className="font-display">Editar capa{editColumn ? `, ${editColumn.label}` : ""}</SheetTitle>
-          </SheetHeader>
+      <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
+        <DialogContent className="sm:max-w-lg rounded-2xl">
+          <DialogHeader className="text-left">
+            <DialogTitle className="font-display">Editar capa{editColumn ? `, ${editColumn.label}` : ""}</DialogTitle>
+          </DialogHeader>
 
-          <div className="mt-4 space-y-4">
+          <div className="mt-2 space-y-4">
             <CoverHeader
               label="Status"
               title={editLabel || editColumn?.label || ""}
@@ -1167,8 +1168,8 @@ const Criando = () => {
               </Button>
             </div>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>

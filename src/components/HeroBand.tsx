@@ -10,7 +10,7 @@ export function HeroBand({
   children,
 }: {
   eyebrow?: string;
-  title: string;
+  title: ReactNode;
   subtitle?: string;
   avatar?: ReactNode;
   actions?: ReactNode;

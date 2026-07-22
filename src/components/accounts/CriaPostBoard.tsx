@@ -276,7 +276,11 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                               className="mt-1 h-9 md:h-6 w-full rounded-md border border-border bg-card px-1.5 text-[11px] font-body text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
                             {(p.caption || p.script) && <p className="text-xs text-muted-foreground font-body line-clamp-2 mt-0.5">{p.caption || p.script}</p>}
                             {p.approval_status === "ajuste_solicitado" && p.last_comment && p.last_comment_role === "cliente_externo" && (
-                              <div className="mt-2 text-xs font-body text-orange-700 bg-orange-50 border border-orange-100 rounded-lg px-2.5 py-1.5">Cliente pediu: "{p.last_comment}"</div>
+                              <div className="mt-2 text-xs font-body text-orange-700 bg-orange-50 border border-orange-100 rounded-lg px-2.5 py-1.5" title={p.last_comment}>
+                                <span className="font-bold">Cliente pediu um ajuste</span>
+                                <p className="line-clamp-2 opacity-90 mt-0.5">{p.last_comment}</p>
+                                <span className="text-[10.5px] font-bold underline">Abrir pra ver o ajuste completo</span>
+                              </div>
                             )}
                             {colKey === "pendente" && (() => {
                               const sentAt = p.approval_updated_at ?? p.created_at;

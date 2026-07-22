@@ -1,4 +1,5 @@
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Outlet, NavLink, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { BottomBar } from "@/components/BottomBar";
@@ -40,6 +41,30 @@ import { UploadProgressIndicator } from "@/components/UploadProgressIndicator";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+
+// Emoji da saudação, clicável e personalizável (fica salvo por dispositivo).
+const GREET_EMOJIS = ["👋", "✨", "🚀", "🔥", "💪", "😎", "🎯", "☕", "🌟", "💜", "🙌", "👊"];
+function GreetingEmoji() {
+  const [emoji, setEmoji] = useState<string>(() => { try { return localStorage.getItem("cria_greet_emoji") || "👋"; } catch { return "👋"; } });
+  const [open, setOpen] = useState(false);
+  const pick = (e: string) => { setEmoji(e); setOpen(false); try { localStorage.setItem("cria_greet_emoji", e); } catch { /* noop */ } };
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button type="button" aria-label="Trocar emoji da saudação" className="leading-none transition-transform hover:scale-110">{emoji}</button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-auto p-2">
+        <p className="text-[11px] font-body text-muted-foreground mb-1.5 px-0.5">Escolha seu emoji</p>
+        <div className="grid grid-cols-6 gap-1">
+          {GREET_EMOJIS.map((e) => (
+            <button key={e} type="button" onClick={() => pick(e)}
+              className={"h-8 w-8 rounded-lg text-lg grid place-items-center transition-colors hover:bg-muted " + (e === emoji ? "bg-muted" : "")}>{e}</button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 const AppLayout = () => {
   const { profile, isLoading } = useProfile();
@@ -140,7 +165,9 @@ const AppLayout = () => {
     "/app/aprender": "Aprender", "/app/configuracoes": "Configurações",
   };
   const isDash = location.pathname === "/app";
-  const heroTitle = isDash ? `${firstName} 👋` : (PAGE_TITLES[location.pathname] ?? "CRIA");
+  const heroTitle = isDash
+    ? <span className="inline-flex items-center gap-2">{firstName} <GreetingEmoji /></span>
+    : (PAGE_TITLES[location.pathname] ?? "CRIA");
   const heroEyebrow = isDash ? `${greetWord},` : undefined;
   const avatarNode = isDash ? (
     <Avatar className="h-11 w-11 shrink-0 border-2 border-white/40 shadow-sm">
