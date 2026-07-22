@@ -148,14 +148,18 @@ function PostApproval({ client, post, index, busy, onApproveFast, onAdjustFast, 
       )}
       {!showFlow ? (
         <>
+          {post.scheduled_date && (
+            <div className="flex items-center gap-1.5 text-sm font-display font-bold text-foreground mb-2 capitalize">
+              <CalendarDays className="h-4 w-4 text-primary shrink-0" />
+              {new Date(post.scheduled_date + "T00:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" })}
+              {post.scheduled_time ? ` · ${String(post.scheduled_time).slice(0, 5)}` : ""}
+            </div>
+          )}
           <div className="flex items-center justify-between gap-2 mb-1.5">
             <h3 className="text-lg font-display font-extrabold text-foreground">Esta publicação</h3>
             <span className={`text-[11px] font-bold px-3 py-1 rounded-full ${STATUS[post.approval_status].cls}`}>{STATUS[post.approval_status].label}</span>
           </div>
-          <p className="text-xs text-muted-foreground font-body mb-4 capitalize">
-            {post.format} · {post.platform}
-            {post.scheduled_date && <span className="normal-case"> · {new Date(post.scheduled_date + "T00:00:00").toLocaleDateString("pt-BR")}{post.scheduled_time ? ` às ${String(post.scheduled_time).slice(0, 5)}` : ""}</span>}
-          </p>
+          <p className="text-xs text-muted-foreground font-body mb-4 capitalize">{post.format} · {post.platform}</p>
           {post.last_comment && post.last_comment_role === "cliente_externo" && (
             <div className="text-xs font-body text-orange-700 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2.5 mb-4">Você pediu: "{post.last_comment}"</div>
           )}
@@ -201,13 +205,7 @@ function PostApproval({ client, post, index, busy, onApproveFast, onAdjustFast, 
           <CardIG client={client} post={post} />
         </div>
         <div className="min-w-0">
-          {/* Legenda em texto corrido só no desktop (no mobile ela já vive no preview). */}
-          {!isStory && (post.caption || post.script) && (
-            <div className="hidden lg:block mb-5">
-              <p className="text-[11px] font-body font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Legenda</p>
-              <p className="text-sm font-body text-foreground/90 leading-relaxed whitespace-pre-wrap bg-muted/40 rounded-2xl px-4 py-3">{post.caption || post.script}</p>
-            </div>
-          )}
+          {/* A legenda já aparece no card do post; sem repetir aqui. */}
           <div className="bg-card border border-border rounded-3xl p-4 sm:p-6 mt-3 shadow-[0_8px_30px_rgba(27,26,24,0.05)] lg:bg-transparent lg:border-0 lg:rounded-none lg:p-0 lg:mt-0 lg:shadow-none">
             {panel}
           </div>

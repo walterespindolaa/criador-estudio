@@ -411,63 +411,99 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               <Button size="sm" onClick={submit} disabled={create.isPending || update.isPending || !f.title.trim()}>{(create.isPending || update.isPending) ? <Loader2 className="h-4 w-4 animate-spin" /> : draftId ? "Criar e enviar" : editing ? (editing.approval_status === "ajuste_solicitado" ? <><RotateCcw className="h-4 w-4 mr-1.5" /> Salvar e reenviar</> : "Salvar") : "Criar e enviar"}</Button>
             </div>
           </DialogHeader>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-[1.1fr_0.9fr] md:gap-5">
+          {/* Duas colunas INDEPENDENTES (flex): a mídia não estica mais os campos
+              da esquerda. items-start = cada coluna com a própria altura. */}
+          <div className="flex flex-col md:flex-row md:gap-5 gap-4 md:items-start">
 
-            {/* 1, Título */}
-            <div className="order-1 md:col-start-1 md:row-start-1 space-y-1.5">
-              <Label className="text-xs font-body">Título *</Label>
-              <Input value={f.title} onChange={(e) => setF((p) => ({ ...p, title: e.target.value }))} className="rounded-xl" />
-            </div>
+            {/* Coluna esquerda: os campos */}
+            <div className="md:w-[54%] space-y-4">
+              {/* Título */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-body">Título *</Label>
+                <Input value={f.title} onChange={(e) => setF((p) => ({ ...p, title: e.target.value }))} className="rounded-xl" />
+              </div>
 
-            {/* 2, Plataforma + Formato */}
-            <div className="order-2 md:col-start-1 md:row-start-2 space-y-3">
+              {/* Plataforma + Formato */}
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-semibold mb-1.5 block">Plataforma</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {PLATFORMS.map((pl) => (
+                      <button key={pl} type="button" onClick={() => onChangePlatform(pl)}
+                        className={`rounded-full border text-sm py-2 transition-colors ${f.platform === pl ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>{cap(pl)}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold mb-1.5 block">Formato</label>
+                  <div className="flex flex-wrap gap-2">
+                    {(FORMATS_BY_PLATFORM[f.platform] ?? FORMATS).map((ft) => (
+                      <button key={ft} type="button" onClick={() => setF((p) => ({ ...p, format: ft }))}
+                        className={`rounded-full border text-xs px-3 py-1.5 transition-colors ${f.format === ft ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>{FORMAT_LABELS[ft] ?? cap(ft)}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Tipo de aprovação */}
               <div>
-                <label className="text-xs font-semibold mb-1.5 block">Plataforma</label>
+                <label className="text-xs font-semibold mb-1.5 block">Tipo de aprovação</label>
                 <div className="grid grid-cols-3 gap-2">
-                  {PLATFORMS.map((pl) => (
-                    <button key={pl} type="button" onClick={() => onChangePlatform(pl)}
-                      className={`rounded-full border text-sm py-2 transition-colors ${f.platform === pl ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>{cap(pl)}</button>
+                  {([["fast","Simplificada"],["flow","Detalhada"],["both","Ambas"]] as [string,string][]).map(([v,l]) => (
+                    <button key={v} type="button" onClick={() => setF((p) => ({ ...p, approval_mode: v as "fast"|"flow"|"both" }))}
+                      className={`rounded-full border text-xs px-2 py-2 text-center transition-colors ${f.approval_mode === v ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>{l}</button>
                   ))}
                 </div>
+                <p className="text-[11px] text-muted-foreground mt-2">Simplificada = 1 clique · Detalhada = 4 etapas · Ambas = o cliente escolhe.</p>
               </div>
+
+              {/* Cronograma: data + hora */}
               <div>
-                <label className="text-xs font-semibold mb-1.5 block">Formato</label>
-                <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                  {(FORMATS_BY_PLATFORM[f.platform] ?? FORMATS).map((ft) => (
-                    <button key={ft} type="button" onClick={() => setF((p) => ({ ...p, format: ft }))}
-                      className={`rounded-full border text-xs px-3 py-1.5 transition-colors ${f.format === ft ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>{FORMAT_LABELS[ft] ?? cap(ft)}</button>
-                  ))}
+                <label className="text-xs font-semibold mb-1.5 block">Cronograma</label>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <Label className="text-[11px] font-body text-muted-foreground">Data de publicação</Label>
+                    <Input type="date" value={f.scheduled_date ?? ""} onChange={(e) => setF((p) => ({ ...p, scheduled_date: e.target.value || null }))} className="rounded-xl" />
+                  </div>
+                  <div className="w-28">
+                    <Label className="text-[11px] font-body text-muted-foreground">Horário</Label>
+                    <Input type="time" value={f.scheduled_time ?? ""} onChange={(e) => setF((p) => ({ ...p, scheduled_time: e.target.value || null }))} className="rounded-xl" />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* 3, Tipo de aprovação */}
-            <div className="order-3 md:col-start-1 md:row-start-3">
-              <label className="text-xs font-semibold mb-1.5 block">Tipo de aprovação</label>
-              <div className="grid grid-cols-3 gap-2">
-                {([["fast","Simplificada"],["flow","Detalhada"],["both","Ambas"]] as [string,string][]).map(([v,l]) => (
-                  <button key={v} type="button" onClick={() => setF((p) => ({ ...p, approval_mode: v as "fast"|"flow"|"both" }))}
-                    className={`rounded-full border text-xs px-2 py-2 text-center transition-colors ${f.approval_mode === v ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>{l}</button>
-                ))}
+              {/* Legenda (maior) */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-body">Legenda</Label>
+                <Textarea value={f.caption ?? ""} onChange={(e) => setF((p) => ({ ...p, caption: e.target.value }))} rows={8} className="rounded-xl min-h-[180px]" />
+                {f.format === "story" && (f.caption ?? "").trim() !== "" && (
+                  <p className="text-[11px] text-muted-foreground font-body">Story não exibe legenda. Esse texto não aparece no preview.</p>
+                )}
               </div>
-              <p className="text-[11px] text-muted-foreground mt-2 hidden md:block">
-                Simplificada = 1 clique · Detalhada = 4 etapas · Ambas = o cliente escolhe.
-              </p>
+
+              {/* Roteiro / copy — sempre disponível (também no Simplificada). */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-body">{f.approval_mode !== "fast" ? "Roteiro / conteúdo (etapa \"Conteúdo\")" : "Roteiro / copy (carrossel, reels...)"}</Label>
+                {f.approval_mode !== "fast" && (
+                  <ClientContentWriter
+                    crmClientId={client.crm_client_id ?? null}
+                    clienteNome={client.name}
+                    titulo={f.title}
+                    formato={f.format}
+                    valor={f.script ?? ""}
+                    onChange={(texto) => setF((p) => ({ ...p, script: texto }))}
+                  />
+                )}
+                <Textarea value={f.script ?? ""} onChange={(e) => setF((p) => ({ ...p, script: e.target.value }))} rows={6} placeholder="Copy do carrossel slide a slide, ou o roteiro do reels..." className="rounded-xl" />
+              </div>
             </div>
 
-            {/* 4, Mídia (direita no desktop, posição 4 no mobile) */}
-            <div className="order-4 md:col-start-2 md:row-start-1 md:row-span-5">
+            {/* Coluna direita: Mídia (própria altura, sem esticar a esquerda) */}
+            <div className="md:w-[46%] md:sticky md:top-0">
               <div className="flex items-center justify-between gap-2 mb-1.5">
                 <label className="text-xs font-semibold">Mídia</label>
-                {/* BRIEFING DE ARTE. Ela escreve isto no WhatsApp do designer, na
-                    mão, dez vezes por semana — e digita a paleta do cliente de
-                    cabeça toda vez. O botão mora AQUI, colado no espaço da arte,
-                    que é o minuto em que ela precisa dele. */}
-                <button
-                  type="button"
-                  onClick={() => setBriefOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/[0.06] px-2.5 py-1 text-[11px] font-body font-bold text-primary hover:bg-primary/10 transition-colors"
-                >
+                <button type="button" onClick={() => setBriefOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/[0.06] px-2.5 py-1 text-[11px] font-body font-bold text-primary hover:bg-primary/10 transition-colors">
                   <Palette className="h-3 w-3" /> Briefing de arte
                 </button>
               </div>
@@ -478,49 +514,6 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               ) : (
                 <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Preparando o post pra você anexar a mídia…</p>
               )}
-            </div>
-
-            {/* 4b, Cronograma: data + hora da publicação */}
-            <div className="order-[4] md:col-start-1 md:row-start-4">
-              <label className="text-xs font-semibold mb-1.5 block">Cronograma</label>
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <Label className="text-[11px] font-body text-muted-foreground">Data de publicação</Label>
-                  <Input type="date" value={f.scheduled_date ?? ""} onChange={(e) => setF((p) => ({ ...p, scheduled_date: e.target.value || null }))} className="rounded-xl" />
-                </div>
-                <div className="w-28">
-                  <Label className="text-[11px] font-body text-muted-foreground">Horário</Label>
-                  <Input type="time" value={f.scheduled_time ?? ""} onChange={(e) => setF((p) => ({ ...p, scheduled_time: e.target.value || null }))} className="rounded-xl" />
-                </div>
-              </div>
-            </div>
-
-            {/* 5, Legenda */}
-            <div className="order-5 md:col-start-1 md:row-start-5 space-y-1.5">
-              <Label className="text-xs font-body">Legenda</Label>
-              <Textarea value={f.caption ?? ""} onChange={(e) => setF((p) => ({ ...p, caption: e.target.value }))} rows={4} className="rounded-xl" />
-              {f.format === "story" && (f.caption ?? "").trim() !== "" && (
-                <p className="text-[11px] text-muted-foreground font-body">Story não exibe legenda. Esse texto não aparece no preview.</p>
-              )}
-            </div>
-
-            {/* 6, Roteiro / copy — sempre disponível (também no Simplificada), pra ter
-                onde escrever a copy do carrossel ou o roteiro do reels. */}
-            <div className="order-6 md:col-start-1 md:row-start-6 space-y-1.5">
-              <Label className="text-xs font-body">{f.approval_mode !== "fast" ? "Roteiro / conteúdo (etapa \"Conteúdo\")" : "Roteiro / copy (carrossel, reels...)"}</Label>
-              {/* Ela escreve conteúdo pra DEZ marcas por semana. O gerador de IA só
-                  aparece nos modos com etapa de conteúdo; no Simplificado fica só o campo. */}
-              {f.approval_mode !== "fast" && (
-                <ClientContentWriter
-                  crmClientId={client.crm_client_id ?? null}
-                  clienteNome={client.name}
-                  titulo={f.title}
-                  formato={f.format}
-                  valor={f.script ?? ""}
-                  onChange={(texto) => setF((p) => ({ ...p, script: texto }))}
-                />
-              )}
-              <Textarea value={f.script ?? ""} onChange={(e) => setF((p) => ({ ...p, script: e.target.value }))} rows={5} placeholder="Copy do carrossel slide a slide, ou o roteiro do reels..." className="rounded-xl" />
             </div>
           </div>
         </DialogContent>
