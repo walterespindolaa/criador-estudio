@@ -43,11 +43,15 @@ function daysWaiting(p: ExternalPost): number {
   return Math.floor((Date.now() - new Date(base).getTime()) / 86400000);
 }
 const STATUS: Record<string, { label: string; cls: string }> = {
+  em_producao: { label: "Em produção", cls: "bg-violet-100 text-violet-700" },
   pendente: { label: "Aguardando cliente", cls: "bg-amber-100 text-amber-700" },
   ajuste_solicitado: { label: "Ajuste solicitado", cls: "bg-orange-100 text-orange-700" },
   aprovado: { label: "Aprovado", cls: "bg-green-100 text-green-700" },
+  postado: { label: "Postado", cls: "bg-slate-200 text-slate-600" },
 };
-const APPROVAL_COLS = ["pendente", "ajuste_solicitado", "aprovado"] as const;
+// 5 status: post nasce em produção; a social mídia libera pro cliente (aguardando);
+// cliente aprova ou pede ajuste; depois de publicado, vai pra Postado.
+const APPROVAL_COLS = ["em_producao", "pendente", "ajuste_solicitado", "aprovado", "postado"] as const;
 type ApprovalKey = (typeof APPROVAL_COLS)[number];
 
 export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange }: { client: ExternalClient; onBack?: () => void; embedded?: boolean; activeTab?: string; onTabChange?: (t: string) => void }) {
@@ -119,15 +123,15 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   const submit = async () => {
     if (!f.title.trim()) return;
     if (draftId) {
-      // Rascunho → publica (entra na fila de aprovação do cliente).
+      // Rascunho → cria o post em PRODUÇÃO (ainda não vai pro cliente).
       await update.mutateAsync({ id: draftId, publish: true, ...f });
-      toast.success("Post enviado pra aprovação!");
+      toast.success("Post criado! Está em produção. Libere pro cliente quando quiser.");
       setDraftId(null);
     } else if (editing) {
       await update.mutateAsync({ id: editing.id, resend: editing.approval_status === "ajuste_solicitado", ...f });
     } else {
       await create.mutateAsync(f);
-      toast.success("Post enviado pra aprovação!");
+      toast.success("Post criado! Está em produção.");
     }
     setFormOpen(false);
     setEditing(null);
@@ -224,7 +228,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
       ) : viewPosts.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border p-10 text-center">
           <p className="text-sm font-body text-foreground font-medium">{mesPost === "all" ? "Nenhum post ainda" : "Nenhum post neste mês"}</p>
-          <p className="text-xs text-muted-foreground font-body mt-1">{mesPost === "all" ? "Crie um post e ele já entra na fila de aprovação do cliente." : "Troque o filtro de mês ou crie um post."}</p>
+          <p className="text-xs text-muted-foreground font-body mt-1">{mesPost === "all" ? "Crie um post: ele nasce em Produção. Quando estiver pronto, libere pro cliente (Aguardando)." : "Troque o filtro de mês ou crie um post."}</p>
         </div>
       ) : (
         <DragDropContext onDragEnd={handleApprovalDragEnd}>
@@ -408,7 +412,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
             <DialogTitle className="font-display">{draftId || !editing ? "Novo post" : "Editar post"}</DialogTitle>
             <div className="flex items-center gap-2 shrink-0">
               <Button variant="outline" size="sm" onClick={() => void closeForm()}>Cancelar</Button>
-              <Button size="sm" onClick={submit} disabled={create.isPending || update.isPending || !f.title.trim()}>{(create.isPending || update.isPending) ? <Loader2 className="h-4 w-4 animate-spin" /> : draftId ? "Criar e enviar" : editing ? (editing.approval_status === "ajuste_solicitado" ? <><RotateCcw className="h-4 w-4 mr-1.5" /> Salvar e reenviar</> : "Salvar") : "Criar e enviar"}</Button>
+              <Button size="sm" onClick={submit} disabled={create.isPending || update.isPending || !f.title.trim()}>{(create.isPending || update.isPending) ? <Loader2 className="h-4 w-4 animate-spin" /> : draftId ? "Criar post" : editing ? (editing.approval_status === "ajuste_solicitado" ? <><RotateCcw className="h-4 w-4 mr-1.5" /> Salvar e reenviar</> : "Salvar") : "Criar post"}</Button>
             </div>
           </DialogHeader>
           {/* Duas colunas INDEPENDENTES (flex): a mídia não estica mais os campos

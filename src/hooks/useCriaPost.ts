@@ -28,7 +28,7 @@ export type ExternalClientInput = { name: string; instagram_handle?: string | nu
 export type ExternalPost = {
   id: string; title: string; platform: string; format: string;
   caption: string | null; hook: string | null;
-  approval_status: "pendente" | "ajuste_solicitado" | "aprovado" | null;
+  approval_status: "em_producao" | "pendente" | "ajuste_solicitado" | "aprovado" | "postado" | null;
   scheduled_date: string | null; created_at: string;
   approval_mode: string; script: string | null;
   approval_updated_at: string | null;
@@ -195,7 +195,7 @@ export function useExternalPosts(clientId: string | null) {
       const { approval_mode, ...rest } = input;
       const { data, error } = await sbFrom("posts").insert({
         user_id: agencyOwnerId!, external_client_id: clientId, status: "editando",
-        approval_status: "pendente", approval_mode: approval_mode ?? "fast", ...rest,
+        approval_status: "em_producao", approval_mode: approval_mode ?? "fast", ...rest,
       }).select().single();
       if (error) throw error;
       return data as unknown as ExternalPost;
@@ -227,11 +227,12 @@ export function useExternalPosts(clientId: string | null) {
     mutationFn: async ({ id, resend, publish, ...input }: ExternalPostInput & { id: string; resend?: boolean; publish?: boolean }) => {
       const patch: Record<string, unknown> = { ...input };
       if (resend) { patch.approval_status = "pendente"; patch.approval_updated_at = new Date().toISOString(); }
-      // publish = sai de rascunho, VINCULA o cliente e entra na fila de aprovação dele.
+      // publish = sai de rascunho e VINCULA o cliente, mas nasce EM PRODUÇÃO
+      // (não vai pro cliente ainda). A social mídia libera pro "Aguardando cliente".
       if (publish) {
         patch.is_draft = false;
         patch.external_client_id = clientId;
-        patch.approval_status = "pendente";
+        patch.approval_status = "em_producao";
         patch.approval_updated_at = new Date().toISOString();
       }
       const { error } = await sbFrom("posts").update(patch).eq("id", id); if (error) throw error;
