@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Link2, Loader2, Plus, Settings2, Trash2, Wallet, Send, Check, Pencil, LogIn } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Link2, Loader2, Plus, Settings2, Trash2, Wallet, Send, Check, Pencil, LogIn, Home, Layers, CalendarDays, BarChart3, BookOpen, Lightbulb, Search, Compass, Instagram, ArrowRight, Lock } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useCrmClient, useUpdateCrmClient, useUploadCrmAsset } from "@/hooks/useCrm";
 import { Camera } from "lucide-react";
@@ -75,7 +76,35 @@ const FLOW_EXPLAIN: Record<string, string> = {
   relatorio: "O relatório white-label com o resultado do que foi publicado no mês.",
 };
 const initial = (n?: string | null) => (n ? n.trim().charAt(0).toUpperCase() : "?");
+
+// ── NAVEGAÇÃO EM DOIS NÍVEIS (cockpit do cliente) ──
+// Nível 1 (topo): a Visão geral + cada Cria (Post, Gestão, Caixa, Radar) + Instagram.
+// Nível 2: dentro de um Cria com mais de um assunto, abre uma landing com cards
+// (e uma barra de sub-abas pra trocar). Cada sub-página tem URL própria, então o
+// F5 mantém a pessoa exatamente onde estava, sem refazer o caminho.
+type SubMeta = { label: string; desc: string; icon: LucideIcon };
+const SUB_META: Record<string, SubMeta> = {
+  posts: { label: "Produção", desc: "Monte cada post e mande aprovar por link: aguardando cliente, ajuste, aprovado.", icon: Layers },
+  cronograma: { label: "Cronograma", desc: "O calendário do mês do cliente, com as datas e o link público.", icon: CalendarDays },
+  relatorio: { label: "Relatório", desc: "O resultado white-label do mês pra enviar pro cliente.", icon: BarChart3 },
+  portal: { label: "Portal", desc: "O que o cliente vê no link de aprovação. Personalize aqui.", icon: Link2 },
+  brandbook: { label: "Brandbook", desc: "Paleta, tom de voz, personas e moodboard da marca.", icon: BookOpen },
+  ideias: { label: "Ideias", desc: "O banco de ideias do cliente pra virar post.", icon: Lightbulb },
+  pesquisa: { label: "Pesquisa", desc: "Concorrência e tendências do nicho.", icon: Search },
+  financeiro: { label: "Financeiro", desc: "Mensalidade, custo e rentabilidade só deste cliente.", icon: Wallet },
+  instagram: { label: "Instagram", desc: "Insights dos posts publicados.", icon: Instagram },
+};
+type Grp = { key: string; label: string; modulo?: CriaColor2; icon: LucideIcon; landing?: boolean; subs: string[] };
+const GROUPS: Grp[] = [
+  { key: "visao-geral", label: "Visão geral", icon: Home, subs: [] },
+  { key: "cria-post", label: "Cria Post", modulo: "laranja", icon: Layers, landing: true, subs: ["posts", "cronograma", "relatorio", "portal"] },
+  { key: "cria-gestao", label: "Cria Gestão", modulo: "rosa", icon: BookOpen, subs: ["brandbook"] },
+  { key: "cria-caixa", label: "Cria Caixa", modulo: "azul", icon: Wallet, subs: ["financeiro"] },
+  { key: "cria-radar", label: "Cria Radar", modulo: "lilas", icon: Compass, landing: true, subs: ["ideias", "pesquisa"] },
+  { key: "instagram", label: "Instagram", icon: Instagram, subs: ["instagram"] },
+];
 import { CRIA_HEX, type CriaColor } from "@/lib/moduleTheme";
+type CriaColor2 = CriaColor;
 import { formatBRL } from "@/lib/money";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { confirmar } from "@/components/shared/Confirm";
@@ -94,13 +123,19 @@ export default function ClienteHub() {
   const { allowed: hasPost } = useHasModule("aprovapost_externo");
   const { data: client, isLoading } = useCrmClient(id);
   const { setActiveAccount } = useActiveAccount();
-  // A aba Pesquisa (Apify) só aparece pra quem tem o HUB liberado, se não tem,
-  // a aba nem existe (não adianta mostrar porta trancada).
-  const visibleTabs = useMemo(
-    () => TABS.filter((t) => !("hub" in t && t.hub) || hasHubCria),
-    [hasHubCria],
-  );
-  const activeTab = tab && visibleTabs.some((t) => t.key === tab) ? tab : "visao-geral";
+  // A sub-página Pesquisa (Apify) só existe pra quem tem o HUB liberado.
+  const subVisible = (sub: string) => (sub === "pesquisa" ? hasHubCria : true);
+  const allTabKeys = useMemo(() => {
+    const s = new Set<string>();
+    GROUPS.forEach((g) => { s.add(g.key); g.subs.forEach((x) => { if (x !== "pesquisa" || hasHubCria) s.add(x); }); });
+    return s;
+  }, [hasHubCria]);
+  // A URL manda: /clientes/:id/:tab. Se o tab é válido, é ele; senão, Visão geral.
+  // É isso que faz o F5 preservar a sub-página em que a pessoa estava.
+  const activeTab = tab && allTabKeys.has(tab) ? tab : "visao-geral";
+  const activeGroup = GROUPS.find((g) => g.key === activeTab || g.subs.includes(activeTab)) ?? GROUPS[0];
+  const onLanding = activeTab === activeGroup.key && activeGroup.landing === true;
+  const groupLocked = (g: Grp) => (g.key === "cria-post" && !hasPost) || (g.key === "cria-caixa" && !hasCaixa);
   // Foto da conta CRIA do cliente sempre atual (não depende do sync manual do CRM).
   const { data: criaProfiles } = useCriaClientProfiles();
   const criaAvatar = client?.cria_owner_id ? (criaProfiles?.[client.cria_owner_id]?.avatar_url ?? null) : null;
@@ -148,11 +183,27 @@ export default function ClienteHub() {
   };
 
   const goTab = (t: string) => navigate(`/socialmidia/clientes/${id}/${t}`);
+  // Clicar num Cria no topo: 0 sub = Visão geral; com landing = abre a landing de
+  // cards; 1 sub só = vai direto na ferramenta (landing de 1 card seria bobo).
+  const openGroup = (g: Grp) => {
+    if (g.subs.length === 0) return goTab("visao-geral");
+    if (g.landing) return goTab(g.key);
+    return goTab(g.subs[0]);
+  };
 
   // Último cliente visitado: alimenta o seletor global e o "Continuar em {cliente}" do dashboard.
   useEffect(() => {
     if (client) saveLastClient(client.id, client.name);
   }, [client]);
+
+  // URL de um Cria de aba única (ex.: /cria-gestao) cai direto na ferramenta dele,
+  // pra nunca abrir em branco quando a pessoa cola/salva o link.
+  useEffect(() => {
+    const g = GROUPS.find((x) => x.key === tab);
+    if (g && !g.landing && g.subs.length > 0) {
+      navigate(`/socialmidia/clientes/${id}/${g.subs[0]}`, { replace: true });
+    }
+  }, [tab, id, navigate]);
 
   // Ativar o Cria Post num cliente exige o MÓDULO Cria Post.
   // Antes o botão simplesmente tentava e falhava (ou o gate genérico dizia
@@ -244,62 +295,84 @@ export default function ClienteHub() {
       </div>
       <ExternalClientDialog open={editOpen} onOpenChange={setEditOpen} client={extClient} />
 
-      {/* Abas por URL, em pílula (o padrão do CRIA).
-          A sublinha de 2px era fria e, no celular, a aba ativa quase não se
-          distinguia das outras. A pílula deixa a ativa sólida e engorda o alvo
-          do dedo. A cor continua sendo a do MÓDULO, que é o que ensina a pessoa
-          a reconhecer o produto dentro da ficha. */}
-      <div className="flex gap-1 mb-5 overflow-x-auto rounded-full border border-border bg-muted/50 p-1 w-fit max-w-full">
-        {visibleTabs.map((t) => {
-          const on = activeTab === t.key;
-          const hex = t.modulo ? CRIA_HEX[t.modulo] : null;
+      {/* NÍVEL 1 — os Cria. Topo enxuto: a pessoa escolhe QUAL Cria; o que tem
+          dentro aparece no nível 2. Cada botão na cor do módulo, que é o que
+          ensina a reconhecer o produto dentro da ficha do cliente. */}
+      <div className="flex gap-1 mb-4 overflow-x-auto rounded-2xl border border-border bg-muted/50 p-1.5 w-fit max-w-full">
+        {GROUPS.map((g) => {
+          const on = activeGroup.key === g.key;
+          const hex = g.modulo ? CRIA_HEX[g.modulo] : "hsl(var(--foreground))";
+          const Icon = g.icon;
+          const locked = groupLocked(g);
           return (
             <button
-              key={t.key}
-              onClick={() => goTab(t.key)}
-              title={t.moduloNome ? `${t.label} · ${t.moduloNome}` : t.label}
-              className={`group flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-body font-semibold whitespace-nowrap transition-colors ${
+              key={g.key}
+              onClick={() => openGroup(g)}
+              title={locked ? `${g.label} · não está no seu plano` : g.label}
+              className={`group flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-body font-semibold whitespace-nowrap transition-colors ${
                 on ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
-              style={on ? { color: hex ?? "hsl(var(--primary))" } : undefined}
+              style={on ? { color: hex } : undefined}
             >
-              {/* O pontinho na cor do módulo: laranja = Cria Post, azul = Cria Caixa,
-                  rosa = Cria Gestão, lilás = Cria Radar. A pessoa aprende a cor uma
-                  vez e passa a ver o produto dentro da ficha do cliente. */}
-              {hex && (
-                <span
-                  aria-hidden
-                  className={`h-1.5 w-1.5 rounded-full shrink-0 transition-opacity ${on ? "opacity-100" : "opacity-50 group-hover:opacity-100"}`}
-                  style={{ background: hex }}
-                />
-              )}
-              {t.label}
+              <span className="grid h-5 w-5 place-items-center rounded-md shrink-0 transition-colors"
+                style={{ background: on ? hex : "transparent", color: on ? "#fff" : hex }}>
+                <Icon className="h-3.5 w-3.5" />
+              </span>
+              {g.label}
+              {locked && <Lock className="h-3 w-3 opacity-50" />}
             </button>
           );
         })}
       </div>
 
-      {/* Régua de fluxo (Criativo → Posts → Cronograma → Relatório) */}
-      {WORKFLOW.has(activeTab) && (
-        <div className="mb-5 rounded-2xl border border-border bg-card p-3">
-          <div className="flex items-center gap-1 overflow-x-auto pb-1">
-            {FLOW_STEPS.filter((s) => !s.gated || hasHubCria).map((s, idx, arr) => {
-              const on = activeTab === s.key;
+      {/* NÍVEL 2 — as sub-abas do Cria ativo (só quando tem mais de um assunto e
+          a pessoa já entrou num deles). Na landing, os cards fazem esse papel. */}
+      {activeGroup.subs.length > 1 && !onLanding && (
+        <div className="mb-3 flex items-center gap-2 flex-wrap">
+          <button onClick={() => openGroup(activeGroup)} title={`Voltar pra ${activeGroup.label}`}
+            className="flex items-center gap-1 text-[12px] font-body font-semibold text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-3.5 w-3.5" /> {activeGroup.label}
+          </button>
+          <div className="flex gap-1 overflow-x-auto rounded-full border border-border bg-muted/40 p-1 w-fit max-w-full">
+            {activeGroup.subs.filter(subVisible).map((sub) => {
+              const on = activeTab === sub;
+              const hex = activeGroup.modulo ? CRIA_HEX[activeGroup.modulo] : "hsl(var(--primary))";
               return (
-                <div key={s.key} className="flex items-center shrink-0">
-                  <button onClick={() => goTab(s.key)}
-                    className={`flex items-center gap-2 rounded-xl px-3 py-1.5 transition-colors ${on ? "bg-primary/10" : "hover:bg-muted/50"}`}>
-                    <span className={`grid h-5 w-5 place-items-center rounded-full text-[11px] font-bold ${on ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{s.n}</span>
-                    <span className={`text-xs font-body font-semibold whitespace-nowrap ${on ? "text-primary" : "text-muted-foreground"}`}>{s.label}</span>
-                  </button>
-                  {idx < arr.length - 1 && <span className="mx-0.5 text-muted-foreground/50">›</span>}
-                </div>
+                <button key={sub} onClick={() => goTab(sub)}
+                  className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-body font-semibold whitespace-nowrap transition-colors ${
+                    on ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                  style={on ? { color: hex } : undefined}>
+                  {SUB_META[sub]?.label ?? sub}
+                </button>
               );
             })}
           </div>
-          {FLOW_EXPLAIN[activeTab] && (
-            <p className="text-[12px] font-body text-muted-foreground leading-relaxed mt-1.5 px-1">{FLOW_EXPLAIN[activeTab]}</p>
-          )}
+        </div>
+      )}
+      {/* Explicação curta da sub-página (mantém a didática que a régua tinha). */}
+      {!onLanding && FLOW_EXPLAIN[activeTab] && (
+        <p className="text-[12px] font-body text-muted-foreground leading-relaxed mb-4 px-1">{FLOW_EXPLAIN[activeTab]}</p>
+      )}
+
+      {/* LANDING do Cria — cards dos assuntos daquele módulo. */}
+      {onLanding && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
+          {activeGroup.subs.filter(subVisible).map((sub) => {
+            const meta = SUB_META[sub];
+            const Icon = meta.icon;
+            const hex = activeGroup.modulo ? CRIA_HEX[activeGroup.modulo] : "hsl(var(--primary))";
+            return (
+              <button key={sub} onClick={() => goTab(sub)}
+                className="group text-left bg-card border border-border rounded-2xl p-4 transition-all hover:border-primary/40 hover:-translate-y-0.5 hover:shadow-md">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-9 w-9 place-items-center rounded-xl text-white shrink-0" style={{ background: hex }}><Icon className="h-4 w-4" /></span>
+                  <span className="font-display font-bold text-foreground">{meta.label}</span>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground/50 ml-auto group-hover:text-foreground transition-colors" />
+                </div>
+                <p className="text-[12.5px] font-body text-muted-foreground mt-2.5 leading-relaxed">{meta.desc}</p>
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -340,9 +413,34 @@ export default function ClienteHub() {
           {/* Anotações: saíram do "Personalizar" (onde ninguém achava) e viraram um campo
               editável aqui, que é onde a pessoa procura por elas. */}
           <NotasCliente clientId={client.id} notes={client.notes} />
+
+          {/* Os Cria deste cliente: um atalho por módulo, pra pilotar tudo daqui.
+              Os que a pessoa não assina aparecem com cadeado (convite, não porta fria). */}
+          <div>
+            <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide mb-2 px-1">Os Cria deste cliente</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {GROUPS.filter((g) => g.modulo).map((g) => {
+                const hex = CRIA_HEX[g.modulo!];
+                const Icon = g.icon;
+                const locked = groupLocked(g);
+                return (
+                  <button key={g.key} onClick={() => openGroup(g)}
+                    className="group text-left bg-card border border-border rounded-2xl p-4 transition-all hover:border-primary/40 hover:-translate-y-0.5 hover:shadow-md">
+                    <div className="flex items-center gap-3">
+                      <span className="grid h-9 w-9 place-items-center rounded-xl text-white shrink-0" style={{ background: hex }}><Icon className="h-4 w-4" /></span>
+                      <span className="font-display font-bold text-foreground">{g.label}</span>
+                      {locked ? <Lock className="h-4 w-4 text-muted-foreground/50 ml-auto" /> : <ArrowRight className="h-4 w-4 text-muted-foreground/50 ml-auto group-hover:text-foreground transition-colors" />}
+                    </div>
+                    <p className="text-[12px] font-body text-muted-foreground mt-2 leading-relaxed">
+                      {g.subs.filter(subVisible).map((s) => SUB_META[s]?.label).filter(Boolean).join(" · ")}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="flex gap-2 flex-wrap">
-            <Button onClick={() => goTab("posts")}><Send className="h-4 w-4 mr-1.5" /> Ver posts</Button>
-            <Button variant="outline" onClick={() => goTab("relatorio")}>Relatório</Button>
             <Button variant="outline" asChild><Link to={`/socialmidia/criacrm/${id}`}><ExternalLink className="h-4 w-4 mr-1.5" /> Ficha completa (CRM)</Link></Button>
           </div>
         </div>
