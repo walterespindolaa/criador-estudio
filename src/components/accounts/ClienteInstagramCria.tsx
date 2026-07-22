@@ -48,20 +48,29 @@ export function ClienteInstagramCria({ criaOwnerId, clientName, extClientId }: {
     return { followers, followersDelta, reach, interactions, eng };
   }, [data, media]);
 
-  // Análise cruzada: alcance médio por formato, só dos posts vinculados ao Cria.
+  // Alcance médio por formato — direto do tipo da mídia do IG (não depende de vínculo).
+  const fmtLabel = (t: string | null) => (t === "VIDEO" || t === "REELS" ? "Reels" : t === "CAROUSEL_ALBUM" ? "Carrossel" : t === "IMAGE" ? "Foto" : "Outro");
   const porFormato = useMemo(() => {
     const acc: Record<string, { soma: number; n: number }> = {};
     media.forEach((mi) => {
-      if (!mi.post_id || !postById[mi.post_id]) return;
-      const f = postById[mi.post_id].format || "Outro";
+      const f = fmtLabel(mi.media_type);
       acc[f] = acc[f] ?? { soma: 0, n: 0 };
       acc[f].soma += m(mi, "reach"); acc[f].n += 1;
     });
     const rows = Object.entries(acc).map(([f, v]) => ({ f, media: Math.round(v.soma / v.n), n: v.n }));
     rows.sort((a, b) => b.media - a.media);
-    const max = rows.length ? rows[0].media : 0;
-    return { rows, max };
-  }, [media, postById]);
+    return { rows, max: rows.length ? rows[0].media : 0 };
+  }, [media]);
+
+  // Destaques: melhor alcance, melhor engajamento e pior alcance do período.
+  const destaques = useMemo(() => {
+    if (!media.length) return null;
+    const comReach = media.filter((mi) => m(mi, "reach") > 0);
+    const best = [...media].sort((a, b) => m(b, "reach") - m(a, "reach"))[0];
+    const bestEng = [...media].sort((a, b) => engOf(b) - engOf(a))[0];
+    const worst = comReach.length > 1 ? [...comReach].sort((a, b) => m(a, "reach") - m(b, "reach"))[0] : null;
+    return { best, bestEng, worst };
+  }, [media]);
 
   const vinculados = media.filter((mi) => mi.post_id && postById[mi.post_id!]).length;
 
@@ -125,20 +134,35 @@ export function ClienteInstagramCria({ criaOwnerId, clientName, extClientId }: {
             <KpiCard icon={Zap} label="Engajamento" value={kpis && kpis.reach > 0 ? `${kpis.eng.toFixed(1)}%` : "-"} sub="interações ÷ alcance" />
           </div>
 
-          {/* Análise cruzada: o que funciona pra este cliente */}
+          {/* Análise: o que funciona pra este cliente (formato) + destaques */}
           {porFormato.rows.length > 0 && (
-            <div className="rounded-2xl border border-border bg-card p-4">
-              <div className="flex items-center gap-2 mb-1"><TrendingUp className="h-4 w-4 text-primary" /><p className="text-sm font-display font-bold text-foreground">O que funciona pra este cliente</p></div>
-              <p className="text-[11.5px] font-body text-muted-foreground mb-3">Alcance médio por formato, só dos {vinculados} post{vinculados > 1 ? "s" : ""} vinculado{vinculados > 1 ? "s" : ""} ao Cria.</p>
-              <div className="space-y-2.5">
-                {porFormato.rows.map((r) => (
-                  <div key={r.f} className="flex items-center gap-3">
-                    <span className="w-20 text-[12.5px] font-body font-semibold text-foreground shrink-0 truncate">{MEDIA_LABEL[r.f] ?? r.f}</span>
-                    <span className="flex-1 h-2 rounded-full bg-muted overflow-hidden"><span className="block h-full rounded-full bg-primary" style={{ width: `${porFormato.max > 0 ? Math.max(4, (r.media / porFormato.max) * 100) : 0}%` }} /></span>
-                    <span className="w-24 text-right text-[12px] font-body shrink-0"><b className="text-foreground">{fmt(r.media)}</b> <span className="text-muted-foreground">· {r.n}</span></span>
-                  </div>
-                ))}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <div className="rounded-2xl border border-border bg-card p-4">
+                <div className="flex items-center gap-2 mb-1"><TrendingUp className="h-4 w-4 text-primary" /><p className="text-sm font-display font-bold text-foreground">Alcance médio por formato</p></div>
+                <p className="text-[11.5px] font-body text-muted-foreground mb-3">
+                  Média de alcance de cada formato publicado.{vinculados > 0 ? ` ${vinculados} vinculado${vinculados > 1 ? "s" : ""} ao Cria.` : " Vincule ao Cria pra cruzar com o que você produziu."}
+                </p>
+                <div className="space-y-2.5">
+                  {porFormato.rows.map((r) => (
+                    <div key={r.f} className="flex items-center gap-3">
+                      <span className="w-20 text-[12.5px] font-body font-semibold text-foreground shrink-0 truncate">{r.f}</span>
+                      <span className="flex-1 h-2 rounded-full bg-muted overflow-hidden"><span className="block h-full rounded-full bg-primary" style={{ width: `${porFormato.max > 0 ? Math.max(4, (r.media / porFormato.max) * 100) : 0}%` }} /></span>
+                      <span className="w-24 text-right text-[12px] font-body shrink-0"><b className="text-foreground">{fmt(r.media)}</b> <span className="text-muted-foreground">· {r.n}</span></span>
+                    </div>
+                  ))}
+                </div>
               </div>
+
+              {destaques && (
+                <div className="rounded-2xl border border-border bg-card p-4">
+                  <div className="flex items-center gap-2 mb-3"><Zap className="h-4 w-4 text-primary" /><p className="text-sm font-display font-bold text-foreground">Destaques</p></div>
+                  <div className="space-y-1">
+                    <DestaqueRow bg="#01A652" ico="↑" titulo="Maior alcance" cap={destaques.best.caption} extra={`${fmt(m(destaques.best, "reach"))} de alcance`} />
+                    <DestaqueRow bg="#EA4918" ico="⚡" titulo="Mais engajou" cap={destaques.bestEng.caption} extra={`${engOf(destaques.bestEng).toFixed(1)}% de engajamento`} />
+                    {destaques.worst && <DestaqueRow bg="#c0392b" ico="↓" titulo="Menor alcance" cap={destaques.worst.caption} extra={`${fmt(m(destaques.worst, "reach"))} de alcance`} />}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -217,6 +241,18 @@ export function ClienteInstagramCria({ criaOwnerId, clientName, extClientId }: {
           </div>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function DestaqueRow({ bg, ico, titulo, cap, extra }: { bg: string; ico: string; titulo: string; cap: string | null; extra: string }) {
+  return (
+    <div className="flex items-start gap-2.5 py-2 border-b border-dashed border-border last:border-none">
+      <span className="grid h-6 w-6 place-items-center rounded-lg text-white text-[13px] font-bold shrink-0" style={{ background: bg }}>{ico}</span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[12.5px] font-body font-bold text-foreground">{titulo} <span className="font-normal text-muted-foreground">· {extra}</span></p>
+        <p className="text-[11.5px] font-body text-muted-foreground truncate">{cap || "(sem legenda)"}</p>
+      </div>
     </div>
   );
 }
