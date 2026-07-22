@@ -66,8 +66,20 @@ export function ManagerCalendar() {
       const { error } = await sbFrom("posts").update(patch).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["manager-calendar", user?.id] }),
-    onError: () => toast.error("Erro ao atualizar."),
+    // Update OTIMISTA: o card muda de dia na hora, sem voltar e pular depois do refetch.
+    onMutate: async ({ id, date, time }: { id: string; date: string | null; time?: string | null }) => {
+      await qc.cancelQueries({ queryKey: ["manager-calendar", user?.id] });
+      const prev = qc.getQueryData<CalPost[]>(["manager-calendar", user?.id]);
+      qc.setQueryData<CalPost[]>(["manager-calendar", user?.id], (old) =>
+        Array.isArray(old) ? old.map((p) => (p.id === id ? { ...p, scheduled_date: date, ...(time !== undefined ? { scheduled_time: time } : {}) } : p)) : old);
+      return { prev };
+    },
+    onError: (_e: unknown, _v, ctx) => {
+      const c = ctx as { prev?: CalPost[] } | undefined;
+      if (c?.prev) qc.setQueryData(["manager-calendar", user?.id], c.prev);
+      toast.error("Erro ao atualizar.");
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["manager-calendar", user?.id], refetchType: "none" }),
   });
 
   const visible = (p: CalPost) => !hidden.has(p.external_client_id);

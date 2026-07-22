@@ -560,8 +560,21 @@ export function useUpdateCrmTask() {
       const { error } = await sbFrom("crm_tasks").update(updates as never).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-tasks"] }),
-    onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao atualizar tarefa."),
+    // Update OTIMISTA: kanban/tarefas fluidos (o card fica onde soltou na hora,
+    // sem voltar e pular depois do refetch).
+    onMutate: async ({ id, ...updates }: { id: string } & Partial<CrmTaskInput>) => {
+      await qc.cancelQueries({ queryKey: ["crm-tasks"] });
+      const snapshot = qc.getQueriesData<CrmTask[]>({ queryKey: ["crm-tasks"] });
+      qc.setQueriesData<CrmTask[]>({ queryKey: ["crm-tasks"] }, (old) =>
+        Array.isArray(old) ? old.map((t) => (t.id === id ? { ...t, ...updates } as CrmTask : t)) : old);
+      return { snapshot };
+    },
+    onError: (e: unknown, _v, ctx) => {
+      const c = ctx as { snapshot?: [readonly unknown[], CrmTask[] | undefined][] } | undefined;
+      c?.snapshot?.forEach(([key, data]) => qc.setQueryData(key, data));
+      toast.error((e as Error)?.message ?? "Erro ao atualizar tarefa.");
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["crm-tasks"], refetchType: "none" }),
   });
 }
 export function useDeleteCrmTask() {
