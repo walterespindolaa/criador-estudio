@@ -43,7 +43,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 // Emoji da saudação, clicável e personalizável (fica salvo por dispositivo).
-const GREET_EMOJIS = ["👋", "✨", "🚀", "🔥", "💪", "😎", "🎯", "☕", "🌟", "💜", "🙌", "👊"];
+const GREET_EMOJIS = [
+  "👋", "✨", "🚀", "🔥", "💪", "😎", "🎯", "☕", "🌟", "💜", "🙌", "👊",
+  "😊", "😄", "🤩", "🥳", "😌", "🤗", "😉", "🙃", "💫", "⚡", "🌈", "🍀",
+  "❤️", "🧡", "💛", "💙", "💚", "🩷", "👑", "🏆", "📈", "🎨", "💡", "🎬",
+];
 function GreetingEmoji() {
   const [emoji, setEmoji] = useState<string>(() => { try { return localStorage.getItem("cria_greet_emoji") || "👋"; } catch { return "👋"; } });
   const [open, setOpen] = useState(false);
@@ -55,7 +59,7 @@ function GreetingEmoji() {
       </PopoverTrigger>
       <PopoverContent align="start" className="w-auto p-2">
         <p className="text-[11px] font-body text-muted-foreground mb-1.5 px-0.5">Escolha seu emoji</p>
-        <div className="grid grid-cols-6 gap-1">
+        <div className="grid grid-cols-6 gap-1 max-h-[220px] overflow-y-auto">
           {GREET_EMOJIS.map((e) => (
             <button key={e} type="button" onClick={() => pick(e)}
               className={"h-8 w-8 rounded-lg text-lg grid place-items-center transition-colors hover:bg-muted " + (e === emoji ? "bg-muted" : "")}>{e}</button>

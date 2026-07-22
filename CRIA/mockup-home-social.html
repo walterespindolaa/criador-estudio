@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CRIA · Home social mídia (mockup)</title>
+<style>
+  :root{--laranja:#EA4918;--amarelo:#FFCF03;--azul:#0061EE;--rosa:#FF77B9;--verde:#01A652;--lilas:#7C90F0;--roxo:#4B3FA8;
+    --tinta:#1c1c1a;--cinza:#5f6066;--linha:#e9e6da;--creme:#F5F3E7;--card:#fff;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--creme);color:var(--tinta);font-family:'Plus Jakarta Sans',-apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:1100px;margin:0 auto;padding:20px 18px 60px}
+  svg.ic{width:16px;height:16px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:none}
+  .sec{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.11em;color:#a9a596;margin:24px 2px 10px}
+  /* HERO */
+  .hero{position:relative;overflow:hidden;border-radius:22px;padding:22px 24px;color:#fff;
+    background:linear-gradient(120deg,#EA4918,#c93c14);box-shadow:0 12px 30px rgba(234,73,24,.22)}
+  .hero .blob{position:absolute;border-radius:50%;opacity:.18;filter:blur(4px)}
+  .hero h1{margin:0;font-size:26px;font-weight:800;letter-spacing:-.4px}
+  .hero p{margin:4px 0 0;font-size:14px;opacity:.92}
+  .hero .row{display:flex;align-items:flex-start;gap:16px;position:relative;z-index:1}
+  .hero .av{width:56px;height:56px;border-radius:18px;background:#fff;color:var(--laranja);display:grid;place-items:center;font-weight:800;font-size:22px;flex:none;border:3px solid rgba(255,255,255,.5)}
+  .cont{margin-left:auto;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);border-radius:14px;padding:9px 13px;display:flex;align-items:center;gap:10px;cursor:pointer}
+  .cont .lb{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;opacity:.85}
+  .cont .nm{font-size:13px;font-weight:800}
+  /* FOCO DE HOJE */
+  .foco{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media(max-width:820px){.foco{grid-template-columns:1fr 1fr}}
+  .fcard{background:var(--card);border:1px solid var(--linha);border-radius:16px;padding:14px;display:flex;gap:11px;align-items:center;box-shadow:0 5px 16px rgba(0,0,0,.03)}
+  .fcard .fi{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#fff;flex:none}
+  .fcard .v{font-size:20px;font-weight:800;line-height:1}
+  .fcard .l{font-size:12px;color:var(--cinza);margin-top:2px;font-weight:600}
+  .fcard.act{cursor:pointer}
+  .fcard.act:hover{border-color:var(--laranja)}
+  /* MÓDULOS */
+  .mods{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media(max-width:820px){.mods{grid-template-columns:1fr 1fr}}
+  .mod{background:var(--card);border:1px solid var(--linha);border-radius:16px;padding:15px;cursor:pointer;transition:.15s;box-shadow:0 5px 16px rgba(0,0,0,.03)}
+  .mod:hover{transform:translateY(-2px);box-shadow:0 12px 24px rgba(0,0,0,.07)}
+  .mod .mi{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#fff;margin-bottom:10px}
+  .mod .mt{font-size:15px;font-weight:800}
+  .mod .md{font-size:12px;color:var(--cinza);margin-top:2px}
+  .ups{margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:1px dashed var(--linha);border-radius:14px;padding:11px 14px}
+  .ups .t{font-size:12.5px;font-weight:800}
+  .ups .chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--linha);background:#fdfdfb;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer}
+  .ups .chip .d{width:16px;height:16px;border-radius:5px;display:grid;place-items:center;color:#fff}
+  /* listas */
+  .card{background:var(--card);border:1px solid var(--linha);border-radius:16px;box-shadow:0 5px 16px rgba(0,0,0,.03)}
+  .apr{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--linha)}
+  .apr:last-child{border-bottom:none}
+  .apr .a{width:34px;height:34px;border-radius:9px;background:#ddd;flex:none;overflow:hidden}
+  .apr .t{font-size:14px;font-weight:700}
+  .apr .s{font-size:12px;color:var(--cinza)}
+  .apr .st{margin-left:auto;font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:#FEF3C7;color:#92600a}
+  /* clientes */
+  .clis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media(max-width:820px){.clis{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.clis{grid-template-columns:1fr}}
+  .cli{position:relative;overflow:hidden;background:var(--card);border:1px solid var(--linha);border-radius:16px;padding:14px;box-shadow:0 5px 16px rgba(0,0,0,.03)}
+  .cli .ac{position:absolute;top:0;left:0;right:0;height:4px}
+  .cli .top{display:flex;gap:11px;align-items:center}
+  .cli .av{width:44px;height:44px;border-radius:50%;color:#fff;display:grid;place-items:center;font-weight:800;font-size:16px;flex:none;overflow:hidden;position:relative}
+  .cli .av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .cli .nm{font-size:14.5px;font-weight:800;line-height:1.1}
+  .cli .hd{font-size:12px;color:var(--cinza)}
+  .cli .badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+  .bdg{font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:999px}
+  .bdg.cria{background:#EDEBFB;color:var(--roxo)}.bdg.link{background:var(--creme);color:var(--cinza)}
+  .bdg.pend{background:#FFF3D6;color:#a06f00}
+  .cli .acts{display:flex;gap:8px;margin-top:12px}
+  .cli .prim{flex:1;border:none;border-radius:11px;padding:9px 0;font:inherit;font-weight:800;font-size:12.5px;color:#fff;cursor:pointer;background:var(--roxo)}
+  .cli .out{border:1px solid var(--linha);background:#fdfdfb;border-radius:11px;padding:9px 12px;font:inherit;font-weight:700;font-size:12.5px;cursor:pointer}
+  .vertudo{margin-left:auto;font-size:12px;font-weight:800;color:var(--laranja);cursor:pointer}
+  .note{background:#fff;border:1px dashed var(--linha);border-radius:14px;padding:12px 14px;margin-top:18px;font-size:12.5px;color:var(--cinza)}
+  .note b{color:var(--tinta)}
+  .headrow{display:flex;align-items:center}
+</style></head>
+<body><div class="wrap">
+
+  <!-- HERO -->
+  <div class="hero">
+    <span class="blob" style="width:200px;height:200px;background:#fff;top:-60px;right:-30px"></span>
+    <div class="row">
+      <div class="av">G</div>
+      <div><h1>Boa tarde, Gabriela</h1><p>3 posts esperando o cliente aprovar. O resto está em dia.</p></div>
+      <div class="cont"><div><div class="lb">Continuar de onde parou</div><div class="nm">Walter Espindola</div></div><svg class="ic"><use href="#i-arrow"/></svg></div>
+    </div>
+  </div>
+
+  <!-- FOCO DE HOJE (direcionamento) -->
+  <div class="sec">Foco de hoje</div>
+  <div class="foco">
+    <div class="fcard act"><span class="fi" style="background:var(--laranja)"><svg class="ic"><use href="#i-check"/></svg></span><div><div class="v">3</div><div class="l">aguardando o cliente</div></div></div>
+    <div class="fcard act"><span class="fi" style="background:var(--rosa)"><svg class="ic"><use href="#i-edit"/></svg></span><div><div class="v">1</div><div class="l">em ajuste</div></div></div>
+    <div class="fcard act"><span class="fi" style="background:var(--azul)"><svg class="ic"><use href="#i-list"/></svg></span><div><div class="v">2</div><div class="l">tarefas pra hoje</div></div></div>
+    <div class="fcard act"><span class="fi" style="background:var(--lilas)"><svg class="ic"><use href="#i-cam"/></svg></span><div><div class="v">1</div><div class="l">captação amanhã</div></div></div>
+  </div>
+
+  <!-- MÓDULOS (só os ativos, sem duplicar Radar/Pacote extra) -->
+  <div class="sec">Seus Cria</div>
+  <div class="mods">
+    <div class="mod"><span class="mi" style="background:var(--laranja)"><svg class="ic"><use href="#i-layers"/></svg></span><div class="mt">Cria Post</div><div class="md">Produção e aprovações</div></div>
+    <div class="mod"><span class="mi" style="background:var(--rosa)"><svg class="ic"><use href="#i-book"/></svg></span><div class="mt">Cria Gestão</div><div class="md">CRM e brandbook</div></div>
+    <div class="mod"><span class="mi" style="background:var(--azul)"><svg class="ic"><use href="#i-wallet"/></svg></span><div class="mt">Cria Caixa</div><div class="md">Financeiro dos clientes</div></div>
+    <div class="mod"><span class="mi" style="background:var(--lilas)"><svg class="ic"><use href="#i-search"/></svg></span><div class="mt">Cria Radar</div><div class="md">Concorrência e tendências</div></div>
+  </div>
+  <!-- upsell discreto, UMA linha, sem card duplicado -->
+  <div class="ups"><span class="t">Amplie seu plano:</span>
+    <button class="chip"><span class="d" style="background:var(--verde)"><svg class="ic" style="width:11px;height:11px"><use href="#i-star"/></svg></span>Cria Studio</button>
+    <button class="chip"><span class="d" style="background:var(--amarelo);color:#1c1c1a"><svg class="ic" style="width:11px;height:11px"><use href="#i-star"/></svg></span>Mais assentos de equipe</button>
+  </div>
+
+  <!-- APROVAÇÕES RECENTES -->
+  <div class="headrow"><div class="sec">Aprovações recentes</div><span class="vertudo" style="margin-top:24px">Ver todas →</span></div>
+  <div class="card">
+    <div class="apr"><div class="a"></div><div><div class="t">As 07 peças</div><div class="s">Walter Espindola</div></div><span class="st">Aguardando</span></div>
+    <div class="apr"><div class="a"></div><div><div class="t">Prova: O que eu construí</div><div class="s">Walter Espindola · 23 jul</div></div><span class="st">Aguardando</span></div>
+    <div class="apr"><div class="a"></div><div><div class="t">Atlas: o mapa que meus pais não tiveram</div><div class="s">Walter Espindola · 06 jul</div></div><span class="st">Aguardando</span></div>
+  </div>
+
+  <!-- SEUS CLIENTES (TODOS, não só Cria) -->
+  <div class="headrow"><div class="sec">Seus clientes</div><span class="vertudo" style="margin-top:24px">Ver todos (5) →</span></div>
+  <div class="clis">
+    <div class="cli"><span class="ac" style="background:var(--laranja)"></span>
+      <div class="top"><div class="av" style="background:var(--laranja)">W<img src="https://i.pravatar.cc/80?img=12"></div><div><div class="nm">Walter Espindola</div><div class="hd">@walterespindola_</div></div></div>
+      <div class="badges"><span class="bdg cria">Usa o Cria</span><span class="bdg pend">3 aguardando</span></div>
+      <div class="acts"><button class="prim">Gerenciar</button><button class="out">Notas</button></div>
+    </div>
+    <div class="cli"><span class="ac" style="background:var(--verde)"></span>
+      <div class="top"><div class="av" style="background:var(--verde)">B</div><div><div class="nm">Beatriz</div><div class="hd">@bea.studio</div></div></div>
+      <div class="badges"><span class="bdg link">Aprova por link</span></div>
+      <div class="acts"><button class="prim">Gerenciar</button><button class="out">Notas</button></div>
+    </div>
+    <div class="cli"><span class="ac" style="background:var(--azul)"></span>
+      <div class="top"><div class="av" style="background:var(--azul)">G</div><div><div class="nm">Gabriela Kawikioni</div><div class="hd">@gabi.k</div></div></div>
+      <div class="badges"><span class="bdg link">Aprova por link</span><span class="bdg pend">1 em ajuste</span></div>
+      <div class="acts"><button class="prim">Gerenciar</button><button class="out">Notas</button></div>
+    </div>
+  </div>
+
+  <div class="note"><b>O que muda:</b> os módulos mostram só os seus Cria (sem aquele "Cria Radar · Pacote Extra" duplicado; upsell vira uma linha discreta embaixo). "Seus clientes" passa a mostrar <b>todos</b>, não só quem usa o Cria, com a cor e o status de cada um. E entra o "Foco de hoje" no topo, dando direção: o que precisa de você agora (aguardando, ajuste, tarefas, captação). A fonte dos textos está maior e mais legível.</div>
+</div>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+  <g id="i-arrow"><path d="M5 12h14"/><polyline points="13 6 19 12 13 18"/></g>
+  <g id="i-check"><polyline points="4 12 9 17 20 6"/></g>
+  <g id="i-edit"><path d="M12 20h9"/><path d="M16.5 3.5a2 2 0 0 1 3 3L7 19l-4 1 1-4z"/></g>
+  <g id="i-list"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></g>
+  <g id="i-cam"><path d="M23 7l-7 5 7 5z"/><rect x="1" y="5" width="15" height="14" rx="2.5"/></g>
+  <g id="i-layers"><polygon points="12 3 21 8 12 13 3 8"/><polyline points="3 13 12 18 21 13"/></g>
+  <g id="i-book"><path d="M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2V4z"/><path d="M5 16h13"/></g>
+  <g id="i-wallet"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M16 11h3"/></g>
+  <g id="i-search"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></g>
+  <g id="i-star"><polygon points="12 4 14 9 19 9.3 15 13 16.5 18 12 15.3 7.5 18 9 13 5 9.3 10 9"/></g>
+</defs></svg>
+</body></html>
