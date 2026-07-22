@@ -213,7 +213,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                   {!embedded && <Button variant="outline" onClick={() => setEditOpen(true)}><Settings2 className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Personalizar</span></Button>}
                 </>
               )}
-              <Button variant="outline" onClick={() => setImportOpen(true)}><KanbanSquare className="h-4 w-4 mr-1.5" /> Importar do kanban</Button>
+              <Button variant="outline" onClick={() => setImportOpen(true)}><KanbanSquare className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Importar do kanban</span></Button>
               <Button onClick={() => openNew()}><Plus className="h-4 w-4 mr-1.5" /> Novo post</Button>
             </div>
           </div>
@@ -426,9 +426,9 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
 
       <Dialog open={formOpen} onOpenChange={(o) => { if (!o) void closeForm(); }}>
         <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="max-w-md md:max-w-5xl bg-white rounded-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="flex flex-row items-center justify-between gap-3 pr-8">
+          <DialogHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pr-8">
             <DialogTitle className="font-display">{draftId || !editing ? "Novo post" : "Editar post"}</DialogTitle>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
               <Button variant="outline" size="sm" onClick={() => void closeForm()}>Cancelar</Button>
               <Button size="sm" onClick={submit} disabled={create.isPending || update.isPending || !f.title.trim()}>{(create.isPending || update.isPending) ? <Loader2 className="h-4 w-4 animate-spin" /> : draftId ? "Criar post" : editing ? (editing.approval_status === "ajuste_solicitado" ? <><RotateCcw className="h-4 w-4 mr-1.5" /> Salvar e reenviar</> : "Salvar") : "Criar post"}</Button>
             </div>
@@ -439,6 +439,17 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
 
             {/* Coluna esquerda: os campos */}
             <div className="md:w-[54%] space-y-4">
+              {/* Ajuste do cliente: fica AQUI, no editor, com espaço pra ler tudo
+                  (no card do kanban aparece só a prévia). */}
+              {editing?.approval_status === "ajuste_solicitado" && editing?.last_comment && (
+                <div className="rounded-xl border border-orange-200 bg-orange-50 p-3">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <RotateCcw className="h-3.5 w-3.5 text-orange-700" />
+                    <p className="text-xs font-body font-bold text-orange-800">O cliente pediu um ajuste</p>
+                  </div>
+                  <p className="text-[13px] font-body text-orange-800 whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto">{editing.last_comment}</p>
+                </div>
+              )}
               {/* Título */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-body">Título *</Label>

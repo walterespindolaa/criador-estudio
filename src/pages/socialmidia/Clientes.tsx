@@ -149,7 +149,7 @@ export default function Clientes() {
                   <span className={`text-[11px] px-2 py-0.5 rounded-full ${c.cria_owner_id ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>{c.cria_owner_id ? "Usa o Cria" : "Aprova por link"}</span>
                   {inactive && <span className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">Inativo</span>}
                 </div>
-                <div className="flex items-center gap-1.5 mt-3">
+                <div className="flex items-center justify-center flex-wrap gap-1.5 mt-3">
                   <Button size="sm" className="h-8 rounded-xl px-3 text-xs" onClick={(e) => { e.stopPropagation(); open(c.id); }}>Abrir ficha</Button>
                   {extc && (
                     <>

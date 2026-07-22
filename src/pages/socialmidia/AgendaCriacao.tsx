@@ -405,9 +405,9 @@ export default function AgendaCriacao() {
 
       {/* Captações */}
       <div id="captacoes-section" data-tour="ag-captacoes" className="rounded-2xl border border-border bg-card p-4 mt-4 scroll-mt-20">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <p className="text-sm font-display font-bold text-foreground">Captações e tarefas</p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button size="sm" variant="outline" className="h-8" onClick={() => { setAddKind("tarefa"); setAddDay(new Date().toLocaleDateString("sv-SE")); }}><Plus className="h-3.5 w-3.5 mr-1" /> Nova tarefa</Button>
             <Button size="sm" className="h-8" onClick={() => setCapOpen(true)}><Plus className="h-3.5 w-3.5 mr-1" /> Nova captação</Button>
           </div>
