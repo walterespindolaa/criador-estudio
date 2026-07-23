@@ -1047,6 +1047,7 @@ export type Database = {
           company_name: string | null
           competitors: Json
           contract_date: string | null
+          contract_end_date: string | null
           created_at: string
           cria_owner_id: string | null
           crm_lead_id: string | null
@@ -1085,6 +1086,7 @@ export type Database = {
           company_name?: string | null
           competitors?: Json
           contract_date?: string | null
+          contract_end_date?: string | null
           created_at?: string
           cria_owner_id?: string | null
           crm_lead_id?: string | null
@@ -1123,6 +1125,7 @@ export type Database = {
           company_name?: string | null
           competitors?: Json
           contract_date?: string | null
+          contract_end_date?: string | null
           created_at?: string
           cria_owner_id?: string | null
           crm_lead_id?: string | null
@@ -1381,6 +1384,7 @@ export type Database = {
           crm_lead_id: string | null
           description: string | null
           due_date: string | null
+          due_time: string | null
           id: string
           manager_id: string
           priority: string
@@ -1394,6 +1398,7 @@ export type Database = {
           crm_lead_id?: string | null
           description?: string | null
           due_date?: string | null
+          due_time?: string | null
           id?: string
           manager_id?: string
           priority?: string
@@ -1407,6 +1412,7 @@ export type Database = {
           crm_lead_id?: string | null
           description?: string | null
           due_date?: string | null
+          due_time?: string | null
           id?: string
           manager_id?: string
           priority?: string
@@ -4952,6 +4958,10 @@ export type Database = {
           posted_at: string
           thumbnail_url: string
         }[]
+      }
+      get_client_ig_report: {
+        Args: { _crm_client_id: string; _since: string; _until: string }
+        Returns: Json
       }
       get_cronograma_by_token: { Args: { _token: string }; Returns: Json }
       get_external_client_by_token: {
