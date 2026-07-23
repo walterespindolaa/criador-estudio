@@ -118,3 +118,25 @@ export function useClientMaterials(crmClientId: string | undefined) {
     deleteMaterial,
   };
 }
+
+// Materiais PEDIDOS pelo cliente e ainda parados em "solicitado" (fila do gestor),
+// de TODOS os clientes de uma vez. Alimenta a Central de Aprovações.
+export type PendingMaterial = Pick<ClientMaterial, "id" | "crm_client_id" | "title" | "created_at">;
+export function useManagerPendingMaterials() {
+  const { agencyOwnerId } = useActiveAccount();
+  const query = useQuery<PendingMaterial[]>({
+    queryKey: ["manager-pending-materials", agencyOwnerId],
+    enabled: !!agencyOwnerId,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("client_materials")
+        .select("id, crm_client_id, title, created_at")
+        .eq("manager_id", agencyOwnerId!)
+        .eq("requested_by", "cliente")
+        .eq("status", "solicitado")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as PendingMaterial[];
+    },
+  });
+  return { pending: query.data ?? [], isLoading: query.isLoading };
+}
