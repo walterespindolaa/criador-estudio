@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   addDays, addMonths, format, isSameDay, isSameMonth,
   startOfMonth, startOfWeek, subMonths,
+  endOfWeek, endOfMonth, startOfYear, endOfYear, subDays,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, CalendarDays, Clock, ChevronDown, Users, Loader2 } from "lucide-react";
@@ -38,6 +39,32 @@ function writeFlag(key: string, val: boolean) {
 const sbFrom = supabase.from.bind(supabase) as unknown as (t: string) => ReturnType<typeof supabase.from>;
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
+// Filtro por período (mesmo padrão do Dashboard/Criando): restringe quais posts
+// aparecem no calendário geral. "Tudo" = mostra tudo (comportamento antigo).
+type PeriodKey = "tudo" | "hoje" | "semana" | "quinzenal" | "mes" | "ano" | "personalizado";
+const PERIOD_OPTIONS: { key: PeriodKey; label: string }[] = [
+  { key: "tudo", label: "Tudo" },
+  { key: "hoje", label: "Hoje" },
+  { key: "semana", label: "Semana" },
+  { key: "quinzenal", label: "Quinzenal" },
+  { key: "mes", label: "Mês" },
+  { key: "ano", label: "Ano" },
+  { key: "personalizado", label: "Personalizado" },
+];
+// Devolve o intervalo (Date) de cada período; null = sem limite ("Tudo").
+function getDateRange(period: PeriodKey): { start: Date; end: Date } | null {
+  const now = new Date();
+  switch (period) {
+    case "tudo": return null;
+    case "hoje": return { start: new Date(now.getFullYear(), now.getMonth(), now.getDate()), end: new Date(now.getFullYear(), now.getMonth(), now.getDate()) };
+    case "semana": return { start: startOfWeek(now, { weekStartsOn: 0 }), end: endOfWeek(now, { weekStartsOn: 0 }) };
+    case "quinzenal": return { start: subDays(now, 14), end: now };
+    case "mes": return { start: startOfMonth(now), end: endOfMonth(now) };
+    case "ano": return { start: startOfYear(now), end: endOfYear(now) };
+    default: return null;
+  }
+}
+
 type CalPost = {
   id: string; title: string; format: string; platform: string;
   external_client_id: string; scheduled_date: string | null; scheduled_time: string | null;
@@ -62,8 +89,35 @@ export function ManagerCalendar() {
   // Dia aberto no mobile: como cada célula fica minúscula no celular, tocar no dia
   // abre a lista dos itens dele num Dialog (cada item abre o popup de edição).
   const [dayModal, setDayModal] = useState<string | null>(null);
+  // Filtro por período (Tudo/Hoje/Semana/Quinzenal/Mês/Ano/Personalizado).
+  const [period, setPeriod] = useState<PeriodKey>("tudo");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+  // Guarda se houve arraste de verdade: evita que o clique disparado logo após um
+  // drop abra o popup de edição (drag e clique coexistem no mesmo card).
+  const draggingRef = useRef(false);
   const toggleAAgendar = () => setAAgendarOpen((v) => { const n = !v; writeFlag("cal_aagendar_open", n); return n; });
   const toggleChips = () => setChipsOpen((v) => { const n = !v; writeFlag("cal_chips_open", n); return n; });
+
+  // Intervalo do período em texto (yyyy-MM-dd) pra comparar direto com scheduled_date.
+  const periodRange = useMemo(() => {
+    if (period === "personalizado") {
+      if (!customFrom || !customTo) return null;
+      return customFrom <= customTo ? { start: customFrom, end: customTo } : { start: customTo, end: customFrom };
+    }
+    const r = getDateRange(period);
+    return r ? { start: format(r.start, "yyyy-MM-dd"), end: format(r.end, "yyyy-MM-dd") } : null;
+  }, [period, customFrom, customTo]);
+
+  // Ao escolher um período pronto, leva o calendário pro mês desse intervalo
+  // (senão a grade poderia ficar num mês sem nenhum post do filtro).
+  const handlePeriod = (key: PeriodKey) => {
+    setPeriod(key);
+    if (key !== "tudo" && key !== "personalizado") {
+      const r = getDateRange(key);
+      if (r) setCursor(r.start);
+    }
+  };
 
   const colorOf = useMemo(() => {
     const map: Record<string, string> = {};
@@ -135,10 +189,12 @@ export function ManagerCalendar() {
     const map: Record<string, CalPost[]> = {};
     for (const p of posts) {
       if (!p.scheduled_date || !visible(p)) continue;
+      // Fora do período escolhido? Não entra na grade.
+      if (periodRange && (p.scheduled_date < periodRange.start || p.scheduled_date > periodRange.end)) continue;
       (map[p.scheduled_date] ??= []).push(p);
     }
     return map;
-  }, [posts, hidden]);
+  }, [posts, hidden, periodRange]);
   const unscheduled = posts.filter((p) => !p.scheduled_date && visible(p));
 
   // Mês: 6 semanas a partir do domingo da semana do dia 1. Semana: 7 dias.
@@ -172,8 +228,12 @@ export function ManagerCalendar() {
       <div
         key={p.id}
         draggable
-        onDragStart={(e) => e.dataTransfer.setData("text/plain", p.id)}
-        onClick={() => setEditPost(p)}
+        onDragStart={(e) => { draggingRef.current = false; e.dataTransfer.setData("text/plain", p.id); e.dataTransfer.effectAllowed = "move"; }}
+        onDrag={() => { draggingRef.current = true; }}
+        // Limpa a flag no tick seguinte: o clique fantasma que alguns navegadores
+        // disparam logo após o drop já foi ignorado (o ref ainda está true nele).
+        onDragEnd={() => { window.setTimeout(() => { draggingRef.current = false; }, 0); }}
+        onClick={() => { if (draggingRef.current) return; setEditPost(p); }}
         className="cursor-grab active:cursor-grabbing rounded-md px-1.5 py-1 mb-1 text-[10px] leading-tight truncate"
         style={{ backgroundColor: `${color}1a`, borderLeft: `3px solid ${color}` }}
         title={`${nameOf[p.external_client_id] ?? ""} · ${p.title}`}
@@ -229,6 +289,29 @@ export function ManagerCalendar() {
           )}
         </div>
       )}
+
+      {/* Filtro por período: restringe os posts exibidos na grade (mesmo padrão do Dashboard). */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground mr-0.5">
+          <CalendarDays className="h-3.5 w-3.5" /> Período
+        </span>
+        {PERIOD_OPTIONS.map((opt) => {
+          const on = period === opt.key;
+          return (
+            <button key={opt.key} type="button" onClick={() => handlePeriod(opt.key)}
+              className={`px-2.5 py-1 rounded-full text-xs font-body border transition-colors ${on ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
+              {opt.label}
+            </button>
+          );
+        })}
+        {period === "personalizado" && (
+          <div className="flex items-center gap-1.5">
+            <Input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="h-8 w-[9.5rem] rounded-lg text-xs" />
+            <span className="text-xs text-muted-foreground font-body">até</span>
+            <Input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="h-8 w-[9.5rem] rounded-lg text-xs" />
+          </div>
+        )}
+      </div>
 
       {/* A agendar: minimizada por padrão. O container inteiro continua sendo a zona de
           drop pra desagendar (arrastar um post pra cá), mesmo colapsada. */}

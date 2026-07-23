@@ -56,7 +56,9 @@ function shadeHex(hex: string, pct: number): string {
 
 function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
   const media = Array.isArray(post.media) ? post.media : [];
-  const handle = client.instagram_handle ? client.instagram_handle.replace(/^@/, "") : (client.client_name || "perfil").toLowerCase().replace(/\s+/g, "");
+  // @ do Instagram: usa o handle real quando existe; senão placeholder neutro
+  // ("perfil"), NUNCA o nome do cadastro do cliente.
+  const handle = client.instagram_handle ? client.instagram_handle.replace(/^@/, "") : "perfil";
   const aspect = postAspect(post.platform, post.format);
   const vertical = aspect === "9 / 16";
   const brand = client.brand_color ?? null;
