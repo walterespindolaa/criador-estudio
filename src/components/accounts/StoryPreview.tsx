@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Heart, Send, ImageOff, Play, X } from "lucide-react";
 import type { CarouselMedia } from "@/components/shared/PostMediaCarousel";
-import { getDisplayImageUrl, getDriveImageFallbackUrl, getVideoEmbedUrl, isVideoMedia } from "@/lib/driveMedia";
+import { getDisplayImageUrl, getDriveImageFallbackUrl, getThumbnailUrl, getVideoEmbedUrl, isVideoMedia } from "@/lib/driveMedia";
+import { ProgressiveImage } from "@/components/shared/ProgressiveImage";
 
 /**
  * Preview de Story (9:16, tela cheia): sem legenda e sem barra de ações de feed.
@@ -22,6 +23,7 @@ export function StoryPreview({ media, handle, avatarUrl, onRemove }: {
 
   const video = item ? isVideoMedia(item) : false;
   const src = item ? getDisplayImageUrl(item) : null;
+  const thumb = item ? getThumbnailUrl(item) : null;
   const embedUrl = item && video ? getVideoEmbedUrl(item) : null;
 
   const onImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -38,7 +40,8 @@ export function StoryPreview({ media, handle, avatarUrl, onRemove }: {
         playing && embedUrl ? (
           <iframe src={embedUrl} className="w-full h-full bg-black" allow="autoplay; fullscreen; picture-in-picture" title={item.file_name || "vídeo"} />
         ) : src ? (
-          <img key={item.id ?? safeIdx} src={src} alt={item.file_name || ""} loading="lazy" className="w-full h-full object-cover" onError={onImgError} />
+          <ProgressiveImage key={item.id ?? safeIdx} thumbSrc={thumb} fullSrc={src} alt={item.file_name || ""}
+            className="w-full h-full object-cover" onFullError={onImgError} onThumbError={onImgError} />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-white/40"><ImageOff className="h-10 w-10" /></div>
         )

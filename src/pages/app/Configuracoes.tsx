@@ -865,14 +865,21 @@ const Configuracoes = () => {
 
                         <div className="space-y-2">
                           <label className="text-xs font-body font-semibold uppercase tracking-wider text-muted-foreground/70">
-                            Tempo de retenção de uploads
+                            Tempo de retenção de mídias
                           </label>
                           <p className="text-xs text-muted-foreground font-body">
-                            Arquivos enviados da galeria são deletados automaticamente após esse período.
-                            Arquivos do Google Drive nunca expiram.
+                            As MÍDIAS enviadas da galeria (fotos e vídeos de post e da aba Arquivos) são
+                            removidas automaticamente após esse período pra economizar espaço.
+                            Os posts, textos e legendas NÃO são apagados. Arquivos do Google Drive nunca expiram.
                           </p>
-                          <div className="flex gap-2">
-                            {[15, 30].map((days) => (
+                          <div className="flex gap-2 flex-wrap">
+                            {[
+                              { days: 15, label: "15 dias" },
+                              { days: 30, label: "30 dias" },
+                              { days: 90, label: "3 meses" },
+                              { days: 180, label: "6 meses" },
+                              { days: 365, label: "1 ano" },
+                            ].map(({ days, label }) => (
                               <button
                                 key={days}
                                 type="button"
@@ -885,7 +892,7 @@ const Configuracoes = () => {
                                     : "bg-card border-border text-foreground hover:border-primary/40"
                                 )}
                               >
-                                {days} dias
+                                {label}
                               </button>
                             ))}
                           </div>

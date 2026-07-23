@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import * as tus from "tus-js-client";
 import { BUNNY_CDN_HOSTNAME } from "@/lib/constants";
-import { compressImage } from "@/lib/image-compress";
+import { capFullImage, makeThumbnail } from "@/lib/image-compress";
 import { useAuth } from "@/contexts/AuthContext";
 import { useActiveAccount } from "@/contexts/AccountContext";
 
@@ -105,25 +105,39 @@ export function useCriaPostMedia(postId: string | null) {
         blob = Array.isArray(out) ? out[0] : out;
         name = name.replace(/\.(heic|heif)$/i, ".jpg"); type = "image/jpeg";
       }
-      // Comprime no cliente e sobe DIRETO pro Storage. Antes o arquivo virava
-      // base64 e passava por uma edge function que decodificava tudo na memória
-      // → estourava (WORKER_RESOURCE_LIMIT) em foto grande/carrossel. Agora os
-      // bytes nunca tocam a function: mais barato, mais rápido e escalável.
-      const toCompress = blob instanceof File ? blob : new File([blob], name, { type });
-      const compressed = await compressImage(toCompress);
+      // Sobe DIRETO pro Storage (os bytes nunca tocam uma edge function; antes
+      // viravam base64 e estouravam WORKER_RESOURCE_LIMIT em foto grande).
+      // DECISÃO DE PRODUTO: guardar o ORIGINAL em QUALIDADE CHEIA (a social mídia
+      // baixa e posta), + uma MINIATURA leve pra listar rápido. O custo é
+      // controlado pela retenção configurável (storage_retention_days).
+      const source = blob instanceof File ? blob : new File([blob], name, { type });
+      // Original cheio: só um teto de segurança (>4096px vira 4096 q~0.92); senão sobe intacto.
+      const full = await capFullImage(source);
+      // Miniatura: máx 640px, q~0.7 (~30-80KB), placeholder do preview progressivo.
+      const thumb = await makeThumbnail(source);
       const owner = activeAccountId || user?.id;
       if (!owner) throw new Error("Sessão expirada. Entre de novo.");
-      const safe = sanitizeStoragePath(compressed.name || name);
-      const path = `${owner}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safe}`;
-      const { error: upErr } = await supabase.storage.from("media").upload(path, compressed, {
-        upsert: true, contentType: compressed.type,
+      const safe = sanitizeStoragePath(full.name || name);
+      const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const fullPath = `${owner}/${stamp}-${safe}`;
+      const { error: upErr } = await supabase.storage.from("media").upload(fullPath, full, {
+        upsert: true, contentType: full.type,
       });
       if (upErr) throw new Error(upErr.message || "Não consegui subir a imagem.");
-      const publicUrl = supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
+      const publicUrl = supabase.storage.from("media").getPublicUrl(fullPath).data.publicUrl;
+      // Miniatura em caminho separado (sufixo -thumb). Se falhar, cai pra imagem cheia
+      // como thumbnail (não trava o upload por causa da prévia).
+      let thumbUrl = publicUrl;
+      const thumbPath = `${owner}/${stamp}-thumb-${safe}`;
+      const { error: thumbErr } = await supabase.storage.from("media").upload(thumbPath, thumb, {
+        upsert: true, contentType: thumb.type,
+      });
+      if (!thumbErr) thumbUrl = supabase.storage.from("media").getPublicUrl(thumbPath).data.publicUrl;
       const { error: addErr } = await sbRpc("criapost_add_media", {
-        p_post_id: postId, p_provider: "device", p_external_file_id: path,
-        p_file_name: name, p_file_type: compressed.type, p_file_size: compressed.size,
-        p_view_url: publicUrl, p_thumbnail_url: publicUrl, p_download_url: null, p_bunny_video_id: null,
+        // view_url + download_url = ORIGINAL cheio (download/post). thumbnail_url = MINIATURA.
+        p_post_id: postId, p_provider: "device", p_external_file_id: fullPath,
+        p_file_name: name, p_file_type: full.type, p_file_size: full.size,
+        p_view_url: publicUrl, p_thumbnail_url: thumbUrl, p_download_url: publicUrl, p_bunny_video_id: null,
       });
       if (addErr) throw new Error(addErr.message);
     },

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { ImageOff, ChevronLeft, ChevronRight, X, Play } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
-import { getDisplayImageUrl, getDriveImageFallbackUrl, getVideoEmbedUrl, isVideoMedia } from "@/lib/driveMedia";
+import { getDisplayImageUrl, getDriveImageFallbackUrl, getThumbnailUrl, getVideoEmbedUrl, isVideoMedia } from "@/lib/driveMedia";
+import { ProgressiveImage } from "@/components/shared/ProgressiveImage";
 
 export type CarouselMedia = {
   id?: string; provider?: string | null; external_file_id?: string | null; view_url?: string | null;
@@ -54,15 +55,23 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
   );
 }
 
-function Slide({ item, onReady }: { item: CarouselMedia; onReady?: () => void }) {
+function Slide({ item, onReady, eager }: { item: CarouselMedia; onReady?: () => void; eager?: boolean }) {
   if (isVideoMedia(item)) return <VideoSlide item={item} onReady={onReady} />;
-  const src = getDisplayImageUrl(item) || "";
+  const full = getDisplayImageUrl(item) || "";
+  // Miniatura leve pro placeholder; a cheia (full) entra por cima ao carregar.
+  const thumb = getThumbnailUrl(item);
   const onImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
     const fb = getDriveImageFallbackUrl(item);
     if (fb && !img.dataset.fb) { img.dataset.fb = "1"; img.src = fb; }
   };
-  if (src) return <img src={src} alt={item.file_name || ""} className="w-full h-full object-cover bg-muted" loading="lazy" onError={onImgError} />;
+  if (full) return (
+    <ProgressiveImage
+      thumbSrc={thumb} fullSrc={full} alt={item.file_name || ""} eager={eager}
+      className="w-full h-full object-cover bg-muted"
+      onFullError={onImgError} onThumbError={onImgError}
+    />
+  );
   return <div className="w-full h-full bg-muted flex items-center justify-center text-muted-foreground"><ImageOff className="h-8 w-8" /></div>;
 }
 
@@ -83,7 +92,7 @@ export function PostMediaCarousel({ media, aspect = "4 / 5", onRemove, onVideoRe
       <div ref={scroller} onScroll={onScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
         {media.map((m, i) => (
           <div key={m.id ?? i} className="relative w-full h-full shrink-0 snap-center">
-            <Slide item={m} onReady={onVideoReady} />
+            <Slide item={m} onReady={onVideoReady} eager={i === 0} />
             {onRemove && m.id && (
               <button type="button" onClick={(e) => { e.stopPropagation(); onRemove(m.id!); }}
                 className="absolute top-2 left-2 z-20 bg-black/60 text-white rounded-full p-1.5 hover:bg-black/80"><X className="h-4 w-4" /></button>

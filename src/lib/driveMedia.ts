@@ -58,6 +58,22 @@ export function getDisplayImageUrl(m: MediaLike, size = 1600): string | null {
   return m.view_url || m.thumbnail_url || m.download_url || null;
 }
 
+/**
+ * URL LEVE pra listagem/placeholder do preview progressivo (grade, carrossel,
+ * portal de aprovação). Prioriza a MINIATURA salva (thumbnail_url) pra não puxar
+ * a imagem cheia de todo mundo de uma vez. Drive: usa o thumbnail pequeno.
+ * Vídeo: o thumbnail já é o frame. Devolve null quando não há nada exibível.
+ */
+export function getThumbnailUrl(m: MediaLike, size = 480): string | null {
+  if (isDriveMedia(m)) {
+    const id = getDriveFileId(m);
+    if (id) return `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${size}`;
+    return m.thumbnail_url || null;
+  }
+  if (isVideoMedia(m)) return m.thumbnail_url || null;
+  return m.thumbnail_url || m.view_url || m.download_url || null;
+}
+
 /** Fallback (lh3.googleusercontent.com) pra quando o thumbnail do Drive falhar. */
 export function getDriveImageFallbackUrl(m: MediaLike, size = 1600): string | null {
   if (!isDriveMedia(m)) return null;
