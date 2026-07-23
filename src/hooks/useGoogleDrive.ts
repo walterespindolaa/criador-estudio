@@ -86,14 +86,16 @@ export function useGoogleDrive() {
   const [picking, setPicking] = useState(false);
 
   const loadGoogleScripts = useCallback((): Promise<void> => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       if (window.google?.picker && window.gapi) { resolve(); return; }
+      const fail = () => reject(new Error("google_script_load_failed"));
 
       const loadPicker = () => {
         if (!window.gapi) {
           const s = document.createElement("script");
           s.src = "https://apis.google.com/js/api.js";
           s.onload = () => { window.gapi.load("picker", () => resolve()); };
+          s.onerror = fail;
           document.body.appendChild(s);
         } else {
           window.gapi.load("picker", () => resolve());
@@ -104,6 +106,7 @@ export function useGoogleDrive() {
         const s = document.createElement("script");
         s.src = "https://accounts.google.com/gsi/client";
         s.onload = loadPicker;
+        s.onerror = fail;
         document.body.appendChild(s);
       } else {
         loadPicker();
@@ -135,6 +138,12 @@ export function useGoogleDrive() {
               scope: resp.scope ?? "",
               expires: resp.expires_in ?? 3600,
             });
+          },
+          // Sem isto, fechar/cancelar o popup de permissão do Google NÃO dispara
+          // callback nenhum e a Promise fica pendurada pra sempre → botão "travado
+          // carregando". Aqui rejeitamos pra o fluxo destravar e o picking resetar.
+          error_callback: (err: { type?: string }) => {
+            reject(new Error(err?.type === "popup_closed" ? "popup_closed" : (err?.type || "oauth_error")));
           },
           ...(hint ? { hint } : {}),
         });

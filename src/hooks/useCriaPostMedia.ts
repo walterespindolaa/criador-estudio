@@ -2,6 +2,23 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import * as tus from "tus-js-client";
 import { BUNNY_CDN_HOSTNAME } from "@/lib/constants";
+import { compressImage } from "@/lib/image-compress";
+import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
+
+// Nome de arquivo seguro pro caminho no Storage (sem acento/espaço/símbolo).
+function sanitizeStoragePath(name: string): string {
+  const lastDot = name.lastIndexOf(".");
+  const base = lastDot > 0 ? name.slice(0, lastDot) : name;
+  const ext = lastDot > 0 ? name.slice(lastDot) : "";
+  const clean = base
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase()
+    .slice(0, 80) || "file";
+  return `${clean}${ext.toLowerCase()}`;
+}
 
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
@@ -38,15 +55,10 @@ async function edgeErrText(err: unknown, fallback: string): Promise<string> {
   return (err as { message?: string })?.message || fallback;
 }
 
-async function fileToBase64(file: Blob): Promise<string> {
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  let bin = ""; const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
-  return btoa(bin);
-}
-
 export function useCriaPostMedia(postId: string | null) {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const { activeAccountId } = useActiveAccount();
   const key = ["criapost-media", postId];
   const invalidate = () => qc.invalidateQueries({ queryKey: key });
 
@@ -84,7 +96,7 @@ export function useCriaPostMedia(postId: string | null) {
       return { prev, objectUrl };
     },
     mutationFn: async (file: File) => {
-      let blob: Blob = file, name = file.name, type = file.type;
+      let blob: Blob = file, name = file.name, type = file.type || "image/jpeg";
       if (isHeic(file)) {
         // Import dinâmico: o heic2any é pesado (~350 kB gzip). Só baixa quando
         // a pessoa realmente sobe um HEIC, em vez de pesar toda abertura de post.
@@ -93,13 +105,27 @@ export function useCriaPostMedia(postId: string | null) {
         blob = Array.isArray(out) ? out[0] : out;
         name = name.replace(/\.(heic|heif)$/i, ".jpg"); type = "image/jpeg";
       }
-      const data_base64 = await fileToBase64(blob);
-      const { data, error } = await supabase.functions.invoke("criapost-image-upload", {
-        body: { post_id: postId, file_name: name, file_type: type, data_base64 },
+      // Comprime no cliente e sobe DIRETO pro Storage. Antes o arquivo virava
+      // base64 e passava por uma edge function que decodificava tudo na memória
+      // → estourava (WORKER_RESOURCE_LIMIT) em foto grande/carrossel. Agora os
+      // bytes nunca tocam a function: mais barato, mais rápido e escalável.
+      const toCompress = blob instanceof File ? blob : new File([blob], name, { type });
+      const compressed = await compressImage(toCompress);
+      const owner = activeAccountId || user?.id;
+      if (!owner) throw new Error("Sessão expirada. Entre de novo.");
+      const safe = sanitizeStoragePath(compressed.name || name);
+      const path = `${owner}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safe}`;
+      const { error: upErr } = await supabase.storage.from("media").upload(path, compressed, {
+        upsert: true, contentType: compressed.type,
       });
-      if (error) throw new Error(await edgeErrText(error, "Não consegui subir a imagem."));
-      if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
-      return data;
+      if (upErr) throw new Error(upErr.message || "Não consegui subir a imagem.");
+      const publicUrl = supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
+      const { error: addErr } = await sbRpc("criapost_add_media", {
+        p_post_id: postId, p_provider: "device", p_external_file_id: path,
+        p_file_name: name, p_file_type: compressed.type, p_file_size: compressed.size,
+        p_view_url: publicUrl, p_thumbnail_url: publicUrl, p_download_url: null, p_bunny_video_id: null,
+      });
+      if (addErr) throw new Error(addErr.message);
     },
     onError: (_e, _f, ctx) => {
       if (ctx?.prev) qc.setQueryData(key, ctx.prev);
