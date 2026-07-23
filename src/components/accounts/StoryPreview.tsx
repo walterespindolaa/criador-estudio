@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Heart, Send, ImageOff, Play, X } from "lucide-react";
+import { Heart, Send, ImageOff, Play, X, ExternalLink } from "lucide-react";
 import type { CarouselMedia } from "@/components/shared/PostMediaCarousel";
-import { getDisplayImageUrl, getDriveImageFallbackUrl, getThumbnailUrl, getVideoEmbedUrl, getVideoFileUrl, getVideoKind, isVideoMedia } from "@/lib/driveMedia";
+import { getDisplayImageUrl, getDriveImageFallbackUrl, getDriveViewPageUrl, getThumbnailUrl, getVideoEmbedUrl, getVideoFileUrl, getVideoKind, isVideoMedia } from "@/lib/driveMedia";
 import { ProgressiveImage } from "@/components/shared/ProgressiveImage";
 
 /**
@@ -29,6 +29,8 @@ export function StoryPreview({ media, handle, avatarUrl, onRemove }: {
   const embedUrl = item && video ? getVideoEmbedUrl(item) : null;
   const fileUrl = item && video ? getVideoFileUrl(item) : null;
   const canPlay = video && (kind === "file" ? !!fileUrl : !!embedUrl);
+  // Fallback só pro Drive: se o embed /preview for bloqueado, abre a página do Drive.
+  const driveViewUrl = item && kind === "drive" ? getDriveViewPageUrl(item) : null;
 
   const onImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
@@ -89,6 +91,14 @@ export function StoryPreview({ media, handle, avatarUrl, onRemove }: {
       {video && !playing && canPlay && (
         <button type="button" onClick={() => setPlaying(true)} aria-label="Reproduzir vídeo" className="absolute inset-0 z-[15] flex items-center justify-center">
           <span className="w-14 h-14 rounded-full bg-black/55 flex items-center justify-center"><Play className="h-7 w-7 text-white ml-0.5" /></span>
+        </button>
+      )}
+
+      {/* Só pro Drive: atalho discreto caso o embed seja bloqueado pela conta do cliente. */}
+      {driveViewUrl && (
+        <button type="button" onClick={() => window.open(driveViewUrl, "_blank", "noopener,noreferrer")}
+          className="absolute bottom-16 right-2 z-30 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-black/80">
+          <ExternalLink className="h-3 w-3" /> Assistir em nova aba
         </button>
       )}
 

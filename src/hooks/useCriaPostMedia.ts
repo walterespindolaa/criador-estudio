@@ -1,8 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import * as tus from "tus-js-client";
-import { BUNNY_CDN_HOSTNAME } from "@/lib/constants";
 import { capFullImage, makeThumbnail } from "@/lib/image-compress";
+import { uploadVideoFileToBunny } from "@/lib/bunny-upload";
 import { useAuth } from "@/contexts/AuthContext";
 import { useActiveAccount } from "@/contexts/AccountContext";
 
@@ -151,40 +150,9 @@ export function useCriaPostMedia(postId: string | null) {
 
   const uploadVideo = useMutation({
     mutationFn: async (file: File) => {
-      const { data: uid } = await supabase.auth.getUser();
-      const { data: sig, error: sigErr } = await supabase.functions.invoke("bunny-create-video", {
-        body: { fileName: file.name, accountId: uid.user?.id, scope: "criapost" },
-      });
-      if (sigErr) throw new Error(await edgeErrText(sigErr, "Não consegui preparar o envio do vídeo."));
-      const { videoGuid, libraryId, signature, expiration } = sig as {
-        videoGuid: string; libraryId: string | number; signature: string; expiration: number;
-      };
-      await new Promise<void>((resolve, reject) => {
-        const upload = new tus.Upload(file, {
-          endpoint: "https://video.bunnycdn.com/tusupload",
-          retryDelays: [0, 1000, 3000, 5000],
-          headers: {
-            AuthorizationSignature: signature,
-            AuthorizationExpire: String(expiration),
-            VideoId: videoGuid,
-            LibraryId: String(libraryId),
-          },
-          metadata: { filetype: file.type, title: file.name },
-          onError: reject,
-          onSuccess: () => resolve(),
-        });
-        upload.start();
-      });
-      const view_url = `https://iframe.mediadelivery.net/embed/${libraryId}/${videoGuid}`;
-      // Miniatura tem que vir do CDN da MESMA library onde o vídeo foi criado (Stream),
-      // senão dá 404. Antes usava o CDN da library criapost (vazia).
-      const thumbnail_url = `https://${BUNNY_CDN_HOSTNAME}/${videoGuid}/thumbnail.jpg`;
-      const { error: addErr } = await sbRpc("criapost_add_media", {
-        p_post_id: postId, p_provider: "bunny_stream", p_external_file_id: videoGuid,
-        p_file_name: file.name, p_file_type: file.type || "video/mp4", p_file_size: file.size,
-        p_view_url: view_url, p_thumbnail_url: thumbnail_url, p_download_url: null, p_bunny_video_id: videoGuid,
-      });
-      if (addErr) throw new Error(addErr.message);
+      if (!postId) throw new Error("O post ainda não foi criado. Feche e abra de novo.");
+      // Lógica compartilhada: create-video + upload TUS + criapost_add_media.
+      await uploadVideoFileToBunny(file, postId);
     },
     onSuccess: invalidate,
   });

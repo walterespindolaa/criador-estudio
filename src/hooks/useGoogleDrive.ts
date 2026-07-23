@@ -2,9 +2,9 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useActiveAccount } from "@/contexts/AccountContext";
-import { useVideoPublicConfirm } from "@/contexts/VideoPublicConfirmContext";
 import { toast } from "sonner";
 import { compressImage } from "@/lib/image-compress";
+import { uploadVideoFileToBunny, uploadFileToBunnyStream } from "@/lib/bunny-upload";
 
 const sanitizeStoragePath = (name: string): string => {
   const lastDot = name.lastIndexOf(".");
@@ -60,14 +60,6 @@ const setStoredToken = (token: string, scope: string, expiresInSeconds = 3600) =
   } catch { /* ignore */ }
 };
 
-const clearStoredToken = () => {
-  try {
-    sessionStorage.removeItem("gd_access_token");
-    sessionStorage.removeItem("gd_token_scope");
-    sessionStorage.removeItem("gd_token_expires");
-  } catch { /* ignore */ }
-};
-
 const isVideoMime = (mime: string) => mime.startsWith("video/");
 
 async function downloadDriveFileToBlob(fileId: string, accessToken: string): Promise<Blob> {
@@ -82,7 +74,6 @@ async function downloadDriveFileToBlob(fileId: string, accessToken: string): Pro
 export function useGoogleDrive() {
   const { user } = useAuth();
   const { activeAccountId } = useActiveAccount();
-  const confirmVideoPublic = useVideoPublicConfirm();
   const [picking, setPicking] = useState(false);
 
   const loadGoogleScripts = useCallback((): Promise<void> => {
@@ -259,8 +250,7 @@ export function useGoogleDrive() {
 
     let imported = 0;
     let failed = 0;
-    let blockedByPolicy = 0;
-    let scopeIssue = 0;
+    let videoIngestFailed = 0;
 
     // Continua a numeração do carrossel a partir do que já existe no post,
     // pra a ordem não zerar (senão a mídia nova entra sem position/ordem).
@@ -275,62 +265,46 @@ export function useGoogleDrive() {
     for (const f of files) {
       try {
         if (isVideoMime(f.mimeType)) {
-          // VÍDEO: SEMPRE fica no Drive (codec/tamanho variam, player do Drive transcodifica).
-          // Storage não é usado pra vídeo: HEVC/.mov não toca em <video> e estoura quota.
-          const ok = await confirmVideoPublic();
-          if (!ok) { failed++; continue; }
+          // VÍDEO: em vez de manter no Drive (player /preview que algumas contas
+          // bloqueiam), INGERE no Bunny Stream: baixa o arquivo do Drive como Blob,
+          // vira File e sobe pro Bunny (transcodifica e toca sempre no nosso player).
+          // Não precisa mais deixar público no Drive (permissions.create anyone).
+          const toastId = `drive-video-${f.id}`;
+          toast.loading(`Enviando vídeo do Drive: ${f.name}...`, { id: toastId });
+          try {
+            const driveBlob = await downloadDriveFileToBlob(f.id, accessToken);
+            const videoFile = new File([driveBlob], f.name, { type: f.mimeType || driveBlob.type });
 
-          const permRes = await fetch(
-            `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(f.id)}/permissions`,
-            {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ role: "reader", type: "anyone" }),
-            },
-          );
-          if (!permRes.ok) {
-            const status = permRes.status;
-            const errText = await permRes.text().catch(() => "");
-            console.error(`[drive-import] permissions.create failed for ${f.name}:`, status, errText);
-
-            // Classifica o 403, scope/auth NÃO é igual a policy de Workspace
-            const isScopeError =
-              (status === 401 || status === 403) &&
-              /scope|insufficient[_ ]?authentication|access[_ ]?token[_ ]?scope|insufficientpermissions/i.test(errText);
-            const isPolicyError =
-              status === 403 &&
-              /sharingratelimitexceeded|domainpolicy|cannotshare|domain/i.test(errText);
-
-            if (isScopeError) {
-              // Token velho (drive.readonly) ainda em cache, derruba e força re-consent na próxima.
-              clearStoredToken();
-              scopeIssue++;
-              continue;
+            if (postId) {
+              // Post já existe: usa a MESMA lógica do upload de vídeo do aparelho
+              // (create-video + TUS + criapost_add_media).
+              await uploadVideoFileToBunny(videoFile, postId);
+            } else {
+              // Post novo (sem id ainda): sobe pro Bunny e insere a ref direto com
+              // post_id null, pra ser reconciliada no save (igual mídia de foto).
+              const bunny = await uploadFileToBunnyStream(videoFile);
+              const { error } = await supabase.from("external_media_refs").insert({
+                user_id: ownerId,
+                post_id: null,
+                provider: "bunny_stream",
+                external_file_id: bunny.videoGuid,
+                file_name: f.name,
+                file_type: f.mimeType || "video/mp4",
+                file_size: f.sizeBytes || null,
+                thumbnail_url: bunny.thumbnail_url,
+                view_url: bunny.view_url,
+                bunny_video_id: bunny.videoGuid,
+                position: basePos + imported,
+              });
+              if (error) throw error;
             }
-            if (isPolicyError) {
-              blockedByPolicy++;
-              continue;
-            }
-            throw new Error(`permissions_${status}`);
+            toast.success(`Vídeo pronto, processando: ${f.name}`, { id: toastId });
+          } catch (verr) {
+            console.error(`[drive-import] bunny ingest failed for ${f.name}:`, verr);
+            toast.error(`Não consegui enviar o vídeo "${f.name}" pro player.`, { id: toastId });
+            videoIngestFailed++;
+            continue;
           }
-
-          const { error } = await supabase.from("external_media_refs").insert({
-            user_id: ownerId,
-            post_id: postId || null,
-            provider: "google_drive",
-            external_file_id: f.id,
-            file_name: f.name,
-            file_type: f.mimeType,
-            file_size: f.sizeBytes || null,
-            thumbnail_url: f.thumbnailUrl || null,
-            view_url: f.url,
-            download_url: `https://drive.google.com/uc?export=download&id=${f.id}`,
-            position: basePos + imported,
-          });
-          if (error) throw error;
         } else {
           // FOTO: baixa do Drive → comprime → upload pro bucket media → ref como 'device'
           const driveBlob = await downloadDriveFileToBlob(f.id, accessToken);
@@ -368,15 +342,12 @@ export function useGoogleDrive() {
 
     if (imported > 0) toast.success(`${imported} arquivo(s) vinculado(s)!`);
     if (failed > 0) toast.error(`${failed} arquivo(s) falharam ao importar.`);
-    if (scopeIssue > 0) {
-      toast.error("Reconecte seu Google Drive pra atualizar a permissão e tente de novo.");
+    // Vídeos que falharam já mostraram toast próprio por item; aqui só um resumo
+    // se mais de um caiu, sem derrubar os outros itens importados.
+    if (videoIngestFailed > 1) {
+      toast.error(`${videoIngestFailed} vídeo(s) não puderam ser enviados pro player.`);
     }
-    if (blockedByPolicy > 0) {
-      toast.error(
-        `Sua conta do Google bloqueia compartilhamento público. Pra ${blockedByPolicy} vídeo(s), use o upload direto (Galeria / PC).`,
-      );
-    }
-  }, [user, activeAccountId, confirmVideoPublic]);
+  }, [user, activeAccountId]);
 
   const pickAndSave = useCallback(async (postId?: string) => {
     if (picking) return;

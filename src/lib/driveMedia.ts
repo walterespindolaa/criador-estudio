@@ -118,6 +118,18 @@ export function getVideoFileUrl(m: MediaLike): string | null {
   return m.view_url || m.download_url || null;
 }
 
+/**
+ * URL da PÁGINA do Drive pra abrir em nova aba (fallback quando o embed /preview
+ * é bloqueado pela conta do cliente). Deriva /file/d/ID/view a partir do file id;
+ * cai no view_url salvo se não achar id.
+ */
+export function getDriveViewPageUrl(m: MediaLike): string | null {
+  if (!isDriveMedia(m)) return null;
+  const id = getDriveFileId(m);
+  if (id) return `https://drive.google.com/file/d/${encodeURIComponent(id)}/view`;
+  return m.view_url || null;
+}
+
 // Nome de arquivo seguro pro download individual: <titulo>-<n>.<ext> sem acento/espaço.
 // Extraído do CriaPostMedia pra ser reaproveitado no popup da agenda.
 export function mediaDownloadName(title: string | undefined, index: number, m: MediaLike, mimeType?: string): string {

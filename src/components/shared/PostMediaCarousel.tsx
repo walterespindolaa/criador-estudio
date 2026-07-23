@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { ImageOff, ChevronLeft, ChevronRight, X, Play } from "lucide-react";
+import { ImageOff, ChevronLeft, ChevronRight, X, Play, ExternalLink } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
-import { getDisplayImageUrl, getDriveImageFallbackUrl, getThumbnailUrl, getVideoEmbedUrl, getVideoFileUrl, getVideoKind, isVideoMedia } from "@/lib/driveMedia";
+import { getDisplayImageUrl, getDriveImageFallbackUrl, getDriveViewPageUrl, getThumbnailUrl, getVideoEmbedUrl, getVideoFileUrl, getVideoKind, isVideoMedia } from "@/lib/driveMedia";
 import { ProgressiveImage } from "@/components/shared/ProgressiveImage";
 
 export type CarouselMedia = {
@@ -20,6 +20,9 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
   const embedUrl = getVideoEmbedUrl(item);
   const fileUrl = getVideoFileUrl(item);
   const canPlay = kind === "file" ? !!fileUrl : !!embedUrl;
+  // Fallback só pro Drive: se o embed /preview for bloqueado pela conta do cliente,
+  // ele ainda assiste abrindo a página do Drive em nova aba.
+  const driveViewUrl = kind === "drive" ? getDriveViewPageUrl(item) : null;
 
   useEffect(() => {
     if (thumbOk === false) { const t = setTimeout(() => setBust((b) => b + 1), 5000); return () => clearTimeout(t); }
@@ -30,7 +33,17 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
     if (kind === "file" && fileUrl)
       return <video src={fileUrl} controls playsInline autoPlay className="w-full h-full bg-black object-contain" />;
     if (embedUrl)
-      return <iframe src={embedUrl} className="w-full h-full bg-black" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={item.file_name || "vídeo"} />;
+      return (
+        <div className="relative w-full h-full bg-black">
+          <iframe src={embedUrl} className="w-full h-full bg-black" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={item.file_name || "vídeo"} />
+          {driveViewUrl && (
+            <button type="button" onClick={() => window.open(driveViewUrl, "_blank", "noopener,noreferrer")}
+              className="absolute bottom-2 right-2 z-10 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-black/80">
+              <ExternalLink className="h-3 w-3" /> Assistir em nova aba
+            </button>
+          )}
+        </div>
+      );
   }
 
   return (
@@ -60,6 +73,13 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
       {canPlay && (
         <button type="button" onClick={() => setPlaying(true)} aria-label="Reproduzir vídeo" className="absolute inset-0 flex items-center justify-center">
           <span className="w-14 h-14 rounded-full bg-black/55 flex items-center justify-center"><Play className="h-7 w-7 text-white ml-0.5" /></span>
+        </button>
+      )}
+      {/* Só pro Drive: atalho discreto caso o embed seja bloqueado pela conta do cliente. */}
+      {driveViewUrl && (
+        <button type="button" onClick={(e) => { e.stopPropagation(); window.open(driveViewUrl, "_blank", "noopener,noreferrer"); }}
+          className="absolute bottom-2 right-2 z-10 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-black/80">
+          <ExternalLink className="h-3 w-3" /> Assistir em nova aba
         </button>
       )}
     </div>
