@@ -117,6 +117,7 @@ async function syncConnection(
   // A API exige period=lifetime + timeframe + 1 chamada por breakdown. Cada chamada
   // isolada: se plano/timeframe não liberar, loga e segue (não quebra o sync).
   const demoRows: Array<Record<string, unknown>> = [];
+  let demoErr: string | null = null; // primeiro erro real da demografia, pra devolver no response.
   const demoMetrics: Array<{ metric: string; key: string }> = [
     { metric: 'follower_demographics', key: 'followers' },
     { metric: 'engaged_audience_demographics', key: 'engaged' },
@@ -137,8 +138,11 @@ async function syncConnection(
         // aquele silencio de social_audience vazia sem pista nenhuma.
         if (!parsed.length) {
           const err = (res as { error?: unknown })?.error;
-          console.warn('[instagram-sync] demographics vazio', dm.metric, bd,
-            err ? JSON.stringify(err) : JSON.stringify(res).slice(0, 300));
+          const detalhe = err ? JSON.stringify(err) : JSON.stringify(res).slice(0, 300);
+          console.warn('[instagram-sync] demographics vazio', dm.metric, bd, detalhe);
+          // Guarda o primeiro erro da metrica PRINCIPAL (follower_demographics) pra
+          // devolver no response e mostrar no app, sem precisar cavar log.
+          if (!demoErr && dm.metric === 'follower_demographics') demoErr = `${bd}: ${detalhe}`;
         }
         for (const p of parsed) {
           demoRows.push({
@@ -280,6 +284,7 @@ async function syncConnection(
     crm_client_id: crmClientId, ok: true,
     followers: (me.followers_count as number) ?? null,
     media_synced: saved, stories_synced: storiesSynced, demographics_rows: demoRows.length,
+    demographics_error: demoErr,
   };
 }
 
@@ -329,6 +334,8 @@ Deno.serve(async (req) => {
       reconnect: self ? self.reconnect === true : false,
       followers: selfOk ? (self?.followers ?? null) : null,
       media_synced: selfOk ? (self?.media_synced ?? 0) : 0,
+      demographics_rows: selfOk ? (self?.demographics_rows ?? 0) : 0,
+      demographics_error: self?.demographics_error ?? null,
       connections: results,
     };
     // Nenhuma conexão sincronizou (ex.: token revogado): devolve 502 pra o front

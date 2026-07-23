@@ -219,16 +219,24 @@ export function useSyncInstagram() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.functions.invoke("instagram-sync");
+      const { data, error } = await supabase.functions.invoke("instagram-sync");
       if (error) throw error;
+      return data as { demographics_rows?: number; demographics_error?: string | null } | null;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["social-daily"] });
       qc.invalidateQueries({ queryKey: ["social-media-insights"] });
       qc.invalidateQueries({ queryKey: ["social-connection"] });
       qc.invalidateQueries({ queryKey: ["social-audience"] });
       qc.invalidateQueries({ queryKey: ["social-stories"] });
-      toast.success("Insights atualizados!");
+      // Diagnostico da demografia: se veio 0 linha com erro, mostra o motivo real
+      // da Meta (pra a gente saber por que a audiencia nao puxa) e loga no console.
+      if (data && !data.demographics_rows && data.demographics_error) {
+        console.warn("[instagram-sync] demografia falhou:", data.demographics_error);
+        toast.warning(`Demografia nao veio: ${String(data.demographics_error).slice(0, 160)}`, { duration: 12000 });
+      } else {
+        toast.success("Insights atualizados!");
+      }
     },
     onError: () => toast.error("Não foi possível atualizar agora."),
   });
