@@ -119,14 +119,14 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   // Cria Post, agora acompanha o cliente aqui dentro (embutido no ClienteHub).
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<ExternalPost | null>(null);
-  const [f, setF] = useState<ExternalPostInput>({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", scheduled_date: null, scheduled_time: null });
+  const [f, setF] = useState<ExternalPostInput>({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", scheduled_date: null, scheduled_time: null, reference_url: null });
   const [copying, setCopying] = useState(false);
   const [briefOpen, setBriefOpen] = useState(false);
 
   // Novo post: cria um RASCUNHO na hora. Assim o post.id já existe e a mídia pode ser
   // anexada de cara (o storage precisa do id). O rascunho não aparece pro cliente.
   const openNew = async (day?: string) => {
-    setF({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", scheduled_date: day ?? null, scheduled_time: null });
+    setF({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", scheduled_date: day ?? null, scheduled_time: null, reference_url: null });
     setFormOpen(true);
     try {
       const draft = await createDraft.mutateAsync({ scheduled_date: day ?? null });
@@ -134,7 +134,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
       setEditing(draft);
     } catch { setFormOpen(false); }
   };
-  const openEdit = (p: ExternalPost) => { setDraftId(null); setEditing(p); setF({ title: p.title, platform: p.platform, format: p.format, caption: p.caption ?? "", hook: p.hook ?? "", approval_mode: (p.approval_mode as "fast"|"flow"|"both") ?? "fast", script: p.script ?? "", scheduled_date: p.scheduled_date ?? null, scheduled_time: (p as { scheduled_time?: string | null }).scheduled_time ?? null }); setFormOpen(true); };
+  const openEdit = (p: ExternalPost) => { setDraftId(null); setEditing(p); setF({ title: p.title, platform: p.platform, format: p.format, caption: p.caption ?? "", hook: p.hook ?? "", approval_mode: (p.approval_mode as "fast"|"flow"|"both") ?? "fast", script: p.script ?? "", scheduled_date: p.scheduled_date ?? null, scheduled_time: (p as { scheduled_time?: string | null }).scheduled_time ?? null, reference_url: p.reference_url ?? null }); setFormOpen(true); };
 
   // Cancelar um post novo apaga o rascunho (com a mídia que já subiu).
   const closeForm = async () => {
@@ -169,6 +169,11 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
 
   const submit = async () => {
     if (!f.title.trim()) return;
+    // Ideia / Referência: aceita só link http(s). Vazio = ok (campo opcional).
+    if ((f.reference_url ?? "").trim() && !/^https?:\/\//i.test((f.reference_url ?? "").trim())) {
+      toast.error("A referência precisa ser um link começando com http.");
+      return;
+    }
     if (draftId) {
       // Rascunho → cria o post em PRODUÇÃO (ainda não vai pro cliente).
       await update.mutateAsync({ id: draftId, publish: true, ...f });
@@ -317,6 +322,12 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                               onChange={(e) => { e.stopPropagation(); setDate.mutate({ id: p.id, scheduled_date: e.target.value || null }); }}
                               className="mt-1 h-9 md:h-6 w-full rounded-md border border-border bg-card px-1.5 text-[11px] font-body text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
                             {(p.caption || p.script) && <p className="text-xs text-muted-foreground font-body line-clamp-2 mt-0.5">{p.caption || p.script}</p>}
+                            {p.reference_url && (
+                              <a href={p.reference_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+                                className="mt-1 inline-flex items-center gap-1 text-[11px] font-body font-semibold text-primary hover:underline">
+                                <Link2 className="h-3 w-3 shrink-0" /> Ideia / Referência
+                              </a>
+                            )}
                             {p.approval_status === "ajuste_solicitado" && p.last_comment && p.last_comment_role === "cliente_externo" && (
                               <div className="mt-2 text-xs font-body text-orange-700 bg-orange-50 border border-orange-100 rounded-lg px-2.5 py-1.5" title={p.last_comment}>
                                 <span className="font-bold">Cliente pediu um ajuste</span>
@@ -545,6 +556,14 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                     <Input type="time" value={f.scheduled_time ?? ""} onChange={(e) => setF((p) => ({ ...p, scheduled_time: e.target.value || null }))} className="rounded-xl" />
                   </div>
                 </div>
+              </div>
+
+              {/* Ideia / Referência: cola um link (Drive, post, Pinterest...) que fica
+                  clicável no card. Mesmo padrão do "Referência" do Cronograma. */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-body">Ideia / Referência (link)</Label>
+                <Input value={f.reference_url ?? ""} onChange={(e) => setF((p) => ({ ...p, reference_url: e.target.value || null }))}
+                  placeholder="Cole um link de inspiração (Drive, post, Pinterest...)" className="rounded-xl" />
               </div>
 
               {/* Legenda (maior) */}
