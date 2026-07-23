@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check } from "lucide-react";
+import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -827,6 +827,33 @@ function TaskDialog({ task, clients, onClose, onOpenCrm, onSave }: {
   );
 }
 
+// Copia a legenda inteira pro clipboard PRESERVANDO a formatação (quebras/parágrafos
+// exatamente como estão no textarea). Usa a Clipboard API e cai num fallback com
+// textarea + execCommand quando o navegador não expõe o clipboard (http, iOS antigo...).
+async function copiarLegenda(texto: string) {
+  const valor = texto ?? "";
+  if (!valor.trim()) { toast.error("Não há legenda pra copiar."); return; }
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(valor);
+    } else {
+      const ta = document.createElement("textarea");
+      ta.value = valor;
+      ta.style.position = "fixed";
+      ta.style.top = "-9999px";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      const ok = document.execCommand("copy");
+      ta.remove();
+      if (!ok) throw new Error("clipboard indisponível");
+    }
+    toast.success("Legenda copiada");
+  } catch {
+    toast.error("Não consegui copiar a legenda. Copie manualmente.");
+  }
+}
+
 // Edição rápida do POST direto da agenda, sem navegar pro cliente. Cobre o essencial
 // (título, data, horário, status, legenda). Mídia/roteiro cheios ficam no botão do cliente.
 function PostEditDialog({ post, clientName, onClose, onSave, onOpenClient, saving }: {
@@ -860,8 +887,11 @@ function PostEditDialog({ post, clientName, onClose, onSave, onOpenClient, savin
         <div className="space-y-3">
           <div><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Título</p><Input value={title} onChange={(e) => setTitle(e.target.value)} className="rounded-xl" /></div>
           <div className="flex gap-2">
-            <div className="flex-1"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Data</p><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
-            <div className="w-28"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Horário</p><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} /></div>
+            <div className="flex-1 min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Data</p><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full rounded-xl" /></div>
+            {/* Horário: largura fixa mais folgada (o input nativo de "time" precisa de
+                espaço pro relógio/spinner, senão fica cortado no mobile). w-full garante
+                que o campo preencha o container inteiro em qualquer largura de tela. */}
+            <div className="w-[124px] shrink-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Horário</p><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full rounded-xl" /></div>
           </div>
           <div>
             <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Status</p>
@@ -869,7 +899,16 @@ function PostEditDialog({ post, clientName, onClose, onSave, onOpenClient, savin
               {Object.entries(POST_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
             </select>
           </div>
-          <div><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Legenda</p><Textarea rows={4} value={caption} onChange={(e) => setCaption(e.target.value)} className="rounded-xl text-sm" /></div>
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase">Legenda</p>
+              <button type="button" onClick={() => copiarLegenda(caption)} disabled={!caption.trim()}
+                className="inline-flex items-center gap-1 h-9 px-2.5 rounded-lg text-[11px] font-body font-semibold text-muted-foreground hover:text-primary hover:bg-primary/[0.06] disabled:opacity-40 disabled:pointer-events-none transition-colors">
+                <Copy className="h-3.5 w-3.5" /> Copiar legenda
+              </button>
+            </div>
+            <Textarea rows={4} value={caption} onChange={(e) => setCaption(e.target.value)} className="rounded-xl text-sm" />
+          </div>
           <button type="button" onClick={onOpenClient} className="inline-flex items-center gap-1 text-[11px] font-body text-muted-foreground hover:text-primary transition-colors">
             <ExternalLink className="h-3 w-3" /> Abrir no cliente pra editar mídia e roteiro
           </button>

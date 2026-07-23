@@ -14,7 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CronogramaBoard } from "@/components/accounts/CronogramaBoard";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
-import { Plus, Link2, Pencil, Loader2, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare, Eye, Clock, Settings2, Palette } from "lucide-react";
+import { Plus, Link2, Pencil, Loader2, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare, Eye, Clock, Settings2, Palette, Copy } from "lucide-react";
 import { CriaPostMedia } from "@/components/accounts/CriaPostMedia";
 import { ImportKanbanDialog } from "@/components/accounts/ImportKanbanDialog";
 import { ClientReportDialog } from "@/components/accounts/ClientReportDialog";
@@ -30,6 +30,26 @@ const FORMATS = ["reels", "carrossel", "foto", "story", "video"];
 // CLIENT_COLORS mudou de casa (ExternalClientDialog), re-export mantém imports antigos.
 export { CLIENT_COLORS } from "@/components/accounts/ExternalClientDialog";
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+// Copia a legenda inteira preservando a formatação (quebras/parágrafos). Clipboard API
+// com fallback (textarea + execCommand) pra quando o navegador não expõe o clipboard.
+async function copiarLegenda(texto: string) {
+  const valor = texto ?? "";
+  if (!valor.trim()) { toast.error("Não há legenda pra copiar."); return; }
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(valor);
+    } else {
+      const ta = document.createElement("textarea");
+      ta.value = valor; ta.style.position = "fixed"; ta.style.top = "-9999px"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      const ok = document.execCommand("copy"); ta.remove();
+      if (!ok) throw new Error("clipboard indisponível");
+    }
+    toast.success("Legenda copiada");
+  } catch {
+    toast.error("Não consegui copiar a legenda. Copie manualmente.");
+  }
+}
 // Cor por formato: a pessoa bate o olho e sabe o que é (reels azul, carrossel verde...).
 const FORMAT_COLOR: Record<string, string> = { reels: "#0061EE", carrossel: "#01A652", foto: "#EA4918", story: "#7C90F0", video: "#4B3FA8" };
 const MES_ABBR = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -568,7 +588,13 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
 
               {/* Legenda (maior) */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-body">Legenda</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="text-xs font-body">Legenda</Label>
+                  <button type="button" onClick={() => copiarLegenda(f.caption ?? "")} disabled={!(f.caption ?? "").trim()}
+                    className="inline-flex items-center gap-1 h-9 px-2.5 rounded-lg text-[11px] font-body font-semibold text-muted-foreground hover:text-primary hover:bg-primary/[0.06] disabled:opacity-40 disabled:pointer-events-none transition-colors">
+                    <Copy className="h-3.5 w-3.5" /> Copiar legenda
+                  </button>
+                </div>
                 <Textarea value={f.caption ?? ""} onChange={(e) => setF((p) => ({ ...p, caption: e.target.value }))} rows={8} className="rounded-xl min-h-[180px]" />
                 {f.format === "story" && (f.caption ?? "").trim() !== "" && (
                   <p className="text-[11px] text-muted-foreground font-body">Story não exibe legenda. Esse texto não aparece no preview.</p>
@@ -604,7 +630,8 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               {editing?.id ? (
                 <CriaPostMedia postId={editing.id} platform={f.platform} format={f.format}
                   caption={f.caption ?? undefined} handle={client.instagram_handle || undefined}
-                  approved={editing.approval_status === "aprovado"} />
+                  approved={editing.approval_status === "aprovado"}
+                  title={f.title || undefined} referenceUrl={f.reference_url ?? null} />
               ) : (
                 <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Preparando o post pra você anexar a mídia…</p>
               )}

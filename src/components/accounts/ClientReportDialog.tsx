@@ -11,13 +11,18 @@ import { clientReportInsight } from "@/lib/ai/claude";
 import { useCrmClients } from "@/hooks/useCrm";
 import { FORMAT_LABELS } from "@/lib/constants";
 import type { ExternalClient, ExternalPost } from "@/hooks/useCriaPost";
-import { computeCrossAnalysis, crossHeadlines, fmtNum, type CrossItem } from "@/components/insights/insightsUtils";
+import {
+  computeCrossAnalysis, crossHeadlines, computeAudienceBreakdown, computeStoriesSummary,
+  fmtNum, type CrossItem, type AudienceLike, type StoryLike,
+} from "@/components/insights/insightsUtils";
 
 const sbRpcR = supabase.rpc.bind(supabase) as unknown as (fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
 type IgMediaRow = {
   caption: string | null; media_type: string | null; permalink: string | null;
   thumbnail_url: string | null; posted_at: string | null; metrics: Record<string, number> | null;
 };
+// Retorno da RPC get_client_ig_report (mídias + demografia + stories do cliente).
+type IgReport = { media: IgMediaRow[]; audience: AudienceLike[]; stories: StoryLike[] };
 const MEDIA_PT: Record<string, string> = { IMAGE: "Imagem", VIDEO: "Vídeo", REELS: "Reels", CAROUSEL_ALBUM: "Carrossel" };
 const engOf = (m: Record<string, number> | null) =>
   m ? (Number(m.likes) || 0) + (Number(m.comments) || 0) + (Number(m.saved) || 0) + (Number(m.shares) || 0) : 0;
@@ -165,19 +170,26 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     since: period.since.toISOString(),
     until: period.until.toISOString(),
   }), [period]);
-  const { data: igMedia = [] } = useQuery<IgMediaRow[]>({
-    queryKey: ["report-ig-media", client.crm_client_id, period.key],
+  // Bundle do IG do cliente: mídias do período + demografia de audiência (snapshot
+  // atual) + stories do período. Uma única RPC segura (get_client_ig_report) que
+  // reaproveita a checagem de gestor do get_client_ig_media.
+  const { data: igReport } = useQuery<IgReport>({
+    queryKey: ["report-ig-data", client.crm_client_id, period.key],
     enabled: open && !!client.crm_client_id,
     queryFn: async () => {
-      const { data, error } = await sbRpcR("get_client_ig_media", {
+      const { data, error } = await sbRpcR("get_client_ig_report", {
         _crm_client_id: client.crm_client_id,
         _since: monthRange.since,
         _until: monthRange.until,
       });
       if (error) throw error;
-      return (data as IgMediaRow[]) ?? [];
+      const d = (data as Partial<IgReport> | null) ?? {};
+      return { media: d.media ?? [], audience: d.audience ?? [], stories: d.stories ?? [] };
     },
   });
+  const igMedia = useMemo<IgMediaRow[]>(() => igReport?.media ?? [], [igReport]);
+  const audience = useMemo(() => computeAudienceBreakdown(igReport?.audience), [igReport]);
+  const stories = useMemo(() => computeStoriesSummary(igReport?.stories), [igReport]);
   const perf = useMemo(() => {
     const sum = (k: string) => igMedia.reduce((a, r) => a + (Number(r.metrics?.[k]) || 0), 0);
     const views = igMedia.reduce((a, r) => a + (Number(r.metrics?.views ?? r.metrics?.plays) || 0), 0);
@@ -395,6 +407,24 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         <div style={{ width: `${total ? (value / total) * 100 : 0}%`, height: "100%", background: C.brand }} />
       </div>
       <div style={{ width: 28, textAlign: "right", fontSize: 12, fontWeight: 700, color: C.ink }}>{value}</div>
+    </div>
+  );
+
+  // Barra de demografia (audiência): rótulo + barra proporcional ao percentual.
+  const audienceBar = (label: string, pct: number) => (
+    <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+      <div style={{ width: 100, fontSize: 12, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</div>
+      <div style={{ flex: 1, height: 8, background: C.soft, borderRadius: 99, overflow: "hidden" }}>
+        <div style={{ width: `${pct > 0 ? Math.max(4, pct) : 0}%`, height: "100%", background: C.brand }} />
+      </div>
+      <div style={{ width: 44, textAlign: "right", fontSize: 12, fontWeight: 700, color: C.ink }}>{Math.round(pct)}%</div>
+    </div>
+  );
+
+  const audienceCol = (title: string, items: { label: string; pct: number }[]) => (
+    <div style={{ flex: 1, minWidth: 220 }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>{title}</div>
+      {items.map((it) => audienceBar(it.label, it.pct))}
     </div>
   );
 
@@ -654,6 +684,43 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
               <div style={{ marginTop: 20, padding: "14px 16px", border: `1px dashed ${C.line}`, borderRadius: 12, background: C.soft }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: C.ink }}>Desempenho (alcance, visualizações, engajamento)</div>
                 <div style={{ fontSize: 11, color: C.sub, marginTop: 4 }}>Aparece automaticamente quando o cliente conectar o Instagram na conta CRIA dele e tiver posts no período.</div>
+              </div>
+            )}
+
+            {/* Perfil de audiência: faixa etária, gênero, top cidades, top países */}
+            {audience.hasData && (
+              <div style={{ marginTop: 24 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: C.sub, marginBottom: 10 }}>
+                  Perfil de audiência{audience.source === "engaged" ? " (com base nos engajados)" : ""}
+                </div>
+                {(audience.age.length > 0 || audience.gender.length > 0) && (
+                  <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+                    {audience.age.length > 0 && audienceCol("Faixa etária", audience.age)}
+                    {audience.gender.length > 0 && audienceCol("Gênero", audience.gender)}
+                  </div>
+                )}
+                {(audience.city.length > 0 || audience.country.length > 0) && (
+                  <div style={{ display: "flex", gap: 24, marginTop: 14, flexWrap: "wrap" }}>
+                    {audience.city.length > 0 && audienceCol("Principais cidades", audience.city)}
+                    {audience.country.length > 0 && audienceCol("Principais países", audience.country)}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Stories: alcance, alcance médio, respostas, taxa de resposta, navegação */}
+            {stories.hasData && (
+              <div style={{ marginTop: 24 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: C.sub, marginBottom: 10 }}>
+                  Stories ({stories.count} no período)
+                </div>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  {statCard("Alcance", stories.reach.toLocaleString("pt-BR"))}
+                  {statCard("Alcance médio", stories.avgReach.toLocaleString("pt-BR"))}
+                  {statCard("Respostas", stories.replies.toLocaleString("pt-BR"))}
+                  {statCard("Taxa de resposta", `${stories.replyRate.toFixed(1).replace(".", ",")}%`)}
+                  {stories.navigation > 0 && statCard("Navegação", stories.navigation.toLocaleString("pt-BR"))}
+                </div>
               </div>
             )}
 

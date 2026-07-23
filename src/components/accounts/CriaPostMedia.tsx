@@ -7,10 +7,10 @@ import { PostMediaCarousel } from "@/components/shared/PostMediaCarousel";
 import { StoryPreview } from "@/components/accounts/StoryPreview";
 import { CriaPostPublishButton } from "@/components/accounts/CriaPostPublishButton";
 import { postAspect } from "@/lib/post-aspect";
-import { getDisplayImageUrl, getDriveImageFallbackUrl, isDriveMedia, isVideoMedia } from "@/lib/driveMedia";
+import { getDisplayImageUrl, getDriveImageFallbackUrl, getDriveFileId, isDriveMedia, isVideoMedia } from "@/lib/driveMedia";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ImagePlus, Video, FileImage, Link2, Loader2, Heart, MessageCircle, Send, Bookmark, GripVertical, X, Play, Download } from "lucide-react";
+import { ImagePlus, Video, FileImage, Link2, Loader2, Heart, MessageCircle, Send, Bookmark, GripVertical, X, Play, Download, ExternalLink, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -43,8 +43,21 @@ function Thumb({ m }: { m: CriaMedia }) {
   );
 }
 
-export function CriaPostMedia({ postId, platform, format, caption, handle, approved }: {
+// Nome de arquivo seguro pro download individual: <titulo>-<n>.<ext> sem acento/espaço.
+function baixarNomeArquivo(title: string | undefined, index: number, m: CriaMedia, mimeType?: string): string {
+  const base = (title || "post")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "").toLowerCase().slice(0, 60) || "post";
+  // Extensão: tenta pelo nome do arquivo salvo, depois pelo mime, senão jpg.
+  const fromName = (m.file_name || "").match(/\.([a-z0-9]{2,5})$/i)?.[1];
+  const fromMime = (mimeType || m.file_type || "").split("/")[1]?.split(";")[0];
+  const ext = (fromName || fromMime || "jpg").toLowerCase().replace("jpeg", "jpg");
+  return `${base}-${index + 1}.${ext}`;
+}
+
+export function CriaPostMedia({ postId, platform, format, caption, handle, approved, title, referenceUrl }: {
   postId: string; platform: string; format: string; caption?: string; handle?: string; approved?: boolean;
+  title?: string; referenceUrl?: string | null;
 }) {
   const { list, uploadImage, uploadVideo, addDriveLink, remove, reorder } = useCriaPostMedia(postId);
   const qc = useQueryClient();
@@ -115,6 +128,49 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
       await pickAndSave(postId);
       qc.invalidateQueries({ queryKey: ["criapost-media", postId] });
     } catch (err) { toast.error(err instanceof Error ? err.message : "Não consegui abrir o Drive"); }
+  };
+
+  // Download INDIVIDUAL de uma mídia, na melhor qualidade disponível:
+  //  - Storage (device): baixa o arquivo como blob e força o download nomeado.
+  //  - Drive: manda pro link de download do Drive (uc?export=download).
+  //  - Vídeo (Bunny/Drive): não dá pra forçar o MP4, abre o player em nova aba.
+  // Reaproveita o mesmo padrão do zip (blob + createObjectURL + a.click()), por arquivo.
+  const [dlId, setDlId] = useState<string | null>(null);
+  const onDownloadOne = async (m: CriaMedia, index: number) => {
+    setDlId(m.id);
+    try {
+      if (isVideoMedia(m)) {
+        const embed = m.view_url;
+        if (!embed) throw new Error("Vídeo indisponível.");
+        window.open(embed, "_blank", "noopener");
+        toast.info("Vídeo aberto em nova aba pra você salvar de lá.");
+        return;
+      }
+      if (isDriveMedia(m)) {
+        const id = getDriveFileId(m);
+        if (!id) throw new Error("Link do Drive inválido.");
+        const a = document.createElement("a");
+        a.href = `https://drive.google.com/uc?export=download&id=${encodeURIComponent(id)}`;
+        a.target = "_blank"; a.rel = "noopener";
+        document.body.appendChild(a); a.click(); a.remove();
+        return;
+      }
+      // Imagem no Storage: baixa os bytes e força o download com nome coerente.
+      const url = m.view_url || m.thumbnail_url;
+      if (!url) throw new Error("Arquivo indisponível.");
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Não consegui baixar o arquivo.");
+      const blob = await res.blob();
+      const obj = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = obj; a.download = baixarNomeArquivo(title, index, m, blob.type);
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(obj);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Não consegui baixar.");
+    } finally {
+      setDlId(null);
+    }
   };
 
   const [zipping, setZipping] = useState(false);
@@ -197,6 +253,54 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
               </Reorder.Item>
             ))}
           </Reorder.Group>
+        </div>
+      )}
+
+      {/* Anexos e links: um lugar só (estilo Trello) pra VER e ACESSAR todos os anexos
+          e todos os links do post, com download individual por arquivo. Reaproveita a
+          lista de mídia (inclui os do Drive) + o reference_url, sem duplicar dados. */}
+      {(ordered.length > 0 || !!(referenceUrl && referenceUrl.trim())) && (
+        <div className="rounded-2xl border border-border bg-muted/30 p-3 space-y-2">
+          <div className="flex items-center gap-1.5">
+            <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
+            <p className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground">Anexos e links</p>
+          </div>
+
+          {ordered.map((m, i) => {
+            const drive = isDriveMedia(m);
+            const video = isVideoMedia(m);
+            const tipo = video ? "Vídeo" : drive ? "Drive" : "Imagem";
+            return (
+              <div key={m.id} className="flex items-center gap-2.5">
+                <div className="relative shrink-0 w-10 h-10 rounded-lg overflow-hidden border border-border bg-muted"><Thumb m={m} /></div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-body text-foreground truncate">{m.file_name || `Mídia ${i + 1}`}</p>
+                  <p className="text-[10px] font-body text-muted-foreground">{tipo}</p>
+                </div>
+                {drive && m.view_url && (
+                  <a href={m.view_url} target="_blank" rel="noopener noreferrer" title="Abrir no Drive"
+                    className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors">
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                )}
+                <button type="button" onClick={() => onDownloadOne(m, i)} disabled={dlId === m.id} title="Baixar este arquivo"
+                  className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border text-muted-foreground hover:text-primary hover:border-primary/40 disabled:opacity-50 transition-colors">
+                  {dlId === m.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                </button>
+              </div>
+            );
+          })}
+
+          {!!(referenceUrl && referenceUrl.trim()) && (
+            <a href={referenceUrl!} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 group">
+              <span className="shrink-0 w-10 h-10 rounded-lg border border-border bg-muted flex items-center justify-center text-muted-foreground"><Link2 className="h-4 w-4" /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs font-body text-primary group-hover:underline truncate">Referência / ideia</span>
+                <span className="block text-[10px] font-body text-muted-foreground truncate">{referenceUrl}</span>
+              </span>
+              <span className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border text-muted-foreground group-hover:text-primary transition-colors"><ExternalLink className="h-4 w-4" /></span>
+            </a>
+          )}
         </div>
       )}
 
