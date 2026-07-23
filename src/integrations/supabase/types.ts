@@ -582,6 +582,72 @@ export type Database = {
         }
         Relationships: []
       }
+      client_materials: {
+        Row: {
+          attachments: Json
+          created_at: string
+          crm_client_id: string | null
+          description: string | null
+          due_date: string | null
+          external_client_id: string | null
+          id: string
+          kind: string
+          manager_id: string
+          position: number
+          requested_by: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          attachments?: Json
+          created_at?: string
+          crm_client_id?: string | null
+          description?: string | null
+          due_date?: string | null
+          external_client_id?: string | null
+          id?: string
+          kind?: string
+          manager_id: string
+          position?: number
+          requested_by?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          attachments?: Json
+          created_at?: string
+          crm_client_id?: string | null
+          description?: string | null
+          due_date?: string | null
+          external_client_id?: string | null
+          id?: string
+          kind?: string
+          manager_id?: string
+          position?: number
+          requested_by?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_materials_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_materials_external_client_id_fkey"
+            columns: ["external_client_id"]
+            isOneToOne: false
+            referencedRelation: "external_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       collab_deliverables: {
         Row: {
           collab_id: string
@@ -1006,6 +1072,7 @@ export type Database = {
           status: string
           tags: string[]
           updated_at: string
+          useful_links: Json
           whatsapp: string | null
         }
         Insert: {
@@ -1043,6 +1110,7 @@ export type Database = {
           status?: string
           tags?: string[]
           updated_at?: string
+          useful_links?: Json
           whatsapp?: string | null
         }
         Update: {
@@ -1080,6 +1148,7 @@ export type Database = {
           status?: string
           tags?: string[]
           updated_at?: string
+          useful_links?: Json
           whatsapp?: string | null
         }
         Relationships: [
@@ -1434,6 +1503,7 @@ export type Database = {
           id: string
           ref_url: string | null
           sort_order: number
+          title: string | null
           type: string | null
           updated_at: string | null
         }
@@ -1449,6 +1519,7 @@ export type Database = {
           id?: string
           ref_url?: string | null
           sort_order?: number
+          title?: string | null
           type?: string | null
           updated_at?: string | null
         }
@@ -1464,6 +1535,7 @@ export type Database = {
           id?: string
           ref_url?: string | null
           sort_order?: number
+          title?: string | null
           type?: string | null
           updated_at?: string | null
         }
@@ -3289,6 +3361,7 @@ export type Database = {
           approval_updated_at: string | null
           archive_summary: string | null
           art: Json | null
+          board_order: number
           calendar_synced_at: string | null
           caption: string | null
           content_blocks: Json | null
@@ -3308,6 +3381,7 @@ export type Database = {
           platform: string
           published_at: string | null
           reference_link: string | null
+          reference_url: string | null
           result_comments: number | null
           result_reach: number | null
           result_saves: number | null
@@ -3330,6 +3404,7 @@ export type Database = {
           approval_updated_at?: string | null
           archive_summary?: string | null
           art?: Json | null
+          board_order?: number
           calendar_synced_at?: string | null
           caption?: string | null
           content_blocks?: Json | null
@@ -3349,6 +3424,7 @@ export type Database = {
           platform: string
           published_at?: string | null
           reference_link?: string | null
+          reference_url?: string | null
           result_comments?: number | null
           result_reach?: number | null
           result_saves?: number | null
@@ -3371,6 +3447,7 @@ export type Database = {
           approval_updated_at?: string | null
           archive_summary?: string | null
           art?: Json | null
+          board_order?: number
           calendar_synced_at?: string | null
           caption?: string | null
           content_blocks?: Json | null
@@ -3390,6 +3467,7 @@ export type Database = {
           platform?: string
           published_at?: string | null
           reference_link?: string | null
+          reference_url?: string | null
           result_comments?: number | null
           result_reach?: number | null
           result_saves?: number | null
@@ -3864,6 +3942,57 @@ export type Database = {
         }
         Relationships: []
       }
+      social_audience: {
+        Row: {
+          breakdown_value: string
+          captured_at: string
+          crm_client_id: string | null
+          dimension: string
+          id: string
+          metric: string
+          provider: string
+          user_id: string
+          value: number
+        }
+        Insert: {
+          breakdown_value: string
+          captured_at?: string
+          crm_client_id?: string | null
+          dimension: string
+          id?: string
+          metric: string
+          provider?: string
+          user_id: string
+          value?: number
+        }
+        Update: {
+          breakdown_value?: string
+          captured_at?: string
+          crm_client_id?: string | null
+          dimension?: string
+          id?: string
+          metric?: string
+          provider?: string
+          user_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_audience_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_audience_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       social_connections: {
         Row: {
           access_token: string
@@ -3931,6 +4060,7 @@ export type Database = {
         Row: {
           caption: string | null
           captured_at: string | null
+          crm_client_id: string | null
           id: string
           media_type: string | null
           metrics: Json
@@ -3946,6 +4076,7 @@ export type Database = {
         Insert: {
           caption?: string | null
           captured_at?: string | null
+          crm_client_id?: string | null
           id?: string
           media_type?: string | null
           metrics?: Json
@@ -3961,6 +4092,7 @@ export type Database = {
         Update: {
           caption?: string | null
           captured_at?: string | null
+          crm_client_id?: string | null
           id?: string
           media_type?: string | null
           metrics?: Json
@@ -3974,6 +4106,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "social_insights_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "social_insights_post_id_fkey"
             columns: ["post_id"]
@@ -3994,6 +4133,7 @@ export type Database = {
         Row: {
           accounts_engaged: number | null
           captured_at: string | null
+          crm_client_id: string | null
           date: string
           followers: number | null
           id: string
@@ -4009,6 +4149,7 @@ export type Database = {
         Insert: {
           accounts_engaged?: number | null
           captured_at?: string | null
+          crm_client_id?: string | null
           date: string
           followers?: number | null
           id?: string
@@ -4024,6 +4165,7 @@ export type Database = {
         Update: {
           accounts_engaged?: number | null
           captured_at?: string | null
+          crm_client_id?: string | null
           date?: string
           followers?: number | null
           id?: string
@@ -4038,7 +4180,74 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "social_metrics_daily_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "social_metrics_daily_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_stories: {
+        Row: {
+          captured_at: string
+          crm_client_id: string | null
+          external_story_id: string
+          id: string
+          media_type: string | null
+          media_url: string | null
+          metrics: Json
+          permalink: string | null
+          posted_at: string | null
+          provider: string
+          thumbnail_url: string | null
+          user_id: string
+        }
+        Insert: {
+          captured_at?: string
+          crm_client_id?: string | null
+          external_story_id: string
+          id?: string
+          media_type?: string | null
+          media_url?: string | null
+          metrics?: Json
+          permalink?: string | null
+          posted_at?: string | null
+          provider?: string
+          thumbnail_url?: string | null
+          user_id: string
+        }
+        Update: {
+          captured_at?: string
+          crm_client_id?: string | null
+          external_story_id?: string
+          id?: string
+          media_type?: string | null
+          media_url?: string | null
+          metrics?: Json
+          permalink?: string | null
+          posted_at?: string | null
+          provider?: string
+          thumbnail_url?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_stories_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_stories_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -4840,8 +5049,20 @@ export type Database = {
         Returns: undefined
       }
       is_account_manager: { Args: { _owner: string }; Returns: boolean }
+      is_account_member: { Args: { _owner: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       is_team_member: { Args: { target: string }; Returns: boolean }
+      list_materials_by_token: {
+        Args: { _token: string }
+        Returns: {
+          created_at: string
+          description: string
+          id: string
+          kind: string
+          status: string
+          title: string
+        }[]
+      }
       list_posts_by_token: {
         Args: { _token: string }
         Returns: {
@@ -4918,6 +5139,14 @@ export type Database = {
           niche: string
         }[]
       }
+      manager_link_client_media: {
+        Args: {
+          client_owner_id: string
+          link_post_id: string
+          media_id: string
+        }
+        Returns: undefined
+      }
       manager_owns_cria_client: { Args: { _owner: string }; Returns: boolean }
       move_to_dlq: {
         Args: {
@@ -4979,6 +5208,15 @@ export type Database = {
       request_adjustment_by_token: {
         Args: { _comment: string; _post_id: string; _token: string }
         Returns: undefined
+      }
+      request_material_by_token: {
+        Args: {
+          _description: string
+          _kind?: string
+          _title: string
+          _token: string
+        }
+        Returns: string
       }
       request_post_adjustment: {
         Args: { _comment: string; _post_id: string }
