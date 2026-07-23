@@ -132,6 +132,27 @@ const AppLayout = () => {
     } catch { /* ignore */ }
   }, [profile]);
 
+  // Ao GERENCIAR a conta de um cliente, o tema/cor tem que ser o DELE, não o seu.
+  // (o useProfile fica no SEU id de propósito, por causa do gate de plano/acesso;
+  // por isso aqui buscamos o perfil do cliente à parte só pra pintar a interface.)
+  // Roda depois do efeito acima, então vence e sobrescreve a cor da social mídia.
+  useEffect(() => {
+    if (!isManaging || !activeAccountId) return;
+    let alive = true;
+    supabase.from("profiles")
+      .select("theme_preset, theme_accent, theme_sidebar, theme_font")
+      .eq("id", activeAccountId)
+      .single()
+      .then(({ data }) => {
+        if (!alive || !data) return;
+        const t = data as { theme_preset?: string | null; theme_accent?: string | null; theme_sidebar?: string | null; theme_font?: string | null };
+        if (t.theme_preset) applyTheme(t.theme_preset, t.theme_accent || "#EA4918");
+        applySidebarColor(t.theme_sidebar || null);
+        if (t.theme_font) applyThemeFont(t.theme_font);
+      });
+    return () => { alive = false; };
+  }, [isManaging, activeAccountId]);
+
   if (!isLoading && profile?.must_change_password === true && location.pathname !== "/app/trocar-senha") {
     return <Navigate to="/app/trocar-senha" replace />;
   }
