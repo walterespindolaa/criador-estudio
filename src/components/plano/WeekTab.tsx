@@ -110,9 +110,9 @@ export function WeekTab({
           ) : (
             <div className="space-y-2 mb-4">
               {habits.map(habit => (
-                <div key={habit.id} className="flex items-center justify-between">
-                  <span className="font-body text-sm text-foreground flex-1">{habit.name}</span>
-                  <div className="flex items-center gap-1">
+                <div key={habit.id} className="flex items-center justify-between gap-2">
+                  <span className="font-body text-sm text-foreground flex-1 min-w-0 truncate">{habit.name}</span>
+                  <div className="flex items-center gap-1 shrink-0">
                     {weekDays.map(day => (
                       <button
                         key={day.date}
@@ -131,7 +131,8 @@ export function WeekTab({
                     <button
                       type="button"
                       onClick={() => onDeleteHabit(habit.id)}
-                      className="p-1 ml-1 hover:bg-destructive/10 rounded"
+                      className="p-2 md:p-1 ml-1 hover:bg-destructive/10 rounded"
+                      aria-label="Remover hábito"
                     >
                       <Trash2 className="h-3 w-3 text-destructive" />
                     </button>

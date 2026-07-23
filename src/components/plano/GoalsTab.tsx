@@ -317,7 +317,7 @@ export function GoalsTab({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-12 gap-2 items-end h-28">
+          <div className="grid grid-cols-12 gap-1 sm:gap-2 items-end h-28">
             {Array.from({ length: 12 }, (_, i) => {
               const now = new Date();
               const monthPosts = posts.filter(p => {
