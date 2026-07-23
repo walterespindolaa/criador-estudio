@@ -74,6 +74,12 @@ export default function AgendaCriacao() {
     if (id === null) return new Set();
     const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
   });
+  // Faixa "Posts de:" (chips de cliente) minimizável, persistida. Com muitos
+  // clientes ela ocupa a tela toda, então dá pra recolher.
+  const [postChipsOpen, setPostChipsOpen] = useState<boolean>(() => {
+    try { const v = localStorage.getItem("agenda_postchips_open"); return v === null ? false : v === "1"; } catch { return false; }
+  });
+  const togglePostChips = () => setPostChipsOpen((v) => { const n = !v; try { localStorage.setItem("agenda_postchips_open", n ? "1" : "0"); } catch { /* segue */ } return n; });
   // Painel "ver todos" de um dia cheio.
   const [dayModal, setDayModal] = useState<string | null>(null);
   // Semana = 7 dias a partir da segunda. Mês = grade completa (segunda a domingo) cobrindo o mês do anchor.
@@ -265,14 +271,24 @@ export default function AgendaCriacao() {
           </div>
         </div>
         {filters.post && extClients.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap mb-3 rounded-xl border border-dashed border-border bg-background/60 px-3 py-2">
-            <span className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground">Posts de:</span>
-            <button type="button" onClick={() => togglePostClient(null)} className={cn("rounded-full border px-2.5 py-1 text-[11px] font-body font-semibold transition-colors", postClients.size === 0 ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground hover:text-foreground")}>Todos</button>
-            {extClients.map((e) => (
-              <button key={e.id} type="button" onClick={() => togglePostClient(e.id)} className={cn("flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-body font-semibold transition-colors", postClients.has(e.id) ? "border-foreground text-foreground bg-muted/40" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
-                <span className="grid h-3.5 w-3.5 place-items-center rounded-full text-white text-[7px] font-bold" style={{ background: e.color || "#EA4918" }}>{e.name.trim().charAt(0).toUpperCase()}</span>{e.name}
-              </button>
-            ))}
+          <div className="mb-3 rounded-xl border border-dashed border-border bg-background/60 px-3 py-2">
+            <button type="button" onClick={togglePostChips} className="flex items-center gap-2 w-full text-left">
+              <span className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground">Posts de</span>
+              <span className="text-[10px] font-body font-semibold text-muted-foreground">
+                {postClients.size === 0 ? `Todos (${extClients.length})` : `${postClients.size} selecionado(s)`}
+              </span>
+              <span className={cn("ml-auto text-muted-foreground transition-transform", postChipsOpen && "rotate-180")}>▾</span>
+            </button>
+            {postChipsOpen && (
+              <div className="flex items-center gap-2 flex-wrap mt-2">
+                <button type="button" onClick={() => togglePostClient(null)} className={cn("rounded-full border px-2.5 py-1 text-[11px] font-body font-semibold transition-colors", postClients.size === 0 ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground hover:text-foreground")}>Todos</button>
+                {extClients.map((e) => (
+                  <button key={e.id} type="button" onClick={() => togglePostClient(e.id)} className={cn("flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-body font-semibold transition-colors", postClients.has(e.id) ? "border-foreground text-foreground bg-muted/40" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
+                    <span className="grid h-3.5 w-3.5 place-items-center rounded-full text-white text-[7px] font-bold" style={{ background: e.color || "#EA4918" }}>{e.name.trim().charAt(0).toUpperCase()}</span>{e.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
         <DragDropContext onDragEnd={handleDragEnd}>

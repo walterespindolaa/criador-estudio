@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useCrmClient, useUpdateCrmClient, useUploadCrmAsset } from "@/hooks/useCrm";
 import { Camera } from "lucide-react";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
+import { BrandColorPicker } from "@/components/accounts/BrandColorPicker";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useExternalClients, useExternalPosts } from "@/hooks/useCriaPost";
 import { datasPara, segmentoDoTexto, DATAS_COMEMORATIVAS } from "@/lib/datasComemorativas";
@@ -108,7 +109,7 @@ import { CRIA_HEX, type CriaColor } from "@/lib/moduleTheme";
 type CriaColor2 = CriaColor;
 // Paleta de cor do cliente (as 6 da marca + roxo e grafite). Pinta o card na
 // lista, a logo e o link público do cronograma.
-const CLIENT_COLORS = ["#EA4918", "#FFCF03", "#0061EE", "#FF77B9", "#01A652", "#7C90F0", "#4B3FA8", "#3A3A38"];
+// Paleta ampliada (12 famílias x 5 tons) vem do BrandColorPicker.
 import { formatBRL } from "@/lib/money";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { confirmar } from "@/components/shared/Confirm";
@@ -276,18 +277,9 @@ export default function ClienteHub() {
               <span className="hidden sm:inline ml-1.5">Cor</span>
             </Button>
             {colorOpen && (
-              <div className="absolute right-0 top-12 z-30 rounded-2xl border border-border bg-card p-3 shadow-xl">
+              <div className="absolute right-0 top-12 z-30 w-[280px] max-h-[60vh] overflow-y-auto rounded-2xl border border-border bg-card p-3 shadow-xl">
                 <p className="text-[11px] font-body text-muted-foreground mb-2">Cor do cliente</p>
-                <div className="flex gap-2 flex-wrap max-w-[204px]">
-                  {CLIENT_COLORS.map((hex) => {
-                    const on = (client as { color?: string | null }).color === hex;
-                    return (
-                      <button key={hex} type="button" onClick={() => setColor(hex)} title={hex} aria-label={`Cor ${hex}`}
-                        className="h-7 w-7 rounded-lg transition-transform hover:scale-110"
-                        style={{ background: hex, boxShadow: on ? "0 0 0 2px hsl(var(--foreground))" : "inset 0 0 0 1px rgba(0,0,0,.08)" }} />
-                    );
-                  })}
-                </div>
+                <BrandColorPicker value={(client as { color?: string | null }).color ?? null} onChange={(hex) => setColor(hex)} />
                 <button type="button" onClick={() => setColor(null)} className="mt-2.5 text-[11px] font-body text-muted-foreground hover:text-foreground">Remover cor</button>
               </div>
             )}
