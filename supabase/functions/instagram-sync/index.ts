@@ -132,6 +132,14 @@ async function syncConnection(
           res = await getJson(`${GRAPH}/me/insights?metric=${dm.metric}&period=lifetime&metric_type=total&timeframe=last_30_days&breakdown=${bd}&access_token=${token}`);
           parsed = parseDemographics(res);
         }
+        // Sem dados: a API quase sempre devolveu um objeto de erro (permissão/escopo,
+        // param invalido). Loga o erro REAL pra aparecer nos logs da edge, senao fica
+        // aquele silencio de social_audience vazia sem pista nenhuma.
+        if (!parsed.length) {
+          const err = (res as { error?: unknown })?.error;
+          console.warn('[instagram-sync] demographics vazio', dm.metric, bd,
+            err ? JSON.stringify(err) : JSON.stringify(res).slice(0, 300));
+        }
         for (const p of parsed) {
           demoRows.push({
             user_id: userId, crm_client_id: crmClientId, provider: 'instagram',
