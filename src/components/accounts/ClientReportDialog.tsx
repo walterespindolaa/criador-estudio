@@ -11,6 +11,7 @@ import { clientReportInsight } from "@/lib/ai/claude";
 import { useCrmClients } from "@/hooks/useCrm";
 import { FORMAT_LABELS } from "@/lib/constants";
 import type { ExternalClient, ExternalPost } from "@/hooks/useCriaPost";
+import { computeCrossAnalysis, crossHeadlines, fmtNum, type CrossItem } from "@/components/insights/insightsUtils";
 
 const sbRpcR = supabase.rpc.bind(supabase) as unknown as (fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
 type IgMediaRow = {
@@ -204,6 +205,37 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   const dtFmt = (s: string | null) =>
     s ? new Date(s).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
 
+  // Cruzamentos pro cliente entender o direcionamento: formato, dia e horário que
+  // mais renderam (pilar/hook não vêm nessa RPC, então saem naturalmente).
+  const cross = useMemo(() => {
+    const items: CrossItem[] = igMedia.map((r) => ({
+      media_type: r.media_type,
+      posted_at: r.posted_at,
+      reach: Number(r.metrics?.reach) || 0,
+      interactions: engOf(r.metrics),
+      pillar: null,
+      hook: null,
+    }));
+    return computeCrossAnalysis(items);
+  }, [igMedia]);
+  const crossHl = useMemo(() => crossHeadlines(cross), [cross]);
+
+  // Destaque de Reels por tempo médio assistido (retenção).
+  const topReels = useMemo(() =>
+    igMedia
+      .filter((r) => r.media_type === "REELS" || r.media_type === "VIDEO")
+      .map((r) => ({ r, watch: Number(r.metrics?.ig_reels_avg_watch_time) || 0, views: Number(r.metrics?.views ?? r.metrics?.plays) || 0 }))
+      .filter((x) => x.watch > 0 || x.views > 0)
+      .sort((a, b) => b.watch - a.watch || b.views - a.views)
+      .slice(0, 3),
+  [igMedia]);
+  const fmtWatch = (ms: number) => {
+    if (ms <= 0) return "-";
+    const sec = ms / 1000;
+    if (sec < 60) return `${sec.toFixed(1).replace(".", ",")}s`;
+    return `${Math.floor(sec / 60)}m ${String(Math.round(sec % 60)).padStart(2, "0")}s`;
+  };
+
   const download = async () => {
     setDownloading(true);
     try {
@@ -340,6 +372,19 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     <div style={{ flex: 1, border: `1px solid ${C.line}`, borderRadius: 12, padding: "14px 16px" }}>
       <div style={{ fontSize: 26, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
       <div style={{ fontSize: 11, color: C.sub, marginTop: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
+    </div>
+  );
+
+  // Barra de alcance médio (cruzamentos) com o valor absoluto e a contagem.
+  const crossRow = (label: string, avgReach: number, count: number, max: number) => (
+    <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+      <div style={{ width: 96, fontSize: 12, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</div>
+      <div style={{ flex: 1, height: 8, background: C.soft, borderRadius: 99, overflow: "hidden" }}>
+        <div style={{ width: `${max > 0 ? Math.max(4, (avgReach / max) * 100) : 0}%`, height: "100%", background: C.brand }} />
+      </div>
+      <div style={{ width: 88, textAlign: "right", fontSize: 12, color: C.ink }}>
+        <b>{fmtNum(avgReach)}</b> <span style={{ color: C.sub }}>· {count}</span>
+      </div>
     </div>
   );
 
@@ -542,6 +587,65 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
                           </div>
                         );
                       })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Direcionamento: conclusões pro cliente entender o que rende mais */}
+                {crossHl.length > 0 && (
+                  <div style={{ marginTop: 18, padding: "14px 16px", border: `1px solid ${C.line}`, borderRadius: 12, background: C.soft }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Direcionamento do período</div>
+                    <ul style={{ margin: 0, paddingLeft: 18 }}>
+                      {crossHl.map((h, i) => (
+                        <li key={i} style={{ fontSize: 12, color: C.ink, marginBottom: 5, lineHeight: 1.5 }}>{h}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Cruzamentos: alcance médio por formato, dia e horário */}
+                {cross.hasData && (
+                  <div style={{ display: "flex", gap: 24, marginTop: 18, flexWrap: "wrap" }}>
+                    {cross.byFormat.length > 0 && (
+                      <div style={{ flex: 1, minWidth: 220 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Alcance médio por formato</div>
+                        {(() => { const mx = Math.max(...cross.byFormat.map((r) => r.avgReach), 0); return cross.byFormat.map((r) => crossRow(r.label, r.avgReach, r.count, mx)); })()}
+                      </div>
+                    )}
+                    {cross.byWeekday.length > 1 && (
+                      <div style={{ flex: 1, minWidth: 220 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Alcance médio por dia</div>
+                        {(() => { const mx = Math.max(...cross.byWeekday.map((r) => r.avgReach), 0); return cross.byWeekday.map((r) => crossRow(r.label, r.avgReach, r.count, mx)); })()}
+                      </div>
+                    )}
+                    {cross.byTime.length > 1 && (
+                      <div style={{ flex: 1, minWidth: 220 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Alcance médio por período</div>
+                        {(() => { const mx = Math.max(...cross.byTime.map((r) => r.avgReach), 0); return cross.byTime.map((r) => crossRow(r.label, r.avgReach, r.count, mx)); })()}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Destaque de Reels por tempo médio assistido (retenção) */}
+                {topReels.length > 0 && (
+                  <div style={{ marginTop: 18 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Reels com mais retenção (tempo médio assistido)</div>
+                    <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden" }}>
+                      {topReels.map(({ r, watch, views }, i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
+                          <div style={{ width: 20, fontSize: 13, fontWeight: 800, color: C.brand, textAlign: "center" }}>{i + 1}</div>
+                          <div style={{ width: 44, height: 44, borderRadius: 8, background: C.soft, overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            {r.thumbnail_url
+                              ? <img src={r.thumbnail_url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                              : <span style={{ fontSize: 9, color: C.sub }}>Reels</span>}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: C.ink }}>{r.caption ? r.caption.slice(0, 60) : "Reels"}</div>
+                            <div style={{ fontSize: 11, color: C.sub }}>{fmtWatch(watch)} assistidos em média{views ? ` · ${fmtNum(views)} views` : ""}</div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}

@@ -53,6 +53,21 @@ export type CriaClientIgMedia = {
   metrics: Record<string, number> | null;
   post_id?: string | null;   // vínculo com o post do Cria Post (se houver)
 };
+export type CriaClientIgAudience = {
+  metric: "followers" | "engaged";
+  dimension: "age" | "gender" | "city" | "country";
+  breakdown_value: string;
+  value: number;
+};
+export type CriaClientIgStory = {
+  external_story_id: string;
+  media_type: string | null;
+  permalink: string | null;
+  thumbnail_url: string | null;
+  media_url: string | null;
+  posted_at: string | null;
+  metrics: Record<string, number> | null;  // reach, replies, total_interactions, navigation
+};
 export type CriaClientInstagram = {
   connected: boolean;
   username?: string | null;
@@ -60,6 +75,8 @@ export type CriaClientInstagram = {
   last_sync?: string | null;
   daily?: CriaClientIgDaily[];
   media?: CriaClientIgMedia[];
+  audience?: CriaClientIgAudience[];   // demografia de audiência
+  stories?: CriaClientIgStory[];       // snapshot de stories
 };
 
 export function useCriaClientInstagram(criaOwnerId: string | null | undefined) {

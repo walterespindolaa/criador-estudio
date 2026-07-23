@@ -4,6 +4,11 @@ import { toast } from "sonner";
 import { useCriaClientInstagram, useLinkClientMedia, type CriaClientIgMedia } from "@/hooks/useManagerClientCria";
 import { useExternalPosts } from "@/hooks/useCriaPost";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { AudienceBreakdown } from "@/components/insights/AudienceBreakdown";
+import { StoriesSummary } from "@/components/insights/StoriesSummary";
+import { ReelsRanking } from "@/components/insights/ReelsRanking";
+import { ContentCrossAnalysis } from "@/components/insights/ContentCrossAnalysis";
+import type { CrossItem } from "@/components/insights/insightsUtils";
 
 // Aba Instagram da ficha do cliente que USA O CRIA: mostra os dados que o pipeline
 // do próprio cliente já sincronizou (social_metrics_daily + social_insights), em
@@ -73,6 +78,19 @@ export function ClienteInstagramCria({ criaOwnerId, clientName, extClientId }: {
   }, [media]);
 
   const vinculados = media.filter((mi) => mi.post_id && postById[mi.post_id!]).length;
+
+  // Cruzamentos pro direcionamento: formato/dia/horário (sempre) + hook do post do
+  // Cria vinculado (quando houver). Pilar não vem no feed do cliente, fica de fora.
+  const crossItems = useMemo<CrossItem[]>(() =>
+    media.map((mi) => ({
+      media_type: mi.media_type,
+      posted_at: mi.posted_at,
+      reach: m(mi, "reach"),
+      interactions: interactionsOf(mi),
+      pillar: null,
+      hook: mi.post_id ? (postById[mi.post_id]?.hook ?? null) : null,
+    })),
+  [media, postById]);
 
   const doLink = async (postId: string | null) => {
     if (!linkingMedia) return;
@@ -165,6 +183,31 @@ export function ClienteInstagramCria({ criaOwnerId, clientName, extClientId }: {
               )}
             </div>
           )}
+
+          {/* Direcionamento: cruzamentos (o que postar mais, formato, dia, horário) */}
+          {media.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-display font-bold text-foreground">O que postar mais</p>
+              <ContentCrossAnalysis items={crossItems} />
+            </div>
+          )}
+
+          {/* Reels por retenção */}
+          {media.some((mi) => mi.media_type === "REELS" || mi.media_type === "VIDEO") && (
+            <ReelsRanking media={media} />
+          )}
+
+          {/* Perfil de audiência do cliente */}
+          <div className="space-y-2">
+            <p className="text-sm font-display font-bold text-foreground">Quem acompanha o cliente</p>
+            <AudienceBreakdown rows={data.audience} />
+          </div>
+
+          {/* Stories do cliente */}
+          <div className="space-y-2">
+            <p className="text-sm font-display font-bold text-foreground">Stories</p>
+            <StoriesSummary stories={data.stories} />
+          </div>
 
           {/* Análise por post */}
           {media.length > 0 && (

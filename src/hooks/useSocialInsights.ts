@@ -48,9 +48,33 @@ export type MediaInsight = {
   permalink: string | null;
   thumbnail_url: string | null;
   posted_at: string | null;
+  // metrics jsonb: reach, saved, shares, total_interactions, likes, comments, views e,
+  // pra reels/vídeo, ig_reels_avg_watch_time e ig_reels_video_view_total_time (retenção).
   metrics: Record<string, number> | null;
   post_id: string | null;
   posts?: LinkedPost;
+};
+
+// Demografia de audiência (1 linha por bucket). metric: followers|engaged.
+// dimension: age|gender|city|country.
+export type AudienceRow = {
+  metric: "followers" | "engaged";
+  dimension: "age" | "gender" | "city" | "country";
+  breakdown_value: string;
+  value: number;
+};
+
+// Story capturado (snapshot; stories somem em 24h).
+export type StoryInsight = {
+  id: string;
+  external_story_id: string;
+  media_type: string | null;
+  permalink: string | null;
+  thumbnail_url: string | null;
+  media_url: string | null;
+  posted_at: string | null;
+  // metrics jsonb: reach, replies, total_interactions, navigation (o que a API liberar).
+  metrics: Record<string, number> | null;
 };
 
 // Conexão Instagram do usuário (uma por provider). Não selecionamos access_token no client.
@@ -84,6 +108,7 @@ export function useDailyMetrics(days = 30) {
         .select("date,followers,reach,impressions,profile_views,website_clicks,accounts_engaged,total_interactions")
         .eq("user_id", user!.id)
         .eq("provider", "instagram")
+        .is("crm_client_id", null) // conta própria (contas por-cliente ficam separadas)
         .gte("date", since)
         .order("date", { ascending: true });
       if (error) throw error;
@@ -104,9 +129,48 @@ export function useMediaInsights() {
         .eq("user_id", user!.id)
         .eq("provider", "instagram")
         .eq("object_type", "media")
+        .is("crm_client_id", null) // conta própria
         .order("posted_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as MediaInsight[];
+    },
+  });
+}
+
+// Demografia de audiência da conta própria (age/gender/city/country x followers/engaged).
+export function useAudienceDemographics() {
+  const { user } = useAuth();
+  return useQuery<AudienceRow[]>({
+    queryKey: ["social-audience", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("social_audience")
+        .select("metric,dimension,breakdown_value,value")
+        .eq("user_id", user!.id)
+        .eq("provider", "instagram")
+        .is("crm_client_id", null)
+        .order("value", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as AudienceRow[];
+    },
+  });
+}
+
+// Stories capturados da conta própria (mais recentes primeiro).
+export function useStories() {
+  const { user } = useAuth();
+  return useQuery<StoryInsight[]>({
+    queryKey: ["social-stories", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("social_stories")
+        .select("id,external_story_id,media_type,permalink,thumbnail_url,media_url,posted_at,metrics")
+        .eq("user_id", user!.id)
+        .eq("provider", "instagram")
+        .is("crm_client_id", null)
+        .order("posted_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as StoryInsight[];
     },
   });
 }
@@ -162,6 +226,8 @@ export function useSyncInstagram() {
       qc.invalidateQueries({ queryKey: ["social-daily"] });
       qc.invalidateQueries({ queryKey: ["social-media-insights"] });
       qc.invalidateQueries({ queryKey: ["social-connection"] });
+      qc.invalidateQueries({ queryKey: ["social-audience"] });
+      qc.invalidateQueries({ queryKey: ["social-stories"] });
       toast.success("Insights atualizados!");
     },
     onError: () => toast.error("Não foi possível atualizar agora."),

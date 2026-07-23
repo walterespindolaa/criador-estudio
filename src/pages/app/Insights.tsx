@@ -14,8 +14,14 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   useSocialConnection, useDailyMetrics, useMediaInsights, useSyncInstagram, useDisconnectInstagram, useLinkMediaToPost,
-  connectInstagram, type MediaInsight,
+  useAudienceDemographics, useStories, connectInstagram, type MediaInsight,
 } from "@/hooks/useSocialInsights";
+import { usePillars } from "@/hooks/usePillars";
+import { AudienceBreakdown } from "@/components/insights/AudienceBreakdown";
+import { StoriesSummary } from "@/components/insights/StoriesSummary";
+import { ReelsRanking } from "@/components/insights/ReelsRanking";
+import { ContentCrossAnalysis } from "@/components/insights/ContentCrossAnalysis";
+import type { CrossItem } from "@/components/insights/insightsUtils";
 
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
@@ -34,6 +40,9 @@ export default function Insights() {
   const { data: conn, isLoading } = useSocialConnection();
   const { data: daily = [] } = useDailyMetrics(30);
   const { data: media = [] } = useMediaInsights();
+  const { data: audience = [] } = useAudienceDemographics();
+  const { data: stories = [] } = useStories();
+  const { pillars } = usePillars();
   const sync = useSyncInstagram();
   const disconnect = useDisconnectInstagram();
   const link = useLinkMediaToPost();
@@ -91,6 +100,21 @@ export default function Insights() {
       reach, interactions, profileViews: last?.profile_views ?? null,
     };
   }, [daily, media]);
+
+  // Cruzamentos: mapeia cada mídia pro shape do ContentCrossAnalysis, puxando pilar,
+  // formato e hook do post do CRIA vinculado (quando houver).
+  const crossItems = useMemo<CrossItem[]>(() => {
+    const pillarById: Record<string, string> = {};
+    pillars.forEach((p) => { pillarById[p.id] = p.name; });
+    return media.map((mi) => ({
+      media_type: mi.media_type,
+      posted_at: mi.posted_at,
+      reach: m(mi, "reach"),
+      interactions: m(mi, "likes") + m(mi, "comments") + m(mi, "saved") + m(mi, "saves") + m(mi, "shares"),
+      pillar: mi.posts?.pillar_id ? (pillarById[mi.posts.pillar_id] ?? null) : null,
+      hook: mi.posts?.hook ?? null,
+    }));
+  }, [media, pillars]);
 
   if (isLoading) return <div className="p-8 text-sm text-muted-foreground">{t("insights.loading")}</div>;
 
@@ -233,6 +257,24 @@ export default function Insights() {
           </div>
         </>
       )}
+
+      {/* CRUZAMENTOS: o que rende mais por formato, pilar, tema e horário */}
+      <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-7 mb-3 flex items-center gap-2">
+        O que postar mais <span className="text-[10px] font-normal normal-case tracking-normal text-muted-foreground">· cruzamentos do seu conteúdo</span>
+      </h2>
+      <ContentCrossAnalysis items={crossItems} />
+
+      {/* REELS por retenção (tempo médio assistido) */}
+      <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-7 mb-3">Reels · retenção</h2>
+      <ReelsRanking media={media} />
+
+      {/* PERFIL DE AUDIÊNCIA */}
+      <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-7 mb-3">Quem te acompanha</h2>
+      <AudienceBreakdown rows={audience} />
+
+      {/* STORIES */}
+      <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-7 mb-3">Stories</h2>
+      <StoriesSummary stories={stories} />
 
       {/* posts + vínculo manual */}
       <h2 data-tour="insights-posts" className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-7 mb-3">{t("insights.postsTitle")}</h2>
