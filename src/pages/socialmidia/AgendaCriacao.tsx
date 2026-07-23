@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy } from "lucide-react";
+import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,6 +21,8 @@ import {
   useCaptures, useAddCapture, useUpdateCapture, useDeleteCapture, useCollaboratorNames, type Capture, type Creation,
 } from "@/hooks/useAgenda";
 import { useAllExternalPosts, useExternalClients, useMoveExternalPostDate, useUpdateExternalPost, type ExternalPostWithClient } from "@/hooks/useCriaPost";
+import { useCriaPostMedia } from "@/hooks/useCriaPostMedia";
+import { isDriveMedia, isDriveUrl } from "@/lib/driveMedia";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 
 // Status dos posts na agenda (mesmas cores do kanban de 5 status).
@@ -47,6 +49,34 @@ const STATUS: Record<Capture["status"], { label: string; cls: string }> = {
   concluida: { label: "Concluída", cls: "bg-secondary/15 text-secondary" },
   cancelada: { label: "Cancelada", cls: "bg-destructive/10 text-destructive" },
 };
+
+// Cor padrão da tarefa de cliente quando o cliente não tem cor definida no cadastro.
+const TASK_CLIENT_DEFAULT_COLOR = "#01A652"; // verde
+// HH:MM a partir de "HH:MM:SS" (ou null).
+const hhmm = (s: string | null | undefined) => (s ? s.slice(0, 5) : null);
+
+// Item unificado do dia, pra ordenar TODOS os tipos juntos por horário e manter os
+// index do @hello-pangea/dnd contíguos com a ordem renderizada.
+type DayItem =
+  | { kind: "cap"; time: string | null; cap: Capture }
+  | { kind: "task"; time: string | null; task: CrmTask }
+  | { kind: "cria"; time: string | null; cria: Creation }
+  | { kind: "post"; time: string | null; post: ExternalPostWithClient };
+
+// Monta a lista do dia ordenada: itens SEM horário primeiro (topo), depois os COM
+// horário em ordem crescente. Fontes de hora: captação=capture_time, post=scheduled_time,
+// tarefa=due_time, criação=sem horário. Sort estável mantém a ordem por tipo no empate.
+function buildDayItems(caps: Capture[], tasks: CrmTask[], cris: Creation[], posts: ExternalPostWithClient[]): DayItem[] {
+  const items: DayItem[] = [
+    ...caps.map((c) => ({ kind: "cap" as const, time: hhmm(c.capture_time), cap: c })),
+    ...tasks.map((t) => ({ kind: "task" as const, time: hhmm(t.due_time), task: t })),
+    ...cris.map((c) => ({ kind: "cria" as const, time: null, cria: c })),
+    ...posts.map((p) => ({ kind: "post" as const, time: hhmm((p as { scheduled_time?: string | null }).scheduled_time), post: p })),
+  ];
+  // "" (sem hora) ordena antes de qualquer "HH:MM"; timed em ordem crescente.
+  items.sort((a, b) => (a.time ?? "").localeCompare(b.time ?? ""));
+  return items;
+}
 
 export default function AgendaCriacao() {
   const navigate = useNavigate();
@@ -304,6 +334,9 @@ export default function AgendaCriacao() {
           )}>
             {days.map((d, i) => {
               const iso = ymd(d); const list = byDay.get(iso) ?? []; const caps = capturesByDay.get(iso) ?? []; const dayTasks = tasksByDay.get(iso) ?? []; const dayPosts = postsByDay.get(iso) ?? []; const totalDay = caps.length + dayTasks.length + list.length + dayPosts.length; const isToday = iso === today;
+              // Lista única do dia, ordenada por horário (sem hora primeiro). Os index dos
+              // Draggable saem daqui (0..n-1 contíguos), casando com a ordem renderizada pro dnd.
+              const dayItems = buildDayItems(caps, dayTasks, list, dayPosts);
               const outOfMonth = view === "mes" && d.getMonth() !== curMonth;
               return (
                 <Droppable droppableId={iso} key={iso}>
@@ -324,86 +357,102 @@ export default function AgendaCriacao() {
                           <button onClick={() => { setAddKind("criacao"); setAddDay(iso); }} className="text-muted-foreground hover:text-primary" aria-label="Adicionar"><Plus className="h-3.5 w-3.5" /></button>
                         </div>
                       </div>
-                      {caps.map((c, idx) => (
-                        <Draggable key={`cap:${c.id}`} draggableId={`cap:${c.id}`} index={idx}>
-                          {(dragProvided, dragSnapshot) => (
-                            <button ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
-                              type="button" title={c.location ?? undefined}
-                              onClick={() => setEditCap(c)}
-                              className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors",
-                                c.status === "concluida" ? "border-teal-500/25 bg-teal-500/5 opacity-70" : "border-teal-500/40 bg-teal-500/10 hover:bg-teal-500/15",
-                                dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
-                              <div className="flex items-center gap-1 text-teal-700 dark:text-teal-300">
-                                <Video className="h-3 w-3 shrink-0" />
-                                <span className="text-[10px] font-body font-bold">{c.capture_time ? c.capture_time.slice(0, 5) : "Captação"}</span>
-                              </div>
-                              <p className="text-[12px] font-body font-semibold text-foreground leading-tight truncate">{nameOf(c.crm_client_id, c.client_name)}</p>
-                            </button>
-                          )}
-                        </Draggable>
-                      ))}
-                      {dayTasks.map((t, idx) => {
-                        // Tarefa de LEAD é azul; tarefa de CLIENTE é âmbar. A cor diz de quem é.
-                        const isLead = !!t.crm_lead_id;
-                        const who = isLead ? (leadName(t.crm_lead_id) ?? "Lead") : nameOf(t.crm_client_id, null);
-                        return (
-                        <Draggable key={`task:${t.id}`} draggableId={`task:${t.id}`} index={caps.length + idx}>
-                          {(dragProvided, dragSnapshot) => {
-                            const done = t.status === "concluida";
-                            return (
-                            <button ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
-                              type="button" title={t.description ?? undefined}
-                              onClick={() => setEditTask(t)}
-                              className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors",
-                                isLead
-                                  ? "border-sky-500/45 bg-sky-500/10 hover:bg-sky-500/15"
-                                  : t.priority === "urgente" || t.priority === "alta"
-                                  ? "border-amber-500/50 bg-amber-500/15 hover:bg-amber-500/20"
-                                  : "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10",
-                                done && "opacity-60",
-                                dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
-                              <div className={cn("flex items-center gap-1", isLead ? "text-sky-700 dark:text-sky-300" : "text-amber-700 dark:text-amber-300")}>
-                                <ListChecks className="h-3 w-3 shrink-0" />
-                                <span className="text-[10px] font-body font-bold truncate flex-1">{isLead ? `Lead · ${who}` : who}</span>
-                                {/* Check pra marcar concluída (risca a tarefa). Span pra não aninhar button. */}
-                                <span role="button" tabIndex={0} aria-label={done ? "Reabrir tarefa" : "Concluir tarefa"}
-                                  onClick={(e) => { e.stopPropagation(); updTask.mutate({ id: t.id, status: done ? "pendente" : "concluida" }); }}
-                                  className={cn("grid h-6 w-6 md:h-4 md:w-4 shrink-0 place-items-center rounded border cursor-pointer transition-colors",
-                                    done ? "bg-emerald-500 border-emerald-500 text-white" : "border-current/50 hover:border-emerald-500 hover:text-emerald-600")}>
-                                  {done && <Check className="h-3 w-3" strokeWidth={3} />}
-                                </span>
-                              </div>
-                              <p className={cn("text-[12px] font-body font-semibold leading-tight truncate", done ? "line-through text-muted-foreground" : "text-foreground")}>{t.title}</p>
-                            </button>
-                            );
-                          }}
-                        </Draggable>
-                        );
-                      })}
-                      {list.map((c, idx) => (
-                        <Draggable key={`cria:${c.id}`} draggableId={`cria:${c.id}`} index={caps.length + dayTasks.length + idx}>
-                          {(dragProvided, dragSnapshot) => (
-                            <div ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
-                              role="button" tabIndex={0}
-                              onClick={() => setEditCreation(c)}
-                              onKeyDown={(e) => { if (e.key === "Enter") setEditCreation(c); }}
-                              className={cn("group rounded-lg border border-border bg-card px-2 py-1.5 cursor-pointer hover:bg-muted/40 transition-colors",
-                                dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
-                              <div className="flex items-start gap-1">
-                                <p className="text-[12px] font-body font-semibold text-foreground leading-tight flex-1 min-w-0 truncate">{nameOf(c.crm_client_id, c.client_name)}</p>
-                                <button onClick={(e) => { e.stopPropagation(); delCreation.mutate(c.id); }} className="text-muted-foreground/50 hover:text-destructive shrink-0" aria-label="Remover"><X className="h-3 w-3" /></button>
-                              </div>
-                              {c.team && <p className="text-[10px] font-body text-muted-foreground truncate">{c.team}</p>}
-                            </div>
-                          )}
-                        </Draggable>
-                      ))}
-                      {dayPosts.map((p, idx) => {
+                      {/* Um único map na ordem já ordenada por horário: os index viram 0..n-1
+                          contíguos (bate com a ordem renderizada, o dnd não quebra). */}
+                      {dayItems.map((item, idx) => {
+                        if (item.kind === "cap") {
+                          const c = item.cap;
+                          return (
+                            <Draggable key={`cap:${c.id}`} draggableId={`cap:${c.id}`} index={idx}>
+                              {(dragProvided, dragSnapshot) => (
+                                <button ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
+                                  type="button" title={c.location ?? undefined}
+                                  onClick={() => setEditCap(c)}
+                                  className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors",
+                                    c.status === "concluida" ? "border-teal-500/25 bg-teal-500/5 opacity-70" : "border-teal-500/40 bg-teal-500/10 hover:bg-teal-500/15",
+                                    dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
+                                  <div className="flex items-center gap-1 text-teal-700 dark:text-teal-300">
+                                    <Video className="h-3 w-3 shrink-0" />
+                                    <span className="text-[10px] font-body font-bold">{c.capture_time ? c.capture_time.slice(0, 5) : "Captação"}</span>
+                                  </div>
+                                  <p className="text-[12px] font-body font-semibold text-foreground leading-tight truncate">{nameOf(c.crm_client_id, c.client_name)}</p>
+                                </button>
+                              )}
+                            </Draggable>
+                          );
+                        }
+                        if (item.kind === "task") {
+                          const t = item.task;
+                          // Tarefa de LEAD é azul. Tarefa de CLIENTE usa a COR DO CLIENTE (cadastro); sem cor -> verde.
+                          const isLead = !!t.crm_lead_id;
+                          const client = t.crm_client_id ? clients.find((c) => c.id === t.crm_client_id) : null;
+                          const clientColor = client?.color || TASK_CLIENT_DEFAULT_COLOR;
+                          const who = isLead ? (leadName(t.crm_lead_id) ?? "Lead") : nameOf(t.crm_client_id, null);
+                          return (
+                            <Draggable key={`task:${t.id}`} draggableId={`task:${t.id}`} index={idx}>
+                              {(dragProvided, dragSnapshot) => {
+                                const done = t.status === "concluida";
+                                return (
+                                  <button ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
+                                    type="button" title={t.description ?? undefined}
+                                    onClick={() => setEditTask(t)}
+                                    className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors",
+                                      isLead ? "border-sky-500/45 bg-sky-500/10 hover:bg-sky-500/15" : "hover:brightness-95",
+                                      done && "opacity-60",
+                                      dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}
+                                    // Cliente: acento na cor do cliente (borda esquerda + fundo bem suave). Texto fica no foreground pra não perder contraste.
+                                    style={!isLead ? { borderColor: `${clientColor}59`, borderLeftColor: clientColor, borderLeftWidth: 3, background: `${clientColor}12` } : undefined}>
+                                    <div className={cn("flex items-center gap-1", isLead && "text-sky-700 dark:text-sky-300")}>
+                                      {isLead
+                                        ? <ListChecks className="h-3 w-3 shrink-0" />
+                                        : <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: clientColor }} />}
+                                      <span className={cn("text-[10px] font-body font-bold truncate flex-1", !isLead && "text-foreground")}>
+                                        {item.time && <span className="tabular-nums">{item.time} · </span>}
+                                        {isLead ? `Lead · ${who}` : who}
+                                      </span>
+                                      {/* Check pra marcar concluída (risca a tarefa). Span pra não aninhar button. */}
+                                      <span role="button" tabIndex={0} aria-label={done ? "Reabrir tarefa" : "Concluir tarefa"}
+                                        onClick={(e) => { e.stopPropagation(); updTask.mutate({ id: t.id, status: done ? "pendente" : "concluida" }); }}
+                                        className={cn("grid h-6 w-6 md:h-4 md:w-4 shrink-0 place-items-center rounded border cursor-pointer transition-colors",
+                                          done ? "bg-emerald-500 border-emerald-500 text-white" : "border-current/50 hover:border-emerald-500 hover:text-emerald-600")}>
+                                        {done && <Check className="h-3 w-3" strokeWidth={3} />}
+                                      </span>
+                                    </div>
+                                    <p className={cn("text-[12px] font-body font-semibold leading-tight truncate", done ? "line-through text-muted-foreground" : "text-foreground")}>{t.title}</p>
+                                  </button>
+                                );
+                              }}
+                            </Draggable>
+                          );
+                        }
+                        if (item.kind === "cria") {
+                          const c = item.cria;
+                          return (
+                            <Draggable key={`cria:${c.id}`} draggableId={`cria:${c.id}`} index={idx}>
+                              {(dragProvided, dragSnapshot) => (
+                                <div ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
+                                  role="button" tabIndex={0}
+                                  onClick={() => setEditCreation(c)}
+                                  onKeyDown={(e) => { if (e.key === "Enter") setEditCreation(c); }}
+                                  className={cn("group rounded-lg border border-border bg-card px-2 py-1.5 cursor-pointer hover:bg-muted/40 transition-colors",
+                                    dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
+                                  <div className="flex items-start gap-1">
+                                    <p className="text-[12px] font-body font-semibold text-foreground leading-tight flex-1 min-w-0 truncate">{nameOf(c.crm_client_id, c.client_name)}</p>
+                                    <button onClick={(e) => { e.stopPropagation(); delCreation.mutate(c.id); }} className="text-muted-foreground/50 hover:text-destructive shrink-0" aria-label="Remover"><X className="h-3 w-3" /></button>
+                                  </div>
+                                  {c.team && <p className="text-[10px] font-body text-muted-foreground truncate">{c.team}</p>}
+                                </div>
+                              )}
+                            </Draggable>
+                          );
+                        }
+                        // post
+                        const p = item.post;
                         const cli = extById.get(p.external_client_id);
                         const posted = p.approval_status === "postado";
                         const st = POST_STATUS[p.approval_status ?? "em_producao"];
                         return (
-                          <Draggable key={`post:${p.id}`} draggableId={`post:${p.id}`} index={caps.length + dayTasks.length + list.length + idx}>
+                          <Draggable key={`post:${p.id}`} draggableId={`post:${p.id}`} index={idx}>
                             {(dragProvided, dragSnapshot) => (
                               <button ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
                                 type="button" title={p.title ?? undefined} onClick={() => openPost(p)}
@@ -412,7 +461,9 @@ export default function AgendaCriacao() {
                                   dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
                                 <div className="flex items-center gap-1 text-orange-700 dark:text-orange-300">
                                   <Send className="h-3 w-3 shrink-0" />
-                                  <span className="text-[10px] font-body font-bold truncate flex-1">{cli?.name ?? "Post"}</span>
+                                  <span className="text-[10px] font-body font-bold truncate flex-1">{item.time && <span className="tabular-nums">{item.time} · </span>}{cli?.name ?? "Post"}</span>
+                                  {/* Indicador discreto: post tem link do Drive no campo Ideia/Referência. */}
+                                  {isDriveUrl(p.reference_url) && <HardDrive className="h-3 w-3 shrink-0 opacity-70" aria-label="Tem Drive" />}
                                   {st && <span className={cn("shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}
                                   {/* Check: marca o post como POSTADO (vai pra coluna Postado do kanban). */}
                                   <span role="button" tabIndex={0} aria-label={posted ? "Reabrir post" : "Marcar como postado"}
@@ -533,6 +584,8 @@ export default function AgendaCriacao() {
         const iso = dayModal;
         const caps = capturesByDay.get(iso) ?? []; const tks = tasksByDay.get(iso) ?? [];
         const cri = byDay.get(iso) ?? []; const pts = postsByDay.get(iso) ?? [];
+        // Mesma ordenação da grade (sem hora primeiro, depois por horário crescente).
+        const items = buildDayItems(caps, tks, cri, pts);
         const d = parseDateOnly(iso);
         const rowCls = "w-full flex items-center gap-2.5 rounded-xl border border-border p-2.5 text-left hover:border-primary/50 hover:bg-primary/5 transition-colors";
         const dot = (c: string) => <span className="h-2 w-2 rounded-full shrink-0" style={{ background: c }} />;
@@ -540,12 +593,14 @@ export default function AgendaCriacao() {
           <Dialog open onOpenChange={(o) => { if (!o) setDayModal(null); }}>
             <DialogContent className="sm:max-w-md rounded-2xl max-h-[80vh] overflow-y-auto">
               <DialogHeader><DialogTitle className="font-display capitalize">{d.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}</DialogTitle></DialogHeader>
-              <p className="text-[12px] font-body text-muted-foreground -mt-2">{caps.length + tks.length + cri.length + pts.length} item(ns) · clique pra editar</p>
+              <p className="text-[12px] font-body text-muted-foreground -mt-2">{items.length} item(ns) · clique pra editar</p>
               <div className="space-y-1.5 mt-1">
-                {cri.map((c) => <button key={`c${c.id}`} onClick={() => { setDayModal(null); setEditCreation(c); }} className={rowCls}>{dot("#4B3FA8")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}</span><span className="ml-auto text-[10px] text-muted-foreground">Criação</span></button>)}
-                {tks.map((t) => <button key={`t${t.id}`} onClick={() => { setDayModal(null); setEditTask(t); }} className={rowCls}>{dot("#0061EE")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{t.title}</span><span className="ml-auto text-[10px] text-muted-foreground">Tarefa</span></button>)}
-                {caps.map((c) => <button key={`p${c.id}`} onClick={() => { setDayModal(null); setEditCap(c); }} className={rowCls}>{dot("#FF77B9")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}{c.capture_time ? ` · ${c.capture_time.slice(0, 5)}` : ""}</span><span className="ml-auto text-[10px] text-muted-foreground">Captação</span></button>)}
-                {pts.map((p) => { const st = POST_STATUS[p.approval_status ?? "em_producao"]; return <button key={`o${p.id}`} onClick={() => { setDayModal(null); openPost(p); }} className={rowCls}>{dot("#EA4918")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{p.title || "Post"}</span>{st && <span className={cn("ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}</button>; })}
+                {items.map((item) => {
+                  if (item.kind === "cria") { const c = item.cria; return <button key={`c${c.id}`} onClick={() => { setDayModal(null); setEditCreation(c); }} className={rowCls}>{dot("#4B3FA8")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}</span><span className="ml-auto text-[10px] text-muted-foreground">Criação</span></button>; }
+                  if (item.kind === "task") { const t = item.task; const isLead = !!t.crm_lead_id; const dotColor = isLead ? "#0061EE" : ((t.crm_client_id ? clients.find((x) => x.id === t.crm_client_id)?.color : null) || TASK_CLIENT_DEFAULT_COLOR); return <button key={`t${t.id}`} onClick={() => { setDayModal(null); setEditTask(t); }} className={rowCls}>{dot(dotColor)}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{t.title}</span><span className="ml-auto text-[10px] text-muted-foreground">Tarefa</span></button>; }
+                  if (item.kind === "cap") { const c = item.cap; return <button key={`p${c.id}`} onClick={() => { setDayModal(null); setEditCap(c); }} className={rowCls}>{dot("#FF77B9")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}{c.capture_time ? ` · ${c.capture_time.slice(0, 5)}` : ""}</span><span className="ml-auto text-[10px] text-muted-foreground">Captação</span></button>; }
+                  const p = item.post; const st = POST_STATUS[p.approval_status ?? "em_producao"]; return <button key={`o${p.id}`} onClick={() => { setDayModal(null); openPost(p); }} className={rowCls}>{dot("#EA4918")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{p.title || "Post"}</span>{st && <span className={cn("ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}</button>;
+                })}
               </div>
             </DialogContent>
           </Dialog>
@@ -613,7 +668,7 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
   open: boolean; day: string | null; clients: Client[]; teamNames: string[]; onClose: () => void;
   initialKind?: "criacao" | "tarefa" | "captacao";
   onCreation: (crm: string | null, name: string | null, team: string | null, note: string | null) => void;
-  onTask: (v: { title: string; description: string | null; crm_client_id: string | null; priority: CrmTaskPriority; status: CrmTaskStatus; due_date: string }) => void;
+  onTask: (v: { title: string; description: string | null; crm_client_id: string | null; priority: CrmTaskPriority; status: CrmTaskStatus; due_date: string; due_time: string | null }) => void;
   onCapture: (v: { capture_date: string; capture_time?: string | null; location?: string | null; crm_client_id?: string | null; client_name?: string | null; team?: string | null; note?: string | null }) => void;
 }) {
   const [kind, setKind] = useState<"criacao" | "tarefa" | "captacao">("criacao");
@@ -639,7 +694,7 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
   const submit = () => {
     if (!day) return;
     if (kind === "criacao") onCreation(crm, name.trim() || null, team.trim() || null, note.trim() || null);
-    else if (kind === "tarefa") onTask({ title: title.trim(), description: note.trim() || null, crm_client_id: crm, priority: prio, status: "pendente", due_date: day });
+    else if (kind === "tarefa") onTask({ title: title.trim(), description: note.trim() || null, crm_client_id: crm, priority: prio, status: "pendente", due_date: day, due_time: time || null });
     else onCapture({ capture_date: day, capture_time: time || null, location: loc.trim() || null, crm_client_id: crm, client_name: name.trim() || null, team: team.trim() || null, note: note.trim() || null });
   };
 
@@ -682,11 +737,17 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
           )}
 
           {kind === "tarefa" && (
-            <div>
-              <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Prioridade</p>
-              <select value={prio} onChange={(e) => setPrio(e.target.value as CrmTaskPriority)} className="w-full h-10 rounded-xl border border-border bg-card px-3 text-sm font-body">
-                {CRM_TASK_PRIORITIES.map((p) => <option key={p} value={p}>{CRM_TASK_PRIORITY_LABELS[p]}</option>)}
-              </select>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Prioridade</p>
+                <select value={prio} onChange={(e) => setPrio(e.target.value as CrmTaskPriority)} className="w-full h-10 rounded-xl border border-border bg-card px-3 text-sm font-body">
+                  {CRM_TASK_PRIORITIES.map((p) => <option key={p} value={p}>{CRM_TASK_PRIORITY_LABELS[p]}</option>)}
+                </select>
+              </div>
+              <div className="w-[124px] shrink-0">
+                <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Horário</p>
+                <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full" />
+              </div>
             </div>
           )}
 
@@ -775,7 +836,7 @@ function TaskDialog({ task, clients, onClose, onOpenCrm, onSave }: {
   clients: Client[];
   onClose: () => void;
   onOpenCrm: () => void;
-  onSave: (patch: { title: string; description: string | null; priority: CrmTaskPriority; status: CrmTaskStatus; due_date: string | null }) => void;
+  onSave: (patch: { title: string; description: string | null; priority: CrmTaskPriority; status: CrmTaskStatus; due_date: string | null; due_time: string | null }) => void;
 }) {
   const open = !!task;
   const [title, setTitle] = useState("");
@@ -783,11 +844,12 @@ function TaskDialog({ task, clients, onClose, onOpenCrm, onSave }: {
   const [prio, setPrio] = useState<CrmTaskPriority>("media");
   const [status, setStatus] = useState<CrmTaskStatus>("pendente");
   const [due, setDue] = useState("");
+  const [dueTime, setDueTime] = useState("");
   const [seeded, setSeeded] = useState("");
   if (open && task && seeded !== task.id) {
     setSeeded(task.id);
     setTitle(task.title); setDesc(task.description ?? "");
-    setPrio(task.priority); setStatus(task.status); setDue(task.due_date ?? "");
+    setPrio(task.priority); setStatus(task.status); setDue(task.due_date ?? ""); setDueTime(task.due_time ? task.due_time.slice(0, 5) : "");
   }
   if (!open && seeded) setSeeded("");
   const clientName = task?.crm_client_id ? clients.find((c) => c.id === task.crm_client_id)?.name : null;
@@ -813,14 +875,17 @@ function TaskDialog({ task, clients, onClose, onOpenCrm, onSave }: {
               </select>
             </div>
           </div>
-          <div><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Vencimento</p><Input type="date" value={due} onChange={(e) => setDue(e.target.value)} /></div>
+          <div className="flex gap-2">
+            <div className="flex-1"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Vencimento</p><Input type="date" value={due} onChange={(e) => setDue(e.target.value)} /></div>
+            <div className="w-[124px] shrink-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Horário</p><Input type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)} className="w-full" /></div>
+          </div>
           <button type="button" onClick={onOpenCrm} className="inline-flex items-center gap-1 text-[11px] font-body text-muted-foreground hover:text-primary transition-colors">
             <ExternalLink className="h-3 w-3" /> Abrir no CRM
           </button>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => onSave({ title: title.trim(), description: desc.trim() || null, priority: prio, status, due_date: due || null })} disabled={!title.trim()}>Salvar</Button>
+          <Button onClick={() => onSave({ title: title.trim(), description: desc.trim() || null, priority: prio, status, due_date: due || null, due_time: dueTime || null })} disabled={!title.trim()}>Salvar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -871,6 +936,16 @@ function PostEditDialog({ post, clientName, onClose, onSave, onOpenClient, savin
   const [caption, setCaption] = useState("");
   const [status, setStatus] = useState<string>("em_producao");
   const [seeded, setSeeded] = useState("");
+  // Mídias do post só carregam quando o popup está aberto (postId null = query desabilitada).
+  // Como só existe 1 PostEditDialog por vez, a query fica naturalmente escopada ao post aberto.
+  const { list: media } = useCriaPostMedia(post?.id ?? null);
+  // Link do Drive pra atalho "Abrir no Drive": prioriza o campo Ideia/Referência quando
+  // for link do Drive; senão pega a view_url do primeiro anexo do Drive do post.
+  const driveUrl = (() => {
+    if (isDriveUrl(post?.reference_url)) return post!.reference_url;
+    const att = (media.data ?? []).find((m) => isDriveMedia(m) && !!m.view_url);
+    return att?.view_url ?? null;
+  })();
   if (open && post && seeded !== post.id) {
     setSeeded(post.id);
     setTitle(post.title ?? "");
@@ -909,9 +984,18 @@ function PostEditDialog({ post, clientName, onClose, onSave, onOpenClient, savin
             </div>
             <Textarea rows={4} value={caption} onChange={(e) => setCaption(e.target.value)} className="rounded-xl text-sm" />
           </div>
-          <button type="button" onClick={onOpenClient} className="inline-flex items-center gap-1 text-[11px] font-body text-muted-foreground hover:text-primary transition-colors">
-            <ExternalLink className="h-3 w-3" /> Abrir no cliente pra editar mídia e roteiro
-          </button>
+          <div className="flex flex-col gap-2">
+            {/* Atalho direto pro Drive do post (referência ou anexo), sem entrar no cliente. */}
+            {driveUrl && (
+              <button type="button" onClick={() => window.open(driveUrl, "_blank", "noopener,noreferrer")}
+                className="inline-flex items-center gap-1.5 self-start rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-body font-semibold text-foreground hover:border-primary/50 hover:bg-primary/[0.06] transition-colors">
+                <HardDrive className="h-3.5 w-3.5 text-primary" /> Abrir no Drive
+              </button>
+            )}
+            <button type="button" onClick={onOpenClient} className="inline-flex items-center gap-1 text-[11px] font-body text-muted-foreground hover:text-primary transition-colors">
+              <ExternalLink className="h-3 w-3" /> Abrir no cliente pra editar mídia e roteiro
+            </button>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>

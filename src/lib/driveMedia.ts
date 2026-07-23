@@ -20,6 +20,13 @@ export function isDriveMedia(m: MediaLike): boolean {
   return DRIVE_PROVIDERS.has((m.provider ?? "").toLowerCase());
 }
 
+// Detecta se uma URL avulsa (ex.: campo Ideia/Referência do post) aponta pro
+// Google Drive/Docs, pra oferecer o atalho "Abrir no Drive" sem depender de anexo.
+export function isDriveUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  return /(?:^|\/\/|\.)(?:drive|docs)\.google\.com\//i.test(url.trim());
+}
+
 export function isVideoMedia(m: MediaLike): boolean {
   return !!m.file_type?.startsWith("video") || !!m.bunny_video_id || m.provider === "bunny_stream";
 }

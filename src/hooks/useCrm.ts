@@ -524,7 +524,8 @@ export type CrmTask = {
   crm_client_id: string | null; crm_lead_id: string | null;
   title: string; description: string | null;
   status: CrmTaskStatus; priority: CrmTaskPriority;
-  due_date: string | null; created_at: string; updated_at: string;
+  // due_time: horário opcional (HH:MM) da tarefa. Coluna nova em crm_tasks (ver SQL).
+  due_date: string | null; due_time: string | null; created_at: string; updated_at: string;
 };
 export type CrmTaskInput = Partial<Omit<CrmTask, "id" | "manager_id" | "created_at" | "updated_at">> & { title: string };
 
