@@ -63,6 +63,8 @@ export type CrmClient = {
   persona: Record<string, string>;
   diagnosis: Record<string, string>;
   competitors: { name?: string; instagram?: string; followers?: string; frequency?: string; contentType?: string }[];
+  // Links úteis do cliente (pastas do Drive, etc.). Coluna jsonb nova, ver SQL.
+  useful_links: { label: string; url: string }[] | null;
   active: boolean;
   notes: string | null;
   created_at: string;

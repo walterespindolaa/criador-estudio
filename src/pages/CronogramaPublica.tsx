@@ -18,7 +18,7 @@ function linkify(text: string) {
   );
 }
 
-type Item = { id: string; copy: string | null; description: string | null; date: string | null; type: string | null; approval_status: string; client_comment: string | null; ref_url: string | null };
+type Item = { id: string; title: string | null; copy: string | null; description: string | null; date: string | null; type: string | null; approval_status: string; client_comment: string | null; ref_url: string | null };
 type Data = { id: string; label: string; day_label: string | null; selected: boolean };
 type Cron = {
   title: string; client_label: string | null; client_handle: string | null; status: string;
@@ -190,8 +190,9 @@ export default function CronogramaPublica() {
                 {it.approval_status === "recusado" && <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: "#A32D2D", background: "#FCEBEB", padding: "3px 10px", borderRadius: 7 }}>Recusado</span>}
                 {it.approval_status === "ajuste" && <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: "#854F0B", background: "#FAEEDA", padding: "3px 10px", borderRadius: 7 }}>Ajuste pedido</span>}
               </div>
-              <div style={{ fontWeight: 800, fontSize: 15.5, color: "#2A2440", lineHeight: 1.3 }}>{it.copy || "(sem título)"}</div>
-              {it.description && <div style={{ fontSize: 13, color: "#6b647e", marginTop: 4, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{linkify(it.description)}</div>}
+              <div style={{ fontWeight: 800, fontSize: 15.5, color: "#2A2440", lineHeight: 1.3 }}>{it.title || it.copy || "(sem título)"}</div>
+              {it.copy && <div style={{ fontSize: 13.5, color: "#2A2440", marginTop: 6, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{linkify(it.copy)}</div>}
+              {it.description && <div style={{ fontSize: 12.5, color: "#6b647e", marginTop: 6, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{linkify(it.description)}</div>}
               {it.ref_url && <a href={it.ref_url} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "#0061EE", marginTop: 9, textDecoration: "none", fontWeight: 500 }}><Link2 style={{ width: 13, height: 13 }} /> Ver referência</a>}
               {it.client_comment && <div style={{ fontSize: 12, color: "#854F0B", background: "#FFFBEB", border: "1px solid #FAC775", borderRadius: 9, padding: "8px 10px", marginTop: 9 }}>"{it.client_comment}"</div>}
 

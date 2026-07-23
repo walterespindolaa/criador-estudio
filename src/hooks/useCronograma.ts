@@ -38,6 +38,7 @@ export type CronogramaItem = {
   id: string;
   cronograma_id: string;
   sort_order: number;
+  title: string | null;   // nome do post (separado da copy); coluna nova, ver SQL
   copy: string | null;
   description: string | null;
   date: string | null;

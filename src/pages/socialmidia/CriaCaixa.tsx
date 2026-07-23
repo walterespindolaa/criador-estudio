@@ -123,7 +123,6 @@ function CaixaInner() {
   const inMonth = (d: string) => { const dt = new Date(d + "T00:00:00"); return dt.getFullYear() === ym.y && dt.getMonth() === ym.m; };
 
   const monthCtx = useMemo(() => records.filter((r) => inMonth(r.date) && (r.context ?? "pj") === ctx), [records, ym, ctx]);
-  const filtered = monthCtx.filter((r) => (typeF === "todos" || r.type === typeF) && (statusF === "todos" || r.status === statusF));
 
   const recebido = monthCtx.filter((r) => r.type === "entrada" && r.status === "pago").reduce((s, r) => s + Number(r.amount), 0);
   const despesas = monthCtx.filter((r) => r.type === "despesa").reduce((s, r) => s + Number(r.amount), 0);
@@ -229,6 +228,45 @@ function CaixaInner() {
   const monthDate = `${ym.y}-${pad(ym.m + 1)}-${pad(Math.min(now.getDate(), 28))}`;
 
   const isPj = ctx === "pj";
+
+  // ── LANÇAMENTOS: fin_records reais + mensalidades pendentes projetadas ──
+  // A aba Lançamentos só listava fin_records reais já materializados. As
+  // mensalidades pendentes vivem em fin_monthly e só viram fin_record quando
+  // marcadas como recebidas, então o filtro "Pendente" mostrava "nenhum
+  // lançamento" mesmo com mensalidade a receber no mês. Aqui juntamos as duas
+  // fontes sem duplicar: os lançamentos reais do mês + as mensalidades ainda
+  // pendentes (projetadas). Só entra o que está "pendente" (pago já tem o
+  // fin_record real; pulado não conta), e só no contexto Empresa (PJ).
+  type LancItem =
+    | { kind: "record"; rec: FinRecord }
+    | { kind: "monthly"; m: FinMonthly; nome: string; status: FinStatus; atrasada: boolean };
+  const lancItems = useMemo<LancItem[]>(() => {
+    const recs: LancItem[] = monthCtx.map((rec) => ({ kind: "record", rec }));
+    if (!isPj) return recs;
+    const proj: LancItem[] = monthlies
+      .filter((m) => m.status === "pendente")
+      .map((m) => ({
+        kind: "monthly", m,
+        nome: clients.find((c) => c.id === m.crm_client_id)?.name ?? "Cliente",
+        // Mensalidade pendente reflete o status real do banco ("pendente"),
+        // pra aparecer no filtro "Pendente". O visual de vencida é só um aviso.
+        status: "pendente" as FinStatus,
+        atrasada: m.due_date < todayISO,
+      }));
+    // Mesma ordenação da lista de fin_records: data desc.
+    return [...recs, ...proj].sort((a, b) => {
+      const da = a.kind === "record" ? a.rec.date : a.m.due_date;
+      const db = b.kind === "record" ? b.rec.date : b.m.due_date;
+      return db.localeCompare(da);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monthCtx, monthlies, isPj, clients, todayISO]);
+
+  const filteredItems = lancItems.filter((it) => {
+    const type: FinType = it.kind === "record" ? it.rec.type : "entrada";
+    const status: FinStatus = it.kind === "record" ? it.rec.status : it.status;
+    return (typeF === "todos" || type === typeF) && (statusF === "todos" || status === statusF);
+  });
 
   const monthStart = new Date(ym.y, ym.m, 1);
   const monthEnd = new Date(ym.y, ym.m + 1, 0);
@@ -630,14 +668,51 @@ function CaixaInner() {
 
       {show("lancamentos") && (isLoading ? (
         <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-16 rounded-2xl bg-muted animate-pulse" />)}</div>
-      ) : filtered.length === 0 ? (
+      ) : filteredItems.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border p-10 text-center">
           <p className="text-sm font-body text-foreground font-medium">Nenhum lançamento neste mês</p>
           <p className="text-xs text-muted-foreground font-body mt-1">{isPj ? "Marque mensalidades recebidas ou adicione despesas da empresa." : "Adicione sua renda (pró-labore) e seus gastos pessoais."}</p>
         </div>
       ) : (
         <div className="space-y-2">
-          {filtered.map((r) => {
+          {filteredItems.map((it) => {
+            // Mensalidade pendente projetada: ainda não é fin_record, então não
+            // tem editar/excluir; a ação é "Marcar recebido" (vira fin_record).
+            if (it.kind === "monthly") {
+              const m = it.m;
+              const venc = new Date(m.due_date + "T00:00:00").toLocaleDateString("pt-BR");
+              return (
+                <div key={`m-${m.id}`} className="group rounded-2xl border border-dashed border-border bg-card p-3.5 sm:p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-green-100 text-green-700">
+                      <ArrowUpRight className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-display font-bold text-foreground leading-snug">Mensalidade, {it.nome}</p>
+                      <p className="text-[11px] text-muted-foreground font-body mt-0.5">
+                        vence {venc} · Mensalidade · a receber
+                        {it.atrasada ? " · vencida" : ""}
+                      </p>
+                    </div>
+                    <span className="text-sm font-display font-extrabold shrink-0 whitespace-nowrap text-green-700">
+                      +{brl(Number(m.amount))}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 mt-2.5 pt-2.5 border-t border-border/60">
+                    <span className={cn("text-[11px] font-bold rounded-full px-2.5 py-1.5", it.atrasada ? STATUS_STYLE.atrasado : STATUS_STYLE.pendente)}>
+                      {it.atrasada ? "Atrasado" : "Pendente"}
+                    </span>
+                    <div className="ml-auto flex items-center gap-1">
+                      <Button size="sm" className="h-8" onClick={() => confirmMonthly.mutate({ m, clientName: it.nome })} disabled={confirmMonthly.isPending}>
+                        <Check className="h-3 w-3 mr-1" /> Marcar recebido
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+            const r = it.rec;
             const isIn = r.type === "entrada";
             return (
               // No mobile a descrição, o status e o valor brigavam pelo mesmo espaço e

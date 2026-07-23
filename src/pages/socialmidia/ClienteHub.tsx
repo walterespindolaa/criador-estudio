@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Link2, Loader2, Plus, Settings2, Trash2, Wallet, Send, Check, Pencil, LogIn, Home, Layers, CalendarDays, BarChart3, BookOpen, Lightbulb, Search, Compass, Instagram, ArrowRight, Lock } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Link2, Loader2, Plus, Settings2, Trash2, Wallet, Send, Check, Pencil, LogIn, Home, Layers, CalendarDays, BarChart3, BookOpen, Lightbulb, Search, Compass, Instagram, ArrowRight, Lock, FolderOpen } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useCrmClient, useUpdateCrmClient, useUploadCrmAsset } from "@/hooks/useCrm";
@@ -271,6 +271,8 @@ export default function ClienteHub() {
             </div>
           </div>
           <div className="relative flex gap-2 shrink-0 flex-wrap">
+            {/* DRIVE — atalho pro(s) link(s) de pasta do Drive do cliente. */}
+            <DriveHeaderButton links={(client as { useful_links?: { label: string; url: string }[] | null }).useful_links ?? null} />
             {/* COR DO CLIENTE — pinta o card na lista, a logo e o link público. */}
             <Button variant="outline" className="px-3" onClick={() => setColorOpen((v) => !v)} title="Cor do cliente" aria-label="Cor do cliente">
               <span className="h-4 w-4 rounded-md ring-1 ring-border" style={{ background: (client as { color?: string | null }).color || "#cbd5e1" }} />
@@ -439,6 +441,9 @@ export default function ClienteHub() {
               editável aqui, que é onde a pessoa procura por elas. */}
           <NotasCliente clientId={client.id} notes={client.notes} />
 
+          {/* LINKS ÚTEIS — pastas do Drive e afins. Rótulo + URL, salva na hora. */}
+          <LinksUteis clientId={client.id} links={(client as { useful_links?: { label: string; url: string }[] | null }).useful_links ?? null} />
+
           {/* DESTAQUES — o cockpit: o resumo de cada Cria, com número de verdade.
               O detalhe continua em cada módulo lá em cima. */}
           <Destaques
@@ -569,6 +574,108 @@ function NotasCliente({ clientId, notes }: { clientId: string; notes: string | n
       <Textarea rows={3} value={txt} onChange={(e) => setTxt(e.target.value)}
         placeholder="Contexto, combinados, senhas de acesso, o que o cliente odeia…"
         className="rounded-xl text-sm" />
+    </div>
+  );
+}
+
+type LinkUtil = { label: string; url: string };
+
+// Detecta se um link é de Drive (pelo rótulo ou pela URL), pra decidir o atalho do cabeçalho.
+function isDriveLink(l: LinkUtil) {
+  return /drive/i.test(l.label) || /drive\.google|docs\.google/i.test(l.url);
+}
+
+// Botão "Drive" no cabeçalho: abre direto se houver 1 pasta; lista num dropdown se houver várias.
+function DriveHeaderButton({ links }: { links: LinkUtil[] | null }) {
+  const [open, setOpen] = useState(false);
+  const drives = (links ?? []).filter((l) => l?.url && isDriveLink(l));
+  if (drives.length === 0) return null;
+  if (drives.length === 1) {
+    return (
+      <Button variant="outline" className="px-3" onClick={() => window.open(drives[0].url, "_blank", "noopener,noreferrer")} title="Abrir pasta do Drive" aria-label="Abrir pasta do Drive">
+        <FolderOpen className="h-4 w-4 sm:mr-1.5" /><span className="hidden sm:inline">Drive</span>
+      </Button>
+    );
+  }
+  return (
+    <div className="relative">
+      <Button variant="outline" className="px-3" onClick={() => setOpen((v) => !v)} title="Pastas do Drive" aria-label="Pastas do Drive">
+        <FolderOpen className="h-4 w-4 sm:mr-1.5" /><span className="hidden sm:inline">Drive</span>
+      </Button>
+      {open && (
+        <div className="absolute right-0 top-12 z-30 w-[240px] rounded-2xl border border-border bg-card p-2 shadow-xl">
+          {drives.map((l, i) => (
+            <a key={i} href={l.url} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}
+              className="flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-body text-foreground hover:bg-muted">
+              <FolderOpen className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><span className="truncate">{l.label || l.url}</span>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Links úteis do cliente (pastas do Drive, materiais…). Grava o array inteiro no jsonb useful_links.
+function LinksUteis({ clientId, links }: { clientId: string; links: LinkUtil[] | null }) {
+  const update = useUpdateCrmClient();
+  const [rows, setRows] = useState<LinkUtil[]>(links ?? []);
+  const [novoLabel, setNovoLabel] = useState("");
+  const [novoUrl, setNovoUrl] = useState("");
+
+  // Adota o servidor quando os links mudam de fora (não pisa em edição: só salvamos no blur).
+  useEffect(() => { setRows(links ?? []); }, [links]);
+
+  const salvar = (next: LinkUtil[]) => {
+    setRows(next);
+    update.mutate({ id: clientId, useful_links: next } as never);
+  };
+
+  const adicionar = () => {
+    const url = novoUrl.trim();
+    if (!url) return;
+    if (!/^https?:\/\//i.test(url)) { toast.error("A URL precisa começar com http:// ou https://"); return; }
+    salvar([...rows, { label: novoLabel.trim() || "Link", url }]);
+    setNovoLabel(""); setNovoUrl("");
+  };
+
+  const remover = (i: number) => salvar(rows.filter((_, idx) => idx !== i));
+  const editar = (i: number, campo: keyof LinkUtil, valor: string) =>
+    setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, [campo]: valor } : r)));
+
+  const salvarEdicao = () => {
+    const bad = rows.find((r) => r.url && !/^https?:\/\//i.test(r.url));
+    if (bad) { toast.error("A URL precisa começar com http:// ou https://"); return; }
+    salvar(rows);
+  };
+
+  return (
+    <div className="bg-card border border-border rounded-2xl p-4">
+      <div className="flex items-center gap-2 mb-2.5">
+        <FolderOpen className="h-4 w-4 text-muted-foreground" />
+        <p className="text-xs font-body text-muted-foreground">Links úteis (Drive, pastas, materiais…)</p>
+      </div>
+
+      {rows.length > 0 && (
+        <div className="space-y-2 mb-3">
+          {rows.map((r, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <Input value={r.label} onChange={(e) => editar(i, "label", e.target.value)} onBlur={salvarEdicao}
+                placeholder="Rótulo (ex.: Drive - Fotos)" className="rounded-xl h-9 text-sm w-32 sm:w-40 shrink-0" />
+              <Input value={r.url} onChange={(e) => editar(i, "url", e.target.value)} onBlur={salvarEdicao}
+                placeholder="https://…" className="rounded-xl h-9 text-sm flex-1 min-w-0" />
+              <a href={r.url} target="_blank" rel="noopener noreferrer" title="Abrir link" aria-label="Abrir link" className="w-9 h-9 rounded-xl border border-border grid place-items-center text-muted-foreground hover:text-primary shrink-0"><ExternalLink className="h-4 w-4" /></a>
+              <button onClick={() => remover(i)} title="Remover" aria-label="Remover" className="w-9 h-9 rounded-xl border border-border grid place-items-center text-muted-foreground hover:text-destructive shrink-0"><Trash2 className="h-4 w-4" /></button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 flex-wrap">
+        <Input value={novoLabel} onChange={(e) => setNovoLabel(e.target.value)} placeholder="Rótulo (ex.: Drive - Aprovados)" className="rounded-xl h-9 text-sm w-32 sm:w-40" />
+        <Input value={novoUrl} onChange={(e) => setNovoUrl(e.target.value)} onKeyDown={(e) => e.key === "Enter" && adicionar()} placeholder="https://drive.google.com/…" className="rounded-xl h-9 text-sm flex-1 min-w-[160px]" />
+        <Button onClick={adicionar} disabled={!novoUrl.trim()} className="rounded-xl h-9 gap-1.5"><Plus className="h-4 w-4" /> Adicionar</Button>
+      </div>
     </div>
   );
 }

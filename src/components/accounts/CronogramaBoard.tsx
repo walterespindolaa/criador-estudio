@@ -189,7 +189,7 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
         const { data, error } = await sbFrom("posts").insert({
           user_id: user.id,
           external_client_id: c.external_client_id,
-          title: it.copy ?? "(sem título)",
+          title: it.title ?? it.copy ?? "(sem título)",
           platform: "instagram",
           format: it.type ?? "Feed",
           caption: it.description ?? null,
@@ -212,8 +212,8 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
   const openNew = () => { setEditing(null); setF({ type: "Reels" }); setFormOpen(true); };
   const openEdit = (it: CronogramaItem) => { setEditing(it); setF(it); setFormOpen(true); };
   const saveItem = async () => {
-    if (editing) await updateItem.mutateAsync({ id: editing.id, copy: f.copy ?? null, description: f.description ?? null, date: f.date ?? null, type: f.type ?? null, ref_url: f.ref_url ?? null });
-    else await addItem.mutateAsync({ copy: f.copy ?? null, description: f.description ?? null, date: f.date ?? null, type: f.type ?? null, ref_url: f.ref_url ?? null });
+    if (editing) await updateItem.mutateAsync({ id: editing.id, title: f.title ?? null, copy: f.copy ?? null, description: f.description ?? null, date: f.date ?? null, type: f.type ?? null, ref_url: f.ref_url ?? null });
+    else await addItem.mutateAsync({ title: f.title ?? null, copy: f.copy ?? null, description: f.description ?? null, date: f.date ?? null, type: f.type ?? null, ref_url: f.ref_url ?? null });
     setFormOpen(false);
   };
 
@@ -298,14 +298,30 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
                               {it.converted_post_id && <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full"><Check className="h-2.5 w-2.5" /> no Cria Post</span>}
                             </div>
 
-                            {/* Copy / título */}
-                            <p className="text-sm font-display font-bold text-foreground leading-snug">{it.copy || "(sem copy)"}</p>
+                            {/* Nome (título) do post */}
+                            <p className="text-sm font-display font-bold text-foreground leading-snug">{it.title || it.copy || "(sem nome)"}</p>
+
+                            {/* Copy em caixinha própria (separada do nome) */}
+                            {it.copy && (
+                              <div className="mt-1.5 rounded-xl bg-primary/[0.04] border border-primary/15 px-3 py-2">
+                                <p className="text-[10px] font-body font-bold uppercase tracking-wide text-primary/70 mb-0.5">Copy</p>
+                                <p className="text-[12.5px] font-body text-foreground leading-relaxed whitespace-pre-wrap line-clamp-6">{it.copy}</p>
+                              </div>
+                            )}
 
                             {/* Descrição em caixinha própria, preservando os parágrafos */}
                             {it.description && (
-                              <div className="mt-2 rounded-xl bg-muted/40 border border-border/60 px-3 py-2">
+                              <div className="mt-1.5 rounded-xl bg-muted/40 border border-border/60 px-3 py-2">
+                                <p className="text-[10px] font-body font-bold uppercase tracking-wide text-muted-foreground/70 mb-0.5">Descrição</p>
                                 <p className="text-[12px] font-body text-muted-foreground leading-relaxed whitespace-pre-wrap line-clamp-6">{it.description}</p>
                               </div>
+                            )}
+
+                            {/* Referência: link clicável (a melhoria que se mantém) */}
+                            {it.ref_url && (
+                              <a href={it.ref_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-body font-semibold text-primary hover:underline">
+                                <Link2 className="h-3.5 w-3.5" /> Ver referência
+                              </a>
                             )}
 
                             {it.client_comment && (
@@ -345,8 +361,9 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
         <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="sm:max-w-lg">
           <DialogHeader><DialogTitle className="font-display">{editing ? "Editar item" : "Novo item"}</DialogTitle></DialogHeader>
           <div className="space-y-3 py-2">
-            <div><Label className="text-xs">Copy / título</Label><Input value={f.copy ?? ""} onChange={(e) => setF((p) => ({ ...p, copy: e.target.value }))} className="rounded-xl" /></div>
-            <div><Label className="text-xs">Descrição</Label><Textarea value={f.description ?? ""} onChange={(e) => setF((p) => ({ ...p, description: e.target.value }))} rows={3} className="rounded-xl" /></div>
+            <div><Label className="text-xs">Nome (título do post)</Label><Input value={f.title ?? ""} onChange={(e) => setF((p) => ({ ...p, title: e.target.value }))} placeholder="Ex.: Reels de bastidores" className="rounded-xl" /></div>
+            <div><Label className="text-xs">Copy</Label><Textarea value={f.copy ?? ""} onChange={(e) => setF((p) => ({ ...p, copy: e.target.value }))} rows={3} placeholder="A legenda/copy do post" className="rounded-xl" /></div>
+            <div><Label className="text-xs">Descrição</Label><Textarea value={f.description ?? ""} onChange={(e) => setF((p) => ({ ...p, description: e.target.value }))} rows={3} placeholder="Roteiro, ideia, o que gravar…" className="rounded-xl" /></div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label className="text-xs">Data</Label><Input type="date" value={f.date ?? ""} onChange={(e) => setF((p) => ({ ...p, date: e.target.value }))} className="rounded-xl" /></div>
               <div>
