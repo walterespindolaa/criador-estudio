@@ -38,7 +38,7 @@ const initial = (n?: string | null) => (n ? n.trim().charAt(0).toUpperCase() : "
 const payloadOf = (f: CrmClient) => ({
   name: f.name, instagram: f.instagram, email: f.email, phone: f.phone,
   segment: f.segment, monthly_value: f.monthly_value, contract_date: f.contract_date,
-  renewal_date: f.renewal_date, notes: f.notes, logo: f.logo, color: f.color,
+  renewal_date: f.renewal_date, contract_end_date: f.contract_end_date, notes: f.notes, logo: f.logo, color: f.color,
   company_name: f.company_name, cnpj: f.cnpj, owner_name: f.owner_name, whatsapp: f.whatsapp, address: f.address,
   plan_name: f.plan_name, payment_day: f.payment_day, payment_method: f.payment_method, birthday: f.birthday,
   status: f.status, tags: f.tags,
@@ -371,6 +371,7 @@ function ClientWorkspace() {
                 </F>
                 <F label="Início do contrato"><Input type="date" value={form.contract_date ?? ""} onChange={(e) => setForm({ ...form, contract_date: e.target.value || null })} className="rounded-xl" /></F>
                 <F label="Renovação"><Input type="date" value={form.renewal_date ?? ""} onChange={(e) => setForm({ ...form, renewal_date: e.target.value || null })} className="rounded-xl" /></F>
+                <F label="Data de encerramento"><Input type="date" value={(form as { contract_end_date?: string | null }).contract_end_date ?? ""} onChange={(e) => setForm({ ...form, contract_end_date: e.target.value || null } as CrmClient)} className="rounded-xl" /></F>
               </div>
             </Card>
           </div>

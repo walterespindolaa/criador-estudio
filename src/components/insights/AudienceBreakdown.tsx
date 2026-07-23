@@ -40,9 +40,9 @@ export function AudienceBreakdown({ rows }: { rows: AudienceLike[] | undefined |
     return (
       <div className="rounded-2xl border border-dashed border-border p-6 text-center">
         <Users className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
-        <p className="text-sm font-body text-foreground font-medium">Demografia ainda coletando</p>
+        <p className="text-sm font-body text-foreground font-medium">Ainda coletando a demografia</p>
         <p className="text-xs text-muted-foreground font-body mt-1 max-w-sm mx-auto">
-          O Instagram só libera o perfil de audiência com um mínimo de seguidores. Volte após alguns dias de sincronização.
+          O Instagram só libera o perfil de audiência (idade, gênero, cidade e país) com um mínimo de seguidores. Volte após a próxima sincronização.
         </p>
       </div>
     );

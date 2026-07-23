@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Link2, Loader2, Plus, Settings2, Trash2, Wallet, Send, Check, Pencil, LogIn, Home, Layers, CalendarDays, BarChart3, BookOpen, Lightbulb, Search, Compass, Instagram, ArrowRight, Lock, FolderOpen, Package } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
-import { useCrmClient, useUpdateCrmClient, useUploadCrmAsset } from "@/hooks/useCrm";
+import { useCrmClient, useUpdateCrmClient, useUploadCrmAsset, CLIENT_STATUSES, CLIENT_STATUS_META, type ClientStatus } from "@/hooks/useCrm";
 import { Camera } from "lucide-react";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { BrandColorPicker } from "@/components/accounts/BrandColorPicker";
@@ -185,6 +185,13 @@ export default function ClienteHub() {
     await updateClient.mutateAsync({ id: client.id, color: hex } as never);
     toast.success(hex ? "Cor do cliente atualizada!" : "Cor removida.");
   };
+  // Ativar/pausar/inativar direto da ficha. Usa o mesmo campo `status` da lista
+  // do Cria Gestão, então a lista e o Caixa/Home refletem na hora.
+  const setStatus = async (s: ClientStatus) => {
+    if (!client) return;
+    await updateClient.mutateAsync({ id: client.id, status: s } as never);
+    toast.success(s === "inativo" ? "Cliente inativado." : s === "pausado" ? "Cliente pausado." : "Cliente reativado.");
+  };
   const doCopyLink = async () => {
     if (!extClient) return;
     setCopying(true);
@@ -276,6 +283,16 @@ export default function ClienteHub() {
           <div className="relative flex gap-2 shrink-0 flex-wrap">
             {/* DRIVE — atalho pro(s) link(s) de pasta do Drive do cliente. */}
             <DriveHeaderButton links={(client as { useful_links?: { label: string; url: string }[] | null }).useful_links ?? null} />
+            {/* STATUS — ativar/pausar/inativar sem sair da ficha. Mesmo campo da lista. */}
+            <select
+              value={(client as { status?: ClientStatus }).status ?? "ativo"}
+              onChange={(e) => setStatus(e.target.value as ClientStatus)}
+              title="Situação do cliente"
+              aria-label="Situação do cliente"
+              className={`h-9 rounded-xl border px-3 text-xs font-body font-semibold cursor-pointer outline-none ${CLIENT_STATUS_META[((client as { status?: ClientStatus }).status ?? "ativo") as ClientStatus].cls}`}
+            >
+              {CLIENT_STATUSES.map((s) => <option key={s} value={s}>{CLIENT_STATUS_META[s].label}</option>)}
+            </select>
             {/* COR DO CLIENTE — pinta o card na lista, a logo e o link público. */}
             <Button variant="outline" className="px-3" onClick={() => setColorOpen((v) => !v)} title="Cor do cliente" aria-label="Cor do cliente">
               <span className="h-4 w-4 rounded-md ring-1 ring-border" style={{ background: (client as { color?: string | null }).color || "#cbd5e1" }} />

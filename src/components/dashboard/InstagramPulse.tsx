@@ -10,7 +10,7 @@ import {
   connectInstagram,
   type MediaInsight,
 } from "@/hooks/useSocialInsights";
-import { computeCrossAnalysis, crossHeadlines, fmtNum, type CrossItem } from "@/components/insights/insightsUtils";
+import { computeCrossAnalysis, computeFollowersDelta, crossHeadlines, fmtNum, type CrossItem } from "@/components/insights/insightsUtils";
 
 // Lê uma métrica numérica do jsonb de uma mídia (mesma convenção da tela de Insights).
 const m = (mi: MediaInsight, k: string) => Number(mi.metrics?.[k] ?? 0);
@@ -22,15 +22,16 @@ function buildDirection(items: CrossItem[]): string | null {
   if (!cross.hasData) return null;
   const parts: string[] = [];
   const [f1, f2] = cross.byFormat;
+  // Rótulos vêm no plural (Reels, Carrosséis, Fotos...), então "performam" concorda sempre.
   if (f1 && f2 && f2.avgReach > 0) {
     const ratio = f1.avgReach / f2.avgReach;
     if (ratio >= 1.2) {
-      parts.push(`Seus ${f1.label} vão ${ratio.toFixed(1).replace(".0", "")}x melhor que ${f2.label.toLowerCase()}`);
+      parts.push(`${f1.label} performam ${ratio.toFixed(1).replace(".0", "")}x melhor que ${f2.label}`);
     } else {
-      parts.push(`${f1.label} é seu formato mais forte`);
+      parts.push(`Formato mais forte: ${f1.label}`);
     }
   } else if (f1) {
-    parts.push(`${f1.label} é seu formato mais forte`);
+    parts.push(`Formato mais forte: ${f1.label}`);
   }
   const topDay = cross.byWeekday[0];
   if (topDay) parts.push(`Melhor dia: ${topDay.label.toLowerCase()}`);
@@ -90,15 +91,17 @@ export function InstagramPulse() {
   // Números do momento (mesma lógica confiável da tela de Insights).
   const kpis = useMemo(() => {
     const last = daily[daily.length - 1];
-    const first = daily[0];
     const reach = media.reduce((a, mi) => a + m(mi, "reach"), 0);
     const interactions = media.reduce(
       (a, mi) => a + m(mi, "likes") + m(mi, "comments") + m(mi, "saved") + m(mi, "saves") + m(mi, "shares"),
       0,
     );
+    // Variação de seguidores só quando a série cobre ~30 dias de verdade (evita "+N" falso).
+    const fd = computeFollowersDelta(daily);
     return {
       followers: last?.followers ?? null,
-      followersDelta: (last?.followers ?? 0) - (first?.followers ?? 0),
+      followersDelta: fd.delta,
+      hasFollowersWindow: fd.hasWindow,
       reach,
       interactions,
       profileViews: last?.profile_views ?? null,
@@ -188,8 +191,12 @@ export function InstagramPulse() {
           icon={Users}
           label="Seguidores"
           value={fmtNum(kpis.followers)}
-          delta={kpis.followers != null ? `${kpis.followersDelta >= 0 ? "▲" : "▼"} ${Math.abs(kpis.followersDelta)} (30d)` : undefined}
-          up={kpis.followersDelta >= 0}
+          delta={
+            kpis.followers != null && kpis.hasFollowersWindow && kpis.followersDelta != null
+              ? `${kpis.followersDelta >= 0 ? "▲" : "▼"} ${Math.abs(kpis.followersDelta)} (30d)`
+              : undefined
+          }
+          up={(kpis.followersDelta ?? 0) >= 0}
         />
         <StatBox icon={Eye} label="Alcance 30d" value={fmtNum(kpis.reach)} />
         <StatBox icon={Zap} label="Engajamento" value={kpis.engagement != null ? `${kpis.engagement.toFixed(1).replace(".0", "")}%` : "-"} />

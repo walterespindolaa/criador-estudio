@@ -13,17 +13,18 @@ export const fmtNum = (n: number | null | undefined): string =>
         ? `${(n / 1000).toFixed(1).replace(".0", "")}k`
         : String(Math.round(n));
 
-// Rótulo pt-BR do formato a partir do media_type do Instagram.
-export const formatMediaLabel = (t: string | null | undefined): string =>
-  t === "VIDEO" || t === "REELS"
-    ? "Reels"
-    : t === "CAROUSEL_ALBUM"
-      ? "Carrossel"
-      : t === "IMAGE"
-        ? "Foto"
-        : t
-          ? "Outro"
-          : "Outro";
+// Rótulo pt-BR do formato (sempre no PLURAL) a partir do media_type do Instagram
+// ou de rótulos textuais soltos. Plural garante concordância nas frases de direção
+// ("Reels performam...", "Carrosséis performam..."), sem "Foto"/"Carrossel" no singular.
+export const formatMediaLabel = (t: string | null | undefined): string => {
+  const k = (t ?? "").toString().trim().toLowerCase();
+  if (k === "reels" || k === "reel") return "Reels";
+  if (k === "video" || k === "vídeo" || k === "reel de video" || k === "reel de vídeo") return "Vídeos";
+  if (k === "carousel_album" || k === "carousel" || k === "carrossel" || k === "carrosseis" || k === "carrosséis") return "Carrosséis";
+  if (k === "image" || k === "photo" || k === "foto" || k === "fotos") return "Fotos";
+  if (k === "story" || k === "stories") return "Stories";
+  return "Outros";
+};
 
 // ============================ Audiência ============================
 export type AudienceLike = {
@@ -241,11 +242,18 @@ export function crossHeadlines(data: CrossAnalysisData): string[] {
   const base = data.overallAvgReach;
   const ratio = (v: number) => (base > 0 ? v / base : 0);
 
-  const topFmt = data.byFormat[0];
-  if (topFmt && data.byFormat.length > 1 && base > 0) {
-    const r = ratio(topFmt.avgReach);
-    if (r >= 1.15) {
-      out.push(`${topFmt.label} é seu formato mais forte: ${fmtNum(topFmt.avgReach)} de alcance médio, ${r.toFixed(1)}x a média geral. Priorize ${topFmt.label} na próxima leva.`);
+  // Frase neutra: os rótulos vêm sempre no plural (Reels, Carrosséis, Fotos...),
+  // então "performam" concorda pra qualquer formato sem quebrar a gramática.
+  const [f1, f2] = data.byFormat;
+  if (f1 && data.byFormat.length > 1 && base > 0) {
+    if (f2 && f2.avgReach > 0 && f1.avgReach / f2.avgReach >= 1.2) {
+      const x = (f1.avgReach / f2.avgReach).toFixed(1).replace(".0", "");
+      out.push(`${f1.label} performam ${x}x melhor que ${f2.label} (${fmtNum(f1.avgReach)} de alcance médio). Priorize esse formato na próxima leva.`);
+    } else {
+      const r = ratio(f1.avgReach);
+      if (r >= 1.15) {
+        out.push(`Formato mais forte: ${f1.label} (${r.toFixed(1)}x a média geral, ${fmtNum(f1.avgReach)} de alcance médio). Vale priorizar.`);
+      }
     }
   }
   const topPillar = data.byPillar[0];
@@ -261,4 +269,36 @@ export function crossHeadlines(data: CrossAnalysisData): string[] {
     out.push(`Seus posts da ${topTime.label.toLowerCase()} rendem mais (${fmtNum(topTime.avgReach)} de alcance médio). Concentre as publicações nesse período.`);
   }
   return out;
+}
+
+// ============================ Variação de seguidores ============================
+// O histórico de seguidores só começa quando o sync começou. Comparar "atual - primeiro
+// valor" numa conta recém-conectada gera um "+N (30d)" gigante e falso. Aqui só devolvemos
+// delta quando a série cobre a janela de verdade (~25-30 dias); senão, delta = null.
+export type FollowersDelta = {
+  delta: number | null; // null quando a série é curta demais pra afirmar "30d"
+  spanDays: number; // dias entre o 1º e o último ponto com seguidores
+  hasWindow: boolean; // true se cobre a janela mínima
+};
+
+export function computeFollowersDelta(
+  daily: { date: string; followers: number | null }[] | undefined | null,
+  windowDays = 30,
+  minSpanDays = 25,
+): FollowersDelta {
+  const pts = (daily ?? []).filter((d) => d.followers != null && d.date);
+  if (pts.length < 2) return { delta: null, spanDays: 0, hasWindow: false };
+  const last = pts[pts.length - 1];
+  const lastTime = new Date(last.date).getTime();
+  const spanDays = Math.round((lastTime - new Date(pts[0].date).getTime()) / 86400000);
+  if (spanDays < minSpanDays) return { delta: null, spanDays, hasWindow: false };
+  // Ponto mais próximo de windowDays atrás (não o primeiro cru), pra um "30d" honesto.
+  const target = lastTime - windowDays * 86400000;
+  let ref = pts[0];
+  let best = Infinity;
+  for (const p of pts) {
+    const diff = Math.abs(new Date(p.date).getTime() - target);
+    if (diff < best) { best = diff; ref = p; }
+  }
+  return { delta: (last.followers ?? 0) - (ref.followers ?? 0), spanDays, hasWindow: true };
 }

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useT } from "@/lib/i18n";
 import {
-  Instagram, Users, Eye, Zap, UserPlus, RefreshCw, Unplug, Link2, Bookmark, Heart, Play, Image as ImageIcon, Images, Sparkles, Info, TrendingUp, BarChart3,
+  Instagram, Users, Eye, Zap, UserPlus, RefreshCw, Unplug, Link2, Bookmark, Heart, Play, Image as ImageIcon, Images, Sparkles, Info, TrendingUp, BarChart3, Search,
 } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useQuery } from "@tanstack/react-query";
@@ -21,7 +21,9 @@ import { AudienceBreakdown } from "@/components/insights/AudienceBreakdown";
 import { StoriesSummary } from "@/components/insights/StoriesSummary";
 import { ReelsRanking } from "@/components/insights/ReelsRanking";
 import { ContentCrossAnalysis } from "@/components/insights/ContentCrossAnalysis";
-import type { CrossItem } from "@/components/insights/insightsUtils";
+import { computeFollowersDelta, type CrossItem } from "@/components/insights/insightsUtils";
+import { STATUS_OPTIONS, FORMAT_LABELS } from "@/lib/constants";
+import { getStatusClasses } from "@/lib/statusColors";
 
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
@@ -50,6 +52,8 @@ export default function Insights() {
   const [linkFor, setLinkFor] = useState<MediaInsight | null>(null);
   const [aiRead, setAiRead] = useState<InsightsReading | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  // Quantos posts renderizar na lista (evita floodar a página com centenas de uma vez).
+  const [postsToShow, setPostsToShow] = useState<number>(20);
 
   const genReading = async () => {
     if (aiLoading || media.length === 0) return;
@@ -89,14 +93,16 @@ export default function Insights() {
 
   const kpis = useMemo(() => {
     const last = daily[daily.length - 1];
-    const first = daily[0];
     // Alcance e interações somados dos posts (dado confiável da API por mídia)
     const reach = media.reduce((a, mi) => a + m(mi, "reach"), 0);
     const interactions = media.reduce((a, mi) => a + m(mi, "likes") + m(mi, "comments") + m(mi, "saved") + m(mi, "shares"), 0);
     if (!last && media.length === 0) return null;
+    // Variação de seguidores só quando a série cobre ~30 dias de verdade (evita "+N" falso).
+    const fd = computeFollowersDelta(daily);
     return {
       followers: last?.followers ?? null,
-      followersDelta: (last?.followers ?? 0) - (first?.followers ?? 0),
+      followersDelta: fd.delta,
+      hasFollowersWindow: fd.hasWindow,
       reach, interactions, profileViews: last?.profile_views ?? null,
     };
   }, [daily, media]);
@@ -201,7 +207,7 @@ export default function Insights() {
 
       {/* KPIs */}
       <div data-tour="insights-kpis" className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
-        <Kpi icon={Users} label={t("insights.kpiFollowers")} value={fmt(kpis?.followers)} delta={kpis ? `${kpis.followersDelta >= 0 ? "▲" : "▼"} ${Math.abs(kpis.followersDelta)} (30d)` : undefined} up={(kpis?.followersDelta ?? 0) >= 0} />
+        <Kpi icon={Users} label={t("insights.kpiFollowers")} value={fmt(kpis?.followers)} delta={kpis?.hasFollowersWindow && kpis.followersDelta != null ? `${kpis.followersDelta >= 0 ? "▲" : "▼"} ${Math.abs(kpis.followersDelta)} (30d)` : undefined} up={(kpis?.followersDelta ?? 0) >= 0} />
         <Kpi icon={Eye} label={t("insights.kpiReach")} value={fmt(kpis?.reach)} />
         <Kpi icon={Zap} label={t("insights.kpiInteractions")} value={fmt(kpis?.interactions)} />
         <Kpi icon={UserPlus} label={t("insights.kpiProfileViews")} value={fmt(kpis?.profileViews)} />
@@ -218,7 +224,7 @@ export default function Insights() {
                   <BarChart data={reachSeries}>
                     <XAxis dataKey="date" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
                     <Tooltip />
-                    <Bar dataKey="v" fill="#C4B5F5" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="v" fill="#EA4918" radius={[3, 3, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -251,8 +257,8 @@ export default function Insights() {
             O que mais gerou crescimento <span className="text-[10px] font-extrabold text-primary bg-primary/10 px-2 py-0.5 rounded-full">IA</span>
           </h2>
           <div className="grid sm:grid-cols-3 gap-3">
-            <Driver icon={Eye} t={t("insights.topReach")} big={byReach[0]?.caption?.slice(0, 40) ?? "-"} s={`${fmt(m(byReach[0], "reach"))} de alcance`} />
-            <Driver icon={Bookmark} t={t("insights.topSaves")} big={bySaves[0]?.caption?.slice(0, 40) ?? "-"} s={`${fmt(m(bySaves[0], "saved") + m(bySaves[0], "saves"))} salvos`} />
+            <Driver icon={Eye} t={t("insights.topReach")} big={byReach[0]?.caption?.slice(0, 40) ?? "-"} s={`${fmt(m(byReach[0], "reach"))} de alcance`} permalink={byReach[0]?.permalink} />
+            <Driver icon={Bookmark} t={t("insights.topSaves")} big={bySaves[0]?.caption?.slice(0, 40) ?? "-"} s={`${fmt(m(bySaves[0], "saved") + m(bySaves[0], "saves"))} salvos`} permalink={bySaves[0]?.permalink} />
             <Driver icon={BarChart3} t={t("insights.bestFormat")} big={fmtType(bestFormat?.t ?? null)} s={`média de ${fmt(Math.round(bestFormat?.avg ?? 0))} de alcance`} />
           </div>
         </>
@@ -277,12 +283,34 @@ export default function Insights() {
       <StoriesSummary stories={stories} />
 
       {/* posts + vínculo manual */}
-      <h2 data-tour="insights-posts" className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-7 mb-3">{t("insights.postsTitle")}</h2>
+      <div className="flex items-center justify-between gap-3 flex-wrap mt-7 mb-3">
+        <h2 data-tour="insights-posts" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t("insights.postsTitle")}</h2>
+        {media.length > 10 && (
+          <div className="flex items-center gap-1 text-[11px]">
+            <span className="text-muted-foreground mr-1">Mostrar:</span>
+            {[10, 20, 30, media.length].map((n, i) => {
+              const isAll = i === 3;
+              const active = isAll ? postsToShow >= media.length : postsToShow === n && postsToShow < media.length;
+              // Evita repetir o botão "Todos" quando total coincide com 10/20/30.
+              if (isAll && [10, 20, 30].includes(media.length)) return null;
+              return (
+                <button
+                  key={isAll ? "all" : n}
+                  onClick={() => setPostsToShow(n)}
+                  className={`px-2 py-1 rounded-md font-semibold transition-colors ${active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  {isAll ? "Todos" : n}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
       {media.length === 0 ? (
         <p className="text-sm text-muted-foreground">Nenhum post coletado ainda. Clique em “Atualizar” após conectar.</p>
       ) : (
         <div className="grid md:grid-cols-2 gap-3">
-          {media.map((mi) => {
+          {media.slice(0, postsToShow).map((mi) => {
             const MI = MEDIA_ICON(mi.media_type);
             return (
               <div key={mi.id} className="bg-card border border-border rounded-2xl p-3 flex gap-3">
@@ -314,6 +342,13 @@ export default function Insights() {
               </div>
             );
           })}
+        </div>
+      )}
+      {media.length > postsToShow && (
+        <div className="mt-3 flex items-center justify-center">
+          <Button variant="outline" size="sm" onClick={() => setPostsToShow((n) => n + 20)}>
+            Carregar mais ({postsToShow} de {media.length})
+          </Button>
         </div>
       )}
 
@@ -372,47 +407,131 @@ function Kpi({ icon: Icon, label, value, delta, up }: { icon: typeof Users; labe
   );
 }
 
-function Driver({ icon: Icon, t, big, s }: { icon: typeof Users; t: string; big: string; s: string }) {
+function Driver({ icon: Icon, t, big, s, permalink }: { icon: typeof Users; t: string; big: string; s: string; permalink?: string | null }) {
+  // Quando há permalink, o destaque abre o post no Instagram em nova aba.
+  const clickable = !!permalink;
+  const open = () => { if (permalink) window.open(permalink, "_blank", "noopener,noreferrer"); };
   return (
-    <div className="bg-card border border-border rounded-2xl p-4">
+    <div
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onClick={clickable ? open : undefined}
+      onKeyDown={clickable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } } : undefined}
+      className={`bg-card border border-border rounded-2xl p-4 ${clickable ? "cursor-pointer transition-colors hover:border-primary/40 hover:bg-primary/5" : ""}`}
+    >
       <div className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider flex items-center gap-1.5"><Icon className="h-3.5 w-3.5 text-primary" /> {t}</div>
-      <div className="text-sm font-extrabold mt-2 leading-tight">{big}</div>
+      <div className={`text-sm font-extrabold mt-2 leading-tight ${clickable ? "text-primary" : ""}`}>{big}</div>
       <div className="text-xs text-muted-foreground mt-1">{s}</div>
     </div>
   );
 }
 
-// Dialog de vínculo manual: lista posts do CRIA pra ligar à mídia.
+// Post do CRIA no formato que o dialog de vínculo consome.
+type LinkPost = { id: string; title: string; format: string | null; status: string | null; published_at: string | null };
+
+// Cor por formato (mesma paleta do kanban do Cria Post, pra bater o olho e reconhecer).
+const FORMAT_COLOR: Record<string, string> = { reels: "#0061EE", carrossel: "#01A652", foto: "#EA4918", story: "#7C90F0", video: "#4B3FA8" };
+
+// Rótulo de status a partir das STATUS_OPTIONS do projeto (mesmos nomes do kanban).
+const STATUS_LABEL: Record<string, string> = Object.fromEntries(STATUS_OPTIONS.map((s) => [s.key, s.label]));
+
+// Ordem dos grupos otimizada pra este fluxo: você liga um post JÁ PUBLICADO no
+// Instagram ao original, então publicados/agendados vêm primeiro; ideias por último.
+const LINK_STATUS_ORDER = ["publicado", "agendado", "editando", "gravando", "roteiro", "ideia"];
+
+// Quantos posts mostrar por grupo antes do "ver mais" (evita o paredão).
+const GROUP_LIMIT = 8;
+
+// Dialog de vínculo manual: lista posts do CRIA pra ligar à mídia, agrupados por
+// status (tipo kanban empilhado), com busca por título e limite por grupo.
 function LinkDialog({ insight, onClose, onPick }: { insight: MediaInsight | null; onClose: () => void; onPick: (postId: string) => void }) {
   const { user } = useAuth();
-  const { data: posts = [] } = useQuery<{ id: string; title: string; format: string | null; published_at: string | null }[]>({
+  const [q, setQ] = useState("");
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const { data: posts = [] } = useQuery<LinkPost[]>({
     queryKey: ["link-posts", user?.id],
     enabled: !!user?.id && !!insight,
     queryFn: async () => {
       const { data, error } = await sbFrom("posts")
-        .select("id,title,format,published_at")
+        .select("id,title,format,status,published_at")
         .eq("user_id", user!.id)
         .order("published_at", { ascending: false })
-        .limit(100);
+        .limit(200);
       if (error) throw error;
-      return (data ?? []) as unknown as { id: string; title: string; format: string | null; published_at: string | null }[];
+      return (data ?? []) as unknown as LinkPost[];
     },
   });
 
+  // Filtra por título e agrupa por status na ordem útil pro fluxo. Status fora da
+  // lista conhecida caem num grupo "Outros" no fim (não some post nenhum).
+  const groups = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    const filtered = term ? posts.filter((p) => (p.title ?? "").toLowerCase().includes(term)) : posts;
+    const known = new Set(LINK_STATUS_ORDER);
+    const out: { key: string; label: string; items: LinkPost[] }[] = [];
+    for (const key of LINK_STATUS_ORDER) {
+      const items = filtered.filter((p) => (p.status ?? "") === key);
+      if (items.length) out.push({ key, label: STATUS_LABEL[key] ?? key, items });
+    }
+    const rest = filtered.filter((p) => !known.has(p.status ?? ""));
+    if (rest.length) out.push({ key: "outros", label: "Outros", items: rest });
+    return out;
+  }, [posts, q]);
+
+  const total = groups.reduce((a, g) => a + g.items.length, 0);
+
   return (
     <Dialog open={!!insight} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-md max-h-[82vh] overflow-hidden flex flex-col">
         <DialogHeader><DialogTitle className="font-display">Vincular ao conteúdo do CRIA</DialogTitle></DialogHeader>
         <p className="text-xs text-muted-foreground -mt-1">Escolha o post do CRIA que originou esta publicação. Isso permite cruzar roteiro, legenda e hook com o desempenho.</p>
-        <div className="mt-3 space-y-1.5">
-          {posts.length === 0 && <p className="text-sm text-muted-foreground">Nenhum post encontrado.</p>}
-          {posts.map((p) => (
-            <button key={p.id} onClick={() => onPick(p.id)}
-              className="w-full text-left px-3 py-2.5 rounded-xl border border-border hover:border-primary/40 hover:bg-primary/5 transition-colors">
-              <span className="text-sm font-medium block truncate">{p.title || "(sem título)"}</span>
-              <span className="text-[11px] text-muted-foreground">{[p.format, p.published_at?.slice(0, 10)].filter(Boolean).join(" · ")}</span>
-            </button>
-          ))}
+
+        {/* Busca por título (filtra todos os grupos) */}
+        <div className="relative mt-3 shrink-0">
+          <Search className="h-3.5 w-3.5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar por título..."
+            className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-border bg-background focus:outline-none focus:border-primary/40"
+          />
+        </div>
+
+        {/* Grupos empilhados por status, cada card mantém o mesmo clique de vincular */}
+        <div className="mt-3 overflow-y-auto flex-1 -mx-1 px-1 space-y-4">
+          {total === 0 && <p className="text-sm text-muted-foreground">{q ? "Nenhum post com esse título." : "Nenhum post encontrado."}</p>}
+          {groups.map((g) => {
+            const isOpen = expanded[g.key];
+            const shown = isOpen ? g.items : g.items.slice(0, GROUP_LIMIT);
+            return (
+              <div key={g.key}>
+                <div className="flex items-center gap-2 mb-2 sticky top-0 bg-background py-1 z-10">
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${getStatusClasses(g.key)}`}>{g.label}</span>
+                  <span className="text-[11px] text-muted-foreground">{g.items.length}</span>
+                </div>
+                <div className="space-y-1.5">
+                  {shown.map((p) => (
+                    <button key={p.id} onClick={() => onPick(p.id)}
+                      className="w-full text-left px-3 py-2.5 rounded-xl border border-border hover:border-primary/40 hover:bg-primary/5 transition-colors">
+                      <span className="text-sm font-medium block truncate">{p.title || "(sem título)"}</span>
+                      <span className="text-[11px] flex items-center gap-1.5 mt-0.5">
+                        {p.format && <span className="font-bold uppercase tracking-wide" style={{ color: FORMAT_COLOR[p.format] ?? "#6b6b66" }}>{FORMAT_LABELS[p.format] ?? p.format}</span>}
+                        {p.published_at && <span className="text-muted-foreground">· {p.published_at.slice(0, 10)}</span>}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                {g.items.length > GROUP_LIMIT && (
+                  <button
+                    onClick={() => setExpanded((e) => ({ ...e, [g.key]: !isOpen }))}
+                    className="mt-1.5 text-[11px] font-semibold text-primary hover:underline"
+                  >
+                    {isOpen ? "Ver menos" : `Ver mais (${g.items.length - GROUP_LIMIT})`}
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       </DialogContent>
     </Dialog>

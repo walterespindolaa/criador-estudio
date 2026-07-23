@@ -44,6 +44,8 @@ export type CrmClient = {
   monthly_value: number | null;
   contract_date: string | null;
   renewal_date: string | null;
+  // Data de encerramento do contrato (opcional). Coluna nova, ver SQL.
+  contract_end_date: string | null;
   // Informações gerais (empresa)
   company_name: string | null;
   cnpj: string | null;
