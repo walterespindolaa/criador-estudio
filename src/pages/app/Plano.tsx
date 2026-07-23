@@ -31,9 +31,10 @@ import { GoalsTab } from "@/components/plano/GoalsTab";
 const getDaysOfWeek = (offset = 0) => {
   const today = new Date();
   const monday = new Date(today);
-  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7) + offset * 7);
+  // Semana começa no DOMINGO.
+  monday.setDate(today.getDate() - today.getDay() + offset * 7);
   const days = [];
-  const dayNames = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+  const dayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
   for (let i = 0; i < 7; i++) {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);

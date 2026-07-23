@@ -6,7 +6,7 @@ import { getStatusClasses } from "@/lib/statusColors";
 import type { Post } from "@/hooks/usePosts";
 import type { Pillar } from "@/hooks/usePillars";
 
-const WEEK_DAY_LABELS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+const WEEK_DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const MONTH_LABELS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
 type Props = {
@@ -29,7 +29,7 @@ function buildMonthCells(currentMonth: Date): Cell[] {
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
   const firstOfMonth = new Date(year, month, 1);
-  const firstDayIdx = (firstOfMonth.getDay() + 6) % 7;
+  const firstDayIdx = firstOfMonth.getDay(); // 0 = domingo (semana começa no domingo)
   const start = new Date(year, month, 1 - firstDayIdx);
   const cells: Cell[] = [];
   for (let i = 0; i < 42; i++) {

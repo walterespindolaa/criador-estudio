@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers } from "lucide-react";
+import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,7 +20,7 @@ import {
   useCreations, useAddCreation, useUpdateCreation, useDeleteCreation,
   useCaptures, useAddCapture, useUpdateCapture, useDeleteCapture, useCollaboratorNames, type Capture, type Creation,
 } from "@/hooks/useAgenda";
-import { useAllExternalPosts, useExternalClients, useMoveExternalPostDate, type ExternalPostWithClient } from "@/hooks/useCriaPost";
+import { useAllExternalPosts, useExternalClients, useMoveExternalPostDate, useUpdateExternalPost, type ExternalPostWithClient } from "@/hooks/useCriaPost";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 
 // Status dos posts na agenda (mesmas cores do kanban de 5 status).
@@ -32,11 +32,11 @@ const POST_STATUS: Record<string, { label: string; cls: string }> = {
   postado: { label: "Postado", cls: "bg-slate-200 text-slate-600" },
 };
 
-const WD = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+const WD = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 // Inverso de parseDateOnly: formata um Date de meia-noite LOCAL de volta para YYYY-MM-DD.
-// Só usar com Dates construídos via parseDateOnly/mondayOf (aritmética de calendário).
 function ymd(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
-function mondayOf(d: Date) { const x = new Date(d); const wd = (x.getDay() + 6) % 7; x.setDate(x.getDate() - wd); x.setHours(0, 0, 0, 0); return x; }
+// Semana começa no DOMINGO (padrão iPhone/BR). Nome mantido por uso interno.
+function mondayOf(d: Date) { const x = new Date(d); x.setDate(x.getDate() - x.getDay()); x.setHours(0, 0, 0, 0); return x; }
 const shortDate = (d: Date) => d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 // Rótulos singulares pro select de status da tarefa (os do CRM são títulos de coluna, no plural).
 const TASK_STATUS_LABELS: Record<CrmTaskStatus, string> = {
@@ -124,6 +124,8 @@ export default function AgendaCriacao() {
   const [editCap, setEditCap] = useState<Capture | null>(null);
   const [editTask, setEditTask] = useState<CrmTask | null>(null);
   const [editCreation, setEditCreation] = useState<Creation | null>(null);
+  const [editPost, setEditPost] = useState<ExternalPostWithClient | null>(null);
+  const updateExtPost = useUpdateExternalPost();
 
   // Arrastar item pra outro dia: atualização otimista no cache + persistência conforme o tipo.
   const handleDragEnd = (result: DropResult) => {
@@ -134,7 +136,7 @@ export default function AgendaCriacao() {
     const kind = draggableId.slice(0, sep);
     const id = draggableId.slice(sep + 1);
     const dest = parseDateOnly(day);
-    const ok = () => toast.success(`Movido para ${WD[(dest.getDay() + 6) % 7].toUpperCase()} ${dest.getDate()}`);
+    const ok = () => toast.success(`Movido para ${WD[dest.getDay()].toUpperCase()} ${dest.getDate()}`);
     const fail = () => toast.error("Não consegui mover. Tente de novo.");
     if (kind === "cap") {
       qc.setQueriesData<Capture[]>({ queryKey: ["agenda-captures"] }, (old) => old?.map((c) => (c.id === id ? { ...c, capture_date: day } : c)));
@@ -152,11 +154,8 @@ export default function AgendaCriacao() {
       movePost.mutate({ id, scheduled_date: day }, { onSuccess: ok, onError: fail });
     }
   };
-  // Abrir a produção do cliente ao clicar num post (é lá que ele é editado).
-  const openPost = (p: ExternalPostWithClient) => {
-    const crm = extById.get(p.external_client_id)?.crm_client_id;
-    navigate(crm ? `/socialmidia/clientes/${crm}/posts` : "/socialmidia/criapost/aprovacoes");
-  };
+  // Clicar num post abre o popup editável AQUI na agenda (sem navegar pro cliente).
+  const openPost = (p: ExternalPostWithClient) => setEditPost(p);
 
   const byDay = useMemo(() => {
     const m = new Map<string, typeof creations>();
@@ -201,7 +200,8 @@ export default function AgendaCriacao() {
     if (!filters.tarefa) return m;
     const prioOrder: Record<string, number> = { urgente: 0, alta: 1, media: 2, baixa: 3 };
     for (const t of crmTasks) {
-      if (!t.due_date || t.status === "concluida") continue;
+      // Concluídas continuam aparecendo (riscadas), pra a social mídia ver o que fechou no dia.
+      if (!t.due_date) continue;
       if (t.due_date < from || t.due_date > to) continue;
       (m.get(t.due_date) ?? m.set(t.due_date, []).get(t.due_date)!).push(t);
     }
@@ -332,7 +332,9 @@ export default function AgendaCriacao() {
                         const who = isLead ? (leadName(t.crm_lead_id) ?? "Lead") : nameOf(t.crm_client_id, null);
                         return (
                         <Draggable key={`task:${t.id}`} draggableId={`task:${t.id}`} index={caps.length + idx}>
-                          {(dragProvided, dragSnapshot) => (
+                          {(dragProvided, dragSnapshot) => {
+                            const done = t.status === "concluida";
+                            return (
                             <button ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
                               type="button" title={t.description ?? undefined}
                               onClick={() => setEditTask(t)}
@@ -342,14 +344,23 @@ export default function AgendaCriacao() {
                                   : t.priority === "urgente" || t.priority === "alta"
                                   ? "border-amber-500/50 bg-amber-500/15 hover:bg-amber-500/20"
                                   : "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10",
+                                done && "opacity-60",
                                 dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
                               <div className={cn("flex items-center gap-1", isLead ? "text-sky-700 dark:text-sky-300" : "text-amber-700 dark:text-amber-300")}>
                                 <ListChecks className="h-3 w-3 shrink-0" />
-                                <span className="text-[10px] font-body font-bold truncate">{isLead ? `Lead · ${who}` : who}</span>
+                                <span className="text-[10px] font-body font-bold truncate flex-1">{isLead ? `Lead · ${who}` : who}</span>
+                                {/* Check pra marcar concluída (risca a tarefa). Span pra não aninhar button. */}
+                                <span role="button" tabIndex={0} aria-label={done ? "Reabrir tarefa" : "Concluir tarefa"}
+                                  onClick={(e) => { e.stopPropagation(); updTask.mutate({ id: t.id, status: done ? "pendente" : "concluida" }); }}
+                                  className={cn("grid h-4 w-4 shrink-0 place-items-center rounded border cursor-pointer transition-colors",
+                                    done ? "bg-emerald-500 border-emerald-500 text-white" : "border-current/50 hover:border-emerald-500 hover:text-emerald-600")}>
+                                  {done && <Check className="h-3 w-3" strokeWidth={3} />}
+                                </span>
                               </div>
-                              <p className="text-[12px] font-body font-semibold text-foreground leading-tight truncate">{t.title}</p>
+                              <p className={cn("text-[12px] font-body font-semibold leading-tight truncate", done ? "line-through text-muted-foreground" : "text-foreground")}>{t.title}</p>
                             </button>
-                          )}
+                            );
+                          }}
                         </Draggable>
                         );
                       })}
@@ -486,6 +497,11 @@ export default function AgendaCriacao() {
           }
           setEditTask(null);
         }} />
+
+      <PostEditDialog post={editPost} clientName={editPost ? (extById.get(editPost.external_client_id)?.name ?? null) : null}
+        onClose={() => setEditPost(null)} saving={updateExtPost.isPending}
+        onSave={(patch) => { if (editPost) updateExtPost.mutate({ id: editPost.id, patch }, { onSuccess: () => { toast.success("Post atualizado."); setEditPost(null); } }); }}
+        onOpenClient={() => { if (editPost) { const crm = extById.get(editPost.external_client_id)?.crm_client_id; setEditPost(null); navigate(crm ? `/socialmidia/clientes/${crm}/posts` : "/socialmidia/criapost/aprovacoes"); } }} />
 
       {/* Painel "Ver todos" de um dia cheio: lista tudo, cada item clicável pra editar. */}
       {dayModal && (() => {
@@ -780,6 +796,64 @@ function TaskDialog({ task, clients, onClose, onOpenCrm, onSave }: {
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button onClick={() => onSave({ title: title.trim(), description: desc.trim() || null, priority: prio, status, due_date: due || null })} disabled={!title.trim()}>Salvar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Edição rápida do POST direto da agenda, sem navegar pro cliente. Cobre o essencial
+// (título, data, horário, status, legenda). Mídia/roteiro cheios ficam no botão do cliente.
+function PostEditDialog({ post, clientName, onClose, onSave, onOpenClient, saving }: {
+  post: ExternalPostWithClient | null;
+  clientName: string | null;
+  onClose: () => void;
+  onSave: (patch: Record<string, unknown>) => void;
+  onOpenClient: () => void;
+  saving: boolean;
+}) {
+  const open = !!post;
+  const [title, setTitle] = useState("");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [caption, setCaption] = useState("");
+  const [status, setStatus] = useState<string>("em_producao");
+  const [seeded, setSeeded] = useState("");
+  if (open && post && seeded !== post.id) {
+    setSeeded(post.id);
+    setTitle(post.title ?? "");
+    setDate(post.scheduled_date ?? "");
+    setTime(((post as { scheduled_time?: string | null }).scheduled_time ?? "")?.slice(0, 5) ?? "");
+    setCaption(post.caption ?? "");
+    setStatus(post.approval_status ?? "em_producao");
+  }
+  if (!open && seeded) setSeeded("");
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-lg rounded-2xl">
+        <DialogHeader><DialogTitle className="font-display">Editar post{clientName ? ` · ${clientName}` : ""}</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Título</p><Input value={title} onChange={(e) => setTitle(e.target.value)} className="rounded-xl" /></div>
+          <div className="flex gap-2">
+            <div className="flex-1"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Data</p><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+            <div className="w-28"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Horário</p><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} /></div>
+          </div>
+          <div>
+            <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Status</p>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full h-10 rounded-xl border border-border bg-card px-3 text-sm font-body">
+              {Object.entries(POST_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            </select>
+          </div>
+          <div><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Legenda</p><Textarea rows={4} value={caption} onChange={(e) => setCaption(e.target.value)} className="rounded-xl text-sm" /></div>
+          <button type="button" onClick={onOpenClient} className="inline-flex items-center gap-1 text-[11px] font-body text-muted-foreground hover:text-primary transition-colors">
+            <ExternalLink className="h-3 w-3" /> Abrir no cliente pra editar mídia e roteiro
+          </button>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={() => onSave({ title: title.trim() || "Post", scheduled_date: date || null, scheduled_time: time || null, caption: caption.trim() || null, approval_status: status, approval_updated_at: new Date().toISOString() })} disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

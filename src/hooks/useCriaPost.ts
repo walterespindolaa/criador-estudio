@@ -186,7 +186,14 @@ export function useExternalPosts(clientId: string | null) {
         const { data: cdata } = await sbFrom("post_approval_comments").select("post_id, content, author_role, created_at").in("post_id", ids).order("created_at", { ascending: false });
         for (const c of (cdata as { post_id: string; content: string; author_role: string }[]) ?? []) if (!comments[c.post_id]) comments[c.post_id] = { content: c.content, author_role: c.author_role };
       }
-      return posts.map((p) => ({ ...p, last_comment: comments[p.id]?.content ?? null, last_comment_role: comments[p.id]?.author_role ?? null }));
+      return posts.map((p) => ({ ...p, last_comment: comments[p.id]?.content ?? null, last_comment_role: comments[p.id]?.author_role ?? null }))
+        // Ordem manual do kanban (board_order asc); created_at desc como desempate.
+        .sort((a, b) => {
+          const ao = (a as { board_order?: number }).board_order ?? 0;
+          const bo = (b as { board_order?: number }).board_order ?? 0;
+          if (ao !== bo) return ao - bo;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
     },
   });
 
@@ -298,7 +305,32 @@ export function useExternalPosts(clientId: string | null) {
     onSettled: () => qc.invalidateQueries({ queryKey: key, refetchType: "none" }),
   });
 
-  return { posts: postsQ.data ?? [], isLoading: postsQ.isLoading, create, createDraft, update, remove, moveStatus, setDate };
+  // Reorder OTIMISTA do kanban do Cria Post (dentro da coluna e entre colunas):
+  // move o card na hora (patch + re-sort do cache) e persiste em segundo plano.
+  const reorderExternalPosts = (changes: { id: string; board_order: number; approval_status?: string; approval_updated_at?: string }[]) => {
+    if (!changes.length) return;
+    const byId = new Map(changes.map((c) => [c.id, c]));
+    qc.setQueryData<ExternalPost[]>(key, (old) => {
+      if (!Array.isArray(old)) return old;
+      const next = old.map((p) => {
+        const c = byId.get(p.id);
+        return c ? ({ ...p, board_order: c.board_order, ...(c.approval_status ? { approval_status: c.approval_status } : {}), ...(c.approval_updated_at ? { approval_updated_at: c.approval_updated_at } : {}) } as ExternalPost) : p;
+      });
+      next.sort((a, b) => {
+        const ao = (a as { board_order?: number }).board_order ?? 0;
+        const bo = (b as { board_order?: number }).board_order ?? 0;
+        if (ao !== bo) return ao - bo;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+      return next;
+    });
+    void Promise.all(changes.map((c) =>
+      sbFrom("posts").update({ board_order: c.board_order, ...(c.approval_status ? { approval_status: c.approval_status } : {}), ...(c.approval_updated_at ? { approval_updated_at: c.approval_updated_at } : {}) } as never).eq("id", c.id),
+    )).then(() => { qc.invalidateQueries({ queryKey: ["external-pending", agencyOwnerId] }); })
+      .catch(() => qc.invalidateQueries({ queryKey: key }));
+  };
+
+  return { posts: postsQ.data ?? [], isLoading: postsQ.isLoading, create, createDraft, update, remove, moveStatus, setDate, reorderExternalPosts };
 }
 
 // Todos os posts de aprovação por link, de todos os clientes externos, num query só.
@@ -328,6 +360,24 @@ export function useAllExternalPosts() {
       }
       return posts.map((p) => ({ ...p, last_comment: comments[p.id]?.content ?? p.last_comment ?? null, last_comment_role: comments[p.id]?.author_role ?? p.last_comment_role ?? null }));
     },
+  });
+}
+
+// Edita campos de um post (de qualquer cliente) direto da Agenda, sem navegar.
+export function useUpdateExternalPost() {
+  const { agencyOwnerId } = useActiveAccount();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Record<string, unknown> }) => {
+      const { error } = await sbFrom("posts").update(patch as never).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["external-posts-all", agencyOwnerId] });
+      qc.invalidateQueries({ queryKey: ["cria-posts"] });
+      qc.invalidateQueries({ queryKey: ["external-pending", agencyOwnerId] });
+    },
+    onError: () => toast.error("Não consegui salvar o post."),
   });
 }
 

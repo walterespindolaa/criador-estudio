@@ -1117,7 +1117,7 @@ function CalendarioFinanceiro({ monthlies, records, recurring, pendingRecurring,
 }) {
   const first = new Date(ym.y, ym.m, 1);
   const lastDay = new Date(ym.y, ym.m + 1, 0).getDate();
-  const startDow = (first.getDay() + 6) % 7; // segunda = 0
+  const startDow = first.getDay(); // domingo = 0 (semana começa no domingo)
   const hoje = new Date().toISOString().slice(0, 10);
   const [diaAberto, setDiaAberto] = useState<number | null>(null);
 
@@ -1202,10 +1202,10 @@ function CalendarioFinanceiro({ monthlies, records, recurring, pendingRecurring,
       </div>
 
       <div className="grid grid-cols-7 gap-0.5 sm:gap-1 mb-1">
-        {["S", "T", "Q", "Q", "S", "S", "D"].map((d, i) => (
+        {["D", "S", "T", "Q", "Q", "S", "S"].map((d, i) => (
           <p key={i} className="text-[10px] uppercase tracking-wider font-body font-semibold text-muted-foreground text-center">
             <span className="sm:hidden">{d}</span>
-            <span className="hidden sm:inline">{["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"][i]}</span>
+            <span className="hidden sm:inline">{["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"][i]}</span>
           </p>
         ))}
       </div>

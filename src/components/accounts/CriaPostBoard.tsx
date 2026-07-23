@@ -28,6 +28,8 @@ const FORMATS = ["reels", "carrossel", "foto", "story", "video"];
 // CLIENT_COLORS mudou de casa (ExternalClientDialog), re-export mantém imports antigos.
 export { CLIENT_COLORS } from "@/components/accounts/ExternalClientDialog";
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+// Cor por formato: a pessoa bate o olho e sabe o que é (reels azul, carrossel verde...).
+const FORMAT_COLOR: Record<string, string> = { reels: "#0061EE", carrossel: "#01A652", foto: "#EA4918", story: "#7C90F0", video: "#4B3FA8" };
 const MES_ABBR = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 function relTimeBR(iso: string): string {
   const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
@@ -55,7 +57,7 @@ const APPROVAL_COLS = ["em_producao", "pendente", "ajuste_solicitado", "aprovado
 type ApprovalKey = (typeof APPROVAL_COLS)[number];
 
 export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange }: { client: ExternalClient; onBack?: () => void; embedded?: boolean; activeTab?: string; onTabChange?: (t: string) => void }) {
-  const { posts, isLoading, create, createDraft, update, remove, moveStatus, setDate } = useExternalPosts(client.id);
+  const { posts, isLoading, create, createDraft, update, remove, moveStatus, setDate, reorderExternalPosts } = useExternalPosts(client.id);
   // Filtro por mês (período) pra revisar/enviar só o que interessa.
   const [mesPost, setMesPost] = useState("all"); // "all" | "YYYY-MM"
   const [fmtFilter, setFmtFilter] = useState("all"); // "all" | format
@@ -85,10 +87,23 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
     if (!r.destination) return;
     const dest = r.destination.droppableId as ApprovalKey;
     const post = posts.find((p) => p.id === r.draggableId);
-    if (!post || (post.approval_status ?? "pendente") === dest) return;
-    // Avançar manualmente pra "Aprovado" sem o cliente: pede confirmação.
-    if (dest === "aprovado") setConfirmMove({ id: r.draggableId, status: dest });
-    else moveStatus.mutate({ id: r.draggableId, approval_status: dest });
+    if (!post) return;
+    const from = (post.approval_status ?? "pendente");
+    // Avançar manualmente pra "Aprovado" sem o cliente: pede confirmação (só na mudança de coluna).
+    if (from !== dest && dest === "aprovado") { setConfirmMove({ id: r.draggableId, status: dest }); return; }
+    // Reordena a coluna de destino (mesma coluna OU mudança de status), gravando board_order.
+    const col = viewPosts.filter((p) => (p.approval_status ?? "pendente") === dest && p.id !== r.draggableId);
+    col.splice(r.destination.index, 0, post);
+    const changes: { id: string; board_order: number; approval_status?: string; approval_updated_at?: string }[] = [];
+    col.forEach((p, idx) => {
+      const isMoved = p.id === r.draggableId;
+      const cur = (p as { board_order?: number }).board_order ?? -1;
+      if (!isMoved && cur === idx) return;
+      const ch: { id: string; board_order: number; approval_status?: string; approval_updated_at?: string } = { id: p.id, board_order: idx };
+      if (isMoved && from !== dest) { ch.approval_status = dest; ch.approval_updated_at = new Date().toISOString(); }
+      changes.push(ch);
+    });
+    reorderExternalPosts(changes);
   };
   const { data: crmClients = [] } = useCrmClients();
   const criaOwnerId = crmClients.find((c) => c.id === client.crm_client_id)?.cria_owner_id ?? null;
@@ -267,7 +282,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                         className={`bg-card border border-border rounded-xl p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all ${dragS.isDragging ? "shadow-warm-lg ring-2 ring-primary/40" : ""}`}>
                         <div className="flex items-start gap-2">
                           <div className="flex-1 min-w-0">
-                            <span className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wide">{cap(p.format)} · {cap(p.platform)}</span>
+                            <span className="text-[10px] font-body font-bold uppercase tracking-wide"><span style={{ color: FORMAT_COLOR[p.format] ?? "#6b6b66" }}>{cap(p.format)}</span> <span className="text-muted-foreground">· {cap(p.platform)}</span></span>
                             <p className="font-display font-bold text-sm text-foreground truncate mt-1">{p.title}</p>
                             {/* Data direto no card, sem abrir o post. Reflete no calendário na hora. */}
                             <input type="date" value={p.scheduled_date ?? ""}
@@ -569,9 +584,10 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
 
 // ── Visão CALENDÁRIO dos posts (mês). Arrastar entre dias muda scheduled_date na hora.
 // Conversa com o kanban: a mesma data aparece no card e aqui.
-const CAL_WD = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+const CAL_WD = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 function calYmd(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
-function calMonday(d: Date) { const x = new Date(d); const wd = (x.getDay() + 6) % 7; x.setDate(x.getDate() - wd); x.setHours(0, 0, 0, 0); return x; }
+// Semana começa no DOMINGO (padrão do iPhone/calendários BR).
+function calWeekStart(d: Date) { const x = new Date(d); x.setDate(x.getDate() - x.getDay()); x.setHours(0, 0, 0, 0); return x; }
 
 function PostsCalendar({ posts, onOpen, onNewAt, onMove }: {
   posts: ExternalPost[];
@@ -586,9 +602,9 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove }: {
 
   const days = (() => {
     const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
-    const start = calMonday(first);
+    const start = calWeekStart(first);
     const last = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
-    const end = calMonday(last); end.setDate(end.getDate() + 6);
+    const end = calWeekStart(last); end.setDate(end.getDate() + 6);
     const n = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
     return Array.from({ length: n }, (_, i) => { const d = new Date(start); d.setDate(d.getDate() + i); return d; });
   })();

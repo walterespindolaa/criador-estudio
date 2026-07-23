@@ -65,6 +65,24 @@ export function useCriaPostMedia(postId: string | null) {
   });
 
   const uploadImage = useMutation({
+    // Prévia OTIMISTA: assim que a pessoa escolhe a foto, coloca uma miniatura
+    // local (blob) na grade na hora. O upload de verdade roda em segundo plano;
+    // quando termina, o invalidate troca pela mídia real (mesma imagem, então
+    // sem "pisca"). Se falhar, remove a prévia e libera o objectURL.
+    onMutate: async (file: File) => {
+      await qc.cancelQueries({ queryKey: key });
+      const prev = qc.getQueryData<CriaMedia[]>(key) ?? [];
+      const objectUrl = URL.createObjectURL(file);
+      const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const optimistic: CriaMedia = {
+        id: tempId, provider: "local-pending", external_file_id: tempId,
+        file_name: file.name, file_type: file.type || "image/jpeg",
+        view_url: objectUrl, thumbnail_url: objectUrl, bunny_video_id: null,
+        position: prev.length,
+      };
+      qc.setQueryData<CriaMedia[]>(key, [...prev, optimistic]);
+      return { prev, objectUrl };
+    },
     mutationFn: async (file: File) => {
       let blob: Blob = file, name = file.name, type = file.type;
       if (isHeic(file)) {
@@ -83,7 +101,12 @@ export function useCriaPostMedia(postId: string | null) {
       if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
       return data;
     },
-    onSuccess: invalidate,
+    onError: (_e, _f, ctx) => {
+      if (ctx?.prev) qc.setQueryData(key, ctx.prev);
+      if (ctx?.objectUrl) URL.revokeObjectURL(ctx.objectUrl);
+    },
+    onSuccess: (_d, _f, ctx) => { if (ctx?.objectUrl) URL.revokeObjectURL(ctx.objectUrl); },
+    onSettled: invalidate,
   });
 
   const uploadVideo = useMutation({
