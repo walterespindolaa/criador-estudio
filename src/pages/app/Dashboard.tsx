@@ -23,9 +23,9 @@ import { usePosts } from "@/hooks/usePosts";
 import { useHabits } from "@/hooks/useHabits";
 import { useTasks } from "@/hooks/useTasks";
 import { usePillars } from "@/hooks/usePillars";
-import { BestTimeToPost } from "@/components/insights/BestTimeToPost";
 import { SmartNotificationsCard } from "@/components/notifications/SmartNotificationsCard";
 import { NextBestAction } from "@/components/dashboard/NextBestAction";
+import { InstagramPulse } from "@/components/dashboard/InstagramPulse";
 import { FirstStepsPanel } from "@/components/dashboard/FirstStepsPanel";
 import { UpcomingPosts } from "@/components/dashboard/UpcomingPosts";
 import { UpcomingTasks } from "@/components/dashboard/UpcomingTasks";
@@ -364,9 +364,17 @@ const Dashboard = () => {
           </div>
         </DCard>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* NOVO: Seu conteúdo no Instagram (largura cheia, em destaque).
+            Reaproveita os hooks de insights; o "melhor dia" da faixa verde substitui
+            o antigo bloco BestTimeToPost (agora dobrado aqui dentro). */}
+        <div className="mb-6" data-tour="dash-instagram">
+          <InstagramPulse />
+        </div>
 
-          <div className="lg:col-span-8 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[1.55fr_1fr] gap-6">
+
+          <div className="space-y-6">
+            <h2 className="text-xs font-body font-bold uppercase tracking-wider text-muted-foreground">Meu conteúdo</h2>
             <div className="grid grid-cols-2 gap-3 sm:gap-4" data-tour="dash-tiles">
               {stats.map((s, i) => (
                 <motion.button
@@ -395,9 +403,8 @@ const Dashboard = () => {
               ))}
             </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div data-tour="dash-posts"><UpcomingPosts /></div>
-              <UpcomingTasks />
+            <div className="mt-4" data-tour="dash-posts">
+              <UpcomingPosts />
             </div>
 
             <section className="bg-card border border-border/30 rounded-2xl p-4 shadow-sm">
@@ -480,10 +487,11 @@ const Dashboard = () => {
             </DCard>
           </div>
 
-          <div className="lg:col-span-4 space-y-6">
+          <div className="space-y-6">
             <WhoYouAre />
             <AiUsageCard />
             <SmartNotificationsCard />
+            <UpcomingTasks />
              <DCard className="border-border/20">
               <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
                 <Flame className="h-4 w-4 text-primary" /> Hábitos de Criação
@@ -526,8 +534,6 @@ const Dashboard = () => {
                 </div>
               </div>
             </DCard>
-
-            <BestTimeToPost posts={posts} />
           </div>
 
         </div>
