@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useExternalClients, useExternalPosts, usePortalActivity, type ExternalClient, type ExternalPost, type ExternalPostInput } from "@/hooks/useCriaPost";
 import { toast } from "sonner";
+import { confirmar } from "@/components/shared/Confirm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,6 +60,7 @@ type ApprovalKey = (typeof APPROVAL_COLS)[number];
 
 export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange }: { client: ExternalClient; onBack?: () => void; embedded?: boolean; activeTab?: string; onTabChange?: (t: string) => void }) {
   const { posts, isLoading, create, createDraft, update, remove, moveStatus, setDate, reorderExternalPosts } = useExternalPosts(client.id);
+  const qc = useQueryClient();
   // Filtro por mês (período) pra revisar/enviar só o que interessa.
   const [mesPost, setMesPost] = useState("all"); // "all" | "YYYY-MM"
   const [fmtFilter, setFmtFilter] = useState("all"); // "all" | format
@@ -138,6 +141,30 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
     setFormOpen(false);
     if (draftId) { await remove.mutateAsync(draftId).catch(() => { /* silencioso */ }); setDraftId(null); }
     setEditing(null);
+  };
+
+  // Novo post: só tem sentido perguntar quando é um RASCUNHO (draftId), porque é
+  // ele que some ao fechar. Se qualquer campo foi preenchido (ou já subiu mídia),
+  // confirma antes de descartar. Sem nada preenchido, fecha direto.
+  const draftHasContent = () => {
+    if ((f.title ?? "").trim() || (f.caption ?? "").trim() || (f.hook ?? "").trim() || (f.script ?? "").trim()) return true;
+    if (f.scheduled_date || f.scheduled_time) return true;
+    if (f.platform !== "instagram" || f.format !== "reels") return true;
+    const media = draftId ? qc.getQueryData(["criapost-media", draftId]) : null;
+    if (Array.isArray(media) && media.length > 0) return true;
+    return false;
+  };
+  const requestCloseForm = async () => {
+    if (draftId && draftHasContent()) {
+      const ok = await confirmar({
+        titulo: "Seu post não foi salvo",
+        descricao: "Deseja sair mesmo assim? As informações preenchidas serão perdidas.",
+        acao: "Sair sem salvar",
+        cancelar: "Continuar editando",
+      });
+      if (!ok) return;
+    }
+    await closeForm();
   };
 
   const submit = async () => {
@@ -439,12 +466,12 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
         </DialogContent>
       </Dialog>
 
-      <Dialog open={formOpen} onOpenChange={(o) => { if (!o) void closeForm(); }}>
+      <Dialog open={formOpen} onOpenChange={(o) => { if (!o) void requestCloseForm(); }}>
         <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="max-w-md md:max-w-5xl bg-white rounded-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pr-8">
             <DialogTitle className="font-display">{draftId || !editing ? "Novo post" : "Editar post"}</DialogTitle>
             <div className="flex items-center gap-2 shrink-0 flex-wrap">
-              <Button variant="outline" size="sm" onClick={() => void closeForm()}>Cancelar</Button>
+              <Button variant="outline" size="sm" onClick={() => void requestCloseForm()}>Cancelar</Button>
               <Button size="sm" onClick={submit} disabled={create.isPending || update.isPending || !f.title.trim()}>{(create.isPending || update.isPending) ? <Loader2 className="h-4 w-4 animate-spin" /> : draftId ? "Criar post" : editing ? (editing.approval_status === "ajuste_solicitado" ? <><RotateCcw className="h-4 w-4 mr-1.5" /> Salvar e reenviar</> : "Salvar") : "Criar post"}</Button>
             </div>
           </DialogHeader>
@@ -557,7 +584,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               </div>
               {editing?.id ? (
                 <CriaPostMedia postId={editing.id} platform={f.platform} format={f.format}
-                  caption={f.caption ?? undefined} handle={client.instagram_handle || client.name}
+                  caption={f.caption ?? undefined} handle={client.instagram_handle || undefined}
                   approved={editing.approval_status === "aprovado"} />
               ) : (
                 <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Preparando o post pra você anexar a mídia…</p>

@@ -10,11 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Loader2, Image as ImageIcon, Eye, EyeOff, Check } from "lucide-react";
+import { BrandColorPicker } from "@/components/accounts/BrandColorPicker";
 
 // Cores dos clientes no calendário geral (também usadas pelo ManagerCalendar).
-export const CLIENT_COLORS = ["#EA4918", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#EF4444", "#14B8A6", "#A855F7"];
-// Paleta CRIA pra cor da marca do cliente no portal público.
-const PORTAL_BRAND_COLORS = ["#EA4918", "#0061EE", "#FF77B9", "#FFCF03", "#01A652"];
+// Pool ampliado: com muitos clientes, o índice modular repete menos.
+export const CLIENT_COLORS = ["#EA4918", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#EF4444", "#14B8A6", "#A855F7", "#6366F1", "#F97316", "#0EA5E9", "#84CC16", "#D946EF", "#8B5E34", "#0061EE", "#DC2626"];
 
 // Edição do cliente de aprovação por link: logo e cor do portal, vínculo com o
 // cadastro central, notas e cor do calendário. Extraído da antiga lista do Cria Post
@@ -138,12 +138,9 @@ export function ExternalClientDialog({ open, onOpenChange, client }: {
             <div className="space-y-1.5">
               <Label className="text-xs font-body">Cor da marca</Label>
               <p className="text-[11px] font-body text-muted-foreground -mt-1">Pinta os botões e destaques da página de aprovação com a cara do cliente.</p>
-              <div className="flex items-center flex-wrap gap-2">
-                {PORTAL_BRAND_COLORS.map((c) => (
-                  <button key={c} type="button" onClick={() => setF((p) => ({ ...p, brand_color: c }))}
-                    className={`h-7 w-7 rounded-full transition-transform ${f.brand_color === c ? "ring-2 ring-offset-2 ring-foreground scale-110" : "hover:scale-105"}`}
-                    style={{ backgroundColor: c }} aria-label={`Cor da marca ${c}`} />
-                ))}
+              <BrandColorPicker value={f.brand_color ?? null} onChange={(c) => setF((p) => ({ ...p, brand_color: c }))} />
+              <div className="flex items-center flex-wrap gap-2 pt-1">
+                <span className="text-[10px] font-body uppercase tracking-wide text-muted-foreground">Outra</span>
                 <input type="color" value={f.brand_color ?? "#EA4918"} onChange={(e) => setF((p) => ({ ...p, brand_color: e.target.value }))}
                   className="h-7 w-9 rounded-lg border border-border bg-transparent p-0.5 cursor-pointer" aria-label="Cor personalizada" />
                 {f.brand_color && <button type="button" onClick={() => setF((p) => ({ ...p, brand_color: null }))} className="text-[11px] font-body text-muted-foreground hover:text-foreground">Limpar</button>}

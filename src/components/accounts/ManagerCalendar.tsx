@@ -5,16 +5,35 @@ import {
   startOfMonth, startOfWeek, subMonths,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, CalendarDays, Clock } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, Clock, ChevronDown, Users, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useExternalClients } from "@/hooks/useCriaPost";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FORMAT_LABELS } from "@/lib/constants";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { CLIENT_COLORS } from "@/components/accounts/CriaPostBoard";
-import { BestTimesHint } from "@/components/shared/BestTimesHint";
 import { toast } from "sonner";
+
+// Estados de aprovação (mesmos rótulos do Cria Post) pro popup editável do post.
+const STATUS_OPTS: { key: string; label: string }[] = [
+  { key: "em_producao", label: "Em produção" },
+  { key: "pendente", label: "Aguardando cliente" },
+  { key: "ajuste_solicitado", label: "Ajuste solicitado" },
+  { key: "aprovado", label: "Aprovado" },
+  { key: "postado", label: "Postado" },
+];
+
+// Lê um flag salvo em localStorage ("1"/"0"); usa o padrão quando não há nada.
+function readFlag(key: string, fallback: boolean): boolean {
+  try { const v = localStorage.getItem(key); return v === null ? fallback : v === "1"; }
+  catch { return fallback; }
+}
+function writeFlag(key: string, val: boolean) {
+  try { localStorage.setItem(key, val ? "1" : "0"); } catch { /* segue */ }
+}
 
 const sbFrom = supabase.from.bind(supabase) as unknown as (t: string) => ReturnType<typeof supabase.from>;
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -22,7 +41,7 @@ const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 type CalPost = {
   id: string; title: string; format: string; platform: string;
   external_client_id: string; scheduled_date: string | null; scheduled_time: string | null;
-  approval_status: string | null;
+  approval_status: string | null; caption: string | null;
 };
 
 const dkey = (d: Date) => format(d, "yyyy-MM-dd");
@@ -34,6 +53,17 @@ export function ManagerCalendar() {
   const [cursor, setCursor] = useState(() => new Date());
   const [view, setView] = useState<"mes" | "semana">("mes");
   const [hidden, setHidden] = useState<Set<string>>(new Set());
+  // "A agendar" começa MINIMIZADA por padrão (ocupava espaço à toa). Persiste por dispositivo.
+  const [aAgendarOpen, setAAgendarOpen] = useState(() => readFlag("cal_aagendar_open", false));
+  // Legenda de clientes (chips coloridos): colapsável. Com muitos clientes (>8) começa oculta.
+  const [chipsOpen, setChipsOpen] = useState(() => readFlag("cal_chips_open", clients.length <= 8));
+  // Post aberto no popup editável (clicar num card do calendário geral).
+  const [editPost, setEditPost] = useState<CalPost | null>(null);
+  // Dia aberto no mobile: como cada célula fica minúscula no celular, tocar no dia
+  // abre a lista dos itens dele num Dialog (cada item abre o popup de edição).
+  const [dayModal, setDayModal] = useState<string | null>(null);
+  const toggleAAgendar = () => setAAgendarOpen((v) => { const n = !v; writeFlag("cal_aagendar_open", n); return n; });
+  const toggleChips = () => setChipsOpen((v) => { const n = !v; writeFlag("cal_chips_open", n); return n; });
 
   const colorOf = useMemo(() => {
     const map: Record<string, string> = {};
@@ -51,7 +81,7 @@ export function ManagerCalendar() {
     enabled: !!user,
     queryFn: async () => {
       const { data, error } = await sbFrom("posts")
-        .select("id, title, format, platform, external_client_id, scheduled_date, scheduled_time, approval_status")
+        .select("id, title, format, platform, external_client_id, scheduled_date, scheduled_time, approval_status, caption")
         .eq("user_id", user!.id)
         .not("external_client_id", "is", null);
       if (error) throw error;
@@ -80,6 +110,24 @@ export function ManagerCalendar() {
       toast.error("Erro ao atualizar.");
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ["manager-calendar", user?.id], refetchType: "none" }),
+  });
+
+  // Salva os campos editáveis do post pelo popup (título, data, horário, status, legenda).
+  // Reflete no calendário geral e no Cria Post do cliente (invalida as duas queries).
+  const savePost = useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Record<string, unknown> }) => {
+      const { error } = await sbFrom("posts").update(patch).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Post atualizado!");
+      qc.invalidateQueries({ queryKey: ["manager-calendar", user?.id] });
+      qc.invalidateQueries({ queryKey: ["cria-posts"] });
+      qc.invalidateQueries({ queryKey: ["external-posts-all", user?.id] });
+      qc.invalidateQueries({ queryKey: ["external-pending", user?.id] });
+      setEditPost(null);
+    },
+    onError: () => toast.error("Não consegui salvar o post."),
   });
 
   const visible = (p: CalPost) => !hidden.has(p.external_client_id);
@@ -116,51 +164,23 @@ export function ManagerCalendar() {
   const toggleClient = (id: string) =>
     setHidden((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
+  // Card do post: arrastável entre os dias e clicável pra abrir o popup editável.
+  // O drag nativo não dispara "click" depois de um arraste real, então dá pra ter os dois.
   const chip = (p: CalPost) => {
     const color = colorOf[p.external_client_id] ?? "#EA4918";
     return (
-      <Popover key={p.id}>
-        <PopoverTrigger asChild>
-          <div
-            draggable
-            onDragStart={(e) => e.dataTransfer.setData("text/plain", p.id)}
-            className="cursor-grab active:cursor-grabbing rounded-md px-1.5 py-1 mb-1 text-[10px] leading-tight truncate"
-            style={{ backgroundColor: `${color}1a`, borderLeft: `3px solid ${color}` }}
-            title={`${nameOf[p.external_client_id] ?? ""} · ${p.title}`}
-          >
-            {p.scheduled_time && <span className="font-semibold mr-1">{p.scheduled_time.slice(0, 5)}</span>}
-            {p.title}
-          </div>
-        </PopoverTrigger>
-        <PopoverContent className="w-64 p-3 space-y-3" align="start">
-          <div>
-            <p className="text-xs font-display font-bold text-foreground truncate">{p.title}</p>
-            <p className="text-[11px] text-muted-foreground font-body flex items-center gap-1.5 mt-0.5">
-              <span className="h-2 w-2 rounded-full inline-block" style={{ backgroundColor: color }} />
-              {nameOf[p.external_client_id] ?? "Cliente"} · {FORMAT_LABELS[p.format] ?? p.format}
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-[10px] font-body text-muted-foreground uppercase tracking-wide">Data</label>
-              <input type="date" defaultValue={p.scheduled_date ?? ""}
-                onChange={(e) => reschedule.mutate({ id: p.id, date: e.target.value || null })}
-                className="w-full mt-1 rounded-lg border border-border bg-card px-2 py-1.5 text-xs" />
-            </div>
-            <div>
-              <label className="text-[10px] font-body text-muted-foreground uppercase tracking-wide">Hora</label>
-              <input type="time" defaultValue={p.scheduled_time?.slice(0, 5) ?? ""}
-                onChange={(e) => reschedule.mutate({ id: p.id, date: p.scheduled_date, time: e.target.value || null })}
-                className="w-full mt-1 rounded-lg border border-border bg-card px-2 py-1.5 text-xs" />
-            </div>
-          </div>
-          <BestTimesHint platform={p.platform} onPick={(t) => reschedule.mutate({ id: p.id, date: p.scheduled_date, time: t })} />
-          <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground hover:text-destructive"
-            onClick={() => reschedule.mutate({ id: p.id, date: null })}>
-            Tirar do calendário
-          </Button>
-        </PopoverContent>
-      </Popover>
+      <div
+        key={p.id}
+        draggable
+        onDragStart={(e) => e.dataTransfer.setData("text/plain", p.id)}
+        onClick={() => setEditPost(p)}
+        className="cursor-grab active:cursor-grabbing rounded-md px-1.5 py-1 mb-1 text-[10px] leading-tight truncate"
+        style={{ backgroundColor: `${color}1a`, borderLeft: `3px solid ${color}` }}
+        title={`${nameOf[p.external_client_id] ?? ""} · ${p.title}`}
+      >
+        {p.scheduled_time && <span className="font-semibold mr-1">{p.scheduled_time.slice(0, 5)}</span>}
+        {p.title}
+      </div>
     );
   };
 
@@ -184,39 +204,53 @@ export function ManagerCalendar() {
         </div>
       </div>
 
-      {/* Filtro por cliente (cor) */}
+      {/* Filtro por cliente (cor): legenda colapsável pra não poluir com muitos clientes. */}
       {clients.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {clients.map((c) => {
-            const color = colorOf[c.id];
-            const off = hidden.has(c.id);
-            return (
-              <button key={c.id} type="button" onClick={() => toggleClient(c.id)}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-body border transition-colors ${off ? "opacity-40 border-border" : "border-border"}`}>
-                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
-                {c.name}
-              </button>
-            );
-          })}
+        <div className="space-y-1.5">
+          <button type="button" onClick={toggleChips}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-body font-semibold border border-border text-muted-foreground hover:text-foreground transition-colors">
+            <Users className="h-3.5 w-3.5" /> Clientes ({clients.length})
+            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${chipsOpen ? "rotate-180" : ""}`} />
+          </button>
+          {chipsOpen && (
+            <div className="flex flex-wrap gap-1.5">
+              {clients.map((c) => {
+                const color = colorOf[c.id];
+                const off = hidden.has(c.id);
+                return (
+                  <button key={c.id} type="button" onClick={() => toggleClient(c.id)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-body border transition-colors ${off ? "opacity-40 border-border" : "border-border"}`}>
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
+                    {c.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
-      {/* A agendar */}
+      {/* A agendar: minimizada por padrão. O container inteiro continua sendo a zona de
+          drop pra desagendar (arrastar um post pra cá), mesmo colapsada. */}
       <div
         onDrop={onDrop(null)} onDragOver={allowDrop}
         className="rounded-xl border border-dashed border-border bg-card/50 p-3"
       >
-        <p className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+        <button type="button" onClick={toggleAAgendar}
+          className="w-full flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground hover:text-foreground transition-colors">
           <CalendarDays className="h-3.5 w-3.5" /> A agendar ({unscheduled.length})
-        </p>
-        {unscheduled.length === 0 ? (
-          <p className="text-xs text-muted-foreground font-body">Tudo agendado. Arraste um post pra cá pra desagendar.</p>
-        ) : (
-          <div className="flex flex-wrap gap-1.5">
-            {unscheduled.map((p) => (
-              <div key={p.id} className="min-w-[120px] max-w-[200px]">{chip(p)}</div>
-            ))}
-          </div>
+          <ChevronDown className={`h-3.5 w-3.5 ml-auto transition-transform ${aAgendarOpen ? "rotate-180" : ""}`} />
+        </button>
+        {aAgendarOpen && (
+          unscheduled.length === 0 ? (
+            <p className="text-xs text-muted-foreground font-body mt-2">Tudo agendado. Arraste um post pra cá pra desagendar.</p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {unscheduled.map((p) => (
+                <div key={p.id} className="min-w-[120px] max-w-[200px]">{chip(p)}</div>
+              ))}
+            </div>
+          )
         )}
       </div>
 
@@ -235,12 +269,24 @@ export function ManagerCalendar() {
             return (
               <div key={d.toISOString()}
                 onDrop={onDrop(dkey(d))} onDragOver={allowDrop}
-                className={`${view === "semana" ? "min-h-[240px]" : "min-h-[92px]"} border-b border-r border-border p-1.5 ${dim ? "bg-muted/20" : ""}`}
+                className={`${view === "semana" ? "min-h-[110px] md:min-h-[240px]" : "min-h-[58px] md:min-h-[92px]"} border-b border-r border-border p-1 md:p-1.5 ${dim ? "bg-muted/20" : ""}`}
               >
-                <div className={`text-[11px] font-body mb-1 ${today ? "font-bold text-primary" : dim ? "text-muted-foreground/50" : "text-foreground"}`}>
+                <div className={`text-xs md:text-[11px] font-body mb-0.5 md:mb-1 ${today ? "font-bold text-primary" : dim ? "text-muted-foreground/50" : "text-foreground"}`}>
                   {format(d, "d")}
                 </div>
-                {list.map(chip)}
+                {/* Desktop (md+): cards com texto e drag-and-drop, exatamente como antes. */}
+                <div className="hidden md:block">{list.map(chip)}</div>
+                {/* Mobile: indicador compacto (pontos por item + total). Tocar abre a lista do dia. */}
+                {list.length > 0 && (
+                  <button type="button" onClick={() => setDayModal(dkey(d))}
+                    className="md:hidden w-full min-h-[28px] flex flex-wrap content-start items-center gap-0.5 rounded-md px-0.5 py-0.5 hover:bg-muted/40 transition-colors"
+                    aria-label={`Ver ${list.length} item(ns) do dia ${format(d, "d")}`}>
+                    {list.slice(0, 4).map((p) => (
+                      <span key={p.id} className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: colorOf[p.external_client_id] ?? "#EA4918" }} />
+                    ))}
+                    <span className="ml-auto text-[10px] font-body font-bold text-muted-foreground">{list.length}</span>
+                  </button>
+                )}
               </div>
             );
           })}
@@ -248,8 +294,120 @@ export function ManagerCalendar() {
       </div>
 
       <p className="text-[11px] text-muted-foreground font-body flex items-center gap-1.5">
-        <Clock className="h-3 w-3" /> Arraste os posts entre os dias pra remarcar. Clique num post pra ajustar data e horário.
+        <Clock className="h-3 w-3" /> Arraste os posts entre os dias pra remarcar. Clique num post pra editar.
       </p>
+
+      {/* Mobile: lista dos itens do dia tocado. Cada item abre o popup de edição. */}
+      {dayModal && (() => {
+        const items = byDay[dayModal] ?? [];
+        const d = new Date(`${dayModal}T00:00:00`);
+        return (
+          <Dialog open onOpenChange={(o) => { if (!o) setDayModal(null); }}>
+            <DialogContent className="sm:max-w-md rounded-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader><DialogTitle className="font-display capitalize">{format(d, "EEEE, d 'de' MMMM", { locale: ptBR })}</DialogTitle></DialogHeader>
+              <p className="text-[12px] font-body text-muted-foreground -mt-2">{items.length} post(s) · toque pra editar</p>
+              <div className="space-y-1.5 mt-1">
+                {items.map((p) => (
+                  <button key={p.id} onClick={() => { setDayModal(null); setEditPost(p); }}
+                    className="w-full flex items-center gap-2.5 rounded-xl border border-border p-3 text-left hover:border-primary/50 hover:bg-primary/5 transition-colors">
+                    <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: colorOf[p.external_client_id] ?? "#EA4918" }} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-body font-semibold text-foreground truncate">{p.title}</p>
+                      <p className="text-[11px] font-body text-muted-foreground truncate">{nameOf[p.external_client_id] ?? ""}{p.scheduled_time ? ` · ${p.scheduled_time.slice(0, 5)}` : ""}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
+
+      {/* Popup editável do post, sem sair pro cliente: título, data, horário, status e legenda. */}
+      <PostEditPopup
+        post={editPost}
+        clientName={editPost ? (nameOf[editPost.external_client_id] ?? null) : null}
+        saving={savePost.isPending}
+        onClose={() => setEditPost(null)}
+        onSave={(patch) => { if (editPost) savePost.mutate({ id: editPost.id, patch }); }}
+      />
     </div>
+  );
+}
+
+// Edição rápida do post pelo calendário geral do gestor. Cobre o essencial (título,
+// data, horário, status, legenda); mídia/roteiro cheios ficam dentro do cliente.
+function PostEditPopup({ post, clientName, onClose, onSave, saving }: {
+  post: CalPost | null;
+  clientName: string | null;
+  onClose: () => void;
+  onSave: (patch: Record<string, unknown>) => void;
+  saving: boolean;
+}) {
+  const open = !!post;
+  const [title, setTitle] = useState("");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [caption, setCaption] = useState("");
+  const [status, setStatus] = useState("em_producao");
+  const [seeded, setSeeded] = useState("");
+  // Semeia os campos ao abrir um post novo (sem useEffect: roda no render quando o id muda).
+  if (open && post && seeded !== post.id) {
+    setSeeded(post.id);
+    setTitle(post.title ?? "");
+    setDate(post.scheduled_date ?? "");
+    setTime(post.scheduled_time?.slice(0, 5) ?? "");
+    setCaption(post.caption ?? "");
+    setStatus(post.approval_status ?? "em_producao");
+  }
+  if (!open && seeded) setSeeded("");
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-lg rounded-2xl">
+        <DialogHeader><DialogTitle className="font-display">Editar post{clientName ? ` · ${clientName}` : ""}</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label className="text-[11px] font-body font-semibold text-muted-foreground uppercase">Título</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} className="rounded-xl mt-1" />
+          </div>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Label className="text-[11px] font-body font-semibold text-muted-foreground uppercase">Data</Label>
+              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="rounded-xl mt-1" />
+            </div>
+            <div className="w-28">
+              <Label className="text-[11px] font-body font-semibold text-muted-foreground uppercase">Horário</Label>
+              <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="rounded-xl mt-1" />
+            </div>
+          </div>
+          <div>
+            <Label className="text-[11px] font-body font-semibold text-muted-foreground uppercase">Status</Label>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full h-10 rounded-xl border border-border bg-card px-3 text-sm font-body mt-1">
+              {STATUS_OPTS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <Label className="text-[11px] font-body font-semibold text-muted-foreground uppercase">Legenda</Label>
+            <Textarea rows={4} value={caption} onChange={(e) => setCaption(e.target.value)} className="rounded-xl text-sm mt-1" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button
+            onClick={() => onSave({
+              title: title.trim() || "Post",
+              scheduled_date: date || null,
+              scheduled_time: time || null,
+              caption: caption.trim() || null,
+              approval_status: status,
+              approval_updated_at: new Date().toISOString(),
+            })}
+            disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

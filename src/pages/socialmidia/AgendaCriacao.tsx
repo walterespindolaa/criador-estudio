@@ -352,7 +352,7 @@ export default function AgendaCriacao() {
                                 {/* Check pra marcar concluída (risca a tarefa). Span pra não aninhar button. */}
                                 <span role="button" tabIndex={0} aria-label={done ? "Reabrir tarefa" : "Concluir tarefa"}
                                   onClick={(e) => { e.stopPropagation(); updTask.mutate({ id: t.id, status: done ? "pendente" : "concluida" }); }}
-                                  className={cn("grid h-4 w-4 shrink-0 place-items-center rounded border cursor-pointer transition-colors",
+                                  className={cn("grid h-6 w-6 md:h-4 md:w-4 shrink-0 place-items-center rounded border cursor-pointer transition-colors",
                                     done ? "bg-emerald-500 border-emerald-500 text-white" : "border-current/50 hover:border-emerald-500 hover:text-emerald-600")}>
                                   {done && <Check className="h-3 w-3" strokeWidth={3} />}
                                 </span>
@@ -401,7 +401,7 @@ export default function AgendaCriacao() {
                                   {/* Check: marca o post como POSTADO (vai pra coluna Postado do kanban). */}
                                   <span role="button" tabIndex={0} aria-label={posted ? "Reabrir post" : "Marcar como postado"}
                                     onClick={(e) => { e.stopPropagation(); updateExtPost.mutate({ id: p.id, patch: { approval_status: posted ? "aprovado" : "postado", approval_updated_at: new Date().toISOString() } }); }}
-                                    className={cn("grid h-4 w-4 shrink-0 place-items-center rounded border cursor-pointer transition-colors",
+                                    className={cn("grid h-6 w-6 md:h-4 md:w-4 shrink-0 place-items-center rounded border cursor-pointer transition-colors",
                                       posted ? "bg-emerald-500 border-emerald-500 text-white" : "border-orange-500/50 hover:border-emerald-500 hover:text-emerald-600")}>
                                     {posted && <Check className="h-3 w-3" strokeWidth={3} />}
                                   </span>

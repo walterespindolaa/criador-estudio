@@ -11,9 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { CLIENT_COLORS } from "@/components/accounts/ExternalClientDialog";
+import { BrandColorPicker } from "@/components/accounts/BrandColorPicker";
 import { confirmar } from "@/components/shared/Confirm";
-
-const PORTAL_BRAND_COLORS = ["#EA4918", "#0061EE", "#FF77B9", "#FFCF03", "#01A652"];
 
 // ═══════════════════════════════════════════════════════════════════════
 // ABA PORTAL
@@ -148,12 +147,9 @@ export function ClientePortalTab({ client, onCopyLink, onOpenPortal, copying }: 
           <div className="space-y-1.5">
             <Label className="text-xs">Cor da marca</Label>
             <p className="text-[11px] font-body text-muted-foreground -mt-1">Pinta os botões e destaques da página dele.</p>
-            <div className="flex items-center flex-wrap gap-2">
-              {PORTAL_BRAND_COLORS.map((c) => (
-                <button key={c} type="button" onClick={() => set({ brand_color: c })}
-                  className={cn("h-7 w-7 rounded-full transition-transform", f.brand_color === c ? "ring-2 ring-offset-2 ring-foreground scale-110" : "hover:scale-105")}
-                  style={{ backgroundColor: c }} aria-label={`Cor ${c}`} />
-              ))}
+            <BrandColorPicker value={f.brand_color ?? null} onChange={(c) => set({ brand_color: c })} />
+            <div className="flex items-center flex-wrap gap-2 pt-1">
+              <span className="text-[10px] font-body uppercase tracking-wide text-muted-foreground">Outra</span>
               <input type="color" value={f.brand_color ?? "#EA4918"} onChange={(e) => set({ brand_color: e.target.value })}
                 className="h-7 w-9 rounded-lg border border-border bg-transparent p-0.5 cursor-pointer" aria-label="Cor personalizada" />
               {f.brand_color && <button type="button" onClick={() => set({ brand_color: null })} className="text-[11px] font-body text-muted-foreground hover:text-foreground">Limpar</button>}
