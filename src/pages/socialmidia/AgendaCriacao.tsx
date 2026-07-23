@@ -384,6 +384,7 @@ export default function AgendaCriacao() {
                       ))}
                       {dayPosts.map((p, idx) => {
                         const cli = extById.get(p.external_client_id);
+                        const posted = p.approval_status === "postado";
                         const st = POST_STATUS[p.approval_status ?? "em_producao"];
                         return (
                           <Draggable key={`post:${p.id}`} draggableId={`post:${p.id}`} index={caps.length + dayTasks.length + list.length + idx}>
@@ -391,13 +392,21 @@ export default function AgendaCriacao() {
                               <button ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
                                 type="button" title={p.title ?? undefined} onClick={() => openPost(p)}
                                 className={cn("rounded-lg border border-orange-500/40 bg-orange-500/10 hover:bg-orange-500/15 px-2 py-1.5 text-left transition-colors w-full",
+                                  posted && "opacity-60",
                                   dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
                                 <div className="flex items-center gap-1 text-orange-700 dark:text-orange-300">
                                   <Send className="h-3 w-3 shrink-0" />
-                                  <span className="text-[10px] font-body font-bold truncate">{cli?.name ?? "Post"}</span>
-                                  {st && <span className={cn("ml-auto shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}
+                                  <span className="text-[10px] font-body font-bold truncate flex-1">{cli?.name ?? "Post"}</span>
+                                  {st && <span className={cn("shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}
+                                  {/* Check: marca o post como POSTADO (vai pra coluna Postado do kanban). */}
+                                  <span role="button" tabIndex={0} aria-label={posted ? "Reabrir post" : "Marcar como postado"}
+                                    onClick={(e) => { e.stopPropagation(); updateExtPost.mutate({ id: p.id, patch: { approval_status: posted ? "aprovado" : "postado", approval_updated_at: new Date().toISOString() } }); }}
+                                    className={cn("grid h-4 w-4 shrink-0 place-items-center rounded border cursor-pointer transition-colors",
+                                      posted ? "bg-emerald-500 border-emerald-500 text-white" : "border-orange-500/50 hover:border-emerald-500 hover:text-emerald-600")}>
+                                    {posted && <Check className="h-3 w-3" strokeWidth={3} />}
+                                  </span>
                                 </div>
-                                <p className="text-[12px] font-body font-semibold text-foreground leading-tight truncate">{p.title || "Post"}</p>
+                                <p className={cn("text-[12px] font-body font-semibold leading-tight truncate", posted ? "line-through text-muted-foreground" : "text-foreground")}>{p.title || "Post"}</p>
                               </button>
                             )}
                           </Draggable>
