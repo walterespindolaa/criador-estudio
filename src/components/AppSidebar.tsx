@@ -48,61 +48,66 @@ import { useTier } from "@/hooks/useTier";
 import { FEATURES, tierAtLeast, type FeatureKey } from "@/lib/plans";
 import { AccountSwitcher } from "@/components/accounts/AccountSwitcher";
 
+// Mesma linha de raciocínio do menu mobile (BottomBar): CRIAR -> PLANEJAR ->
+// RESULTADOS -> MINHA MARCA -> MUNDO CRIA -> APRENDER -> MAIS. Ordem e grupos
+// batem com o celular pra a pessoa achar tudo no mesmo lugar nos dois lados.
 const groups = [
   {
-    label: "Operação",
+    label: "Criar",
     items: [
+      // Dashboard/Início continua sendo a porta de entrada, no topo do primeiro grupo.
       { title: "Dashboard", url: "/app", icon: LayoutDashboard, end: true },
       { title: "Ideias", url: "/app/ideias", icon: Lightbulb },
-      { title: "Aprovações", url: "/app/aprovacao", icon: ClipboardCheck },
-      { title: "Meu Feed", url: "/app/feed", icon: Grid3X3, feature: "feed" },
-      { title: "Tarefas", url: "/app/tarefas", icon: ListTodo },
+      { title: "Criando", url: "/app/criando", icon: Kanban },
+      { title: "Cria Stories", url: "/app/stories", icon: Clapperboard, feature: "stories" },
     ],
   },
   {
-    label: "Planejamento",
+    label: "Planejar",
     items: [
-      { title: "Criando", url: "/app/criando", icon: Kanban },
-      { title: "Tendências", url: "/app/tendencias", icon: TrendingUp, feature: "tendencias" },
-      { title: "Cria Stories", url: "/app/stories", icon: Clapperboard, feature: "stories" },
-      { title: "Cria Prompter", url: "/app/prompter", icon: Video, feature: "prompter" },
+      { title: "Meu Feed", url: "/app/feed", icon: Grid3X3, feature: "feed" },
+      { title: "Aprovações", url: "/app/aprovacao", icon: ClipboardCheck },
       { title: "Metas", url: "/app/metas", icon: Target },
+      { title: "Tarefas", url: "/app/tarefas", icon: ListTodo },
       { title: "Arquivos", url: "/app/arquivos", icon: FolderOpen },
     ],
   },
   {
-    label: "Estratégia",
-    items: [
-      { title: "Biblioteca", url: "/app/biblioteca", icon: BookOpen, feature: "biblioteca" },
-      { title: "Brandbook", url: "/app/brandbook", icon: BookMarked },
-      { title: "Link in Bio", url: "/app/linkinbio", icon: Link2 },
-      { title: "Media Kit", url: "/app/media-kit", icon: IdCard, feature: "media-kit" },
-    ],
-  },
-  {
-    label: "Monetização",
-    items: [
-      { title: "Collabs", url: "/app/collabs", icon: Handshake, feature: "collabs" },
-    ],
-  },
-  {
-    label: "Agência",
-    managerOnly: true,
-    items: [
-      { title: "Módulos", url: "/app/modulos", icon: Package },
-    ],
-  },
-  {
-    label: "Análise",
+    label: "Resultados",
     items: [
       { title: "Relatórios", url: "/app/relatorios", icon: BarChart3, feature: "relatorios" },
       { title: "Histórico", url: "/app/historico", icon: Archive, feature: "historico" },
     ],
   },
   {
-    label: "Comece por aqui",
+    label: "Minha marca",
+    items: [
+      { title: "Brandbook", url: "/app/brandbook", icon: BookMarked },
+      { title: "Link in Bio", url: "/app/linkinbio", icon: Link2 },
+      { title: "Media Kit", url: "/app/media-kit", icon: IdCard, feature: "media-kit" },
+      { title: "Biblioteca", url: "/app/biblioteca", icon: BookOpen, feature: "biblioteca" },
+    ],
+  },
+  {
+    label: "Mundo CRIA",
+    items: [
+      { title: "Tendências", url: "/app/tendencias", icon: TrendingUp, feature: "tendencias" },
+      { title: "Cria Prompter", url: "/app/prompter", icon: Video, feature: "prompter" },
+    ],
+  },
+  {
+    label: "Aprender",
     items: [
       { title: "Aprender", url: "/app/aprender", icon: GraduationCap },
+    ],
+  },
+  {
+    label: "Mais",
+    items: [
+      { title: "Collabs", url: "/app/collabs", icon: Handshake, feature: "collabs" },
+      // Módulos segue restrito a manager. A flag saiu do grupo e virou de item,
+      // filtrada na renderização, pra não vazar pra quem não é agência.
+      { title: "Módulos", url: "/app/modulos", icon: Package, managerOnly: true },
       { title: "Configurações", url: "/app/configuracoes", icon: Settings },
     ],
   },
@@ -184,7 +189,9 @@ export function AppSidebar() {
             )}
             <SidebarGroupContent>
               <SidebarMenu>
-                {group.items.map((item) => {
+                {group.items
+                  .filter((item) => !(item as { managerOnly?: boolean }).managerOnly || profile?.account_type === "manager")
+                  .map((item) => {
                   // O item TRAVADO continua clicável, de propósito. Antes ele jogava
                   // a pessoa em /app/assinar (uma tabela de preços genérica). Agora
                   // ele abre a própria tela, onde o UpgradeGate mostra o que ela

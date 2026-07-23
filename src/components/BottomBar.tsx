@@ -30,10 +30,6 @@ const MORE_SECTIONS: { title: string; items: MoreItem[] }[] = [
     { title: "Cria Plano", url: "/app/autopilot", icon: Wand2, hot: true, desc: "Cronograma do mês com IA" },
     { title: "Cria Stories", url: "/app/stories", icon: Clapperboard, desc: "Plano de stories da semana" },
   ]},
-  { title: "Mundo CRIA", items: [
-    { title: "Tendências", url: "/app/tendencias", icon: TrendingUp, hot: true, desc: "O que tá bombando no nicho" },
-    { title: "Cria Prompter", url: "/app/prompter", icon: Video, hot: true, desc: "Teleprompter com comando de voz" },
-  ]},
   { title: "Planejar", items: [
     { title: "Meu Feed", url: "/app/feed", icon: Grid3X3, desc: "Prévia do seu feed" },
     { title: "Aprovações", url: "/app/aprovacao", icon: ClipboardCheck, desc: "O que espera seu ok" },
@@ -41,16 +37,20 @@ const MORE_SECTIONS: { title: string; items: MoreItem[] }[] = [
     { title: "Tarefas", url: "/app/tarefas", icon: ListTodo },
     { title: "Arquivos", url: "/app/arquivos", icon: FolderOpen },
   ]},
+  { title: "Resultados", items: [
+    { title: "Insights", url: "/app/insights", icon: Instagram },
+    { title: "Relatórios", url: "/app/relatorios", icon: BarChart3 },
+    { title: "Histórico", url: "/app/historico", icon: Archive },
+  ]},
   { title: "Minha marca", items: [
     { title: "Brandbook", url: "/app/brandbook", icon: BookMarked, desc: "Identidade, tom e persona" },
     { title: "Link na bio", url: "/app/linkinbio", icon: Link2 },
     { title: "Media Kit", url: "/app/media-kit", icon: IdCard, hot: true, desc: "Seu portfólio pra marcas" },
     { title: "Biblioteca", url: "/app/biblioteca", icon: BookOpen },
   ]},
-  { title: "Resultados", items: [
-    { title: "Insights", url: "/app/insights", icon: Instagram },
-    { title: "Relatórios", url: "/app/relatorios", icon: BarChart3 },
-    { title: "Histórico", url: "/app/historico", icon: Archive },
+  { title: "Mundo CRIA", items: [
+    { title: "Tendências", url: "/app/tendencias", icon: TrendingUp, hot: true, desc: "O que tá bombando no nicho" },
+    { title: "Cria Prompter", url: "/app/prompter", icon: Video, hot: true, desc: "Teleprompter com comando de voz" },
   ]},
   { title: "Aprender", items: [
     { title: "Cursos", url: "/app/aprender", icon: GraduationCap },
