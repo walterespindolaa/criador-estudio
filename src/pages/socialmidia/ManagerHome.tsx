@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Camera, ArrowRight, Ticket, Settings, Users, Sparkles, Check, Gift, Wallet, Send, CalendarDays, Eye, EyeOff, Heart, Clock } from "lucide-react";
+import { Camera, ArrowRight, Ticket, Settings, Users, Sparkles, Check, Gift, Wallet, Send, CalendarDays, Eye, EyeOff, Heart, Clock, RotateCcw, ChevronRight } from "lucide-react";
 import { useOperationSignals, DOMAIN_HEX, type OpDomain, type OpUrgency, type HealthLevel } from "@/hooks/useOperationSignals";
 import { OrganicBlobs } from "@/components/brand/OrganicBlobs";
 import { CRIA_HEX, type CriaColor } from "@/lib/moduleTheme";
@@ -14,11 +14,12 @@ import { useModules } from "@/hooks/useModules";
 import { supabase } from "@/integrations/supabase/client";
 import { validateUpload } from "@/lib/upload-validation";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
-import { ApprovalTracker } from "@/components/accounts/ApprovalTracker";
 import { CopyButton } from "@/components/shared/CopyButton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useManagerOutlet } from "@/components/accounts/ManagerLayout";
 import { readLastClient } from "@/components/accounts/ClientSwitcher";
 import { useCrmClients } from "@/hooks/useCrm";
+import { useAllExternalPosts, useExternalClients } from "@/hooks/useCriaPost";
 
 // Card do painel. A cor é a do módulo pra onde ele leva: a pessoa aprende
 // a cor uma vez e depois navega no automático, sem ler.
@@ -86,15 +87,40 @@ export default function ManagerHome() {
   // Motor de sinais: alimenta o feed "Sua operação hoje" e a saúde dos clientes.
   const { signals, health, counts } = useOperationSignals();
 
-  // Módulos: só os ativos viram card. O resto vira upsell discreto — e o "pacote
-  // extra" some se o módulo-base já está ativo (era o "Cria Radar" duplicado).
-  const activeMods = modules.filter((m) => m.status === "active" || m.status === "past_due");
-  const upsellMods = modules.filter((m) =>
+  // Módulos: só os ativos viram card. Pacotes extras / add-ons (ex.: "Cria Radar
+  // · Pacote Extra", code hub_extra) NÃO são módulo próprio — é só compra de uso
+  // a mais. Filtramos de vez, então nunca viram card nem upsell duplicado.
+  const isAddon = (m: { code: string; name: string }) =>
+    m.code === "hub_extra" || m.code.endsWith("_extra") || /pacote\s+extra/i.test(m.name);
+  const catalogMods = modules.filter((m) => !isAddon(m));
+  const activeMods = catalogMods.filter((m) => m.status === "active" || m.status === "past_due");
+  const upsellMods = catalogMods.filter((m) =>
     m.status !== "active" && m.status !== "past_due" && !m.coming_soon &&
     !activeMods.some((a) => m.name.startsWith(a.name)),
   );
   // Clientes do CRM (todos, não só os que usam o Cria), pro grid da home.
   const clientesHome = crmClients.filter((c) => (c.status ?? "ativo") !== "inativo").slice(0, 6);
+  // Saúde por cliente (do motor de sinais): a bolinha + o texto de status entram
+  // dentro do card de cada cliente, sem faixa separada. Fail-safe: se não houver
+  // sinal, o cliente aparece sem status.
+  const healthByClient = new Map(health.map((h) => [h.clientId, h]));
+
+  // Aprovações recentes de TODOS os clientes do gestor (Cria Post por link), não
+  // só da conta que conectou o CRIA. Agrega os posts externos pendentes / em
+  // ajuste / aprovados, do mais recente pro mais antigo.
+  const { data: allExtPosts = [] } = useAllExternalPosts();
+  const { clients: extClients } = useExternalClients();
+  const extClientById = new Map(extClients.map((e) => [e.id, e]));
+  const APPROVAL_META: Record<string, { label: string; cls: string; icon: typeof Clock }> = {
+    pendente: { label: "Aguardando", cls: "bg-yellow-100 text-yellow-900 border border-yellow-300", icon: Clock },
+    ajuste_solicitado: { label: "Em ajuste", cls: "bg-orange-100 text-orange-800 border border-orange-200", icon: RotateCcw },
+    aprovado: { label: "Aprovado", cls: "bg-green-100 text-green-700 border border-green-200", icon: Check },
+  };
+  const recentApprovals = allExtPosts
+    .filter((p) => p.approval_status === "pendente" || p.approval_status === "ajuste_solicitado" || p.approval_status === "aprovado")
+    .sort((a, b) =>
+      new Date(b.approval_updated_at ?? b.created_at).getTime() - new Date(a.approval_updated_at ?? a.created_at).getTime())
+    .slice(0, 5);
 
   const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; e.target.value = "";
@@ -186,61 +212,7 @@ export default function ManagerHome() {
         </div>
       </section>
 
-      {/* ═══ SUA OPERAÇÃO HOJE ═══
-          Feed único e priorizado: junta conteúdo, financeiro, relacionamento e
-          prazo, ordenado por urgência. A cor fica só no ícone da categoria. */}
-      {signals.length > 0 && (
-        <section className="mb-8">
-          <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider">Sua operação hoje</h2>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-foreground text-background">{signals.length}</span>
-          </div>
-          <div className="rounded-2xl border border-border bg-card overflow-hidden">
-            {signals.slice(0, 8).map((s) => {
-              const Icon = DOMAIN_ICON[s.domain];
-              const urg = URG[s.urgency];
-              return (
-                <button key={s.id} type="button" onClick={() => navigate(s.to)}
-                  className="w-full flex items-center gap-3 px-4 py-3 border-b border-border last:border-b-0 text-left transition-colors hover:bg-muted/40">
-                  <span className="grid h-10 w-10 place-items-center rounded-xl text-white shrink-0" style={{ background: DOMAIN_HEX[s.domain] }}><Icon className="h-4 w-4" /></span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[14.5px] font-body font-bold text-foreground leading-tight">{s.title}</span>
-                    <span className="block text-[12.5px] font-body text-muted-foreground truncate mt-0.5">
-                      <span className="font-bold text-foreground">{s.clientName}</span> · {s.sub}
-                    </span>
-                  </span>
-                  <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full shrink-0 ${urg.cls}`}>{urg.label}</span>
-                  <span className="hidden sm:inline-flex items-center gap-1 text-[12px] font-bold text-foreground shrink-0">{s.actionLabel}<ArrowRight className="h-3.5 w-3.5" /></span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* ═══ SAÚDE DOS CLIENTES ═══ radar de retenção */}
-      {health.length > 0 && (
-        <section className="mb-8">
-          <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">Saúde dos clientes</h2>
-          <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-1 px-1">
-            {health.map((h) => (
-              <button key={h.clientId} type="button" onClick={() => navigate(`/socialmidia/clientes/${h.clientId}/visao-geral`)}
-                className="flex-none w-[190px] rounded-2xl border border-border bg-card p-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-md">
-                <div className="flex items-center gap-2">
-                  <span className="relative grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full text-white text-xs font-display font-bold" style={{ background: h.color || "#0F6E56" }}>
-                    {initial(h.name)}
-                    {h.logo && <img src={h.logo} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 h-full w-full object-cover" />}
-                  </span>
-                  <span className="text-[13.5px] font-display font-bold text-foreground truncate flex-1">{h.name}</span>
-                  <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: HEALTH_HEX[h.level] }} />
-                </div>
-                <p className="text-[11.5px] font-body text-muted-foreground mt-2 leading-snug line-clamp-2">{h.reason}</p>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
-
+      {/* ═══ SEUS MÓDULOS ═══ (1ª seção: quem só quer trabalhar entra direto) */}
       <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">Seus módulos</h2>
       <div data-tour="gh-modulos" className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
         {activeMods.map((m) => (
@@ -267,11 +239,94 @@ export default function ManagerHome() {
         </div>
       )}
 
+      {/* ═══ SEUS CLIENTES ═══ (2ª seção)
+          A saúde de cada cliente virou parte do card: bolinha colorida com tooltip
+          no hover (desktop) e o texto do status logo abaixo do nome (mobile, sem
+          hover). Não existe mais faixa "Saúde dos clientes" separada. */}
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider">Seus clientes</h2>
+        <button onClick={() => navigate("/socialmidia/clientes")} className="text-primary font-body font-bold text-xs flex items-center gap-1 hover:underline">Ver todos <ArrowRight className="h-3 w-3" /></button>
+      </div>
+      <TooltipProvider delayDuration={120}>
+        <div data-tour="gh-clientes" className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
+          {clientesHome.map((c) => {
+            const cor = (c as { color?: string | null }).color || "#0F6E56";
+            const h = healthByClient.get(c.id);
+            return (
+              <button key={c.id} type="button" onClick={() => navigate(`/socialmidia/clientes/${c.id}/visao-geral`)}
+                className="relative overflow-hidden text-left bg-card border border-border rounded-2xl p-4 pt-5 transition-all hover:-translate-y-0.5 hover:shadow-md">
+                <span aria-hidden className="absolute top-0 inset-x-0 h-1.5" style={{ background: cor }} />
+                <div className="flex items-center gap-2.5">
+                  <span className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full text-white text-sm font-display font-bold" style={{ background: cor }}>
+                    {initial(c.name)}
+                    {c.logo && <img src={c.logo} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 h-full w-full object-cover" />}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-display font-bold text-foreground truncate">{c.name || "Sem nome"}</span>
+                    {c.instagram && <span className="block text-[11px] font-body text-muted-foreground truncate">@{c.instagram.replace(/^@/, "")}</span>}
+                  </span>
+                  {/* Bolinha de saúde: tooltip no hover diz o que significa. */}
+                  {h && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="h-2.5 w-2.5 rounded-full shrink-0 mt-0.5 cursor-help" style={{ background: HEALTH_HEX[h.level] }} aria-label={h.reason} />
+                      </TooltipTrigger>
+                      <TooltipContent>{h.reason}</TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
+                {/* Texto do status: no mobile (sem hover) é onde a saúde aparece. */}
+                {h && <p className="text-[11px] font-body text-muted-foreground mt-2 leading-snug line-clamp-1">{h.reason}</p>}
+                <div className="flex gap-1.5 mt-2.5 flex-wrap">
+                  <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full ${c.cria_owner_id ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>{c.cria_owner_id ? "Usa o Cria" : "Aprova por link"}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </TooltipProvider>
+
+      {/* ═══ APROVAÇÕES RECENTES ═══ (3ª seção)
+          Agrega os posts de aprovação por link de TODOS os clientes do gestor
+          (Cria Post), não só da conta que conectou o CRIA. */}
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider">Aprovações recentes</h2>
         <button onClick={() => navigate("/socialmidia/aprovacoes")} className="text-primary font-body font-bold text-xs flex items-center gap-1 hover:underline">Ver todas <ArrowRight className="h-3 w-3" /></button>
       </div>
-      <div data-tour="gh-aprovacoes" className="mb-8"><ApprovalTracker hideHeader limit={5} /></div>
+      {recentApprovals.length > 0 ? (
+        <div data-tour="gh-aprovacoes" className="rounded-2xl border border-border bg-card overflow-hidden mb-8">
+          {recentApprovals.map((p) => {
+            const ext = extClientById.get(p.external_client_id);
+            const meta = APPROVAL_META[p.approval_status ?? "pendente"] ?? APPROVAL_META.pendente;
+            const MetaIcon = meta.icon;
+            const to = ext?.crm_client_id ? `/socialmidia/clientes/${ext.crm_client_id}/posts` : "/socialmidia/criapost";
+            return (
+              <button key={p.id} type="button" onClick={() => navigate(to)}
+                className="w-full text-left flex items-center gap-3 px-4 py-3 border-b border-border last:border-b-0 hover:bg-muted/40 transition-colors">
+                <div className="w-9 h-9 rounded-xl bg-muted shrink-0 overflow-hidden flex items-center justify-center">
+                  {ext?.logo_url ? <img src={ext.logo_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                    : <span className="text-sm font-display font-bold text-primary">{initial(ext?.name)}</span>}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-body font-medium text-foreground truncate">{p.title || "Sem título"}</p>
+                  <p className="text-[11px] text-muted-foreground font-body truncate">{ext?.name ?? "Cliente"}</p>
+                  {p.approval_status === "ajuste_solicitado" && p.last_comment && (
+                    <p className="text-[11px] text-orange-700 font-body truncate mt-0.5">"{p.last_comment}"</p>
+                  )}
+                </div>
+                <span className={`shrink-0 text-[11px] font-body font-semibold px-2 py-1 rounded-full inline-flex items-center gap-1 ${meta.cls}`}>
+                  <MetaIcon className="h-3 w-3" />{meta.label}
+                </span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <div data-tour="gh-aprovacoes" className="rounded-2xl border border-dashed border-border bg-card/60 px-4 py-6 text-center mb-8">
+          <p className="text-xs font-body text-muted-foreground">Nenhuma aprovação por aqui ainda. Mande um post pro cliente aprovar no Cria Post.</p>
+        </div>
+      )}
 
       {isPartner && partner?.coupon_code && (
         <>
@@ -299,35 +354,6 @@ export default function ManagerHome() {
           <ArrowRight className="h-4 w-4 text-primary shrink-0" />
         </button>
       )}
-
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider">Seus clientes</h2>
-        <button onClick={() => navigate("/socialmidia/clientes")} className="text-primary font-body font-bold text-xs flex items-center gap-1 hover:underline">Ver todos <ArrowRight className="h-3 w-3" /></button>
-      </div>
-      <div data-tour="gh-clientes" className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
-        {clientesHome.map((c) => {
-          const cor = (c as { color?: string | null }).color || "#0F6E56";
-          return (
-            <button key={c.id} type="button" onClick={() => navigate(`/socialmidia/clientes/${c.id}/visao-geral`)}
-              className="relative overflow-hidden text-left bg-card border border-border rounded-2xl p-4 pt-5 transition-all hover:-translate-y-0.5 hover:shadow-md">
-              <span aria-hidden className="absolute top-0 inset-x-0 h-1.5" style={{ background: cor }} />
-              <div className="flex items-center gap-2.5">
-                <span className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full text-white text-sm font-display font-bold" style={{ background: cor }}>
-                  {initial(c.name)}
-                  {c.logo && <img src={c.logo} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 h-full w-full object-cover" />}
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-sm font-display font-bold text-foreground truncate">{c.name || "Sem nome"}</span>
-                  {c.instagram && <span className="block text-[11px] font-body text-muted-foreground truncate">@{c.instagram.replace(/^@/, "")}</span>}
-                </span>
-              </div>
-              <div className="flex gap-1.5 mt-2.5 flex-wrap">
-                <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full ${c.cria_owner_id ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>{c.cria_owner_id ? "Usa o Cria" : "Aprova por link"}</span>
-              </div>
-            </button>
-          );
-        })}
-      </div>
 
       {!hasAgency && (
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-pink-400 text-white p-5 sm:p-6 mt-8">
@@ -374,6 +400,39 @@ export default function ManagerHome() {
             <Sparkles className="h-4 w-4" /> Conhecer o Plano de Agência
           </button>
         </div>
+      )}
+
+      {/* ═══ SUA OPERAÇÃO HOJE ═══ (última seção)
+          Feed de alertas priorizado (conteúdo, financeiro, relacionamento, prazo).
+          Vai pro fim: quem só quer postar não abre o dia com uma lista de atenções.
+          A cor fica só no ícone da categoria. */}
+      {signals.length > 0 && (
+        <section className="mt-8">
+          <div className="flex items-center gap-2 mb-3">
+            <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider">Sua operação hoje</h2>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-foreground text-background">{signals.length}</span>
+          </div>
+          <div className="rounded-2xl border border-border bg-card overflow-hidden">
+            {signals.slice(0, 8).map((s) => {
+              const Icon = DOMAIN_ICON[s.domain];
+              const urg = URG[s.urgency];
+              return (
+                <button key={s.id} type="button" onClick={() => navigate(s.to)}
+                  className="w-full flex items-center gap-3 px-4 py-3 border-b border-border last:border-b-0 text-left transition-colors hover:bg-muted/40">
+                  <span className="grid h-10 w-10 place-items-center rounded-xl text-white shrink-0" style={{ background: DOMAIN_HEX[s.domain] }}><Icon className="h-4 w-4" /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[14.5px] font-body font-bold text-foreground leading-tight">{s.title}</span>
+                    <span className="block text-[12.5px] font-body text-muted-foreground truncate mt-0.5">
+                      <span className="font-bold text-foreground">{s.clientName}</span> · {s.sub}
+                    </span>
+                  </span>
+                  <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full shrink-0 ${urg.cls}`}>{urg.label}</span>
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[12px] font-bold text-foreground shrink-0">{s.actionLabel}<ArrowRight className="h-3.5 w-3.5" /></span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
       )}
 
       {rawImageSrc && (

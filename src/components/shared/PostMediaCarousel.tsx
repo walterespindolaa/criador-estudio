@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ImageOff, ChevronLeft, ChevronRight, X, Play } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
-import { getDisplayImageUrl, getDriveImageFallbackUrl, getThumbnailUrl, getVideoEmbedUrl, isVideoMedia } from "@/lib/driveMedia";
+import { getDisplayImageUrl, getDriveImageFallbackUrl, getThumbnailUrl, getVideoEmbedUrl, getVideoFileUrl, getVideoKind, isVideoMedia } from "@/lib/driveMedia";
 import { ProgressiveImage } from "@/components/shared/ProgressiveImage";
 
 export type CarouselMedia = {
@@ -15,14 +15,23 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
   const thumb = getDisplayImageUrl(item);
   const [thumbOk, setThumbOk] = useState<boolean | null>(thumb ? null : true);
   const [bust, setBust] = useState(0);
+  // Player por tipo: Bunny/Drive são iframe (embedUrl); storage/device é arquivo (<video>).
+  const kind = getVideoKind(item);
   const embedUrl = getVideoEmbedUrl(item);
+  const fileUrl = getVideoFileUrl(item);
+  const canPlay = kind === "file" ? !!fileUrl : !!embedUrl;
 
   useEffect(() => {
     if (thumbOk === false) { const t = setTimeout(() => setBust((b) => b + 1), 5000); return () => clearTimeout(t); }
   }, [thumbOk, bust]);
 
-  if (playing && embedUrl)
-    return <iframe src={embedUrl} className="w-full h-full bg-black" allow="autoplay; fullscreen; picture-in-picture" title={item.file_name || "vídeo"} />;
+  // Só monta o player DEPOIS que o cliente toca no play (não pesa os slides parados).
+  if (playing) {
+    if (kind === "file" && fileUrl)
+      return <video src={fileUrl} controls playsInline autoPlay className="w-full h-full bg-black object-contain" />;
+    if (embedUrl)
+      return <iframe src={embedUrl} className="w-full h-full bg-black" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={item.file_name || "vídeo"} />;
+  }
 
   return (
     <div className="relative w-full h-full bg-black">
@@ -37,7 +46,8 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
             setThumbOk((p) => (p === true ? true : false));
           }} />
       )}
-      {thumbOk !== true && (
+      {/* Estado "processando" só quando ainda não dá pra tocar e o frame não veio. */}
+      {thumbOk !== true && !canPlay && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[#15131f] text-white">
           <Logo variant="dark" className="h-7 w-auto" />
           <div className="w-3/5 h-1.5 rounded-full bg-white/20 overflow-hidden">
@@ -46,8 +56,9 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
           <span className="text-xs text-white/70">Processando vídeo…</span>
         </div>
       )}
-      {thumbOk === true && (
-        <button type="button" onClick={() => setPlaying(true)} className="absolute inset-0 flex items-center justify-center">
+      {/* Play disponível assim que existe uma fonte tocável, mesmo se o frame demorar. */}
+      {canPlay && (
+        <button type="button" onClick={() => setPlaying(true)} aria-label="Reproduzir vídeo" className="absolute inset-0 flex items-center justify-center">
           <span className="w-14 h-14 rounded-full bg-black/55 flex items-center justify-center"><Play className="h-7 w-7 text-white ml-0.5" /></span>
         </button>
       )}

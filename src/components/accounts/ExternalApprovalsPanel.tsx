@@ -6,20 +6,27 @@ import { ExternalClientDialog } from "@/components/accounts/ExternalClientDialog
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Clock, RotateCcw, CheckCircle2, ChevronRight, ChevronsUpDown, Contact, Send } from "lucide-react";
+import { Clock, RotateCcw, CheckCircle2, ChevronRight, ChevronsUpDown, Contact, Send, Palette, Instagram } from "lucide-react";
 
 // Painel de aprovações por link (Cria Post): visão do fluxo por status, com filtro
 // por cliente. Não é mais uma lista de clientes: clicar em qualquer post abre o
 // hub do cliente em /socialmidia/clientes/:id/posts.
+// O board espelha o kanban de 5 status do cliente (Em produção -> Aguardando ->
+// Ajuste solicitado -> Aprovado -> Postado), agregando todos os clientes.
 
-type StatusKey = "pendente" | "ajuste_solicitado" | "aprovado";
+type StatusKey = "em_producao" | "pendente" | "ajuste_solicitado" | "aprovado" | "postado";
 
+// Mesmas cores/rótulos do kanban do cliente (POST_STATUS em CriaPostBoard.tsx).
 const SECTIONS: { key: StatusKey; label: string; cls: string; icon: typeof Clock }[] = [
+  { key: "em_producao", label: "Em produção", cls: "bg-violet-100 text-violet-700", icon: Palette },
   { key: "pendente", label: "Aguardando cliente", cls: "bg-amber-100 text-amber-700", icon: Clock },
-  { key: "ajuste_solicitado", label: "Em ajuste", cls: "bg-orange-100 text-orange-700", icon: RotateCcw },
-  { key: "aprovado", label: "Aprovados", cls: "bg-green-100 text-green-700", icon: CheckCircle2 },
+  { key: "ajuste_solicitado", label: "Ajuste solicitado", cls: "bg-orange-100 text-orange-700", icon: RotateCcw },
+  { key: "aprovado", label: "Aprovado", cls: "bg-green-100 text-green-700", icon: CheckCircle2 },
+  { key: "postado", label: "Postado", cls: "bg-slate-200 text-slate-600", icon: Instagram },
 ];
-const APPROVED_LIMIT = 10;
+// Colunas de histórico (aprovado/postado) podem crescer muito: limita a prévia.
+const HISTORY_LIMIT = 10;
+const HISTORY_KEYS: StatusKey[] = ["aprovado", "postado"];
 
 const initial = (n?: string | null) => (n ? n.trim().charAt(0).toUpperCase() : "?");
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -69,7 +76,8 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
       const st = p.approval_status ?? "pendente";
       if (st === "pendente") s.pendente += 1;
       else if (st === "ajuste_solicitado") s.ajuste += 1;
-      else s.aprovado += 1;
+      else if (st === "aprovado") s.aprovado += 1;
+      // em_producao e postado não entram nas contagens de "atenção" dos chips.
       m.set(c.id, s);
     });
     return Array.from(m.values()).sort((a, b) => (b.pendente + b.ajuste) - (a.pendente + a.ajuste));
@@ -137,7 +145,9 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
         <span className="flex-1 min-w-0">
           <span className="block text-sm font-body font-medium text-foreground truncate">{p.title}</span>
           <span className="block text-[11px] text-muted-foreground font-body truncate">
-            {c?.name ?? "Cliente"} · {cap(p.format)}{dt ? ` · ${dt}` : ""}
+            {c?.name ?? "Cliente"} · {cap(p.format)} · {dt
+              ? <span className="font-semibold text-foreground/80">{dt}</span>
+              : <span className="italic opacity-70">sem data</span>}
           </span>
           {p.approval_status === "ajuste_solicitado" && p.last_comment && p.last_comment_role === "cliente_externo" && (
             <span className="block text-[11px] text-orange-700 font-body truncate mt-0.5">"{p.last_comment}"</span>
@@ -320,13 +330,16 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
           ou seja, ele NÃO encolhe abaixo do min-content dos filhos. Um título
           longo de post empurrava a coluna inteira pra fora da tela, mesmo com
           o `truncate` no texto. É o bug do print. */}
-      <div className={sections.length > 1 ? "grid gap-3 lg:grid-cols-3 items-start min-w-0" : "space-y-2 min-w-0"}>
+      {/* 5 colunas (espelha o kanban do cliente). Scroll horizontal no mobile,
+          igual ao kanban do Cria Post: cada coluna encolhe até um mínimo. */}
+      <div className={sections.length > 1 ? "flex gap-3 overflow-x-auto pb-4 -mx-1 px-1 kanban-scroll items-start" : "space-y-2 min-w-0"}>
         {sections.map((s) => {
           const all = shown.filter((p) => (p.approval_status ?? "pendente") === s.key);
-          const list = s.key === "aprovado" ? all.slice(0, APPROVED_LIMIT) : all;
+          const limited = HISTORY_KEYS.includes(s.key);
+          const list = limited ? all.slice(0, HISTORY_LIMIT) : all;
           const Icon = s.icon;
           return (
-            <div key={s.key} className={sections.length > 1 ? "rounded-2xl bg-muted/30 p-2 min-w-0" : "min-w-0"}>
+            <div key={s.key} className={sections.length > 1 ? "w-[80vw] max-w-[300px] sm:w-72 shrink-0 rounded-2xl bg-muted/30 p-2" : "min-w-0"}>
               <div className="flex items-center justify-between px-2 py-2">
                 <span className={`inline-flex items-center gap-1 text-[10px] font-body font-bold px-2 py-0.5 rounded-full ${s.cls}`}><Icon className="h-3 w-3" /> {s.label}</span>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{all.length}</span>
@@ -334,7 +347,7 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
               <div className="space-y-2">
                 {list.map(card)}
                 {all.length === 0 && <p className="text-center py-8 text-muted-foreground/40 text-[11px] font-body">vazio</p>}
-                {all.length > list.length && <p className="text-center py-1 text-[11px] text-muted-foreground font-body">e mais {all.length - list.length} aprovados, veja no cliente</p>}
+                {all.length > list.length && <p className="text-center py-1 text-[11px] text-muted-foreground font-body">e mais {all.length - list.length}, veja no cliente</p>}
               </div>
             </div>
           );

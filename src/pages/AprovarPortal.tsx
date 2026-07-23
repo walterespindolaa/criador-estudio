@@ -114,7 +114,9 @@ function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
           <div className="flex items-center gap-4 px-3.5 pt-3 pb-1.5 text-foreground">
             <Heart className="h-6 w-6" /><MessageCircle className="h-6 w-6" /><Send className="h-6 w-6" /><Bookmark className="h-6 w-6 ml-auto" />
           </div>
-          {legenda && <p className="px-3.5 pb-4 text-[13.5px] leading-snug text-foreground whitespace-pre-wrap"><span className="font-bold mr-1.5">{handle}</span>{legenda}</p>}
+          {/* No mock: legenda cheia no mobile (empilhado); no desktop cai pra 2 linhas
+              porque o texto completo passa a viver na coluna lateral (menos altura). */}
+          {legenda && <p className="px-3.5 pb-4 text-[13.5px] leading-snug text-foreground whitespace-pre-wrap lg:line-clamp-2"><span className="font-bold mr-1.5">{handle}</span>{legenda}</p>}
         </>
       )}
     </article>
@@ -134,6 +136,8 @@ function PostApproval({ client, post, index, busy, onApproveFast, onAdjustFast, 
   const fullyApproved = post.approval_status === "aprovado";
   const vertical = postAspect(post.platform, post.format) === "9 / 16";
   const isStory = (post.format || "").toLowerCase() === "story";
+  // Mesma regra do CardIG: legenda cai no script quando o campo próprio vem vazio.
+  const legenda = post.caption || post.script || null;
 
   const openAdjust = () => { setAdjOpen(true); setComment(""); };
   const sendFast = () => { onAdjustFast(post.post_id, comment.trim()); setAdjOpen(false); setComment(""); };
@@ -163,7 +167,7 @@ function PostApproval({ client, post, index, busy, onApproveFast, onAdjustFast, 
           </div>
           <p className="text-xs text-muted-foreground font-body mb-4 capitalize">{post.format} · {post.platform}</p>
           {post.last_comment && post.last_comment_role === "cliente_externo" && (
-            <div className="text-xs font-body text-orange-700 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2.5 mb-4">Você pediu: "{post.last_comment}"</div>
+            <div className="text-xs font-body text-orange-700 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2.5 mb-4 whitespace-pre-wrap">Você pediu:{"\n"}{post.last_comment}</div>
           )}
           {fullyApproved ? (
             <div className="flex items-center gap-2 text-sm font-body font-bold text-green-700 bg-green-50 rounded-2xl px-4 py-3.5"><Check className="h-5 w-5" /> Aprovado, obrigada!</div>
@@ -207,8 +211,15 @@ function PostApproval({ client, post, index, busy, onApproveFast, onAdjustFast, 
           <CardIG client={client} post={post} />
         </div>
         <div className="min-w-0">
-          {/* A legenda já aparece no card do post; sem repetir aqui. */}
+          {/* No mobile a legenda cheia fica dentro do mock (empilhado); no desktop o
+              texto completo vem PRA CÁ, ao lado da mídia, pra encurtar o card. */}
           <div className="bg-card border border-border rounded-3xl p-4 sm:p-6 mt-3 shadow-[0_8px_30px_rgba(27,26,24,0.05)] lg:bg-transparent lg:border-0 lg:rounded-none lg:p-0 lg:mt-0 lg:shadow-none">
+            {legenda && !isStory && (
+              <div className="hidden lg:block mb-5">
+                <p className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground mb-1.5">Legenda</p>
+                <p className="text-[13.5px] leading-snug text-foreground whitespace-pre-wrap max-h-72 overflow-y-auto pr-1">{legenda}</p>
+              </div>
+            )}
             {panel}
           </div>
         </div>

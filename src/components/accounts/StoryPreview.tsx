@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Heart, Send, ImageOff, Play, X } from "lucide-react";
 import type { CarouselMedia } from "@/components/shared/PostMediaCarousel";
-import { getDisplayImageUrl, getDriveImageFallbackUrl, getThumbnailUrl, getVideoEmbedUrl, isVideoMedia } from "@/lib/driveMedia";
+import { getDisplayImageUrl, getDriveImageFallbackUrl, getThumbnailUrl, getVideoEmbedUrl, getVideoFileUrl, getVideoKind, isVideoMedia } from "@/lib/driveMedia";
 import { ProgressiveImage } from "@/components/shared/ProgressiveImage";
 
 /**
@@ -24,7 +24,11 @@ export function StoryPreview({ media, handle, avatarUrl, onRemove }: {
   const video = item ? isVideoMedia(item) : false;
   const src = item ? getDisplayImageUrl(item) : null;
   const thumb = item ? getThumbnailUrl(item) : null;
+  // Player por tipo: Bunny/Drive são iframe; storage/device é arquivo (<video>).
+  const kind = item && video ? getVideoKind(item) : null;
   const embedUrl = item && video ? getVideoEmbedUrl(item) : null;
+  const fileUrl = item && video ? getVideoFileUrl(item) : null;
+  const canPlay = video && (kind === "file" ? !!fileUrl : !!embedUrl);
 
   const onImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
@@ -37,8 +41,10 @@ export function StoryPreview({ media, handle, avatarUrl, onRemove }: {
     <div className="relative w-full overflow-hidden rounded-2xl bg-black select-none" style={{ aspectRatio: "9 / 16" }}>
       {/* Mídia cobrindo a tela toda */}
       {item ? (
-        playing && embedUrl ? (
-          <iframe src={embedUrl} className="w-full h-full bg-black" allow="autoplay; fullscreen; picture-in-picture" title={item.file_name || "vídeo"} />
+        playing && video && kind === "file" && fileUrl ? (
+          <video src={fileUrl} controls playsInline autoPlay className="w-full h-full bg-black object-cover" />
+        ) : playing && embedUrl ? (
+          <iframe src={embedUrl} className="w-full h-full bg-black" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={item.file_name || "vídeo"} />
         ) : src ? (
           <ProgressiveImage key={item.id ?? safeIdx} thumbSrc={thumb} fullSrc={src} alt={item.file_name || ""}
             className="w-full h-full object-cover" onFullError={onImgError} onThumbError={onImgError} />
@@ -80,7 +86,7 @@ export function StoryPreview({ media, handle, avatarUrl, onRemove }: {
       )}
 
       {/* Play pra vídeo */}
-      {video && !playing && embedUrl && (
+      {video && !playing && canPlay && (
         <button type="button" onClick={() => setPlaying(true)} aria-label="Reproduzir vídeo" className="absolute inset-0 z-[15] flex items-center justify-center">
           <span className="w-14 h-14 rounded-full bg-black/55 flex items-center justify-center"><Play className="h-7 w-7 text-white ml-0.5" /></span>
         </button>

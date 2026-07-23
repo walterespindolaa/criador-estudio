@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive } from "lucide-react";
+import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive, Download, Play, FileImage, Link2, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,8 +21,8 @@ import {
   useCaptures, useAddCapture, useUpdateCapture, useDeleteCapture, useCollaboratorNames, type Capture, type Creation,
 } from "@/hooks/useAgenda";
 import { useAllExternalPosts, useExternalClients, useMoveExternalPostDate, useUpdateExternalPost, type ExternalPostWithClient } from "@/hooks/useCriaPost";
-import { useCriaPostMedia } from "@/hooks/useCriaPostMedia";
-import { isDriveMedia, isDriveUrl } from "@/lib/driveMedia";
+import { useCriaPostMedia, type CriaMedia } from "@/hooks/useCriaPostMedia";
+import { isDriveMedia, isDriveUrl, isVideoMedia, getThumbnailUrl, getDriveImageFallbackUrl, downloadMediaFile, mediaDownloadName } from "@/lib/driveMedia";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 
 // Status dos posts na agenda (mesmas cores do kanban de 5 status).
@@ -919,6 +919,28 @@ async function copiarLegenda(texto: string) {
   }
 }
 
+// Miniatura de um anexo do post (read-only) pra grade "Mídia e anexos" do popup da agenda.
+// Drive: view_url é página, então usa o thumbnail exibível (com fallback pro lh3).
+// Vídeo: mostra o frame/ícone de play por cima.
+function AgendaMediaThumb({ m }: { m: CriaMedia }) {
+  const video = isVideoMedia(m);
+  const src = getThumbnailUrl(m, 480) || "";
+  const onImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    const fb = getDriveImageFallbackUrl(m, 800);
+    if (fb && !img.dataset.fb) { img.dataset.fb = "1"; img.src = fb; return; }
+    img.style.display = "none";
+  };
+  return (
+    <div className="relative w-full h-full bg-muted">
+      {src
+        ? <img src={src} alt="" draggable={false} loading="lazy" className="w-full h-full object-cover select-none" onError={onImgError} />
+        : <div className="w-full h-full flex items-center justify-center text-muted-foreground"><FileImage className="h-5 w-5" /></div>}
+      {video && <span className="absolute inset-0 flex items-center justify-center pointer-events-none"><Play className="h-6 w-6 text-white [filter:drop-shadow(0_1px_2px_rgba(0,0,0,.7))]" /></span>}
+    </div>
+  );
+}
+
 // Edição rápida do POST direto da agenda, sem navegar pro cliente. Cobre o essencial
 // (título, data, horário, status, legenda). Mídia/roteiro cheios ficam no botão do cliente.
 function PostEditDialog({ post, clientName, onClose, onSave, onOpenClient, saving }: {
@@ -939,13 +961,29 @@ function PostEditDialog({ post, clientName, onClose, onSave, onOpenClient, savin
   // Mídias do post só carregam quando o popup está aberto (postId null = query desabilitada).
   // Como só existe 1 PostEditDialog por vez, a query fica naturalmente escopada ao post aberto.
   const { list: media } = useCriaPostMedia(post?.id ?? null);
+  const attachments = media.data ?? [];
+  // Download por anexo (util compartilhado): storage baixa o blob, Drive vai pro link
+  // de download, vídeo abre o player em nova aba.
+  const [dlId, setDlId] = useState<string | null>(null);
+  const onDownloadOne = async (m: CriaMedia, index: number) => {
+    setDlId(m.id);
+    try {
+      const kind = await downloadMediaFile(m, mediaDownloadName(post?.title ?? undefined, index, m));
+      if (kind === "video") toast.info("Vídeo aberto em nova aba pra você salvar de lá.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Não consegui baixar.");
+    } finally {
+      setDlId(null);
+    }
+  };
   // Link do Drive pra atalho "Abrir no Drive": prioriza o campo Ideia/Referência quando
   // for link do Drive; senão pega a view_url do primeiro anexo do Drive do post.
   const driveUrl = (() => {
     if (isDriveUrl(post?.reference_url)) return post!.reference_url;
-    const att = (media.data ?? []).find((m) => isDriveMedia(m) && !!m.view_url);
+    const att = attachments.find((m) => isDriveMedia(m) && !!m.view_url);
     return att?.view_url ?? null;
   })();
+  const refUrl = post?.reference_url?.trim() || null;
   if (open && post && seeded !== post.id) {
     setSeeded(post.id);
     setTitle(post.title ?? "");
@@ -984,18 +1022,76 @@ function PostEditDialog({ post, clientName, onClose, onSave, onOpenClient, savin
             </div>
             <Textarea rows={4} value={caption} onChange={(e) => setCaption(e.target.value)} className="rounded-xl text-sm" />
           </div>
-          <div className="flex flex-col gap-2">
-            {/* Atalho direto pro Drive do post (referência ou anexo), sem entrar no cliente. */}
-            {driveUrl && (
+          {/* Mídia e anexos (read-only): VER e PEGAR a mídia aqui, igual ao Trello, sem
+              precisar abrir o cliente. Grade de miniaturas + baixar por anexo + Drive +
+              link de referência. Upload/reordenar seguem só no editor completo do cliente. */}
+          <div className="rounded-2xl border border-border bg-muted/30 p-3 space-y-2.5">
+            <div className="flex items-center gap-1.5">
+              <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
+              <p className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground">Mídia e anexos</p>
+            </div>
+
+            {attachments.length === 0
+              ? <p className="text-[12px] font-body text-muted-foreground">Sem mídia anexada.</p>
+              : (
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  {attachments.map((m, i) => {
+                    const drive = isDriveMedia(m);
+                    return (
+                      <div key={m.id} className="relative rounded-xl overflow-hidden border border-border bg-muted aspect-square">
+                        {/* Clicar na miniatura abre a imagem cheia / página do Drive em nova aba. */}
+                        <button type="button" onClick={() => { if (m.view_url) window.open(m.view_url, "_blank", "noopener,noreferrer"); }}
+                          className="absolute inset-0" aria-label="Abrir mídia">
+                          <AgendaMediaThumb m={m} />
+                        </button>
+                        {/* Barra de ações por anexo (alvos de toque >=36px). */}
+                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-end gap-1 bg-gradient-to-t from-black/70 to-transparent p-1">
+                          {drive && m.view_url && (
+                            <a href={m.view_url} target="_blank" rel="noopener noreferrer" title="Abrir no Drive"
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center justify-center h-9 w-9 rounded-lg bg-black/40 text-white hover:bg-black/60 transition-colors">
+                              <HardDrive className="h-4 w-4" />
+                            </a>
+                          )}
+                          <button type="button" onClick={(e) => { e.stopPropagation(); onDownloadOne(m, i); }} disabled={dlId === m.id} title="Baixar este anexo"
+                            className="inline-flex items-center justify-center h-9 w-9 rounded-lg bg-black/40 text-white hover:bg-black/60 disabled:opacity-50 transition-colors">
+                            {dlId === m.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+            {/* Link de referência / ideia (pode ser Drive ou qualquer link). */}
+            {refUrl && (
+              <a href={refUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 group pt-0.5">
+                <span className="shrink-0 grid h-9 w-9 place-items-center rounded-lg border border-border bg-card text-muted-foreground">
+                  {isDriveUrl(refUrl) ? <HardDrive className="h-4 w-4 text-primary" /> : <Link2 className="h-4 w-4" />}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[12px] font-body font-semibold text-primary group-hover:underline truncate">
+                    {isDriveUrl(refUrl) ? "Abrir referência no Drive" : "Abrir referência"}
+                  </span>
+                  <span className="block text-[10px] font-body text-muted-foreground truncate">{refUrl}</span>
+                </span>
+                <span className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border text-muted-foreground group-hover:text-primary transition-colors"><ExternalLink className="h-4 w-4" /></span>
+              </a>
+            )}
+
+            {/* Atalho direto pro Drive do post quando não há reference_url do Drive mas há anexo do Drive. */}
+            {driveUrl && !(refUrl && isDriveUrl(refUrl)) && (
               <button type="button" onClick={() => window.open(driveUrl, "_blank", "noopener,noreferrer")}
                 className="inline-flex items-center gap-1.5 self-start rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-body font-semibold text-foreground hover:border-primary/50 hover:bg-primary/[0.06] transition-colors">
                 <HardDrive className="h-3.5 w-3.5 text-primary" /> Abrir no Drive
               </button>
             )}
-            <button type="button" onClick={onOpenClient} className="inline-flex items-center gap-1 text-[11px] font-body text-muted-foreground hover:text-primary transition-colors">
-              <ExternalLink className="h-3 w-3" /> Abrir no cliente pra editar mídia e roteiro
-            </button>
           </div>
+
+          <button type="button" onClick={onOpenClient} className="inline-flex items-center gap-1 text-[11px] font-body text-muted-foreground hover:text-primary transition-colors">
+            <ExternalLink className="h-3 w-3" /> Abrir no cliente pra editar mídia e roteiro
+          </button>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>

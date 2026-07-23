@@ -7,7 +7,7 @@ import { PostMediaCarousel } from "@/components/shared/PostMediaCarousel";
 import { StoryPreview } from "@/components/accounts/StoryPreview";
 import { CriaPostPublishButton } from "@/components/accounts/CriaPostPublishButton";
 import { postAspect } from "@/lib/post-aspect";
-import { getDisplayImageUrl, getDriveImageFallbackUrl, getDriveFileId, isDriveMedia, isVideoMedia } from "@/lib/driveMedia";
+import { getDisplayImageUrl, getDriveImageFallbackUrl, isDriveMedia, isVideoMedia, downloadMediaFile, mediaDownloadName } from "@/lib/driveMedia";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ImagePlus, Video, FileImage, Link2, Loader2, Heart, MessageCircle, Send, Bookmark, GripVertical, X, Play, Download, ExternalLink, Paperclip } from "lucide-react";
@@ -41,18 +41,6 @@ function Thumb({ m }: { m: CriaMedia }) {
       {video && <span className="absolute inset-0 flex items-center justify-center pointer-events-none"><Play className="h-5 w-5 text-white [filter:drop-shadow(0_1px_2px_rgba(0,0,0,.7))]" /></span>}
     </div>
   );
-}
-
-// Nome de arquivo seguro pro download individual: <titulo>-<n>.<ext> sem acento/espaço.
-function baixarNomeArquivo(title: string | undefined, index: number, m: CriaMedia, mimeType?: string): string {
-  const base = (title || "post")
-    .normalize("NFD").replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "").toLowerCase().slice(0, 60) || "post";
-  // Extensão: tenta pelo nome do arquivo salvo, depois pelo mime, senão jpg.
-  const fromName = (m.file_name || "").match(/\.([a-z0-9]{2,5})$/i)?.[1];
-  const fromMime = (mimeType || m.file_type || "").split("/")[1]?.split(";")[0];
-  const ext = (fromName || fromMime || "jpg").toLowerCase().replace("jpeg", "jpg");
-  return `${base}-${index + 1}.${ext}`;
 }
 
 export function CriaPostMedia({ postId, platform, format, caption, handle, approved, title, referenceUrl }: {
@@ -130,42 +118,14 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
     } catch (err) { toast.error(err instanceof Error ? err.message : "Não consegui abrir o Drive"); }
   };
 
-  // Download INDIVIDUAL de uma mídia, na melhor qualidade disponível:
-  //  - Storage (device): baixa o arquivo como blob e força o download nomeado.
-  //  - Drive: manda pro link de download do Drive (uc?export=download).
-  //  - Vídeo (Bunny/Drive): não dá pra forçar o MP4, abre o player em nova aba.
-  // Reaproveita o mesmo padrão do zip (blob + createObjectURL + a.click()), por arquivo.
+  // Download INDIVIDUAL de uma mídia (util compartilhado em driveMedia.ts):
+  // Storage baixa o blob, Drive manda pro link de download, vídeo abre o player.
   const [dlId, setDlId] = useState<string | null>(null);
   const onDownloadOne = async (m: CriaMedia, index: number) => {
     setDlId(m.id);
     try {
-      if (isVideoMedia(m)) {
-        const embed = m.view_url;
-        if (!embed) throw new Error("Vídeo indisponível.");
-        window.open(embed, "_blank", "noopener");
-        toast.info("Vídeo aberto em nova aba pra você salvar de lá.");
-        return;
-      }
-      if (isDriveMedia(m)) {
-        const id = getDriveFileId(m);
-        if (!id) throw new Error("Link do Drive inválido.");
-        const a = document.createElement("a");
-        a.href = `https://drive.google.com/uc?export=download&id=${encodeURIComponent(id)}`;
-        a.target = "_blank"; a.rel = "noopener";
-        document.body.appendChild(a); a.click(); a.remove();
-        return;
-      }
-      // Imagem no Storage: baixa os bytes e força o download com nome coerente.
-      const url = m.view_url || m.thumbnail_url;
-      if (!url) throw new Error("Arquivo indisponível.");
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("Não consegui baixar o arquivo.");
-      const blob = await res.blob();
-      const obj = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = obj; a.download = baixarNomeArquivo(title, index, m, blob.type);
-      document.body.appendChild(a); a.click(); a.remove();
-      URL.revokeObjectURL(obj);
+      const kind = await downloadMediaFile(m, mediaDownloadName(title, index, m));
+      if (kind === "video") toast.info("Vídeo aberto em nova aba pra você salvar de lá.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Não consegui baixar.");
     } finally {

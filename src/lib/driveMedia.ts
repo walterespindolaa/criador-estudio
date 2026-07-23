@@ -9,6 +9,7 @@ export type MediaLike = {
   thumbnail_url?: string | null;
   download_url?: string | null;
   file_type?: string | null;
+  file_name?: string | null;
   bunny_video_id?: string | null;
 };
 
@@ -96,4 +97,72 @@ export function getVideoEmbedUrl(m: MediaLike): string | null {
     if (id) return `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`;
   }
   return m.view_url || null;
+}
+
+/**
+ * Tipo de player pra um vídeo:
+ *  - "bunny": embed do Bunny Stream (iframe.mediadelivery.net) → iframe.
+ *  - "drive": vídeo do Google Drive → iframe /preview.
+ *  - "file":  arquivo de vídeo no storage (device) → tag <video controls>.
+ * Devolve null quando a mídia não é vídeo.
+ */
+export function getVideoKind(m: MediaLike): "bunny" | "drive" | "file" | null {
+  if (!isVideoMedia(m)) return null;
+  if (!!m.bunny_video_id || m.provider === "bunny_stream" || /iframe\.mediadelivery\.net/i.test(m.view_url ?? "")) return "bunny";
+  if (isDriveVideo(m)) return "drive";
+  return "file";
+}
+
+/** src direto pra <video> (vídeo de storage/device): o próprio arquivo público. */
+export function getVideoFileUrl(m: MediaLike): string | null {
+  return m.view_url || m.download_url || null;
+}
+
+// Nome de arquivo seguro pro download individual: <titulo>-<n>.<ext> sem acento/espaço.
+// Extraído do CriaPostMedia pra ser reaproveitado no popup da agenda.
+export function mediaDownloadName(title: string | undefined, index: number, m: MediaLike, mimeType?: string): string {
+  const base = (title || "post")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "").toLowerCase().slice(0, 60) || "post";
+  // Extensão: tenta pelo nome do arquivo salvo, depois pelo mime, senão jpg.
+  const fromName = (m.file_name || "").match(/\.([a-z0-9]{2,5})$/i)?.[1];
+  const fromMime = (mimeType || m.file_type || "").split("/")[1]?.split(";")[0];
+  const ext = (fromName || fromMime || "jpg").toLowerCase().replace("jpeg", "jpg");
+  return `${base}-${index + 1}.${ext}`;
+}
+
+// Download INDIVIDUAL de uma mídia, na melhor qualidade disponível:
+//  - Storage (device): baixa o arquivo como blob e força o download nomeado.
+//  - Drive: manda pro link de download do Drive (uc?export=download).
+//  - Vídeo (Bunny/Drive): não dá pra forçar o MP4, abre o player em nova aba.
+// Devolve "video" quando só abriu o player (pra quem chama avisar por toast).
+// Extraído do CriaPostMedia pra ser reaproveitado no popup da agenda.
+export async function downloadMediaFile(m: MediaLike, fileName: string): Promise<"file" | "video"> {
+  if (isVideoMedia(m)) {
+    const embed = m.view_url;
+    if (!embed) throw new Error("Vídeo indisponível.");
+    window.open(embed, "_blank", "noopener");
+    return "video";
+  }
+  if (isDriveMedia(m)) {
+    const id = getDriveFileId(m);
+    if (!id) throw new Error("Link do Drive inválido.");
+    const a = document.createElement("a");
+    a.href = `https://drive.google.com/uc?export=download&id=${encodeURIComponent(id)}`;
+    a.target = "_blank"; a.rel = "noopener";
+    document.body.appendChild(a); a.click(); a.remove();
+    return "file";
+  }
+  // Imagem no Storage: baixa os bytes e força o download com nome coerente.
+  const url = m.view_url || m.thumbnail_url;
+  if (!url) throw new Error("Arquivo indisponível.");
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Não consegui baixar o arquivo.");
+  const blob = await res.blob();
+  const obj = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = obj; a.download = fileName;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(obj);
+  return "file";
 }
