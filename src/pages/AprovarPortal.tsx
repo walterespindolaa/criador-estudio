@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, RotateCcw, Loader2, ImageOff, Heart, MessageCircle, Send, Bookmark, Zap, ListChecks, ChevronDown, Clapperboard, CalendarDays, BarChart3, CheckSquare, AlertTriangle } from "lucide-react";
+import { Check, RotateCcw, Loader2, ImageOff, Heart, MessageCircle, Send, Bookmark, Zap, ListChecks, ChevronDown, Clapperboard, CalendarDays, BarChart3, CheckSquare, AlertTriangle, Package, Plus } from "lucide-react";
 import { hexToHsl } from "@/lib/applyTheme";
 import { PostMediaCarousel } from "@/components/shared/PostMediaCarousel";
 import { StoryPreview } from "@/components/accounts/StoryPreview";
@@ -478,6 +478,8 @@ export default function AprovarPortal() {
                     )}
                   </>
                 )}
+
+                <SolicitarMaterial token={token} />
               </>
             )}
           </motion.div>
@@ -489,5 +491,132 @@ export default function AprovarPortal() {
         </div>
       </main>
     </div>
+  );
+}
+
+// ── Seção "Solicitar material" (lado CLIENTE, sem login) ──────────────────
+// O cliente descreve o que precisa (título + tipo + descrição) e envia. A RPC
+// request_material_by_token grava no kanban do gestor em "Solicitado" com
+// origem = cliente e dispara a notificação. Abaixo, o cliente acompanha o
+// status só do que ELE pediu (list_materials_by_token).
+const MAT_KINDS: { key: string; label: string }[] = [
+  { key: "apresentacao", label: "Apresentação" },
+  { key: "flyer", label: "Flyer" },
+  { key: "arte_avulsa", label: "Arte avulsa" },
+  { key: "logo", label: "Logo" },
+  { key: "outro", label: "Outro" },
+];
+const MAT_STATUS: Record<string, { label: string; cls: string }> = {
+  solicitado: { label: "Recebido", cls: "bg-amber-100 text-amber-700" },
+  a_fazer: { label: "Na fila", cls: "bg-slate-100 text-slate-600" },
+  em_aprovacao: { label: "Em aprovação", cls: "bg-blue-100 text-blue-700" },
+  ajuste: { label: "Em ajuste", cls: "bg-orange-100 text-orange-700" },
+  finalizado: { label: "Pronto", cls: "bg-green-100 text-green-700" },
+};
+type MaterialRow = { id: string; title: string; description: string | null; kind: string; status: string; created_at: string };
+
+function SolicitarMaterial({ token }: { token: string | undefined }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [kind, setKind] = useState("arte_avulsa");
+  const [desc, setDesc] = useState("");
+
+  const listQ = useQuery({
+    queryKey: ["portal-materials", token], enabled: !!token,
+    queryFn: async () => {
+      const { data, error } = await sbRpc("list_materials_by_token", { _token: token });
+      if (error) throw error;
+      return (data as MaterialRow[]) ?? [];
+    },
+  });
+
+  const send = useMutation({
+    mutationFn: async () => {
+      const { error } = await sbRpc("request_material_by_token", {
+        _token: token, _title: title.trim(), _description: desc.trim(), _kind: kind,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Pedido enviado! Já avisamos quem cuida do seu conteúdo.");
+      setTitle(""); setDesc(""); setKind("arte_avulsa"); setOpen(false);
+      qc.invalidateQueries({ queryKey: ["portal-materials", token] });
+    },
+    onError: () => toast.error("Não foi possível enviar. Tente de novo."),
+  });
+
+  const pedidos = listQ.data ?? [];
+
+  return (
+    <section className="mt-8 lg:mt-10">
+      <div className="bg-white border border-border rounded-3xl overflow-hidden shadow-[0_8px_30px_rgba(27,26,24,0.05)]">
+        <div className="flex items-center gap-3 px-4 py-4 sm:px-6">
+          <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+            <Package className="h-5 w-5 text-primary" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-base font-display font-extrabold text-foreground leading-tight">Precisa de um material?</h3>
+            <p className="text-[13px] text-muted-foreground font-body">Apresentação, flyer, arte avulsa, logo… peça aqui.</p>
+          </div>
+          {!open && (
+            <Button onClick={() => setOpen(true)} className="shrink-0 rounded-2xl h-11">
+              <Plus className="h-4 w-4 mr-1.5" /> Solicitar
+            </Button>
+          )}
+        </div>
+
+        {open && (
+          <div className="px-4 pb-5 sm:px-6 space-y-3.5 border-t border-border pt-4">
+            <div>
+              <label className="text-xs font-body font-bold text-foreground">O que você precisa?</label>
+              <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Flyer de promoção de fim de ano"
+                className="mt-1.5 w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm font-body outline-none focus:ring-2 focus:ring-primary/30" />
+            </div>
+            <div>
+              <label className="text-xs font-body font-bold text-foreground">Tipo</label>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {MAT_KINDS.map((k) => (
+                  <button key={k.key} type="button" onClick={() => setKind(k.key)}
+                    className={`text-[13px] font-body font-semibold rounded-xl px-3 py-2 border transition-colors ${kind === k.key ? "bg-primary text-white border-primary" : "bg-white text-muted-foreground border-border"}`}>
+                    {k.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-body font-bold text-foreground">Detalhes (opcional)</label>
+              <Textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} placeholder="Cores, texto, referências, prazo…" className="mt-1.5 rounded-2xl" />
+            </div>
+            <div className="flex gap-2.5">
+              <Button className="flex-1 h-12 rounded-2xl" disabled={send.isPending || !title.trim()} onClick={() => send.mutate()}>
+                {send.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar pedido"}
+              </Button>
+              <Button variant="ghost" className="h-12 rounded-2xl" onClick={() => setOpen(false)} disabled={send.isPending}>Cancelar</Button>
+            </div>
+          </div>
+        )}
+
+        {pedidos.length > 0 && (
+          <div className="px-4 pb-5 sm:px-6 border-t border-border pt-4">
+            <p className="text-[12px] font-body font-bold text-muted-foreground uppercase tracking-wide mb-2.5">Seus pedidos</p>
+            <div className="space-y-2">
+              {pedidos.map((p) => {
+                const st = MAT_STATUS[p.status] ?? MAT_STATUS.solicitado;
+                return (
+                  <div key={p.id} className="flex items-center gap-3 rounded-2xl bg-muted/40 px-3.5 py-2.5">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13.5px] font-body font-semibold text-foreground truncate">{p.title}</p>
+                      <p className="text-[11px] text-muted-foreground font-body">{MAT_KINDS.find((k) => k.key === p.kind)?.label ?? "Material"}</p>
+                    </div>
+                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 ${st.cls}`}>{st.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

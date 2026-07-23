@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Bell, Trophy, Lightbulb, CheckCircle2, Flame, UserPlus, Clock, Trash2 } from "lucide-react";
+import { Bell, Trophy, Lightbulb, CheckCircle2, Flame, UserPlus, Clock, Trash2, Package } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { confirmar } from "@/components/shared/Confirm";
 const TYPE_ICONS: Record<string, { icon: typeof Bell; color: string }> = {
   lead: { icon: UserPlus, color: "text-green-600" },
   cria_post: { icon: CheckCircle2, color: "text-secondary" },
+  material: { icon: Package, color: "text-primary" },
   meta_batida: { icon: Trophy, color: "text-yellow-500" },
   ideia_criada: { icon: Lightbulb, color: "text-primary" },
   post_publicado: { icon: CheckCircle2, color: "text-secondary" },
@@ -26,6 +27,7 @@ const TYPE_ICONS: Record<string, { icon: typeof Bell; color: string }> = {
 const CATEGORY: Record<string, string> = {
   lead: "Leads",
   cria_post: "Cliente / Cria Post",
+  material: "Cliente / Cria Post",
   posts_pendentes: "Lembretes",
   lembrete_postar: "Lembretes",
   dica_dia: "Ganchos & dicas",

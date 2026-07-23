@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Link2, Loader2, Plus, Settings2, Trash2, Wallet, Send, Check, Pencil, LogIn, Home, Layers, CalendarDays, BarChart3, BookOpen, Lightbulb, Search, Compass, Instagram, ArrowRight, Lock, FolderOpen } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Link2, Loader2, Plus, Settings2, Trash2, Wallet, Send, Check, Pencil, LogIn, Home, Layers, CalendarDays, BarChart3, BookOpen, Lightbulb, Search, Compass, Instagram, ArrowRight, Lock, FolderOpen, Package } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useCrmClient, useUpdateCrmClient, useUploadCrmAsset } from "@/hooks/useCrm";
@@ -20,6 +20,7 @@ import { ClientePortalTab } from "@/components/accounts/ClientePortalTab";
 import { ModuleUpsell, ModuleUpsellDialog } from "@/components/accounts/ModuleUpsell";
 import { useHasModule } from "@/hooks/useModules";
 import { ClientDetail } from "@/components/accounts/CriaPostBoard";
+import { MateriaisBoard } from "@/components/accounts/MateriaisBoard";
 import { ExternalClientDialog } from "@/components/accounts/ExternalClientDialog";
 import { saveLastClient } from "@/components/accounts/ClientSwitcher";
 import { CriativoTab } from "@/components/hubcria/CriativoTab";
@@ -57,6 +58,7 @@ const TABS: TabDef[] = [
   { key: "cronograma", label: "Cronograma", modulo: "laranja", moduloNome: "Cria Post" },
   { key: "posts", label: "Posts", modulo: "laranja", moduloNome: "Cria Post" },
   { key: "relatorio", label: "Relatório", modulo: "laranja", moduloNome: "Cria Post" },
+  { key: "materiais", label: "Materiais", modulo: "laranja", moduloNome: "Cria Post" },
   { key: "instagram", label: "Instagram" },
   { key: "financeiro", label: "Financeiro", modulo: "azul", moduloNome: "Cria Caixa" },
   { key: "pesquisa", label: "Pesquisa", hub: true, modulo: "lilas", moduloNome: "Cria Radar" },
@@ -90,6 +92,7 @@ const SUB_META: Record<string, SubMeta> = {
   cronograma: { label: "Cronograma", desc: "O calendário do mês do cliente, com as datas e o link público.", icon: CalendarDays },
   relatorio: { label: "Relatório", desc: "O resultado white-label do mês pra enviar pro cliente.", icon: BarChart3 },
   portal: { label: "Portal", desc: "O que o cliente vê no link de aprovação. Personalize aqui.", icon: Link2 },
+  materiais: { label: "Materiais", desc: "Demandas de material fora dos posts. O cliente pede pelo portal, você gerencia no kanban.", icon: Package },
   brandbook: { label: "Brandbook", desc: "Paleta, tom de voz, personas e moodboard da marca.", icon: BookOpen },
   ideias: { label: "Ideias", desc: "O banco de ideias do cliente pra virar post.", icon: Lightbulb },
   pesquisa: { label: "Pesquisa", desc: "Concorrência e tendências do nicho.", icon: Search },
@@ -99,7 +102,7 @@ const SUB_META: Record<string, SubMeta> = {
 type Grp = { key: string; label: string; modulo?: CriaColor2; icon: LucideIcon; landing?: boolean; subs: string[] };
 const GROUPS: Grp[] = [
   { key: "visao-geral", label: "Visão geral", icon: Home, subs: [] },
-  { key: "cria-post", label: "Cria Post", modulo: "laranja", icon: Layers, landing: true, subs: ["posts", "cronograma", "relatorio", "portal"] },
+  { key: "cria-post", label: "Cria Post", modulo: "laranja", icon: Layers, landing: true, subs: ["posts", "cronograma", "relatorio", "materiais", "portal"] },
   { key: "cria-gestao", label: "Cria Gestão", modulo: "rosa", icon: BookOpen, subs: ["brandbook"] },
   { key: "cria-caixa", label: "Cria Caixa", modulo: "azul", icon: Wallet, subs: ["financeiro"] },
   { key: "cria-radar", label: "Cria Radar", modulo: "lilas", icon: Search, landing: true, subs: ["ideias", "pesquisa"] },
@@ -517,6 +520,9 @@ export default function ClienteHub() {
           </div>
         )
       )}
+
+      {/* MATERIAIS. Demandas fora do fluxo de posts. O cliente pede pelo portal. */}
+      {activeTab === "materiais" && <MateriaisBoard clientId={id!} clientName={client.name} />}
 
       {/* FINANCEIRO, exclusivo de quem assina o Cria Caixa. */}
       {activeTab === "financeiro" && (
