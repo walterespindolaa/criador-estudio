@@ -1,11 +1,12 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useT } from "@/lib/i18n";
 import {
   Instagram, Users, Eye, Zap, UserPlus, RefreshCw, Unplug, Link2, Bookmark, Heart, Play, Image as ImageIcon, Images, Sparkles, Info, TrendingUp, BarChart3, Search,
 } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -54,6 +55,32 @@ export default function Insights() {
   const [aiLoading, setAiLoading] = useState(false);
   // Quantos posts renderizar na lista (evita floodar a página com centenas de uma vez).
   const [postsToShow, setPostsToShow] = useState<number>(20);
+
+  // Retorno do OAuth do Instagram: a edge redireciona pra ca com ?ig=connected
+  // ou ?ig=error&m=<motivo>. Sem tratar isso, o usuario reconectava e "nada
+  // acontecia" (nem via o erro). Aqui: no sucesso, atualiza conexao + dispara um
+  // sync na hora; no erro, mostra o motivo real; e limpa a URL nos dois casos.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const qc = useQueryClient();
+  useEffect(() => {
+    const ig = searchParams.get("ig");
+    if (!ig) return;
+    if (ig === "connected") {
+      toast.success("Instagram conectado! Puxando seus dados...");
+      ["social-connection", "social-daily", "social-media-insights", "social-audience", "social-stories"]
+        .forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
+      supabase.functions.invoke("instagram-sync").then(() => {
+        ["social-connection", "social-daily", "social-media-insights", "social-audience", "social-stories"]
+          .forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
+      }).catch(() => { /* o sync tambem roda por cron; segue */ });
+    } else if (ig === "error") {
+      const motivo = searchParams.get("m");
+      toast.error(`Nao consegui conectar o Instagram${motivo ? `: ${motivo}` : ""}. Tente de novo.`);
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete("ig"); next.delete("m");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, qc, setSearchParams]);
 
   const genReading = async () => {
     if (aiLoading || media.length === 0) return;
