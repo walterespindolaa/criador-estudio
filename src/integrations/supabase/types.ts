@@ -3374,6 +3374,7 @@ export type Database = {
           created_at: string | null
           cta: string | null
           deleted_at: string | null
+          drive_folder_url: string | null
           external_client_id: string | null
           format: string
           google_event_id: string | null
@@ -3417,6 +3418,7 @@ export type Database = {
           created_at?: string | null
           cta?: string | null
           deleted_at?: string | null
+          drive_folder_url?: string | null
           external_client_id?: string | null
           format: string
           google_event_id?: string | null
@@ -3460,6 +3462,7 @@ export type Database = {
           created_at?: string | null
           cta?: string | null
           deleted_at?: string | null
+          drive_folder_url?: string | null
           external_client_id?: string | null
           format?: string
           google_event_id?: string | null
@@ -5081,6 +5084,7 @@ export type Database = {
           approval_status: string
           caption: string
           content_blocks: Json
+          drive_folder_url: string
           format: string
           hook: string
           last_comment: string
