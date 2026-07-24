@@ -143,13 +143,32 @@ export function mediaDownloadName(title: string | undefined, index: number, m: M
   return `${base}-${index + 1}.${ext}`;
 }
 
+// Abre uma URL numa nova aba/força download nativo sem passar pelo fetch-blob.
+// É o fallback do mobile: no Safari/webview o fetch de uma imagem de outra origem
+// falha ("Load failed"), então a gente entrega a imagem pra pessoa segurar e salvar.
+function openForSave(url: string, fileName: string) {
+  try {
+    const a = document.createElement("a");
+    a.href = url;
+    // download só é respeitado em same-origin; cross-origin o navegador ignora e
+    // abre numa aba (target _blank), que é justamente o que queremos no mobile.
+    a.download = fileName;
+    a.target = "_blank"; a.rel = "noopener";
+    document.body.appendChild(a); a.click(); a.remove();
+  } catch {
+    window.open(url, "_blank", "noopener");
+  }
+}
+
 // Download INDIVIDUAL de uma mídia, na melhor qualidade disponível:
-//  - Storage (device): baixa o arquivo como blob e força o download nomeado.
+//  - Storage (device): tenta baixar o arquivo como blob e força o download nomeado.
+//    Se o fetch-blob falhar (mobile: "Load failed"), abre a imagem pra segurar e salvar.
 //  - Drive: manda pro link de download do Drive (uc?export=download).
 //  - Vídeo (Bunny/Drive): não dá pra forçar o MP4, abre o player em nova aba.
-// Devolve "video" quando só abriu o player (pra quem chama avisar por toast).
+// Devolve "video" quando só abriu o player e "opened" quando caiu no fallback do
+// mobile (abriu a imagem pra salvar), pra quem chama avisar por toast.
 // Extraído do CriaPostMedia pra ser reaproveitado no popup da agenda.
-export async function downloadMediaFile(m: MediaLike, fileName: string): Promise<"file" | "video"> {
+export async function downloadMediaFile(m: MediaLike, fileName: string): Promise<"file" | "video" | "opened"> {
   if (isVideoMedia(m)) {
     const embed = m.view_url;
     if (!embed) throw new Error("Vídeo indisponível.");
@@ -168,13 +187,20 @@ export async function downloadMediaFile(m: MediaLike, fileName: string): Promise
   // Imagem no Storage: baixa os bytes e força o download com nome coerente.
   const url = m.view_url || m.thumbnail_url;
   if (!url) throw new Error("Arquivo indisponível.");
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("Não consegui baixar o arquivo.");
-  const blob = await res.blob();
-  const obj = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = obj; a.download = fileName;
-  document.body.appendChild(a); a.click(); a.remove();
-  URL.revokeObjectURL(obj);
-  return "file";
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Não consegui baixar o arquivo.");
+    const blob = await res.blob();
+    const obj = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = obj; a.download = fileName;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(obj);
+    return "file";
+  } catch {
+    // Mobile (Safari/webview): o fetch-blob de uma imagem de outra origem quebra com
+    // "Load failed". Em vez de mostrar o erro, abre a imagem pra pessoa salvar de lá.
+    openForSave(url, fileName);
+    return "opened";
+  }
 }

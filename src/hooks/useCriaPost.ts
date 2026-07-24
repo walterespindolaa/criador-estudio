@@ -365,6 +365,40 @@ export function useAllExternalPosts() {
   });
 }
 
+// Capa (primeira mídia) de VÁRIOS posts numa ÚNICA query, pra mostrar no card da
+// agenda estilo Trello sem cair em N+1 (uma query por card seria pesado na grade).
+// Recebe os ids dos posts VISÍVEIS e devolve um mapa post_id -> primeira mídia
+// (menor position). Quem consome monta a URL exibível com getThumbnailUrl.
+export type PostCoverMedia = {
+  post_id: string; provider: string | null; external_file_id: string | null;
+  file_type: string | null; file_name: string | null;
+  view_url: string | null; thumbnail_url: string | null; bunny_video_id: string | null;
+};
+export function useExternalPostCovers(postIds: string[]) {
+  const { agencyOwnerId } = useActiveAccount();
+  // Chave estável: ids ordenados (a ordem de entrada varia por dia/render).
+  const idsKey = [...postIds].sort();
+  return useQuery({
+    queryKey: ["external-post-covers", agencyOwnerId, idsKey],
+    enabled: !!agencyOwnerId && idsKey.length > 0,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("external_media_refs")
+        .select("post_id, provider, external_file_id, file_type, file_name, view_url, thumbnail_url, bunny_video_id, position")
+        .in("post_id", idsKey)
+        .order("position", { ascending: true, nullsFirst: true })
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      const map = new Map<string, PostCoverMedia>();
+      for (const row of (data as (PostCoverMedia & { position: number | null })[]) ?? []) {
+        // Como vem ordenado por position asc, a PRIMEIRA linha de cada post é a capa.
+        if (!map.has(row.post_id)) map.set(row.post_id, row);
+      }
+      return map;
+    },
+  });
+}
+
 // Edita campos de um post (de qualquer cliente) direto da Agenda, sem navegar.
 export function useUpdateExternalPost() {
   const { agencyOwnerId } = useActiveAccount();

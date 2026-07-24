@@ -126,6 +126,7 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
     try {
       const kind = await downloadMediaFile(m, mediaDownloadName(title, index, m));
       if (kind === "video") toast.info("Vídeo aberto em nova aba pra você salvar de lá.");
+      else if (kind === "opened") toast.info("Abri a imagem, é só segurar pra salvar.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Não consegui baixar.");
     } finally {

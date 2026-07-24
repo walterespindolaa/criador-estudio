@@ -1,10 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
+import { DragDropContext, Droppable, Draggable, type DropResult, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive, Download, Play, FileImage, Link2, Paperclip } from "lucide-react";
+import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive, Download, Play, FileImage, Link2, Paperclip, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,7 +20,7 @@ import {
   useCreations, useAddCreation, useUpdateCreation, useDeleteCreation,
   useCaptures, useAddCapture, useUpdateCapture, useDeleteCapture, useCollaboratorNames, type Capture, type Creation,
 } from "@/hooks/useAgenda";
-import { useAllExternalPosts, useExternalClients, useMoveExternalPostDate, useUpdateExternalPost, type ExternalPostWithClient } from "@/hooks/useCriaPost";
+import { useAllExternalPosts, useExternalClients, useMoveExternalPostDate, useUpdateExternalPost, useExternalPostCovers, type ExternalPostWithClient, type PostCoverMedia } from "@/hooks/useCriaPost";
 import { useCriaPostMedia, type CriaMedia } from "@/hooks/useCriaPostMedia";
 import { isDriveMedia, isDriveUrl, isVideoMedia, getThumbnailUrl, getDriveImageFallbackUrl, downloadMediaFile, mediaDownloadName } from "@/lib/driveMedia";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
@@ -76,6 +76,44 @@ function buildDayItems(caps: Capture[], tasks: CrmTask[], cris: Creation[], post
   // "" (sem hora) ordena antes de qualquer "HH:MM"; timed em ordem crescente.
   items.sort((a, b) => (a.time ?? "").localeCompare(b.time ?? ""));
   return items;
+}
+
+// Punho de arrastar (drag handle) visível no card. No mobile o @hello-pangea/dnd
+// não conseguia iniciar o drag pelo card inteiro (o toque brigava com o scroll
+// horizontal e com o clique que abre o popup). Isolando o gesto num punho, a pessoa
+// arrasta pelo grip e o card fixa no dia destino; o resto do card segue clicável.
+// touch-none (touch-action: none) faz o toque no punho virar drag em vez de scroll.
+type HandleProps = DraggableProvidedDragHandleProps | undefined;
+function DragHandle({ handleProps, className }: { handleProps: HandleProps; className?: string }) {
+  return (
+    <span {...handleProps} onClick={(e) => e.stopPropagation()}
+      aria-label="Arrastar para outro dia"
+      className={cn("shrink-0 grid place-items-center h-6 w-5 md:h-5 md:w-4 -ml-0.5 rounded touch-none cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-foreground transition-colors", className)}>
+      <GripVertical className="h-3.5 w-3.5" />
+    </span>
+  );
+}
+
+// Capa (primeira mídia) no topo do card do post, estilo Trello. Miniatura leve com
+// fallback pro lh3 do Drive; frame + play pra vídeo. Full-bleed (bordas do card).
+function PostCardCover({ m }: { m: PostCoverMedia }) {
+  const video = isVideoMedia(m);
+  const src = getThumbnailUrl(m, 640) || "";
+  const onImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    const fb = getDriveImageFallbackUrl(m, 800);
+    if (fb && !img.dataset.fb) { img.dataset.fb = "1"; img.src = fb; return; }
+    // Sem thumbnail exibível: esconde a img e deixa o card só com texto.
+    const wrap = img.closest("[data-cover]") as HTMLElement | null;
+    if (wrap) wrap.style.display = "none";
+  };
+  if (!src) return null;
+  return (
+    <div data-cover className="relative -mx-2 -mt-1.5 mb-1.5 h-24 md:h-20 overflow-hidden rounded-t-lg bg-muted">
+      <img src={src} alt="" draggable={false} loading="lazy" className="w-full h-full object-cover select-none" onError={onImgError} />
+      {video && <span className="absolute inset-0 flex items-center justify-center pointer-events-none"><Play className="h-6 w-6 text-white [filter:drop-shadow(0_1px_2px_rgba(0,0,0,.7))]" /></span>}
+    </div>
+  );
 }
 
 export default function AgendaCriacao() {
@@ -212,6 +250,31 @@ export default function AgendaCriacao() {
     return m;
   }, [allPosts, from, to, filters.post, postClients]);
 
+  // Ids dos posts VISÍVEIS no período (achatado). Alimenta a capa em UMA query só.
+  const visiblePostIds = useMemo(() => {
+    const ids: string[] = [];
+    for (const arr of postsByDay.values()) for (const p of arr) ids.push(p.id);
+    return ids;
+  }, [postsByDay]);
+  const { data: coversMap } = useExternalPostCovers(visiblePostIds);
+
+  // Rolagem horizontal da semana no mobile: abre ancorado na coluna de HOJE.
+  const weekScrollRef = useRef<HTMLDivElement | null>(null);
+  const todayColRef = useRef<HTMLDivElement | null>(null);
+  const todayVisible = days.some((d) => ymd(d) === today);
+  useEffect(() => {
+    if (view !== "semana") return;
+    const cont = weekScrollRef.current;
+    if (!cont) return;
+    // No desktop a grade não rola (lg:grid), então mexer no scrollLeft é inócuo lá.
+    const col = todayColRef.current;
+    // Só ancora em HOJE quando a semana exibida realmente contém hoje (senão o ref
+    // pode estar defasado); do contrário, volta pro começo da semana.
+    if (col && todayVisible) cont.scrollTo({ left: Math.max(0, col.offsetLeft - cont.offsetLeft - 8), behavior: "auto" });
+    else cont.scrollTo({ left: 0, behavior: "auto" });
+    // Reexecuta ao trocar de semana/visão (ex.: botão "Hoje").
+  }, [view, weekStart, todayVisible]);
+
   // Captações da semana exibida, indexadas por dia (YYYY-MM-DD), para aparecerem na grade.
   const capturesByDay = useMemo(() => {
     const m = new Map<string, Capture[]>();
@@ -327,10 +390,12 @@ export default function AgendaCriacao() {
               {WD.map((w) => <p key={w} className="text-[10px] uppercase tracking-wider font-body font-semibold text-muted-foreground text-center">{w}</p>)}
             </div>
           )}
-          <div className={cn(
+          <div ref={weekScrollRef} className={cn(
             view === "mes"
               ? "grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2"
-              : "flex gap-2 overflow-x-auto pb-2 lg:grid lg:grid-cols-7 lg:overflow-visible lg:pb-0",
+              // Mobile: colunas espaçosas (~85vw, uma por vez com peek da próxima) e
+              // scroll-snap suave; no lg vira grade de 7 sem scroll.
+              : "flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth lg:grid lg:grid-cols-7 lg:gap-2 lg:overflow-visible lg:pb-0",
           )}>
             {days.map((d, i) => {
               const iso = ymd(d); const list = byDay.get(iso) ?? []; const caps = capturesByDay.get(iso) ?? []; const dayTasks = tasksByDay.get(iso) ?? []; const dayPosts = postsByDay.get(iso) ?? []; const totalDay = caps.length + dayTasks.length + list.length + dayPosts.length; const isToday = iso === today;
@@ -341,9 +406,9 @@ export default function AgendaCriacao() {
               return (
                 <Droppable droppableId={iso} key={iso}>
                   {(dropProvided, dropSnapshot) => (
-                    <div ref={dropProvided.innerRef} {...dropProvided.droppableProps}
+                    <div ref={(el) => { dropProvided.innerRef(el); if (view === "semana" && isToday) todayColRef.current = el; }} {...dropProvided.droppableProps}
                       className={cn("rounded-xl border p-2.5 flex flex-col gap-1.5 transition-shadow",
-                        view === "mes" ? "min-h-[110px]" : "w-[170px] shrink-0 lg:w-auto min-h-[220px] lg:min-h-[280px]",
+                        view === "mes" ? "min-h-[110px]" : "w-[85vw] max-w-[380px] shrink-0 snap-start lg:w-auto lg:max-w-none lg:snap-align-none min-h-[240px] lg:min-h-[280px]",
                         isToday ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-background",
                         outOfMonth && "opacity-45",
                         dropSnapshot.isDraggingOver && "ring-2 ring-primary/40 border-primary/60 bg-primary/5")}>
@@ -365,13 +430,14 @@ export default function AgendaCriacao() {
                           return (
                             <Draggable key={`cap:${c.id}`} draggableId={`cap:${c.id}`} index={idx}>
                               {(dragProvided, dragSnapshot) => (
-                                <button ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
+                                <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
                                   type="button" title={c.location ?? undefined}
                                   onClick={() => setEditCap(c)}
                                   className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors",
                                     c.status === "concluida" ? "border-teal-500/25 bg-teal-500/5 opacity-70" : "border-teal-500/40 bg-teal-500/10 hover:bg-teal-500/15",
                                     dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
                                   <div className="flex items-center gap-1 text-teal-700 dark:text-teal-300">
+                                    <DragHandle handleProps={dragProvided.dragHandleProps ?? undefined} className="text-teal-700/40 dark:text-teal-300/40" />
                                     <Video className="h-3 w-3 shrink-0" />
                                     <span className="text-[10px] font-body font-bold">{c.capture_time ? c.capture_time.slice(0, 5) : "Captação"}</span>
                                   </div>
@@ -393,7 +459,7 @@ export default function AgendaCriacao() {
                               {(dragProvided, dragSnapshot) => {
                                 const done = t.status === "concluida";
                                 return (
-                                  <button ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
+                                  <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
                                     type="button" title={t.description ?? undefined}
                                     onClick={() => setEditTask(t)}
                                     className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors",
@@ -403,6 +469,7 @@ export default function AgendaCriacao() {
                                     // Cliente: acento na cor do cliente (borda esquerda + fundo bem suave). Texto fica no foreground pra não perder contraste.
                                     style={!isLead ? { borderColor: `${clientColor}59`, borderLeftColor: clientColor, borderLeftWidth: 3, background: `${clientColor}12` } : undefined}>
                                     <div className={cn("flex items-center gap-1", isLead && "text-sky-700 dark:text-sky-300")}>
+                                      <DragHandle handleProps={dragProvided.dragHandleProps ?? undefined} />
                                       {isLead
                                         ? <ListChecks className="h-3 w-3 shrink-0" />
                                         : <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: clientColor }} />}
@@ -430,13 +497,14 @@ export default function AgendaCriacao() {
                           return (
                             <Draggable key={`cria:${c.id}`} draggableId={`cria:${c.id}`} index={idx}>
                               {(dragProvided, dragSnapshot) => (
-                                <div ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
+                                <div ref={dragProvided.innerRef} {...dragProvided.draggableProps}
                                   role="button" tabIndex={0}
                                   onClick={() => setEditCreation(c)}
                                   onKeyDown={(e) => { if (e.key === "Enter") setEditCreation(c); }}
                                   className={cn("group rounded-lg border border-border bg-card px-2 py-1.5 cursor-pointer hover:bg-muted/40 transition-colors",
                                     dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
                                   <div className="flex items-start gap-1">
+                                    <DragHandle handleProps={dragProvided.dragHandleProps ?? undefined} className="mt-px" />
                                     <p className="text-[12px] font-body font-semibold text-foreground leading-tight flex-1 min-w-0 truncate">{nameOf(c.crm_client_id, c.client_name)}</p>
                                     <button onClick={(e) => { e.stopPropagation(); delCreation.mutate(c.id); }} className="text-muted-foreground/50 hover:text-destructive shrink-0" aria-label="Remover"><X className="h-3 w-3" /></button>
                                   </div>
@@ -453,13 +521,18 @@ export default function AgendaCriacao() {
                         const st = POST_STATUS[p.approval_status ?? "em_producao"];
                         return (
                           <Draggable key={`post:${p.id}`} draggableId={`post:${p.id}`} index={idx}>
-                            {(dragProvided, dragSnapshot) => (
-                              <button ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
+                            {(dragProvided, dragSnapshot) => {
+                              const cover = coversMap?.get(p.id);
+                              return (
+                              <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
                                 type="button" title={p.title ?? undefined} onClick={() => openPost(p)}
-                                className={cn("rounded-lg border border-orange-500/40 bg-orange-500/10 hover:bg-orange-500/15 px-2 py-1.5 text-left transition-colors w-full",
+                                className={cn("rounded-lg border border-orange-500/40 bg-orange-500/10 hover:bg-orange-500/15 px-2 py-1.5 text-left transition-colors w-full overflow-hidden",
                                   posted && "opacity-60",
                                   dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
+                                {/* Capa estilo Trello: primeira mídia do post no topo, full-bleed. */}
+                                {cover && <PostCardCover m={cover} />}
                                 <div className="flex items-center gap-1 text-orange-700 dark:text-orange-300">
+                                  <DragHandle handleProps={dragProvided.dragHandleProps ?? undefined} className="text-orange-700/40 dark:text-orange-300/40" />
                                   <Send className="h-3 w-3 shrink-0" />
                                   <span className="text-[10px] font-body font-bold truncate flex-1">{item.time && <span className="tabular-nums">{item.time} · </span>}{cli?.name ?? "Post"}</span>
                                   {/* Indicador discreto: post tem link do Drive no campo Ideia/Referência. */}
@@ -475,7 +548,8 @@ export default function AgendaCriacao() {
                                 </div>
                                 <p className={cn("text-[12px] font-body font-semibold leading-tight truncate", posted ? "line-through text-muted-foreground" : "text-foreground")}>{p.title || "Post"}</p>
                               </button>
-                            )}
+                              );
+                            }}
                           </Draggable>
                         );
                       })}
@@ -970,6 +1044,7 @@ function PostEditDialog({ post, clientName, onClose, onSave, onOpenClient, savin
     try {
       const kind = await downloadMediaFile(m, mediaDownloadName(post?.title ?? undefined, index, m));
       if (kind === "video") toast.info("Vídeo aberto em nova aba pra você salvar de lá.");
+      else if (kind === "opened") toast.info("Abri a imagem, é só segurar pra salvar.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Não consegui baixar.");
     } finally {
