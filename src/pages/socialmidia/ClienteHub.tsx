@@ -94,7 +94,6 @@ const SUB_META: Record<string, SubMeta> = {
   relatorio: { label: "Relatório", desc: "O resultado white-label do mês pra enviar pro cliente.", icon: BarChart3 },
   portal: { label: "Portal", desc: "O que o cliente vê no link de aprovação. Personalize aqui.", icon: Link2 },
   materiais: { label: "Materiais", desc: "Demandas de material fora dos posts. O cliente pede pelo portal, você gerencia no kanban.", icon: Package },
-  drive: { label: "Drive", desc: "As pastas e arquivos que estão dentro do link do Drive do cliente.", icon: FolderOpen },
   brandbook: { label: "Brandbook", desc: "Paleta, tom de voz, personas e moodboard da marca.", icon: BookOpen },
   ideias: { label: "Ideias", desc: "O banco de ideias do cliente pra virar post.", icon: Lightbulb },
   pesquisa: { label: "Pesquisa", desc: "Concorrência e tendências do nicho.", icon: Search },
@@ -104,11 +103,15 @@ const SUB_META: Record<string, SubMeta> = {
 type Grp = { key: string; label: string; modulo?: CriaColor2; icon: LucideIcon; landing?: boolean; subs: string[] };
 const GROUPS: Grp[] = [
   { key: "visao-geral", label: "Visão geral", icon: Home, subs: [] },
-  { key: "cria-post", label: "Cria Post", modulo: "laranja", icon: Layers, landing: true, subs: ["posts", "cronograma", "relatorio", "materiais", "drive", "portal"] },
+  { key: "cria-post", label: "Cria Post", modulo: "laranja", icon: Layers, landing: true, subs: ["posts", "cronograma", "relatorio", "materiais", "portal"] },
   { key: "cria-gestao", label: "Cria Gestão", modulo: "rosa", icon: BookOpen, subs: ["brandbook"] },
   { key: "cria-caixa", label: "Cria Caixa", modulo: "azul", icon: Wallet, subs: ["financeiro"] },
   { key: "cria-radar", label: "Cria Radar", modulo: "lilas", icon: Search, landing: true, subs: ["ideias", "pesquisa"] },
   { key: "instagram", label: "Instagram", icon: Instagram, subs: ["instagram"] },
+  // Links úteis vira aba de topo própria: o editor de rótulo+URL + as pastas do
+  // Drive de cada link salvo. Antes o editor morava na Visão geral e o Drive era
+  // uma sub-aba do Cria Post. Agora é um lugar só.
+  { key: "links-uteis", label: "Links úteis", icon: Link2, subs: ["links-uteis"] },
 ];
 import { CRIA_HEX, type CriaColor } from "@/lib/moduleTheme";
 type CriaColor2 = CriaColor;
@@ -464,8 +467,8 @@ export default function ClienteHub() {
               editável aqui, que é onde a pessoa procura por elas. */}
           <NotasCliente clientId={client.id} notes={client.notes} />
 
-          {/* LINKS ÚTEIS — pastas do Drive e afins. Rótulo + URL, salva na hora. */}
-          <LinksUteis clientId={client.id} links={(client as { useful_links?: { label: string; url: string }[] | null }).useful_links ?? null} />
+          {/* Os "Links úteis" (editor + pastas do Drive) migraram pra aba de topo
+              própria "Links úteis". Aqui na Visão geral não fica mais duplicado. */}
 
           {/* DESTAQUES — o cockpit: o resumo de cada Cria, com número de verdade.
               O detalhe continua em cada módulo lá em cima. */}
@@ -544,9 +547,10 @@ export default function ClienteHub() {
       {/* MATERIAIS. Demandas fora do fluxo de posts. O cliente pede pelo portal. */}
       {activeTab === "materiais" && <MateriaisBoard clientId={id!} clientName={client.name} />}
 
-      {/* DRIVE. Lê o conteúdo do link de pasta do Drive salvo nos links úteis. */}
-      {activeTab === "drive" && (
-        <DriveTab links={(client as { useful_links?: LinkUtil[] | null }).useful_links ?? null} />
+      {/* LINKS ÚTEIS. Aba de topo: editor de rótulo+URL + as pastas do Drive de
+          cada link salvo (paginadas 10 por página). */}
+      {activeTab === "links-uteis" && (
+        <LinksUteisTab clientId={client.id} links={(client as { useful_links?: LinkUtil[] | null }).useful_links ?? null} />
       )}
 
       {/* FINANCEIRO, exclusivo de quem assina o Cria Caixa. */}
@@ -661,11 +665,17 @@ function fmtDriveDate(iso: string | null): string {
 // cliente, igual o concorrente. A listagem por API key SÓ funciona com pasta
 // compartilhada como "qualquer pessoa com o link pode ver" — se for privada, a
 // edge devolve a mensagem amigável e a gente mostra aqui.
+const DRIVE_PAGE_SIZE = 10;
+
 function DriveTab({ links }: { links: LinkUtil[] | null }) {
   const drives = useMemo(() => (links ?? []).filter((l) => l?.url && isDriveLink(l)), [links]);
   const [sel, setSel] = useState(0);
+  const [page, setPage] = useState(0);
   const activeDrive = drives[Math.min(sel, drives.length - 1)] ?? null;
   const { data, isLoading, isError, error, isFetching, refetch } = useDriveFolder(activeDrive?.url);
+
+  // Trocar de pasta volta pra primeira página (a paginação é por pasta).
+  useEffect(() => { setPage(0); }, [sel]);
 
   // Sem link de Drive salvo: estado vazio com instrução.
   if (drives.length === 0) {
@@ -674,7 +684,7 @@ function DriveTab({ links }: { links: LinkUtil[] | null }) {
         <FolderOpen className="h-8 w-8 mx-auto text-muted-foreground/60 mb-3" />
         <p className="text-sm font-body text-foreground font-medium">Nenhuma pasta do Drive neste cliente</p>
         <p className="text-xs text-muted-foreground font-body mt-1 max-w-md mx-auto">
-          Cole o link da pasta do Google Drive nos <strong>links úteis</strong> (na Visão geral), com "Drive" no rótulo.
+          Cole um link da pasta do Google Drive no editor acima, com "Drive" no rótulo.
           A pasta precisa estar compartilhada como <strong>"qualquer pessoa com o link pode ver"</strong>.
         </p>
       </div>
@@ -683,6 +693,11 @@ function DriveTab({ links }: { links: LinkUtil[] | null }) {
 
   const items: DriveItem[] = data?.items ?? [];
   const rootUrl = data?.root_url ?? activeDrive?.url ?? "";
+  // Paginação client-side: no máximo 10 itens por página. clampa a página caso a
+  // lista encolha depois de um refetch.
+  const totalPages = Math.max(1, Math.ceil(items.length / DRIVE_PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const pageItems = items.slice(safePage * DRIVE_PAGE_SIZE, safePage * DRIVE_PAGE_SIZE + DRIVE_PAGE_SIZE);
 
   return (
     <div className="space-y-4">
@@ -741,29 +756,68 @@ function DriveTab({ links }: { links: LinkUtil[] | null }) {
         </div>
       )}
 
-      {/* Listagem: pastas primeiro (a API já ordena), nome clicável abre no Drive. */}
+      {/* Listagem: pastas primeiro (a API já ordena), nome clicável abre no Drive.
+          Mostra no máximo 10 por página (fatia da lista que a edge devolveu). */}
       {!isLoading && !isError && items.length > 0 && (
-        <div className="rounded-2xl border border-border bg-card divide-y divide-border overflow-hidden">
-          {items.map((it) => (
-            <a
-              key={it.id}
-              href={it.webViewLink ?? rootUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors"
-            >
-              {it.isFolder
-                ? <FolderOpen className="h-5 w-5 text-primary shrink-0" />
-                : <FileIcon className="h-5 w-5 text-muted-foreground shrink-0" />}
-              <span className="text-[13px] font-body text-foreground truncate flex-1 min-w-0">{it.name}</span>
-              {it.modifiedTime && (
-                <span className="text-[11px] font-body text-muted-foreground shrink-0 hidden sm:inline">{fmtDriveDate(it.modifiedTime)}</span>
-              )}
-              <ExternalLink className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            </a>
-          ))}
-        </div>
+        <>
+          <div className="rounded-2xl border border-border bg-card divide-y divide-border overflow-hidden">
+            {pageItems.map((it) => (
+              <a
+                key={it.id}
+                href={it.webViewLink ?? rootUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors"
+              >
+                {it.isFolder
+                  ? <FolderOpen className="h-5 w-5 text-primary shrink-0" />
+                  : <FileIcon className="h-5 w-5 text-muted-foreground shrink-0" />}
+                <span className="text-[13px] font-body text-foreground truncate flex-1 min-w-0">{it.name}</span>
+                {it.modifiedTime && (
+                  <span className="text-[11px] font-body text-muted-foreground shrink-0 hidden sm:inline">{fmtDriveDate(it.modifiedTime)}</span>
+                )}
+                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              </a>
+            ))}
+          </div>
+
+          {/* Paginação: só quando passa de 10 itens. Botões recuar/avançar (‹ ›). */}
+          {items.length > DRIVE_PAGE_SIZE && (
+            <div className="flex items-center justify-center gap-3 pt-1">
+              <Button variant="outline" size="sm" className="rounded-xl h-8 w-8 p-0" aria-label="Página anterior"
+                onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={safePage === 0}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-[12px] font-body text-muted-foreground tabular-nums">
+                Página {safePage + 1} de {totalPages}
+              </span>
+              <Button variant="outline" size="sm" className="rounded-xl h-8 w-8 p-0" aria-label="Próxima página"
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))} disabled={safePage >= totalPages - 1}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </>
       )}
+    </div>
+  );
+}
+
+// ── ABA LINKS ÚTEIS (topo) ──
+// Junta o editor de links (rótulo + URL) com as pastas do Drive de cada link
+// salvo. Antes o editor ficava na Visão geral e o Drive era sub-aba do Cria Post;
+// agora vivem juntos aqui.
+function LinksUteisTab({ clientId, links }: { clientId: string; links: LinkUtil[] | null }) {
+  return (
+    <div className="space-y-5">
+      <LinksUteis clientId={clientId} links={links} />
+      <div>
+        <div className="flex items-center gap-2 mb-2.5 px-1">
+          <FolderOpen className="h-4 w-4 text-muted-foreground" />
+          <p className="text-xs font-body text-muted-foreground">Pastas do Google Drive</p>
+        </div>
+        <DriveTab links={links} />
+      </div>
     </div>
   );
 }

@@ -16,7 +16,7 @@ import { validateUpload } from "@/lib/upload-validation";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useManagerOutlet } from "@/components/accounts/ManagerLayout";
+import { useManagerOutlet, MODULE_ICON } from "@/components/accounts/ManagerLayout";
 import { readLastClient } from "@/components/accounts/ClientSwitcher";
 import { useCrmClients } from "@/hooks/useCrm";
 import { useAllExternalPosts, useExternalClients } from "@/hooks/useCriaPost";
@@ -43,12 +43,9 @@ function Painel({ color, icon: Icon, valor, label, to, destaque, masked }: {
 
 function initial(name?: string | null) { return name ? name.trim().charAt(0).toUpperCase() : "?"; }
 const DOMAIN_ICON: Record<OpDomain, typeof Users> = { conteudo: Send, financeiro: Wallet, relacionamento: Heart, prazo: Clock };
-// Ícone por módulo, pra deixar o card enxuto reconhecível de relance (a cor vem
-// de MODULE_COLOR). Fallback: Sparkles pra qualquer código novo.
-const MODULE_ICON: Record<string, typeof Users> = {
-  criapost: Send, criacaixa: Wallet, criacrm: Users, clientes: Users,
-  hubcria: Sparkles, stories: Camera, agenda: CalendarDays, equipe: Users,
-};
+// O ícone de cada módulo vem de MODULE_ICON (fonte única, no ManagerLayout),
+// casado pelo CÓDIGO DO CATÁLOGO (m.code). Assim o card da home usa o MESMO
+// ícone do menu lateral. Fallback: Sparkles pra qualquer código novo/desconhecido.
 const URG: Record<OpUrgency, { label: string; cls: string }> = {
   hi: { label: "Urgente", cls: "bg-red-100 text-red-700" },
   mid: { label: "Atenção", cls: "bg-amber-100 text-amber-700" },

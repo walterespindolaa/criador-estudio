@@ -34,7 +34,10 @@ import { applySidebarColor } from "@/lib/sidebarTheme";
 import { applyThemeFont } from "@/components/settings/SettingsVisual";
 
 const brl = (c: number) => `R$ ${(c / 100).toFixed(2).replace(".", ",")}`;
-const MODICONS: Record<string, typeof Send> = { aprovapost_externo: Send, crm: Users2, financeiro: Wallet, hub_cria: Search };
+// Ícone de cada módulo, casado pelo CÓDIGO DO CATÁLOGO (m.code). Fonte única da
+// verdade: o rail (desktop), o menu "Mais" (mobile) e os cards da home
+// (ManagerHome) leem daqui, pra o ícone do card ser o MESMO do menu lateral.
+export const MODULE_ICON: Record<string, LucideIcon> = { aprovapost_externo: Send, crm: Users2, financeiro: Wallet, hub_cria: Search };
 const MODULE_ROUTE: Record<string, string> = {
   aprovapost_externo: "/socialmidia/criapost",
   crm: "/socialmidia/criacrm",
@@ -235,7 +238,7 @@ export default function ManagerLayout() {
             // pode virar item de menu (a pessoa clica esperando abrir algo).
             .filter((m) => m.code !== "hub_extra")
             .map((m) => {
-            const Icon = (MODICONS[m.code] ?? Boxes) as LucideIcon;
+            const Icon = (MODULE_ICON[m.code] ?? Boxes) as LucideIcon;
             const active = m.status === "active" || m.status === "past_due";
             const route = MODULE_ROUTE[m.code];
             const corner = active
@@ -369,7 +372,7 @@ export default function ManagerLayout() {
                 .map((m) => ({
                   label: m.name,
                   desc: (m.status === "active" || m.status === "past_due") ? "Toque para abrir" : m.coming_soon ? "Em breve" : "Conhecer o módulo",
-                  icon: (MODICONS[m.code] ?? Boxes) as LucideIcon,
+                  icon: (MODULE_ICON[m.code] ?? Boxes) as LucideIcon,
                   ativo: m.status === "active" || m.status === "past_due",
                   onClick: () => openModule(m),
                 })),
