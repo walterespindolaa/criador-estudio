@@ -27,13 +27,16 @@ export function useUserLinks() {
     queryKey,
     enabled: !!ownerId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("useful_links")
-        .eq("id", ownerId)
-        .maybeSingle();
+      // Caminho seguro: RPC SECURITY DEFINER devolve SO colunas nao sensiveis
+      // (sem stripe/pix/subscription). Funciona pro dono e pro membro ativo.
+      // Nao esta tipada em types.ts, entao usamos o cast padrao.
+      const { data, error } = await (supabase.rpc as unknown as (
+        fn: string,
+        args: Record<string, unknown>,
+      ) => Promise<{ data: unknown; error: unknown }>)("get_managed_profile", { _owner: ownerId });
       if (error) throw error;
-      const raw = (data as { useful_links?: unknown } | null)?.useful_links;
+      const row = Array.isArray(data) ? (data[0] as { useful_links?: unknown } | undefined) : undefined;
+      const raw = row?.useful_links;
       return Array.isArray(raw) ? (raw as UserLink[]) : [];
     },
   });

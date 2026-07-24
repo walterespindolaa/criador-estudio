@@ -603,13 +603,12 @@ const LinkInBio = () => {
     queryKey: managedProfileKey,
     enabled: !!ownerId && !isOwnAccount,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, name, avatar_url, niche, instagram_handle, bio, bio_slug, bio_settings")
-        .eq("id", ownerId)
-        .maybeSingle();
+      // Caminho seguro: RPC SECURITY DEFINER devolve SO colunas nao sensiveis
+      // (sem stripe/pix/subscription). Funciona pro dono e pro membro ativo.
+      const { data, error } = await sbRpc("get_managed_profile", { _owner: ownerId });
       if (error) throw error;
-      return data as BioProfileSubset | null;
+      const row = Array.isArray(data) ? (data[0] ?? null) : null;
+      return row as BioProfileSubset | null;
     },
   });
 

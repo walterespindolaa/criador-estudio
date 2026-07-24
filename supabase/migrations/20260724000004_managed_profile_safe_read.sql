@@ -44,7 +44,12 @@ returns table (
   theme_font             text,
   storage_used_bytes     bigint,
   storage_quota_bytes    bigint,
-  storage_retention_days integer
+  storage_retention_days integer,
+  -- Colunas NAO sensiveis usadas por outras telas do membro (links uteis e
+  -- Link na Bio). Nada financeiro aqui: nunca incluir stripe/pix/subscription.
+  useful_links           jsonb,
+  bio_slug               text,
+  bio_settings           jsonb
 )
 language sql
 stable
@@ -55,7 +60,7 @@ as $$
     p.id, p.name, p.avatar_url, p.niche, p.instagram_handle, p.bio,
     p.weekly_goal, p.role, p.account_type, p.theme_preset, p.theme_accent,
     p.theme_sidebar, p.theme_font, p.storage_used_bytes, p.storage_quota_bytes,
-    p.storage_retention_days
+    p.storage_retention_days, p.useful_links, p.bio_slug, p.bio_settings
   from public.profiles p
   where p.id = _owner
     -- So o membro ATIVO da conta (ou o proprio dono) enxerga.
@@ -65,19 +70,26 @@ $$;
 grant execute on function public.get_managed_profile(uuid) to authenticated;
 
 -- ============================================================
--- REMOCAO DO SELECT AMPLO — NAO habilitar sem validar o front antes.
+-- REMOCAO DO SELECT AMPLO — agora habilitada.
 --
--- Passo a passo pra fechar o vazamento por completo (fora do escopo desta
--- entrega, exige editar TS):
---   1) Migrar src/hooks/useActiveProfile.ts e o efeito de tema em
---      src/components/AppLayout.tsx pra chamar
---      supabase.rpc('get_managed_profile', { _owner: ownerId }) em vez de
---      from('profiles').select(...).
---   2) Confirmar que nenhuma OUTRA tela le o profile do dono via membro.
---   3) So entao rodar o drop abaixo (descomentar):
+-- STATUS (2026-07-24): TODOS os pontos onde o MEMBRO lia o profile do dono ja
+-- foram migrados pro RPC seguro get_managed_profile (so colunas nao sensiveis):
+--   - src/hooks/useActiveProfile.ts  -> supabase.rpc('get_managed_profile')
+--   - src/components/AppLayout.tsx    -> supabase.rpc('get_managed_profile')
+--   - src/pages/app/Feed.tsx          -> supabase.rpc('get_managed_profile')
+--   - src/hooks/useUserLinks.ts       -> supabase.rpc('get_managed_profile')
+--   - src/pages/app/LinkInBio.tsx     -> supabase.rpc('get_managed_profile')
+-- As colunas useful_links, bio_slug e bio_settings foram adicionadas ao
+-- RETURNS/SELECT da funcao acima (nao sensiveis; sem stripe/pix/subscription).
 --
--- drop policy if exists member_read_profile on public.profiles;
+-- Varredura final: os demais reads de `profiles` no front usam sempre o id do
+-- PROPRIO usuario da sessao (useProfile, useTeam, lib/notifications) ou o
+-- caminho de ADMIN (useAdmin, gated por policy de admin separada), nenhum
+-- depende desta policy. Logo o acesso de MEMBRO ao profile do dono passa a ser
+-- 100% via get_managed_profile, que so devolve colunas seguras.
 --
--- Enquanto o drop nao roda, o vazamento continua aberto: a funcao acima ja
--- existe e e o caminho seguro, mas a policy ampla ainda permite `select *`.
+-- Por isso derrubamos a policy ampla: ela expunha a linha INTEIRA
+-- (stripe_customer_id, stripe_subscription_id, pix_key, subscription_status)
+-- pra qualquer membro ativo. Removendo-a, o vazamento A4 fecha por completo.
+drop policy if exists member_read_profile on public.profiles;
 -- ============================================================

@@ -139,13 +139,15 @@ const AppLayout = () => {
   useEffect(() => {
     if (!isManaging || !activeAccountId) return;
     let alive = true;
-    supabase.from("profiles")
-      .select("theme_preset, theme_accent, theme_sidebar, theme_font")
-      .eq("id", activeAccountId)
-      .single()
+    // Caminho seguro: RPC SECURITY DEFINER traz so colunas nao sensiveis do
+    // perfil da conta gerenciada (sem stripe/pix). Devolve array; pega [0].
+    void (supabase.rpc as unknown as (
+      fn: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: unknown }>)("get_managed_profile", { _owner: activeAccountId })
       .then(({ data }) => {
-        if (!alive || !data) return;
-        const t = data as { theme_preset?: string | null; theme_accent?: string | null; theme_sidebar?: string | null; theme_font?: string | null };
+        if (!alive || !Array.isArray(data) || !data[0]) return;
+        const t = data[0] as { theme_preset?: string | null; theme_accent?: string | null; theme_sidebar?: string | null; theme_font?: string | null };
         if (t.theme_preset) applyTheme(t.theme_preset, t.theme_accent || "#EA4918");
         applySidebarColor(t.theme_sidebar || null);
         if (t.theme_font) applyThemeFont(t.theme_font);

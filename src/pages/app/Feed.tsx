@@ -46,13 +46,16 @@ const Feed = () => {
     queryKey: ["feed-profile", ownerId],
     enabled: !!ownerId && !isOwnAccount,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("name, avatar_url, niche, instagram_handle, bio")
-        .eq("id", ownerId)
-        .maybeSingle();
+      // Caminho seguro: RPC SECURITY DEFINER devolve SO colunas nao sensiveis
+      // (sem stripe/pix/subscription). Funciona pro dono e pro membro ativo.
+      // Nao esta tipada em types.ts, entao usamos o cast padrao.
+      const { data, error } = await (supabase.rpc as unknown as (
+        fn: string,
+        args: Record<string, unknown>,
+      ) => Promise<{ data: unknown; error: unknown }>)("get_managed_profile", { _owner: ownerId });
       if (error) throw error;
-      return data as FeedProfile | null;
+      const row = Array.isArray(data) ? (data[0] ?? null) : null;
+      return row as FeedProfile | null;
     },
   });
   const profile = isOwnAccount ? selfProfile : (managedProfile as typeof selfProfile);
