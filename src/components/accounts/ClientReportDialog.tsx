@@ -20,6 +20,9 @@ const sbRpcR = supabase.rpc.bind(supabase) as unknown as (fn: string, args?: Rec
 type IgMediaRow = {
   caption: string | null; media_type: string | null; permalink: string | null;
   thumbnail_url: string | null; posted_at: string | null; metrics: Record<string, number> | null;
+  // Vínculo com a peça que a agência produziu no Cria Post (external_post), quando houver.
+  post_id?: string | null;
+  linked_title?: string | null; linked_format?: string | null; linked_hook?: string | null;
 };
 // Retorno da RPC get_client_ig_report (mídias + demografia + stories do cliente).
 type IgReport = { media: IgMediaRow[]; audience: AudienceLike[]; stories: StoryLike[] };
@@ -247,6 +250,50 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     if (sec < 60) return `${sec.toFixed(1).replace(".", ",")}s`;
     return `${Math.floor(sec / 60)}m ${String(Math.round(sec % 60)).padStart(2, "0")}s`;
   };
+
+  // Peças que a agência PRODUZIU e vinculou (social_insights.post_id -> external_post):
+  // o que fizemos no Cria Post × o resultado real da publicação no IG do cliente.
+  const pieces = useMemo(() =>
+    igMedia
+      .filter((r) => r.post_id && (r.linked_title || r.linked_format))
+      .map((r) => ({
+        title: r.linked_title || "Post",
+        format: r.linked_format || null,
+        hook: r.linked_hook || null,
+        thumbnail_url: r.thumbnail_url,
+        posted_at: r.posted_at,
+        reach: Number(r.metrics?.reach) || 0,
+        saved: Number(r.metrics?.saved) || 0,
+        interactions: engOf(r.metrics),
+      }))
+      .sort((a, b) => b.reach - a.reach),
+  [igMedia]);
+
+  // Camada 2: alcance médio real por FORMATO da peça produzida (Reels/Carrossel/Foto
+  // que a agência fez). external_post tem format e hook, mas NÃO tem pilar.
+  const byProducedFormat = useMemo(() => {
+    const acc: Record<string, { soma: number; n: number }> = {};
+    pieces.forEach((p) => {
+      const f = p.format || "outro";
+      acc[f] = acc[f] ?? { soma: 0, n: 0 };
+      acc[f].soma += p.reach; acc[f].n += 1;
+    });
+    return Object.entries(acc)
+      .map(([f, v]) => ({ f, avg: Math.round(v.soma / v.n), n: v.n }))
+      .sort((a, b) => b.avg - a.avg);
+  }, [pieces]);
+
+  const byProducedHook = useMemo(() => {
+    const acc: Record<string, { soma: number; n: number }> = {};
+    pieces.filter((p) => p.hook).forEach((p) => {
+      const h = p.hook!.slice(0, 44);
+      acc[h] = acc[h] ?? { soma: 0, n: 0 };
+      acc[h].soma += p.reach; acc[h].n += 1;
+    });
+    return Object.entries(acc)
+      .map(([h, v]) => ({ h, avg: Math.round(v.soma / v.n), n: v.n }))
+      .sort((a, b) => b.avg - a.avg);
+  }, [pieces]);
 
   const download = async () => {
     setDownloading(true);
@@ -617,6 +664,53 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
                           </div>
                         );
                       })}
+                    </div>
+                  </div>
+                )}
+
+                {/* As peças que produzimos e o que renderam: mídia do IG × external_post vinculado */}
+                {pieces.length > 0 && (
+                  <div style={{ marginTop: 18 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>
+                      As peças que produzimos e o que renderam ({pieces.length})
+                    </div>
+                    <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden" }}>
+                      {pieces.map((p, i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
+                          <div style={{ width: 44, height: 44, borderRadius: 8, background: C.soft, overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            {p.thumbnail_url
+                              ? <img src={p.thumbnail_url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                              : <span style={{ fontSize: 9, color: C.sub }}>{p.format ? (FORMAT_LABELS[p.format] ?? p.format) : "post"}</span>}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.title}</div>
+                            <div style={{ fontSize: 11, color: C.sub }}>
+                              {p.format ? (FORMAT_LABELS[p.format] ?? cap(p.format)) : "Post"}{p.posted_at ? ` · ${dtFmt(p.posted_at)}` : ""}
+                            </div>
+                          </div>
+                          <div style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: C.ink }}>{p.reach.toLocaleString("pt-BR")} alcance</div>
+                            <div style={{ fontSize: 11, color: C.sub }}>{p.saved.toLocaleString("pt-BR")} salvos · {p.interactions.toLocaleString("pt-BR")} inter.</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Camada 2: alcance médio real por formato (e hook) da peça produzida */}
+                    {byProducedFormat.length > 0 && (
+                      <div style={{ marginTop: 14 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Alcance médio por formato que produzimos</div>
+                        {(() => { const mx = Math.max(...byProducedFormat.map((r) => r.avg), 0); return byProducedFormat.map((r) => crossRow(FORMAT_LABELS[r.f] ?? cap(r.f), r.avg, r.n, mx)); })()}
+                      </div>
+                    )}
+                    {byProducedHook.length > 0 && (
+                      <div style={{ marginTop: 14 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Alcance médio por hook que produzimos</div>
+                        {(() => { const mx = Math.max(...byProducedHook.map((r) => r.avg), 0); return byProducedHook.map((r) => crossRow(r.h, r.avg, r.n, mx)); })()}
+                      </div>
+                    )}
+                    <div style={{ fontSize: 10.5, color: C.sub, marginTop: 8 }}>
+                      Cruzamento pelas peças que a agência produziu no Cria Post (formato e hook). Pilar não é registrado em posts externos, por isso fica de fora.
                     </div>
                   </div>
                 )}
