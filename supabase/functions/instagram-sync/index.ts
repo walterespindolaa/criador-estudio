@@ -93,7 +93,7 @@ async function syncConnection(
   if (reachRows.length) {
     await admin.from('social_metrics_daily').upsert(reachRows as never, { onConflict: 'user_id,crm_client_id,provider,date' });
   }
-  const acctTotals = await getJson(`${GRAPH}/me/insights?metric=profile_views,accounts_engaged,total_interactions&period=day&metric_type=total&since=${since}&until=${until}&access_token=${token}`);
+  const acctTotals = await getJson(`${GRAPH}/me/insights?metric=profile_views,accounts_engaged,total_interactions&period=day&metric_type=total_value&since=${since}&until=${until}&access_token=${token}`);
   const tot: Record<string, number> = {};
   for (const row of (acctTotals.data ?? []) as Array<{ name: string; total_value?: { value: number }; values?: Array<{ value: number }> }>) {
     tot[row.name] = Number(row.total_value?.value ?? row.values?.[0]?.value ?? 0);
@@ -126,11 +126,11 @@ async function syncConnection(
   for (const dm of demoMetrics) {
     for (const bd of breakdowns) {
       try {
-        let res = await getJson(`${GRAPH}/me/insights?metric=${dm.metric}&period=lifetime&metric_type=total&timeframe=this_month&breakdown=${bd}&access_token=${token}`);
+        let res = await getJson(`${GRAPH}/me/insights?metric=${dm.metric}&period=lifetime&metric_type=total_value&timeframe=this_month&breakdown=${bd}&access_token=${token}`);
         let parsed = parseDemographics(res);
         if (!parsed.length) {
           // Fallback de timeframe: contas novas/pouco volume podem não ter "this_month".
-          res = await getJson(`${GRAPH}/me/insights?metric=${dm.metric}&period=lifetime&metric_type=total&timeframe=last_30_days&breakdown=${bd}&access_token=${token}`);
+          res = await getJson(`${GRAPH}/me/insights?metric=${dm.metric}&period=lifetime&metric_type=total_value&timeframe=last_30_days&breakdown=${bd}&access_token=${token}`);
           parsed = parseDemographics(res);
         }
         // Sem dados: a API quase sempre devolveu um objeto de erro (permissão/escopo,
