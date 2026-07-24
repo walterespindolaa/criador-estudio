@@ -116,9 +116,10 @@ function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
           <div className="flex items-center gap-4 px-3.5 pt-3 pb-1.5 text-foreground">
             <Heart className="h-6 w-6" /><MessageCircle className="h-6 w-6" /><Send className="h-6 w-6" /><Bookmark className="h-6 w-6 ml-auto" />
           </div>
-          {/* No mock: legenda cheia no mobile (empilhado); no desktop cai pra 2 linhas
-              porque o texto completo passa a viver na coluna lateral (menos altura). */}
-          {legenda && <p className="px-3.5 pb-4 text-[13.5px] leading-snug text-foreground whitespace-pre-wrap lg:line-clamp-2"><span className="font-bold mr-1.5">{handle}</span>{legenda}</p>}
+          {/* No mock o caption é só um preview de 2 linhas (feito estilo feed). A legenda
+              COMPLETA vive na coluna lateral (desktop) ou no bloco "Legenda" abaixo do
+              card (mobile), pra todos os formatos, evitando duplicar o texto. */}
+          {legenda && <p className="px-3.5 pb-4 text-[13.5px] leading-snug text-foreground line-clamp-2"><span className="font-bold mr-1.5">{handle}</span>{legenda}</p>}
         </>
       )}
     </article>
@@ -235,11 +236,22 @@ function PostApproval({ client, post, index, busy, onApproveFast, onAdjustFast, 
           <CardIG client={client} post={post} />
         </div>
         <div className="min-w-0">
-          {/* No mobile a legenda cheia fica dentro do mock (empilhado); no desktop o
-              texto completo vem PRA CÁ, ao lado da mídia, pra encurtar o card. */}
+          {/* No mobile a legenda completa aparece no bloco "Legenda" abaixo (lg:hidden),
+              pra TODOS os formatos (inclusive Reels/Story vertical); no desktop o texto
+              completo vem PRA CÁ, na coluna lateral, ao lado da mídia. */}
           <div className="bg-card border border-border rounded-3xl p-4 sm:p-6 mt-3 shadow-[0_8px_30px_rgba(27,26,24,0.05)] lg:bg-transparent lg:border-0 lg:rounded-none lg:p-0 lg:mt-0 lg:shadow-none">
             {/* Bloco de status (data, título, selo, formato) no TOPO, antes da legenda. */}
             {statusHeader}
+            {/* MOBILE: legenda COMPLETA abaixo da mídia, respeitando quebras de linha
+                (sem line-clamp). Vale pra todo formato, pois no vídeo/story o texto ou
+                fica cortado no overlay ou nem aparece. No desktop some (lg:hidden). */}
+            {legenda && (
+              <div className="lg:hidden mb-5">
+                <p className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground mb-1.5">Legenda</p>
+                <p className="text-[13.5px] leading-snug text-foreground whitespace-pre-wrap">{legenda}</p>
+              </div>
+            )}
+            {/* DESKTOP: legenda completa na coluna lateral (mantido como estava). */}
             {legenda && !isStory && (
               <div className="hidden lg:block mb-5">
                 <p className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground mb-1.5">Legenda</p>
