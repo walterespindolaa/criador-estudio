@@ -566,14 +566,14 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               {/* Cronograma: data + hora */}
               <div>
                 <label className="text-xs font-semibold mb-1.5 block">Cronograma</label>
-                <div className="flex gap-2">
-                  <div className="flex-1">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="min-w-0">
                     <Label className="text-[11px] font-body text-muted-foreground">Data de publicação</Label>
-                    <Input type="date" value={f.scheduled_date ?? ""} onChange={(e) => setF((p) => ({ ...p, scheduled_date: e.target.value || null }))} className="rounded-xl" />
+                    <Input type="date" value={f.scheduled_date ?? ""} onChange={(e) => setF((p) => ({ ...p, scheduled_date: e.target.value || null }))} className="w-full rounded-xl" />
                   </div>
-                  <div className="w-28">
+                  <div className="min-w-0">
                     <Label className="text-[11px] font-body text-muted-foreground">Horário</Label>
-                    <Input type="time" value={f.scheduled_time ?? ""} onChange={(e) => setF((p) => ({ ...p, scheduled_time: e.target.value || null }))} className="rounded-xl" />
+                    <Input type="time" value={f.scheduled_time ?? ""} onChange={(e) => setF((p) => ({ ...p, scheduled_time: e.target.value || null }))} className="w-full rounded-xl" />
                   </div>
                 </div>
               </div>

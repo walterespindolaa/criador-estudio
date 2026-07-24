@@ -20,7 +20,7 @@ import {
   useCreations, useAddCreation, useUpdateCreation, useDeleteCreation,
   useCaptures, useAddCapture, useUpdateCapture, useDeleteCapture, useCollaboratorNames, type Capture, type Creation,
 } from "@/hooks/useAgenda";
-import { useAllExternalPosts, useExternalClients, useMoveExternalPostDate, useUpdateExternalPost, useExternalPostCovers, type ExternalPostWithClient, type PostCoverMedia } from "@/hooks/useCriaPost";
+import { useAllExternalPosts, useExternalClients, useMoveExternalPostDate, useUpdateExternalPost, type ExternalPostWithClient } from "@/hooks/useCriaPost";
 import { useCriaPostMedia, type CriaMedia } from "@/hooks/useCriaPostMedia";
 import { isDriveMedia, isDriveUrl, isVideoMedia, getThumbnailUrl, getDriveImageFallbackUrl, downloadMediaFile, mediaDownloadName } from "@/lib/driveMedia";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
@@ -91,28 +91,6 @@ function DragHandle({ handleProps, className }: { handleProps: HandleProps; clas
       className={cn("shrink-0 grid place-items-center h-6 w-5 md:h-5 md:w-4 -ml-0.5 rounded touch-none cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-foreground transition-colors", className)}>
       <GripVertical className="h-3.5 w-3.5" />
     </span>
-  );
-}
-
-// Capa (primeira mídia) no topo do card do post, estilo Trello. Miniatura leve com
-// fallback pro lh3 do Drive; frame + play pra vídeo. Full-bleed (bordas do card).
-function PostCardCover({ m }: { m: PostCoverMedia }) {
-  const video = isVideoMedia(m);
-  const src = getThumbnailUrl(m, 640) || "";
-  const onImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    const img = e.currentTarget;
-    const fb = getDriveImageFallbackUrl(m, 800);
-    if (fb && !img.dataset.fb) { img.dataset.fb = "1"; img.src = fb; return; }
-    // Sem thumbnail exibível: esconde a img e deixa o card só com texto.
-    const wrap = img.closest("[data-cover]") as HTMLElement | null;
-    if (wrap) wrap.style.display = "none";
-  };
-  if (!src) return null;
-  return (
-    <div data-cover className="relative -mx-2 -mt-1.5 mb-1.5 h-24 md:h-20 overflow-hidden rounded-t-lg bg-muted">
-      <img src={src} alt="" draggable={false} loading="lazy" className="w-full h-full object-cover select-none" onError={onImgError} />
-      {video && <span className="absolute inset-0 flex items-center justify-center pointer-events-none"><Play className="h-6 w-6 text-white [filter:drop-shadow(0_1px_2px_rgba(0,0,0,.7))]" /></span>}
-    </div>
   );
 }
 
@@ -249,14 +227,6 @@ export default function AgendaCriacao() {
     }
     return m;
   }, [allPosts, from, to, filters.post, postClients]);
-
-  // Ids dos posts VISÍVEIS no período (achatado). Alimenta a capa em UMA query só.
-  const visiblePostIds = useMemo(() => {
-    const ids: string[] = [];
-    for (const arr of postsByDay.values()) for (const p of arr) ids.push(p.id);
-    return ids;
-  }, [postsByDay]);
-  const { data: coversMap } = useExternalPostCovers(visiblePostIds);
 
   // Rolagem horizontal da semana no mobile: abre ancorado na coluna de HOJE.
   const weekScrollRef = useRef<HTMLDivElement | null>(null);
@@ -522,15 +492,12 @@ export default function AgendaCriacao() {
                         return (
                           <Draggable key={`post:${p.id}`} draggableId={`post:${p.id}`} index={idx}>
                             {(dragProvided, dragSnapshot) => {
-                              const cover = coversMap?.get(p.id);
                               return (
                               <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
                                 type="button" title={p.title ?? undefined} onClick={() => openPost(p)}
                                 className={cn("rounded-lg border border-orange-500/40 bg-orange-500/10 hover:bg-orange-500/15 px-2 py-1.5 text-left transition-colors w-full overflow-hidden",
                                   posted && "opacity-60",
                                   dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
-                                {/* Capa estilo Trello: primeira mídia do post no topo, full-bleed. */}
-                                {cover && <PostCardCover m={cover} />}
                                 <div className="flex items-center gap-1 text-orange-700 dark:text-orange-300">
                                   <DragHandle handleProps={dragProvided.dragHandleProps ?? undefined} className="text-orange-700/40 dark:text-orange-300/40" />
                                   <Send className="h-3 w-3 shrink-0" />
@@ -813,20 +780,20 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
 
           {kind === "captacao" && (
             <div className="flex gap-2">
-              <div className="w-28"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Hora</p><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} /></div>
-              <div className="flex-1"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Local (opcional)</p><Input value={loc} onChange={(e) => setLoc(e.target.value)} placeholder="Ex.: Estúdio" /></div>
+              <div className="w-[110px] shrink-0 min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Hora</p><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full" /></div>
+              <div className="flex-1 min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Local (opcional)</p><Input value={loc} onChange={(e) => setLoc(e.target.value)} placeholder="Ex.: Estúdio" /></div>
             </div>
           )}
 
           {kind === "tarefa" && (
-            <div className="flex gap-2">
-              <div className="flex-1">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="min-w-0">
                 <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Prioridade</p>
                 <select value={prio} onChange={(e) => setPrio(e.target.value as CrmTaskPriority)} className="w-full h-10 rounded-xl border border-border bg-card px-3 text-sm font-body">
                   {CRM_TASK_PRIORITIES.map((p) => <option key={p} value={p}>{CRM_TASK_PRIORITY_LABELS[p]}</option>)}
                 </select>
               </div>
-              <div className="w-[124px] shrink-0">
+              <div className="min-w-0">
                 <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Horário</p>
                 <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full" />
               </div>
@@ -880,9 +847,9 @@ function CaptureDialog({ open, initial, clients, teamNames, onClose, onSave, pen
         <DialogHeader><DialogTitle className="font-display">{initial ? "Editar captação" : "Nova captação"}</DialogTitle></DialogHeader>
         <div className="space-y-2">
           <ClientPicker clients={clients} crm={crm} name={name} onCrm={setCrm} onName={setName} />
-          <div className="flex gap-2">
-            <div className="flex-1"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Data</p><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
-            <div className="w-28"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Hora</p><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} /></div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Data</p><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full" /></div>
+            <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Hora</p><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full" /></div>
           </div>
           <div><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Local (opcional)</p><Input value={loc} onChange={(e) => setLoc(e.target.value)} placeholder="Ex.: Estúdio, coworking, local externo" /></div>
           <div><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Equipe (opcional)</p><Input value={team} onChange={(e) => setTeam(e.target.value)} placeholder="Ex.: Ana, Bruno" list="agenda-team-names" /><TeamDatalist names={teamNames} /></div>
@@ -957,9 +924,9 @@ function TaskDialog({ task, clients, onClose, onOpenCrm, onSave }: {
               </select>
             </div>
           </div>
-          <div className="flex gap-2">
-            <div className="flex-1"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Vencimento</p><Input type="date" value={due} onChange={(e) => setDue(e.target.value)} /></div>
-            <div className="w-[124px] shrink-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Horário</p><Input type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)} className="w-full" /></div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Vencimento</p><Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="w-full" /></div>
+            <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Horário</p><Input type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)} className="w-full" /></div>
           </div>
           <button type="button" onClick={onOpenCrm} className="inline-flex items-center gap-1 text-[11px] font-body text-muted-foreground hover:text-primary transition-colors">
             <ExternalLink className="h-3 w-3" /> Abrir no CRM
@@ -1082,12 +1049,11 @@ function PostEditDialog({ post, clientName, onClose, onSave, onOpenClient, savin
         <DialogHeader><DialogTitle className="font-display">Editar post{clientName ? ` · ${clientName}` : ""}</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Título</p><Input value={title} onChange={(e) => setTitle(e.target.value)} className="rounded-xl" /></div>
-          <div className="flex gap-2">
-            <div className="flex-1 min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Data</p><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full rounded-xl" /></div>
-            {/* Horário: largura fixa mais folgada (o input nativo de "time" precisa de
-                espaço pro relógio/spinner, senão fica cortado no mobile). w-full garante
-                que o campo preencha o container inteiro em qualquer largura de tela. */}
-            <div className="w-[124px] shrink-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Horário</p><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full rounded-xl" /></div>
+          {/* grid-cols-2 (minmax(0,1fr)) trava cada coluna em 50% e impede o input
+              nativo de "time" de transbordar/cortar no mobile (bug do iOS). */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Data</p><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full rounded-xl" /></div>
+            <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Horário</p><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full rounded-xl" /></div>
           </div>
           <div>
             <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Status</p>
