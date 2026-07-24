@@ -2,13 +2,14 @@
 // pro OAuth, guardado server-side. Antes o frontend colocava o JWT do usuário na URL
 // do OAuth (?state=JWT), que vazava em histórico/logs. Agora vai só o ticket aleatório.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') || '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
+  // CORS compartilhado: reflete a origem quando ela está na allowlist (inclui a PWA
+  // no domínio proprio e nos previews *.lovable.app). Antes usava uma origem unica
+  // fixa, o que bloqueava a conexao do Instagram quando a PWA rodava em outro dominio
+  // (ex.: no PC), caindo em "Integracao ainda nao configurada".
+  const corsHeaders = getCorsHeaders(req);
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   const json = (b: unknown, s = 200) =>
     new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });

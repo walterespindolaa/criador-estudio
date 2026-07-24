@@ -218,7 +218,7 @@ export default function Insights() {
         <div className="min-w-0">
           <p className="font-display font-bold text-sm">{conn.username ? `@${conn.username}` : t("insights.connectedAccount")}</p>
           <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> {t("insights.connected")}{conn.account_type ? ` · ${conn.account_type}` : ""}
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> {t("insights.connected")}
           </p>
         </div>
         <div className="ml-auto flex items-center gap-2">

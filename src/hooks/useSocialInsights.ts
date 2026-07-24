@@ -83,6 +83,13 @@ export function useSocialConnection() {
   return useQuery<SocialConnection | null>({
     queryKey: ["social-connection", user?.id],
     enabled: !!user?.id,
+    // A conexao vive no banco (por user_id), entao vale pra qualquer aparelho. Se a
+    // pessoa conecta o Instagram no celular, o PC precisa buscar de novo: por isso
+    // refazemos ao montar e ao focar a janela (o padrao global nao refaz no foco),
+    // pra a conexao "aparecer" no PC sem precisar recarregar na mao.
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data, error } = await sbFrom("social_connections")
         .select("id,user_id,provider,external_account_id,username,account_type,profile_picture_url,token_expires_at,connected_at,updated_at")
