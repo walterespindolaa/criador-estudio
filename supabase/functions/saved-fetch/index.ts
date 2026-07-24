@@ -26,6 +26,39 @@ function platformOf(url: string): string {
   return "outro";
 }
 
+// Baixa a capa da URL efêmera do CDN (Instagram/TikTok) e sobe pro bucket
+// público 'saved-covers' via service role. Retorna a public URL persistente.
+// Best-effort: se qualquer passo falhar, devolve a URL original do CDN.
+const MAX_COVER_BYTES = 8 * 1024 * 1024; // 8 MB
+function extFor(ct: string): string {
+  if (ct.includes("png")) return "png";
+  if (ct.includes("webp")) return "webp";
+  return "jpg"; // jpeg/default
+}
+async function persistCover(svc: SupabaseClient, userId: string, cdnUrl: string | null): Promise<string | null> {
+  if (!cdnUrl || !/^https?:\/\//i.test(cdnUrl)) return cdnUrl;
+  try {
+    const resp = await fetch(cdnUrl);
+    if (!resp.ok) return cdnUrl;
+    const ct = (resp.headers.get("content-type") || "image/jpeg").toLowerCase();
+    if (!ct.startsWith("image/")) return cdnUrl;
+    const len = Number(resp.headers.get("content-length") || 0);
+    if (len && len > MAX_COVER_BYTES) return cdnUrl;
+    const buf = new Uint8Array(await resp.arrayBuffer());
+    if (buf.byteLength === 0 || buf.byteLength > MAX_COVER_BYTES) return cdnUrl;
+    const path = `${userId}/${crypto.randomUUID()}.${extFor(ct)}`;
+    const { error } = await svc.storage.from("saved-covers").upload(path, buf, {
+      contentType: ct, upsert: false,
+    });
+    if (error) { console.error("[saved-fetch] cover upload", error.message); return cdnUrl; }
+    const pub = svc.storage.from("saved-covers").getPublicUrl(path).data.publicUrl;
+    return pub || cdnUrl;
+  } catch (e) {
+    console.error("[saved-fetch] persistCover", e instanceof Error ? e.message : String(e));
+    return cdnUrl;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
@@ -69,10 +102,13 @@ Deno.serve(async (req) => {
 
     const type = String(it.type || "").toLowerCase();
     const media_type = type.includes("video") ? "video" : type.includes("sidecar") ? "carousel" : "image";
+    // URL efêmera do CDN -> persiste numa storage nossa pra capa não morrer.
+    const cdnThumb = it.displayUrl || it.thumbnailUrl || (it.images?.[0] ?? null) || null;
+    const thumbnail = await persistCover(svc, user.id, cdnThumb);
     return json({
       ok: true,
       platform,
-      thumbnail: it.displayUrl || it.thumbnailUrl || (it.images?.[0] ?? null) || null,
+      thumbnail,
       caption: it.caption ? String(it.caption).slice(0, 800) : null,
       author: it.ownerUsername || it.ownerFullName || null,
       media_type,

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveAccount } from "@/contexts/AccountContext";
@@ -59,33 +59,76 @@ async function fetchPreview(url: string): Promise<Partial<SavedRef>> {
   } catch { return {}; }
 }
 
+// Detecta a plataforma pelo link, sem depender de rede (regex client-side).
+function detectPlatform(url: string): string {
+  if (/tiktok\.com/i.test(url)) return "tiktok";
+  if (/instagram\.com/i.test(url)) return "instagram";
+  return "outro";
+}
+
 export function useAddSavedRef() {
   const { activeAccountId } = useActiveAccount();
   const userId = activeAccountId;
   const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (input: { url: string; folder?: string | null; note?: string | null; withPreview?: boolean }) => {
+  // Ids dos salvos que estão puxando capa/legenda em segundo plano (pra o card
+  // mostrar o estado sutil de "carregando capa" sem travar nada).
+  const [pendingPreviewIds, setPendingPreviewIds] = useState<Set<string>>(new Set());
+
+  // Roda a captura da capa/legenda em SEGUNDO PLANO e regrava o registro pelo id.
+  // Best-effort: se falhar, o card só fica sem capa (tem placeholder + "atualizar capa").
+  const runPreviewInBackground = async (id: string, url: string) => {
+    setPendingPreviewIds((prev) => new Set(prev).add(id));
+    try {
+      const preview = await fetchPreview(url);
+      const patch: Partial<SavedRef> = {};
+      if (preview.platform) patch.platform = preview.platform;
+      if (preview.thumbnail_url) patch.thumbnail_url = preview.thumbnail_url;
+      if (preview.caption) patch.caption = preview.caption;
+      if (preview.author) patch.author = preview.author;
+      if (preview.media_type) patch.media_type = preview.media_type;
+      if (Object.keys(patch).length > 0) {
+        await sbFrom("saved_refs").update(patch as never).eq("id", id);
+      }
+    } catch {
+      // silencioso: o card usa o placeholder e o botão "atualizar capa"
+    } finally {
+      setPendingPreviewIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+      qc.invalidateQueries({ queryKey: ["saved-refs"] });
+    }
+  };
+
+  const mutation = useMutation({
+    // Insert INSTANTÂNEO: grava só o que dá pra saber sem rede. A capa/legenda
+    // vêm depois, em segundo plano (onSuccess), sem travar o botão nem a UI.
+    mutationFn: async (input: { url: string; folder?: string | null; note?: string | null }) => {
       if (!userId) throw new Error("Not authenticated");
       const url = input.url.trim();
       if (!/^https?:\/\//i.test(url)) throw new Error("Cole um link válido (começa com http).");
-      const preview = input.withPreview !== false ? await fetchPreview(url) : {};
-      const { error } = await sbFrom("saved_refs").insert({
+      const { data, error } = await sbFrom("saved_refs").insert({
         user_id: userId,
         url,
-        platform: preview.platform ?? (/tiktok\.com/i.test(url) ? "tiktok" : /instagram\.com/i.test(url) ? "instagram" : "outro"),
-        author: preview.author ?? null,
-        caption: preview.caption ?? null,
-        thumbnail_url: preview.thumbnail_url ?? null,
-        media_type: preview.media_type ?? null,
+        platform: detectPlatform(url),
+        author: null,
+        caption: null,
+        thumbnail_url: null,
+        media_type: null,
         folder: input.folder?.trim() || null,
         note: input.note?.trim() || null,
         status: "novo",
-      } as never);
+      } as never).select("id").single();
       if (error) throw error;
+      return { id: (data as unknown as { id: string }).id, url };
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["saved-refs"] }); toast.success("Salvo!"); },
+    onSuccess: ({ id, url }) => {
+      qc.invalidateQueries({ queryKey: ["saved-refs"] });
+      toast.success("Salvo! Puxando a capa…");
+      void runPreviewInBackground(id, url);
+    },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Não consegui salvar."),
   });
+
+  // Anexa o set de ids "puxando capa" ao objeto da mutation (mesma referência).
+  return Object.assign(mutation, { pendingPreviewIds });
 }
 
 export function useUpdateSavedRef() {
@@ -97,6 +140,24 @@ export function useUpdateSavedRef() {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["saved-refs"] }),
     onError: () => toast.error("Não consegui atualizar."),
+  });
+}
+
+// Recaptura a capa de um salvo antigo (capa morta): rechama a edge e
+// regrava thumbnail_url (agora persistente no bucket 'saved-covers').
+export function useRefreshSavedCover() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (r: Pick<SavedRef, "id" | "url">) => {
+      const preview = await fetchPreview(r.url);
+      if (!preview.thumbnail_url) throw new Error("Não consegui recuperar a capa.");
+      const patch: Partial<SavedRef> = { thumbnail_url: preview.thumbnail_url };
+      if (preview.media_type) patch.media_type = preview.media_type;
+      const { error } = await sbFrom("saved_refs").update(patch as never).eq("id", r.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["saved-refs"] }); toast.success("Capa atualizada!"); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Não consegui atualizar a capa."),
   });
 }
 

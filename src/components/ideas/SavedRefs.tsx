@@ -1,12 +1,17 @@
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bookmark, Plus, Loader2, Search, Play, MoreVertical, Trash2, FolderInput, ExternalLink, PenLine, Instagram, Music2 } from "lucide-react";
+import { Bookmark, Plus, Loader2, Search, Play, MoreVertical, Trash2, FolderInput, ExternalLink, PenLine, Instagram, Music2, ImageOff, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useSavedRefs, useSavedFolders, useAddSavedRef, useUpdateSavedRef, useDeleteSavedRef, type SavedRef } from "@/hooks/useSavedRefs";
+import { useSavedRefs, useSavedFolders, useAddSavedRef, useUpdateSavedRef, useDeleteSavedRef, useRefreshSavedCover, type SavedRef } from "@/hooks/useSavedRefs";
 import { usePosts } from "@/hooks/usePosts";
+
+// Sentinelas do seletor de pasta (não colidem com nomes reais de pasta).
+const FOLDER_NONE = "__none__";
+const FOLDER_NEW = "__new__";
 
 export function SavedRefs({ initialUrl }: { initialUrl?: string }) {
   const navigate = useNavigate();
@@ -15,10 +20,14 @@ export function SavedRefs({ initialUrl }: { initialUrl?: string }) {
   const add = useAddSavedRef();
   const upd = useUpdateSavedRef();
   const del = useDeleteSavedRef();
+  const refreshCover = useRefreshSavedCover();
   const { createPost } = usePosts();
 
   const [url, setUrl] = useState(initialUrl ?? "");
-  const [folder, setFolder] = useState("");
+  // Seletor de pasta: valor do select (sentinela "sem pasta"/"nova pasta" ou nome existente)
+  // + texto da pasta nova. O valor final vira o mesmo campo "folder" do save().
+  const [folderSel, setFolderSel] = useState<string>(FOLDER_NONE);
+  const [newFolder, setNewFolder] = useState("");
   const [search, setSearch] = useState("");
   const [activeFolder, setActiveFolder] = useState<string | null>(null);
   const [menuId, setMenuId] = useState<string | null>(null);
@@ -32,9 +41,17 @@ export function SavedRefs({ initialUrl }: { initialUrl?: string }) {
     });
   }, [refs, search, activeFolder]);
 
+  // Resolve a pasta escolhida: existente selecionada, nova digitada ou nenhuma.
+  const resolveFolder = () => {
+    if (folders.length === 0) return newFolder.trim();
+    if (folderSel === FOLDER_NEW) return newFolder.trim();
+    if (folderSel === FOLDER_NONE) return "";
+    return folderSel;
+  };
+
   const save = () => {
     if (!url.trim()) return;
-    add.mutate({ url: url.trim(), folder: folder.trim() || null, withPreview: true }, { onSuccess: () => { setUrl(""); } });
+    add.mutate({ url: url.trim(), folder: resolveFolder() || null }, { onSuccess: () => { setUrl(""); } });
   };
 
   const move = (r: SavedRef) => {
@@ -72,12 +89,29 @@ export function SavedRefs({ initialUrl }: { initialUrl?: string }) {
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <Input value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") save(); }} placeholder="Cole o link do Instagram ou TikTok…" className="flex-1" />
-          <Input value={folder} onChange={(e) => setFolder(e.target.value)} placeholder="Pasta (ex.: Ganchos)" className="sm:w-44" list="saved-folders" />
-          <datalist id="saved-folders">{folders.map((f) => <option key={f} value={f} />)}</datalist>
           <Button onClick={save} disabled={add.isPending || !url.trim()} className="shrink-0">
             {add.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
             Salvar
           </Button>
+        </div>
+        {/* Seletor de pasta: escolhe uma existente ou cria uma nova (opcional). */}
+        <div className="flex flex-col sm:flex-row gap-2">
+          {folders.length > 0 && (
+            <Select value={folderSel} onValueChange={setFolderSel}>
+              <SelectTrigger className="w-full sm:w-52 h-9">
+                <span className="text-muted-foreground mr-1 text-xs shrink-0">Pasta:</span>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={FOLDER_NONE}>Sem pasta</SelectItem>
+                {folders.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                <SelectItem value={FOLDER_NEW}>+ Nova pasta…</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          {(folders.length === 0 || folderSel === FOLDER_NEW) && (
+            <Input value={newFolder} onChange={(e) => setNewFolder(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") save(); }} placeholder="Pasta (ex.: Ganchos)" className="w-full sm:w-52 h-9" autoFocus={folders.length > 0 && folderSel === FOLDER_NEW} />
+          )}
         </div>
         <p className="text-[11px] font-body text-muted-foreground">Puxa a capa e a legenda do post automaticamente. Depois é só categorizar e usar como referência.</p>
       </div>
@@ -112,7 +146,10 @@ export function SavedRefs({ initialUrl }: { initialUrl?: string }) {
           {filtered.map((r) => (
             <SavedCard key={r.id} r={r} open={menuId === r.id} onToggleMenu={() => setMenuId(menuId === r.id ? null : r.id)}
               onOpen={() => window.open(r.url, "_blank", "noopener")}
-              onCriar={() => criarPost(r)} onMove={() => move(r)} onDelete={() => { setMenuId(null); del.mutate(r.id); }} />
+              onCriar={() => criarPost(r)} onMove={() => move(r)} onDelete={() => { setMenuId(null); del.mutate(r.id); }}
+              onRefreshCover={() => refreshCover.mutate({ id: r.id, url: r.url })}
+              refreshing={refreshCover.isPending && refreshCover.variables?.id === r.id}
+              loadingCover={add.pendingPreviewIds.has(r.id)} />
           ))}
         </div>
       )}
@@ -120,22 +157,39 @@ export function SavedRefs({ initialUrl }: { initialUrl?: string }) {
   );
 }
 
-function SavedCard({ r, open, onToggleMenu, onOpen, onCriar, onMove, onDelete }: {
+function SavedCard({ r, open, onToggleMenu, onOpen, onCriar, onMove, onDelete, onRefreshCover, refreshing, loadingCover }: {
   r: SavedRef; open: boolean; onToggleMenu: () => void; onOpen: () => void; onCriar: () => void; onMove: () => void; onDelete: () => void;
+  onRefreshCover: () => void; refreshing: boolean; loadingCover: boolean;
 }) {
   const pressTimer = useRef<number | null>(null);
+  const [imgFailed, setImgFailed] = useState(false);
   const startPress = () => { pressTimer.current = window.setTimeout(() => onToggleMenu(), 500); };
   const cancelPress = () => { if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null; } };
   const PlatIcon = r.platform === "tiktok" ? Music2 : Instagram;
+  // Sem capa OU capa quebrou (URL de CDN expirada): mostra placeholder decente.
+  const showPlaceholder = !r.thumbnail_url || imgFailed;
   return (
     <div className="relative rounded-2xl border border-border bg-card overflow-hidden group"
       onTouchStart={startPress} onTouchEnd={cancelPress} onTouchMove={cancelPress}>
       <button onClick={onOpen} className="block w-full text-left">
         <div className="aspect-[4/5] bg-muted relative">
-          {r.thumbnail_url ? (
-            <img src={r.thumbnail_url} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+          {!showPlaceholder ? (
+            <img src={r.thumbnail_url!} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" onError={() => setImgFailed(true)} />
+          ) : loadingCover ? (
+            // Capa vindo em segundo plano: shimmer discreto pra a pessoa saber que está carregando.
+            <div className="absolute inset-0 grid place-items-center bg-gradient-to-b from-muted to-muted/60 animate-pulse">
+              <div className="flex flex-col items-center gap-1.5 text-muted-foreground/60">
+                <Loader2 className="h-6 w-6 animate-spin" strokeWidth={1.5} />
+                <span className="text-[9px] font-body">puxando capa…</span>
+              </div>
+            </div>
           ) : (
-            <div className="absolute inset-0 grid place-items-center text-muted-foreground/40"><PlatIcon className="h-8 w-8" /></div>
+            <div className="absolute inset-0 grid place-items-center bg-gradient-to-b from-muted to-muted/60">
+              <div className="flex flex-col items-center gap-1.5 text-muted-foreground/50">
+                <PlatIcon className="h-9 w-9" strokeWidth={1.5} />
+                <span className="text-[9px] font-body inline-flex items-center gap-1"><ImageOff className="h-3 w-3" /> sem capa</span>
+              </div>
+            </div>
           )}
           {r.media_type === "video" && (
             <span className="absolute top-2 left-2 grid h-7 w-7 place-items-center rounded-full bg-black/45 text-white"><Play className="h-3.5 w-3.5" /></span>
@@ -156,6 +210,7 @@ function SavedCard({ r, open, onToggleMenu, onOpen, onCriar, onMove, onDelete }:
         </Button>
         <div className="flex items-center gap-1">
           <button onClick={onOpen} title="Abrir original" className="flex-1 h-7 grid place-items-center rounded-lg bg-muted/60 text-muted-foreground hover:text-foreground"><ExternalLink className="h-3.5 w-3.5" /></button>
+          <button onClick={onRefreshCover} disabled={refreshing} title="Atualizar capa" className="flex-1 h-7 grid place-items-center rounded-lg bg-muted/60 text-muted-foreground hover:text-foreground disabled:opacity-50"><RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} /></button>
           <button onClick={onMove} title="Mover de pasta" className="flex-1 h-7 grid place-items-center rounded-lg bg-muted/60 text-muted-foreground hover:text-foreground"><FolderInput className="h-3.5 w-3.5" /></button>
           <button onClick={onDelete} title="Excluir" className="flex-1 h-7 grid place-items-center rounded-lg bg-muted/60 text-muted-foreground hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
         </div>
