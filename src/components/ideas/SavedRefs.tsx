@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bookmark, Plus, Loader2, Search, Play, MoreVertical, Trash2, FolderInput, ExternalLink, PenLine, Instagram, Music2, ImageOff, RefreshCw } from "lucide-react";
+import { Bookmark, Plus, Loader2, Search, Play, MoreVertical, Trash2, FolderInput, ExternalLink, PenLine, Instagram, Music2, ImageOff, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,6 +12,10 @@ import { usePosts } from "@/hooks/usePosts";
 // Sentinelas do seletor de pasta (não colidem com nomes reais de pasta).
 const FOLDER_NONE = "__none__";
 const FOLDER_NEW = "__new__";
+
+// Paginação: ~10 linhas por página. No desktop o grid tem 6 colunas,
+// então 6 x 10 = 60 itens por página mantém a ideia de "10 linhas".
+const PAGE_SIZE = 60;
 
 export function SavedRefs({ initialUrl }: { initialUrl?: string }) {
   const navigate = useNavigate();
@@ -35,6 +39,7 @@ export function SavedRefs({ initialUrl }: { initialUrl?: string }) {
   const [search, setSearch] = useState("");
   const [activeFolder, setActiveFolder] = useState<string | null>(null);
   const [menuId, setMenuId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -44,6 +49,14 @@ export function SavedRefs({ initialUrl }: { initialUrl?: string }) {
       return (r.author ?? "").toLowerCase().includes(q) || (r.caption ?? "").toLowerCase().includes(q) || (r.folder ?? "").toLowerCase().includes(q);
     });
   }, [refs, search, activeFolder]);
+
+  // Paginação client-side sobre a lista JÁ filtrada (busca + pasta).
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  // Ao mudar busca/pasta (ou a lista encolher), volta pra página 1.
+  useEffect(() => { setPage(1); }, [search, activeFolder]);
+  // Segurança: se a página atual passou do total (ex.: itens excluídos), reajusta.
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+  const paged = useMemo(() => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [filtered, page]);
 
   // Resolve a pasta escolhida: existente selecionada, nova digitada ou nenhuma.
   const resolveFolder = () => {
@@ -168,16 +181,30 @@ export function SavedRefs({ initialUrl }: { initialUrl?: string }) {
           <p className="text-xs font-body text-muted-foreground mt-1">{refs.length === 0 ? "Cole um link do Instagram/TikTok acima." : "Tenta outra pasta ou busca."}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          {filtered.map((r) => (
-            <SavedCard key={r.id} r={r} open={menuId === r.id} onToggleMenu={() => setMenuId(menuId === r.id ? null : r.id)}
-              onOpen={() => window.open(r.url, "_blank", "noopener")}
-              onCriar={() => criarPost(r)} onMove={() => move(r)} onDelete={() => { setMenuId(null); del.mutate(r.id); }}
-              onRefreshCover={() => refreshCover.mutate({ id: r.id, url: r.url })}
-              refreshing={refreshCover.isPending && refreshCover.variables?.id === r.id}
-              loadingCover={add.pendingPreviewIds.has(r.id)} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2">
+            {paged.map((r) => (
+              <SavedCard key={r.id} r={r} open={menuId === r.id} onToggleMenu={() => setMenuId(menuId === r.id ? null : r.id)}
+                onOpen={() => window.open(r.url, "_blank", "noopener")}
+                onCriar={() => criarPost(r)} onMove={() => move(r)} onDelete={() => { setMenuId(null); del.mutate(r.id); }}
+                onRefreshCover={() => refreshCover.mutate({ id: r.id, url: r.url })}
+                refreshing={refreshCover.isPending && refreshCover.variables?.id === r.id}
+                loadingCover={add.pendingPreviewIds.has(r.id)} />
+            ))}
+          </div>
+          {/* Controles de página: só quando há mais de uma página. */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <Button variant="outline" size="sm" className="h-8 text-xs" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Anterior
+              </Button>
+              <span className="text-xs font-body text-muted-foreground">Página {page} de {totalPages}</span>
+              <Button variant="outline" size="sm" className="h-8 text-xs" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+                Próxima <ChevronRight className="h-3.5 w-3.5 ml-1" />
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -195,7 +222,7 @@ function SavedCard({ r, open, onToggleMenu, onOpen, onCriar, onMove, onDelete, o
   // Sem capa OU capa quebrou (URL de CDN expirada): mostra placeholder decente.
   const showPlaceholder = !r.thumbnail_url || imgFailed;
   return (
-    <div className="relative rounded-2xl border border-border bg-card overflow-hidden group"
+    <div className="relative rounded-xl border border-border bg-card overflow-hidden group"
       onTouchStart={startPress} onTouchEnd={cancelPress} onTouchMove={cancelPress}>
       <button onClick={onOpen} className="block w-full text-left">
         <div className="aspect-[4/5] bg-muted relative">
@@ -204,41 +231,41 @@ function SavedCard({ r, open, onToggleMenu, onOpen, onCriar, onMove, onDelete, o
           ) : loadingCover ? (
             // Capa vindo em segundo plano: shimmer discreto pra a pessoa saber que está carregando.
             <div className="absolute inset-0 grid place-items-center bg-gradient-to-b from-muted to-muted/60 animate-pulse">
-              <div className="flex flex-col items-center gap-1.5 text-muted-foreground/60">
-                <Loader2 className="h-6 w-6 animate-spin" strokeWidth={1.5} />
-                <span className="text-[9px] font-body">puxando capa…</span>
+              <div className="flex flex-col items-center gap-1 text-muted-foreground/60">
+                <Loader2 className="h-5 w-5 animate-spin" strokeWidth={1.5} />
+                <span className="text-[8px] font-body">puxando capa…</span>
               </div>
             </div>
           ) : (
             <div className="absolute inset-0 grid place-items-center bg-gradient-to-b from-muted to-muted/60">
-              <div className="flex flex-col items-center gap-1.5 text-muted-foreground/50">
-                <PlatIcon className="h-9 w-9" strokeWidth={1.5} />
-                <span className="text-[9px] font-body inline-flex items-center gap-1"><ImageOff className="h-3 w-3" /> sem capa</span>
+              <div className="flex flex-col items-center gap-1 text-muted-foreground/50">
+                <PlatIcon className="h-7 w-7" strokeWidth={1.5} />
+                <span className="text-[8px] font-body inline-flex items-center gap-1"><ImageOff className="h-2.5 w-2.5" /> sem capa</span>
               </div>
             </div>
           )}
           {r.media_type === "video" && (
-            <span className="absolute top-2 left-2 grid h-7 w-7 place-items-center rounded-full bg-black/45 text-white"><Play className="h-3.5 w-3.5" /></span>
+            <span className="absolute top-1.5 left-1.5 grid h-6 w-6 place-items-center rounded-full bg-black/45 text-white"><Play className="h-3 w-3" /></span>
           )}
-          {r.status === "usado" && <span className="absolute bottom-2 left-2 rounded-full bg-secondary/90 text-white text-[9px] font-bold px-1.5 py-0.5">usado</span>}
-          <span className="absolute top-2 right-2 grid h-6 w-6 place-items-center rounded-full bg-black/40 text-white"><PlatIcon className="h-3 w-3" /></span>
+          {r.status === "usado" && <span className="absolute bottom-1.5 left-1.5 rounded-full bg-secondary/90 text-white text-[8px] font-bold px-1.5 py-0.5">usado</span>}
+          <span className="absolute top-1.5 right-1.5 grid h-5 w-5 place-items-center rounded-full bg-black/40 text-white"><PlatIcon className="h-2.5 w-2.5" /></span>
         </div>
       </button>
-      <div className="p-2">
-        {r.author && <p className="text-[11px] font-body font-semibold text-foreground truncate">@{r.author}</p>}
-        {r.caption && <p className="text-[10.5px] font-body text-muted-foreground line-clamp-2 mt-0.5">{r.caption}</p>}
-        {r.folder && <span className="inline-block mt-1 text-[9px] font-body px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">{r.folder}</span>}
+      <div className="p-1.5">
+        {r.author && <p className="text-[10px] font-body font-semibold text-foreground truncate">@{r.author}</p>}
+        {r.caption && <p className="text-[9.5px] font-body text-muted-foreground line-clamp-2 mt-0.5 leading-snug">{r.caption}</p>}
+        {r.folder && <span className="inline-block mt-1 text-[8px] font-body px-1.5 py-0.5 rounded-full bg-primary/10 text-primary truncate max-w-full">{r.folder}</span>}
       </div>
       {/* Ações visíveis abaixo do post */}
-      <div className="px-2 pb-2 space-y-1.5">
-        <Button size="sm" className="w-full h-8 text-xs" onClick={onCriar}>
-          <PenLine className="h-3.5 w-3.5 mr-1" /> Criar post disso
+      <div className="px-1.5 pb-1.5 space-y-1">
+        <Button size="sm" className="w-full h-7 text-[10px] px-1" onClick={onCriar}>
+          <PenLine className="h-3 w-3 mr-1" /> Criar post
         </Button>
         <div className="flex items-center gap-1">
-          <button onClick={onOpen} title="Abrir original" className="flex-1 h-7 grid place-items-center rounded-lg bg-muted/60 text-muted-foreground hover:text-foreground"><ExternalLink className="h-3.5 w-3.5" /></button>
-          <button onClick={onRefreshCover} disabled={refreshing} title="Atualizar capa" className="flex-1 h-7 grid place-items-center rounded-lg bg-muted/60 text-muted-foreground hover:text-foreground disabled:opacity-50"><RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} /></button>
-          <button onClick={onMove} title="Mover de pasta" className="flex-1 h-7 grid place-items-center rounded-lg bg-muted/60 text-muted-foreground hover:text-foreground"><FolderInput className="h-3.5 w-3.5" /></button>
-          <button onClick={onDelete} title="Excluir" className="flex-1 h-7 grid place-items-center rounded-lg bg-muted/60 text-muted-foreground hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
+          <button onClick={onOpen} title="Abrir original" className="flex-1 h-6 grid place-items-center rounded-md bg-muted/60 text-muted-foreground hover:text-foreground"><ExternalLink className="h-3 w-3" /></button>
+          <button onClick={onRefreshCover} disabled={refreshing} title="Atualizar capa" className="flex-1 h-6 grid place-items-center rounded-md bg-muted/60 text-muted-foreground hover:text-foreground disabled:opacity-50"><RefreshCw className={cn("h-3 w-3", refreshing && "animate-spin")} /></button>
+          <button onClick={onMove} title="Mover de pasta" className="flex-1 h-6 grid place-items-center rounded-md bg-muted/60 text-muted-foreground hover:text-foreground"><FolderInput className="h-3 w-3" /></button>
+          <button onClick={onDelete} title="Excluir" className="flex-1 h-6 grid place-items-center rounded-md bg-muted/60 text-muted-foreground hover:text-destructive"><Trash2 className="h-3 w-3" /></button>
         </div>
       </div>
     </div>
