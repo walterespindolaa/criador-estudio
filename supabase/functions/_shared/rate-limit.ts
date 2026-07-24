@@ -1,7 +1,10 @@
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 
 export type RateLimitWindow = "minute" | "hour" | "day";
-export interface RateLimitOptions { scope: string; window: RateLimitWindow; limit: number; }
+// failClosed: em erro de DB, BLOQUEAR (allowed=false) em vez de liberar. Default
+// mantém o comportamento atual (fail-open). Ligue failClosed:true em endpoints
+// PÚBLICOS anônimos, onde um RPC quebrado não pode virar "sem limite nenhum".
+export interface RateLimitOptions { scope: string; window: RateLimitWindow; limit: number; failClosed?: boolean; }
 export interface RateLimitResult { allowed: boolean; count: number; limit: number; }
 
 let cachedAdmin: SupabaseClient | null = null;
@@ -29,9 +32,12 @@ export async function checkRateLimit(userId: string, options: RateLimitOptions):
     _limit: options.limit,
   });
   if (error || !data || (Array.isArray(data) && data.length === 0)) {
-    // Failsafe: em erro de DB, LIBERA (não trava todo mundo). Erro vai pros logs.
-    console.error("[rate-limit] RPC error, failing open:", (error as { message?: string })?.message);
-    return { allowed: true, count: 0, limit: options.limit };
+    // Em erro de DB: por padrão LIBERA (fail-open, não trava todo mundo). Se o
+    // chamador passou failClosed:true (endpoints públicos anônimos), BLOQUEIA —
+    // senão um RPC fora do ar deixaria o endpoint sem limite algum. Vai pros logs.
+    const failClosed = options.failClosed === true;
+    console.error(`[rate-limit] RPC error, failing ${failClosed ? "closed" : "open"}:`, (error as { message?: string })?.message);
+    return { allowed: !failClosed, count: 0, limit: options.limit };
   }
   const row = Array.isArray(data) ? data[0] : data;
   return { allowed: row.allowed === true, count: row.current_count ?? 0, limit: row.limit ?? options.limit };

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { toast } from "sonner";
+import { hojeBR, parseDateOnly, toISODateBR } from "@/lib/date-br";
 
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
@@ -387,6 +388,53 @@ export function useAllExternalPosts() {
         for (const c of (cdata as { post_id: string; content: string; author_role: string }[]) ?? []) if (!comments[c.post_id]) comments[c.post_id] = { content: c.content, author_role: c.author_role };
       }
       return posts.map((p) => ({ ...p, last_comment: comments[p.id]?.content ?? p.last_comment ?? null, last_comment_role: comments[p.id]?.author_role ?? p.last_comment_role ?? null }));
+    },
+  });
+}
+
+// Posts ENXUTOS pro motor de sinais da home (useOperationSignals). Diferente do
+// useAllExternalPosts (que alimenta o board/painel e precisa de TODOS os posts com
+// as colunas do card), aqui buscamos só o que os sinais leem e só a janela que
+// importa pra "precisa de você hoje", pra não crescer com o histórico:
+//  - external_client_id: agrupar posts por cliente
+//  - approval_status: sinais de aprovação parada / ajuste pendente
+//  - approval_updated_at (+ created_at de fallback): idade do sinal
+//  - scheduled_date: silêncio (sem post agendado nos próximos 7 dias)
+// Janela: pega TODOS os pendentes/em ajuste (independe de data) + qualquer post
+// agendado/criado nos últimos 60 dias (o que também cobre os agendados futuros,
+// que são >= hoje). Nenhum sinal atual varre "post antigo há muito tempo", então
+// a janela não quebra nada. Se surgir um sinal desse tipo, ampliar a janela aqui.
+export type OperationPost = {
+  external_client_id: string;
+  approval_status: ExternalPost["approval_status"];
+  approval_updated_at: string | null;
+  created_at: string;
+  scheduled_date: string | null;
+};
+const OPERATION_POST_COLUMNS =
+  "external_client_id, approval_status, approval_updated_at, created_at, scheduled_date";
+export function useOperationPosts() {
+  const { agencyOwnerId } = useActiveAccount();
+  return useQuery({
+    queryKey: ["operation-posts", agencyOwnerId],
+    enabled: !!agencyOwnerId,
+    // Mesma cadência do painel: cliente aprova por link, revalida ao focar, com janela
+    // de 30s pra não rebaixar tudo a cada montagem/foco.
+    staleTime: 30_000, refetchOnWindowFocus: true,
+    queryFn: async () => {
+      // Corte da janela: hoje menos 60 dias, no fuso BR.
+      const cutoffDate = parseDateOnly(hojeBR());
+      cutoffDate.setDate(cutoffDate.getDate() - 60);
+      const cutoff = toISODateBR(cutoffDate);
+      const { data, error } = await sbFrom("posts").select(OPERATION_POST_COLUMNS)
+        .eq("user_id", agencyOwnerId!)
+        .not("external_client_id", "is", null)
+        .not("is_draft", "is", true)
+        .or(`approval_status.in.(pendente,ajuste_solicitado),scheduled_date.gte.${cutoff},created_at.gte.${cutoff}`)
+        .order("created_at", { ascending: false })
+        .limit(2000);
+      if (error) throw error;
+      return (data as OperationPost[]) ?? [];
     },
   });
 }

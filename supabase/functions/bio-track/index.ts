@@ -35,8 +35,12 @@ serve(async (req) => {
     const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     // 30 eventos/min por IP+alvo. Se estourar, ignora silenciosamente (não conta).
-    const { data: allowed } = await svc.rpc("rate_touch", { _key: `bio:${ip}:${slug || linkId}`, _limit: 30 });
-    if (allowed === false) return ok({ ok: true, throttled: true });
+    // Fail-CLOSED: este endpoint é público e anônimo (verify_jwt = false), então
+    // em erro do rate-limit (RPC/DB fora) a gente NÃO conta o evento. Liberar em
+    // falha deixaria o contador da bio sem teto justo quando o freio quebrou —
+    // exatamente a hora do abuso. Melhor perder uma métrica que abrir a porteira.
+    const { data: allowed, error: rlErr } = await svc.rpc("rate_touch", { _key: `bio:${ip}:${slug || linkId}`, _limit: 30 });
+    if (rlErr || allowed === false) return ok({ ok: true, throttled: true });
 
     if (type === "view" && slug) {
       await svc.rpc("increment_bio_view", { _slug: slug });

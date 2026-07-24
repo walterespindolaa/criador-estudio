@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useCrmClients } from "@/hooks/useCrm";
-import { useAllExternalPosts, useExternalClients } from "@/hooks/useCriaPost";
+import { useOperationPosts, useExternalClients } from "@/hooks/useCriaPost";
 import { useFinRecords } from "@/hooks/useFinance";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 
@@ -41,7 +41,8 @@ function daysSince(iso: string): number {
 
 export function useOperationSignals() {
   const { data: crmClients = [] } = useCrmClients();
-  const { data: allPosts = [] } = useAllExternalPosts();
+  // Query enxuta com só os campos/janela que os sinais usam (ver useOperationPosts).
+  const { data: allPosts = [] } = useOperationPosts();
   const { clients: extClients } = useExternalClients();
   // O sinal financeiro só olha o que foi pago NO MÊS corrente (paidThisMonth
   // abaixo). Então buscamos só o financeiro a partir do 1º dia do mês, em vez do
