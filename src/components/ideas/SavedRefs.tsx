@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useSavedRefs, useSavedFolders, useAddSavedRef, useUpdateSavedRef, useDeleteSavedRef, useRefreshSavedCover, type SavedRef } from "@/hooks/useSavedRefs";
+import { useSavedRefs, useSavedFolders, useAddSavedRef, useUpdateSavedRef, useDeleteSavedRef, useRefreshSavedCover, useRecoverMissingCovers, type SavedRef } from "@/hooks/useSavedRefs";
 import { usePosts } from "@/hooks/usePosts";
 
 // Sentinelas do seletor de pasta (não colidem com nomes reais de pasta).
@@ -21,7 +21,11 @@ export function SavedRefs({ initialUrl }: { initialUrl?: string }) {
   const upd = useUpdateSavedRef();
   const del = useDeleteSavedRef();
   const refreshCover = useRefreshSavedCover();
+  const recoverCovers = useRecoverMissingCovers();
   const { createPost } = usePosts();
+
+  // Salvos SEM capa (thumbnail vazio/null): só esses entram no lote.
+  const missingCovers = useMemo(() => refs.filter((r) => !r.thumbnail_url).map((r) => ({ id: r.id, url: r.url })), [refs]);
 
   const [url, setUrl] = useState(initialUrl ?? "");
   // Seletor de pasta: valor do select (sentinela "sem pasta"/"nova pasta" ou nome existente)
@@ -122,6 +126,28 @@ export function SavedRefs({ initialUrl }: { initialUrl?: string }) {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por @ ou palavra…" className="pl-9" />
         </div>
+        {/* Recuperar capas faltantes EM LOTE: só aparece se houver salvos sem capa. */}
+        {missingCovers.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => recoverCovers.recover(missingCovers)}
+              disabled={recoverCovers.running}
+            >
+              {recoverCovers.running ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
+              {recoverCovers.running
+                ? `Recuperando capas… ${recoverCovers.progress.done} de ${recoverCovers.progress.total}`
+                : `Recuperar capas faltantes (${missingCovers.length})`}
+            </Button>
+            {recoverCovers.running && (
+              <button onClick={recoverCovers.cancel} className="text-[11px] font-body text-muted-foreground hover:text-foreground underline shrink-0">
+                cancelar
+              </button>
+            )}
+          </div>
+        )}
         {folders.length > 0 && (
           <div className="flex gap-1.5 flex-wrap">
             <button onClick={() => setActiveFolder(null)} className={cn("px-3 h-8 rounded-full text-xs font-body border", !activeFolder ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground")}>Todas</button>
