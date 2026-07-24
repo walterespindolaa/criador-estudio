@@ -14,14 +14,23 @@ export type Feedback = {
   status: "novo" | "visto" | "resolvido";
   url: string | null;
   origin: string | null; // gestor | usuario (de onde a pessoa enviou)
+  attachment_url: string | null;  // print/imagem/vídeo (bucket separado 'feedback')
+  attachment_type: string | null; // image | video
   created_at: string;
 };
 
-// Usuário envia feedback.
+// Usuário envia feedback. O anexo (se houver) já foi subido no bucket 'feedback'
+// pelo diálogo; aqui só gravamos a referência (url + tipo).
 export function useSendFeedback() {
   const { user } = useAuth();
   return useMutation({
-    mutationFn: async (input: { type: string; message: string; origin?: string }) => {
+    mutationFn: async (input: {
+      type: string;
+      message: string;
+      origin?: string;
+      attachmentUrl?: string;
+      attachmentType?: string;
+    }) => {
       if (!user) throw new Error("Sem sessão");
       const { error } = await sbFrom("feedbacks").insert({
         user_id: user.id,
@@ -29,6 +38,8 @@ export function useSendFeedback() {
         message: input.message,
         origin: input.origin ?? null,
         url: typeof window !== "undefined" ? window.location.href : null,
+        attachment_url: input.attachmentUrl ?? null,
+        attachment_type: input.attachmentType ?? null,
       } as never);
       if (error) throw error;
     },

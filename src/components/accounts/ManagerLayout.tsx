@@ -19,6 +19,7 @@ import { Logo } from "@/components/shared/Logo";
 import { definirBadge } from "@/lib/pwa";
 import { ModulePopup } from "@/components/accounts/ModulePopup";
 import { ClientSwitcher } from "@/components/accounts/ClientSwitcher";
+import { AccountSwitcher } from "@/components/accounts/AccountSwitcher";
 import { SettingsManagerDrawer } from "@/components/accounts/SettingsManagerDrawer";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { HeroBand } from "@/components/HeroBand";
@@ -301,7 +302,7 @@ export default function ManagerLayout() {
           className="min-h-14 sticky top-0 z-40 grid grid-cols-[1fr_auto_1fr] items-center px-3 bg-background border-b border-border md:hidden"
           style={{ paddingTop: "env(safe-area-inset-top)" }}
         >
-          <div className="flex items-center gap-1 justify-self-start">
+          <div className="flex items-center gap-0.5 justify-self-start">
             <GlobalSearch />
             <HelpButton />
           </div>
@@ -316,8 +317,11 @@ export default function ManagerLayout() {
             <Logo className="h-6 w-auto" />
           </button>
 
-          <div className="flex items-center gap-1 justify-self-end">
+          <div className="flex items-center gap-0.5 justify-self-end">
             {canClients && <ClientSwitcher />}
+            {/* Pular direto PRA DENTRO da conta do cliente (impersonar), da barra
+                dela mesma. Só aparece se ela tiver contas gerenciadas. */}
+            <AccountSwitcher compact />
             <NotificationsBell />
             <button
               type="button"

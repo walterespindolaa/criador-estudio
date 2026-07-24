@@ -61,7 +61,7 @@ function deriveState(profile: Perfil): BadgeState | null {
   return { kind: "expired" };
 }
 
-export function PlanBadge({ light = false, onlyUrgent = false }: { light?: boolean; onlyUrgent?: boolean }) {
+export function PlanBadge({ light = false, onlyUrgent = false, compact = false }: { light?: boolean; onlyUrgent?: boolean; compact?: boolean }) {
   const { profile } = useProfile();
   const navigate = useNavigate();
   const state = deriveState(profile);
@@ -75,8 +75,10 @@ export function PlanBadge({ light = false, onlyUrgent = false }: { light?: boole
     return null;
   }
 
-  const base =
-    "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-body font-semibold transition-all hover:opacity-90 hover:-translate-y-px cursor-pointer shrink-0";
+  const base = compact
+    // Mobile: pílula enxuta (só o ícone + Nd), pra não amontoar a barra do topo.
+    ? "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-body font-semibold transition-all hover:opacity-90 cursor-pointer shrink-0"
+    : "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-body font-semibold transition-all hover:opacity-90 hover:-translate-y-px cursor-pointer shrink-0";
 
   const variants: Record<BadgeState["kind"], { className: string; icon: React.ReactNode; label: string }> = {
     admin: {
@@ -123,6 +125,10 @@ export function PlanBadge({ light = false, onlyUrgent = false }: { light?: boole
 
   const variant = variants[state.kind];
 
+  // No mobile (compact), o texto vira só "337d" pros estados de teste, que são os
+  // únicos que aparecem lá (onlyUrgent). Desktop mantém o rótulo completo.
+  const label = compact && "daysLeft" in state ? `${state.daysLeft}d` : variant.label;
+
   return (
     <button
       type="button"
@@ -132,7 +138,7 @@ export function PlanBadge({ light = false, onlyUrgent = false }: { light?: boole
       aria-label={`Plano atual: ${variant.label}. Clique para ver os planos.`}
     >
       {variant.icon}
-      <span>{variant.label}</span>
+      <span>{label}</span>
     </button>
   );
 }

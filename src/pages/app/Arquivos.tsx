@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { FolderOpen, Upload, Search, Trash2, FileText, Cloud, ImageIcon, Crown, Clock } from "lucide-react";
+import { FolderOpen, Upload, Search, Trash2, FileText, Cloud, ImageIcon, Crown, Clock, Plus, ExternalLink, ChevronLeft, ChevronRight, RefreshCw, File as FileIcon, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,8 @@ import { DrivePickerButton } from "@/components/drive/DrivePickerButton";
 import { FilePreviewModal } from "@/components/files/FilePreviewModal";
 import { DriveMediaPreview } from "@/components/drive/DriveMediaPreview";
 import { useFiles } from "@/hooks/useFiles";
+import { useDriveFolder, type DriveItem } from "@/hooks/useDriveFolder";
+import { useUserLinks, type UserLink } from "@/hooks/useUserLinks";
 import { cn } from "@/lib/utils";
 import { storageBytesForPlan, formatStorage, STORAGE_BYTES, TIER_LABEL, tierRank, type PlanId } from "@/lib/plans";
 import { useTier } from "@/hooks/useTier";
@@ -79,7 +81,248 @@ function SignedImage({
   return <img src={url} alt={alt} className="w-full h-full object-cover" loading="lazy" />;
 }
 
+// ── LINKS ÚTEIS / DRIVE DO USUÁRIO FINAL ──
+// Mesma ideia da aba "Links úteis" do gestor (ClienteHub): o criador salva os
+// próprios links (rótulo + URL) e, pros que forem do Drive, a gente lista as
+// pastas/arquivos daquela pasta. A diferença é o armazenamento: aqui os links
+// são da CONTA do criador (profiles.useful_links), não de um cliente.
 
+// Detecta se um link é de Drive (pelo rótulo ou pela URL).
+function isDriveLink(l: UserLink) {
+  return /drive/i.test(l.label) || /drive\.google|docs\.google/i.test(l.url);
+}
+
+function fmtDriveDate(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+const DRIVE_PAGE_SIZE = 10;
+
+// Editor de links (rótulo + URL): adicionar / listar / remover. Grava o array
+// inteiro no jsonb do perfil, igual o gestor faz com useful_links.
+function UserLinksEditor({
+  rows,
+  onSave,
+}: {
+  rows: UserLink[];
+  onSave: (next: UserLink[]) => void;
+}) {
+  const [draft, setDraft] = useState<UserLink[]>(rows);
+  const [novoLabel, setNovoLabel] = useState("");
+  const [novoUrl, setNovoUrl] = useState("");
+
+  // Adota o servidor quando os links mudam de fora (só salvamos no blur).
+  useEffect(() => { setDraft(rows); }, [rows]);
+
+  const adicionar = () => {
+    const url = novoUrl.trim();
+    if (!url) return;
+    if (!/^https?:\/\//i.test(url)) { toast.error("A URL precisa começar com http:// ou https://"); return; }
+    onSave([...draft, { label: novoLabel.trim() || "Link", url }]);
+    setNovoLabel(""); setNovoUrl("");
+  };
+
+  const remover = (i: number) => onSave(draft.filter((_, idx) => idx !== i));
+  const editar = (i: number, campo: keyof UserLink, valor: string) =>
+    setDraft((prev) => prev.map((r, idx) => (idx === i ? { ...r, [campo]: valor } : r)));
+
+  const salvarEdicao = () => {
+    const bad = draft.find((r) => r.url && !/^https?:\/\//i.test(r.url));
+    if (bad) { toast.error("A URL precisa começar com http:// ou https://"); return; }
+    onSave(draft);
+  };
+
+  return (
+    <div className="bg-card border border-border rounded-2xl p-4">
+      <div className="flex items-center gap-2 mb-2.5">
+        <Link2 className="h-4 w-4 text-muted-foreground" />
+        <p className="text-xs font-body text-muted-foreground">Seus links (Drive, pastas, materiais…)</p>
+      </div>
+
+      {draft.length > 0 && (
+        <div className="space-y-2 mb-3">
+          {draft.map((r, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <Input value={r.label} onChange={(e) => editar(i, "label", e.target.value)} onBlur={salvarEdicao}
+                placeholder="Rótulo (ex.: Drive - Fotos)" className="rounded-xl h-9 text-sm w-32 sm:w-40 shrink-0" />
+              <Input value={r.url} onChange={(e) => editar(i, "url", e.target.value)} onBlur={salvarEdicao}
+                placeholder="https://…" className="rounded-xl h-9 text-sm flex-1 min-w-0" />
+              <a href={r.url} target="_blank" rel="noopener noreferrer" title="Abrir link" aria-label="Abrir link" className="w-9 h-9 rounded-xl border border-border grid place-items-center text-muted-foreground hover:text-primary shrink-0"><ExternalLink className="h-4 w-4" /></a>
+              <button onClick={() => remover(i)} title="Remover" aria-label="Remover" className="w-9 h-9 rounded-xl border border-border grid place-items-center text-muted-foreground hover:text-destructive shrink-0"><Trash2 className="h-4 w-4" /></button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 flex-wrap">
+        <Input value={novoLabel} onChange={(e) => setNovoLabel(e.target.value)} placeholder="Rótulo (ex.: Drive - Aprovados)" className="rounded-xl h-9 text-sm w-32 sm:w-40" />
+        <Input value={novoUrl} onChange={(e) => setNovoUrl(e.target.value)} onKeyDown={(e) => e.key === "Enter" && adicionar()} placeholder="https://drive.google.com/…" className="rounded-xl h-9 text-sm flex-1 min-w-[160px]" />
+        <Button onClick={adicionar} disabled={!novoUrl.trim()} className="rounded-xl h-9 gap-1.5"><Plus className="h-4 w-4" /> Adicionar</Button>
+      </div>
+    </div>
+  );
+}
+
+// Lista o conteúdo das pastas do Drive salvas nos links do usuário. Reaproveita
+// useDriveFolder (edge drive-list), com paginação de 10 por página, pastas
+// primeiro (a API já ordena), nome clicável abre no Drive em nova aba.
+function UserDriveFolders({ links }: { links: UserLink[] }) {
+  const drives = useMemo(() => (links ?? []).filter((l) => l?.url && isDriveLink(l)), [links]);
+  const [sel, setSel] = useState(0);
+  const [page, setPage] = useState(0);
+  const activeDrive = drives[Math.min(sel, drives.length - 1)] ?? null;
+  const { data, isLoading, isError, error, isFetching, refetch } = useDriveFolder(activeDrive?.url);
+
+  // Trocar de pasta volta pra primeira página (a paginação é por pasta).
+  useEffect(() => { setPage(0); }, [sel]);
+
+  // Sem link de Drive salvo: estado vazio com instrução.
+  if (drives.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-border p-8 text-center">
+        <FolderOpen className="h-8 w-8 mx-auto text-muted-foreground/60 mb-3" />
+        <p className="text-sm font-body text-foreground font-medium">Nenhuma pasta do Drive nos seus links</p>
+        <p className="text-xs text-muted-foreground font-body mt-1 max-w-md mx-auto">
+          Cole um link da pasta do Google Drive no editor acima, com "Drive" no rótulo.
+          A pasta precisa estar compartilhada como <strong>"qualquer pessoa com o link pode ver"</strong>.
+        </p>
+      </div>
+    );
+  }
+
+  const items: DriveItem[] = data?.items ?? [];
+  const rootUrl = data?.root_url ?? activeDrive?.url ?? "";
+  const totalPages = Math.max(1, Math.ceil(items.length / DRIVE_PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const pageItems = items.slice(safePage * DRIVE_PAGE_SIZE, safePage * DRIVE_PAGE_SIZE + DRIVE_PAGE_SIZE);
+
+  return (
+    <div className="space-y-4">
+      {/* Barra: seletor (se houver mais de uma pasta), atualizar, abrir no Drive. */}
+      <div className="flex flex-wrap items-center gap-2">
+        {drives.length > 1 && (
+          <select
+            value={sel}
+            onChange={(e) => setSel(Number(e.target.value))}
+            aria-label="Escolher pasta do Drive"
+            className="h-9 rounded-xl border border-border bg-card px-3 text-xs font-body font-semibold cursor-pointer outline-none max-w-[60%]"
+          >
+            {drives.map((d, i) => <option key={i} value={i}>{d.label || d.url}</option>)}
+          </select>
+        )}
+        <div className="flex-1" />
+        <Button variant="outline" size="sm" className="rounded-xl gap-1.5" onClick={() => refetch()} disabled={isFetching}>
+          <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} /> Atualizar
+        </Button>
+        {rootUrl && (
+          <Button size="sm" className="rounded-xl gap-1.5" onClick={() => window.open(rootUrl, "_blank", "noopener,noreferrer")}>
+            <FolderOpen className="h-4 w-4" /> Abrir no Drive
+          </Button>
+        )}
+      </div>
+
+      {/* Loading: skeleton de linhas. */}
+      {isLoading && (
+        <div className="rounded-2xl border border-border bg-card divide-y divide-border overflow-hidden">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 px-4 py-3">
+              <div className="h-5 w-5 rounded bg-muted animate-pulse shrink-0" />
+              <div className="h-4 rounded bg-muted animate-pulse flex-1 max-w-[40%]" />
+              <div className="h-3 w-20 rounded bg-muted animate-pulse ml-auto" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Erro: mensagem amigável (pasta privada, chave ausente, etc.). */}
+      {!isLoading && isError && (
+        <div className="rounded-2xl border border-amber-300/60 bg-amber-50 dark:bg-amber-950/20 p-6 text-center">
+          <p className="text-sm font-body text-amber-800 dark:text-amber-300 font-medium">
+            {(error as Error)?.message || "Não foi possível listar a pasta do Drive."}
+          </p>
+          <Button variant="outline" size="sm" className="rounded-xl gap-1.5 mt-3" onClick={() => refetch()}>
+            <RefreshCw className="h-4 w-4" /> Tentar de novo
+          </Button>
+        </div>
+      )}
+
+      {/* Vazia. */}
+      {!isLoading && !isError && items.length === 0 && (
+        <div className="rounded-2xl border border-dashed border-border p-10 text-center">
+          <p className="text-sm font-body text-muted-foreground">Esta pasta está vazia.</p>
+        </div>
+      )}
+
+      {/* Listagem: pastas primeiro, nome clicável abre no Drive. Máx 10 por página. */}
+      {!isLoading && !isError && items.length > 0 && (
+        <>
+          <div className="rounded-2xl border border-border bg-card divide-y divide-border overflow-hidden">
+            {pageItems.map((it) => (
+              <a
+                key={it.id}
+                href={it.webViewLink ?? rootUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors"
+              >
+                {it.isFolder
+                  ? <FolderOpen className="h-5 w-5 text-primary shrink-0" />
+                  : <FileIcon className="h-5 w-5 text-muted-foreground shrink-0" />}
+                <span className="text-[13px] font-body text-foreground truncate flex-1 min-w-0">{it.name}</span>
+                {it.modifiedTime && (
+                  <span className="text-[11px] font-body text-muted-foreground shrink-0 hidden sm:inline">{fmtDriveDate(it.modifiedTime)}</span>
+                )}
+                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              </a>
+            ))}
+          </div>
+
+          {/* Paginação: só quando passa de 10 itens. Botões recuar/avançar (‹ ›). */}
+          {items.length > DRIVE_PAGE_SIZE && (
+            <div className="flex items-center justify-center gap-3 pt-1">
+              <Button variant="outline" size="sm" className="rounded-xl h-8 w-8 p-0" aria-label="Página anterior"
+                onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={safePage === 0}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-[12px] font-body text-muted-foreground tabular-nums">
+                Página {safePage + 1} de {totalPages}
+              </span>
+              <Button variant="outline" size="sm" className="rounded-xl h-8 w-8 p-0" aria-label="Próxima página"
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))} disabled={safePage >= totalPages - 1}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// Seção completa dos links do usuário: editor + pastas do Drive. Lê/grava via
+// useUserLinks (profiles.useful_links).
+function UserLinksSection() {
+  const { links, save } = useUserLinks();
+  return (
+    <div className="mb-6 space-y-4">
+      <p className="text-sm font-body font-semibold text-foreground flex items-center gap-2">
+        <Link2 className="h-4 w-4 text-primary" />
+        Links úteis
+      </p>
+      <UserLinksEditor rows={links} onSave={(next) => save.mutate(next)} />
+      <div>
+        <div className="flex items-center gap-2 mb-2.5 px-1">
+          <FolderOpen className="h-4 w-4 text-muted-foreground" />
+          <p className="text-xs font-body text-muted-foreground">Pastas do Google Drive</p>
+        </div>
+        <UserDriveFolders links={links} />
+      </div>
+    </div>
+  );
+}
 
 const Arquivos = () => {
   const { user } = useAuth();
@@ -100,6 +343,8 @@ const Arquivos = () => {
   const [pendingCategory, setPendingCategory] = useState("geral");
   const [pendingPermanent, setPendingPermanent] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  // Paginação client-side das "Mídias vinculadas" (sobre a lista já filtrada).
+  const [drivePage, setDrivePage] = useState(0);
 
   const storageUsed = activeProfile?.storage_used_bytes ?? 0;
   const storageQuota = activeProfile?.storage_quota_bytes ?? storageBytesForPlan(null, false);
@@ -271,6 +516,19 @@ const Arquivos = () => {
     !search || f.file_name?.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Paginação das "Mídias vinculadas": 12 por página, recalcula sobre o
+  // resultado filtrado. Ao mudar busca/filtro, o efeito abaixo volta pra pág 1.
+  const DRIVE_MEDIA_PAGE_SIZE = 12;
+  const driveTotalPages = Math.max(1, Math.ceil(filteredDrive.length / DRIVE_MEDIA_PAGE_SIZE));
+  const driveSafePage = Math.min(drivePage, driveTotalPages - 1);
+  const pagedDrive = filteredDrive.slice(
+    driveSafePage * DRIVE_MEDIA_PAGE_SIZE,
+    driveSafePage * DRIVE_MEDIA_PAGE_SIZE + DRIVE_MEDIA_PAGE_SIZE,
+  );
+
+  // Trocar busca ou filtro volta as "Mídias vinculadas" pra primeira página.
+  useEffect(() => { setDrivePage(0); }, [search, catFilter]);
+
   return (
     <div className="pb-20 md:pb-0">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
@@ -359,6 +617,9 @@ const Arquivos = () => {
             ))}
           </div>
         </div>
+
+        {/* Links úteis / Drive do próprio criador (rótulo + URL + pastas do Drive) */}
+        <UserLinksSection />
 
         {/* Empty state */}
         {filteredUploads.length === 0 && filteredDrive.length === 0 ? (
@@ -472,7 +733,7 @@ const Arquivos = () => {
                   <span className="text-[10px] text-muted-foreground font-normal">({filteredDrive.length})</span>
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {filteredDrive.map((f) => (
+                  {pagedDrive.map((f) => (
                     <DriveMediaPreview
                       key={f.id}
                       fileName={f.file_name}
@@ -485,6 +746,23 @@ const Arquivos = () => {
                     />
                   ))}
                 </div>
+
+                {/* Paginação: só quando passa de 12 itens. Botões recuar/avançar (‹ ›). */}
+                {filteredDrive.length > DRIVE_MEDIA_PAGE_SIZE && (
+                  <div className="flex items-center justify-center gap-3 pt-4">
+                    <Button variant="outline" size="sm" className="rounded-xl h-8 w-8 p-0" aria-label="Página anterior"
+                      onClick={() => setDrivePage((p) => Math.max(0, p - 1))} disabled={driveSafePage === 0}>
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-[12px] font-body text-muted-foreground tabular-nums">
+                      Página {driveSafePage + 1} de {driveTotalPages}
+                    </span>
+                    <Button variant="outline" size="sm" className="rounded-xl h-8 w-8 p-0" aria-label="Próxima página"
+                      onClick={() => setDrivePage((p) => Math.min(driveTotalPages - 1, p + 1))} disabled={driveSafePage >= driveTotalPages - 1}>
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </>

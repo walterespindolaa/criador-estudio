@@ -24,14 +24,15 @@ export function AccountSwitcher({ compact = false }: { compact?: boolean }) {
         aria-label={compact ? `Trocar de conta (${label})` : undefined}
         className={
           compact
-            // Pill PRETO no mobile: destaca o seletor, que antes sumia claro no fundo.
-            ? "h-9 w-9 flex items-center justify-center rounded-xl bg-neutral-900 text-white hover:bg-neutral-800 transition-colors"
+            // Botão discreto (igual sino/ajustes): SÓ o boneco fica preto pra chamar
+            // atenção, sem pintar o botão inteiro de preto.
+            ? "h-9 w-9 flex items-center justify-center rounded-xl hover:bg-accent/60 transition-colors"
             : "w-full flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm font-body hover:bg-accent/50 transition-colors"
         }
       >
         {isManaging
-          ? <Users className={cn("h-4 w-4 shrink-0", compact ? "text-white" : "text-primary")} />
-          : <User className={cn("h-4 w-4 shrink-0", compact ? "text-white/90" : "text-muted-foreground")} />}
+          ? <Users className={cn("h-4 w-4 shrink-0", compact ? "text-neutral-900 dark:text-neutral-100" : "text-primary")} />
+          : <User className={cn("h-4 w-4 shrink-0", compact ? "text-neutral-900 dark:text-neutral-100" : "text-muted-foreground")} />}
         {!compact && (
           <>
             <span className="truncate flex-1 text-left">{label}</span>

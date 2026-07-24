@@ -42,6 +42,15 @@ export function AdminFeedback() {
               </div>
               <p className="text-sm text-foreground break-words">{f.message}</p>
               {f.url && <p className="text-[11px] text-muted-foreground/70 truncate mt-0.5">{f.url}</p>}
+              {/* Anexo (print/imagem/vídeo). Imagem abre em nova aba; vídeo toca inline. */}
+              {f.attachment_url && f.attachment_type === "image" && (
+                <a href={f.attachment_url} target="_blank" rel="noreferrer" className="mt-2 inline-block">
+                  <img src={f.attachment_url} alt="Anexo do feedback" className="max-h-44 rounded-lg border border-border object-contain" loading="lazy" />
+                </a>
+              )}
+              {f.attachment_url && f.attachment_type === "video" && (
+                <video src={f.attachment_url} controls className="mt-2 max-h-52 w-full max-w-xs rounded-lg border border-border" />
+              )}
               <div className="flex gap-2 mt-2">
                 {f.status !== "visto" && <button onClick={() => setStatus.mutate({ id: f.id, status: "visto" })} className="text-[11px] font-medium rounded-lg border border-border px-2.5 py-1 hover:bg-muted">Marcar como visto</button>}
                 {f.status !== "resolvido" && <button onClick={() => setStatus.mutate({ id: f.id, status: "resolvido" })} className="text-[11px] font-medium rounded-lg border border-green-200 text-green-700 px-2.5 py-1 hover:bg-green-50">Resolver</button>}

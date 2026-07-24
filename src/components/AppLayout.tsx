@@ -250,7 +250,7 @@ const AppLayout = () => {
                 className="min-h-14 grid grid-cols-[1fr_auto_1fr] items-center px-3 bg-background border-b border-border md:hidden"
                 style={{ paddingTop: isManaging ? undefined : "env(safe-area-inset-top)" }}
               >
-                <div className="flex items-center gap-1 justify-self-start">
+                <div className="flex items-center gap-0.5 justify-self-start">
                   <GlobalSearch />
                   <HelpButton />
                 </div>
@@ -265,9 +265,9 @@ const AppLayout = () => {
                   <Logo className="h-6 w-auto" />
                 </button>
 
-                <div className="flex items-center gap-1 justify-self-end">
+                <div className="flex items-center gap-0.5 justify-self-end">
                   <UploadProgressIndicator />
-                  <PlanBadge onlyUrgent />
+                  <PlanBadge onlyUrgent compact />
                   <AccountSwitcher compact />
                   <NotificationsBell />
                   <NavLink to="/app/configuracoes" aria-label="Configurações" className="p-2 hover:bg-accent/60 rounded-xl transition-colors">
