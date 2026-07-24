@@ -8,7 +8,10 @@ export function ManagingBanner() {
   const name = current?.name;
 
   return (
-    <div className="w-full md:-ml-[104px] md:w-[calc(100%+104px)] bg-primary text-primary-foreground px-4 py-2.5 flex items-center justify-between gap-3 shadow-sm">
+    <div
+      className="w-full md:-ml-[104px] md:w-[calc(100%+104px)] bg-primary text-primary-foreground px-4 pb-2.5 flex items-center justify-between gap-3 shadow-sm"
+      style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.625rem)" }}
+    >
       <div className="flex items-center gap-2 min-w-0">
         <Eye className="h-4 w-4 shrink-0" strokeWidth={2} />
         <p className="text-sm sm:text-base font-body font-semibold truncate">

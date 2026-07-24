@@ -9,7 +9,7 @@ import {
   Sparkles, MessageSquareText, FileCode2, Anchor, PenLine, MessageSquare,
   ClipboardList, BarChart3, Eye, Bookmark, Target, Clock, Cloud, Image as ImageIcon, X, Trash2,
   Layers, Type, Radio, MousePointerClick, Link as LinkIcon, Download, BookOpen, CircleHelp,
-  Loader2, Hash, Copy, Repeat2, FileText, ListChecks, Calendar, ChevronDown,
+  Loader2, Hash, Copy, Repeat2, Recycle, FileText, ListChecks, Calendar, ChevronDown,
   RefreshCw, Minus, Plus, SmilePlus, Briefcase, StickyNote,
   
   Play, Video, ExternalLink,
@@ -1239,9 +1239,11 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     variant="outline"
                     size="sm"
                     className="gap-1.5"
+                    aria-label="Reciclar conteúdo (repostar com ângulo novo)"
+                    title="Reciclar conteúdo (repostar com ângulo novo)"
                     onClick={() => { setRepurposeMode("recycle"); setRepurposeOpen(true); }}
                   >
-                    <Repeat2 className="h-3.5 w-3.5" />
+                    <Recycle className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">Reciclar</span>
                   </Button>
                 )}
@@ -1250,6 +1252,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     variant="outline"
                     size="sm"
                     className="gap-1.5"
+                    aria-label="Reaproveitar (adaptar para outra plataforma)"
+                    title="Reaproveitar (adaptar para outra plataforma)"
                     onClick={() => { setRepurposeMode("repurpose"); setRepurposeOpen(true); }}
                   >
                     <Repeat2 className="h-3.5 w-3.5" />

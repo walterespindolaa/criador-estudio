@@ -14,6 +14,8 @@ const STATUS_STYLE: Record<string, string> = {
   visto: "bg-blue-100 text-blue-700",
   resolvido: "bg-green-100 text-green-700",
 };
+// De onde a pessoa enviou. Feedbacks antigos (sem origem) não mostram nada.
+const ORIGIN_LABEL: Record<string, string> = { gestor: "Social mídia", usuario: "Usuário", cliente: "Cliente" };
 
 export function AdminFeedback() {
   const { feedbacks, isLoading, setStatus } = useFeedbacksAdmin();
@@ -35,6 +37,7 @@ export function AdminFeedback() {
               <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <span className={cn("text-[10px] font-bold uppercase px-2 py-0.5 rounded-full", TYPE_STYLE[f.type] ?? "bg-muted")}>{TYPE_LABEL[f.type] ?? f.type}</span>
                 <span className={cn("text-[10px] font-bold uppercase px-2 py-0.5 rounded-full", STATUS_STYLE[f.status] ?? "bg-muted")}>{f.status}</span>
+                {f.origin && <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">{ORIGIN_LABEL[f.origin] ?? f.origin}</span>}
                 <span className="text-[11px] text-muted-foreground">{formatDistanceToNow(new Date(f.created_at), { locale: ptBR, addSuffix: true })}</span>
               </div>
               <p className="text-sm text-foreground break-words">{f.message}</p>

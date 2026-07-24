@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Plus, Calendar as CalendarIcon, AlertTriangle, Trash2, ListTodo, CheckCircle2, Circle } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Plus, Calendar as CalendarIcon, CalendarDays, AlertTriangle, Trash2, ListTodo, CheckCircle2, Circle, X } from "lucide-react";
 import {
   useCrmTasks, useCreateCrmTask, useUpdateCrmTask, useDeleteCrmTask,
   useCrmClients, useCrmLeads, CRM_TASK_PRIORITY_LABELS,
@@ -11,9 +11,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { confirmar } from "@/components/shared/Confirm";
+import { hojeBR, parseDateOnly } from "@/lib/date-br";
 
 const COLUMNS: { key: CrmTaskStatus; label: string }[] = [
   { key: "pendente", label: "Pendentes" },
@@ -29,6 +31,68 @@ const PRIO_CLASS: Record<CrmTaskPriority, string> = {
 const shortDate = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
 type ViewFilter = "todas" | "atrasadas" | "hoje" | "semana" | "concluidas";
 
+// ── Filtro por PERÍODO (due_date). Complementa os chips Todas/Atrasadas/Hoje/etc:
+// aqui a pessoa recorta uma JANELA de prazo (próximos N dias ou intervalo de/até).
+// Persiste por dispositivo pra voltar do jeito que ficou, até limpar.
+const PERIODO_KEY = "criagestao_tarefas_periodo";
+const PERIODO_DIAS: Record<string, number> = { "7": 7, "15": 15, "30": 30 };
+type PeriodoFilter = {
+  preset: "all" | "7" | "15" | "30" | "custom"; // "próximos N dias" ou intervalo
+  from: string; // YYYY-MM-DD (só quando preset = custom)
+  to: string;   // YYYY-MM-DD (só quando preset = custom)
+};
+const PERIODO_DEFAULT: PeriodoFilter = { preset: "all", from: "", to: "" };
+
+// Soma dias a uma data YYYY-MM-DD e devolve outra YYYY-MM-DD (sem passar por UTC).
+function isoAddDays(base: string, days: number): string {
+  const d = parseDateOnly(base);
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Lê o período salvo, validando o preset pra não quebrar com lixo no localStorage.
+function loadPeriodo(): PeriodoFilter {
+  try {
+    const raw = localStorage.getItem(PERIODO_KEY);
+    if (raw) {
+      const p = JSON.parse(raw) as Partial<PeriodoFilter>;
+      const presets = ["all", "7", "15", "30", "custom"];
+      return {
+        preset: (presets.includes(p.preset as string) ? p.preset : "all") as PeriodoFilter["preset"],
+        from: typeof p.from === "string" ? p.from : "",
+        to: typeof p.to === "string" ? p.to : "",
+      };
+    }
+  } catch { /* segue */ }
+  return { ...PERIODO_DEFAULT };
+}
+
+// Intervalo efetivo (YYYY-MM-DD) do período. "Próximos N dias" = janela inclusiva
+// começando hoje (fuso BR). null = sem limite naquela ponta.
+function periodoRange(f: PeriodoFilter): { from: string | null; to: string | null } {
+  if (f.preset === "all") return { from: null, to: null };
+  if (f.preset === "custom") return { from: f.from || null, to: f.to || null };
+  const n = PERIODO_DIAS[f.preset] ?? 0;
+  const from = hojeBR();
+  return { from, to: isoAddDays(from, n - 1) };
+}
+
+// DD/MM só pra rótulo do chip. A string já é YYYY-MM-DD, dá pra fatiar direto.
+function ddmm(iso: string): string {
+  if (!iso) return "";
+  const [, m, d] = iso.split("-");
+  return `${d}/${m}`;
+}
+
+// Rótulo do gatilho do popover conforme o período ativo.
+function periodoLabel(f: PeriodoFilter): string {
+  if (f.preset === "custom" && (f.from || f.to)) return `${ddmm(f.from) || "…"} – ${ddmm(f.to) || "…"}`;
+  if (f.preset === "7") return "Próx. 7 dias";
+  if (f.preset === "15") return "Próx. 15 dias";
+  if (f.preset === "30") return "Próx. 30 dias";
+  return "Período";
+}
+
 export function TasksTab() {
   const { data: tasks = [], isLoading } = useCrmTasks();
   const { data: clients = [] } = useCrmClients();
@@ -41,10 +105,18 @@ export function TasksTab() {
   const [editing, setEditing] = useState<CrmTask | null>(null);
   const [view, setView] = useState<ViewFilter>("todas");
   const [clientFilter, setClientFilter] = useState<string>("all");
+  const [periodo, setPeriodo] = useState<PeriodoFilter>(() => loadPeriodo());
   const [dragId, setDragId] = useState<string | null>(null);
 
-  const today = new Date().toISOString().split("T")[0];
-  const weekEnd = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
+  // Reaplica o período salvo no F5 até a pessoa limpar.
+  useEffect(() => {
+    try { localStorage.setItem(PERIODO_KEY, JSON.stringify(periodo)); } catch { /* segue */ }
+  }, [periodo]);
+
+  const today = hojeBR();
+  const weekEnd = isoAddDays(today, 7);
+  const range = periodoRange(periodo);
+  const periodoAtivo = periodo.preset !== "all";
 
   const nameFor = (t: CrmTask) => {
     if (t.crm_client_id) return clients.find((c) => c.id === t.crm_client_id)?.name ?? "Cliente";
@@ -62,9 +134,15 @@ export function TasksTab() {
         case "concluidas": if (t.status !== "concluida") return false; break;
       }
       if (clientFilter !== "all" && t.crm_client_id !== clientFilter) return false;
+      // Período (due_date): tarefa sem prazo não entra numa janela de datas.
+      if (range.from || range.to) {
+        if (!t.due_date) return false;
+        if (range.from && t.due_date < range.from) return false;
+        if (range.to && t.due_date > range.to) return false;
+      }
       return true;
     });
-  }, [tasks, view, today, weekEnd, clientFilter]);
+  }, [tasks, view, today, weekEnd, clientFilter, range.from, range.to]);
 
   const counts = useMemo(() => ({
     todas: tasks.length,
@@ -107,6 +185,45 @@ export function TasksTab() {
           <option value="all">Todos os clientes</option>
           {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
+
+        {/* Filtro por período do prazo (due_date). Fica num popover pra não estourar
+            a linha no mobile: presets "próximos N dias" + intervalo específico. */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className={cn("inline-flex items-center gap-1 h-8 rounded-full border px-3 text-xs font-medium whitespace-nowrap transition-colors", periodoAtivo ? "bg-primary text-primary-foreground border-primary" : "border-input bg-card text-muted-foreground hover:text-foreground")}>
+              <CalendarDays className="h-3.5 w-3.5" />
+              {periodoLabel(periodo)}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-64">
+            <p className="text-xs font-semibold text-foreground mb-2">Filtrar por prazo</p>
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {([["7", "Próximos 7 dias"], ["15", "Próximos 15 dias"], ["30", "Próximos 30 dias"]] as [PeriodoFilter["preset"], string][]).map(([v, label]) => (
+                <button key={v} onClick={() => setPeriodo((prev) => ({ ...prev, preset: v }))}
+                  className={cn("text-xs font-medium px-2.5 py-1 rounded-full border transition-colors", periodo.preset === v ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground")}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs font-semibold text-foreground mb-2">Período específico</p>
+            <div className="flex gap-2">
+              <div className="flex-1 min-w-0">
+                <Label className="text-[11px] text-muted-foreground">De</Label>
+                <Input type="date" value={periodo.from} onChange={(e) => setPeriodo((prev) => ({ ...prev, from: e.target.value, preset: "custom" }))} className="rounded-lg" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <Label className="text-[11px] text-muted-foreground">Até</Label>
+                <Input type="date" value={periodo.to} onChange={(e) => setPeriodo((prev) => ({ ...prev, to: e.target.value, preset: "custom" }))} className="rounded-lg" />
+              </div>
+            </div>
+            {periodoAtivo && (
+              <button onClick={() => setPeriodo({ ...PERIODO_DEFAULT })}
+                className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+                <X className="h-3.5 w-3.5" /> Limpar período
+              </button>
+            )}
+          </PopoverContent>
+        </Popover>
       </div>
 
       {isLoading ? (

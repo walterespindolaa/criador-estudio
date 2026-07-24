@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { DragDropContext, Droppable, Draggable, type DropResult, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
+import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive, Download, Play, FileImage, Link2, Paperclip, GripVertical, FolderOpen, CalendarRange } from "lucide-react";
@@ -84,29 +84,29 @@ function buildDayItems(caps: Capture[], tasks: CrmTask[], cris: Creation[], post
   return items;
 }
 
-// Punho de arrastar (drag handle) visível no card. No mobile o @hello-pangea/dnd
-// não conseguia iniciar o drag pelo card inteiro (o toque brigava com o scroll
-// horizontal e com o clique que abre o popup). Isolando o gesto num punho, a pessoa
-// arrasta pelo grip e o card fixa no dia destino; o resto do card segue clicável.
+// CAUSA RAIZ do "não arrasta no celular" (e o punho tampouco resolvia):
+// o @hello-pangea/dnd ABORTA o início do drag quando o elemento DRAGGABLE (o nó com
+// draggableProps) é interativo. A checagem interna isEventInInteractiveElement caminha
+// do alvo tocado ATÉ o nó draggable; se achar uma tag interativa no caminho, cancela o
+// drag (tryStart retorna null, nenhum lock é criado). Como os cards da agenda eram
+// <button>, a checagem SEMPRE achava o próprio <button> e matava o arraste, no toque e
+// no mouse. O touch-action era pista falsa: o gesto nem chegava a começar.
 //
-// CAUSA REAL do drag não iniciar no toque: o dragHandleProps do @hello-pangea/dnd
-// injeta role="button" no punho. Aí a regra GLOBAL de src/index.css
-// `button, a, [role="button"] { touch-action: manipulation }` (que fica FORA de
-// @layer, logo vence qualquer utilitário do Tailwind, que mora em @layer utilities)
-// sobrescrevia o `touch-none`. Com touch-action: manipulation o navegador ainda
-// deixa rolar, então o long-press vira scroll e o TouchSensor nunca começa o drag.
-// No desktop o mouse ignora touch-action, por isso lá funcionava.
-// Correção: forçar touch-action:none por STYLE INLINE (inline vence CSS sem !important,
-// inclusive as regras não-layered). user-select/callout none evitam o iOS roubar o
-// long-press com seleção de texto. Alvo de toque >=32px no mobile (pedido do item).
-type HandleProps = DraggableProvidedDragHandleProps | undefined;
-function DragHandle({ handleProps, className }: { handleProps: HandleProps; className?: string }) {
+// Correção robusta (vale mês e semana):
+//  1) disableInteractiveElementBlocking em cada <Draggable> desliga essa checagem.
+//  2) dragHandleProps vai no CARD INTEIRO (não num punho minúsculo): no celular não há
+//     hover pra revelar o punho, então o alvo de arraste passa a ser o card todo.
+//  3) touch-action:none no card (dragTouchStyle + a regra global do index.css que casa
+//     [data-rfd-drag-handle-draggable-id], atributo que o dragHandleProps injeta no card)
+//     garante que o long-press de 120ms do dnd não seja roubado pelo scroll horizontal
+//     da semana nem pela rolagem vertical da página.
+// O grip vira só pista visual (decorativo); quem arrasta é o card inteiro.
+const dragTouchStyle: CSSProperties = { touchAction: "none", WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" };
+function DragGrip({ className }: { className?: string }) {
   return (
-    <span {...handleProps} onClick={(e) => e.stopPropagation()}
-      style={{ touchAction: "none", WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" }}
-      aria-label="Arrastar para outro dia"
-      className={cn("shrink-0 grid place-items-center h-8 w-8 md:h-5 md:w-4 -ml-1.5 md:-ml-0.5 rounded touch-none select-none cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-foreground transition-colors", className)}>
-      <GripVertical className="h-4 w-4 md:h-3.5 md:w-3.5" />
+    <span aria-hidden="true"
+      className={cn("shrink-0 grid place-items-center h-5 w-4 -ml-0.5 rounded text-muted-foreground/50", className)}>
+      <GripVertical className="h-3.5 w-3.5" />
     </span>
   );
 }
@@ -293,18 +293,25 @@ export default function AgendaCriacao() {
     if (!filters.post) return m;
     for (const p of allPosts) {
       if (!p.scheduled_date || p.scheduled_date < from || p.scheduled_date > to) continue;
+      // DECISÃO: posts "Em produção" NÃO aparecem nas células de dia; ficam só na faixa
+      // do topo (approval_status nulo conta como em_producao, o padrão da criação).
+      if ((p.approval_status ?? "em_producao") === "em_producao") continue;
       if (postClients.size > 0 && !postClients.has(p.external_client_id)) continue;
       (m.get(p.scheduled_date) ?? m.set(p.scheduled_date, []).get(p.scheduled_date)!).push(p);
     }
     return m;
   }, [allPosts, from, to, filters.post, postClients]);
 
-  // Posts SEM data (em produção): NUNCA somem, independente do período/semana/mês.
-  // Ficam numa faixa fixa no topo; arrastar pra um dia agenda (seta a data).
-  const noDatePosts = useMemo(() => {
+  // Faixa fixa do topo "Em produção": NUNCA some, independente do período/semana/mês.
+  // Inclui TODOS os posts em produção (com OU sem data) mais qualquer post sem data
+  // (qualquer status). Assim nenhum post em produção some ao sair da célula do dia, e os
+  // posts sem data seguem sempre visíveis. Arrastar daqui pra um dia agenda (seta a data);
+  // o arraste NÃO altera o status (post em produção arrastado continua em produção).
+  const producaoPosts = useMemo(() => {
     if (!filters.post) return [] as ExternalPostWithClient[];
     return allPosts.filter((p) =>
-      !p.scheduled_date && (postClients.size === 0 || postClients.has(p.external_client_id)));
+      ((p.approval_status ?? "em_producao") === "em_producao" || !p.scheduled_date)
+      && (postClients.size === 0 || postClients.has(p.external_client_id)));
   }, [allPosts, filters.post, postClients]);
 
   // Rolagem horizontal da semana no mobile: abre ancorado na coluna de HOJE.
@@ -462,9 +469,10 @@ export default function AgendaCriacao() {
           </div>
         )}
         <DragDropContext onDragEnd={handleDragEnd}>
-          {/* Faixa fixa "Sem data (em produção)": sempre visível, independente do período.
-              Arrastar um post daqui pra um dia agenda; arrastar de volta pra cá tira a data. */}
-          {filters.post && noDatePosts.length > 0 && (
+          {/* Faixa fixa "Em produção": sempre visível, independente do período. Reúne todos
+              os posts em produção (com ou sem data) + posts sem data. Arrastar um post daqui
+              pra um dia agenda; arrastar de volta pra cá tira a data. */}
+          {filters.post && producaoPosts.length > 0 && (
             <Droppable droppableId={NO_DATE} direction="horizontal">
               {(dp, ds) => (
                 <div ref={dp.innerRef} {...dp.droppableProps}
@@ -472,23 +480,25 @@ export default function AgendaCriacao() {
                     ds.isDraggingOver ? "border-primary/60 bg-primary/5 ring-2 ring-primary/40" : "border-orange-500/40 bg-orange-500/[0.04]")}>
                   <div className="flex items-center gap-1.5 mb-1.5">
                     <Layers className="h-3.5 w-3.5 text-orange-600" />
-                    <span className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground">Sem data (em produção)</span>
-                    <span className="text-[10px] font-body font-semibold text-muted-foreground">{noDatePosts.length}</span>
+                    <span className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground">Em produção</span>
+                    <span className="text-[9px] font-body text-muted-foreground/70 hidden sm:inline">(com ou sem data)</span>
+                    <span className="text-[10px] font-body font-semibold text-muted-foreground">{producaoPosts.length}</span>
                     <span className="ml-auto text-[9px] font-body text-muted-foreground/70 hidden sm:inline">arraste pra um dia pra agendar</span>
                   </div>
                   <div className="flex gap-2 overflow-x-auto pb-1">
-                    {noDatePosts.map((p, idx) => {
+                    {producaoPosts.map((p, idx) => {
                       const cli = extById.get(p.external_client_id);
                       const st = POST_STATUS[p.approval_status ?? "em_producao"];
                       return (
-                        <Draggable key={`post:${p.id}`} draggableId={`post:${p.id}`} index={idx}>
+                        <Draggable key={`post:${p.id}`} draggableId={`post:${p.id}`} index={idx} disableInteractiveElementBlocking>
                           {(dragProvided, dragSnapshot) => (
-                            <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
+                            <button ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
                               type="button" title={p.title ?? undefined} onClick={() => openPost(p)}
-                              className={cn("rounded-lg border border-orange-500/40 bg-card hover:bg-orange-500/10 px-2 py-1.5 text-left transition-colors w-[180px] shrink-0 overflow-hidden",
+                              style={{ ...dragProvided.draggableProps.style, ...dragTouchStyle }}
+                              className={cn("rounded-lg border border-orange-500/40 bg-card hover:bg-orange-500/10 px-2 py-1.5 text-left transition-colors w-[180px] shrink-0 overflow-hidden cursor-grab active:cursor-grabbing",
                                 dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
                               <div className="flex items-center gap-1 text-orange-700 dark:text-orange-300">
-                                <DragHandle handleProps={dragProvided.dragHandleProps ?? undefined} className="text-orange-700/40 dark:text-orange-300/40" />
+                                <DragGrip className="text-orange-700/40 dark:text-orange-300/40" />
                                 <Send className="h-3 w-3 shrink-0" />
                                 <span className="text-[10px] font-body font-bold truncate flex-1">{cli?.name ?? "Post"}</span>
                                 {p.drive_folder_url && <FolderOpen className="h-3 w-3 shrink-0 text-primary opacity-80" aria-label="Tem pasta no Drive" />}
@@ -551,16 +561,17 @@ export default function AgendaCriacao() {
                         if (item.kind === "cap") {
                           const c = item.cap;
                           return (
-                            <Draggable key={`cap:${c.id}`} draggableId={`cap:${c.id}`} index={idx}>
+                            <Draggable key={`cap:${c.id}`} draggableId={`cap:${c.id}`} index={idx} disableInteractiveElementBlocking>
                               {(dragProvided, dragSnapshot) => (
-                                <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
+                                <button ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
                                   type="button" title={c.location ?? undefined}
                                   onClick={() => setEditCap(c)}
-                                  className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors",
+                                  style={{ ...dragProvided.draggableProps.style, ...dragTouchStyle }}
+                                  className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors cursor-grab active:cursor-grabbing",
                                     c.status === "concluida" ? "border-teal-500/25 bg-teal-500/5 opacity-70" : "border-teal-500/40 bg-teal-500/10 hover:bg-teal-500/15",
                                     dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
                                   <div className="flex items-center gap-1 text-teal-700 dark:text-teal-300">
-                                    <DragHandle handleProps={dragProvided.dragHandleProps ?? undefined} className="text-teal-700/40 dark:text-teal-300/40" />
+                                    <DragGrip className="text-teal-700/40 dark:text-teal-300/40" />
                                     <Video className="h-3 w-3 shrink-0" />
                                     <span className="text-[10px] font-body font-bold">{c.capture_time ? c.capture_time.slice(0, 5) : "Captação"}</span>
                                   </div>
@@ -578,21 +589,22 @@ export default function AgendaCriacao() {
                           const clientColor = client?.color || TASK_CLIENT_DEFAULT_COLOR;
                           const who = isLead ? (leadName(t.crm_lead_id) ?? "Lead") : nameOf(t.crm_client_id, null);
                           return (
-                            <Draggable key={`task:${t.id}`} draggableId={`task:${t.id}`} index={idx}>
+                            <Draggable key={`task:${t.id}`} draggableId={`task:${t.id}`} index={idx} disableInteractiveElementBlocking>
                               {(dragProvided, dragSnapshot) => {
                                 const done = t.status === "concluida";
                                 return (
-                                  <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
+                                  <button ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
                                     type="button" title={t.description ?? undefined}
                                     onClick={() => setEditTask(t)}
-                                    className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors",
+                                    className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors cursor-grab active:cursor-grabbing",
                                       isLead ? "border-sky-500/45 bg-sky-500/10 hover:bg-sky-500/15" : "hover:brightness-95",
                                       done && "opacity-60",
                                       dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}
                                     // Cliente: acento na cor do cliente (borda esquerda + fundo bem suave). Texto fica no foreground pra não perder contraste.
-                                    style={!isLead ? { borderColor: `${clientColor}59`, borderLeftColor: clientColor, borderLeftWidth: 3, background: `${clientColor}12` } : undefined}>
+                                    // Merge com draggableProps.style: sem isso o style explícito venceria o do spread e o transform do drag sumiria.
+                                    style={{ ...dragProvided.draggableProps.style, ...(!isLead ? { borderColor: `${clientColor}59`, borderLeftColor: clientColor, borderLeftWidth: 3, background: `${clientColor}12` } : {}), ...dragTouchStyle }}>
                                     <div className={cn("flex items-center gap-1", isLead && "text-sky-700 dark:text-sky-300")}>
-                                      <DragHandle handleProps={dragProvided.dragHandleProps ?? undefined} />
+                                      <DragGrip />
                                       {isLead
                                         ? <ListChecks className="h-3 w-3 shrink-0" />
                                         : <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: clientColor }} />}
@@ -618,16 +630,17 @@ export default function AgendaCriacao() {
                         if (item.kind === "cria") {
                           const c = item.cria;
                           return (
-                            <Draggable key={`cria:${c.id}`} draggableId={`cria:${c.id}`} index={idx}>
+                            <Draggable key={`cria:${c.id}`} draggableId={`cria:${c.id}`} index={idx} disableInteractiveElementBlocking>
                               {(dragProvided, dragSnapshot) => (
-                                <div ref={dragProvided.innerRef} {...dragProvided.draggableProps}
+                                <div ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
                                   role="button" tabIndex={0}
                                   onClick={() => setEditCreation(c)}
                                   onKeyDown={(e) => { if (e.key === "Enter") setEditCreation(c); }}
-                                  className={cn("group rounded-lg border border-border bg-card px-2 py-1.5 cursor-pointer hover:bg-muted/40 transition-colors",
+                                  style={{ ...dragProvided.draggableProps.style, ...dragTouchStyle }}
+                                  className={cn("group rounded-lg border border-border bg-card px-2 py-1.5 cursor-grab active:cursor-grabbing hover:bg-muted/40 transition-colors",
                                     dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
                                   <div className="flex items-start gap-1">
-                                    <DragHandle handleProps={dragProvided.dragHandleProps ?? undefined} className="mt-px" />
+                                    <DragGrip className="mt-px" />
                                     <p className="text-[12px] font-body font-semibold text-foreground leading-tight flex-1 min-w-0 truncate">{nameOf(c.crm_client_id, c.client_name)}</p>
                                     <button onClick={(e) => { e.stopPropagation(); delCreation.mutate(c.id); }} className="text-muted-foreground/50 hover:text-destructive shrink-0" aria-label="Remover"><X className="h-3 w-3" /></button>
                                   </div>
@@ -643,16 +656,17 @@ export default function AgendaCriacao() {
                         const posted = p.approval_status === "postado";
                         const st = POST_STATUS[p.approval_status ?? "em_producao"];
                         return (
-                          <Draggable key={`post:${p.id}`} draggableId={`post:${p.id}`} index={idx}>
+                          <Draggable key={`post:${p.id}`} draggableId={`post:${p.id}`} index={idx} disableInteractiveElementBlocking>
                             {(dragProvided, dragSnapshot) => {
                               return (
-                              <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
+                              <button ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
                                 type="button" title={p.title ?? undefined} onClick={() => openPost(p)}
-                                className={cn("rounded-lg border border-orange-500/40 bg-orange-500/10 hover:bg-orange-500/15 px-2 py-1.5 text-left transition-colors w-full overflow-hidden",
+                                style={{ ...dragProvided.draggableProps.style, ...dragTouchStyle }}
+                                className={cn("rounded-lg border border-orange-500/40 bg-orange-500/10 hover:bg-orange-500/15 px-2 py-1.5 text-left transition-colors w-full overflow-hidden cursor-grab active:cursor-grabbing",
                                   posted && "opacity-60",
                                   dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
                                 <div className="flex items-center gap-1 text-orange-700 dark:text-orange-300">
-                                  <DragHandle handleProps={dragProvided.dragHandleProps ?? undefined} className="text-orange-700/40 dark:text-orange-300/40" />
+                                  <DragGrip className="text-orange-700/40 dark:text-orange-300/40" />
                                   <Send className="h-3 w-3 shrink-0" />
                                   <span className="text-[10px] font-body font-bold truncate flex-1">{item.time && <span className="tabular-nums">{item.time} · </span>}{cli?.name ?? "Post"}</span>
                                   {/* Indicador discreto: post tem link do Drive no campo Ideia/Referência. */}
@@ -981,9 +995,11 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
           <ClientPicker clients={clients} crm={crm} name={name} onCrm={setCrm} onName={setName} />
 
           {kind === "captacao" && (
-            <div className="flex gap-2">
-              <div className="w-[110px] shrink-0 min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Hora</p><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full" /></div>
-              <div className="flex-1 min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Local (opcional)</p><Input value={loc} onChange={(e) => setLoc(e.target.value)} placeholder="Ex.: Estúdio" /></div>
+            // Hora e Local lado a lado; abaixo de ~390px empilha pra nenhum espremer o outro.
+            // O valor da hora alinha à esquerda / não corta pela regra global do index.css.
+            <div className="flex gap-2 max-[390px]:flex-col">
+              <div className="w-[120px] shrink-0 min-w-0 max-[390px]:w-full"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Hora</p><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full h-10" /></div>
+              <div className="flex-1 min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Local (opcional)</p><Input value={loc} onChange={(e) => setLoc(e.target.value)} placeholder="Ex.: Estúdio" className="h-10" /></div>
             </div>
           )}
 
@@ -1251,12 +1267,14 @@ function PostEditDialog({ post, clientName, onClose, onSave, onOpenClient, savin
         <DialogHeader><DialogTitle className="font-display">Editar post{clientName ? ` · ${clientName}` : ""}</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Título</p><Input value={title} onChange={(e) => setTitle(e.target.value)} className="rounded-xl" /></div>
-          {/* grid-cols-2 (minmax(0,1fr)) trava cada coluna em 50% e impede o input
-              nativo de "time" de transbordar/cortar no mobile (bug do iOS).
-              Item 4: campos mais enxutos (h-9 + padding menor) pra não ocuparem tanto. */}
-          <div className="grid grid-cols-2 gap-2">
-            <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Data</p><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full h-9 rounded-lg px-2.5 text-sm" /></div>
-            <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Horário</p><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full h-9 rounded-lg px-2.5 text-sm" /></div>
+          {/* Data e Horário lado a lado. grid-cols-2 (minmax(0,1fr)) trava cada coluna em
+              50% e impede o input nativo de "time" de transbordar no mobile. Alinhamento
+              à esquerda e valor não-cortado vêm da regra global de input[type=date/time]
+              no index.css (bug do iOS que centralizava/cortava). Altura h-10 igual aos
+              demais campos, largura total; abaixo de ~390px o grid empilha sozinho. */}
+          <div className="grid grid-cols-2 gap-2 max-[390px]:grid-cols-1">
+            <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Data</p><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full h-10 rounded-lg px-3" /></div>
+            <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Horário</p><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full h-10 rounded-lg px-3" /></div>
           </div>
           <div>
             <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Status</p>

@@ -234,7 +234,49 @@ const AppLayout = () => {
           <AppRail />
 
           <div className="flex-1 flex flex-col min-w-0 md:pl-[104px]">
-            <ManagingBanner />
+            {/* TOPO MOBILE: o banner de impersonação e o header ficam GRUDADOS e
+                sticky juntos, respeitando a safe-area do topo do celular. No desktop
+                o wrapper vira fluxo normal (md:static) e só o banner aparece, já que
+                o header é md:hidden. */}
+            <div className="sticky top-0 z-40 md:static md:z-auto">
+              <ManagingBanner />
+
+              {/* HEADER MOBILE: 3 zonas, logo no centro (2 à esquerda, logo centrado,
+                  2 à direita). Quando está gerenciando (banner laranja em cima), o
+                  header NÃO repete a safe-area: quem trata o notch é o banner, e as
+                  duas barras ficam coladas, sem gap. Sem banner, o próprio header
+                  respeita a safe-area do topo. */}
+              <header
+                className="min-h-14 grid grid-cols-[1fr_auto_1fr] items-center px-3 bg-background border-b border-border md:hidden"
+                style={{ paddingTop: isManaging ? undefined : "env(safe-area-inset-top)" }}
+              >
+                <div className="flex items-center gap-1 justify-self-start">
+                  <GlobalSearch />
+                  <HelpButton />
+                </div>
+
+                {/* A logo central sobe a página atual pro topo (não navega pra home). */}
+                <button
+                  type="button"
+                  onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                  className="flex items-center justify-self-center px-2"
+                  aria-label="Subir ao topo"
+                >
+                  <Logo className="h-6 w-auto" />
+                </button>
+
+                <div className="flex items-center gap-1 justify-self-end">
+                  <UploadProgressIndicator />
+                  <PlanBadge onlyUrgent />
+                  <AccountSwitcher compact />
+                  <NotificationsBell />
+                  <NavLink to="/app/configuracoes" aria-label="Configurações" className="p-2 hover:bg-accent/60 rounded-xl transition-colors">
+                    <Settings className="h-5 w-5 text-muted-foreground hover:text-foreground" />
+                  </NavLink>
+                </div>
+              </header>
+            </div>
+
             <TrialBanner />
             <StorageWarningBanner />
             <div className="hidden md:block md:-ml-[104px] md:w-[calc(100%+104px)]">
@@ -244,49 +286,11 @@ const AppLayout = () => {
                   <PlanBadge light />
                   <UploadProgressIndicator />
                   <HelpButton light />
-                  <FeedbackButton />
+                  <FeedbackButton origin="usuario" />
                   <NotificationsBell />
                 </div>
               </HeroBand>
             </div>
-
-            {/* HEADER MOBILE — 3 zonas, logo no centro.
-                Antes eram SETE controles empilhados à direita (busca, conta, plano,
-                upload, ajuda, feedback, sino, engrenagem) com o logo espremido na
-                esquerda. Num celular de 380px isso vira uma barra ilegível.
-                Agora: 2 à esquerda · logo centrado · 2 à direita. A pílula do plano
-                só aparece quando ela EXIGE atenção (teste acabando, sem plano) —
-                nos outros casos ela mora no menu, em "Planos". O feedback virou o
-                botão flutuante que já existe. */}
-            <header
-              className="min-h-14 sticky top-0 z-40 grid grid-cols-[1fr_auto_1fr] items-center px-3 bg-background border-b border-border md:hidden"
-              style={{ paddingTop: "env(safe-area-inset-top)" }}
-            >
-              <div className="flex items-center gap-1 justify-self-start">
-                <GlobalSearch />
-                <HelpButton />
-              </div>
-
-              {/* A logo central sobe a página atual pro topo (não navega pra home). */}
-              <button
-                type="button"
-                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                className="flex items-center justify-self-center px-2"
-                aria-label="Subir ao topo"
-              >
-                <Logo className="h-6 w-auto" />
-              </button>
-
-              <div className="flex items-center gap-1 justify-self-end">
-                <UploadProgressIndicator />
-                <PlanBadge onlyUrgent />
-                <AccountSwitcher compact />
-                <NotificationsBell />
-                <NavLink to="/app/configuracoes" aria-label="Configurações" className="p-2 hover:bg-accent/60 rounded-xl transition-colors">
-                  <Settings className="h-5 w-5 text-muted-foreground hover:text-foreground" />
-                </NavLink>
-              </div>
-            </header>
 
             <main className="flex-1 pb-[96px] md:pb-0 w-full overflow-x-hidden">
               <div className="max-w-screen-2xl mx-auto px-4 py-4 md:px-8 md:py-6">

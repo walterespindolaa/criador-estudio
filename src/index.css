@@ -43,6 +43,37 @@ body, p, span, h1, h2, h3, h4, h5, h6, a, li, td, th, label {
   }
 }
 
+/* CAMPOS DE DATA E HORA (input[type=date] / [type=time]) NO MOBILE.
+   Bug: no iOS/Safari o VALOR desses campos é renderizado CENTRALIZADO por padrão
+   (pseudo ::-webkit-date-and-time-value), o que deixava a DATA "torta/centralizada";
+   e a "aparência" nativa, somada a alturas menores, cortava o valor da HORA (parecia
+   vazio). Aqui resetamos a aparência, alinhamos o valor à ESQUERDA e garantimos que o
+   conteúdo não seja cortado. Vale pra todos os popups (Editar post, Adicionar no dia,
+   captação, tarefa) porque todos usam o mesmo <input> nativo. */
+input[type="date"],
+input[type="time"] {
+  -webkit-appearance: none;
+  appearance: none;
+  text-align: left;
+}
+/* iOS: alinha o texto do valor à esquerda (em vez de centralizado) e tira margem. */
+input[type="date"]::-webkit-date-and-time-value,
+input[type="time"]::-webkit-date-and-time-value {
+  text-align: left;
+  margin: 0;
+}
+/* Não cortar o valor verticalmente e não deixar o "editor" nativo empurrar o texto. */
+input[type="date"]::-webkit-datetime-edit,
+input[type="time"]::-webkit-datetime-edit {
+  padding: 0;
+  line-height: normal;
+}
+/* O ícone do seletor (desktop) fica à direita, sem espremer o valor. */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  margin-left: auto;
+}
+
 /* ÁREA SEGURA (notch e barra de gestos do iPhone). */
 @supports (padding: env(safe-area-inset-bottom)) {
   .safe-bottom { padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem); }

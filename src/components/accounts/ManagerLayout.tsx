@@ -2,10 +2,10 @@ import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { Navigate, Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { BroadcastBanner } from "@/components/BroadcastBanner";
 import { NotificationNudge } from "@/components/NotificationNudge";
-import { FeedbackButton } from "@/components/FeedbackButton";
+import { FeedbackButton, FeedbackDialog } from "@/components/FeedbackButton";
 import {
   Home, Boxes, Handshake, DollarSign, Users, ListChecks, Menu, ChevronRight, Gift,
-  Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, Sparkles, CalendarDays, Trash2, UserPlus, Search, type LucideIcon,
+  Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, Sparkles, CalendarDays, Trash2, UserPlus, Search, MessageSquarePlus, type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -103,6 +103,7 @@ export default function ManagerLayout() {
   const [railHovered, setRailHovered] = useState(false);
   const [selectedModule, setSelectedModule] = useState<ModuleWithStatus | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   // Tema: managers agora escolhem o próprio accent (igual usuário normal). Sem trava de roxo.
   useEffect(() => {
@@ -284,7 +285,7 @@ export default function ManagerLayout() {
               <GlobalSearch />
               {canClients && <ClientSwitcher />}
               <HelpButton light />
-              <FeedbackButton />
+              <FeedbackButton origin="gestor" />
               <NotificationsBell />
             </div>
           </HeroBand>
@@ -391,6 +392,7 @@ export default function ManagerLayout() {
           {
             title: "Sistema",
             items: [
+              { label: "Enviar feedback", desc: "Uma ideia ou um problema no app", icon: MessageSquarePlus as LucideIcon, onClick: () => setFeedbackOpen(true) },
               { label: "Lixeira", desc: "Recuperar o que você excluiu", icon: Trash2 as LucideIcon, onClick: () => navigate("/socialmidia/lixeira") },
               { label: "Configurações", desc: "Perfil, visual e integrações", icon: SettingsIcon as LucideIcon, onClick: () => setSettingsOpen(true) },
             ],
@@ -468,6 +470,7 @@ export default function ManagerLayout() {
 
       <ModulePopup module={selectedModule} onClose={() => setSelectedModule(null)} />
       <SettingsManagerDrawer open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} origin="gestor" />
     </div>
     </TourProvider>
     </VideoPublicConfirmProvider>

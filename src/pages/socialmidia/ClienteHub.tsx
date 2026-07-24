@@ -263,29 +263,38 @@ export default function ClienteHub() {
 
       {/* Cabeçalho no padrão vitrine: logo grande, badges de status e ações sempre visíveis. */}
       <div className="mb-4 rounded-3xl border border-border bg-card p-4 sm:p-5">
-        <div className="flex flex-wrap items-center gap-4">
-          <button type="button" onClick={() => avatarInputRef.current?.click()} aria-label="Trocar foto do cliente"
-            className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-full grid place-items-center text-white text-xl font-display font-bold shrink-0 overflow-hidden ring-2 ring-border/60 hover:ring-primary/40 transition-all group/av" style={{ background: "linear-gradient(135deg,#0F6E56,#1d9e75)" }}>
-            {initial(client.name)}
-            {/* Avatar do CRIA do cliente → logo manual → inicial. */}
-            {avatarUrl && <img src={avatarUrl} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 w-full h-full object-cover" />}
-            <span className="absolute inset-0 bg-black/40 opacity-0 group-hover/av:opacity-100 transition-opacity grid place-items-center"><Camera className="h-4 w-4 text-white" /></span>
-          </button>
-          <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={onPickAvatar} />
-          <ImageCropModal open={!!cropSrc} onOpenChange={(o) => { if (!o) setCropSrc(null); }} imageSrc={cropSrc ?? ""} onCropComplete={onCroppedAvatar} aspectRatio={1} />
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-display font-extrabold text-foreground tracking-tight truncate">{client.name}</h1>
-            <p className="text-sm text-muted-foreground font-body truncate">
-              {client.instagram ? `@${client.instagram.replace(/^@/, "")}` : "sem @"}{client.cria_owner_id ? " · usa o Cria" : " · aprova por link"}
-            </p>
-            <div className="flex gap-1.5 mt-1.5 flex-wrap">
-              {extClient
-                ? <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/12 text-emerald-600 font-body font-semibold">Link de aprovação ativo</span>
-                : <span className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-body">Cria Post não ativado</span>}
-              {pendCount > 0 && <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-body font-semibold">{pendCount} pendente{pendCount > 1 ? "s" : ""}</span>}
+        {/* Mobile-first: empilha em blocos limpos (avatar+nome, selos, ações).
+            No desktop (md:) volta a ser uma linha só, como era antes. */}
+        <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:gap-4">
+          {/* BLOCO 1 — avatar + nome + @ + selos. No mobile ocupa a linha inteira
+              e o nome ganha largura pra aparecer; no desktop vira a coluna flex-1. */}
+          <div className="flex items-center gap-3 md:gap-4 min-w-0 md:flex-1">
+            <button type="button" onClick={() => avatarInputRef.current?.click()} aria-label="Trocar foto do cliente"
+              className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-full grid place-items-center text-white text-xl font-display font-bold shrink-0 overflow-hidden ring-2 ring-border/60 hover:ring-primary/40 transition-all group/av" style={{ background: "linear-gradient(135deg,#0F6E56,#1d9e75)" }}>
+              {initial(client.name)}
+              {/* Avatar do CRIA do cliente → logo manual → inicial. */}
+              {avatarUrl && <img src={avatarUrl} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 w-full h-full object-cover" />}
+              <span className="absolute inset-0 bg-black/40 opacity-0 group-hover/av:opacity-100 transition-opacity grid place-items-center"><Camera className="h-4 w-4 text-white" /></span>
+            </button>
+            <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={onPickAvatar} />
+            <ImageCropModal open={!!cropSrc} onOpenChange={(o) => { if (!o) setCropSrc(null); }} imageSrc={cropSrc ?? ""} onCropComplete={onCroppedAvatar} aspectRatio={1} />
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xl sm:text-2xl font-display font-extrabold text-foreground tracking-tight truncate">{client.name}</h1>
+              <p className="text-sm text-muted-foreground font-body truncate">
+                {client.instagram ? `@${client.instagram.replace(/^@/, "")}` : "sem @"}{client.cria_owner_id ? " · usa o Cria" : " · aprova por link"}
+              </p>
+              {/* SELOS — linha própria abaixo do nome, sem sobrepor. */}
+              <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                {extClient
+                  ? <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/12 text-emerald-600 font-body font-semibold">Link de aprovação ativo</span>
+                  : <span className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-body">Cria Post não ativado</span>}
+                {pendCount > 0 && <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-body font-semibold">{pendCount} pendente{pendCount > 1 ? "s" : ""}</span>}
+              </div>
             </div>
           </div>
-          <div className="relative flex gap-2 shrink-0 flex-wrap">
+          {/* BLOCO 2 — ações. No mobile viram uma linha própria (largura total,
+              wrap, toque confortável); no desktop encostam à direita, shrink-0. */}
+          <div className="relative flex gap-2 flex-wrap w-full md:w-auto md:shrink-0">
             {/* LINKS ÚTEIS — atalho fixo pros links do cliente (Drive, Captação…).
                 Rótulo sempre "Links úteis"; aparece mesmo sem nenhum link. */}
             <LinksUteisHeaderButton links={(client as { useful_links?: { label: string; url: string }[] | null }).useful_links ?? null} />
@@ -305,7 +314,7 @@ export default function ClienteHub() {
               <span className="hidden sm:inline ml-1.5">Cor</span>
             </Button>
             {colorOpen && (
-              <div className="absolute right-0 top-12 z-30 w-[280px] max-h-[60vh] overflow-y-auto rounded-2xl border border-border bg-card p-3 shadow-xl">
+              <div className="absolute left-0 md:left-auto md:right-0 top-12 z-30 w-[280px] max-w-[calc(100vw-3rem)] max-h-[60vh] overflow-y-auto rounded-2xl border border-border bg-card p-3 shadow-xl">
                 <p className="text-[11px] font-body text-muted-foreground mb-2">Cor do cliente</p>
                 <BrandColorPicker value={(client as { color?: string | null }).color ?? null} onChange={(hex) => setColor(hex)} />
                 <button type="button" onClick={() => setColor(null)} className="mt-2.5 text-[11px] font-body text-muted-foreground hover:text-foreground">Remover cor</button>
@@ -330,20 +339,15 @@ export default function ClienteHub() {
                 <span className="hidden sm:inline">Entrar no Cria dele</span>
               </Button>
             )}
-          </div>
-          {extClient && (
-            <div className="flex gap-2 shrink-0 flex-wrap">
+            {/* ABRIR PORTAL — vive junto das outras ações pra fluir no mesmo wrap.
+                O botão "Personalizar" SAIU daqui: abria um popup com exatamente o
+                mesmo conteúdo da aba Portal. Ficou UM lugar: a aba Portal. */}
+            {extClient && (
               <Button variant="outline" className="px-3" onClick={openPortal} title="Abrir portal do cliente em nova aba" aria-label="Abrir portal do cliente em nova aba">
                 <ExternalLink className="h-4 w-4" />
               </Button>
-              {/* O botão "Personalizar" SAIU daqui.
-                  Ele abria um popup com exatamente o mesmo conteúdo da aba
-                  Portal, que fica dois centímetros abaixo. Dois caminhos pra
-                  mesma coisa não é conveniência, é dúvida: a pessoa não sabe
-                  qual é o certo, e o popup (que é apertado) ganhava por estar
-                  mais perto do dedo. Ficou UM lugar: a aba Portal. */}
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
       <ExternalClientDialog open={editOpen} onOpenChange={setEditOpen} client={extClient} />
@@ -1317,33 +1321,46 @@ function FinanceTab({ clientId, clientName, monthlyValue }: { clientId: string; 
       {/* Lançamento rápido, agora com categoria. */}
       <div className="bg-card border border-border rounded-2xl p-4">
         <p className="text-sm font-display font-semibold text-foreground mb-3">Novo lançamento de {clientName}</p>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <div className="flex rounded-lg border border-border overflow-hidden shrink-0">
+        {/* Mobile: tudo empilhado com respiro; desktop: uma linha só (sm:contents dissolve os grupos). */}
+        <div className="space-y-2.5 sm:space-y-0 sm:flex sm:flex-row sm:gap-2">
+          {/* Toggle Custo/Entrada: metades iguais e confortáveis no toque. */}
+          <div className="flex w-full sm:w-auto rounded-lg border border-border overflow-hidden shrink-0">
             {(["despesa", "entrada"] as const).map((t) => (
               <button key={t} onClick={() => { setType(t); setCat(t === "despesa" ? "Design" : "Mensalidade"); }}
-                className={`text-xs px-3 py-2 ${type === t ? (t === "entrada" ? "bg-green-600 text-white" : "bg-red-500 text-white") : "text-muted-foreground"}`}>
+                className={`flex-1 sm:flex-none text-center h-11 sm:h-10 px-4 text-base sm:text-xs font-body font-semibold transition-colors ${type === t ? (t === "entrada" ? "bg-green-600 text-white" : "bg-red-500 text-white") : "text-muted-foreground"}`}>
                 {t === "entrada" ? "Entrada" : "Custo"}
               </button>
             ))}
           </div>
-          <select value={cat} onChange={(e) => setCat(e.target.value)} className="h-10 rounded-lg border border-border bg-card px-3 text-sm shrink-0">
-            {cats.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-          {/* Mês de competência: em qual mês esse valor pesa na margem. */}
-          <select value={compet} onChange={(e) => setCompet(e.target.value)} title="Mês de competência"
-            className="h-10 rounded-lg border border-border bg-card px-3 text-sm shrink-0">
-            {competList.map((m) => <option key={m} value={m}>{labelMesBR(m)}</option>)}
-          </select>
-          <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Descrição (ex.: 4 artes do mês)" className="rounded-lg flex-1" />
-          <div className="w-full sm:w-36 shrink-0"><MoneyInput value={valor} onChange={setValor} /></div>
-          <Button onClick={add} disabled={create.isPending || createRecurring.isPending} className="shrink-0">
-            {create.isPending || createRecurring.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-          </Button>
+          {/* Categoria + mês lado a lado no mobile; soltos na linha no desktop. */}
+          <div className="grid grid-cols-2 gap-2.5 sm:contents">
+            <select value={cat} onChange={(e) => setCat(e.target.value)}
+              className="h-11 sm:h-10 w-full sm:w-auto rounded-lg border border-border bg-card px-3 text-base sm:text-sm shrink-0">
+              {cats.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            {/* Mês de competência: em qual mês esse valor pesa na margem. */}
+            <select value={compet} onChange={(e) => setCompet(e.target.value)} title="Mês de competência"
+              className="h-11 sm:h-10 w-full sm:w-auto rounded-lg border border-border bg-card px-3 text-base sm:text-sm shrink-0">
+              {competList.map((m) => <option key={m} value={m}>{labelMesBR(m)}</option>)}
+            </select>
+          </div>
+          <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Descrição (ex.: 4 artes do mês)"
+            className="rounded-lg flex-1 h-11 sm:h-10 text-base sm:text-sm" />
+          {/* Valor + botão lado a lado no mobile; soltos na linha no desktop. */}
+          <div className="flex gap-2.5 sm:contents">
+            <div className="flex-1 sm:w-36 sm:flex-none shrink-0">
+              <MoneyInput value={valor} onChange={setValor} className="h-11 sm:h-10 text-base sm:text-sm rounded-lg" />
+            </div>
+            <Button onClick={add} disabled={create.isPending || createRecurring.isPending}
+              className="shrink-0 h-11 sm:h-10 w-11 sm:w-auto">
+              {create.isPending || createRecurring.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            </Button>
+          </div>
         </div>
 
         {/* Repetir todo mês, sem precisar sair pro Cria Caixa. */}
         <button type="button" onClick={() => setRepetir((r) => !r)}
-          className={`mt-2 w-full flex items-start gap-2.5 rounded-xl border px-3 py-2 text-left transition-colors ${
+          className={`mt-3 w-full flex items-start gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-colors ${
             repetir ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}>
           <span className={`mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded border ${
             repetir ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground/40"}`}>

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { NavLink, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Home, Lightbulb, Kanban, CalendarDays,
-  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, Menu, ChevronRight, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck, Handshake, Maximize2, Minimize2, Instagram, BarChart3, ShieldCheck, PlayCircle, Clapperboard, Wand2, TrendingUp, IdCard, Trash2, Gem, Video, Globe
+  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, Menu, ChevronRight, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck, Handshake, Maximize2, Minimize2, Instagram, BarChart3, ShieldCheck, PlayCircle, Clapperboard, Wand2, TrendingUp, IdCard, Trash2, Gem, Video, Globe, MessageSquarePlus
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,6 +12,7 @@ import { useCriaAI } from "@/contexts/CriaAIContext";
 import { useTier } from "@/hooks/useTier";
 import { PlanTag } from "@/components/shared/PlanTag";
 import { seloDaRota } from "@/lib/plans";
+import { FeedbackDialog } from "@/components/FeedbackButton";
 
 const leftItems = [
   { title: "Início", url: "/app", icon: Home, exact: true },
@@ -70,6 +71,7 @@ const MORE_SECTIONS: { title: string; items: MoreItem[] }[] = [
 
 export function BottomBar() {
   const [moreOpen, setMoreOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
@@ -173,8 +175,17 @@ export function BottomBar() {
                 </div>
               </div>
             ))}
+            {/* Feedback: abre o mesmo diálogo do desktop, mas acessível no celular. */}
+            <button type="button" onClick={() => { setMoreOpen(false); setFeedbackOpen(true); }}
+              className="mt-1 w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl active:bg-muted/60 transition-colors text-left">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground"><MessageSquarePlus className="h-[18px] w-[18px]" strokeWidth={1.8} /></span>
+              <div className="min-w-0 flex-1">
+                <span className="block text-[15px] font-body font-semibold text-foreground">Enviar feedback</span>
+                <span className="block text-[11.5px] font-body text-muted-foreground truncate mt-0.5">Uma ideia ou um problema no app</span>
+              </div>
+            </button>
             <button type="button" onClick={handleSignOut}
-              className="mt-2 mb-1 w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl active:bg-destructive/10 transition-colors">
+              className="mt-1 mb-1 w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl active:bg-destructive/10 transition-colors">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-destructive/10 text-destructive"><LogOut className="h-[18px] w-[18px]" strokeWidth={1.8} /></span>
               <span className="text-[15px] font-body font-semibold text-destructive">Sair</span>
             </button>
@@ -207,6 +218,8 @@ export function BottomBar() {
           </button>
         </div>
       </div>
+
+      <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} origin="usuario" />
     </>
   );
 }

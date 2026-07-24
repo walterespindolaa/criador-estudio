@@ -180,9 +180,9 @@ export default function ManagerHome() {
 
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">{greeting(profile?.name)}</h1>
-            <p className="text-sm text-muted-foreground font-body mt-1">
+            <p className="text-sm sm:text-sm text-[0.9375rem] leading-relaxed text-muted-foreground font-body mt-1.5">
               {counts.total > 0
-                ? <><strong className="text-foreground">{counts.total}</strong> {counts.total === 1 ? "coisa precisa" : "coisas precisam"} de você hoje{counts.red > 0 ? <> · <strong className="text-red-600">{counts.red} urgente{counts.red > 1 ? "s" : ""}</strong></> : null}. Comece pelo topo da lista.</>
+                ? <><strong className="text-foreground">{counts.total}</strong> {counts.total === 1 ? "coisa precisa" : "coisas precisam"} de você hoje{counts.red > 0 ? <>{" "}<span className="whitespace-nowrap"><span aria-hidden className="mx-1 text-muted-foreground/50">·</span><strong className="text-red-600">{counts.red} urgente{counts.red > 1 ? "s" : ""}</strong></span></> : null}. Comece pelo topo da lista.</>
                 : ativos > 0
                   ? <>Tudo em dia. Bom momento pra adiantar a semana.</>
                   : <>Bora colocar a sua operação de pé.</>}

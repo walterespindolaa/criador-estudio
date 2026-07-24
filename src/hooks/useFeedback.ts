@@ -13,6 +13,7 @@ export type Feedback = {
   message: string;
   status: "novo" | "visto" | "resolvido";
   url: string | null;
+  origin: string | null; // gestor | usuario (de onde a pessoa enviou)
   created_at: string;
 };
 
@@ -20,12 +21,13 @@ export type Feedback = {
 export function useSendFeedback() {
   const { user } = useAuth();
   return useMutation({
-    mutationFn: async (input: { type: string; message: string }) => {
+    mutationFn: async (input: { type: string; message: string; origin?: string }) => {
       if (!user) throw new Error("Sem sessão");
       const { error } = await sbFrom("feedbacks").insert({
         user_id: user.id,
         type: input.type,
         message: input.message,
+        origin: input.origin ?? null,
         url: typeof window !== "undefined" ? window.location.href : null,
       } as never);
       if (error) throw error;
