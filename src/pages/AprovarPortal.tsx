@@ -144,15 +144,25 @@ function PostApproval({ client, post, index, busy, onApproveFast, onAdjustFast, 
   const openAdjust = () => { setAdjOpen(true); setComment(""); };
   const sendFast = () => { onAdjustFast(post.post_id, comment.trim()); setAdjOpen(false); setComment(""); };
 
-  // Data agendada no TOPO do bloco de info do post (antes da legenda/ações), tanto
-  // na visão rápida quanto na detalhada. Antes ficava no meio do painel.
-  const dateHeader = post.scheduled_date ? (
-    <div className="flex items-center gap-1.5 text-sm font-display font-bold text-foreground mb-3 capitalize">
-      <CalendarDays className="h-4 w-4 text-primary shrink-0" />
-      {new Date(post.scheduled_date + "T00:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" })}
-      {post.scheduled_time ? ` · ${String(post.scheduled_time).slice(0, 5)}` : ""}
+  // Bloco de STATUS no TOPO do painel de info (antes da legenda e das ações), tanto na
+  // visão rápida quanto na detalhada: data, título "Esta publicação", selo de status e
+  // formato/plataforma. Antes esses itens ficavam espalhados no meio do painel.
+  const statusHeader = (
+    <div className="mb-4">
+      {post.scheduled_date && (
+        <div className="flex items-center gap-1.5 text-sm font-display font-bold text-foreground mb-2 capitalize">
+          <CalendarDays className="h-4 w-4 text-primary shrink-0" />
+          {new Date(post.scheduled_date + "T00:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" })}
+          {post.scheduled_time ? ` · ${String(post.scheduled_time).slice(0, 5)}` : ""}
+        </div>
+      )}
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <h3 className="text-lg font-display font-extrabold text-foreground">Esta publicação</h3>
+        <span className={`text-[11px] font-bold px-3 py-1 rounded-full ${STATUS[post.approval_status].cls}`}>{STATUS[post.approval_status].label}</span>
+      </div>
+      <p className="text-xs text-muted-foreground font-body capitalize">{post.format} · {post.platform}</p>
     </div>
-  ) : null;
+  );
 
   // O painel de aprovação é um só (estado único) e muda de casa via CSS:
   // no mobile fica abaixo do preview, no desktop vira a coluna da direita.
@@ -180,11 +190,6 @@ function PostApproval({ client, post, index, busy, onApproveFast, onAdjustFast, 
       )}
       {!showFlow ? (
         <>
-          <div className="flex items-center justify-between gap-2 mb-1.5">
-            <h3 className="text-lg font-display font-extrabold text-foreground">Esta publicação</h3>
-            <span className={`text-[11px] font-bold px-3 py-1 rounded-full ${STATUS[post.approval_status].cls}`}>{STATUS[post.approval_status].label}</span>
-          </div>
-          <p className="text-xs text-muted-foreground font-body mb-4 capitalize">{post.format} · {post.platform}</p>
           {post.last_comment && post.last_comment_role === "cliente_externo" && (
             <div className="text-xs font-body text-orange-700 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2.5 mb-4 whitespace-pre-wrap">Você pediu:{"\n"}{post.last_comment}</div>
           )}
@@ -233,8 +238,8 @@ function PostApproval({ client, post, index, busy, onApproveFast, onAdjustFast, 
           {/* No mobile a legenda cheia fica dentro do mock (empilhado); no desktop o
               texto completo vem PRA CÁ, ao lado da mídia, pra encurtar o card. */}
           <div className="bg-card border border-border rounded-3xl p-4 sm:p-6 mt-3 shadow-[0_8px_30px_rgba(27,26,24,0.05)] lg:bg-transparent lg:border-0 lg:rounded-none lg:p-0 lg:mt-0 lg:shadow-none">
-            {/* Data no TOPO do bloco de info do post (antes da legenda e das ações). */}
-            {dateHeader}
+            {/* Bloco de status (data, título, selo, formato) no TOPO, antes da legenda. */}
+            {statusHeader}
             {legenda && !isStory && (
               <div className="hidden lg:block mb-5">
                 <p className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground mb-1.5">Legenda</p>

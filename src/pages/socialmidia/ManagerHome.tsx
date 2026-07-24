@@ -20,6 +20,7 @@ import { useManagerOutlet } from "@/components/accounts/ManagerLayout";
 import { readLastClient } from "@/components/accounts/ClientSwitcher";
 import { useCrmClients } from "@/hooks/useCrm";
 import { useAllExternalPosts, useExternalClients } from "@/hooks/useCriaPost";
+import { MonthOverviewPanel } from "@/components/accounts/MonthOverviewPanel";
 
 // Card do painel. A cor é a do módulo pra onde ele leva: a pessoa aprende
 // a cor uma vez e depois navega no automático, sem ler.
@@ -266,6 +267,12 @@ export default function ManagerHome() {
           ))}
         </div>
       )}
+
+      {/* ═══ VISÃO GERAL DO MÊS ═══
+          Painel de produção do mês pro gestor se organizar: contagem de posts do
+          Cria Post por status (todos os clientes), total, destaques e mini evolução.
+          Só dados reais (useAllExternalPosts). */}
+      <MonthOverviewPanel />
 
       {/* ═══ SEUS CLIENTES ═══ (2ª seção)
           A saúde de cada cliente virou parte do card: bolinha colorida com tooltip

@@ -90,6 +90,10 @@ project_id = "exuxlwdnkgmhtnwoyvwo"
     verify_jwt = true
   [functions.google-drive-connect]
     verify_jwt = true
+  # Lista o conteúdo de uma pasta PÚBLICA do Drive (API key, sem OAuth).
+  # Valida Authorization + getUser() internamente.
+  [functions.drive-list]
+    verify_jwt = true
   [functions.crm-sync-from-cria]
     verify_jwt = true
   [functions.story-notifications]

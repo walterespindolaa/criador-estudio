@@ -1,11 +1,12 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Plus, Users, Loader2, Link2, Search, Send } from "lucide-react";
+import { Plus, Users, Loader2, Link2, Search, Send, Upload, FolderOpen } from "lucide-react";
 import { toast } from "sonner";
-import { useCrmClients, useCreateCrmClient, type CrmClient } from "@/hooks/useCrm";
+import { useCrmClients, useCreateCrmClient, useUploadCrmAsset, type CrmClient } from "@/hooks/useCrm";
 import { useExternalClients, type ExternalClient } from "@/hooks/useCriaPost";
 import { useCriaClientProfiles } from "@/hooks/useManagerClientCria";
+import { BrandColorPicker } from "@/components/accounts/BrandColorPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +29,7 @@ export default function Clientes() {
   const { data: clients = [], isLoading } = useCrmClients();
   const { clients: ext, pending, copyLink } = useExternalClients();
   const createClient = useCreateCrmClient();
+  const uploadAsset = useUploadCrmAsset();
   // Foto da conta CRIA do cliente sempre atual: avatar do profile → logo manual → inicial.
   const { data: criaProfiles } = useCriaClientProfiles();
   const avatarOf = (c: CrmClient) => {
@@ -43,6 +45,24 @@ export default function Clientes() {
   const [newOpen, setNewOpen] = useState(false);
   const [nName, setNName] = useState("");
   const [nIg, setNIg] = useState("");
+  // Campos novos do cadastro: cor, logo (upload ou URL) e link do Drive.
+  const [nColor, setNColor] = useState<string | null>(null);
+  const [nLogo, setNLogo] = useState("");
+  const [nDrive, setNDrive] = useState("");
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  // Sobe a imagem no mesmo bucket dos outros uploads (crm) usando uma pasta
+  // temporária: o cliente ainda não existe, então guardamos só a URL assinada.
+  const onPickLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; e.target.value = "";
+    if (!file) return;
+    try {
+      const url = await uploadAsset.mutateAsync({ clientId: `novo-${crypto.randomUUID()}`, file, kind: "avatar" });
+      setNLogo(url);
+    } catch { /* o hook já avisa */ }
+  };
+
+  const resetNew = () => { setNName(""); setNIg(""); setNColor(null); setNLogo(""); setNDrive(""); };
 
   // "aguardando" por cliente central: soma dos posts pendentes do external vinculado.
   const pendingByCrm = useMemo(() => {
@@ -76,8 +96,21 @@ export default function Clientes() {
 
   const doCreate = async () => {
     if (!nName.trim()) return;
-    const c = await createClient.mutateAsync({ name: nName.trim(), instagram: nIg.trim() || null });
-    setNewOpen(false); setNName(""); setNIg("");
+    const drive = nDrive.trim();
+    if (drive && !/^https?:\/\//i.test(drive)) { toast.error("O link do Drive precisa começar com http:// ou https://"); return; }
+    const logo = nLogo.trim();
+    if (logo && !/^https?:\/\//i.test(logo)) { toast.error("A URL da imagem precisa começar com http:// ou https://"); return; }
+    // O link do Drive já entra nos links úteis com rótulo "Drive" (a aba Drive
+    // funciona de cara).
+    const useful_links = drive ? [{ label: "Drive", url: drive }] : null;
+    const c = await createClient.mutateAsync({
+      name: nName.trim(),
+      instagram: nIg.trim() || null,
+      color: nColor,
+      logo: logo || null,
+      useful_links,
+    });
+    setNewOpen(false); resetNew();
     toast.success("Cliente criado!");
     open(c.id);
   };
@@ -170,25 +203,66 @@ export default function Clientes() {
         </div>
       )}
 
-      <Dialog open={newOpen} onOpenChange={(o) => !createClient.isPending && setNewOpen(o)}>
-        <DialogContent className="sm:max-w-lg">
+      <Dialog open={newOpen} onOpenChange={(o) => { if (createClient.isPending) return; setNewOpen(o); if (!o) resetNew(); }}>
+        <DialogContent className="sm:max-w-lg max-h-[88vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-display">Novo cliente</DialogTitle>
             <DialogDescription className="font-body text-sm">Cria a ficha do cliente. Você adiciona posts, cronograma e o resto dentro dele.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-2">
-            <div className="space-y-1.5">
-              <Label className="font-body text-xs">Nome</Label>
-              <Input value={nName} onChange={(e) => setNName(e.target.value)} placeholder="Nome da marca/cliente" className="rounded-xl" />
+            {/* Foto/logo + nome, lado a lado no desktop, empilhados no mobile. */}
+            <div className="flex items-start gap-3">
+              <button type="button" onClick={() => logoInputRef.current?.click()} title="Enviar foto ou logo"
+                aria-label="Enviar foto ou logo"
+                className="relative w-16 h-16 rounded-full grid place-items-center text-white text-xl font-display font-bold shrink-0 overflow-hidden ring-2 ring-border/60 hover:ring-primary/40 transition-all"
+                style={{ background: nColor || "linear-gradient(135deg,#0F6E56,#1d9e75)" }}>
+                {nName.trim() ? nName.trim().charAt(0).toUpperCase() : <Upload className="h-5 w-5" />}
+                {nLogo.trim() && <img src={nLogo.trim()} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 w-full h-full object-cover" />}
+              </button>
+              <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={onPickLogo} />
+              <div className="flex-1 space-y-1.5 min-w-0">
+                <Label className="font-body text-xs">Nome</Label>
+                <Input value={nName} onChange={(e) => setNName(e.target.value)} placeholder="Nome da marca/cliente" className="rounded-xl" />
+              </div>
             </div>
+
             <div className="space-y-1.5">
               <Label className="font-body text-xs">Instagram (opcional)</Label>
               <Input value={nIg} onChange={(e) => setNIg(e.target.value)} placeholder="@cliente" className="rounded-xl" />
             </div>
+
+            {/* FOTO/LOGO: enviar do dispositivo (botão acima) ou colar uma URL. */}
+            <div className="space-y-1.5">
+              <Label className="font-body text-xs">Foto ou logo (opcional)</Label>
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="outline" className="rounded-xl h-9 gap-1.5 shrink-0" onClick={() => logoInputRef.current?.click()} disabled={uploadAsset.isPending}>
+                  {uploadAsset.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} Enviar
+                </Button>
+                <Input value={nLogo} onChange={(e) => setNLogo(e.target.value)} placeholder="ou cole uma URL de imagem" className="rounded-xl h-9 text-sm flex-1 min-w-0" />
+              </div>
+            </div>
+
+            {/* LINK DO DRIVE: já entra nos links úteis com rótulo "Drive". */}
+            <div className="space-y-1.5">
+              <Label className="font-body text-xs flex items-center gap-1.5"><FolderOpen className="h-3.5 w-3.5 text-muted-foreground" /> Link do Drive (opcional)</Label>
+              <Input value={nDrive} onChange={(e) => setNDrive(e.target.value)} placeholder="https://drive.google.com/…" className="rounded-xl" />
+              <p className="text-[11px] font-body text-muted-foreground">Entra nos links úteis do cliente e já ativa a aba Drive.</p>
+            </div>
+
+            {/* COR DO CLIENTE: mesma paleta da ficha (pinta o card na lista e o link público). */}
+            <div className="space-y-1.5">
+              <Label className="font-body text-xs">Cor do cliente (opcional)</Label>
+              <div className="rounded-xl border border-border p-2.5">
+                <BrandColorPicker value={nColor} onChange={(hex) => setNColor(hex)} />
+                {nColor && (
+                  <button type="button" onClick={() => setNColor(null)} className="mt-2 text-[11px] font-body text-muted-foreground hover:text-foreground">Remover cor</button>
+                )}
+              </div>
+            </div>
           </div>
           <div className="flex justify-end gap-2 mt-6">
-            <Button variant="outline" onClick={() => setNewOpen(false)} disabled={createClient.isPending}>Cancelar</Button>
-            <Button onClick={doCreate} disabled={createClient.isPending || !nName.trim()}>{createClient.isPending && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}Criar</Button>
+            <Button variant="outline" onClick={() => { setNewOpen(false); resetNew(); }} disabled={createClient.isPending}>Cancelar</Button>
+            <Button onClick={doCreate} disabled={createClient.isPending || uploadAsset.isPending || !nName.trim()}>{createClient.isPending && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}Criar</Button>
           </div>
         </DialogContent>
       </Dialog>

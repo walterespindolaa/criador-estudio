@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Link2, Loader2, Plus, Settings2, Trash2, Wallet, Send, Check, Pencil, LogIn, Home, Layers, CalendarDays, BarChart3, BookOpen, Lightbulb, Search, Compass, Instagram, ArrowRight, Lock, FolderOpen, Package } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Link2, Loader2, Plus, Settings2, Trash2, Wallet, Send, Check, Pencil, LogIn, Home, Layers, CalendarDays, BarChart3, BookOpen, Lightbulb, Search, Compass, Instagram, ArrowRight, Lock, FolderOpen, Package, File as FileIcon, RefreshCw } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useCrmClient, useUpdateCrmClient, useUploadCrmAsset, CLIENT_STATUSES, CLIENT_STATUS_META, type ClientStatus } from "@/hooks/useCrm";
@@ -26,6 +26,7 @@ import { saveLastClient } from "@/components/accounts/ClientSwitcher";
 import { CriativoTab } from "@/components/hubcria/CriativoTab";
 import { useHasHubCria } from "@/hooks/useHubCria";
 import { useCriaClientProfiles } from "@/hooks/useManagerClientCria";
+import { useDriveFolder, type DriveItem } from "@/hooks/useDriveFolder";
 import { ClienteInstagramCria } from "@/components/accounts/ClienteInstagramCria";
 import { ClienteBrandbookCria } from "@/components/accounts/ClienteBrandbookCria";
 import { Button } from "@/components/ui/button";
@@ -93,6 +94,7 @@ const SUB_META: Record<string, SubMeta> = {
   relatorio: { label: "Relatório", desc: "O resultado white-label do mês pra enviar pro cliente.", icon: BarChart3 },
   portal: { label: "Portal", desc: "O que o cliente vê no link de aprovação. Personalize aqui.", icon: Link2 },
   materiais: { label: "Materiais", desc: "Demandas de material fora dos posts. O cliente pede pelo portal, você gerencia no kanban.", icon: Package },
+  drive: { label: "Drive", desc: "As pastas e arquivos que estão dentro do link do Drive do cliente.", icon: FolderOpen },
   brandbook: { label: "Brandbook", desc: "Paleta, tom de voz, personas e moodboard da marca.", icon: BookOpen },
   ideias: { label: "Ideias", desc: "O banco de ideias do cliente pra virar post.", icon: Lightbulb },
   pesquisa: { label: "Pesquisa", desc: "Concorrência e tendências do nicho.", icon: Search },
@@ -102,7 +104,7 @@ const SUB_META: Record<string, SubMeta> = {
 type Grp = { key: string; label: string; modulo?: CriaColor2; icon: LucideIcon; landing?: boolean; subs: string[] };
 const GROUPS: Grp[] = [
   { key: "visao-geral", label: "Visão geral", icon: Home, subs: [] },
-  { key: "cria-post", label: "Cria Post", modulo: "laranja", icon: Layers, landing: true, subs: ["posts", "cronograma", "relatorio", "materiais", "portal"] },
+  { key: "cria-post", label: "Cria Post", modulo: "laranja", icon: Layers, landing: true, subs: ["posts", "cronograma", "relatorio", "materiais", "drive", "portal"] },
   { key: "cria-gestao", label: "Cria Gestão", modulo: "rosa", icon: BookOpen, subs: ["brandbook"] },
   { key: "cria-caixa", label: "Cria Caixa", modulo: "azul", icon: Wallet, subs: ["financeiro"] },
   { key: "cria-radar", label: "Cria Radar", modulo: "lilas", icon: Search, landing: true, subs: ["ideias", "pesquisa"] },
@@ -281,8 +283,9 @@ export default function ClienteHub() {
             </div>
           </div>
           <div className="relative flex gap-2 shrink-0 flex-wrap">
-            {/* DRIVE — atalho pro(s) link(s) de pasta do Drive do cliente. */}
-            <DriveHeaderButton links={(client as { useful_links?: { label: string; url: string }[] | null }).useful_links ?? null} />
+            {/* LINKS ÚTEIS — atalho fixo pros links do cliente (Drive, Captação…).
+                Rótulo sempre "Links úteis"; aparece mesmo sem nenhum link. */}
+            <LinksUteisHeaderButton links={(client as { useful_links?: { label: string; url: string }[] | null }).useful_links ?? null} />
             {/* STATUS — ativar/pausar/inativar sem sair da ficha. Mesmo campo da lista. */}
             <select
               value={(client as { status?: ClientStatus }).status ?? "ativo"}
@@ -541,6 +544,11 @@ export default function ClienteHub() {
       {/* MATERIAIS. Demandas fora do fluxo de posts. O cliente pede pelo portal. */}
       {activeTab === "materiais" && <MateriaisBoard clientId={id!} clientName={client.name} />}
 
+      {/* DRIVE. Lê o conteúdo do link de pasta do Drive salvo nos links úteis. */}
+      {activeTab === "drive" && (
+        <DriveTab links={(client as { useful_links?: LinkUtil[] | null }).useful_links ?? null} />
+      )}
+
       {/* FINANCEIRO, exclusivo de quem assina o Cria Caixa. */}
       {activeTab === "financeiro" && (
         hasCaixa
@@ -608,29 +616,150 @@ function isDriveLink(l: LinkUtil) {
   return /drive/i.test(l.label) || /drive\.google|docs\.google/i.test(l.url);
 }
 
-// Botão "Drive" no cabeçalho: abre direto se houver 1 pasta; lista num dropdown se houver várias.
-function DriveHeaderButton({ links }: { links: LinkUtil[] | null }) {
+// Botão "Links úteis" do cabeçalho: rótulo FIXO (nunca pega o nome do 1º link) e
+// SEMPRE visível, mesmo sem nenhum link. Ao clicar: se houver links, abre o
+// dropdown listando cada um (rótulo → abre a URL em nova aba); se não houver, mostra
+// um recado curto apontando pra seção "Links úteis" logo abaixo na Visão geral.
+function LinksUteisHeaderButton({ links }: { links: LinkUtil[] | null }) {
   const [open, setOpen] = useState(false);
-  const drives = (links ?? []).filter((l) => l?.url && isDriveLink(l));
-  if (drives.length === 0) return null;
-  if (drives.length === 1) {
-    return (
-      <Button variant="outline" className="px-3" onClick={() => window.open(drives[0].url, "_blank", "noopener,noreferrer")} title="Abrir pasta do Drive" aria-label="Abrir pasta do Drive">
-        <FolderOpen className="h-4 w-4 sm:mr-1.5" /><span className="hidden sm:inline">Drive</span>
-      </Button>
-    );
-  }
+  const items = (links ?? []).filter((l) => l?.url);
   return (
     <div className="relative">
-      <Button variant="outline" className="px-3" onClick={() => setOpen((v) => !v)} title="Pastas do Drive" aria-label="Pastas do Drive">
-        <FolderOpen className="h-4 w-4 sm:mr-1.5" /><span className="hidden sm:inline">Drive</span>
+      <Button variant="outline" className="px-3" onClick={() => setOpen((v) => !v)} title="Links úteis" aria-label="Links úteis">
+        <FolderOpen className="h-4 w-4 sm:mr-1.5" /><span className="hidden sm:inline">Links úteis</span>
       </Button>
       {open && (
-        <div className="absolute right-0 top-12 z-30 w-[240px] rounded-2xl border border-border bg-card p-2 shadow-xl">
-          {drives.map((l, i) => (
-            <a key={i} href={l.url} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}
-              className="flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-body text-foreground hover:bg-muted">
-              <FolderOpen className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><span className="truncate">{l.label || l.url}</span>
+        <div className="absolute right-0 top-12 z-30 w-[260px] rounded-2xl border border-border bg-card p-2 shadow-xl">
+          {items.length > 0 ? (
+            items.map((l, i) => (
+              <a key={i} href={l.url} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}
+                className="flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-body text-foreground hover:bg-muted">
+                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><span className="truncate">{l.label || l.url}</span>
+              </a>
+            ))
+          ) : (
+            <p className="px-3 py-2 text-[12px] font-body text-muted-foreground leading-relaxed">
+              Nenhum link ainda. Adicione seus links logo abaixo, na seção <strong className="text-foreground">Links úteis</strong>.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Formata a data de modificação do item do Drive (ISO → DD/MM/AAAA), pt-BR.
+function fmtDriveDate(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+// ── ABA DRIVE ──
+// Lê o conteúdo (subpastas + arquivos) da pasta do Drive salva nos links úteis do
+// cliente, igual o concorrente. A listagem por API key SÓ funciona com pasta
+// compartilhada como "qualquer pessoa com o link pode ver" — se for privada, a
+// edge devolve a mensagem amigável e a gente mostra aqui.
+function DriveTab({ links }: { links: LinkUtil[] | null }) {
+  const drives = useMemo(() => (links ?? []).filter((l) => l?.url && isDriveLink(l)), [links]);
+  const [sel, setSel] = useState(0);
+  const activeDrive = drives[Math.min(sel, drives.length - 1)] ?? null;
+  const { data, isLoading, isError, error, isFetching, refetch } = useDriveFolder(activeDrive?.url);
+
+  // Sem link de Drive salvo: estado vazio com instrução.
+  if (drives.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-border p-10 text-center">
+        <FolderOpen className="h-8 w-8 mx-auto text-muted-foreground/60 mb-3" />
+        <p className="text-sm font-body text-foreground font-medium">Nenhuma pasta do Drive neste cliente</p>
+        <p className="text-xs text-muted-foreground font-body mt-1 max-w-md mx-auto">
+          Cole o link da pasta do Google Drive nos <strong>links úteis</strong> (na Visão geral), com "Drive" no rótulo.
+          A pasta precisa estar compartilhada como <strong>"qualquer pessoa com o link pode ver"</strong>.
+        </p>
+      </div>
+    );
+  }
+
+  const items: DriveItem[] = data?.items ?? [];
+  const rootUrl = data?.root_url ?? activeDrive?.url ?? "";
+
+  return (
+    <div className="space-y-4">
+      {/* Barra: seletor (se houver mais de uma pasta), abrir no Drive, atualizar. */}
+      <div className="flex flex-wrap items-center gap-2">
+        {drives.length > 1 && (
+          <select
+            value={sel}
+            onChange={(e) => setSel(Number(e.target.value))}
+            aria-label="Escolher pasta do Drive"
+            className="h-9 rounded-xl border border-border bg-card px-3 text-xs font-body font-semibold cursor-pointer outline-none"
+          >
+            {drives.map((d, i) => <option key={i} value={i}>{d.label || d.url}</option>)}
+          </select>
+        )}
+        <div className="flex-1" />
+        <Button variant="outline" size="sm" className="rounded-xl gap-1.5" onClick={() => refetch()} disabled={isFetching}>
+          <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} /> Atualizar
+        </Button>
+        {rootUrl && (
+          <Button size="sm" className="rounded-xl gap-1.5" onClick={() => window.open(rootUrl, "_blank", "noopener,noreferrer")}>
+            <FolderOpen className="h-4 w-4" /> Abrir no Drive
+          </Button>
+        )}
+      </div>
+
+      {/* Loading: skeleton de linhas. */}
+      {isLoading && (
+        <div className="rounded-2xl border border-border bg-card divide-y divide-border overflow-hidden">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 px-4 py-3">
+              <div className="h-5 w-5 rounded bg-muted animate-pulse shrink-0" />
+              <div className="h-4 rounded bg-muted animate-pulse flex-1 max-w-[40%]" />
+              <div className="h-3 w-20 rounded bg-muted animate-pulse ml-auto" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Erro: mensagem amigável (pasta privada, chave ausente, etc.). */}
+      {!isLoading && isError && (
+        <div className="rounded-2xl border border-amber-300/60 bg-amber-50 dark:bg-amber-950/20 p-6 text-center">
+          <p className="text-sm font-body text-amber-800 dark:text-amber-300 font-medium">
+            {(error as Error)?.message || "Não foi possível listar a pasta do Drive."}
+          </p>
+          <Button variant="outline" size="sm" className="rounded-xl gap-1.5 mt-3" onClick={() => refetch()}>
+            <RefreshCw className="h-4 w-4" /> Tentar de novo
+          </Button>
+        </div>
+      )}
+
+      {/* Vazia. */}
+      {!isLoading && !isError && items.length === 0 && (
+        <div className="rounded-2xl border border-dashed border-border p-10 text-center">
+          <p className="text-sm font-body text-muted-foreground">Esta pasta está vazia.</p>
+        </div>
+      )}
+
+      {/* Listagem: pastas primeiro (a API já ordena), nome clicável abre no Drive. */}
+      {!isLoading && !isError && items.length > 0 && (
+        <div className="rounded-2xl border border-border bg-card divide-y divide-border overflow-hidden">
+          {items.map((it) => (
+            <a
+              key={it.id}
+              href={it.webViewLink ?? rootUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors"
+            >
+              {it.isFolder
+                ? <FolderOpen className="h-5 w-5 text-primary shrink-0" />
+                : <FileIcon className="h-5 w-5 text-muted-foreground shrink-0" />}
+              <span className="text-[13px] font-body text-foreground truncate flex-1 min-w-0">{it.name}</span>
+              {it.modifiedTime && (
+                <span className="text-[11px] font-body text-muted-foreground shrink-0 hidden sm:inline">{fmtDriveDate(it.modifiedTime)}</span>
+              )}
+              <ExternalLink className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
             </a>
           ))}
         </div>
