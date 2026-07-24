@@ -17,12 +17,24 @@ export type FinRecordInput = Partial<Omit<FinRecord, "id" | "manager_id" | "crea
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 
-export function useFinRecords() {
+// opts.since (YYYY-MM-DD): quando informado, traz só lançamentos a partir dessa
+// data (janela leve, ex.: a home do copiloto só precisa do mês corrente). Sem
+// opts, mantém o comportamento antigo (histórico completo) pras telas de finanças.
+export function useFinRecords(opts?: { since?: string }) {
   const { agencyOwnerId } = useActiveAccount();
+  const since = opts?.since;
   return useQuery<FinRecord[]>({
-    queryKey: ["fin-records", agencyOwnerId], enabled: !!agencyOwnerId,
+    // Chave separada pra janela não colidir com o cache do histórico completo.
+    queryKey: since ? ["fin-records", agencyOwnerId, "since", since] : ["fin-records", agencyOwnerId],
+    enabled: !!agencyOwnerId,
     queryFn: async () => {
-      const { data, error } = await sbFrom("fin_records").select("*").eq("manager_id", agencyOwnerId!).order("date", { ascending: false });
+      const base = sbFrom("fin_records").select("*").eq("manager_id", agencyOwnerId!);
+      const filtered = since ? base.gte("date", since) : base;
+      // Teto generoso pra não puxar histórico infinito. Ordenado por data desc,
+      // então os lançamentos mais recentes (usados nos relatórios/mês) estão sempre
+      // presentes. Nota: contas com mais de 2000 lançamentos podem ter os mais
+      // antigos truncados num relatório de período muito longo.
+      const { data, error } = await filtered.order("date", { ascending: false }).limit(2000);
       if (error) throw error;
       return (data ?? []) as unknown as FinRecord[];
     },
@@ -36,26 +48,28 @@ export function useCreateFinRecord() {
       const { error } = await sbFrom("fin_records").insert({ ...input, manager_id: agencyOwnerId } as never);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId] }),
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao salvar lançamento."),
   });
 }
 export function useUpdateFinRecord() {
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Partial<FinRecordInput>) => {
       const { error } = await sbFrom("fin_records").update(updates as never).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId] }),
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao atualizar."),
   });
 }
 export function useDeleteFinRecord() {
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => { const { error } = await sbFrom("fin_records").delete().eq("id", id); if (error) throw error; },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId] }),
     onError: () => toast.error("Erro ao excluir."),
   });
 }
@@ -76,7 +90,8 @@ export function useFinRecurring() {
   return useQuery<FinRecurring[]>({
     queryKey: ["fin-recurring", agencyOwnerId], enabled: !!agencyOwnerId,
     queryFn: async () => {
-      const { data, error } = await sbFrom("fin_recurring").select("*").eq("manager_id", agencyOwnerId!).order("created_at", { ascending: false });
+      // Recorrentes são poucas por agência; 500 é teto de segurança generoso.
+      const { data, error } = await sbFrom("fin_recurring").select("*").eq("manager_id", agencyOwnerId!).order("created_at", { ascending: false }).limit(500);
       if (error) throw error;
       return (data ?? []) as unknown as FinRecurring[];
     },
@@ -90,26 +105,28 @@ export function useCreateFinRecurring() {
       const { error } = await sbFrom("fin_recurring").insert({ ...input, manager_id: agencyOwnerId } as never);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-recurring"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-recurring", agencyOwnerId] }),
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao salvar recorrente."),
   });
 }
 export function useUpdateFinRecurring() {
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Partial<FinRecurringInput>) => {
       const { error } = await sbFrom("fin_recurring").update(updates as never).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-recurring"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-recurring", agencyOwnerId] }),
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao atualizar recorrente."),
   });
 }
 export function useDeleteFinRecurring() {
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => { const { error } = await sbFrom("fin_recurring").delete().eq("id", id); if (error) throw error; },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-recurring"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-recurring", agencyOwnerId] }),
     onError: () => toast.error("Erro ao excluir recorrente."),
   });
 }
@@ -124,7 +141,7 @@ export function useGenerateRecurring() {
       if (error) throw error;
       return rows.length;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId] }),
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao lançar recorrentes."),
   });
 }
@@ -145,15 +162,16 @@ export function useCreateFinTransfer() {
       const { error } = await sbFrom("fin_records").insert(rows as never);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId] }),
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro na transferência."),
   });
 }
 export function useDeleteFinByGroup() {
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (group: string) => { const { error } = await sbFrom("fin_records").delete().eq("transfer_group", group); if (error) throw error; },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId] }),
     onError: () => toast.error("Erro ao excluir transferência."),
   });
 }
@@ -233,7 +251,7 @@ export function useEnsureMonthly() {
           .eq("crm_client_id", r.crm_client_id).eq("month_ref", r.month_ref).eq("status", "pendente");
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-monthly"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-monthly", agencyOwnerId] }),
   });
 }
 
@@ -256,8 +274,8 @@ export function useConfirmMonthly() {
       if (e2) throw e2;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["fin-monthly"] });
-      qc.invalidateQueries({ queryKey: ["fin-records"] });
+      qc.invalidateQueries({ queryKey: ["fin-monthly", agencyOwnerId] });
+      qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId] });
       toast.success("Recebimento confirmado.");
     },
     onError: () => toast.error("Não consegui confirmar."),
@@ -266,6 +284,7 @@ export function useConfirmMonthly() {
 
 // DESFAZER: apaga o lançamento criado e volta a instância pra pendente.
 export function useUndoMonthly() {
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (m: FinMonthly) => {
@@ -279,8 +298,8 @@ export function useUndoMonthly() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["fin-monthly"] });
-      qc.invalidateQueries({ queryKey: ["fin-records"] });
+      qc.invalidateQueries({ queryKey: ["fin-monthly", agencyOwnerId] });
+      qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId] });
       toast.success("Desfeito. A mensalidade voltou pra pendente.");
     },
     onError: () => toast.error("Não consegui desfazer."),
@@ -289,6 +308,7 @@ export function useUndoMonthly() {
 
 // PULAR o mês (com motivo). Não vira lançamento e não conta na previsão.
 export function useSkipMonthly() {
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ m, reason }: { m: FinMonthly; reason?: string }) => {
@@ -300,8 +320,8 @@ export function useSkipMonthly() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["fin-monthly"] });
-      qc.invalidateQueries({ queryKey: ["fin-records"] });
+      qc.invalidateQueries({ queryKey: ["fin-monthly", agencyOwnerId] });
+      qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId] });
       toast.success("Mensalidade pulada neste mês.");
     },
     onError: () => toast.error("Não consegui pular."),

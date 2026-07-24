@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/money";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 import { confirmar } from "@/components/shared/Confirm";
+import { hojeBR, toISODateBR } from "@/lib/date-br";
 const brl = (v?: number | null) => formatBRL(v, { zeroAsDash: false });
 const POT: Record<string, string> = { alto: "🟢", medio: "🟡", baixo: "🔴" };
 const shortDate = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
@@ -66,7 +67,7 @@ export function PipelineBoard() {
     return map;
   }, [tasks]);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = hojeBR();
 
   const handleDragEnd = (r: DropResult) => {
     if (!r.destination || r.source.droppableId === r.destination.droppableId) return;
@@ -88,12 +89,19 @@ export function PipelineBoard() {
           });
           clientId = c.id;
         }
-        await createContract.mutateAsync({
-          title: `Contrato - ${lead.name}`, status: "fechado",
-          monthly_value: lead.monthly_value ?? 0, contract_value: lead.monthly_value ?? 0,
-          closed_date: new Date().toISOString().split("T")[0], crm_lead_id: lead.id, crm_client_id: clientId,
-        });
-        toast.success("Lead convertido em cliente + contrato!");
+        // O cliente já foi criado (ou já existia). Se o contrato falhar, avisamos que a
+        // conversão foi parcial em vez de mostrar sucesso puro, sem quebrar o fluxo.
+        try {
+          await createContract.mutateAsync({
+            title: `Contrato - ${lead.name}`, status: "fechado",
+            monthly_value: lead.monthly_value ?? 0, contract_value: lead.monthly_value ?? 0,
+            closed_date: toISODateBR(new Date()), crm_lead_id: lead.id, crm_client_id: clientId,
+          });
+          toast.success("Lead convertido em cliente + contrato!");
+        } catch {
+          // Hooks já mostram o erro específico; aqui deixamos claro o estado parcial.
+          toast.warning("Cliente criado, mas houve erro ao gerar o contrato. Crie o contrato manualmente.");
+        }
       }
     } catch { /* hooks já mostram o erro */ }
   };

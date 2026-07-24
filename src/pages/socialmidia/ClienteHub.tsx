@@ -249,6 +249,21 @@ export default function ClienteHub() {
     toast.success("Cliente ativado no Cria Post!");
   };
 
+  // Abas nível 1: pista de que a linha rola na horizontal (leigo não percebe o overflow).
+  // O fade na borda direita só aparece enquanto ainda dá pra rolar; some ao chegar no fim
+  // e nunca aparece quando as abas cabem (assim não corta a última aba no desktop).
+  const nivel1Ref = useRef<HTMLDivElement>(null);
+  const [nivel1MaisAbas, setNivel1MaisAbas] = useState(false);
+  useEffect(() => {
+    const el = nivel1Ref.current;
+    if (!el) return;
+    const check = () => setNivel1MaisAbas(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+    check();
+    el.addEventListener("scroll", check, { passive: true });
+    window.addEventListener("resize", check);
+    return () => { el.removeEventListener("scroll", check); window.removeEventListener("resize", check); };
+  }, [client]);
+
   if (isLoading) return <div className="py-20 text-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground mx-auto" /></div>;
   if (!client) return (
     <div className="py-20 text-center">
@@ -355,7 +370,11 @@ export default function ClienteHub() {
       {/* NÍVEL 1 — os Cria. Topo enxuto: a pessoa escolhe QUAL Cria; o que tem
           dentro aparece no nível 2. Cada botão na cor do módulo, que é o que
           ensina a reconhecer o produto dentro da ficha do cliente. */}
-      <div className="flex gap-1 mb-4 overflow-x-auto rounded-2xl border border-border bg-muted/50 p-1.5 w-fit max-w-full">
+      <div
+        ref={nivel1Ref}
+        className="flex gap-1 mb-4 overflow-x-auto rounded-2xl border border-border bg-muted/50 p-1.5 w-fit max-w-full"
+        style={nivel1MaisAbas ? { WebkitMaskImage: "linear-gradient(to right, #000 calc(100% - 28px), transparent)", maskImage: "linear-gradient(to right, #000 calc(100% - 28px), transparent)" } : undefined}
+      >
         {GROUPS.map((g) => {
           const on = activeGroup.key === g.key;
           const hex = g.modulo ? CRIA_HEX[g.modulo] : "hsl(var(--foreground))";
@@ -637,7 +656,7 @@ function LinksUteisHeaderButton({ links }: { links: LinkUtil[] | null }) {
         <FolderOpen className="h-4 w-4 sm:mr-1.5" /><span className="hidden sm:inline">Links úteis</span>
       </Button>
       {open && (
-        <div className="absolute right-0 top-12 z-30 w-[260px] rounded-2xl border border-border bg-card p-2 shadow-xl">
+        <div className="absolute left-0 md:left-auto md:right-0 top-12 z-30 w-[260px] max-w-[calc(100vw-3rem)] rounded-2xl border border-border bg-card p-2 shadow-xl">
           {items.length > 0 ? (
             items.map((l, i) => (
               <a key={i} href={l.url} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}

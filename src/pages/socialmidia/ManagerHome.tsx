@@ -466,7 +466,11 @@ export default function ManagerHome() {
                     </span>
                   </span>
                   <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full shrink-0 ${urg.cls}`}>{urg.label}</span>
-                  <span className="hidden sm:inline-flex items-center gap-1 text-[12px] font-bold text-foreground shrink-0">{s.actionLabel}<ArrowRight className="h-3.5 w-3.5" /></span>
+                  {/* No mobile some o rótulo, mas a seta fica como pista de que o item é clicável. */}
+                  <span className="inline-flex items-center gap-1 text-[12px] font-bold text-foreground shrink-0">
+                    <span className="hidden sm:inline">{s.actionLabel}</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </span>
                 </button>
               );
             })}

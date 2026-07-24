@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useProfile } from "@/hooks/useProfile";
 import { bestTimes } from "@/lib/bestTimes";
+import { toISODateBR } from "@/lib/date-br";
 import { toast } from "sonner";
 
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
@@ -251,9 +252,15 @@ export function useRunScrape() {
       const ate = Date.now() + 4 * 60 * 1000;
       while (Date.now() < ate) {
         await new Promise((r) => setTimeout(r, 4000));
-        const { data: p } = await supabase.functions.invoke("apify-scrape", {
+        const { data: p, error: pollErr } = await supabase.functions.invoke("apify-scrape", {
           body: { action: "poll", scrape_id: scrapeId, manager_id: agencyOwnerId },
         });
+        // Se a função de poll cair, `st` ficava undefined e o loop seguia às
+        // cegas a cada 4s até o timeout de 4 min. Aborta cedo com o erro real:
+        // tanto a falha de transporte (error) quanto o envelope { error } da edge.
+        if (pollErr) throw new Error((await erroDaEdge(pollErr)) || "A análise não completou.");
+        const pErr = (p as { error?: string })?.error;
+        if (pErr) throw new Error((p as { message?: string })?.message || pErr);
         const st = (p as { status?: string })?.status;
         if (st === "done") return { scrape_id: scrapeId, ...(p as object) } as { scrape_id: string; ideas_count: number; cost_usd: number };
         if (st === "error") throw new Error((p as { error?: string })?.error || "A análise não completou.");
@@ -287,9 +294,13 @@ export function useHubCredits() {
     enabled: !!agencyOwnerId,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("hub_credits_status", { _manager: agencyOwnerId! });
-      if (error) return { used: 0, quota: 0 };
+      // FALHA ao ler a cota é diferente de "sem cota". Se devolvêssemos quota 0
+      // aqui, o CriativoTab (que só trava quando quota > 0) liberaria análises
+      // pagas do Apify sem limite. Sinalizamos error:true pra ele travar a ação
+      // paga e pedir pra tentar de novo (fail-closed).
+      if (error) return { used: 0, quota: 0, error: true };
       const r = (Array.isArray(data) ? data[0] : data) as { used: number; quota: number } | null;
-      return { used: Number(r?.used ?? 0), quota: Number(r?.quota ?? 0) };
+      return { used: Number(r?.used ?? 0), quota: Number(r?.quota ?? 0), error: false };
     },
   });
 }
@@ -326,7 +337,7 @@ export function useGeneratePlanFromIdeas() {
           title: idea.title.slice(0, 200),
           caption: idea.rationale ?? null,
           format: (idea.format || "reels").toLowerCase(),
-          scheduled_date: d.toISOString().slice(0, 10),
+          scheduled_date: toISODateBR(d),
           scheduled_time: slots[i % slots.length],
         };
       });

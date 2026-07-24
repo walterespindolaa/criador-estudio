@@ -14,11 +14,6 @@ export const PROPOSAL_LABEL: Record<ProposalStatus, string> = {
   none: "Sem orçamento", enviada: "Enviada", vista: "Vista",
   aceita: "Aceita", recusada: "Recusada", ajuste: "Ajuste pedido",
 };
-function slugify(s: string): string {
-  return s.toLowerCase().normalize("NFD").replace(new RegExp("[\\u0300-\\u036f]", "g"), "")
-    .replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 24) || "proposta";
-}
-
 export type Collab = {
   id: string;
   user_id: string;
@@ -183,9 +178,14 @@ export function useCollabs() {
   });
 
   const generateProposal = useMutation({
-    mutationFn: async ({ collabId, brand, validUntil, terms }:
+    mutationFn: async ({ collabId, validUntil, terms }:
       { collabId: string; brand: string; validUntil?: string | null; terms?: string | null }) => {
-      const token = `${slugify(brand)}-${crypto.randomUUID().slice(0, 8)}`;
+      // Token de proposta: entropia FORTE (256 bits) e SEM prefixo derivado de dado
+      // conhecido (nome da marca). O antigo `${slugify(brand)}-<8 hex>` dava só ~32 bits
+      // de aleatoriedade com prefixo adivinhável, permitindo brute force nas RPCs
+      // grant-to-anon (get/accept/reject/request_change_by_token). O token e buscado
+      // por igualdade exata, entao o formato aqui e livre.
+      const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
       const { error } = await sbFrom("collabs").update({
         proposal_token: token,
         proposal_status: "enviada",

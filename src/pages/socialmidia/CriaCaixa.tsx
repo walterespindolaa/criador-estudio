@@ -25,6 +25,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 
 const pad0 = (n: number) => String(n).padStart(2, "0");
 import { cn } from "@/lib/utils";
+import { hojeBR, toISODateBR } from "@/lib/date-br";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { confirmar } from "@/components/shared/Confirm";
 
@@ -129,7 +130,9 @@ function CaixaInner() {
 
   // ── Mensalidades como INSTÂNCIA do mês (fin_monthly) ──
   const monthRef = `${ym.y}-${pad0(ym.m + 1)}-01`;
-  const todayISO = new Date().toISOString().slice(0, 10);
+  // Fuso BR: usar hojeBR() evita que após ~21h o "hoje" vire o dia seguinte (UTC)
+  // e a mensalidade que vence hoje apareça como atrasada.
+  const todayISO = hojeBR();
   const { data: monthlies = [] } = useFinMonthly(monthRef);
   const ensureMonthly = useEnsureMonthly();
   const confirmMonthly = useConfirmMonthly();
@@ -290,6 +293,8 @@ function CaixaInner() {
 
   const customCats = profile?.fin_settings?.categories?.[ctx];
   const addCategory = async (type: FinType, name: string) => {
+    // Sem o perfil carregado, o payload gravaria null por cima de nome/razão/CNPJ.
+    if (!profile) { toast.error("Aguarde carregar seu perfil antes de adicionar categorias."); return; }
     const p = profile;
     const fin = p?.fin_settings ?? {};
     const cur = fin.categories ?? {};
@@ -305,6 +310,8 @@ function CaixaInner() {
 
   const customSubs = profile?.fin_settings?.subcats?.[ctx];
   const addSubcategory = async (type: FinType, category: string, name: string) => {
+    // Sem o perfil carregado, o payload gravaria null por cima de nome/razão/CNPJ.
+    if (!profile) { toast.error("Aguarde carregar seu perfil antes de adicionar subcategorias."); return; }
     const p = profile;
     const fin = p?.fin_settings ?? {};
     const cur = fin.subcats ?? {};
@@ -1036,6 +1043,11 @@ function RecordDialog({ record, context, clients, defaultDate, defaultCats, cust
   };
   const submit = async () => {
     if (!f.description?.trim()) return;
+    // Valor obrigatório: sem esta trava o lançamento salvava com R$ 0 (criação e edição).
+    if (!f.amount || f.amount <= 0) {
+      toast.error("Informe um valor maior que zero.");
+      return;
+    }
     if (record) {
       await update.mutateAsync({ id: record.id, ...f });
     } else {
@@ -1193,7 +1205,8 @@ function CalendarioFinanceiro({ monthlies, records, recurring, pendingRecurring,
   const first = new Date(ym.y, ym.m, 1);
   const lastDay = new Date(ym.y, ym.m + 1, 0).getDate();
   const startDow = first.getDay(); // domingo = 0 (semana começa no domingo)
-  const hoje = new Date().toISOString().slice(0, 10);
+  // Fuso BR: o realce de "hoje" no calendário precisa bater com o dia local BR.
+  const hoje = hojeBR();
   const [diaAberto, setDiaAberto] = useState<number | null>(null);
 
   const evs = useMemo<Ev[]>(() => {
@@ -1512,13 +1525,13 @@ function DiaDetalhe({ dia, mes, itens, clientName, acoes, onFechar }: {
 function RelatorioPeriodo({ records, ctx }: { records: FinRecord[]; ctx: FinContext }) {
   const hoje = new Date();
   const [de, setDe] = useState(`${hoje.getFullYear()}-01-01`);
-  const [ate, setAte] = useState(hoje.toISOString().slice(0, 10));
+  const [ate, setAte] = useState(hojeBR());
 
   const preset = (kind: "mes" | "ano" | "12m") => {
     const y = hoje.getFullYear(), m = hoje.getMonth();
-    if (kind === "mes") { setDe(`${y}-${pad0(m + 1)}-01`); setAte(new Date(y, m + 1, 0).toISOString().slice(0, 10)); }
+    if (kind === "mes") { setDe(`${y}-${pad0(m + 1)}-01`); setAte(toISODateBR(new Date(y, m + 1, 0))); }
     else if (kind === "ano") { setDe(`${y}-01-01`); setAte(`${y}-12-31`); }
-    else { const d = new Date(y, m - 11, 1); setDe(d.toISOString().slice(0, 10)); setAte(new Date(y, m + 1, 0).toISOString().slice(0, 10)); }
+    else { const d = new Date(y, m - 11, 1); setDe(toISODateBR(d)); setAte(toISODateBR(new Date(y, m + 1, 0))); }
   };
 
   const rows = records.filter((r) => (r.context ?? "pj") === ctx && r.date >= de && r.date <= ate);

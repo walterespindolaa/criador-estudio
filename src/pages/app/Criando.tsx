@@ -33,6 +33,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, parseISO, isWithinInterval } from "date-fns";
+import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { usePosts, type Post } from "@/hooks/usePosts";
 import { toast } from "sonner";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
@@ -51,7 +52,7 @@ const PERIOD_OPTIONS: { key: PeriodKey; label: string }[] = [
   { key: "personalizado", label: "Personalizado" },
 ];
 
-function getDateRange(period: PeriodKey, customRange?: { from: Date; to: Date }): { start: Date; end: Date } | null {
+function getDateRange(period: PeriodKey, customRange?: { from: string; to: string }): { start: Date; end: Date } | null {
   const now = new Date();
   switch (period) {
     case "tudo": return null;
@@ -60,7 +61,8 @@ function getDateRange(period: PeriodKey, customRange?: { from: Date; to: Date })
     case "quinzenal": return { start: subDays(now, 14), end: now };
     case "mes": return { start: startOfMonth(now), end: endOfMonth(now) };
     case "ano": return { start: startOfYear(now), end: endOfYear(now) };
-    case "personalizado": return customRange ? { start: customRange.from, end: customRange.to } : null;
+    // Personalizado: strings YYYY-MM-DD viram meia-noite LOCAL (fuso BR), nunca UTC.
+    case "personalizado": return customRange ? { start: parseDateOnly(customRange.from), end: parseDateOnly(customRange.to) } : null;
     default: return null;
   }
 }
@@ -177,7 +179,8 @@ const Criando = () => {
   const [period, setPeriod] = useState<PeriodKey>(() => {
     return (localStorage.getItem("criando-period") as PeriodKey) || "tudo";
   });
-  const [customRange, setCustomRange] = useState<{ from: Date; to: Date } | undefined>();
+  // Guarda strings YYYY-MM-DD (fuso BR). Evita toISOString/new Date crus, que causam off-by-one.
+  const [customRange, setCustomRange] = useState<{ from: string; to: string } | undefined>();
   const [filterPlatform, setFilterPlatform] = useState<string | null>(null);
   const [filterPillar, setFilterPillar] = useState<string | null>(null);
   const [filterWeek, setFilterWeek] = useState<number | null>(null);
@@ -212,7 +215,14 @@ const Criando = () => {
       if (filterWeek != null && post.week_number !== filterWeek) return false;
       if (filterFormat && post.format !== filterFormat) return false;
       if (search.trim() && !(post.title ?? "").toLowerCase().includes(search.trim().toLowerCase())) return false;
-      if (dateRange) {
+      if (period === "personalizado") {
+        // Comparação lexicográfica de strings YYYY-MM-DD: sem conversão de fuso, sem off-by-one.
+        if (customRange) {
+          const postDate = post.scheduled_date || post.created_at?.split("T")[0];
+          if (!postDate) return false;
+          if (postDate < customRange.from || postDate > customRange.to) return false;
+        }
+      } else if (dateRange) {
         const postDate = post.scheduled_date || post.created_at?.split("T")[0];
         if (!postDate) return period === "tudo";
         try {
@@ -222,7 +232,7 @@ const Criando = () => {
       }
       return true;
     });
-  }, [posts, filterPlatform, filterPillar, filterWeek, filterFormat, search, dateRange, period]);
+  }, [posts, filterPlatform, filterPillar, filterWeek, filterFormat, search, dateRange, period, customRange]);
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pendingFormat, setPendingFormat] = useState<string | null>(null);
@@ -266,7 +276,7 @@ const Criando = () => {
 
   // Drag estilo Trello: reordena DENTRO da coluna e move ENTRE colunas, gravando
   // a ordem manual (board_order). Card fica onde você soltou, não vai mais pro fim.
-  const handleDragEnd = (result: DropResult) => {
+  const handleDragEnd = async (result: DropResult) => {
     const { destination, draggableId } = result;
     if (!destination) return;
     const destStatus = destination.droppableId;
@@ -291,15 +301,16 @@ const Criando = () => {
       }
       changes.push(ch);
     });
-    reorderPosts(changes);
+    // Aguarda a confirmação do save ANTES de comemorar. Se falhar, o reorder já
+    // reverteu o card e avisou; não dispara confetti/audit por cima de erro.
+    const ok = await reorderPosts(changes);
+    if (!ok) return;
 
-    // Publicou: confetti + audit, como no fluxo antigo.
+    // Publicou (e persistiu): confetti + audit, como no fluxo antigo.
     if (changedStatus && destStatus === "publicado" && user) {
-      void (async () => {
-        const { fireConfetti } = await import("@/lib/confetti");
-        fireConfetti();
-        await supabase.from("audit_log").insert({ user_id: user.id, action: "post_published", entity_type: "post", entity_id: draggableId } as never);
-      })();
+      const { fireConfetti } = await import("@/lib/confetti");
+      fireConfetti();
+      await supabase.from("audit_log").insert({ user_id: user.id, action: "post_published", entity_type: "post", entity_id: draggableId } as never);
     }
   };
 
@@ -380,12 +391,12 @@ const Criando = () => {
                 </div>
                 {period === "personalizado" && (
                   <div className="flex items-center gap-2 mt-3">
-                    <Input type="date" value={customRange?.from?.toISOString().split("T")[0] || ""}
-                      onChange={e => setCustomRange(prev => ({ from: new Date(e.target.value), to: prev?.to || new Date() }))}
+                    <Input type="date" value={customRange?.from || ""}
+                      onChange={e => setCustomRange(prev => ({ from: e.target.value, to: prev?.to || hojeBR() }))}
                       className="rounded-xl text-xs h-9 flex-1" />
                     <span className="text-muted-foreground text-xs">até</span>
-                    <Input type="date" value={customRange?.to?.toISOString().split("T")[0] || ""}
-                      onChange={e => setCustomRange(prev => ({ from: prev?.from || new Date(), to: new Date(e.target.value) }))}
+                    <Input type="date" value={customRange?.to || ""}
+                      onChange={e => setCustomRange(prev => ({ from: prev?.from || hojeBR(), to: e.target.value }))}
                       className="rounded-xl text-xs h-9 flex-1" />
                   </div>
                 )}
@@ -543,12 +554,12 @@ const Criando = () => {
 
         {period === "personalizado" && (
           <div className="hidden md:flex items-center gap-2 mb-4">
-            <Input type="date" value={customRange?.from?.toISOString().split("T")[0] || ""}
-              onChange={e => setCustomRange(prev => ({ from: new Date(e.target.value), to: prev?.to || new Date() }))}
+            <Input type="date" value={customRange?.from || ""}
+              onChange={e => setCustomRange(prev => ({ from: e.target.value, to: prev?.to || hojeBR() }))}
               className="rounded-xl text-xs h-8 w-36" />
             <span className="text-muted-foreground text-xs">até</span>
-            <Input type="date" value={customRange?.to?.toISOString().split("T")[0] || ""}
-              onChange={e => setCustomRange(prev => ({ from: prev?.from || new Date(), to: new Date(e.target.value) }))}
+            <Input type="date" value={customRange?.to || ""}
+              onChange={e => setCustomRange(prev => ({ from: prev?.from || hojeBR(), to: e.target.value }))}
               className="rounded-xl text-xs h-8 w-36" />
           </div>
         )}
@@ -606,7 +617,7 @@ const Criando = () => {
 
         {posts.length > 0 && view === "board" && (
         /* onDragStart com vibração: o dedo SENTE que pegou o card. iOS ignora, Android responde. */
-        <DragDropContext onDragStart={() => tocar(12)} onDragEnd={(r) => { tocar(8); handleDragEnd(r); }}>
+        <DragDropContext onDragStart={() => tocar(12)} onDragEnd={(r) => { tocar(8); void handleDragEnd(r); }}>
         <div data-tour="criando-board" className="hidden md:flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-proximity kanban-scroll">
           {COLUMNS.map(col => {
             const colPosts = filteredPosts.filter(p => p.status === col.key);
@@ -947,7 +958,7 @@ const Criando = () => {
           <div data-tour="criando-board-m" className="md:hidden">
             {/* onDragStart com vibração: o dedo SENTE que pegou o card. É o detalhe
             que separa "site num celular" de "app". iOS ignora, Android responde. */}
-        <DragDropContext onDragStart={() => tocar(12)} onDragEnd={(r) => { tocar(8); handleDragEnd(r); }}>
+        <DragDropContext onDragStart={() => tocar(12)} onDragEnd={(r) => { tocar(8); void handleDragEnd(r); }}>
             <div className="flex gap-2.5 overflow-x-auto -mx-4 px-4 kanban-scroll h-[calc(100svh-230px)] min-h-[340px]">
               {COLUMNS.map((col, i) => {
                 const colPosts = filteredPosts.filter(p => (p.status ?? "ideia") === col.key);

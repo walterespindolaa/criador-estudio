@@ -43,7 +43,11 @@ export function useOperationSignals() {
   const { data: crmClients = [] } = useCrmClients();
   const { data: allPosts = [] } = useAllExternalPosts();
   const { clients: extClients } = useExternalClients();
-  const { data: finRecords = [] } = useFinRecords();
+  // O sinal financeiro só olha o que foi pago NO MÊS corrente (paidThisMonth
+  // abaixo). Então buscamos só o financeiro a partir do 1º dia do mês, em vez do
+  // extrato inteiro, aliviando a rede na home. Ver B8 da varredura.
+  const monthStartBR = `${hojeBR().slice(0, 7)}-01`;
+  const { data: finRecords = [] } = useFinRecords({ since: monthStartBR });
 
   return useMemo(() => {
     const todayStr = hojeBR();

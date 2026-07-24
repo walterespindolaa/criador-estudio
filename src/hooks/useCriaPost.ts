@@ -41,6 +41,14 @@ export type ExternalPost = {
 };
 export type ExternalPostInput = { title: string; platform: string; format: string; caption?: string | null; hook?: string | null; script?: string | null; approval_mode?: "fast" | "flow" | "both"; scheduled_date?: string | null; scheduled_time?: string | null; reference_url?: string | null; drive_folder_url?: string | null };
 
+// Colunas usadas no board/card, no calendário e no editor do Cria Post. Trocamos o
+// select("*") por esta lista pra NÃO rebaixar todas as colunas (e as futuras) a cada
+// refetch. É o suficiente pro editor abrir; mídia pesada já vem por query própria sob
+// demanda. Mantém board_order (ordenação), scheduled_time e external_client_id (usados
+// via cast pelas telas que consomem estas queries).
+const POST_BOARD_COLUMNS =
+  "id, title, platform, format, caption, hook, approval_status, scheduled_date, scheduled_time, created_at, approval_mode, script, approval_updated_at, reference_url, drive_folder_url, board_order, external_client_id";
+
 export function useExternalClients() {
   const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
@@ -175,12 +183,13 @@ export function useExternalPosts(clientId: string | null) {
   const postsQ = useQuery({
     queryKey: key,
     enabled: !!agencyOwnerId && !!clientId,
-    // Revalida ao abrir/focar: o cliente aprova por link e o kanban do gestor
-    // precisa refletir (senão fica no "pendente" cacheado).
-    staleTime: 0, refetchOnMount: "always", refetchOnWindowFocus: true,
+    // Revalida ao focar (cliente aprova por link e o kanban precisa refletir), mas com
+    // janela de 30s pra não rebaixar tudo a cada montagem/foco. As mutações já invalidam
+    // quando algo muda de verdade.
+    staleTime: 30_000, refetchOnWindowFocus: true,
     queryFn: async () => {
       // Rascunhos (is_draft) NÃO aparecem no kanban/calendário nem vão pro cliente.
-      const { data, error } = await sbFrom("posts").select("*").eq("external_client_id", clientId!)
+      const { data, error } = await sbFrom("posts").select(POST_BOARD_COLUMNS).eq("external_client_id", clientId!)
         .not("is_draft", "is", true)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -312,9 +321,13 @@ export function useExternalPosts(clientId: string | null) {
 
   // Reorder OTIMISTA do kanban do Cria Post (dentro da coluna e entre colunas):
   // move o card na hora (patch + re-sort do cache) e persiste em segundo plano.
-  const reorderExternalPosts = (changes: { id: string; board_order: number; approval_status?: string; approval_updated_at?: string }[]) => {
-    if (!changes.length) return;
+  const reorderExternalPosts = async (changes: { id: string; board_order: number; approval_status?: string; approval_updated_at?: string }[]): Promise<boolean> => {
+    if (!changes.length) return true;
     const byId = new Map(changes.map((c) => [c.id, c]));
+    // Snapshot pra rollback. O client do Supabase NÃO rejeita a promise em erro (devolve
+    // { error }), então o .catch nunca rodava: numa falha o card ficava movido na tela
+    // mas não persistia, sumindo no próximo refetch sem aviso. Agora checamos cada erro.
+    const snapshot = qc.getQueryData<ExternalPost[]>(key);
     qc.setQueryData<ExternalPost[]>(key, (old) => {
       if (!Array.isArray(old)) return old;
       const next = old.map((p) => {
@@ -329,10 +342,19 @@ export function useExternalPosts(clientId: string | null) {
       });
       return next;
     });
-    void Promise.all(changes.map((c) =>
+    const results = await Promise.all(changes.map((c) =>
       sbFrom("posts").update({ board_order: c.board_order, ...(c.approval_status ? { approval_status: c.approval_status } : {}), ...(c.approval_updated_at ? { approval_updated_at: c.approval_updated_at } : {}) } as never).eq("id", c.id),
-    )).then(() => { qc.invalidateQueries({ queryKey: ["external-pending", agencyOwnerId] }); })
-      .catch(() => qc.invalidateQueries({ queryKey: key }));
+    ));
+    const failed = results.find((r) => (r as { error?: unknown }).error);
+    if (failed) {
+      // Reverte pro estado de antes e avisa, em vez de deixar o card "voltar" calado.
+      if (snapshot) qc.setQueryData(key, snapshot);
+      toast.error("Não consegui salvar a ordem. Tente de novo.");
+      qc.invalidateQueries({ queryKey: key });
+      return false;
+    }
+    qc.invalidateQueries({ queryKey: ["external-pending", agencyOwnerId] });
+    return true;
   };
 
   return { posts: postsQ.data ?? [], isLoading: postsQ.isLoading, create, createDraft, update, remove, moveStatus, setDate, reorderExternalPosts };
@@ -346,10 +368,11 @@ export function useAllExternalPosts() {
   return useQuery({
     queryKey: ["external-posts-all", agencyOwnerId],
     enabled: !!agencyOwnerId,
-    // O cliente aprova por link; revalida pra o painel do gestor sair do "pendente".
-    staleTime: 0, refetchOnMount: "always", refetchOnWindowFocus: true,
+    // O cliente aprova por link; revalida ao focar pra o painel sair do "pendente",
+    // mas com janela de 30s pra não rebaixar todos os posts a cada montagem/foco.
+    staleTime: 30_000, refetchOnWindowFocus: true,
     queryFn: async () => {
-      const { data, error } = await sbFrom("posts").select("*")
+      const { data, error } = await sbFrom("posts").select(POST_BOARD_COLUMNS)
         .eq("user_id", agencyOwnerId!)
         .not("external_client_id", "is", null)
         .not("is_draft", "is", true)

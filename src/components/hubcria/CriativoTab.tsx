@@ -180,6 +180,10 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
   // resultado): sem cota, o prejuízo é do CRIA; sem MOSTRAR a cota, a surpresa
   // é da pessoa. As duas coisas são inaceitáveis.
   const { data: credits } = useHubCredits();
+  // Fail-closed: se a leitura da cota FALHOU (RPC hub_credits_status caiu), não
+  // liberamos gasto pago do Apify às cegas. Diferente de "sem cota" (quota 0
+  // legítima), aqui travamos a ação e pedimos pra tentar de novo.
+  const creditsError = credits?.error === true;
   const quota = credits?.quota ?? 0;
   const usados = credits?.used ?? 0;
   const restantes = Math.max(0, quota - usados);
@@ -242,6 +246,9 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
 
   const analisar = async () => {
     if (selectedItems.length === 0) { toast.error("Escolha ao menos uma análise."); return; }
+    // Fail-closed: cota não lida = não gastamos. Melhor pedir pra tentar de novo
+    // do que liberar uma análise paga sem saber se ela cabe no saldo.
+    if (creditsError) { toast.error("Não consegui conferir seu saldo de créditos agora. Tente de novo em instantes."); return; }
     // Transcrição: usa os links do reel se preenchidos, senão o @.
     const inputFor = (it: TypeDef) =>
       it.key === "transcription" ? (hasLinks ? validLinks.join(",") : handle.trim())
@@ -586,11 +593,15 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
             {/* O CUSTO ANTES DO CLIQUE. A pessoa precisa saber quanto vai gastar
                 enquanto ainda pode mudar de ideia — não depois, num erro. */}
             <div className="flex items-center gap-3 flex-wrap">
-              <Button onClick={analisar} disabled={!!running || (quota > 0 && custoSelecao > restantes)} size="lg">
+              <Button onClick={analisar} disabled={!!running || creditsError || (quota > 0 && custoSelecao > restantes)} size="lg">
                 {running ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
                 {running ? `Analisando ${running}…` : `Analisar${quota > 0 ? ` · ${custoSelecao} ${custoSelecao === 1 ? "crédito" : "créditos"}` : ` (${selectedItems.length})`}`}
               </Button>
-              {quota > 0 && custoSelecao > restantes ? (
+              {creditsError ? (
+                <p className="text-[12px] font-body text-destructive">
+                  Não consegui conferir seu saldo de créditos agora. Recarregue a página e tente de novo antes de rodar uma análise.
+                </p>
+              ) : quota > 0 && custoSelecao > restantes ? (
                 <p className="text-[12px] font-body text-destructive">
                   Você tem {restantes} {restantes === 1 ? "crédito" : "créditos"} e essa seleção custa {custoSelecao}. Tire uma análise ou compre um pacote extra.
                 </p>

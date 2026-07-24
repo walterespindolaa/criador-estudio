@@ -10,8 +10,9 @@ import { useManagerProfile } from "@/hooks/useModules";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { ContractPdfTemplate, type ContractData } from "@/components/pdf/ContractPdfTemplate";
 import { cn } from "@/lib/utils";
+import { toISODateBR } from "@/lib/date-br";
 
-const today = () => new Date().toISOString().split("T")[0];
+const today = () => toISODateBR(new Date());
 const slug = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "cliente";
 
 type Props = { open: boolean; onOpenChange: (o: boolean) => void };

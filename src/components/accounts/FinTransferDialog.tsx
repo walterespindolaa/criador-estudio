@@ -8,8 +8,9 @@ import { toast } from "sonner";
 import { useCreateFinTransfer, type TransferKind } from "@/hooks/useFinance";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 import { cn } from "@/lib/utils";
+import { toISODateBR } from "@/lib/date-br";
 
-const today = () => new Date().toISOString().split("T")[0];
+const today = () => toISODateBR(new Date());
 type Props = { open: boolean; onOpenChange: (o: boolean) => void };
 
 export function FinTransferDialog({ open, onOpenChange }: Props) {

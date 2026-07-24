@@ -612,12 +612,16 @@ export default function AgendaCriacao() {
                                         {item.time && <span className="tabular-nums">{item.time} · </span>}
                                         {isLead ? `Lead · ${who}` : who}
                                       </span>
-                                      {/* Check pra marcar concluída (risca a tarefa). Span pra não aninhar button. */}
+                                      {/* Check pra marcar concluída (risca a tarefa). Span pra não aninhar button.
+                                          No mobile o alvo de toque é ampliado com padding + margem negativa (~40px),
+                                          sem mudar o tamanho visível do box nem empurrar o layout do card. */}
                                       <span role="button" tabIndex={0} aria-label={done ? "Reabrir tarefa" : "Concluir tarefa"}
                                         onClick={(e) => { e.stopPropagation(); updTask.mutate({ id: t.id, status: done ? "pendente" : "concluida" }); }}
-                                        className={cn("grid h-6 w-6 md:h-4 md:w-4 shrink-0 place-items-center rounded border cursor-pointer transition-colors",
+                                        className="grid shrink-0 place-items-center cursor-pointer p-2 -m-2 md:p-0 md:m-0">
+                                        <span className={cn("grid h-6 w-6 md:h-4 md:w-4 place-items-center rounded border transition-colors",
                                           done ? "bg-emerald-500 border-emerald-500 text-white" : "border-current/50 hover:border-emerald-500 hover:text-emerald-600")}>
-                                        {done && <Check className="h-3 w-3" strokeWidth={3} />}
+                                          {done && <Check className="h-3 w-3" strokeWidth={3} />}
+                                        </span>
                                       </span>
                                     </div>
                                     <p className={cn("text-[12px] font-body font-semibold leading-tight truncate", done ? "line-through text-muted-foreground" : "text-foreground")}>{t.title}</p>

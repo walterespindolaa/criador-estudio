@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveAccount } from "@/contexts/AccountContext";
+import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
 
 export type Post = Database["public"]["Tables"]["posts"]["Row"];
@@ -89,9 +90,15 @@ export function usePosts(options?: { limit?: number }) {
   // Reorder do kanban com UPDATE OTIMISTA: a UI move o card na hora (patch + re-sort
   // do cache), e a persistência roda em segundo plano. Sem isso o card "voltava e
   // pulava" depois do refetch.
-  const reorderPosts = (changes: { id: string; board_order: number; status?: string; published_at?: string }[]) => {
-    if (!changes.length) return;
+  // Retorna true só quando TODOS os updates persistiram. Quem chama (confetti/audit
+  // ao publicar) deve aguardar esse retorno antes de comemorar.
+  const reorderPosts = async (changes: { id: string; board_order: number; status?: string; published_at?: string }[]): Promise<boolean> => {
+    if (!changes.length) return true;
     const byId = new Map(changes.map((c) => [c.id, c]));
+    // Snapshot pra rollback. O client do Supabase NÃO rejeita a promise em erro:
+    // devolve { error }. Sem checar isso, uma falha (RLS/rede) deixava o card movido
+    // na tela mas sem persistir, sumindo no próximo refetch e sem aviso nenhum.
+    const snapshot = queryClient.getQueriesData<Post[]>({ queryKey: ["posts", userId] });
     queryClient.setQueriesData<Post[]>({ queryKey: ["posts", userId] }, (old) => {
       if (!Array.isArray(old)) return old;
       const next = old.map((p) => {
@@ -106,9 +113,18 @@ export function usePosts(options?: { limit?: number }) {
       });
       return next;
     });
-    void Promise.all(changes.map((c) =>
+    const results = await Promise.all(changes.map((c) =>
       supabase.from("posts").update({ board_order: c.board_order, ...(c.status ? { status: c.status } : {}), ...(c.published_at ? { published_at: c.published_at } : {}) } as never).eq("id", c.id),
-    )).catch(() => queryClient.invalidateQueries({ queryKey: ["posts", userId] }));
+    ));
+    const failed = results.find((r) => r.error);
+    if (failed) {
+      // Reverte o cache pro estado de antes e avisa, em vez de mentir pra pessoa.
+      for (const [key, data] of snapshot) queryClient.setQueryData(key, data);
+      toast.error("Não consegui salvar a ordem. Tente de novo.");
+      queryClient.invalidateQueries({ queryKey: ["posts", userId] });
+      return false;
+    }
+    return true;
   };
 
   return { posts, isLoading, error, createPost, updatePost, deletePost, reorderPosts };

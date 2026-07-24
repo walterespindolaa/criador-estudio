@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ContractGeneratorDialog } from "@/components/accounts/crm/ContractGeneratorDialog";
 import { toast } from "sonner";
+import { toISODateBR } from "@/lib/date-br";
 
 import { formatBRL, parseBRL } from "@/lib/money";
 import { MoneyInput } from "@/components/shared/MoneyInput";
@@ -124,11 +125,11 @@ function ContractDialog({ contract, clients, saving, onClose, onCreate, onUpdate
     };
     if (contract) {
       const updates: Partial<CrmContractInput> = { ...base };
-      if (status === "fechado" && !contract.closed_date) updates.closed_date = new Date().toISOString().split("T")[0];
-      if (status === "encerrado" && !contract.ended_date) updates.ended_date = new Date().toISOString().split("T")[0];
+      if (status === "fechado" && !contract.closed_date) updates.closed_date = toISODateBR(new Date());
+      if (status === "encerrado" && !contract.ended_date) updates.ended_date = toISODateBR(new Date());
       onUpdate(contract.id, updates);
     } else {
-      onCreate({ ...base, sent_date: new Date().toISOString().split("T")[0] });
+      onCreate({ ...base, sent_date: toISODateBR(new Date()) });
     }
   };
 

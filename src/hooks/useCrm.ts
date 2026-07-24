@@ -88,7 +88,8 @@ export function useCrmClients() {
     queryKey: ["crm-clients", agencyOwnerId],
     enabled: !!agencyOwnerId,
     queryFn: async () => {
-      const { data, error } = await sbFrom("crm_clients").select("*").eq("manager_id", agencyOwnerId!).is("deleted_at", null).order("created_at", { ascending: false });
+      // Teto generoso pra não puxar histórico infinito; cobre bem a carteira.
+      const { data, error } = await sbFrom("crm_clients").select("*").eq("manager_id", agencyOwnerId!).is("deleted_at", null).order("created_at", { ascending: false }).limit(500);
       if (error) throw error;
       return (data ?? []) as unknown as CrmClient[];
     },
@@ -118,12 +119,13 @@ export function useCreateCrmClient() {
       if (error) throw error;
       return data as unknown as CrmClient;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-clients"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-clients", agencyOwnerId] }),
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao salvar cliente."),
   });
 }
 
 export function useUpdateCrmClient() {
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Partial<CrmClientInput>) => {
@@ -146,12 +148,13 @@ export function useUpdateCrmClient() {
       toast.error((e as Error)?.message ?? "Erro ao atualizar.");
     },
     // Cache já está certo, revalida a lista em background, sem travar a UI.
-    onSettled: () => qc.invalidateQueries({ queryKey: ["crm-clients"], refetchType: "none" }),
+    onSettled: () => qc.invalidateQueries({ queryKey: ["crm-clients", agencyOwnerId], refetchType: "none" }),
   });
 }
 
 // Puxa o Brandbook/nome do cliente que usa o Cria pro CRM da agência (via edge, service role).
 export function useSyncCrmFromCria() {
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (crmClientId: string) => {
@@ -163,12 +166,15 @@ export function useSyncCrmFromCria() {
     },
     onSuccess: (_d, id) => {
       qc.invalidateQueries({ queryKey: ["crm-client", id] });
-      qc.invalidateQueries({ queryKey: ["crm-clients"] });
+      qc.invalidateQueries({ queryKey: ["crm-clients", agencyOwnerId] });
     },
+    // Sem onError a sincronizacao falhava em silencio. Padrao dos vizinhos: toast.error.
+    onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao sincronizar com o Cria."),
   });
 }
 
 export function useDeleteCrmClient() {
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
@@ -176,7 +182,7 @@ export function useDeleteCrmClient() {
       const { error } = await sbFrom("crm_clients").update({ deleted_at: new Date().toISOString() } as never).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["crm-clients"] }); toast.success("Cliente movido pra Lixeira (recuperável por 30 dias)."); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["crm-clients", agencyOwnerId] }); toast.success("Cliente movido pra Lixeira (recuperável por 30 dias)."); },
     onError: () => toast.error("Erro ao excluir."),
   });
 }
@@ -207,7 +213,7 @@ export function useImportCriaClients() {
       return { imported: toInsert.length };
     },
     onSuccess: (r) => {
-      qc.invalidateQueries({ queryKey: ["crm-clients"] });
+      qc.invalidateQueries({ queryKey: ["crm-clients", agencyOwnerId] });
       toast.success(r.imported > 0 ? `${r.imported} cliente(s) importado(s) do cria.` : "Nenhum cliente novo pra importar.");
     },
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao importar do cria."),
@@ -285,25 +291,27 @@ export function useCreateCrmTag() {
       const { error } = await sbFrom("crm_tags").insert({ manager_id: agencyOwnerId, name: name.trim(), color } as never);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-tags"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-tags", agencyOwnerId] }),
     onError: (e: unknown) => toast.error((e as Error)?.message?.includes("duplicate") ? "Já existe uma etiqueta com esse nome." : "Erro ao criar etiqueta."),
   });
 }
 
 export function useDeleteCrmTag() {
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await sbFrom("crm_tags").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-tags"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-tags", agencyOwnerId] }),
     onError: () => toast.error("Erro ao excluir etiqueta."),
   });
 }
 
 // Renomear / trocar a cor de uma etiqueta existente.
 export function useUpdateCrmTag() {
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, name, color }: { id: string; name?: string; color?: string }) => {
@@ -313,7 +321,7 @@ export function useUpdateCrmTag() {
       const { error } = await sbFrom("crm_tags").update(patch as never).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-tags"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-tags", agencyOwnerId] }),
     onError: (e: unknown) => toast.error((e as Error)?.message?.includes("duplicate") ? "Já existe uma etiqueta com esse nome." : "Erro ao salvar etiqueta."),
   });
 }
@@ -349,7 +357,7 @@ export function useSeedDefaultCrmTags() {
       return rows.length;
     },
     onSuccess: (n) => {
-      qc.invalidateQueries({ queryKey: ["crm-tags"] });
+      qc.invalidateQueries({ queryKey: ["crm-tags", agencyOwnerId] });
       if (n) toast.success(`${n} etiqueta(s) padrão criada(s). Edite ou exclua à vontade.`);
       else toast.info("As etiquetas padrão já estão todas aí.");
     },
@@ -381,7 +389,7 @@ export function useCrmLeads() {
   return useQuery<CrmLead[]>({
     queryKey: ["crm-leads", agencyOwnerId], enabled: !!agencyOwnerId,
     queryFn: async () => {
-      const { data, error } = await sbFrom("crm_leads").select("*").eq("manager_id", agencyOwnerId!).order("created_at", { ascending: false });
+      const { data, error } = await sbFrom("crm_leads").select("*").eq("manager_id", agencyOwnerId!).order("created_at", { ascending: false }).limit(500);
       if (error) throw error;
       return (data ?? []) as unknown as CrmLead[];
     },
@@ -396,11 +404,12 @@ export function useCreateCrmLead() {
       if (error) throw error;
       return data as unknown as CrmLead;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-leads"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-leads", agencyOwnerId] }),
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao criar lead."),
   });
 }
 export function useUpdateCrmLead() {
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Partial<CrmLeadInput>) => {
@@ -421,14 +430,15 @@ export function useUpdateCrmLead() {
       c?.snapshot?.forEach(([key, data]) => qc.setQueryData(key, data)); // desfaz
       toast.error((e as Error)?.message ?? "Erro ao atualizar lead.");
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ["crm-leads"], refetchType: "none" }),
+    onSettled: () => qc.invalidateQueries({ queryKey: ["crm-leads", agencyOwnerId], refetchType: "none" }),
   });
 }
 export function useDeleteCrmLead() {
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => { const { error } = await sbFrom("crm_leads").delete().eq("id", id); if (error) throw error; },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-leads"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-leads", agencyOwnerId] }),
     onError: () => toast.error("Erro ao excluir lead."),
   });
 }
@@ -446,7 +456,7 @@ export function useCrmContracts() {
   return useQuery<CrmContract[]>({
     queryKey: ["crm-contracts", agencyOwnerId], enabled: !!agencyOwnerId,
     queryFn: async () => {
-      const { data, error } = await sbFrom("crm_contracts").select("*").eq("manager_id", agencyOwnerId!).order("created_at", { ascending: false });
+      const { data, error } = await sbFrom("crm_contracts").select("*").eq("manager_id", agencyOwnerId!).order("created_at", { ascending: false }).limit(500);
       if (error) throw error;
       return (data ?? []) as unknown as CrmContract[];
     },
@@ -460,7 +470,7 @@ export function useCreateCrmContract() {
       const { error } = await sbFrom("crm_contracts").insert({ ...input, manager_id: agencyOwnerId } as never);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-contracts"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-contracts", agencyOwnerId] }),
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao criar contrato."),
   });
 }
@@ -487,24 +497,26 @@ export function useUploadCrmAsset() {
 
 // ===================== CONTRATOS: editar + apagar =====================
 export function useUpdateCrmContract() {
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Partial<CrmContractInput>) => {
       const { error } = await sbFrom("crm_contracts").update(updates as never).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-contracts"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-contracts", agencyOwnerId] }),
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao atualizar contrato."),
   });
 }
 export function useDeleteCrmContract() {
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await sbFrom("crm_contracts").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-contracts"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-contracts", agencyOwnerId] }),
     onError: () => toast.error("Erro ao excluir contrato."),
   });
 }
@@ -540,7 +552,8 @@ export function useCrmTasks() {
       const { data, error } = await sbFrom("crm_tasks")
         .select("*").eq("manager_id", agencyOwnerId!)
         .order("due_date", { ascending: true, nullsFirst: false })
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(500);
       if (error) throw error;
       return (data ?? []) as unknown as CrmTask[];
     },
@@ -554,11 +567,12 @@ export function useCreateCrmTask() {
       const { error } = await sbFrom("crm_tasks").insert({ ...input, manager_id: agencyOwnerId } as never);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-tasks"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-tasks", agencyOwnerId] }),
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao criar tarefa."),
   });
 }
 export function useUpdateCrmTask() {
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Partial<CrmTaskInput>) => {
@@ -579,17 +593,18 @@ export function useUpdateCrmTask() {
       c?.snapshot?.forEach(([key, data]) => qc.setQueryData(key, data));
       toast.error((e as Error)?.message ?? "Erro ao atualizar tarefa.");
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ["crm-tasks"], refetchType: "none" }),
+    onSettled: () => qc.invalidateQueries({ queryKey: ["crm-tasks", agencyOwnerId], refetchType: "none" }),
   });
 }
 export function useDeleteCrmTask() {
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await sbFrom("crm_tasks").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-tasks"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-tasks", agencyOwnerId] }),
     onError: () => toast.error("Erro ao excluir tarefa."),
   });
 }

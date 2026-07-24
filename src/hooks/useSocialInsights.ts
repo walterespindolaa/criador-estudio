@@ -137,7 +137,10 @@ export function useMediaInsights() {
         .eq("provider", "instagram")
         .eq("object_type", "media")
         .is("crm_client_id", null) // conta própria
-        .order("posted_at", { ascending: false });
+        .order("posted_at", { ascending: false })
+        // Teto generoso: a tela de Insights lista as mídias mais recentes; 200
+        // cobre bem mais de um ano de posts sem puxar histórico infinito.
+        .limit(200);
       if (error) throw error;
       return (data ?? []) as unknown as MediaInsight[];
     },
@@ -156,7 +159,10 @@ export function useAudienceDemographics() {
         .eq("user_id", user!.id)
         .eq("provider", "instagram")
         .is("crm_client_id", null)
-        .order("value", { ascending: false });
+        .order("value", { ascending: false })
+        // Demografia tem no máx. alguns buckets por dimensão (idade/gênero/
+        // cidade/país); 500 é folgado e evita puxar linhas antigas à toa.
+        .limit(500);
       if (error) throw error;
       return (data ?? []) as unknown as AudienceRow[];
     },
@@ -175,7 +181,9 @@ export function useStories() {
         .eq("user_id", user!.id)
         .eq("provider", "instagram")
         .is("crm_client_id", null)
-        .order("posted_at", { ascending: false });
+        .order("posted_at", { ascending: false })
+        // Stories mais recentes primeiro; 100 cobre bastante snapshot sem excesso.
+        .limit(100);
       if (error) throw error;
       return (data ?? []) as unknown as StoryInsight[];
     },
@@ -228,9 +236,17 @@ export function useSyncInstagram() {
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke("instagram-sync");
       if (error) throw error;
-      return data as { demographics_rows?: number; demographics_error?: string | null } | null;
+      return data as { demographics_rows?: number; demographics_error?: string | null; reconnect?: boolean } | null;
     },
     onSuccess: (data) => {
+      // Token da conta própria expirou: a edge devolve reconnect:true. Nesse caso
+      // NADA foi atualizado, entao nao mostramos "Insights atualizados!". Avisamos
+      // pra reconectar e atualizamos a conexao (pra a UI refletir o estado expirado).
+      if (data?.reconnect) {
+        qc.invalidateQueries({ queryKey: ["social-connection"] });
+        toast.warning("Sua conexao com o Instagram expirou. Reconecte a conta pra atualizar os insights.", { duration: 12000 });
+        return;
+      }
       qc.invalidateQueries({ queryKey: ["social-daily"] });
       qc.invalidateQueries({ queryKey: ["social-media-insights"] });
       qc.invalidateQueries({ queryKey: ["social-connection"] });

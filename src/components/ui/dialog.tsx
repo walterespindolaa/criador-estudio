@@ -52,8 +52,11 @@ const DialogContent = React.forwardRef<
         // colunazinha estreita, quadrada, com scroll interno, no meio de uma tela vazia.
         // Aqui: canto 3xl (igual aos cards), largura de trabalho (2xl), respiro (p-7)
         // e altura limitada com scroll só quando precisa.
-        "fixed left-[50%] top-[50%] z-50 flex flex-col w-[calc(100vw-2rem)] max-w-2xl max-h-[88vh] overflow-y-auto",
-        "translate-x-[-50%] translate-y-[-50%] gap-5 border bg-background p-6 sm:p-7 shadow-2xl rounded-3xl duration-200",
+        // MOBILE: ancora no topo (top-4, sem translate vertical) e usa dvh, pra que o
+        // rodapé com "Salvar" não fique atrás do teclado do iOS quando um campo perto do
+        // fim ganha foco. DESKTOP (sm:): volta ao centralizado original, sem mudança.
+        "fixed left-[50%] top-4 sm:top-[50%] z-50 flex flex-col w-[calc(100vw-2rem)] max-w-2xl max-h-[92dvh] sm:max-h-[88vh] overflow-y-auto",
+        "translate-x-[-50%] translate-y-0 sm:translate-y-[-50%] gap-5 border bg-background p-6 sm:p-7 shadow-2xl rounded-3xl duration-200",
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
         className,
       )}
