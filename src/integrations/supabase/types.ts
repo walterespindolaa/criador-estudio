@@ -1833,27 +1833,36 @@ export type Database = {
       }
       feedbacks: {
         Row: {
+          attachment_type: string | null
+          attachment_url: string | null
           created_at: string
           id: string
           message: string
+          origin: string | null
           status: string
           type: string
           url: string | null
           user_id: string | null
         }
         Insert: {
+          attachment_type?: string | null
+          attachment_url?: string | null
           created_at?: string
           id?: string
           message: string
+          origin?: string | null
           status?: string
           type?: string
           url?: string | null
           user_id?: string | null
         }
         Update: {
+          attachment_type?: string | null
+          attachment_url?: string | null
           created_at?: string
           id?: string
           message?: string
+          origin?: string | null
           status?: string
           type?: string
           url?: string | null
@@ -3575,6 +3584,7 @@ export type Database = {
           trial_ends_at: string | null
           trial_started_at: string | null
           updated_at: string | null
+          useful_links: Json
           weekly_goal: number | null
           youtube_handle: string | null
         }
@@ -3629,6 +3639,7 @@ export type Database = {
           trial_ends_at?: string | null
           trial_started_at?: string | null
           updated_at?: string | null
+          useful_links?: Json
           weekly_goal?: number | null
           youtube_handle?: string | null
         }
@@ -3683,6 +3694,7 @@ export type Database = {
           trial_ends_at?: string | null
           trial_started_at?: string | null
           updated_at?: string | null
+          useful_links?: Json
           weekly_goal?: number | null
           youtube_handle?: string | null
         }
