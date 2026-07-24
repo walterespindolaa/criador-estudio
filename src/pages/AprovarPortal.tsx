@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, RotateCcw, Loader2, ImageOff, Heart, MessageCircle, Send, Bookmark, Zap, ListChecks, ChevronDown, Clapperboard, CalendarDays, BarChart3, CheckSquare, AlertTriangle, Package, Plus } from "lucide-react";
+import { Check, RotateCcw, Loader2, ImageOff, Heart, MessageCircle, Send, Bookmark, Zap, ListChecks, ChevronDown, Clapperboard, CalendarDays, BarChart3, CheckSquare, AlertTriangle, Package, Plus, FolderOpen } from "lucide-react";
 import { hexToHsl } from "@/lib/applyTheme";
 import { PostMediaCarousel } from "@/components/shared/PostMediaCarousel";
 import { StoryPreview } from "@/components/accounts/StoryPreview";
@@ -31,6 +31,8 @@ export type PortalPost = {
   approval_status: "pendente" | "ajuste_solicitado" | "aprovado";
   scheduled_date: string | null; scheduled_time?: string | null; media: MediaItem[];
   last_comment: string | null; last_comment_role: string | null;
+  // Link da pasta do Drive com os materiais do post (atalho pro cliente).
+  drive_folder_url?: string | null;
 };
 type ClientHeader = { client_name: string; client_logo: string | null; manager_name: string | null; brand_color?: string | null; instagram_handle?: string | null };
 type PortalSettings = { show_calendar?: boolean; show_report?: boolean };
@@ -142,10 +144,34 @@ function PostApproval({ client, post, index, busy, onApproveFast, onAdjustFast, 
   const openAdjust = () => { setAdjOpen(true); setComment(""); };
   const sendFast = () => { onAdjustFast(post.post_id, comment.trim()); setAdjOpen(false); setComment(""); };
 
+  // Data agendada no TOPO do bloco de info do post (antes da legenda/ações), tanto
+  // na visão rápida quanto na detalhada. Antes ficava no meio do painel.
+  const dateHeader = post.scheduled_date ? (
+    <div className="flex items-center gap-1.5 text-sm font-display font-bold text-foreground mb-3 capitalize">
+      <CalendarDays className="h-4 w-4 text-primary shrink-0" />
+      {new Date(post.scheduled_date + "T00:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" })}
+      {post.scheduled_time ? ` · ${String(post.scheduled_time).slice(0, 5)}` : ""}
+    </div>
+  ) : null;
+
   // O painel de aprovação é um só (estado único) e muda de casa via CSS:
   // no mobile fica abaixo do preview, no desktop vira a coluna da direita.
+  // Atalho pra pasta do Drive com os materiais do post (só link http válido).
+  const driveFolder = (post.drive_folder_url ?? "").trim();
+  const hasDriveFolder = /^https?:\/\//i.test(driveFolder);
+
   const panel = (
     <>
+      {hasDriveFolder && (
+        <button type="button" onClick={() => window.open(driveFolder, "_blank", "noopener,noreferrer")}
+          className="w-full flex items-center gap-2 mb-4 rounded-2xl border border-primary/30 bg-primary/[0.05] px-3.5 py-2.5 text-left hover:bg-primary/10 transition-colors">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><FolderOpen className="h-4 w-4" /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13px] font-body font-bold text-foreground leading-tight">Abrir pasta no Drive</span>
+            <span className="block text-[11px] font-body text-muted-foreground">Materiais deste post</span>
+          </span>
+        </button>
+      )}
       {mode === "both" && (
         <div className="flex bg-muted rounded-2xl p-1.5 mb-5">
           <button onClick={() => setView("fast")} className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-body font-extrabold py-3 rounded-xl transition-colors ${view === "fast" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}><Zap className="h-4 w-4" /> Rápida</button>
@@ -154,13 +180,6 @@ function PostApproval({ client, post, index, busy, onApproveFast, onAdjustFast, 
       )}
       {!showFlow ? (
         <>
-          {post.scheduled_date && (
-            <div className="flex items-center gap-1.5 text-sm font-display font-bold text-foreground mb-2 capitalize">
-              <CalendarDays className="h-4 w-4 text-primary shrink-0" />
-              {new Date(post.scheduled_date + "T00:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" })}
-              {post.scheduled_time ? ` · ${String(post.scheduled_time).slice(0, 5)}` : ""}
-            </div>
-          )}
           <div className="flex items-center justify-between gap-2 mb-1.5">
             <h3 className="text-lg font-display font-extrabold text-foreground">Esta publicação</h3>
             <span className={`text-[11px] font-bold px-3 py-1 rounded-full ${STATUS[post.approval_status].cls}`}>{STATUS[post.approval_status].label}</span>
@@ -214,6 +233,8 @@ function PostApproval({ client, post, index, busy, onApproveFast, onAdjustFast, 
           {/* No mobile a legenda cheia fica dentro do mock (empilhado); no desktop o
               texto completo vem PRA CÁ, ao lado da mídia, pra encurtar o card. */}
           <div className="bg-card border border-border rounded-3xl p-4 sm:p-6 mt-3 shadow-[0_8px_30px_rgba(27,26,24,0.05)] lg:bg-transparent lg:border-0 lg:rounded-none lg:p-0 lg:mt-0 lg:shadow-none">
+            {/* Data no TOPO do bloco de info do post (antes da legenda e das ações). */}
+            {dateHeader}
             {legenda && !isStory && (
               <div className="hidden lg:block mb-5">
                 <p className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground mb-1.5">Legenda</p>

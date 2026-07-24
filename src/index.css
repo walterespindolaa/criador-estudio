@@ -56,6 +56,13 @@ body, p, span, h1, h2, h3, h4, h5, h6, a, li, td, th, label {
 button, a, [role="button"] {
   touch-action: manipulation;
 }
+/* Punho de arrastar do @hello-pangea/dnd ganha role="button", e a regra acima
+   (fora de layer) vencia o .touch-none do Tailwind, matando o drag no TOUCH em
+   TODOS os kanbans (agenda, Criando, Cria Post, pipeline). Aqui liberamos o
+   toque pro dnd iniciar o arraste no celular. */
+[data-rfd-drag-handle-draggable-id] {
+  touch-action: none !important;
+}
 
 /* Rolagem horizontal (abas, chips) com pegada de app: para no item. */
 .scroll-snap-x {

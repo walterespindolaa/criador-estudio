@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, type DropResult, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive, Download, Play, FileImage, Link2, Paperclip, GripVertical } from "lucide-react";
+import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive, Download, Play, FileImage, Link2, Paperclip, GripVertical, FolderOpen, CalendarRange } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,6 +44,12 @@ const shortDate = (d: Date) => d.toLocaleDateString("pt-BR", { day: "2-digit", m
 const TASK_STATUS_LABELS: Record<CrmTaskStatus, string> = {
   pendente: "Pendente", em_andamento: "Em andamento", concluida: "Concluída",
 };
+// droppableId da faixa fixa "Sem data (em produção)". Arrastar um post daqui pra um
+// dia agenda (seta a data); arrastar um post de um dia pra cá tira a data (volta pra cá).
+const NO_DATE = "no-date";
+// Teto de dias no período personalizado, pra grade não explodir.
+const RANGE_MAX_DAYS = 62;
+
 const STATUS: Record<Capture["status"], { label: string; cls: string }> = {
   agendada: { label: "Agendada", cls: "bg-primary/10 text-primary" },
   concluida: { label: "Concluída", cls: "bg-secondary/15 text-secondary" },
@@ -82,14 +88,25 @@ function buildDayItems(caps: Capture[], tasks: CrmTask[], cris: Creation[], post
 // não conseguia iniciar o drag pelo card inteiro (o toque brigava com o scroll
 // horizontal e com o clique que abre o popup). Isolando o gesto num punho, a pessoa
 // arrasta pelo grip e o card fixa no dia destino; o resto do card segue clicável.
-// touch-none (touch-action: none) faz o toque no punho virar drag em vez de scroll.
+//
+// CAUSA REAL do drag não iniciar no toque: o dragHandleProps do @hello-pangea/dnd
+// injeta role="button" no punho. Aí a regra GLOBAL de src/index.css
+// `button, a, [role="button"] { touch-action: manipulation }` (que fica FORA de
+// @layer, logo vence qualquer utilitário do Tailwind, que mora em @layer utilities)
+// sobrescrevia o `touch-none`. Com touch-action: manipulation o navegador ainda
+// deixa rolar, então o long-press vira scroll e o TouchSensor nunca começa o drag.
+// No desktop o mouse ignora touch-action, por isso lá funcionava.
+// Correção: forçar touch-action:none por STYLE INLINE (inline vence CSS sem !important,
+// inclusive as regras não-layered). user-select/callout none evitam o iOS roubar o
+// long-press com seleção de texto. Alvo de toque >=32px no mobile (pedido do item).
 type HandleProps = DraggableProvidedDragHandleProps | undefined;
 function DragHandle({ handleProps, className }: { handleProps: HandleProps; className?: string }) {
   return (
     <span {...handleProps} onClick={(e) => e.stopPropagation()}
+      style={{ touchAction: "none", WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" }}
       aria-label="Arrastar para outro dia"
-      className={cn("shrink-0 grid place-items-center h-6 w-5 md:h-5 md:w-4 -ml-0.5 rounded touch-none cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-foreground transition-colors", className)}>
-      <GripVertical className="h-3.5 w-3.5" />
+      className={cn("shrink-0 grid place-items-center h-8 w-8 md:h-5 md:w-4 -ml-1.5 md:-ml-0.5 rounded touch-none select-none cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-foreground transition-colors", className)}>
+      <GripVertical className="h-4 w-4 md:h-3.5 md:w-3.5" />
     </span>
   );
 }
@@ -128,8 +145,25 @@ export default function AgendaCriacao() {
   const togglePostChips = () => setPostChipsOpen((v) => { const n = !v; try { localStorage.setItem("agenda_postchips_open", n ? "1" : "0"); } catch { /* segue */ } return n; });
   // Painel "ver todos" de um dia cheio.
   const [dayModal, setDayModal] = useState<string | null>(null);
+  // Período personalizado (item 2): dois inputs "de"/"até". Quando preenchido e válido,
+  // a grade passa a mostrar os dias desse intervalo, ignorando semana/mês.
+  const [rangeFrom, setRangeFrom] = useState("");
+  const [rangeTo, setRangeTo] = useState("");
+  const rangeActive = !!rangeFrom && !!rangeTo && rangeFrom <= rangeTo;
+  const rangeReqDays = rangeActive ? Math.round((parseDateOnly(rangeTo).getTime() - parseDateOnly(rangeFrom).getTime()) / 86400000) + 1 : 0;
+  const rangeCapped = rangeReqDays > RANGE_MAX_DAYS; // passou do teto: mostramos só os primeiros RANGE_MAX_DAYS.
+  const clearRange = () => { setRangeFrom(""); setRangeTo(""); };
   // Semana = 7 dias a partir da segunda. Mês = grade completa (segunda a domingo) cobrindo o mês do anchor.
+  // Período = os dias do intervalo escolhido (com teto de RANGE_MAX_DAYS).
   const days = useMemo(() => {
+    if (rangeActive) {
+      const start = parseDateOnly(rangeFrom);
+      const end = parseDateOnly(rangeTo);
+      let n = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+      if (n > RANGE_MAX_DAYS) n = RANGE_MAX_DAYS;
+      if (n < 1) n = 1;
+      return Array.from({ length: n }, (_, i) => { const d = new Date(start); d.setDate(d.getDate() + i); return d; });
+    }
     if (view === "semana") {
       return Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d; });
     }
@@ -139,7 +173,9 @@ export default function AgendaCriacao() {
     const gridEnd = mondayOf(last); gridEnd.setDate(gridEnd.getDate() + 6);
     const n = Math.round((gridEnd.getTime() - gridStart.getTime()) / 86400000) + 1;
     return Array.from({ length: n }, (_, i) => { const d = new Date(gridStart); d.setDate(d.getDate() + i); return d; });
-  }, [weekStart, view]);
+  }, [weekStart, view, rangeActive, rangeFrom, rangeTo]);
+  // A grade usa layout de GRADE (não o scroll horizontal da semana) no mês e no período.
+  const gridLayout = view === "mes" || rangeActive;
   const from = ymd(days[0]); const to = ymd(days[days.length - 1]);
   const today = hojeBR();
   const curMonth = weekStart.getMonth();
@@ -170,6 +206,29 @@ export default function AgendaCriacao() {
     return m;
   }, [extClients]);
 
+  // Filtro de cliente vale pra TODOS os tipos da agenda. Só os posts guardam
+  // external_client_id; tarefas/captações/criações guardam crm_client_id (e às vezes
+  // nome livre). Então, dos externos selecionados, derivamos os crm_client_id e os nomes
+  // correspondentes pra casar com os demais tipos.
+  const selectedCrmIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const id of postClients) { const crm = extById.get(id)?.crm_client_id; if (crm) s.add(crm); }
+    return s;
+  }, [postClients, extById]);
+  const selectedNames = useMemo(() => {
+    const s = new Set<string>();
+    for (const id of postClients) { const nm = extById.get(id)?.name; if (nm) s.add(nm.trim().toLowerCase()); }
+    return s;
+  }, [postClients, extById]);
+  // Casa um item (por crm_client_id e/ou nome livre) com os clientes selecionados.
+  // Sem seleção = passa tudo. Com seleção, item sem cliente correspondente some.
+  const clientMatches = (crmId: string | null | undefined, name: string | null | undefined) => {
+    if (postClients.size === 0) return true;
+    if (crmId && selectedCrmIds.has(crmId)) return true;
+    if (name && selectedNames.has(name.trim().toLowerCase())) return true;
+    return false;
+  };
+
   const [addDay, setAddDay] = useState<string | null>(null);
   const [addKind, setAddKind] = useState<"criacao" | "tarefa" | "captacao">("criacao");
   const [capOpen, setCapOpen] = useState(false);
@@ -183,10 +242,18 @@ export default function AgendaCriacao() {
   const handleDragEnd = (result: DropResult) => {
     const { source, destination, draggableId } = result;
     if (!destination || destination.droppableId === source.droppableId) return;
-    const day = destination.droppableId; // droppableId = YYYY-MM-DD do dia
+    const day = destination.droppableId; // droppableId = YYYY-MM-DD do dia (ou NO_DATE)
     const sep = draggableId.indexOf(":");
     const kind = draggableId.slice(0, sep);
     const id = draggableId.slice(sep + 1);
+    // Soltar na faixa "Sem data": só faz sentido pra POST (tira a data). Os outros tipos
+    // exigem data, então ignoramos o drop aqui em vez de gravar uma data inválida.
+    if (day === NO_DATE) {
+      if (kind !== "post") return;
+      qc.setQueriesData<ExternalPostWithClient[]>({ queryKey: ["external-posts-all"] }, (old) => old?.map((p) => (p.id === id ? { ...p, scheduled_date: null } : p)));
+      movePost.mutate({ id, scheduled_date: null }, { onSuccess: () => toast.success("Post voltou para Sem data"), onError: () => toast.error("Não consegui mover. Tente de novo.") });
+      return;
+    }
     const dest = parseDateOnly(day);
     const ok = () => toast.success(`Movido para ${WD[dest.getDay()].toUpperCase()} ${dest.getDate()}`);
     const fail = () => toast.error("Não consegui mover. Tente de novo.");
@@ -212,9 +279,13 @@ export default function AgendaCriacao() {
   const byDay = useMemo(() => {
     const m = new Map<string, typeof creations>();
     if (!filters.criacao) return m;
-    for (const c of creations) (m.get(c.day) ?? m.set(c.day, []).get(c.day)!).push(c);
+    for (const c of creations) {
+      if (!clientMatches(c.crm_client_id, c.client_name)) continue;
+      (m.get(c.day) ?? m.set(c.day, []).get(c.day)!).push(c);
+    }
     return m;
-  }, [creations, filters.criacao]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [creations, filters.criacao, postClients, selectedCrmIds, selectedNames]);
 
   // Posts (Cria Post) com data no período, por dia. Multi-cliente aplicado aqui.
   const postsByDay = useMemo(() => {
@@ -228,12 +299,20 @@ export default function AgendaCriacao() {
     return m;
   }, [allPosts, from, to, filters.post, postClients]);
 
+  // Posts SEM data (em produção): NUNCA somem, independente do período/semana/mês.
+  // Ficam numa faixa fixa no topo; arrastar pra um dia agenda (seta a data).
+  const noDatePosts = useMemo(() => {
+    if (!filters.post) return [] as ExternalPostWithClient[];
+    return allPosts.filter((p) =>
+      !p.scheduled_date && (postClients.size === 0 || postClients.has(p.external_client_id)));
+  }, [allPosts, filters.post, postClients]);
+
   // Rolagem horizontal da semana no mobile: abre ancorado na coluna de HOJE.
   const weekScrollRef = useRef<HTMLDivElement | null>(null);
   const todayColRef = useRef<HTMLDivElement | null>(null);
   const todayVisible = days.some((d) => ymd(d) === today);
   useEffect(() => {
-    if (view !== "semana") return;
+    if (view !== "semana" || rangeActive) return;
     const cont = weekScrollRef.current;
     if (!cont) return;
     // No desktop a grade não rola (lg:grid), então mexer no scrollLeft é inócuo lá.
@@ -243,7 +322,7 @@ export default function AgendaCriacao() {
     if (col && todayVisible) cont.scrollTo({ left: Math.max(0, col.offsetLeft - cont.offsetLeft - 8), behavior: "auto" });
     else cont.scrollTo({ left: 0, behavior: "auto" });
     // Reexecuta ao trocar de semana/visão (ex.: botão "Hoje").
-  }, [view, weekStart, todayVisible]);
+  }, [view, weekStart, todayVisible, rangeActive]);
 
   // Captações da semana exibida, indexadas por dia (YYYY-MM-DD), para aparecerem na grade.
   const capturesByDay = useMemo(() => {
@@ -252,11 +331,13 @@ export default function AgendaCriacao() {
     for (const c of captures) {
       if (c.status === "cancelada") continue;
       if (c.capture_date < from || c.capture_date > to) continue;
+      if (!clientMatches(c.crm_client_id, c.client_name)) continue;
       (m.get(c.capture_date) ?? m.set(c.capture_date, []).get(c.capture_date)!).push(c);
     }
     for (const arr of m.values()) arr.sort((a, b) => (a.capture_time ?? "99:99").localeCompare(b.capture_time ?? "99:99"));
     return m;
-  }, [captures, from, to, filters.capta]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [captures, from, to, filters.capta, postClients, selectedCrmIds, selectedNames]);
 
   const nameOf = (crmId: string | null, fallback: string | null) =>
     (crmId ? clients.find((c) => c.id === crmId)?.name : null) || fallback || "Cliente";
@@ -272,13 +353,25 @@ export default function AgendaCriacao() {
       // Concluídas continuam aparecendo (riscadas), pra a social mídia ver o que fechou no dia.
       if (!t.due_date) continue;
       if (t.due_date < from || t.due_date > to) continue;
+      // Filtro de cliente: tarefa casa pelo crm_client_id. Tarefa de lead (ou sem cliente)
+      // some quando há cliente(s) específico(s) selecionado(s).
+      if (!clientMatches(t.crm_client_id, null)) continue;
       (m.get(t.due_date) ?? m.set(t.due_date, []).get(t.due_date)!).push(t);
     }
     for (const arr of m.values()) arr.sort((a, b) => (prioOrder[a.priority] ?? 9) - (prioOrder[b.priority] ?? 9));
     return m;
-  }, [crmTasks, from, to, filters.tarefa]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [crmTasks, from, to, filters.tarefa, postClients, selectedCrmIds, selectedNames]);
 
   const upcoming = useMemo(() => captures.filter((c) => c.status !== "cancelada" && c.capture_date >= today).slice(0, 30), [captures, today]);
+  // Próximas tarefas (item 3): pendentes/em andamento com vencimento a partir de hoje,
+  // pra a seção de baixo mostrar de fato captações E tarefas, sem confundir.
+  const upcomingTasks = useMemo(() =>
+    crmTasks
+      .filter((t) => t.status !== "concluida" && !!t.due_date && t.due_date >= today)
+      .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? "") || (a.due_time ?? "99:99").localeCompare(b.due_time ?? "99:99"))
+      .slice(0, 30),
+    [crmTasks, today]);
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="pb-24 md:pb-0">
@@ -333,10 +426,22 @@ export default function AgendaCriacao() {
             </div>
           </div>
         </div>
-        {filters.post && extClients.length > 0 && (
+        {/* Período personalizado (item 2): dois inputs "de"/"até". Preenchido, a grade
+            mostra só os dias do intervalo; os posts SEM data seguem na faixa acima. */}
+        <div className="mb-3 flex items-center gap-2 flex-wrap rounded-xl border border-border bg-background/60 px-3 py-2">
+          <span className="inline-flex items-center gap-1 text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground"><CalendarRange className="h-3.5 w-3.5" /> Período</span>
+          <Input type="date" value={rangeFrom} onChange={(e) => setRangeFrom(e.target.value)} aria-label="De" className="h-8 w-[9.5rem] rounded-lg px-2.5 text-xs" />
+          <span className="text-[11px] font-body text-muted-foreground">até</span>
+          <Input type="date" value={rangeTo} onChange={(e) => setRangeTo(e.target.value)} aria-label="Até" className="h-8 w-[9.5rem] rounded-lg px-2.5 text-xs" />
+          {rangeActive && <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={clearRange}>Limpar</Button>}
+          {rangeActive
+            ? <span className="text-[11px] font-body font-semibold text-primary">{rangeCapped ? `Mostrando os primeiros ${RANGE_MAX_DAYS} dias` : `${days.length} dia(s)`}</span>
+            : <span className="text-[11px] font-body text-muted-foreground/70 hidden sm:inline">preencha de/até pra ver um intervalo específico</span>}
+        </div>
+        {extClients.length > 0 && (
           <div className="mb-3 rounded-xl border border-dashed border-border bg-background/60 px-3 py-2">
             <button type="button" onClick={togglePostChips} className="flex items-center gap-2 w-full text-left">
-              <span className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground">Posts de</span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground"><Users className="h-3.5 w-3.5" /> Filtrar por cliente</span>
               <span className="text-[10px] font-body font-semibold text-muted-foreground">
                 {postClients.size === 0 ? `Todos (${extClients.length})` : `${postClients.size} selecionado(s)`}
               </span>
@@ -344,7 +449,9 @@ export default function AgendaCriacao() {
             </button>
             {postChipsOpen && (
               <div className="flex items-center gap-2 flex-wrap mt-2">
-                <button type="button" onClick={() => togglePostClient(null)} className={cn("rounded-full border px-2.5 py-1 text-[11px] font-body font-semibold transition-colors", postClients.size === 0 ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground hover:text-foreground")}>Todos</button>
+                <button type="button" onClick={() => togglePostClient(null)} className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-body font-semibold transition-colors", postClients.size === 0 ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
+                  <span className={cn("grid h-3.5 w-3.5 place-items-center rounded-full", postClients.size === 0 ? "bg-background/25" : "bg-muted")}><Users className="h-2.5 w-2.5" /></span>Todos
+                </button>
                 {extClients.map((e) => (
                   <button key={e.id} type="button" onClick={() => togglePostClient(e.id)} className={cn("flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-body font-semibold transition-colors", postClients.has(e.id) ? "border-foreground text-foreground bg-muted/40" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
                     <span className="grid h-3.5 w-3.5 place-items-center rounded-full text-white text-[7px] font-bold" style={{ background: e.color || "#EA4918" }}>{e.name.trim().charAt(0).toUpperCase()}</span>{e.name}
@@ -355,13 +462,57 @@ export default function AgendaCriacao() {
           </div>
         )}
         <DragDropContext onDragEnd={handleDragEnd}>
-          {view === "mes" && (
+          {/* Faixa fixa "Sem data (em produção)": sempre visível, independente do período.
+              Arrastar um post daqui pra um dia agenda; arrastar de volta pra cá tira a data. */}
+          {filters.post && noDatePosts.length > 0 && (
+            <Droppable droppableId={NO_DATE} direction="horizontal">
+              {(dp, ds) => (
+                <div ref={dp.innerRef} {...dp.droppableProps}
+                  className={cn("mb-3 rounded-xl border border-dashed p-2.5 transition-colors",
+                    ds.isDraggingOver ? "border-primary/60 bg-primary/5 ring-2 ring-primary/40" : "border-orange-500/40 bg-orange-500/[0.04]")}>
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <Layers className="h-3.5 w-3.5 text-orange-600" />
+                    <span className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground">Sem data (em produção)</span>
+                    <span className="text-[10px] font-body font-semibold text-muted-foreground">{noDatePosts.length}</span>
+                    <span className="ml-auto text-[9px] font-body text-muted-foreground/70 hidden sm:inline">arraste pra um dia pra agendar</span>
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {noDatePosts.map((p, idx) => {
+                      const cli = extById.get(p.external_client_id);
+                      const st = POST_STATUS[p.approval_status ?? "em_producao"];
+                      return (
+                        <Draggable key={`post:${p.id}`} draggableId={`post:${p.id}`} index={idx}>
+                          {(dragProvided, dragSnapshot) => (
+                            <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
+                              type="button" title={p.title ?? undefined} onClick={() => openPost(p)}
+                              className={cn("rounded-lg border border-orange-500/40 bg-card hover:bg-orange-500/10 px-2 py-1.5 text-left transition-colors w-[180px] shrink-0 overflow-hidden",
+                                dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
+                              <div className="flex items-center gap-1 text-orange-700 dark:text-orange-300">
+                                <DragHandle handleProps={dragProvided.dragHandleProps ?? undefined} className="text-orange-700/40 dark:text-orange-300/40" />
+                                <Send className="h-3 w-3 shrink-0" />
+                                <span className="text-[10px] font-body font-bold truncate flex-1">{cli?.name ?? "Post"}</span>
+                                {p.drive_folder_url && <FolderOpen className="h-3 w-3 shrink-0 text-primary opacity-80" aria-label="Tem pasta no Drive" />}
+                                {st && <span className={cn("shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}
+                              </div>
+                              <p className="text-[12px] font-body font-semibold leading-tight truncate text-foreground">{p.title || "Post"}</p>
+                            </button>
+                          )}
+                        </Draggable>
+                      );
+                    })}
+                    {dp.placeholder}
+                  </div>
+                </div>
+              )}
+            </Droppable>
+          )}
+          {view === "mes" && !rangeActive && (
             <div className="hidden lg:grid lg:grid-cols-7 gap-2 mb-1">
               {WD.map((w) => <p key={w} className="text-[10px] uppercase tracking-wider font-body font-semibold text-muted-foreground text-center">{w}</p>)}
             </div>
           )}
           <div ref={weekScrollRef} className={cn(
-            view === "mes"
+            gridLayout
               ? "grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2"
               // Mobile: colunas espaçosas (~85vw, uma por vez com peek da próxima) e
               // scroll-snap suave; no lg vira grade de 7 sem scroll.
@@ -372,19 +523,21 @@ export default function AgendaCriacao() {
               // Lista única do dia, ordenada por horário (sem hora primeiro). Os index dos
               // Draggable saem daqui (0..n-1 contíguos), casando com a ordem renderizada pro dnd.
               const dayItems = buildDayItems(caps, dayTasks, list, dayPosts);
-              const outOfMonth = view === "mes" && d.getMonth() !== curMonth;
+              const outOfMonth = view === "mes" && !rangeActive && d.getMonth() !== curMonth;
+              // No mês/período mostramos o dia da semana real do dia (WD[getDay]); na semana idem.
+              const showWeekday = view === "semana" || rangeActive;
               return (
                 <Droppable droppableId={iso} key={iso}>
                   {(dropProvided, dropSnapshot) => (
-                    <div ref={(el) => { dropProvided.innerRef(el); if (view === "semana" && isToday) todayColRef.current = el; }} {...dropProvided.droppableProps}
+                    <div ref={(el) => { dropProvided.innerRef(el); if (view === "semana" && !rangeActive && isToday) todayColRef.current = el; }} {...dropProvided.droppableProps}
                       className={cn("rounded-xl border p-2.5 flex flex-col gap-1.5 transition-shadow",
-                        view === "mes" ? "min-h-[110px]" : "w-[85vw] max-w-[380px] shrink-0 snap-start lg:w-auto lg:max-w-none lg:snap-align-none min-h-[240px] lg:min-h-[280px]",
+                        gridLayout ? "min-h-[110px]" : "w-[85vw] max-w-[380px] shrink-0 snap-start lg:w-auto lg:max-w-none lg:snap-align-none min-h-[240px] lg:min-h-[280px]",
                         isToday ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-background",
                         outOfMonth && "opacity-45",
                         dropSnapshot.isDraggingOver && "ring-2 ring-primary/40 border-primary/60 bg-primary/5")}>
                       <div className="flex items-center justify-between px-0.5">
                         <div>
-                          {view === "semana" && <span className={cn("text-[11px] uppercase tracking-wider font-body font-semibold", isToday ? "text-primary" : "text-muted-foreground")}>{WD[i % 7]}</span>}{" "}
+                          {showWeekday && <span className={cn("text-[11px] uppercase tracking-wider font-body font-semibold", isToday ? "text-primary" : "text-muted-foreground")}>{WD[d.getDay()]}</span>}{" "}
                           <span className={cn("text-base font-display font-bold", isToday ? "text-primary" : "text-foreground")}>{d.getDate()}</span>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
@@ -504,6 +657,8 @@ export default function AgendaCriacao() {
                                   <span className="text-[10px] font-body font-bold truncate flex-1">{item.time && <span className="tabular-nums">{item.time} · </span>}{cli?.name ?? "Post"}</span>
                                   {/* Indicador discreto: post tem link do Drive no campo Ideia/Referência. */}
                                   {isDriveUrl(p.reference_url) && <HardDrive className="h-3 w-3 shrink-0 opacity-70" aria-label="Tem Drive" />}
+                                  {/* E indicador da PASTA do Drive (campo distinto drive_folder_url). */}
+                                  {p.drive_folder_url && <FolderOpen className="h-3 w-3 shrink-0 text-primary opacity-80" aria-label="Tem pasta no Drive" />}
                                   {st && <span className={cn("shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}
                                   {/* Check: marca o post como POSTADO (vai pra coluna Postado do kanban). */}
                                   <span role="button" tabIndex={0} aria-label={posted ? "Reabrir post" : "Marcar como postado"}
@@ -531,17 +686,25 @@ export default function AgendaCriacao() {
         </DragDropContext>
       </div>
 
-      {/* Captações */}
+      {/* Próximas captações e tarefas: DUAS listas separadas e rotuladas, cada uma com
+          estado vazio claro, pra ninguém confundir o que a seção mostra. */}
       <div id="captacoes-section" data-tour="ag-captacoes" className="rounded-2xl border border-border bg-card p-4 mt-4 scroll-mt-20">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <p className="text-sm font-display font-bold text-foreground">Captações e tarefas</p>
+          <p className="text-sm font-display font-bold text-foreground">Próximas captações e tarefas</p>
           <div className="flex items-center gap-2 flex-wrap">
             <Button size="sm" variant="outline" className="h-8" onClick={() => { setAddKind("tarefa"); setAddDay(new Date().toLocaleDateString("sv-SE")); }}><Plus className="h-3.5 w-3.5 mr-1" /> Nova tarefa</Button>
             <Button size="sm" className="h-8" onClick={() => setCapOpen(true)}><Plus className="h-3.5 w-3.5 mr-1" /> Nova captação</Button>
           </div>
         </div>
+
+        {/* Próximas captações */}
+        <div className="flex items-center gap-1.5 mb-2">
+          <Video className="h-3.5 w-3.5 text-primary" />
+          <p className="text-[11px] font-body font-bold uppercase tracking-wider text-muted-foreground">Próximas captações</p>
+          {upcoming.length > 0 && <span className="text-[10px] font-body font-semibold text-muted-foreground">{upcoming.length}</span>}
+        </div>
         {upcoming.length === 0 ? (
-          <p className="text-[12px] font-body text-muted-foreground py-4 text-center">Nenhuma captação agendada. Clique em "Nova captação".</p>
+          <p className="text-[12px] font-body text-muted-foreground py-3 text-center rounded-xl border border-dashed border-border">Nenhuma captação agendada. Clique em "Nova captação".</p>
         ) : (
           <div className="space-y-2">
             {upcoming.map((c) => {
@@ -570,6 +733,45 @@ export default function AgendaCriacao() {
                     <option value="cancelada">Cancelada</option>
                   </select>
                   <button onClick={() => delCapture.mutate(c.id)} className="text-muted-foreground/50 hover:text-destructive shrink-0"><X className="h-4 w-4" /></button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Próximas tarefas */}
+        <div className="flex items-center gap-1.5 mt-5 mb-2">
+          <ListChecks className="h-3.5 w-3.5 text-sky-600" />
+          <p className="text-[11px] font-body font-bold uppercase tracking-wider text-muted-foreground">Próximas tarefas</p>
+          {upcomingTasks.length > 0 && <span className="text-[10px] font-body font-semibold text-muted-foreground">{upcomingTasks.length}</span>}
+        </div>
+        {upcomingTasks.length === 0 ? (
+          <p className="text-[12px] font-body text-muted-foreground py-3 text-center rounded-xl border border-dashed border-border">Nenhuma tarefa pendente. Clique em "Nova tarefa".</p>
+        ) : (
+          <div className="space-y-2">
+            {upcomingTasks.map((t) => {
+              const d = parseDateOnly(t.due_date!);
+              const isLead = !!t.crm_lead_id;
+              const clientColor = isLead ? "#0061EE" : ((t.crm_client_id ? clients.find((c) => c.id === t.crm_client_id)?.color : null) || TASK_CLIENT_DEFAULT_COLOR);
+              const who = isLead ? (leadName(t.crm_lead_id) ?? "Lead") : nameOf(t.crm_client_id, null);
+              return (
+                <div key={t.id} className="flex items-center gap-3 rounded-xl border border-border p-3 flex-wrap">
+                  <div className="text-center shrink-0 w-11">
+                    <p className="text-lg font-display font-extrabold text-foreground leading-none">{d.getDate()}</p>
+                    <p className="text-[10px] font-body uppercase text-muted-foreground">{d.toLocaleDateString("pt-BR", { month: "short" })}</p>
+                  </div>
+                  <span className="grid h-9 w-9 place-items-center rounded-full shrink-0" style={{ background: `${clientColor}1f`, color: clientColor }}><ListChecks className="h-4 w-4" /></span>
+                  <button type="button" onClick={() => setEditTask(t)} className="min-w-0 flex-1 text-left">
+                    <p className="text-sm font-body font-semibold text-foreground truncate">{t.title}</p>
+                    <div className="flex items-center gap-2 flex-wrap text-[11px] font-body text-muted-foreground">
+                      <span className="truncate">{isLead ? `Lead · ${who}` : who}</span>
+                      {t.due_time && <span className="inline-flex items-center gap-0.5"><Clock className="h-3 w-3" />{t.due_time.slice(0, 5)}</span>}
+                    </div>
+                  </button>
+                  <span className="text-[11px] font-body font-semibold rounded-full px-2 py-1 shrink-0" style={{ background: `${clientColor}1f`, color: clientColor }}>{CRM_TASK_PRIORITY_LABELS[t.priority]}</span>
+                  <span role="button" tabIndex={0} aria-label="Concluir tarefa"
+                    onClick={() => updTask.mutate({ id: t.id, status: "concluida" })}
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-border cursor-pointer hover:border-emerald-500 hover:text-emerald-600 transition-colors"><Check className="h-4 w-4" /></span>
                 </div>
               );
             })}
@@ -1050,10 +1252,11 @@ function PostEditDialog({ post, clientName, onClose, onSave, onOpenClient, savin
         <div className="space-y-3">
           <div><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Título</p><Input value={title} onChange={(e) => setTitle(e.target.value)} className="rounded-xl" /></div>
           {/* grid-cols-2 (minmax(0,1fr)) trava cada coluna em 50% e impede o input
-              nativo de "time" de transbordar/cortar no mobile (bug do iOS). */}
+              nativo de "time" de transbordar/cortar no mobile (bug do iOS).
+              Item 4: campos mais enxutos (h-9 + padding menor) pra não ocuparem tanto. */}
           <div className="grid grid-cols-2 gap-2">
-            <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Data</p><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full rounded-xl" /></div>
-            <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Horário</p><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full rounded-xl" /></div>
+            <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Data</p><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full h-9 rounded-lg px-2.5 text-sm" /></div>
+            <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Horário</p><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full h-9 rounded-lg px-2.5 text-sm" /></div>
           </div>
           <div>
             <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Status</p>
@@ -1134,6 +1337,15 @@ function PostEditDialog({ post, clientName, onClose, onSave, onOpenClient, savin
               <button type="button" onClick={() => window.open(driveUrl, "_blank", "noopener,noreferrer")}
                 className="inline-flex items-center gap-1.5 self-start rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-body font-semibold text-foreground hover:border-primary/50 hover:bg-primary/[0.06] transition-colors">
                 <HardDrive className="h-3.5 w-3.5 text-primary" /> Abrir no Drive
+              </button>
+            )}
+
+            {/* Item 5: PASTA do Drive do post (campo drive_folder_url, distinto da referência).
+                Abre o link direto em nova aba. */}
+            {post?.drive_folder_url && (
+              <button type="button" onClick={() => { const u = post?.drive_folder_url; if (u) window.open(u, "_blank", "noopener,noreferrer"); }}
+                className="inline-flex items-center gap-1.5 self-start rounded-lg border border-primary/40 px-2.5 py-1.5 text-[12px] font-body font-semibold text-primary hover:bg-primary/[0.06] transition-colors">
+                <FolderOpen className="h-3.5 w-3.5" /> Abrir pasta no Drive
               </button>
             )}
           </div>

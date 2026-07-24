@@ -28,8 +28,25 @@ export function isDriveUrl(url: string | null | undefined): boolean {
   return /(?:^|\/\/|\.)(?:drive|docs)\.google\.com\//i.test(url.trim());
 }
 
+// Extensão de vídeo no nome/URL (cobre arquivos sem mime salvo, ex.: ref antiga).
+function hasVideoExt(s: string | null | undefined): boolean {
+  return /\.(mp4|mov|webm|m4v|mkv|avi)(?:$|[?#])/i.test((s ?? "").trim());
+}
+
 export function isVideoMedia(m: MediaLike): boolean {
-  return !!m.file_type?.startsWith("video") || !!m.bunny_video_id || m.provider === "bunny_stream";
+  // Mime explícito manda: imagem nunca é vídeo, vídeo sempre é.
+  if (m.file_type?.startsWith("image")) return false;
+  if (m.file_type?.startsWith("video")) return true;
+  // Bunny Stream (upload de vídeo do app / ingestão do Drive) é sempre vídeo.
+  if (!!m.bunny_video_id || m.provider === "bunny_stream") return true;
+  // Link do Drive colado NÃO traz mime (file_type null). No fluxo real as imagens
+  // entram por upload ou pelo seletor do Drive (viram arquivo 'device'), então um
+  // link avulso do Drive é tratado como vídeo: o slide oferece play + "Assistir no
+  // Drive", e o /preview também abre imagem caso raro. Assim o vídeo do Drive nunca
+  // cai no caminho de imagem (frame borrado sem play).
+  if (isDriveMedia(m) && !m.file_type) return true;
+  // Fallback por extensão do nome/URL pra refs sem mime.
+  return hasVideoExt(m.file_name) || hasVideoExt(m.view_url) || hasVideoExt(m.download_url);
 }
 
 export function isDriveVideo(m: MediaLike): boolean {
@@ -92,7 +109,8 @@ export function getDriveImageFallbackUrl(m: MediaLike, size = 1600): string | nu
 
 /** URL de embed (iframe) pra vídeo: Drive usa /preview, Bunny já vem pronto no view_url. */
 export function getVideoEmbedUrl(m: MediaLike): string | null {
-  if (isDriveVideo(m)) {
+  // Qualquer mídia do Drive (com ou sem mime) toca pelo /preview do próprio arquivo.
+  if (isDriveMedia(m)) {
     const id = getDriveFileId(m);
     if (id) return `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`;
   }
@@ -109,7 +127,8 @@ export function getVideoEmbedUrl(m: MediaLike): string | null {
 export function getVideoKind(m: MediaLike): "bunny" | "drive" | "file" | null {
   if (!isVideoMedia(m)) return null;
   if (!!m.bunny_video_id || m.provider === "bunny_stream" || /iframe\.mediadelivery\.net/i.test(m.view_url ?? "")) return "bunny";
-  if (isDriveVideo(m)) return "drive";
+  // Qualquer mídia do Drive (mesmo sem mime) usa o player /preview, não a tag <video>.
+  if (isDriveMedia(m)) return "drive";
   return "file";
 }
 

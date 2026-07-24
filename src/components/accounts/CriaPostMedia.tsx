@@ -7,12 +7,16 @@ import { PostMediaCarousel } from "@/components/shared/PostMediaCarousel";
 import { StoryPreview } from "@/components/accounts/StoryPreview";
 import { CriaPostPublishButton } from "@/components/accounts/CriaPostPublishButton";
 import { postAspect } from "@/lib/post-aspect";
-import { getDisplayImageUrl, getDriveImageFallbackUrl, isDriveMedia, isVideoMedia, downloadMediaFile, mediaDownloadName } from "@/lib/driveMedia";
+import { getDisplayImageUrl, getDriveImageFallbackUrl, getDriveViewPageUrl, isDriveMedia, isVideoMedia, downloadMediaFile, mediaDownloadName } from "@/lib/driveMedia";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ImagePlus, Video, FileImage, Link2, Loader2, Heart, MessageCircle, Send, Bookmark, GripVertical, X, Play, Download, ExternalLink, Paperclip } from "lucide-react";
+import { ImagePlus, Video, FileImage, Link2, Loader2, Heart, MessageCircle, Send, Bookmark, GripVertical, X, Play, Download, ExternalLink, Paperclip, ChevronDown, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { confirmar } from "@/components/shared/Confirm";
 import { supabase } from "@/integrations/supabase/client";
+
+// Lembra se a seção "Anexos e links" fica aberta (colapsada por padrão).
+const ATT_OPEN_KEY = "criapost_att_open";
 
 const MAX_MEDIA = 20;
 const ACCEPTED_MSG = "Formato não aceito. Use imagens (JPG, PNG, WebP, GIF, HEIC) ou vídeos (MP4, MOV, WebM).";
@@ -47,13 +51,16 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
   postId: string; platform: string; format: string; caption?: string; handle?: string; approved?: boolean;
   title?: string; referenceUrl?: string | null;
 }) {
-  const { list, uploadImage, uploadVideo, addDriveLink, remove, reorder } = useCriaPostMedia(postId);
+  const { list, uploadImage, uploadVideo, addDriveLink, remove, removeAll, reorder } = useCriaPostMedia(postId);
   const qc = useQueryClient();
   const { pickAndSave, picking } = useGoogleDrive();
   const imgRef = useRef<HTMLInputElement>(null);
   const vidRef = useRef<HTMLInputElement>(null);
   const [driveUrl, setDriveUrl] = useState("");
   const [showDrive, setShowDrive] = useState(false);
+  // "Anexos e links" colapsável: começa fechada, mas lembra a escolha por device.
+  const [attOpen, setAttOpen] = useState<boolean>(() => { try { return localStorage.getItem(ATT_OPEN_KEY) === "1"; } catch { return false; } });
+  const toggleAtt = () => setAttOpen((o) => { const n = !o; try { localStorage.setItem(ATT_OPEN_KEY, n ? "1" : "0"); } catch { /* segue */ } return n; });
   const [order, setOrder] = useState<string[]>([]);
   const dirty = useRef(false);
   const busy = uploadImage.isPending || uploadVideo.isPending || addDriveLink.isPending;
@@ -62,6 +69,9 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
   const count = media.length;
   const full = count >= MAX_MEDIA;
   const remaining = () => MAX_MEDIA - (list.data?.length ?? 0);
+  // Contador da seção "Anexos e links" (mídias + o link de referência, se houver).
+  const hasRef = !!(referenceUrl && referenceUrl.trim());
+  const attCount = count + (hasRef ? 1 : 0);
 
   useEffect(() => { if (!dirty.current) setOrder(media.map((m) => m.id)); }, [media]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -103,9 +113,32 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
     catch (err) { toast.error(err instanceof Error ? err.message : "Falha ao adicionar"); }
   };
 
-  const onRemoveMedia = async (id: string) => {
-    try { await remove.mutateAsync(id); toast.success("Mídia removida"); }
-    catch (err) { toast.error(err instanceof Error ? err.message : "Falha ao remover"); }
+  // Remoção INDIVIDUAL otimista (o item some na hora; o delete real roda atrás).
+  const onRemoveMedia = (id: string) => {
+    remove.mutate(id, { onError: (err) => toast.error(err instanceof Error ? err.message : "Falha ao remover") });
+  };
+
+  // Exclui TODAS as mídias do post de uma vez (com confirmação), também otimista.
+  const onRemoveAll = async () => {
+    if (!media.length) return;
+    const ok = await confirmar({
+      titulo: "Excluir todas as mídias?",
+      descricao: "Isso apaga todas as mídias anexadas a este post. Não dá pra desfazer.",
+      acao: "Excluir todas",
+    });
+    if (!ok) return;
+    removeAll.mutate(media.map((m) => m.id), {
+      onSuccess: () => toast.success("Mídias removidas"),
+      onError: (err) => toast.error(err instanceof Error ? err.message : "Falha ao remover"),
+    });
+  };
+
+  // Abre/prevê um anexo: Drive vai pro /view do arquivo; imagem cheia e vídeo
+  // (player do Bunny) abrem em nova aba.
+  const openMedia = (m: CriaMedia) => {
+    if (isDriveMedia(m)) { const u = getDriveViewPageUrl(m); if (u) window.open(u, "_blank", "noopener,noreferrer"); return; }
+    const u = m.view_url || m.thumbnail_url;
+    if (u) window.open(u, "_blank", "noopener,noreferrer");
   };
 
   // Seleciona do Drive (multi): abre o seletor do Google, entra em pastas e marca
@@ -217,50 +250,74 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
         </div>
       )}
 
-      {/* Anexos e links: um lugar só (estilo Trello) pra VER e ACESSAR todos os anexos
-          e todos os links do post, com download individual por arquivo. Reaproveita a
-          lista de mídia (inclui os do Drive) + o reference_url, sem duplicar dados. */}
-      {(ordered.length > 0 || !!(referenceUrl && referenceUrl.trim())) && (
-        <div className="rounded-2xl border border-border bg-muted/30 p-3 space-y-2">
-          <div className="flex items-center gap-1.5">
-            <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
-            <p className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground">Anexos e links</p>
-          </div>
+      {/* Anexos e links: COLAPSÁVEL e compacto (estilo Trello). Um cabeçalho com
+          contador expande a lista de anexos (mídia + Drive) e do reference_url.
+          Cada anexo é clicável (abre/prevê) + download; Drive abre direto no /view.
+          "Excluir todas" apaga tudo de uma vez (otimista, com confirmação). */}
+      {(ordered.length > 0 || hasRef) && (
+        <div className="rounded-xl border border-border bg-muted/30 overflow-hidden">
+          <button type="button" onClick={toggleAtt} aria-expanded={attOpen}
+            className="w-full flex items-center gap-1.5 px-3 py-2 text-left hover:bg-muted/50 transition-colors">
+            <Paperclip className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <span className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground">Anexos e links ({attCount})</span>
+            <ChevronDown className={`h-4 w-4 text-muted-foreground ml-auto transition-transform ${attOpen ? "rotate-180" : ""}`} />
+          </button>
 
-          {ordered.map((m, i) => {
-            const drive = isDriveMedia(m);
-            const video = isVideoMedia(m);
-            const tipo = video ? "Vídeo" : drive ? "Drive" : "Imagem";
-            return (
-              <div key={m.id} className="flex items-center gap-2.5">
-                <div className="relative shrink-0 w-10 h-10 rounded-lg overflow-hidden border border-border bg-muted"><Thumb m={m} /></div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-body text-foreground truncate">{m.file_name || `Mídia ${i + 1}`}</p>
-                  <p className="text-[10px] font-body text-muted-foreground">{tipo}</p>
+          {attOpen && (
+            <div className="px-3 pb-3 space-y-2 border-t border-border">
+              {ordered.length > 1 && (
+                <div className="flex justify-end pt-2 -mb-0.5">
+                  <Button type="button" size="sm" variant="ghost" disabled={removeAll.isPending}
+                    className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={onRemoveAll}>
+                    {removeAll.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5 mr-1.5" />} Excluir todas
+                  </Button>
                 </div>
-                {drive && m.view_url && (
-                  <a href={m.view_url} target="_blank" rel="noopener noreferrer" title="Abrir no Drive"
-                    className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors">
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                )}
-                <button type="button" onClick={() => onDownloadOne(m, i)} disabled={dlId === m.id} title="Baixar este arquivo"
-                  className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border text-muted-foreground hover:text-primary hover:border-primary/40 disabled:opacity-50 transition-colors">
-                  {dlId === m.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                </button>
-              </div>
-            );
-          })}
+              )}
 
-          {!!(referenceUrl && referenceUrl.trim()) && (
-            <a href={referenceUrl!} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 group">
-              <span className="shrink-0 w-10 h-10 rounded-lg border border-border bg-muted flex items-center justify-center text-muted-foreground"><Link2 className="h-4 w-4" /></span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-xs font-body text-primary group-hover:underline truncate">Referência / ideia</span>
-                <span className="block text-[10px] font-body text-muted-foreground truncate">{referenceUrl}</span>
-              </span>
-              <span className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border text-muted-foreground group-hover:text-primary transition-colors"><ExternalLink className="h-4 w-4" /></span>
-            </a>
+              {ordered.map((m, i) => {
+                const drive = isDriveMedia(m);
+                const video = isVideoMedia(m);
+                const tipo = drive ? "Drive" : video ? "Vídeo" : "Imagem";
+                return (
+                  <div key={m.id} className="flex items-center gap-2.5">
+                    {/* Linha clicável: abre/prevê o arquivo (imagem cheia/Drive/vídeo). */}
+                    <button type="button" onClick={() => openMedia(m)} title="Abrir / visualizar" className="flex items-center gap-2.5 min-w-0 flex-1 text-left group">
+                      <span className="relative shrink-0 w-10 h-10 rounded-lg overflow-hidden border border-border bg-muted"><Thumb m={m} /></span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-body text-foreground truncate group-hover:text-primary group-hover:underline">{m.file_name || `Mídia ${i + 1}`}</span>
+                        <span className="block text-[10px] font-body text-muted-foreground">{tipo}</span>
+                      </span>
+                    </button>
+                    {drive && (
+                      <button type="button" title="Abrir no Drive"
+                        onClick={() => { const u = getDriveViewPageUrl(m); if (u) window.open(u, "_blank", "noopener,noreferrer"); }}
+                        className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors">
+                        <ExternalLink className="h-4 w-4" />
+                      </button>
+                    )}
+                    <button type="button" onClick={() => onDownloadOne(m, i)} disabled={dlId === m.id} title="Baixar este arquivo"
+                      className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border text-muted-foreground hover:text-primary hover:border-primary/40 disabled:opacity-50 transition-colors">
+                      {dlId === m.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                    </button>
+                    <button type="button" onClick={() => onRemoveMedia(m.id)} title="Remover"
+                      className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                );
+              })}
+
+              {hasRef && (
+                <a href={referenceUrl!} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 group">
+                  <span className="shrink-0 w-10 h-10 rounded-lg border border-border bg-muted flex items-center justify-center text-muted-foreground"><Link2 className="h-4 w-4" /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xs font-body text-primary group-hover:underline truncate">Referência / ideia</span>
+                    <span className="block text-[10px] font-body text-muted-foreground truncate">{referenceUrl}</span>
+                  </span>
+                  <span className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border text-muted-foreground group-hover:text-primary transition-colors"><ExternalLink className="h-4 w-4" /></span>
+                </a>
+              )}
+            </div>
           )}
         </div>
       )}

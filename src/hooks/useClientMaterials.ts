@@ -10,18 +10,30 @@ export type MaterialStatus = "solicitado" | "a_fazer" | "em_aprovacao" | "ajuste
 export type MaterialKind = "apresentacao" | "flyer" | "arte_avulsa" | "logo" | "outro";
 export type MaterialOrigin = "gestor" | "cliente";
 
+// Anexo de um material: arquivo subido pro Storage ("file") ou link colado do
+// Drive ("drive"). Fica guardado na coluna jsonb attachments (já existente).
+export type MaterialAttachment = {
+  kind: "file" | "drive";
+  name: string;
+  url: string;
+  path?: string | null; // caminho no bucket (só pra "file")
+  type?: string | null; // mime (só pra "file")
+  size?: number | null; // bytes (só pra "file")
+};
+
 export type ClientMaterial = {
   id: string;
   manager_id: string;
   crm_client_id: string | null;
   external_client_id: string | null;
   title: string;
+  // Reaproveitado como BRIEFING do material (especificações, medidas, instruções).
   description: string | null;
   kind: MaterialKind;
   status: MaterialStatus;
   requested_by: MaterialOrigin;
   due_date: string | null;
-  attachments: { label?: string; url?: string }[] | null;
+  attachments: MaterialAttachment[] | null;
   position: number;
   created_at: string;
   updated_at: string;
@@ -33,10 +45,26 @@ export type MaterialInput = {
   kind?: MaterialKind;
   status?: MaterialStatus;
   due_date?: string | null;
+  attachments?: MaterialAttachment[] | null;
 };
 
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
+
+// Nome de arquivo seguro pro caminho no Storage (sem acento/espaço/símbolo).
+// Mesmo padrão do useCriaPostMedia.
+function sanitizeStoragePath(name: string): string {
+  const lastDot = name.lastIndexOf(".");
+  const base = lastDot > 0 ? name.slice(0, lastDot) : name;
+  const ext = lastDot > 0 ? name.slice(lastDot) : "";
+  const clean = base
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase()
+    .slice(0, 80) || "file";
+  return `${clean}${ext.toLowerCase()}`;
+}
 
 export function useClientMaterials(crmClientId: string | undefined) {
   const { agencyOwnerId } = useActiveAccount();
@@ -64,9 +92,14 @@ export function useClientMaterials(crmClientId: string | undefined) {
       if (!crmClientId) throw new Error("Cliente inválido");
       const { data, error } = await sbFrom("client_materials")
         .insert({
-          ...input,
-          status: input.status ?? "a_fazer",
+          title: input.title,
+          description: input.description ?? null,
+          // O tipo saiu da UI do gestor; mantemos o default do banco pra não quebrar
+          // o portal do cliente, que ainda usa kind.
           kind: input.kind ?? "arte_avulsa",
+          status: input.status ?? "a_fazer",
+          due_date: input.due_date ?? null,
+          attachments: input.attachments ?? [],
           requested_by: "gestor",
           manager_id: agencyOwnerId,
           crm_client_id: crmClientId,
@@ -79,6 +112,22 @@ export function useClientMaterials(crmClientId: string | undefined) {
     onSuccess: invalidate,
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao criar material."),
   });
+
+  // Sobe um arquivo (pdf, imagem, vídeo…) DIRETO pro Storage e devolve o anexo
+  // pronto pra guardar no material. Mesmo bucket "media" do Cria Post; caminho
+  // separado por dono/cliente. Sem compressão: material pode ser qualquer formato.
+  const uploadAttachment = async (file: File): Promise<MaterialAttachment> => {
+    if (!agencyOwnerId) throw new Error("Sessão expirada. Entre de novo.");
+    const safe = sanitizeStoragePath(file.name);
+    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const path = `${agencyOwnerId}/materials/${crmClientId ?? "geral"}/${stamp}-${safe}`;
+    const { error } = await supabase.storage.from("media").upload(path, file, {
+      upsert: true, contentType: file.type || "application/octet-stream",
+    });
+    if (error) throw new Error(error.message || "Não consegui subir o arquivo.");
+    const url = supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
+    return { kind: "file", name: file.name, url, path, type: file.type || null, size: file.size ?? null };
+  };
 
   const updateMaterial = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Partial<MaterialInput> & { status?: MaterialStatus }) => {
@@ -116,6 +165,7 @@ export function useClientMaterials(crmClientId: string | undefined) {
     createMaterial,
     updateMaterial,
     deleteMaterial,
+    uploadAttachment,
   };
 }
 

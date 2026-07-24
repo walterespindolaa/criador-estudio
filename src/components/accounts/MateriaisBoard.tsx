@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
-  useClientMaterials, type ClientMaterial, type MaterialKind, type MaterialStatus,
+  useClientMaterials, type ClientMaterial, type MaterialAttachment, type MaterialStatus,
 } from "@/hooks/useClientMaterials";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,8 +12,9 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { confirmar } from "@/components/shared/Confirm";
-import { Plus, MoreVertical, Loader2, User, CalendarDays, Package } from "lucide-react";
+import { Plus, MoreVertical, Loader2, User, CalendarDays, Paperclip, Upload, Link2, X, FileText, ExternalLink } from "lucide-react";
 import { parseDateOnly } from "@/lib/date-br";
+import { toast } from "sonner";
 
 const COLUMNS: { key: MaterialStatus; label: string; dot: string }[] = [
   { key: "solicitado", label: "Solicitado", dot: "bg-amber-500" },
@@ -23,15 +24,6 @@ const COLUMNS: { key: MaterialStatus; label: string; dot: string }[] = [
   { key: "finalizado", label: "Finalizado", dot: "bg-green-500" },
 ];
 
-const KINDS: { key: MaterialKind; label: string }[] = [
-  { key: "apresentacao", label: "Apresentação" },
-  { key: "flyer", label: "Flyer" },
-  { key: "arte_avulsa", label: "Arte avulsa" },
-  { key: "logo", label: "Logo" },
-  { key: "outro", label: "Outro" },
-];
-const kindLabel = (k: MaterialKind) => KINDS.find((x) => x.key === k)?.label ?? "Outro";
-
 function fmtDate(d: string | null): string | null {
   if (!d) return null;
   try {
@@ -39,21 +31,53 @@ function fmtDate(d: string | null): string | null {
   } catch { return null; }
 }
 
-type FormState = { title: string; description: string; kind: MaterialKind; due_date: string };
-const EMPTY: FormState = { title: "", description: "", kind: "arte_avulsa", due_date: "" };
+type FormState = { title: string; description: string; due_date: string; attachments: MaterialAttachment[] };
+const EMPTY: FormState = { title: "", description: "", due_date: "", attachments: [] };
 
 export function MateriaisBoard({ clientId, clientName }: { clientId: string; clientName: string }) {
-  const { materials, isLoading, isError, createMaterial, updateMaterial, deleteMaterial } = useClientMaterials(clientId);
+  const { materials, isLoading, isError, createMaterial, updateMaterial, deleteMaterial, uploadAttachment } = useClientMaterials(clientId);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ClientMaterial | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
+  const [driveUrl, setDriveUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const openNew = () => { setEditing(null); setForm(EMPTY); setDialogOpen(true); };
+  const openNew = () => { setEditing(null); setForm(EMPTY); setDriveUrl(""); setDialogOpen(true); };
   const openEdit = (m: ClientMaterial) => {
     setEditing(m);
-    setForm({ title: m.title, description: m.description ?? "", kind: m.kind, due_date: m.due_date ?? "" });
+    setForm({ title: m.title, description: m.description ?? "", due_date: m.due_date ?? "", attachments: m.attachments ?? [] });
+    setDriveUrl("");
     setDialogOpen(true);
   };
+
+  // Sobe os arquivos escolhidos pro Storage e anexa ao material (na hora, no form).
+  const onPickFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (!files.length) return;
+    setUploading(true);
+    for (const f of files) {
+      try {
+        const att = await uploadAttachment(f);
+        setForm((prev) => ({ ...prev, attachments: [...prev.attachments, att] }));
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Falha ao subir o arquivo.");
+      }
+    }
+    setUploading(false);
+  };
+
+  // Anexa um link do Drive (arquivo ou pasta) sem subir nada pro Storage.
+  const addDrive = () => {
+    const raw = driveUrl.trim();
+    if (!raw) return;
+    setForm((prev) => ({ ...prev, attachments: [...prev.attachments, { kind: "drive", name: "Link do Drive", url: raw }] }));
+    setDriveUrl("");
+  };
+
+  const removeAttachment = (idx: number) =>
+    setForm((prev) => ({ ...prev, attachments: prev.attachments.filter((_, i) => i !== idx) }));
 
   const save = () => {
     const title = form.title.trim();
@@ -61,8 +85,8 @@ export function MateriaisBoard({ clientId, clientName }: { clientId: string; cli
     const payload = {
       title,
       description: form.description.trim() || null,
-      kind: form.kind,
       due_date: form.due_date || null,
+      attachments: form.attachments,
     };
     if (editing) {
       updateMaterial.mutate({ id: editing.id, ...payload }, { onSuccess: () => setDialogOpen(false) });
@@ -141,29 +165,54 @@ export function MateriaisBoard({ clientId, clientName }: { clientId: string; cli
           <DialogHeader>
             <DialogTitle>{editing ? "Editar material" : "Novo material"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3.5 py-1">
+          <div className="space-y-3.5 py-1 max-h-[70vh] overflow-y-auto px-0.5">
             <div>
               <label className="text-xs font-body font-semibold text-muted-foreground">Título</label>
               <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Ex.: Flyer de aniversário" className="mt-1" autoFocus />
             </div>
             <div>
-              <label className="text-xs font-body font-semibold text-muted-foreground">Tipo</label>
-              <div className="mt-1 flex flex-wrap gap-1.5">
-                {KINDS.map((k) => (
-                  <button key={k.key} type="button" onClick={() => setForm({ ...form, kind: k.key })}
-                    className={`text-[12px] font-body font-semibold rounded-lg px-2.5 py-1.5 border transition-colors ${form.kind === k.key ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border hover:text-foreground"}`}>
-                    {k.label}
-                  </button>
-                ))}
-              </div>
+              <label className="text-xs font-body font-semibold text-muted-foreground">Briefing</label>
+              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Especificações, dimensões, instruções, referências…" rows={5} className="mt-1 resize-none" />
+              <p className="text-[11px] font-body text-muted-foreground mt-1">Descreva tudo que a arte precisa: medidas, textos, cores, o que não pode faltar.</p>
             </div>
             <div>
-              <label className="text-xs font-body font-semibold text-muted-foreground">Descrição</label>
-              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Detalhes, referências, medidas…" rows={3} className="mt-1 resize-none" />
-            </div>
-            <div>
-              <label className="text-xs font-body font-semibold text-muted-foreground">Prazo (opcional)</label>
+              <label className="text-xs font-body font-semibold text-muted-foreground">Prazo / data pra ficar pronto (opcional)</label>
               <Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} className="mt-1" />
+            </div>
+            <div>
+              <label className="text-xs font-body font-semibold text-muted-foreground">Anexos e arquivos</label>
+              <input ref={fileRef} type="file" multiple hidden onChange={onPickFiles} />
+              <div className="mt-1 flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant="outline" disabled={uploading} onClick={() => fileRef.current?.click()}>
+                  {uploading ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Upload className="h-4 w-4 mr-1.5" />} Enviar arquivo
+                </Button>
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <Input value={driveUrl} onChange={(e) => setDriveUrl(e.target.value)} placeholder="Colar link do Drive"
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addDrive(); } }}
+                  className="h-9 rounded-xl" />
+                <Button type="button" size="sm" variant="outline" onClick={addDrive} disabled={!driveUrl.trim()}>
+                  <Link2 className="h-4 w-4 mr-1.5" /> Colar
+                </Button>
+              </div>
+              {form.attachments.length > 0 && (
+                <ul className="mt-2 space-y-1.5">
+                  {form.attachments.map((a, i) => (
+                    <li key={i} className="flex items-center gap-2 rounded-xl border border-border bg-muted/30 px-2.5 py-2">
+                      {a.kind === "drive"
+                        ? <Link2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                        : <FileText className="h-4 w-4 text-muted-foreground shrink-0" />}
+                      <a href={a.url} target="_blank" rel="noopener noreferrer" className="min-w-0 flex-1 text-[12px] font-body text-foreground truncate hover:text-primary hover:underline">
+                        {a.name}
+                      </a>
+                      <button type="button" onClick={() => removeAttachment(i)} aria-label="Remover anexo"
+                        className="text-muted-foreground hover:text-destructive p-1 rounded-lg shrink-0">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
           <DialogFooter>
@@ -183,13 +232,16 @@ function MaterialCard({ m, onEdit, onRemove, onMove }: {
 }) {
   const due = fmtDate(m.due_date);
   const fromClient = m.requested_by === "cliente";
+  const atts = m.attachments ?? [];
   return (
     <article className="rounded-2xl border border-border bg-card p-3 shadow-sm">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <span className="inline-flex items-center gap-1 text-[10px] font-body font-bold uppercase tracking-wide text-primary bg-primary/10 rounded-md px-1.5 py-0.5">
-            <Package className="h-3 w-3" /> {kindLabel(m.kind)}
-          </span>
+          {atts.length > 0 && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-body font-bold uppercase tracking-wide text-primary bg-primary/10 rounded-md px-1.5 py-0.5">
+              <Paperclip className="h-3 w-3" /> {atts.length} {atts.length > 1 ? "anexos" : "anexo"}
+            </span>
+          )}
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -211,6 +263,19 @@ function MaterialCard({ m, onEdit, onRemove, onMove }: {
       </div>
       <h4 className="text-sm font-display font-bold text-foreground mt-1.5 leading-snug">{m.title}</h4>
       {m.description && <p className="text-[12px] font-body text-muted-foreground mt-1 line-clamp-2">{m.description}</p>}
+      {atts.length > 0 && (
+        <div className="mt-2 space-y-1">
+          {atts.slice(0, 3).map((a, i) => (
+            <a key={i} href={a.url} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-[11px] font-body text-muted-foreground hover:text-primary hover:underline">
+              {a.kind === "drive" ? <Link2 className="h-3 w-3 shrink-0" /> : <FileText className="h-3 w-3 shrink-0" />}
+              <span className="truncate">{a.name}</span>
+              <ExternalLink className="h-2.5 w-2.5 shrink-0 opacity-60" />
+            </a>
+          ))}
+          {atts.length > 3 && <p className="text-[10px] font-body text-muted-foreground">+{atts.length - 3} anexo(s)</p>}
+        </div>
+      )}
       <div className="flex items-center gap-2 flex-wrap mt-2.5">
         {fromClient && (
           <span className="inline-flex items-center gap-1 text-[10px] font-body font-bold text-amber-700 bg-amber-50 border border-amber-100 rounded-md px-1.5 py-0.5">

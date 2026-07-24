@@ -28,9 +28,17 @@ export function StoryPreview({ media, handle, avatarUrl, onRemove }: {
   const kind = item && video ? getVideoKind(item) : null;
   const embedUrl = item && video ? getVideoEmbedUrl(item) : null;
   const fileUrl = item && video ? getVideoFileUrl(item) : null;
-  const canPlay = video && (kind === "file" ? !!fileUrl : !!embedUrl);
+  // Tem player embutido? Sem player, o play abre a fonte em nova aba (nunca sem ação).
+  const hasInlinePlayer = video && (kind === "file" ? !!fileUrl : !!embedUrl);
   // Fallback só pro Drive: se o embed /preview for bloqueado, abre a página do Drive.
   const driveViewUrl = item && kind === "drive" ? getDriveViewPageUrl(item) : null;
+
+  // Play robusto: monta o player embutido ou abre a fonte em nova aba.
+  const onPlay = () => {
+    if (hasInlinePlayer) { setPlaying(true); return; }
+    const u = driveViewUrl || embedUrl || fileUrl;
+    if (u) window.open(u, "_blank", "noopener,noreferrer");
+  };
 
   const onImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
@@ -43,9 +51,9 @@ export function StoryPreview({ media, handle, avatarUrl, onRemove }: {
     <div className="relative w-full overflow-hidden rounded-2xl bg-black select-none" style={{ aspectRatio: "9 / 16" }}>
       {/* Mídia cobrindo a tela toda */}
       {item ? (
-        playing && video && kind === "file" && fileUrl ? (
+        playing && hasInlinePlayer && kind === "file" && fileUrl ? (
           <video src={fileUrl} controls playsInline autoPlay className="w-full h-full bg-black object-cover" />
-        ) : playing && embedUrl ? (
+        ) : playing && hasInlinePlayer && embedUrl ? (
           <iframe src={embedUrl} className="w-full h-full bg-black" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={item.file_name || "vídeo"} />
         ) : src ? (
           <ProgressiveImage key={item.id ?? safeIdx} thumbSrc={thumb} fullSrc={src} alt={item.file_name || ""}
@@ -87,18 +95,20 @@ export function StoryPreview({ media, handle, avatarUrl, onRemove }: {
         </>
       )}
 
-      {/* Play pra vídeo */}
-      {video && !playing && canPlay && (
-        <button type="button" onClick={() => setPlaying(true)} aria-label="Reproduzir vídeo" className="absolute inset-0 z-[15] flex items-center justify-center">
-          <span className="w-14 h-14 rounded-full bg-black/55 flex items-center justify-center"><Play className="h-7 w-7 text-white ml-0.5" /></span>
+      {/* Play SEMPRE visível pra vídeo: nunca um frame sem controle. Sem player
+          embutido (Drive bloqueado etc.), o clique abre a fonte em nova aba. */}
+      {video && !playing && (
+        <button type="button" onClick={onPlay} aria-label="Reproduzir vídeo" className="absolute inset-0 z-[15] flex flex-col items-center justify-center gap-2">
+          <span className="w-16 h-16 rounded-full bg-black/55 flex items-center justify-center shadow-lg"><Play className="h-8 w-8 text-white ml-1" /></span>
+          {!src && <span className="text-xs font-medium text-white/85">Assistir</span>}
         </button>
       )}
 
-      {/* Só pro Drive: atalho discreto caso o embed seja bloqueado pela conta do cliente. */}
+      {/* Só pro Drive: atalho caso o embed /preview seja bloqueado pela conta do cliente. */}
       {driveViewUrl && (
         <button type="button" onClick={() => window.open(driveViewUrl, "_blank", "noopener,noreferrer")}
           className="absolute bottom-16 right-2 z-30 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-black/80">
-          <ExternalLink className="h-3 w-3" /> Assistir em nova aba
+          <ExternalLink className="h-3 w-3" /> Assistir no Drive
         </button>
       )}
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useExternalClients, useExternalPosts, usePortalActivity, type ExternalClient, type ExternalPost, type ExternalPostInput } from "@/hooks/useCriaPost";
 import { toast } from "sonner";
@@ -8,13 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ArtBriefDialog } from "./ArtBriefDialog";
 import { ClientContentWriter } from "./ClientContentWriter";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CronogramaBoard } from "@/components/accounts/CronogramaBoard";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
-import { Plus, Link2, Pencil, Loader2, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare, Eye, Clock, Settings2, Palette, Copy } from "lucide-react";
+import { Plus, Link2, Pencil, Loader2, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare, Eye, Clock, Settings2, Palette, Copy, CalendarDays, X } from "lucide-react";
+import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { CriaPostMedia } from "@/components/accounts/CriaPostMedia";
 import { ImportKanbanDialog } from "@/components/accounts/ImportKanbanDialog";
 import { ClientReportDialog } from "@/components/accounts/ClientReportDialog";
@@ -52,7 +54,6 @@ async function copiarLegenda(texto: string) {
 }
 // Cor por formato: a pessoa bate o olho e sabe o que é (reels azul, carrossel verde...).
 const FORMAT_COLOR: Record<string, string> = { reels: "#0061EE", carrossel: "#01A652", foto: "#EA4918", story: "#7C90F0", video: "#4B3FA8" };
-const MES_ABBR = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 function relTimeBR(iso: string): string {
   const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
   if (min < 1) return "agora mesmo";
@@ -78,18 +79,94 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 const APPROVAL_COLS = ["em_producao", "pendente", "ajuste_solicitado", "aprovado", "postado"] as const;
 type ApprovalKey = (typeof APPROVAL_COLS)[number];
 
+// ── Filtro de data + formato do board (Produção). Persiste por dispositivo pra
+// voltar do jeito que a pessoa deixou, até ela limpar.
+const FILTER_KEY = "criapost_filter_v1";
+const PRESET_DAYS: Record<string, number> = { "7": 7, "15": 15, "30": 30, "60": 60 };
+type PostFilter = {
+  preset: "all" | "7" | "15" | "30" | "60" | "custom"; // atalho de período
+  from: string; // YYYY-MM-DD (só quando preset = custom)
+  to: string;   // YYYY-MM-DD (só quando preset = custom)
+  fmt: string;  // "all" | formato
+};
+const FILTER_DEFAULT: PostFilter = { preset: "all", from: "", to: "", fmt: "all" };
+
+// Carrega o filtro salvo. Se um dia existir o esquema antigo (mês/formato solto),
+// migramos: o mês YYYY-MM vira um intervalo custom daquele mês.
+function loadPostFilter(): PostFilter {
+  try {
+    const raw = localStorage.getItem(FILTER_KEY);
+    if (raw) {
+      const p = JSON.parse(raw) as Partial<PostFilter>;
+      const presets = ["all", "7", "15", "30", "60", "custom"];
+      return {
+        preset: (presets.includes(p.preset as string) ? p.preset : "all") as PostFilter["preset"],
+        from: typeof p.from === "string" ? p.from : "",
+        to: typeof p.to === "string" ? p.to : "",
+        fmt: typeof p.fmt === "string" ? p.fmt : "all",
+      };
+    }
+    // Migração best-effort do esquema antigo (nunca chegou a persistir, mas fica o gancho).
+    const oldMes = localStorage.getItem("criapost_mes"); // "YYYY-MM"
+    const oldFmt = localStorage.getItem("criapost_fmt");
+    if (oldMes || oldFmt) {
+      const migrated = { ...FILTER_DEFAULT };
+      if (oldMes && /^\d{4}-\d{2}$/.test(oldMes)) {
+        const [y, m] = oldMes.split("-").map(Number);
+        const last = new Date(y, m, 0).getDate(); // último dia do mês
+        migrated.preset = "custom";
+        migrated.from = `${oldMes}-01`;
+        migrated.to = `${oldMes}-${String(last).padStart(2, "0")}`;
+      }
+      if (oldFmt) migrated.fmt = oldFmt;
+      try { localStorage.removeItem("criapost_mes"); localStorage.removeItem("criapost_fmt"); } catch { /* segue */ }
+      return migrated;
+    }
+  } catch { /* segue */ }
+  return { ...FILTER_DEFAULT };
+}
+
+// Intervalo efetivo (YYYY-MM-DD) do filtro. Preset "últimos N dias" = janela
+// inclusiva terminando hoje (fuso BR). null = sem limite naquela ponta.
+function filterRange(f: PostFilter): { from: string | null; to: string | null } {
+  if (f.preset === "all") return { from: null, to: null };
+  if (f.preset === "custom") return { from: f.from || null, to: f.to || null };
+  const n = PRESET_DAYS[f.preset] ?? 0;
+  const to = hojeBR();
+  const d = parseDateOnly(to);
+  d.setDate(d.getDate() - (n - 1));
+  const from = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return { from, to };
+}
+
+// DD/MM só pra rótulo do chip. A string já é YYYY-MM-DD (date, sem fuso), então
+// dá pra fatiar direto sem passar por Date (evita off-by-one).
+function ddmm(iso: string): string {
+  if (!iso) return "";
+  const [, m, d] = iso.split("-");
+  return `${d}/${m}`;
+}
+
 export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange }: { client: ExternalClient; onBack?: () => void; embedded?: boolean; activeTab?: string; onTabChange?: (t: string) => void }) {
   const { posts, isLoading, create, createDraft, update, remove, moveStatus, setDate, reorderExternalPosts } = useExternalPosts(client.id);
   const qc = useQueryClient();
-  // Filtro por mês (período) pra revisar/enviar só o que interessa.
-  const [mesPost, setMesPost] = useState("all"); // "all" | "YYYY-MM"
-  const [fmtFilter, setFmtFilter] = useState("all"); // "all" | format
-  const mesesPost = Array.from(new Set(posts.map((p) => p.scheduled_date?.slice(0, 7)).filter(Boolean) as string[])).sort();
+  // Filtro de data/formato pra revisar/enviar só o que interessa. Persistido em
+  // localStorage (criapost_filter_v1) e reaplicado no F5 até a pessoa limpar.
+  const [filter, setFilter] = useState<PostFilter>(() => loadPostFilter());
+  useEffect(() => {
+    try { localStorage.setItem(FILTER_KEY, JSON.stringify(filter)); } catch { /* segue */ }
+  }, [filter]);
+  const range = filterRange(filter);
+  const filterActive = filter.preset !== "all" || filter.fmt !== "all";
   const formatosPost = Array.from(new Set(posts.map((p) => p.format).filter(Boolean) as string[]));
-  const viewPosts = posts.filter((p) =>
-    (mesPost === "all" || (p.scheduled_date ?? "").slice(0, 7) === mesPost) &&
-    (fmtFilter === "all" || p.format === fmtFilter),
-  );
+  const viewPosts = posts.filter((p) => {
+    if (filter.fmt !== "all" && p.format !== filter.fmt) return false;
+    // Post sem data (tipicamente "Em produção") SEMPRE aparece: só o formato o filtra.
+    if (!p.scheduled_date) return true;
+    if (range.from && p.scheduled_date < range.from) return false;
+    if (range.to && p.scheduled_date > range.to) return false;
+    return true;
+  });
   // Guarda o id do rascunho aberto: se o usuário cancelar, apagamos (não vira lixo).
   const [draftId, setDraftId] = useState<string | null>(null);
   // Kanban (padrão) ou Calendário. Preferência salva por dispositivo.
@@ -139,14 +216,14 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   // Cria Post, agora acompanha o cliente aqui dentro (embutido no ClienteHub).
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<ExternalPost | null>(null);
-  const [f, setF] = useState<ExternalPostInput>({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", scheduled_date: null, scheduled_time: null, reference_url: null });
+  const [f, setF] = useState<ExternalPostInput>({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", scheduled_date: null, scheduled_time: null, reference_url: null, drive_folder_url: null });
   const [copying, setCopying] = useState(false);
   const [briefOpen, setBriefOpen] = useState(false);
 
   // Novo post: cria um RASCUNHO na hora. Assim o post.id já existe e a mídia pode ser
   // anexada de cara (o storage precisa do id). O rascunho não aparece pro cliente.
   const openNew = async (day?: string) => {
-    setF({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", scheduled_date: day ?? null, scheduled_time: null, reference_url: null });
+    setF({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", scheduled_date: day ?? null, scheduled_time: null, reference_url: null, drive_folder_url: null });
     setFormOpen(true);
     try {
       const draft = await createDraft.mutateAsync({ scheduled_date: day ?? null });
@@ -154,7 +231,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
       setEditing(draft);
     } catch { setFormOpen(false); }
   };
-  const openEdit = (p: ExternalPost) => { setDraftId(null); setEditing(p); setF({ title: p.title, platform: p.platform, format: p.format, caption: p.caption ?? "", hook: p.hook ?? "", approval_mode: (p.approval_mode as "fast"|"flow"|"both") ?? "fast", script: p.script ?? "", scheduled_date: p.scheduled_date ?? null, scheduled_time: (p as { scheduled_time?: string | null }).scheduled_time ?? null, reference_url: p.reference_url ?? null }); setFormOpen(true); };
+  const openEdit = (p: ExternalPost) => { setDraftId(null); setEditing(p); setF({ title: p.title, platform: p.platform, format: p.format, caption: p.caption ?? "", hook: p.hook ?? "", approval_mode: (p.approval_mode as "fast"|"flow"|"both") ?? "fast", script: p.script ?? "", scheduled_date: p.scheduled_date ?? null, scheduled_time: (p as { scheduled_time?: string | null }).scheduled_time ?? null, reference_url: p.reference_url ?? null, drive_folder_url: (p as { drive_folder_url?: string | null }).drive_folder_url ?? null }); setFormOpen(true); };
 
   // Cancelar um post novo apaga o rascunho (com a mídia que já subiu).
   const closeForm = async () => {
@@ -192,6 +269,11 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
     // Ideia / Referência: aceita só link http(s). Vazio = ok (campo opcional).
     if ((f.reference_url ?? "").trim() && !/^https?:\/\//i.test((f.reference_url ?? "").trim())) {
       toast.error("A referência precisa ser um link começando com http.");
+      return;
+    }
+    // Pasta do Drive: mesma validação simples (link http). Vazio = ok.
+    if ((f.drive_folder_url ?? "").trim() && !/^https?:\/\//i.test((f.drive_folder_url ?? "").trim())) {
+      toast.error("A pasta do Drive precisa ser um link começando com http.");
       return;
     }
     if (draftId) {
@@ -284,20 +366,47 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               <Button onClick={() => openNew()}><Plus className="h-4 w-4 mr-1.5" /> Novo post</Button>
             </div>
           </div>
-      {mesesPost.length > 1 && (
-        <div className="flex gap-1.5 flex-wrap mb-3">
-          <button onClick={() => setMesPost("all")} className={`text-xs font-body font-semibold px-3 py-1.5 rounded-full border transition-colors ${mesPost === "all" ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}>Tudo</button>
-          {mesesPost.map((k) => (
-            <button key={k} onClick={() => setMesPost(k)} className={`text-xs font-body font-semibold px-3 py-1.5 rounded-full border transition-colors ${mesPost === k ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}>{MES_ABBR[Number(k.slice(5, 7)) - 1]}/{k.slice(2, 4)}</button>
-          ))}
-        </div>
-      )}
+      {/* Filtro de data: presets rápidos + período específico (popover) + limpar.
+          Mobile-first: os chips quebram linha; o período fica num popover discreto. */}
+      <div className="flex gap-1.5 flex-wrap items-center mb-3">
+        {([["all", "Tudo"], ["7", "7 dias"], ["15", "15 dias"], ["30", "30 dias"], ["60", "60 dias"]] as [PostFilter["preset"], string][]).map(([v, label]) => (
+          <button key={v} onClick={() => setFilter((prev) => ({ ...prev, preset: v }))}
+            className={`text-xs font-body font-semibold px-3 py-1.5 rounded-full border transition-colors ${filter.preset === v ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>{label}</button>
+        ))}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className={`inline-flex items-center gap-1 text-xs font-body font-semibold px-3 py-1.5 rounded-full border transition-colors ${filter.preset === "custom" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
+              <CalendarDays className="h-3.5 w-3.5" />
+              {filter.preset === "custom" && (filter.from || filter.to) ? `${ddmm(filter.from) || "…"} – ${ddmm(filter.to) || "…"}` : "Período"}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-64">
+            <p className="text-xs font-body font-semibold text-foreground mb-2">Período específico</p>
+            <div className="flex gap-2">
+              <div className="flex-1 min-w-0">
+                <Label className="text-[11px] font-body text-muted-foreground">De</Label>
+                <Input type="date" value={filter.from} onChange={(e) => setFilter((prev) => ({ ...prev, from: e.target.value, preset: "custom" }))} className="rounded-lg" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <Label className="text-[11px] font-body text-muted-foreground">Até</Label>
+                <Input type="date" value={filter.to} onChange={(e) => setFilter((prev) => ({ ...prev, to: e.target.value, preset: "custom" }))} className="rounded-lg" />
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+        {filterActive && (
+          <button onClick={() => setFilter({ ...FILTER_DEFAULT })}
+            className="inline-flex items-center gap-1 text-xs font-body font-semibold px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground transition-colors">
+            <X className="h-3.5 w-3.5" /> Limpar
+          </button>
+        )}
+      </div>
       {/* Filtro por formato: aparece quando há mais de um formato na fila. */}
       {formatosPost.length > 1 && (
         <div className="flex gap-1.5 flex-wrap mb-3">
-          <button onClick={() => setFmtFilter("all")} className={`text-xs font-body font-semibold px-3 py-1.5 rounded-full border transition-colors ${fmtFilter === "all" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>Todos os formatos</button>
+          <button onClick={() => setFilter((prev) => ({ ...prev, fmt: "all" }))} className={`text-xs font-body font-semibold px-3 py-1.5 rounded-full border transition-colors ${filter.fmt === "all" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>Todos os formatos</button>
           {formatosPost.map((fmt) => (
-            <button key={fmt} onClick={() => setFmtFilter(fmt)} className={`text-xs font-body font-semibold px-3 py-1.5 rounded-full border transition-colors ${fmtFilter === fmt ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>{FORMAT_LABELS[fmt] ?? fmt}</button>
+            <button key={fmt} onClick={() => setFilter((prev) => ({ ...prev, fmt }))} className={`text-xs font-body font-semibold px-3 py-1.5 rounded-full border transition-colors ${filter.fmt === fmt ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>{FORMAT_LABELS[fmt] ?? fmt}</button>
           ))}
         </div>
       )}
@@ -308,8 +417,8 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
         <div className="space-y-3">{[0, 1].map((i) => <div key={i} className="h-20 rounded-2xl bg-muted animate-pulse" />)}</div>
       ) : viewPosts.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border p-10 text-center">
-          <p className="text-sm font-body text-foreground font-medium">{mesPost === "all" ? "Nenhum post ainda" : "Nenhum post neste mês"}</p>
-          <p className="text-xs text-muted-foreground font-body mt-1">{mesPost === "all" ? "Crie um post: ele nasce em Produção. Quando estiver pronto, libere pro cliente (Aguardando)." : "Troque o filtro de mês ou crie um post."}</p>
+          <p className="text-sm font-body text-foreground font-medium">{filterActive ? "Nenhum post com esse filtro" : "Nenhum post ainda"}</p>
+          <p className="text-xs text-muted-foreground font-body mt-1">{filterActive ? "Ajuste o período/formato ou toque em Limpar." : "Crie um post: ele nasce em Produção. Quando estiver pronto, libere pro cliente (Aguardando)."}</p>
         </div>
       ) : (
         <DragDropContext onDragEnd={handleApprovalDragEnd}>
@@ -584,6 +693,15 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                 <Label className="text-xs font-body">Ideia / Referência (link)</Label>
                 <Input value={f.reference_url ?? ""} onChange={(e) => setF((p) => ({ ...p, reference_url: e.target.value || null }))}
                   placeholder="Cole um link de inspiração (Drive, post, Pinterest...)" className="rounded-xl" />
+              </div>
+
+              {/* Pasta do Drive: link da PASTA com os materiais deste post (distinto da
+                  ideia/referência acima, que é só inspiração). Aparece como atalho
+                  "Abrir pasta no Drive" na página de aprovação do cliente. */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-body">Pasta do Drive (link)</Label>
+                <Input value={f.drive_folder_url ?? ""} onChange={(e) => setF((p) => ({ ...p, drive_folder_url: e.target.value || null }))}
+                  placeholder="Cole o link da pasta do Drive com os materiais" className="rounded-xl" />
               </div>
 
               {/* Legenda (maior) */}

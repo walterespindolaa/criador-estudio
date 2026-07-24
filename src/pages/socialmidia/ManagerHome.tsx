@@ -1,9 +1,9 @@
 import { useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Camera, ArrowRight, Ticket, Settings, Users, Sparkles, Check, Gift, Wallet, Send, CalendarDays, Eye, EyeOff, Heart, Clock, RotateCcw, ChevronRight } from "lucide-react";
+import { Camera, ArrowRight, Ticket, Settings, Users, Sparkles, Check, Gift, Wallet, Send, CalendarDays, Eye, EyeOff, Heart, Clock, RotateCcw, ChevronRight, ChevronDown } from "lucide-react";
 import { useOperationSignals, DOMAIN_HEX, type OpDomain, type OpUrgency, type HealthLevel } from "@/hooks/useOperationSignals";
 import { OrganicBlobs } from "@/components/brand/OrganicBlobs";
-import { CRIA_HEX, type CriaColor } from "@/lib/moduleTheme";
+import { CRIA_HEX, MODULE_COLOR, type CriaColor } from "@/lib/moduleTheme";
 import { formatBRL } from "@/lib/money";
 import { useManagerApprovalOverview } from "@/hooks/useApprovals";
 import { toast } from "sonner";
@@ -42,6 +42,12 @@ function Painel({ color, icon: Icon, valor, label, to, destaque, masked }: {
 
 function initial(name?: string | null) { return name ? name.trim().charAt(0).toUpperCase() : "?"; }
 const DOMAIN_ICON: Record<OpDomain, typeof Users> = { conteudo: Send, financeiro: Wallet, relacionamento: Heart, prazo: Clock };
+// Ícone por módulo, pra deixar o card enxuto reconhecível de relance (a cor vem
+// de MODULE_COLOR). Fallback: Sparkles pra qualquer código novo.
+const MODULE_ICON: Record<string, typeof Users> = {
+  criapost: Send, criacaixa: Wallet, criacrm: Users, clientes: Users,
+  hubcria: Sparkles, stories: Camera, agenda: CalendarDays, equipe: Users,
+};
 const URG: Record<OpUrgency, { label: string; cls: string }> = {
   hi: { label: "Urgente", cls: "bg-red-100 text-red-700" },
   mid: { label: "Atenção", cls: "bg-amber-100 text-amber-700" },
@@ -69,6 +75,16 @@ export default function ManagerHome() {
   // Modo privacidade: um olho oculta TODOS os números dos cards (útil pra gravar
   // tela ou mostrar pra alguém sem expor faturamento/pendências).
   const [masked, setMasked] = useState(false);
+  // Faixa "Seus clientes" recolhível (mesmo padrão da Agenda). Default aberto;
+  // o estado fica no localStorage pra persistir entre sessões.
+  const [clientesOpen, setClientesOpen] = useState<boolean>(() => {
+    try { const v = localStorage.getItem("home_clientes_open"); return v === null ? true : v === "1"; } catch { return true; }
+  });
+  const toggleClientes = () => setClientesOpen((v) => {
+    const n = !v;
+    try { localStorage.setItem("home_clientes_open", n ? "1" : "0"); } catch { /* segue */ }
+    return n;
+  });
   const hasAgency = (profile?.seat_limit ?? 0) > 0;
 
   // Atalho "Continuar em {cliente}": retoma o último cliente visitado no hub.
@@ -214,17 +230,29 @@ export default function ManagerHome() {
 
       {/* ═══ SEUS MÓDULOS ═══ (1ª seção: quem só quer trabalhar entra direto) */}
       <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">Seus módulos</h2>
-      <div data-tour="gh-modulos" className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-        {activeMods.map((m) => (
-          <button key={m.code} type="button" onClick={() => openModule(m)}
-            className="text-left bg-card border border-border rounded-2xl p-4 hover:border-primary/40 transition-colors">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="font-display font-bold text-foreground text-sm">{m.name}</span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">Ativo</span>
-            </div>
-            <p className="text-xs text-muted-foreground font-body">Toque para abrir</p>
-          </button>
-        ))}
+      {/* Cards compactos: 2 colunas no celular, todos na MESMA linha no desktop
+          (grid-cols-4). Cada módulo mantém a cor de MODULE_COLOR na borda + ícone. */}
+      <div data-tour="gh-modulos" className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-4">
+        {activeMods.map((m) => {
+          const cor = CRIA_HEX[MODULE_COLOR[m.code] ?? "laranja"];
+          const Icon = MODULE_ICON[m.code] ?? Sparkles;
+          return (
+            <button key={m.code} type="button" onClick={() => openModule(m)}
+              className="text-left bg-card border border-border rounded-2xl p-3 transition-all hover:-translate-y-0.5 hover:shadow-md"
+              style={{ borderLeftWidth: 3, borderLeftColor: cor }}>
+              <div className="flex items-center gap-2 mb-2 min-w-0">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl" style={{ background: `${cor}1f`, color: cor }}>
+                  <Icon className="h-4 w-4" />
+                </span>
+                <span className="font-display font-bold text-foreground text-[13px] leading-tight truncate">{m.name}</span>
+              </div>
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 shrink-0">Ativo</span>
+                <span className="text-[10px] text-muted-foreground font-body truncate">Toque para abrir</span>
+              </div>
+            </button>
+          );
+        })}
       </div>
       {/* Upsell discreto, em UMA linha, sem card duplicado no meio dos ativos. */}
       {upsellMods.length > 0 && (
@@ -244,9 +272,15 @@ export default function ManagerHome() {
           no hover (desktop) e o texto do status logo abaixo do nome (mobile, sem
           hover). Não existe mais faixa "Saúde dos clientes" separada. */}
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider">Seus clientes</h2>
+        {/* Setinha pra recolher/expandir a lista (persistido em localStorage). */}
+        <button type="button" onClick={toggleClientes} className="flex items-center gap-1.5"
+          aria-expanded={clientesOpen} aria-label={clientesOpen ? "Recolher clientes" : "Expandir clientes"}>
+          <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider">Seus clientes</h2>
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${clientesOpen ? "rotate-180" : ""}`} />
+        </button>
         <button onClick={() => navigate("/socialmidia/clientes")} className="text-primary font-body font-bold text-xs flex items-center gap-1 hover:underline">Ver todos <ArrowRight className="h-3 w-3" /></button>
       </div>
+      {clientesOpen && (
       <TooltipProvider delayDuration={120}>
         <div data-tour="gh-clientes" className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
           {clientesHome.map((c) => {
@@ -285,6 +319,7 @@ export default function ManagerHome() {
           })}
         </div>
       </TooltipProvider>
+      )}
 
       {/* ═══ APROVAÇÕES RECENTES ═══ (3ª seção)
           Agrega os posts de aprovação por link de TODOS os clientes do gestor

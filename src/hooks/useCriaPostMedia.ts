@@ -149,12 +149,38 @@ export function useCriaPostMedia(postId: string | null) {
   });
 
   const uploadVideo = useMutation({
+    // Prévia OTIMISTA do vídeo: assim que a pessoa escolhe o arquivo, coloca um
+    // player local (blob) no preview NA HORA. O upload pro Bunny (TUS) roda em
+    // segundo plano; quando termina, o invalidate troca pela versão final (frame
+    // do Bunny + play). Antes o preview do composer ficava EM BRANCO durante todo
+    // o upload, porque só a imagem tinha prévia otimista, o vídeo não.
+    onMutate: async (file: File) => {
+      await qc.cancelQueries({ queryKey: key });
+      const prev = qc.getQueryData<CriaMedia[]>(key) ?? [];
+      const objectUrl = URL.createObjectURL(file);
+      const tempId = `temp-vid-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const optimistic: CriaMedia = {
+        // view_url = blob tocável (<video>); thumbnail null pra NÃO renderizar um
+        // <img> quebrado (o frame real vem do Bunny depois da troca).
+        id: tempId, provider: "local-pending", external_file_id: tempId,
+        file_name: file.name, file_type: file.type || "video/mp4",
+        view_url: objectUrl, thumbnail_url: null, bunny_video_id: null,
+        position: prev.length,
+      };
+      qc.setQueryData<CriaMedia[]>(key, [...prev, optimistic]);
+      return { prev, objectUrl };
+    },
     mutationFn: async (file: File) => {
       if (!postId) throw new Error("O post ainda não foi criado. Feche e abra de novo.");
       // Lógica compartilhada: create-video + upload TUS + criapost_add_media.
       await uploadVideoFileToBunny(file, postId);
     },
-    onSuccess: invalidate,
+    onError: (_e, _f, ctx) => {
+      if (ctx?.prev) qc.setQueryData(key, ctx.prev);
+      if (ctx?.objectUrl) URL.revokeObjectURL(ctx.objectUrl);
+    },
+    onSuccess: (_d, _f, ctx) => { if (ctx?.objectUrl) URL.revokeObjectURL(ctx.objectUrl); },
+    onSettled: invalidate,
   });
 
   const addDriveLink = useMutation({
@@ -201,12 +227,44 @@ export function useCriaPostMedia(postId: string | null) {
   });
 
   const remove = useMutation({
+    // Remoção OTIMISTA: tira o item da lista NA HORA e faz o delete real em
+    // segundo plano. Antes parecia lento porque esperava o round-trip da edge
+    // function pra sumir. Se falhar, devolve o item pra lista (rollback).
+    onMutate: async (mediaId: string) => {
+      await qc.cancelQueries({ queryKey: key });
+      const prev = qc.getQueryData<CriaMedia[]>(key) ?? [];
+      qc.setQueryData<CriaMedia[]>(key, prev.filter((m) => m.id !== mediaId));
+      return { prev };
+    },
     mutationFn: async (mediaId: string) => {
       const { data, error } = await supabase.functions.invoke("criapost-media-delete", { body: { media_id: mediaId } });
       if (error) throw new Error(await edgeErrText(error, "Não consegui remover a mídia."));
       if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
     },
-    onSuccess: invalidate,
+    onError: (_e, _id, ctx) => { if (ctx?.prev) qc.setQueryData(key, ctx.prev); },
+    onSettled: invalidate,
+  });
+
+  const removeAll = useMutation({
+    // Exclui TODAS as mídias do post de uma vez, também otimista: esvazia a lista
+    // na hora e dispara os deletes em paralelo em segundo plano. Recebe os ids
+    // porque o cache já foi limpo no onMutate. Rollback se algum falhar.
+    onMutate: async (_ids: string[]) => {
+      await qc.cancelQueries({ queryKey: key });
+      const prev = qc.getQueryData<CriaMedia[]>(key) ?? [];
+      qc.setQueryData<CriaMedia[]>(key, []);
+      return { prev };
+    },
+    mutationFn: async (ids: string[]) => {
+      const results = await Promise.allSettled(ids.map((id) =>
+        supabase.functions.invoke("criapost-media-delete", { body: { media_id: id } })));
+      const anyFail = results.some((r) =>
+        r.status === "rejected" ||
+        (r.status === "fulfilled" && (!!r.value.error || !!((r.value.data as { error?: string })?.error))));
+      if (anyFail) throw new Error("Não consegui remover algumas mídias.");
+    },
+    onError: (_e, _ids, ctx) => { if (ctx?.prev) qc.setQueryData(key, ctx.prev); },
+    onSettled: invalidate,
   });
 
   const reorder = useMutation({
@@ -217,5 +275,5 @@ export function useCriaPostMedia(postId: string | null) {
     onSuccess: invalidate,
   });
 
-  return { list, uploadImage, uploadVideo, addDriveLink, remove, reorder };
+  return { list, uploadImage, uploadVideo, addDriveLink, remove, removeAll, reorder };
 }

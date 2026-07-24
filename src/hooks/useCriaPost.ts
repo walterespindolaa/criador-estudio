@@ -35,8 +35,11 @@ export type ExternalPost = {
   last_comment: string | null; last_comment_role: string | null;
   // Link de ideia/referência (Drive, post, Pinterest...). Coluna nova em posts, ver SQL.
   reference_url: string | null;
+  // Link da PASTA do Drive com os materiais do post (distinto da referência/ideia).
+  // Coluna nova em posts (ver SQL). Aparece como atalho na aprovação do cliente.
+  drive_folder_url: string | null;
 };
-export type ExternalPostInput = { title: string; platform: string; format: string; caption?: string | null; hook?: string | null; script?: string | null; approval_mode?: "fast" | "flow" | "both"; scheduled_date?: string | null; scheduled_time?: string | null; reference_url?: string | null };
+export type ExternalPostInput = { title: string; platform: string; format: string; caption?: string | null; hook?: string | null; script?: string | null; approval_mode?: "fast" | "flow" | "both"; scheduled_date?: string | null; scheduled_time?: string | null; reference_url?: string | null; drive_folder_url?: string | null };
 
 export function useExternalClients() {
   const { agencyOwnerId } = useActiveAccount();
