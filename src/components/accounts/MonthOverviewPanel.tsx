@@ -1,8 +1,11 @@
 import { useMemo, useState } from "react";
 import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { ChevronLeft, ChevronRight, CalendarRange, CheckCircle2, Clock, RotateCcw } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarRange, CheckCircle2, Clock, RotateCcw, Eye, EyeOff } from "lucide-react";
 import { useAllExternalPosts } from "@/hooks/useCriaPost";
 import { toISODateBR, hojeBR, parseDateOnly } from "@/lib/date-br";
+
+// Chave do localStorage pra lembrar se o painel está visível ou recolhido.
+const OPEN_KEY = "home_month_overview_open";
 
 // "Visão geral do mês": produção de posts do gestor (todos os clientes) agregada
 // por status do Cria Post, pra a social mídia se organizar. Só dados reais do
@@ -14,12 +17,17 @@ import { toISODateBR, hojeBR, parseDateOnly } from "@/lib/date-br";
 
 type StatusKey = "em_producao" | "pendente" | "ajuste_solicitado" | "aprovado" | "postado";
 
-const STATUS_META: { key: StatusKey; label: string; hex: string }[] = [
-  { key: "em_producao", label: "Em produção", hex: "#8b5cf6" },
-  { key: "pendente", label: "Aguardando cliente", hex: "#f59e0b" },
-  { key: "ajuste_solicitado", label: "Ajuste solicitado", hex: "#f97316" },
-  { key: "aprovado", label: "Aprovado", hex: "#22c55e" },
-  { key: "postado", label: "Postado", hex: "#94a3b8" },
+// Cores por status derivadas dos tokens do tema (src/index.css), pra o mesmo
+// status ter a mesma cor no kanban do Cria Post e aqui, e acompanhar o tema
+// quando ele mudar. Mapeamento espelha o STATUS do CriaPostBoard:
+// em produção=lilás, aguardando=amarelo, ajuste=laranja CRIA, aprovado=verde,
+// postado=muted (cinza). Usa hsl(var(--token)) em vez de hex fixo.
+const STATUS_META: { key: StatusKey; label: string; color: string }[] = [
+  { key: "em_producao", label: "Em produção", color: "hsl(var(--cria-lilas))" },
+  { key: "pendente", label: "Aguardando cliente", color: "hsl(var(--cria-amarelo))" },
+  { key: "ajuste_solicitado", label: "Ajuste solicitado", color: "hsl(var(--cria-laranja))" },
+  { key: "aprovado", label: "Aprovado", color: "hsl(var(--cria-verde))" },
+  { key: "postado", label: "Postado", color: "hsl(var(--muted-foreground))" },
 ];
 
 // "YYYY-MM" de um post: usa a data agendada (o mês pra onde o post foi planejado);
@@ -122,10 +130,21 @@ export function MonthOverviewPanel() {
   }, [posts]);
 
   const pieData = STATUS_META
-    .map((s) => ({ key: s.key, name: s.label, value: counts[s.key], hex: s.hex }))
+    .map((s) => ({ key: s.key, name: s.label, value: counts[s.key], color: s.color }))
     .filter((d) => d.value > 0);
 
   const pct = (n: number) => (total > 0 ? Math.round((n / total) * 100) : 0);
+
+  // Olhinho: recolhe o painel deixando só cabeçalho. Default aberto; persiste no
+  // localStorage (só "0" oculta). Falha silenciosa se o storage não existir.
+  const [open, setOpen] = useState(() => {
+    try { return localStorage.getItem(OPEN_KEY) !== "0"; } catch { return true; }
+  });
+  const toggleOpen = () => setOpen((v) => {
+    const next = !v;
+    try { localStorage.setItem(OPEN_KEY, next ? "1" : "0"); } catch { /* ignora */ }
+    return next;
+  });
 
   return (
     <section className="rounded-3xl border border-border bg-card p-4 sm:p-5 mb-8">
@@ -136,18 +155,31 @@ export function MonthOverviewPanel() {
           <h2 className="text-sm font-display font-bold text-foreground truncate">Visão geral do mês</h2>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <button type="button" onClick={goOlder} disabled={idx >= months.length - 1}
-            className="grid h-8 w-8 place-items-center rounded-lg border border-border text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors" aria-label="Mês anterior">
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <span className="text-xs font-body font-bold text-foreground w-[120px] text-center tabular-nums">{monthLabel(month)}</span>
-          <button type="button" onClick={goNewer} disabled={idx <= 0}
-            className="grid h-8 w-8 place-items-center rounded-lg border border-border text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors" aria-label="Próximo mês">
-            <ChevronRight className="h-4 w-4" />
+          {/* Seletor de mês só aparece quando o painel está expandido */}
+          {open && (
+            <>
+              <button type="button" onClick={goOlder} disabled={idx >= months.length - 1}
+                className="grid h-8 w-8 place-items-center rounded-lg border border-border text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors" aria-label="Mês anterior">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="text-xs font-body font-bold text-foreground w-[120px] text-center tabular-nums">{monthLabel(month)}</span>
+              <button type="button" onClick={goNewer} disabled={idx <= 0}
+                className="grid h-8 w-8 place-items-center rounded-lg border border-border text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors" aria-label="Próximo mês">
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </>
+          )}
+          {/* Olhinho: oculta/mostra o conteúdo do painel */}
+          <button type="button" onClick={toggleOpen}
+            className="grid h-8 w-8 place-items-center rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors"
+            aria-label={open ? "Ocultar visão geral" : "Mostrar visão geral"} aria-pressed={!open}>
+            {open ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
           </button>
         </div>
       </div>
 
+      {/* Conteúdo do painel: some quando recolhido pelo olhinho */}
+      {open && (<>
       {isLoading ? (
         <div className="h-48 rounded-2xl bg-muted animate-pulse" />
       ) : total === 0 ? (
@@ -163,7 +195,7 @@ export function MonthOverviewPanel() {
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
                   <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={62} outerRadius={92} paddingAngle={pieData.length > 1 ? 2 : 0} stroke="none">
-                    {pieData.map((entry) => <Cell key={entry.key} fill={entry.hex} />)}
+                    {pieData.map((entry) => <Cell key={entry.key} fill={entry.color} />)}
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
@@ -179,7 +211,7 @@ export function MonthOverviewPanel() {
                 const n = counts[s.key];
                 return (
                   <div key={s.key} className="flex items-center gap-2.5">
-                    <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: s.hex }} />
+                    <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: s.color }} />
                     <span className="text-[13px] font-body text-foreground flex-1 min-w-0 truncate">{s.label}</span>
                     <span className="text-[13px] font-body font-bold text-foreground tabular-nums">{n}</span>
                     <span className="text-[11px] font-body text-muted-foreground tabular-nums w-9 text-right">{pct(n)}%</span>
@@ -189,22 +221,26 @@ export function MonthOverviewPanel() {
             </div>
           </div>
 
-          {/* Linha de destaque: entregue x andamento + ajustes */}
+          {/* Linha de destaque: entregue x andamento + ajustes.
+              Mesmas cores da paleta de status: entregue=verde (aprovado+postado),
+              andamento=lilás (em produção), ajuste=laranja CRIA. Fundo/borda são
+              tints do token e o número fica em text-foreground pra legibilidade
+              nos dois temas. */}
           <div className="grid grid-cols-3 gap-2 mt-4">
-            <div className="rounded-xl bg-green-50 border border-green-200 px-3 py-2.5">
-              <p className="flex items-center gap-1 text-[10.5px] font-body font-bold text-green-700 uppercase tracking-wide"><CheckCircle2 className="h-3 w-3" /> Entregues</p>
-              <p className="text-lg font-display font-extrabold text-green-800 leading-none mt-1 tabular-nums">{entregues}</p>
-              <p className="text-[10.5px] font-body text-green-700/80 mt-0.5">aprovados + postados</p>
+            <div className="rounded-xl border px-3 py-2.5" style={{ background: "hsl(var(--cria-verde) / 0.1)", borderColor: "hsl(var(--cria-verde) / 0.25)" }}>
+              <p className="flex items-center gap-1 text-[10.5px] font-body font-bold uppercase tracking-wide" style={{ color: "hsl(var(--cria-verde))" }}><CheckCircle2 className="h-3 w-3" /> Entregues</p>
+              <p className="text-lg font-display font-extrabold text-foreground leading-none mt-1 tabular-nums">{entregues}</p>
+              <p className="text-[10.5px] font-body text-muted-foreground mt-0.5">aprovados + postados</p>
             </div>
-            <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5">
-              <p className="flex items-center gap-1 text-[10.5px] font-body font-bold text-amber-700 uppercase tracking-wide"><Clock className="h-3 w-3" /> Em andamento</p>
-              <p className="text-lg font-display font-extrabold text-amber-800 leading-none mt-1 tabular-nums">{andamento}</p>
-              <p className="text-[10.5px] font-body text-amber-700/80 mt-0.5">{counts.pendente} aguardando cliente</p>
+            <div className="rounded-xl border px-3 py-2.5" style={{ background: "hsl(var(--cria-lilas) / 0.12)", borderColor: "hsl(var(--cria-lilas) / 0.3)" }}>
+              <p className="flex items-center gap-1 text-[10.5px] font-body font-bold uppercase tracking-wide" style={{ color: "hsl(var(--cria-lilas))" }}><Clock className="h-3 w-3" /> Em andamento</p>
+              <p className="text-lg font-display font-extrabold text-foreground leading-none mt-1 tabular-nums">{andamento}</p>
+              <p className="text-[10.5px] font-body text-muted-foreground mt-0.5">{counts.pendente} aguardando cliente</p>
             </div>
-            <div className="rounded-xl bg-orange-50 border border-orange-200 px-3 py-2.5">
-              <p className="flex items-center gap-1 text-[10.5px] font-body font-bold text-orange-700 uppercase tracking-wide"><RotateCcw className="h-3 w-3" /> Ajuste</p>
-              <p className="text-lg font-display font-extrabold text-orange-800 leading-none mt-1 tabular-nums">{counts.ajuste_solicitado}</p>
-              <p className="text-[10.5px] font-body text-orange-700/80 mt-0.5">precisam de ajuste</p>
+            <div className="rounded-xl border px-3 py-2.5" style={{ background: "hsl(var(--cria-laranja) / 0.1)", borderColor: "hsl(var(--cria-laranja) / 0.25)" }}>
+              <p className="flex items-center gap-1 text-[10.5px] font-body font-bold uppercase tracking-wide" style={{ color: "hsl(var(--cria-laranja))" }}><RotateCcw className="h-3 w-3" /> Ajuste</p>
+              <p className="text-lg font-display font-extrabold text-foreground leading-none mt-1 tabular-nums">{counts.ajuste_solicitado}</p>
+              <p className="text-[10.5px] font-body text-muted-foreground mt-0.5">precisam de ajuste</p>
             </div>
           </div>
         </>
@@ -229,6 +265,7 @@ export function MonthOverviewPanel() {
           </div>
         </div>
       )}
+      </>)}
     </section>
   );
 }
