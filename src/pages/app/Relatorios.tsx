@@ -1,17 +1,21 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
+  AlertTriangle,
   ArrowRight,
   BarChart3,
-  Bookmark,
   CalendarDays,
+  CheckCircle2,
+  ExternalLink,
   Flame,
+  Instagram,
+  Layers,
   Lightbulb,
+  Link2,
   Loader2,
   Sparkles,
   TrendingDown,
   TrendingUp,
-  Trophy,
 } from "lucide-react";
 import {
   Bar,
@@ -33,6 +37,19 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePosts } from "@/hooks/usePosts";
 import { usePillars } from "@/hooks/usePillars";
 import { useIdeas } from "@/hooks/useIdeas";
+import {
+  useSocialConnection,
+  useMediaInsights,
+  connectInstagram,
+  type MediaInsight,
+} from "@/hooks/useSocialInsights";
+import {
+  computeCrossAnalysis,
+  crossHeadlines,
+  fmtNum,
+  formatMediaLabel,
+  type CrossItem,
+} from "@/components/insights/insightsUtils";
 import { cn } from "@/lib/utils";
 import { FORMAT_LABELS, FORMATS, PLATFORMS } from "@/lib/constants";
 import { BestTimeToPost } from "@/components/insights/BestTimeToPost";
@@ -49,21 +66,43 @@ const PERIOD_OPTIONS: { key: PeriodKey; label: string; days: number }[] = [
   { key: "year", label: "Este ano", days: 365 },
 ];
 
+// Paleta oficial do Cria (laranja é a --primary). "Sem pilar" usa um cinza neutro.
+const CRIA_PALETTE = ["#EA4918", "#0061EE", "#01A652", "#FF77B9", "#FFCF03", "#4B3FA8"];
+const NEUTRAL = "#94A3B8";
+
 const FORMAT_COLORS: Record<string, string> = {
-  reels: "#FF6B6B",
-  carrossel: "#EA4918",
-  foto: "#FFBE0B",
-  story: "#FF69B4",
-  video: "#4DABF7",
-  shorts: "#20B2AA",
-  live: "#22C55E",
+  reels: "#EA4918", // laranja (primary)
+  carrossel: "#0061EE", // azul
+  foto: "#01A652", // verde
+  story: "#FF77B9", // rosa
+  video: "#4B3FA8", // roxo
+  shorts: "#FFCF03", // amarelo
+  live: "#0061EE", // azul
+};
+
+// Rótulos do formatMediaLabel (plural) -> cor Cria, pros gráficos de performance do IG.
+const MEDIA_LABEL_COLORS: Record<string, string> = {
+  Reels: "#EA4918",
+  Carrosséis: "#0061EE",
+  Fotos: "#01A652",
+  Stories: "#FF77B9",
+  Vídeos: "#4B3FA8",
+  Outros: NEUTRAL,
 };
 
 const PLATFORM_COLORS: Record<string, string> = {
-  instagram: "#E1306C",
-  tiktok: "#000000",
-  youtube: "#FF0000",
+  instagram: "#EA4918",
+  tiktok: "#4B3FA8",
+  youtube: "#0061EE",
 };
+
+// Lê uma métrica numérica do jsonb de uma mídia do IG.
+const mVal = (mi: MediaInsight, k: string) => Number(mi.metrics?.[k] ?? 0);
+// Interações totais: usa total_interactions quando vier, senão soma os componentes.
+const mInteractions = (mi: MediaInsight) =>
+  mVal(mi, "total_interactions") ||
+  mVal(mi, "likes") + mVal(mi, "comments") + mVal(mi, "saved") + mVal(mi, "saves") + mVal(mi, "shares");
+const mSaved = (mi: MediaInsight) => mVal(mi, "saved") || mVal(mi, "saves");
 
 const PLATFORM_LABELS: Record<string, string> = {
   instagram: "Instagram",
@@ -123,6 +162,8 @@ const Relatorios = () => {
   const { posts, isLoading: postsLoading } = usePosts();
   const { pillars } = usePillars();
   const { ideas } = useIdeas();
+  const { data: conn, isLoading: connLoading } = useSocialConnection();
+  const { data: media = [] } = useMediaInsights();
   const navigate = useNavigate();
 
   const [period, setPeriod] = useState<PeriodKey>("30");
@@ -299,123 +340,163 @@ const Relatorios = () => {
     return { current, longest };
   }, [posts, now]);
 
-  // ── DESEMPENHO: lê as métricas reais já gravadas em posts.result_* ──
-  // Só posts publicados que tenham pelo menos result_views preenchido.
-  const performancePosts = useMemo(
-    () => periodPosts.filter((p) => p.status === "publicado" && p.result_views != null),
-    [periodPosts]
+  // ── DESEMPENHO: lê os dados REAIS do Instagram (useMediaInsights) ──
+  // Nada de preencher à mão: alcance/interações vêm direto da API da Meta.
+  const igConnected = !!conn;
+
+  // Índice pilar_id -> {name,color} pra cruzar o vínculo IG->CRIA.
+  const pillarById = useMemo(() => {
+    const map = new Map<string, { name: string; color: string }>();
+    pillars.forEach((p) => map.set(p.id, { name: p.name, color: p.color ?? NEUTRAL }));
+    return map;
+  }, [pillars]);
+  const pillarColorByName = useMemo(() => {
+    const map = new Map<string, string>();
+    pillars.forEach((p) => map.set(p.name, p.color ?? NEUTRAL));
+    return map;
+  }, [pillars]);
+
+  // Mídia do IG dentro do período selecionado (posted_at é o carimbo real da Meta).
+  const periodMedia = useMemo(
+    () => media.filter((mi) => mi.posted_at && new Date(mi.posted_at) >= periodStart),
+    [media, periodStart]
   );
-  const prevPerformancePosts = useMemo(
-    () => previousPosts.filter((p) => p.status === "publicado" && p.result_views != null),
-    [previousPosts]
+  const prevMedia = useMemo(
+    () =>
+      media.filter(
+        (mi) =>
+          mi.posted_at &&
+          new Date(mi.posted_at) >= previousStart &&
+          new Date(mi.posted_at) < periodStart
+      ),
+    [media, previousStart, periodStart]
   );
 
-  const avgViews = useMemo(
-    () => mean(performancePosts.map((p) => p.result_views ?? 0)),
-    [performancePosts]
+  // Shape CrossItem pros utils de cruzamento (mesma conta usada na tela de Insights).
+  const crossItems = useMemo<CrossItem[]>(
+    () =>
+      periodMedia.map((mi) => ({
+        media_type: mi.media_type,
+        posted_at: mi.posted_at,
+        reach: mVal(mi, "reach"),
+        interactions: mInteractions(mi),
+        pillar: mi.posts?.pillar_id ? pillarById.get(mi.posts.pillar_id)?.name ?? null : null,
+        hook: mi.posts?.hook ?? null,
+      })),
+    [periodMedia, pillarById]
   );
-  const prevAvgViews = useMemo(
-    () => mean(prevPerformancePosts.map((p) => p.result_views ?? 0)),
-    [prevPerformancePosts]
+  const cross = useMemo(() => computeCrossAnalysis(crossItems), [crossItems]);
+
+  // Só faz leitura de desempenho quando conectado e com alcance/interações reais.
+  const hasPerformance = igConnected && cross.hasData;
+  // Há posts do IG vinculados a posts do CRIA com pilar? (habilita a leitura por pilar)
+  const hasLinkedPillar = crossItems.some((i) => i.pillar);
+
+  const avgReach = cross.overallAvgReach;
+  const prevAvgReach = useMemo(() => {
+    const withReach = prevMedia.filter((mi) => mVal(mi, "reach") > 0);
+    return mean(withReach.map((mi) => mVal(mi, "reach")));
+  }, [prevMedia]);
+  const avgReachDelta =
+    prevAvgReach === 0 ? (avgReach > 0 ? 100 : 0) : ((avgReach - prevAvgReach) / prevAvgReach) * 100;
+
+  const avgEngagement = useMemo(() => {
+    const withReach = periodMedia.filter((mi) => mVal(mi, "reach") > 0);
+    if (withReach.length === 0) return 0;
+    return mean(withReach.map((mi) => (mInteractions(mi) / mVal(mi, "reach")) * 100));
+  }, [periodMedia]);
+
+  // Alcance médio por formato (rótulo plural do IG) com a cor Cria.
+  const formatPerf = useMemo(
+    () =>
+      cross.byFormat.map((g) => ({
+        label: g.label,
+        avg: g.avgReach,
+        count: g.count,
+        color: MEDIA_LABEL_COLORS[g.label] ?? NEUTRAL,
+      })),
+    [cross]
   );
-  const avgViewsDelta =
-    prevAvgViews === 0 ? (avgViews > 0 ? 100 : 0) : ((avgViews - prevAvgViews) / prevAvgViews) * 100;
-
-  // Média de views por formato (desc), topo = "Formato que mais rende"
-  const byFormat = useMemo(() => {
-    const groups = new Map<string, number[]>();
-    performancePosts.forEach((p) => {
-      const arr = groups.get(p.format) ?? [];
-      arr.push(p.result_views ?? 0);
-      groups.set(p.format, arr);
-    });
-    return Array.from(groups.entries())
-      .map(([format, vals]) => ({
-        format,
-        label: FORMAT_LABELS[format] || format,
-        color: FORMAT_COLORS[format] ?? "#94A3B8",
-        avg: mean(vals),
-        count: vals.length,
-      }))
-      .sort((a, b) => b.avg - a.avg);
-  }, [performancePosts]);
-
   const topFormatDelta =
-    byFormat.length > 0 && avgViews > 0 ? ((byFormat[0].avg - avgViews) / avgViews) * 100 : 0;
+    formatPerf.length > 0 && avgReach > 0 ? ((formatPerf[0].avg - avgReach) / avgReach) * 100 : 0;
 
-  // Média de saves por pilar (desc), topo = "Pilar que gera saves"
-  const byPillar = useMemo(() => {
-    const groups = new Map<string, number[]>();
-    performancePosts.forEach((p) => {
-      const key = p.pillar_id ?? "sem-pilar";
-      const arr = groups.get(key) ?? [];
-      arr.push(p.result_saves ?? 0);
-      groups.set(key, arr);
-    });
-    return Array.from(groups.entries())
-      .map(([id, vals]) => {
-        const pillar = pillars.find((pl) => pl.id === id);
-        return {
-          id,
-          name: pillar?.name ?? "Sem pilar",
-          color: pillar?.color ?? "#94A3B8",
-          avg: mean(vals),
-          count: vals.length,
-        };
-      })
-      .sort((a, b) => b.avg - a.avg);
-  }, [performancePosts, pillars]);
+  // Alcance médio por pilar (só posts vinculados) com a cor do pilar no banco.
+  const pillarPerf = useMemo(
+    () =>
+      cross.byPillar.map((g, i) => ({
+        label: g.label,
+        avg: g.avgReach,
+        count: g.count,
+        color: pillarColorByName.get(g.label) ?? CRIA_PALETTE[i % CRIA_PALETTE.length],
+      })),
+    [cross, pillarColorByName]
+  );
 
-  // Média de views por dia da semana (desc), topo = "Melhor dia (por resultado)"
-  const byWeekday = useMemo(() => {
-    const groups = new Map<number, number[]>();
-    performancePosts.forEach((p) => {
-      if (!p.published_at) return;
-      const day = new Date(p.published_at).getDay();
-      const arr = groups.get(day) ?? [];
-      arr.push(p.result_views ?? 0);
-      groups.set(day, arr);
-    });
-    return Array.from(groups.entries())
-      .map(([day, vals]) => ({ day, label: WEEKDAY_LABELS[day], avg: mean(vals), count: vals.length }))
-      .sort((a, b) => b.avg - a.avg);
-  }, [performancePosts]);
+  const topWeekday = cross.byWeekday[0] ?? null;
 
-  // eng% por post = (saves + comments) / (reach ?? views)
-  const postEngagement = (p: (typeof performancePosts)[number]) => {
-    const views = p.result_views ?? 0;
-    const denom = p.result_reach ?? views;
-    if (denom <= 0) return 0;
-    return (((p.result_saves ?? 0) + (p.result_comments ?? 0)) / denom) * 100;
-  };
-
-  // Top 3 por views
+  // Top 3 mídias por alcance (desempate por salvos), clicáveis abrindo o permalink.
   const topPosts = useMemo(() => {
-    return [...performancePosts]
-      .sort((a, b) => (b.result_views ?? 0) - (a.result_views ?? 0))
+    return [...periodMedia]
+      .sort((a, b) => mVal(b, "reach") - mVal(a, "reach") || mSaved(b) - mSaved(a))
       .slice(0, 3)
-      .map((p) => {
-        const pillar = pillars.find((pl) => pl.id === p.pillar_id);
+      .map((mi) => {
+        const pillar = mi.posts?.pillar_id ? pillarById.get(mi.posts.pillar_id) : null;
+        const formatLabel = formatMediaLabel(mi.media_type);
+        const reach = mVal(mi, "reach");
         return {
-          id: p.id,
-          title: p.title,
-          formatLabel: FORMAT_LABELS[p.format] || p.format,
-          formatColor: FORMAT_COLORS[p.format] ?? "#94A3B8",
+          id: mi.id,
+          title: mi.posts?.title || formatLabel,
+          permalink: mi.permalink,
+          formatLabel,
+          formatColor: MEDIA_LABEL_COLORS[formatLabel] ?? NEUTRAL,
           pillarName: pillar?.name ?? null,
-          pillarColor: pillar?.color ?? "#94A3B8",
-          views: p.result_views ?? 0,
-          saves: p.result_saves ?? 0,
-          eng: postEngagement(p),
+          pillarColor: pillar?.color ?? NEUTRAL,
+          reach,
+          saved: mSaved(mi),
+          eng: reach > 0 ? (mInteractions(mi) / reach) * 100 : 0,
         };
       });
-  }, [performancePosts, pillars]);
+  }, [periodMedia, pillarById]);
 
-  const avgEngagement = useMemo(
-    () => mean(performancePosts.map(postEngagement)),
-    [performancePosts]
-  );
+  // Constância: posts publicados por semana (dados do CRIA) vs meta/ritmo.
+  const weeksInPeriod = Math.max(1, Math.round(periodCfg.days / 7));
+  const postsPerWeek = publishedCount / weeksInPeriod;
+  const paceAbove = postsPerWeek >= weeklyGoal;
 
-  const hasPerformance = performancePosts.length >= 3;
+  // Leitura "O que tá indo bem": frases de direção dos cruzamentos.
+  const goodPoints = useMemo(() => (hasPerformance ? crossHeadlines(cross) : []), [hasPerformance, cross]);
+
+  // Leitura "O que dá pra melhorar": pilar sem post, formato fraco, constância baixa.
+  const improvePoints = useMemo(() => {
+    if (!hasPerformance) return [] as string[];
+    const out: string[] = [];
+    // Pilar sem post publicado no período (só quando há vínculos pra afirmar isso).
+    if (hasLinkedPillar) {
+      const active = new Set(crossItems.filter((i) => i.pillar).map((i) => i.pillar));
+      const missing = pillars.filter((p) => !active.has(p.name));
+      if (missing.length > 0) {
+        const names = missing.slice(0, 2).map((p) => `"${p.name}"`).join(" e ");
+        out.push(`Você não publicou nada de ${names} no período. Vale equilibrar os pilares.`);
+      }
+    }
+    // Formato com alcance abaixo da média geral.
+    if (cross.byFormat.length > 1 && avgReach > 0) {
+      const weak = cross.byFormat[cross.byFormat.length - 1];
+      if (weak.avgReach > 0 && weak.avgReach < avgReach * 0.75) {
+        out.push(
+          `${weak.label} vêm rendendo abaixo da média (${fmtNum(weak.avgReach)} de alcance). Repense o tema ou teste outro formato.`
+        );
+      }
+    }
+    // Constância abaixo do ritmo.
+    if (!paceAbove) {
+      const perWeek = postsPerWeek.toFixed(1).replace(".0", "").replace(".", ",");
+      out.push(
+        `Você publicou ${perWeek}/semana, abaixo do seu ritmo de ${weeklyGoal}. Consistência puxa alcance.`
+      );
+    }
+    return out;
+  }, [hasPerformance, hasLinkedPillar, crossItems, pillars, cross, avgReach, paceAbove, postsPerWeek, weeklyGoal]);
 
   const handleGenerateInsight = async () => {
     if (insightLoading) return;
@@ -437,21 +518,23 @@ const Relatorios = () => {
         streak_semanas: streak.current,
         streak_maior: streak.longest,
         nicho: activeProfile?.niche,
+        constancia_posts_por_semana: Number(postsPerWeek.toFixed(1)),
         desempenho: hasPerformance
           ? {
-              posts_com_resultados: performancePosts.length,
-              views_medios: Math.round(avgViews),
-              views_medios_delta_pct: Math.round(avgViewsDelta),
-              formato_que_mais_rende: byFormat[0]
-                ? { formato: byFormat[0].label, views_medios: Math.round(byFormat[0].avg) }
-                : null,
-              pilar_que_gera_saves: byPillar[0]
-                ? { pilar: byPillar[0].name, saves_medios: Math.round(byPillar[0].avg) }
-                : null,
-              melhor_dia: byWeekday[0]
-                ? { dia: byWeekday[0].label, views_medios: Math.round(byWeekday[0].avg) }
-                : null,
+              posts_analisados: periodMedia.length,
+              alcance_medio: Math.round(avgReach),
+              alcance_medio_delta_pct: Math.round(avgReachDelta),
               engajamento_medio_pct: Number(avgEngagement.toFixed(1)),
+              formato_que_mais_rende: formatPerf[0]
+                ? { formato: formatPerf[0].label, alcance_medio: Math.round(formatPerf[0].avg) }
+                : null,
+              pilar_que_mais_alcanca: pillarPerf[0]
+                ? { pilar: pillarPerf[0].label, alcance_medio: Math.round(pillarPerf[0].avg) }
+                : null,
+              melhor_dia: topWeekday
+                ? { dia: topWeekday.label, alcance_medio: Math.round(topWeekday.avgReach) }
+                : null,
+              pontos_de_melhoria: improvePoints,
             }
           : null,
       };
@@ -461,7 +544,7 @@ const Relatorios = () => {
         operation: "cria-chat",
         data: {
           mensagem:
-            "Você é a Cria, analista de conteúdo. Olhe os dados abaixo e me dê 2-3 insights curtos e acionáveis. Comente não só a consistência e a distribuição, mas também o que está PERFORMANDO: use o bloco 'desempenho' (formato que mais rende, pilar que gera saves, melhor dia, engajamento médio e a variação de views médios vs período anterior) pra recomendar o que eu deveria priorizar e testar essa semana. Se 'desempenho' vier null, foque em consistência e peça pra eu preencher os resultados dos posts. Linguagem natural, em português brasileiro, sem markdown.",
+            "Você é a Cria, analista de conteúdo. Olhe os dados abaixo e me dê 2-3 insights curtos e acionáveis. Comente não só a consistência e a distribuição, mas também o que está PERFORMANDO: use o bloco 'desempenho' (dados reais do Instagram: formato que mais rende, pilar que mais alcança, melhor dia, engajamento médio, a variação de alcance médio vs período anterior e os pontos_de_melhoria) pra recomendar o que eu deveria priorizar e testar essa semana. Se 'desempenho' vier null, foque em consistência e me sugira conectar o Instagram pra ver o desempenho real. Linguagem natural, em português brasileiro, sem markdown.",
           nicho: activeProfile?.niche,
           analise: summary,
         },
@@ -602,7 +685,7 @@ const Relatorios = () => {
           />
         </div>
 
-        {/* ─── DESEMPENHO (lê posts.result_*) ─────────── */}
+        {/* ─── DESEMPENHO (lê os dados reais do Instagram) ─────────── */}
         <section data-tour="rel-desempenho" className="mb-8">
           {/* Header da seção */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
@@ -611,156 +694,318 @@ const Relatorios = () => {
                 Desempenho
               </h2>
               <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-body font-bold uppercase tracking-wider">
-                Novo
+                Instagram
               </span>
               {hasPerformance && (
                 <span className="text-xs font-body text-muted-foreground">
-                  {performancePosts.length} posts com resultados
+                  {periodMedia.length} posts no período
                 </span>
               )}
             </div>
             {hasPerformance && (
               <p className="text-xs font-body text-muted-foreground">
-                views médios: <span className="font-semibold text-foreground">{formatCompact(avgViews)}</span>
+                alcance médio: <span className="font-semibold text-foreground">{fmtNum(avgReach)}</span>
                 {" · "}
                 <span
                   className={cn(
                     "font-semibold",
-                    avgViewsDelta > 0
+                    avgReachDelta > 0
                       ? "text-emerald-600 dark:text-emerald-400"
-                      : avgViewsDelta < 0
+                      : avgReachDelta < 0
                         ? "text-red-600 dark:text-red-400"
                         : "text-muted-foreground"
                   )}
                 >
-                  {formatPercent(avgViewsDelta)}
+                  {formatPercent(avgReachDelta)}
                 </span>{" "}
-                vs período anterior
+                vs período anterior · eng.{" "}
+                <span className="font-semibold text-foreground">{formatEngagement(avgEngagement)}</span>
               </p>
             )}
           </div>
 
-          {!hasPerformance ? (
-            /* Estado vazio, menos de 3 posts com result_views */
+          {connLoading ? (
+            <div className="rounded-2xl bg-card border border-border shadow-warm-sm p-8 text-center">
+              <Loader2 className="h-5 w-5 text-muted-foreground animate-spin mx-auto" />
+            </div>
+          ) : !igConnected ? (
+            /* Não conectado: convite discreto pra conectar o IG (+ histórico manual). */
+            <div className="rounded-2xl bg-card border border-border shadow-warm-sm p-6 sm:p-8">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#515BD4] grid place-items-center shrink-0">
+                  <Instagram className="h-6 w-6 text-white" strokeWidth={1.75} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-base font-display font-semibold text-foreground">
+                    Conecte seu Instagram pra ver seu desempenho real
+                  </h3>
+                  <p className="text-sm font-body text-muted-foreground leading-relaxed mt-0.5">
+                    Alcance, engajamento, melhores posts e o que dá pra melhorar, direto da sua conta,
+                    sem precisar preencher nada à mão.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => connectInstagram()}
+                  className="gap-2 shrink-0 bg-gradient-to-r from-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90 w-full sm:w-auto"
+                >
+                  <Instagram className="h-4 w-4" /> Conectar Instagram
+                </Button>
+              </div>
+              <div className="mt-4 pt-4 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => navigate("/app/historico")}
+                  className="text-xs font-body text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                >
+                  Prefere preencher os resultados à mão? Ir pro Histórico
+                  <ArrowRight className="h-3 w-3" />
+                </button>
+              </div>
+            </div>
+          ) : !hasPerformance ? (
+            /* Conectado, mas sem mídia/alcance ainda (conta nova ou sem sync). */
             <div className="rounded-2xl bg-card border border-border shadow-warm-sm p-8 text-center">
               <div className="w-12 h-12 rounded-2xl bg-muted/60 flex items-center justify-center mx-auto mb-4">
-                <Trophy className="h-6 w-6 text-foreground/70" strokeWidth={1.75} />
+                <BarChart3 className="h-6 w-6 text-foreground/70" strokeWidth={1.75} />
               </div>
               <h3 className="text-base font-display font-semibold text-foreground mb-1.5">
-                Desbloqueie o Desempenho
+                {conn?.username ? `@${conn.username} conectado` : "Instagram conectado"}
               </h3>
               <p className="text-sm font-body text-muted-foreground leading-relaxed max-w-md mx-auto mb-5">
-                Preencha os resultados dos seus posts publicados (views, salvos, alcance…) pra
-                desbloquear o Desempenho e ver o que mais rende.
+                Seu desempenho aparece aqui conforme acompanhamos sua conta. Assim que houver posts com
+                alcance no período, mostramos o que mais rende.
               </p>
-              <Button variant="secondary" size="sm" onClick={() => navigate("/app/historico")}>
-                <ArrowRight className="h-3.5 w-3.5 mr-1.5" /> Ir pro Histórico
+              <Button variant="secondary" size="sm" onClick={() => navigate("/app/insights")}>
+                <ArrowRight className="h-3.5 w-3.5 mr-1.5" /> Ver Insights
               </Button>
             </div>
           ) : (
             <>
-              {/* Winner cards */}
+              {/* Winner cards (formato/pilar/dia campeão, dados reais do IG) */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mb-4">
                 <WinnerCard
                   icon={<Flame className="h-4 w-4 text-white" strokeWidth={1.75} />}
-                  iconBg="bg-gradient-to-br from-rose-500 to-red-500"
+                  iconBg="bg-gradient-to-br from-primary to-rose-500"
                   label="Formato que mais rende"
-                  value={byFormat[0]?.label ?? "-"}
-                  sub={`${formatCompact(byFormat[0]?.avg ?? 0)} views médios`}
+                  value={formatPerf[0]?.label ?? "-"}
+                  valueColor={formatPerf[0]?.color}
+                  sub={`${fmtNum(formatPerf[0]?.avg ?? 0)} de alcance médio`}
                   delta={topFormatDelta}
                   deltaLabel="vs média geral"
                 />
                 <WinnerCard
-                  icon={<Bookmark className="h-4 w-4 text-white" strokeWidth={1.75} />}
-                  iconBg="bg-gradient-to-br from-violet-500 to-pink-400"
-                  label="Pilar que gera saves"
-                  value={byPillar[0]?.name ?? "-"}
-                  valueColor={byPillar[0]?.color}
-                  sub={`${formatCompact(byPillar[0]?.avg ?? 0)} salvos médios`}
+                  icon={<Layers className="h-4 w-4 text-white" strokeWidth={1.75} />}
+                  iconBg="bg-gradient-to-br from-[#4B3FA8] to-[#0061EE]"
+                  label={hasLinkedPillar ? "Pilar que mais alcança" : "Pilar (vincule pra ver)"}
+                  value={hasLinkedPillar ? pillarPerf[0]?.label ?? "-" : "—"}
+                  valueColor={hasLinkedPillar ? pillarPerf[0]?.color : undefined}
+                  sub={
+                    hasLinkedPillar
+                      ? `${fmtNum(pillarPerf[0]?.avg ?? 0)} de alcance médio`
+                      : "Vincule seus posts do IG"
+                  }
                 />
                 <WinnerCard
                   icon={<CalendarDays className="h-4 w-4 text-white" strokeWidth={1.75} />}
-                  iconBg="bg-gradient-to-br from-sky-500 to-blue-600"
-                  label="Melhor dia (por resultado)"
-                  value={byWeekday[0]?.label ?? "-"}
-                  sub={`${formatCompact(byWeekday[0]?.avg ?? 0)} views médios`}
+                  iconBg="bg-gradient-to-br from-[#0061EE] to-[#01A652]"
+                  label="Melhor dia pra publicar"
+                  value={topWeekday?.label ?? "-"}
+                  sub={`${fmtNum(topWeekday?.avgReach ?? 0)} de alcance médio`}
                 />
               </div>
 
-              {/* Views por formato + Top posts */}
+              {/* Leitura: o que tá indo bem x o que dá pra melhorar */}
+              {(goodPoints.length > 0 || improvePoints.length > 0) && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                  {goodPoints.length > 0 && (
+                    <div className="rounded-2xl border border-emerald-200/60 bg-emerald-50 p-4 dark:border-emerald-500/20 dark:bg-emerald-500/10">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" strokeWidth={2} />
+                        <p className="text-sm font-display font-bold text-foreground">O que tá indo bem</p>
+                      </div>
+                      <ul className="space-y-2 text-[13px] font-body text-foreground/90">
+                        {goodPoints.map((h, i) => (
+                          <li key={i} className="flex gap-2">
+                            <TrendingUp className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5 dark:text-emerald-400" />
+                            <span>{h}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {improvePoints.length > 0 && (
+                    <div className="rounded-2xl border border-amber-200/60 bg-amber-50 p-4 dark:border-amber-500/20 dark:bg-amber-500/10">
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" strokeWidth={2} />
+                        <p className="text-sm font-display font-bold text-foreground">O que dá pra melhorar</p>
+                      </div>
+                      <ul className="space-y-2 text-[13px] font-body text-foreground/90">
+                        {improvePoints.map((h, i) => (
+                          <li key={i} className="flex gap-2">
+                            <ArrowRight className="h-4 w-4 text-amber-600 shrink-0 mt-0.5 dark:text-amber-400" />
+                            <span>{h}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Alcance médio por formato + Top posts */}
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.25fr] gap-4">
-                <ChartCard title="Média de views por formato" subtitle="O que mais entrega resultado">
+                <ChartCard title="Alcance médio por formato" subtitle="Onde está o resultado, não só o volume">
                   <ResponsiveContainer width="100%" height={260}>
-                    <BarChart data={byFormat} layout="vertical" margin={{ top: 8, right: 16, left: 16, bottom: 0 }}>
-                      <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
+                    <BarChart data={formatPerf} layout="vertical" margin={{ top: 8, right: 16, left: 16, bottom: 0 }}>
+                      <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} tickFormatter={(v: number) => fmtNum(v)} />
                       <YAxis dataKey="label" type="category" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} width={70} />
                       <Tooltip
                         cursor={{ fill: "hsl(var(--muted) / 0.4)" }}
                         contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
-                        formatter={(value: number) => [`${Math.round(value)} views médios`, "Média"]}
+                        formatter={(value: number) => [`${fmtNum(value)} de alcance médio`, "Média"]}
                       />
                       <Bar dataKey="avg" radius={[0, 6, 6, 0]}>
-                        {byFormat.map((row) => (
-                          <Cell key={row.format} fill={row.color} />
+                        {formatPerf.map((row) => (
+                          <Cell key={row.label} fill={row.color} />
                         ))}
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartCard>
 
-                <ChartCard title="Seus posts que mais performaram" subtitle="Top 3 por visualizações">
+                <ChartCard title="Seus posts que mais performaram" subtitle="Top 3 por alcance · toque pra abrir no Instagram">
                   <div className="space-y-2">
-                    {topPosts.map((p, i) => (
-                      <div
-                        key={p.id}
-                        className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 p-3"
-                      >
-                        <span className="shrink-0 w-7 h-7 rounded-lg bg-card border border-border flex items-center justify-center text-sm font-display font-extrabold text-foreground/70">
-                          {i + 1}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-body font-semibold text-foreground truncate">
-                            {p.title || "Sem título"}
-                          </p>
-                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                            <span
-                              className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-body font-medium text-white"
-                              style={{ backgroundColor: p.formatColor }}
-                            >
-                              {p.formatLabel}
-                            </span>
-                            {p.pillarName && (
+                    {topPosts.map((p, i) => {
+                      const Row = p.permalink ? "a" : "div";
+                      return (
+                        <Row
+                          key={p.id}
+                          {...(p.permalink
+                            ? { href: p.permalink, target: "_blank", rel: "noreferrer" }
+                            : {})}
+                          className={cn(
+                            "flex items-center gap-3 rounded-xl border border-border bg-muted/30 p-3",
+                            p.permalink && "hover:bg-muted/60 transition-colors cursor-pointer"
+                          )}
+                        >
+                          <span className="shrink-0 w-7 h-7 rounded-lg bg-card border border-border flex items-center justify-center text-sm font-display font-extrabold text-foreground/70">
+                            {i + 1}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-body font-semibold text-foreground truncate flex items-center gap-1">
+                              {p.title || "Sem título"}
+                              {p.permalink && <ExternalLink className="h-3 w-3 text-muted-foreground shrink-0" />}
+                            </p>
+                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                               <span
                                 className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-body font-medium text-white"
-                                style={{ backgroundColor: p.pillarColor }}
+                                style={{ backgroundColor: p.formatColor }}
                               >
-                                {p.pillarName}
+                                {p.formatLabel}
                               </span>
-                            )}
+                              {p.pillarName && (
+                                <span
+                                  className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-body font-medium text-white"
+                                  style={{ backgroundColor: p.pillarColor }}
+                                >
+                                  {p.pillarName}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        <div className="shrink-0 flex items-center gap-3 text-right">
-                          <div>
-                            <p className="text-sm font-display font-bold text-foreground leading-none">{formatCompact(p.views)}</p>
-                            <p className="text-[9px] uppercase tracking-wider font-body text-muted-foreground mt-0.5">views</p>
+                          <div className="shrink-0 flex items-center gap-3 text-right">
+                            <div>
+                              <p className="text-sm font-display font-bold text-foreground leading-none">{fmtNum(p.reach)}</p>
+                              <p className="text-[9px] uppercase tracking-wider font-body text-muted-foreground mt-0.5">alcance</p>
+                            </div>
+                            <div>
+                              <p className="text-sm font-display font-bold text-foreground leading-none">{fmtNum(p.saved)}</p>
+                              <p className="text-[9px] uppercase tracking-wider font-body text-muted-foreground mt-0.5">salvos</p>
+                            </div>
+                            <div>
+                              <p className="text-sm font-display font-bold text-primary leading-none">{formatEngagement(p.eng)}</p>
+                              <p className="text-[9px] uppercase tracking-wider font-body text-muted-foreground mt-0.5">eng.</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-sm font-display font-bold text-foreground leading-none">{formatCompact(p.saves)}</p>
-                            <p className="text-[9px] uppercase tracking-wider font-body text-muted-foreground mt-0.5">salvos</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-display font-bold text-primary leading-none">{formatEngagement(p.eng)}</p>
-                            <p className="text-[9px] uppercase tracking-wider font-body text-muted-foreground mt-0.5">eng.</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                        </Row>
+                      );
+                    })}
                   </div>
                 </ChartCard>
               </div>
+
+              {/* Alcance médio por pilar (só posts vinculados) OU aviso pra vincular */}
+              {hasLinkedPillar ? (
+                <ChartCard title="Alcance médio por pilar" subtitle="Qual tema rende mais (posts vinculados ao CRIA)" className="mt-4">
+                  <ResponsiveContainer width="100%" height={Math.max(140, pillarPerf.length * 46)}>
+                    <BarChart data={pillarPerf} layout="vertical" margin={{ top: 8, right: 16, left: 16, bottom: 0 }}>
+                      <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} tickFormatter={(v: number) => fmtNum(v)} />
+                      <YAxis dataKey="label" type="category" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} width={90} />
+                      <Tooltip
+                        cursor={{ fill: "hsl(var(--muted) / 0.4)" }}
+                        contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
+                        formatter={(value: number) => [`${fmtNum(value)} de alcance médio`, "Média"]}
+                      />
+                      <Bar dataKey="avg" radius={[0, 6, 6, 0]}>
+                        {pillarPerf.map((row) => (
+                          <Cell key={row.label} fill={row.color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartCard>
+              ) : (
+                <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 rounded-2xl border border-dashed border-border bg-muted/20 p-4">
+                  <Link2 className="h-5 w-5 text-muted-foreground shrink-0" />
+                  <p className="flex-1 text-[13px] font-body text-muted-foreground">
+                    Vincule seus posts do Instagram aos do CRIA pra ver o alcance médio por pilar e o tema
+                    que mais rende.
+                  </p>
+                  <Button variant="secondary" size="sm" onClick={() => navigate("/app/insights")} className="shrink-0">
+                    Vincular nos Insights <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+                  </Button>
+                </div>
+              )}
             </>
           )}
         </section>
+
+        {/* Constância: leitura do ritmo vs meta semanal */}
+        {publishedCount > 0 && (
+          <div
+            className={cn(
+              "mb-4 flex items-start gap-3 rounded-2xl border p-4",
+              paceAbove
+                ? "border-emerald-200/60 bg-emerald-50 dark:border-emerald-500/20 dark:bg-emerald-500/10"
+                : "border-amber-200/60 bg-amber-50 dark:border-amber-500/20 dark:bg-amber-500/10"
+            )}
+          >
+            {paceAbove ? (
+              <TrendingUp className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5 dark:text-emerald-400" strokeWidth={2} />
+            ) : (
+              <TrendingDown className="h-5 w-5 text-amber-600 shrink-0 mt-0.5 dark:text-amber-400" strokeWidth={2} />
+            )}
+            <p className="text-[13px] font-body text-foreground/90 leading-snug">
+              Você publicou{" "}
+              <span className="font-semibold text-foreground">
+                {postsPerWeek.toFixed(1).replace(".0", "").replace(".", ",")}/semana
+              </span>{" "}
+              no período,{" "}
+              {paceAbove ? (
+                <>
+                  no seu ritmo ou acima da meta de {weeklyGoal} por semana. Constância mantida, segue firme.
+                </>
+              ) : (
+                <>
+                  abaixo do seu ritmo de {weeklyGoal} por semana. Consistência puxa alcance, vale ajustar o
+                  calendário.
+                </>
+              )}{" "}
+              Você bateu a meta em {weeksData.filter((w) => w.total >= weeklyGoal).length} de {weeksData.length}{" "}
+              {weeksData.length === 1 ? "semana" : "semanas"} ({consistency}%).
+            </p>
+          </div>
+        )}
 
         {/* Posts por semana */}
         <ChartCard title="Posts por semana" subtitle="Distribuição por pilar de conteúdo">
