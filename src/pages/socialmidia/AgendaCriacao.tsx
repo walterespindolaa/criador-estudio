@@ -613,7 +613,7 @@ export default function AgendaCriacao() {
       {/* "+" do dia: escolhe o TIPO (criação / tarefa / captação) antes de preencher. */}
       <AddAnyDialog open={!!addDay} day={addDay} clients={clients} teamNames={teamNames} initialKind={addKind}
         onClose={() => setAddDay(null)}
-        onCreation={(crm, name, team, note) => { if (addDay) addCreation.mutate({ day: addDay, crm_client_id: crm, client_name: name, team, note }); setAddDay(null); }}
+        onCreation={(crm, name, team, note, day) => { addCreation.mutate({ day, crm_client_id: crm, client_name: name, team, note }); setAddDay(null); }}
         onTask={(v) => { createTask.mutate(v, { onSuccess: () => toast.success("Tarefa criada.") }); setAddDay(null); }}
         onCapture={(v) => { addCapture.mutate(v); setAddDay(null); }} />
 
@@ -741,7 +741,7 @@ function AddCreationDialog({ open, day, initial, clients, teamNames, onClose, on
 function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTask, onCapture, initialKind = "criacao" }: {
   open: boolean; day: string | null; clients: Client[]; teamNames: string[]; onClose: () => void;
   initialKind?: "criacao" | "tarefa" | "captacao";
-  onCreation: (crm: string | null, name: string | null, team: string | null, note: string | null) => void;
+  onCreation: (crm: string | null, name: string | null, team: string | null, note: string | null, day: string) => void;
   onTask: (v: { title: string; description: string | null; crm_client_id: string | null; priority: CrmTaskPriority; status: CrmTaskStatus; due_date: string; due_time: string | null }) => void;
   onCapture: (v: { capture_date: string; capture_time?: string | null; location?: string | null; crm_client_id?: string | null; client_name?: string | null; team?: string | null; note?: string | null }) => void;
 }) {
@@ -754,22 +754,24 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
   const [prio, setPrio] = useState<CrmTaskPriority>("media");
   const [time, setTime] = useState("");
   const [loc, setLoc] = useState("");
+  const [date, setDate] = useState(""); // data do item (padrao o dia clicado, mas editavel)
   const [seeded, setSeeded] = useState("");
 
   if (open && day && seeded !== day) {
     setSeeded(day);
-    setKind(initialKind); setCrm(null); setName(""); setTeam(""); setNote(""); setTitle(""); setPrio("media"); setTime(""); setLoc("");
+    setKind(initialKind); setCrm(null); setName(""); setTeam(""); setNote(""); setTitle(""); setPrio("media"); setTime(""); setLoc(""); setDate(day);
   }
   if (!open && seeded) setSeeded("");
 
   const hasClient = !!crm || !!name.trim();
-  const valid = kind === "tarefa" ? !!title.trim() : hasClient;
+  const valid = (kind === "tarefa" ? !!title.trim() : hasClient) && !!date;
 
   const submit = () => {
-    if (!day) return;
-    if (kind === "criacao") onCreation(crm, name.trim() || null, team.trim() || null, note.trim() || null);
-    else if (kind === "tarefa") onTask({ title: title.trim(), description: note.trim() || null, crm_client_id: crm, priority: prio, status: "pendente", due_date: day, due_time: time || null });
-    else onCapture({ capture_date: day, capture_time: time || null, location: loc.trim() || null, crm_client_id: crm, client_name: name.trim() || null, team: team.trim() || null, note: note.trim() || null });
+    const d = date || day;
+    if (!d) return;
+    if (kind === "criacao") onCreation(crm, name.trim() || null, team.trim() || null, note.trim() || null, d);
+    else if (kind === "tarefa") onTask({ title: title.trim(), description: note.trim() || null, crm_client_id: crm, priority: prio, status: "pendente", due_date: d, due_time: time || null });
+    else onCapture({ capture_date: d, capture_time: time || null, location: loc.trim() || null, crm_client_id: crm, client_name: name.trim() || null, team: team.trim() || null, note: note.trim() || null });
   };
 
   const KINDS = [
@@ -800,6 +802,12 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
               <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="O que precisa ser feito" />
             </div>
           )}
+
+          {/* Data do item (padrao o dia clicado, mas da pra mudar aqui). */}
+          <div>
+            <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Data</p>
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          </div>
 
           <ClientPicker clients={clients} crm={crm} name={name} onCrm={setCrm} onName={setName} />
 
