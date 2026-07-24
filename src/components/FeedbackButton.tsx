@@ -161,12 +161,12 @@ export function FeedbackDialog({
                     <FileVideo className="h-6 w-6 text-muted-foreground" />
                   </div>
                 )}
-                <span className="text-xs text-foreground truncate flex-1">{attName}</span>
+                <span className="text-xs text-foreground truncate flex-1 min-w-0">{attName}</span>
                 <button
                   type="button"
                   onClick={removeAttachment}
                   aria-label="Remover anexo"
-                  className="shrink-0 h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                  className="shrink-0 h-9 w-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-red-600 hover:bg-red-50"
                 >
                   <X className="h-4 w-4" />
                 </button>

@@ -158,8 +158,8 @@ function PostApproval({ client, post, index, busy, onApproveFast, onAdjustFast, 
         </div>
       )}
       <div className="flex items-center justify-between gap-2 mb-1.5">
-        <h3 className="text-lg font-display font-extrabold text-foreground">Esta publicação</h3>
-        <span className={`text-[11px] font-bold px-3 py-1 rounded-full ${STATUS[post.approval_status].cls}`}>{STATUS[post.approval_status].label}</span>
+        <h3 className="text-lg font-display font-extrabold text-foreground min-w-0 truncate">Esta publicação</h3>
+        <span className={`shrink-0 whitespace-nowrap text-[11px] font-bold px-3 py-1 rounded-full ${STATUS[post.approval_status].cls}`}>{STATUS[post.approval_status].label}</span>
       </div>
       <p className="text-xs text-muted-foreground font-body capitalize">{post.format} · {post.platform}</p>
     </div>
@@ -404,7 +404,7 @@ export default function AprovarPortal() {
           const Icon = t.icon;
           return (
             <button key={t.key} onClick={() => setTab(t.key)}
-              className={`flex-1 lg:flex-none flex items-center justify-center gap-1.5 text-[13px] font-body font-extrabold rounded-xl transition-colors ${variant === "mobile" ? "py-2" : "px-5 py-2.5"} ${on ? "bg-white text-primary shadow-sm lg:bg-primary/10" : "text-muted-foreground hover:text-foreground"}`}>
+              className={`flex-1 lg:flex-none flex items-center justify-center gap-1.5 text-[13px] font-body font-extrabold rounded-xl transition-colors ${variant === "mobile" ? "py-2.5 min-h-[44px]" : "px-5 py-2.5"} ${on ? "bg-white text-primary shadow-sm lg:bg-primary/10" : "text-muted-foreground hover:text-foreground"}`}>
               <Icon className="h-4 w-4" /> {t.label}
             </button>
           );

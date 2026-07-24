@@ -30,12 +30,14 @@ function Painel({ color, icon: Icon, valor, label, to, destaque, masked }: {
   const hex = CRIA_HEX[color];
   return (
     <Link to={to}
-      className="group relative rounded-2xl border border-border bg-background/70 backdrop-blur-sm p-3.5 transition-all hover:-translate-y-0.5 hover:shadow-md"
+      className="group relative min-w-0 rounded-2xl border border-border bg-background/70 backdrop-blur-sm p-3.5 transition-all hover:-translate-y-0.5 hover:shadow-md"
       style={{ borderLeftWidth: 3, borderLeftColor: hex, ...(destaque ? { background: `${hex}0f` } : {}) }}>
       <span className="grid h-9 w-9 place-items-center rounded-xl mb-2" style={{ background: `${hex}1f`, color: hex }}>
         <Icon className="h-4 w-4" />
       </span>
-      <p className="text-xl font-display font-extrabold text-foreground leading-none tabular-nums">{masked ? "••••" : valor}</p>
+      {/* min-w-0 no card + break-words no valor: uma mensalidade alta (ex.: R$ 120.000,00)
+          quebra a linha em vez de estourar o card na grade de 2 colunas do mobile. */}
+      <p className="text-lg sm:text-xl font-display font-extrabold text-foreground leading-tight tabular-nums break-words">{masked ? "••••" : valor}</p>
       <p className="text-[11px] font-body text-muted-foreground mt-1 leading-tight">{label}</p>
     </Link>
   );

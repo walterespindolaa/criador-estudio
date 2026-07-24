@@ -319,7 +319,7 @@ export default function ClienteHub() {
               onChange={(e) => setStatus(e.target.value as ClientStatus)}
               title="Situação do cliente"
               aria-label="Situação do cliente"
-              className={`h-9 rounded-xl border px-3 text-xs font-body font-semibold cursor-pointer outline-none ${CLIENT_STATUS_META[((client as { status?: ClientStatus }).status ?? "ativo") as ClientStatus].cls}`}
+              className={`h-10 rounded-xl border px-3 text-xs font-body font-semibold cursor-pointer outline-none ${CLIENT_STATUS_META[((client as { status?: ClientStatus }).status ?? "ativo") as ClientStatus].cls}`}
             >
               {CLIENT_STATUSES.map((s) => <option key={s} value={s}>{CLIENT_STATUS_META[s].label}</option>)}
             </select>
@@ -888,11 +888,13 @@ function LinksUteis({ clientId, links }: { clientId: string; links: LinkUtil[] |
       {rows.length > 0 && (
         <div className="space-y-2 mb-3">
           {rows.map((r, i) => (
-            <div key={i} className="flex items-center gap-2">
+            <div key={i} className="flex flex-wrap items-center gap-2">
+              {/* Mobile: o rótulo ocupa a linha inteira e a URL cai pra a linha de
+                  baixo com largura de sobra (antes espremia a URL em ~100px). */}
               <Input value={r.label} onChange={(e) => editar(i, "label", e.target.value)} onBlur={salvarEdicao}
-                placeholder="Rótulo (ex.: Drive - Fotos)" className="rounded-xl h-9 text-sm w-32 sm:w-40 shrink-0" />
+                placeholder="Rótulo (ex.: Drive - Fotos)" className="rounded-xl h-9 text-sm w-full sm:w-40 sm:shrink-0" />
               <Input value={r.url} onChange={(e) => editar(i, "url", e.target.value)} onBlur={salvarEdicao}
-                placeholder="https://…" className="rounded-xl h-9 text-sm flex-1 min-w-0" />
+                placeholder="https://…" className="rounded-xl h-9 text-sm flex-1 min-w-[140px]" />
               <a href={r.url} target="_blank" rel="noopener noreferrer" title="Abrir link" aria-label="Abrir link" className="w-9 h-9 rounded-xl border border-border grid place-items-center text-muted-foreground hover:text-primary shrink-0"><ExternalLink className="h-4 w-4" /></a>
               <button onClick={() => remover(i)} title="Remover" aria-label="Remover" className="w-9 h-9 rounded-xl border border-border grid place-items-center text-muted-foreground hover:text-destructive shrink-0"><Trash2 className="h-4 w-4" /></button>
             </div>
@@ -901,8 +903,8 @@ function LinksUteis({ clientId, links }: { clientId: string; links: LinkUtil[] |
       )}
 
       <div className="flex items-center gap-2 flex-wrap">
-        <Input value={novoLabel} onChange={(e) => setNovoLabel(e.target.value)} placeholder="Rótulo (ex.: Drive - Aprovados)" className="rounded-xl h-9 text-sm w-32 sm:w-40" />
-        <Input value={novoUrl} onChange={(e) => setNovoUrl(e.target.value)} onKeyDown={(e) => e.key === "Enter" && adicionar()} placeholder="https://drive.google.com/…" className="rounded-xl h-9 text-sm flex-1 min-w-[160px]" />
+        <Input value={novoLabel} onChange={(e) => setNovoLabel(e.target.value)} placeholder="Rótulo (ex.: Drive - Aprovados)" className="rounded-xl h-9 text-sm w-full sm:w-40" />
+        <Input value={novoUrl} onChange={(e) => setNovoUrl(e.target.value)} onKeyDown={(e) => e.key === "Enter" && adicionar()} placeholder="https://drive.google.com/…" className="rounded-xl h-9 text-sm flex-1 min-w-[140px]" />
         <Button onClick={adicionar} disabled={!novoUrl.trim()} className="rounded-xl h-9 gap-1.5"><Plus className="h-4 w-4" /> Adicionar</Button>
       </div>
     </div>
@@ -1060,9 +1062,10 @@ function Destaques({ clientId, clientSegment, clientBirthday, renewalDate, extCl
 function MiniStat({ k, v, tone }: { k: string; v: string; tone: "green" | "red" | "plain" }) {
   const c = tone === "green" ? "text-green-600" : tone === "red" ? "text-red-500" : "text-foreground";
   return (
-    <div className="border border-border rounded-xl px-3 py-2 bg-muted/30">
-      <p className="text-[11px] font-body text-muted-foreground">{k}</p>
-      <p className={`text-[17px] font-display font-extrabold mt-0.5 ${c}`}>{v}</p>
+    <div className="min-w-0 border border-border rounded-xl px-3 py-2 bg-muted/30">
+      <p className="text-[11px] font-body text-muted-foreground truncate">{k}</p>
+      {/* break-words: valor alto (ex.: R$ 120.000,00) quebra em vez de estourar o card no grid de 2 colunas do mobile. */}
+      <p className={`text-[17px] font-display font-extrabold mt-0.5 leading-tight tabular-nums break-words ${c}`}>{v}</p>
     </div>
   );
 }
@@ -1289,9 +1292,9 @@ function FinanceTab({ clientId, clientName, monthlyValue }: { clientId: string; 
         ))}
         {range === "mes" && (
           <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => shiftMes(-1)} aria-label="Mês anterior"><ChevronLeft className="h-4 w-4" /></Button>
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => shiftMes(-1)} aria-label="Mês anterior"><ChevronLeft className="h-4 w-4" /></Button>
             <span className="text-xs font-display font-bold text-foreground min-w-[72px] text-center">{labelMesBR(ymPrefix)}</span>
-            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => shiftMes(1)} aria-label="Próximo mês"><ChevronRight className="h-4 w-4" /></Button>
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => shiftMes(1)} aria-label="Próximo mês"><ChevronRight className="h-4 w-4" /></Button>
           </div>
         )}
         {monthlyValue ? (
@@ -1553,7 +1556,8 @@ function FinBox({ label, value, tone, hint }: { label: string; value: string; to
   return (
     <div className="bg-card border border-border rounded-2xl p-4">
       <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide">{label}</p>
-      <p className={`text-xl font-display font-extrabold mt-1 ${c}`}>{value}</p>
+      {/* break-words: valor alto quebra a linha em vez de estourar o card no grid de 2 colunas do mobile. */}
+      <p className={`text-xl font-display font-extrabold mt-1 leading-tight tabular-nums break-words ${c}`}>{value}</p>
       {hint && <p className="text-[10.5px] font-body text-muted-foreground mt-0.5 leading-tight">{hint}</p>}
     </div>
   );

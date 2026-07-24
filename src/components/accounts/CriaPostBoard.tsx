@@ -607,7 +607,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
       </Dialog>
 
       <Dialog open={formOpen} onOpenChange={(o) => { if (!o) void requestCloseForm(); }}>
-        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="max-w-md md:max-w-5xl bg-white rounded-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="max-w-md md:max-w-5xl bg-white rounded-2xl">
           <DialogHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pr-8">
             <DialogTitle className="font-display">{draftId || !editing ? "Novo post" : "Editar post"}</DialogTitle>
             <div className="flex items-center gap-2 shrink-0 flex-wrap">
@@ -675,14 +675,15 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               {/* Cronograma: data + hora */}
               <div>
                 <label className="text-xs font-semibold mb-1.5 block">Cronograma</label>
-                <div className="grid grid-cols-2 gap-2">
+                {/* Data/Horário: lado a lado; abaixo de ~390px empilham pra o valor nunca espremer. */}
+                <div className="grid grid-cols-2 gap-2 max-[390px]:grid-cols-1">
                   <div className="min-w-0">
                     <Label className="text-[11px] font-body text-muted-foreground">Data de publicação</Label>
-                    <Input type="date" value={f.scheduled_date ?? ""} onChange={(e) => setF((p) => ({ ...p, scheduled_date: e.target.value || null }))} className="w-full rounded-xl" />
+                    <Input type="date" value={f.scheduled_date ?? ""} onChange={(e) => setF((p) => ({ ...p, scheduled_date: e.target.value || null }))} className="w-full h-10 rounded-xl" />
                   </div>
                   <div className="min-w-0">
                     <Label className="text-[11px] font-body text-muted-foreground">Horário</Label>
-                    <Input type="time" value={f.scheduled_time ?? ""} onChange={(e) => setF((p) => ({ ...p, scheduled_time: e.target.value || null }))} className="w-full rounded-xl" />
+                    <Input type="time" value={f.scheduled_time ?? ""} onChange={(e) => setF((p) => ({ ...p, scheduled_time: e.target.value || null }))} className="w-full h-10 rounded-xl" />
                   </div>
                 </div>
               </div>

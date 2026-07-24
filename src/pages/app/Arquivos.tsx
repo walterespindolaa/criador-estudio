@@ -147,7 +147,7 @@ function UserLinksEditor({
           {draft.map((r, i) => (
             <div key={i} className="flex items-center gap-2">
               <Input value={r.label} onChange={(e) => editar(i, "label", e.target.value)} onBlur={salvarEdicao}
-                placeholder="Rótulo (ex.: Drive - Fotos)" className="rounded-xl h-9 text-sm w-32 sm:w-40 shrink-0" />
+                placeholder="Rótulo (ex.: Drive - Fotos)" className="rounded-xl h-9 text-sm w-24 sm:w-40 shrink-0" />
               <Input value={r.url} onChange={(e) => editar(i, "url", e.target.value)} onBlur={salvarEdicao}
                 placeholder="https://…" className="rounded-xl h-9 text-sm flex-1 min-w-0" />
               <a href={r.url} target="_blank" rel="noopener noreferrer" title="Abrir link" aria-label="Abrir link" className="w-9 h-9 rounded-xl border border-border grid place-items-center text-muted-foreground hover:text-primary shrink-0"><ExternalLink className="h-4 w-4" /></a>

@@ -206,7 +206,7 @@ export function MateriaisBoard({ clientId, clientName }: { clientId: string; cli
                         {a.name}
                       </a>
                       <button type="button" onClick={() => removeAttachment(i)} aria-label="Remover anexo"
-                        className="text-muted-foreground hover:text-destructive p-1 rounded-lg shrink-0">
+                        className="text-muted-foreground hover:text-destructive h-8 w-8 grid place-items-center rounded-lg shrink-0">
                         <X className="h-4 w-4" />
                       </button>
                     </li>

@@ -173,7 +173,8 @@ export function TasksTab() {
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
-        <div className="flex items-center gap-1 bg-muted/50 rounded-full p-0.5">
+        {/* Mobile: a barra de 5 chips não cabe em 390px; rola na horizontal em vez de estourar. */}
+        <div className="flex items-center gap-1 bg-muted/50 rounded-full p-0.5 max-w-full overflow-x-auto scrollbar-none">
           {pills.map((p) => (
             <button key={p.v} onClick={() => setView(p.v)}
               className={cn("px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all", view === p.v ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
@@ -247,7 +248,8 @@ export function TasksTab() {
                         onClick={() => { setEditing(t); setDialogOpen(true); }}
                         className={cn("rounded-xl border border-border bg-card p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all", dragId === t.id && "opacity-40")}>
                         <div className="flex items-start gap-2">
-                          <button type="button" onClick={(e) => { e.stopPropagation(); updateTask.mutate({ id: t.id, status: t.status === "concluida" ? "pendente" : "concluida" }); }} className="mt-0.5 shrink-0 text-muted-foreground hover:text-primary">
+                          {/* Alvo de toque ~36px no mobile (margem negativa mantém o card compacto). */}
+                          <button type="button" onClick={(e) => { e.stopPropagation(); updateTask.mutate({ id: t.id, status: t.status === "concluida" ? "pendente" : "concluida" }); }} className="-m-1.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors md:-m-0.5 md:h-6 md:w-6">
                             {t.status === "concluida" ? <CheckCircle2 className="h-4 w-4 text-primary" /> : <Circle className="h-4 w-4" />}
                           </button>
                           <div className="flex-1 min-w-0 space-y-1.5">

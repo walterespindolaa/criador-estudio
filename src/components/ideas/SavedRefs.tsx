@@ -251,21 +251,22 @@ function SavedCard({ r, open, onToggleMenu, onOpen, onCriar, onMove, onDelete, o
           <span className="absolute top-1.5 right-1.5 grid h-5 w-5 place-items-center rounded-full bg-black/40 text-white"><PlatIcon className="h-2.5 w-2.5" /></span>
         </div>
       </button>
-      <div className="p-1.5">
-        {r.author && <p className="text-[10px] font-body font-semibold text-foreground truncate">@{r.author}</p>}
-        {r.caption && <p className="text-[9.5px] font-body text-muted-foreground line-clamp-2 mt-0.5 leading-snug">{r.caption}</p>}
-        {r.folder && <span className="inline-block mt-1 text-[8px] font-body px-1.5 py-0.5 rounded-full bg-primary/10 text-primary truncate max-w-full">{r.folder}</span>}
+      {/* Mobile (2 col): textos maiores pra ler; a partir de sm o grid aperta e volta ao micro. */}
+      <div className="p-2 sm:p-1.5">
+        {r.author && <p className="text-xs sm:text-[10px] font-body font-semibold text-foreground truncate">@{r.author}</p>}
+        {r.caption && <p className="text-[11px] sm:text-[9.5px] font-body text-muted-foreground line-clamp-2 mt-0.5 leading-snug">{r.caption}</p>}
+        {r.folder && <span className="inline-block mt-1 text-[9px] sm:text-[8px] font-body px-1.5 py-0.5 rounded-full bg-primary/10 text-primary truncate max-w-full">{r.folder}</span>}
       </div>
-      {/* Ações visíveis abaixo do post */}
-      <div className="px-1.5 pb-1.5 space-y-1">
-        <Button size="sm" className="w-full h-7 text-[10px] px-1" onClick={onCriar}>
-          <PenLine className="h-3 w-3 mr-1" /> Criar post
+      {/* Ações visíveis abaixo do post. No mobile os alvos crescem (h-9) pra tocar; no desktop encolhem. */}
+      <div className="px-2 pb-2 sm:px-1.5 sm:pb-1.5 space-y-1.5 sm:space-y-1">
+        <Button size="sm" className="w-full h-9 sm:h-7 text-xs sm:text-[10px] px-1" onClick={onCriar}>
+          <PenLine className="h-3.5 w-3.5 sm:h-3 sm:w-3 mr-1" /> Criar post
         </Button>
-        <div className="flex items-center gap-1">
-          <button onClick={onOpen} title="Abrir original" className="flex-1 h-6 grid place-items-center rounded-md bg-muted/60 text-muted-foreground hover:text-foreground"><ExternalLink className="h-3 w-3" /></button>
-          <button onClick={onRefreshCover} disabled={refreshing} title="Atualizar capa" className="flex-1 h-6 grid place-items-center rounded-md bg-muted/60 text-muted-foreground hover:text-foreground disabled:opacity-50"><RefreshCw className={cn("h-3 w-3", refreshing && "animate-spin")} /></button>
-          <button onClick={onMove} title="Mover de pasta" className="flex-1 h-6 grid place-items-center rounded-md bg-muted/60 text-muted-foreground hover:text-foreground"><FolderInput className="h-3 w-3" /></button>
-          <button onClick={onDelete} title="Excluir" className="flex-1 h-6 grid place-items-center rounded-md bg-muted/60 text-muted-foreground hover:text-destructive"><Trash2 className="h-3 w-3" /></button>
+        <div className="flex items-center gap-1.5 sm:gap-1">
+          <button onClick={onOpen} title="Abrir original" className="flex-1 h-9 sm:h-6 grid place-items-center rounded-md bg-muted/60 text-muted-foreground hover:text-foreground"><ExternalLink className="h-4 w-4 sm:h-3 sm:w-3" /></button>
+          <button onClick={onRefreshCover} disabled={refreshing} title="Atualizar capa" className="flex-1 h-9 sm:h-6 grid place-items-center rounded-md bg-muted/60 text-muted-foreground hover:text-foreground disabled:opacity-50"><RefreshCw className={cn("h-4 w-4 sm:h-3 sm:w-3", refreshing && "animate-spin")} /></button>
+          <button onClick={onMove} title="Mover de pasta" className="flex-1 h-9 sm:h-6 grid place-items-center rounded-md bg-muted/60 text-muted-foreground hover:text-foreground"><FolderInput className="h-4 w-4 sm:h-3 sm:w-3" /></button>
+          <button onClick={onDelete} title="Excluir" className="flex-1 h-9 sm:h-6 grid place-items-center rounded-md bg-muted/60 text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4 sm:h-3 sm:w-3" /></button>
         </div>
       </div>
     </div>

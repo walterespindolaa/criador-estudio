@@ -162,7 +162,7 @@ export function MonthOverviewPanel() {
                 className="grid h-8 w-8 place-items-center rounded-lg border border-border text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors" aria-label="Mês anterior">
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              <span className="text-xs font-body font-bold text-foreground w-[120px] text-center tabular-nums">{monthLabel(month)}</span>
+              <span className="text-xs font-body font-bold text-foreground w-[92px] sm:w-[120px] text-center tabular-nums">{monthLabel(month)}</span>
               <button type="button" onClick={goNewer} disabled={idx <= 0}
                 className="grid h-8 w-8 place-items-center rounded-lg border border-border text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors" aria-label="Próximo mês">
                 <ChevronRight className="h-4 w-4" />

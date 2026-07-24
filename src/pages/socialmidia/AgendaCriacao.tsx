@@ -750,7 +750,7 @@ export default function AgendaCriacao() {
                     <option value="concluida">Concluída</option>
                     <option value="cancelada">Cancelada</option>
                   </select>
-                  <button onClick={() => delCapture.mutate(c.id)} className="text-muted-foreground/50 hover:text-destructive shrink-0"><X className="h-4 w-4" /></button>
+                  <button onClick={() => delCapture.mutate(c.id)} className="-m-1 grid h-10 w-10 shrink-0 place-items-center rounded-lg text-muted-foreground/50 hover:text-destructive hover:bg-destructive/5 transition-colors md:h-8 md:w-8" aria-label="Remover captação"><X className="h-4 w-4" /></button>
                 </div>
               );
             })}
@@ -789,7 +789,7 @@ export default function AgendaCriacao() {
                   <span className="text-[11px] font-body font-semibold rounded-full px-2 py-1 shrink-0" style={{ background: `${clientColor}1f`, color: clientColor }}>{CRM_TASK_PRIORITY_LABELS[t.priority]}</span>
                   <span role="button" tabIndex={0} aria-label="Concluir tarefa"
                     onClick={() => updTask.mutate({ id: t.id, status: "concluida" })}
-                    className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-border cursor-pointer hover:border-emerald-500 hover:text-emerald-600 transition-colors"><Check className="h-4 w-4" /></span>
+                    className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-border cursor-pointer hover:border-emerald-500 hover:text-emerald-600 transition-colors md:h-8 md:w-8"><Check className="h-4 w-4" /></span>
                 </div>
               );
             })}
@@ -1008,7 +1008,7 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
           )}
 
           {kind === "tarefa" && (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 max-[390px]:grid-cols-1">
               <div className="min-w-0">
                 <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Prioridade</p>
                 <select value={prio} onChange={(e) => setPrio(e.target.value as CrmTaskPriority)} className="w-full h-10 rounded-xl border border-border bg-card px-3 text-sm font-body">
@@ -1017,7 +1017,7 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
               </div>
               <div className="min-w-0">
                 <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Horário</p>
-                <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full" />
+                <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full h-10" />
               </div>
             </div>
           )}
@@ -1069,9 +1069,10 @@ function CaptureDialog({ open, initial, clients, teamNames, onClose, onSave, pen
         <DialogHeader><DialogTitle className="font-display">{initial ? "Editar captação" : "Nova captação"}</DialogTitle></DialogHeader>
         <div className="space-y-2">
           <ClientPicker clients={clients} crm={crm} name={name} onCrm={setCrm} onName={setName} />
-          <div className="grid grid-cols-2 gap-2">
-            <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Data</p><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full" /></div>
-            <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Hora</p><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full" /></div>
+          {/* Data/Hora: lado a lado; abaixo de ~390px empilham pra o valor nunca espremer. */}
+          <div className="grid grid-cols-2 gap-2 max-[390px]:grid-cols-1">
+            <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Data</p><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full h-10" /></div>
+            <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Hora</p><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full h-10" /></div>
           </div>
           <div><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Local (opcional)</p><Input value={loc} onChange={(e) => setLoc(e.target.value)} placeholder="Ex.: Estúdio, coworking, local externo" /></div>
           <div><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Equipe (opcional)</p><Input value={team} onChange={(e) => setTeam(e.target.value)} placeholder="Ex.: Ana, Bruno" list="agenda-team-names" /><TeamDatalist names={teamNames} /></div>
@@ -1146,9 +1147,10 @@ function TaskDialog({ task, clients, onClose, onOpenCrm, onSave }: {
               </select>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Vencimento</p><Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="w-full" /></div>
-            <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Horário</p><Input type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)} className="w-full" /></div>
+          {/* Vencimento/Horário: empilham abaixo de ~390px pra não cortar o valor. */}
+          <div className="grid grid-cols-2 gap-2 max-[390px]:grid-cols-1">
+            <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Vencimento</p><Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="w-full h-10" /></div>
+            <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Horário</p><Input type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)} className="w-full h-10" /></div>
           </div>
           <button type="button" onClick={onOpenCrm} className="inline-flex items-center gap-1 text-[11px] font-body text-muted-foreground hover:text-primary transition-colors">
             <ExternalLink className="h-3 w-3" /> Abrir no CRM

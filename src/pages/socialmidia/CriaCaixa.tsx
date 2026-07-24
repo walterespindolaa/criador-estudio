@@ -941,7 +941,9 @@ function Metric({ label, value, tone, hint }: { label: string; value: string; to
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
       <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-body font-semibold">{label}</p>
-      <p className={cn("text-xl font-display font-extrabold mt-1", c)}>{value}</p>
+      {/* break-words: uma mensalidade alta (ex.: R$ 120.000,00) quebra a linha em
+          vez de estourar o card no grid de 2 colunas do mobile. */}
+      <p className={cn("text-xl font-display font-extrabold mt-1 leading-tight tabular-nums break-words", c)}>{value}</p>
       {hint && <p className="text-[10.5px] font-body text-muted-foreground mt-0.5 leading-tight">{hint}</p>}
     </div>
   );
@@ -952,7 +954,7 @@ function MiniStat({ label, value, tone, hint }: { label: string; value: string; 
   return (
     <div className="min-w-0">
       <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-body font-semibold">{label}</p>
-      <p className={cn("text-sm font-display font-bold mt-0.5", c)}>{value}</p>
+      <p className={cn("text-sm font-display font-bold mt-0.5 leading-tight tabular-nums break-words", c)}>{value}</p>
       {hint && <p className="text-[10px] font-body text-muted-foreground truncate" title={hint}>{hint}</p>}
     </div>
   );
@@ -962,7 +964,7 @@ function Alloc({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <p className="text-[11px] text-muted-foreground font-body font-semibold">{label}</p>
-      <p className="text-base font-display font-extrabold text-foreground mt-0.5">{value}</p>
+      <p className="text-base font-display font-extrabold text-foreground mt-0.5 leading-tight tabular-nums break-words">{value}</p>
     </div>
   );
 }
@@ -1280,7 +1282,7 @@ function CalendarioFinanceiro({ monthlies, records, recurring, pendingRecurring,
           <h3 className="text-sm font-display font-bold text-foreground">Calendário de entradas e saídas</h3>
           {temPrevisto && <p className="text-[11px] font-body text-muted-foreground">Tracejado = previsto (recorrente ainda não lançado).</p>}
         </div>
-        <div className="flex items-center gap-3 text-[11px] font-body">
+        <div className="flex items-center gap-x-3 gap-y-1 flex-wrap text-[11px] font-body">
           <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" /> entra <strong className="text-foreground">{brl(totalReceber)}</strong></span>
           <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> sai <strong className="text-foreground">{brl(totalPagar)}</strong></span>
           <span className={cn("inline-flex items-center gap-1 font-bold", totalReceber - totalPagar >= 0 ? "text-green-700" : "text-red-600")}>
@@ -1571,9 +1573,10 @@ function RelatorioPeriodo({ records, ctx }: { records: FinRecord[]; ctx: FinCont
       </div>
 
       <div className="flex items-end gap-2 flex-wrap mb-3">
-        <div><p className="text-[10px] font-body font-semibold text-muted-foreground uppercase mb-1">De</p><Input type="date" value={de} onChange={(e) => setDe(e.target.value)} className="h-9 rounded-xl w-40" /></div>
-        <div><p className="text-[10px] font-body font-semibold text-muted-foreground uppercase mb-1">Até</p><Input type="date" value={ate} onChange={(e) => setAte(e.target.value)} className="h-9 rounded-xl w-40" /></div>
-        <div className="flex gap-1">
+        {/* Mobile: os dois campos de data dividem a linha (flex-1); no desktop voltam ao w-40 fixo. */}
+        <div className="flex-1 min-w-[9rem]"><p className="text-[10px] font-body font-semibold text-muted-foreground uppercase mb-1">De</p><Input type="date" value={de} onChange={(e) => setDe(e.target.value)} className="h-9 rounded-xl w-full sm:w-40" /></div>
+        <div className="flex-1 min-w-[9rem]"><p className="text-[10px] font-body font-semibold text-muted-foreground uppercase mb-1">Até</p><Input type="date" value={ate} onChange={(e) => setAte(e.target.value)} className="h-9 rounded-xl w-full sm:w-40" /></div>
+        <div className="flex gap-1 flex-wrap">
           {([["mes", "Este mês"], ["12m", "12 meses"], ["ano", "Este ano"]] as const).map(([k, l]) => (
             <Button key={k} size="sm" variant="ghost" className="h-9 text-xs" onClick={() => preset(k)}>{l}</Button>
           ))}
@@ -1596,11 +1599,26 @@ function RelatorioPeriodo({ records, ctx }: { records: FinRecord[]; ctx: FinCont
             const label = new Date(Number(yy), Number(mm) - 1, 1).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
             const saldo = v.receita - v.custo;
             return (
-              <div key={k} className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-muted/40">
-                <span className="text-[12px] font-body font-semibold text-foreground w-20 shrink-0 capitalize">{label}</span>
-                <span className="text-[12px] font-body text-green-700 shrink-0">+{brl(v.receita)}</span>
-                <span className="text-[12px] font-body text-red-600 shrink-0">−{brl(v.custo)}</span>
-                <span className={cn("text-[12px] font-display font-bold ml-auto shrink-0", saldo >= 0 ? "text-green-700" : "text-red-600")}>{brl(saldo)}</span>
+              <div key={k} className="rounded-lg px-2 py-1.5 hover:bg-muted/40">
+                {/* Desktop: linha única (mês · receita · custo · saldo). */}
+                <div className="hidden sm:flex items-center gap-3">
+                  <span className="text-[12px] font-body font-semibold text-foreground w-20 shrink-0 capitalize">{label}</span>
+                  <span className="text-[12px] font-body text-green-700 shrink-0">+{brl(v.receita)}</span>
+                  <span className="text-[12px] font-body text-red-600 shrink-0">−{brl(v.custo)}</span>
+                  <span className={cn("text-[12px] font-display font-bold ml-auto shrink-0", saldo >= 0 ? "text-green-700" : "text-red-600")}>{brl(saldo)}</span>
+                </div>
+                {/* Mobile: mês + saldo em cima; receita e custo embaixo, pra três valores
+                    em reais nunca estourarem a largura em 390px. */}
+                <div className="sm:hidden">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[12px] font-body font-semibold text-foreground flex-1 min-w-0 truncate capitalize">{label}</span>
+                    <span className={cn("text-[12px] font-display font-bold shrink-0", saldo >= 0 ? "text-green-700" : "text-red-600")}>{brl(saldo)}</span>
+                  </div>
+                  <div className="flex items-center gap-3 mt-0.5">
+                    <span className="text-[11.5px] font-body text-green-700">+{brl(v.receita)}</span>
+                    <span className="text-[11.5px] font-body text-red-600">−{brl(v.custo)}</span>
+                  </div>
+                </div>
               </div>
             );
           })}
