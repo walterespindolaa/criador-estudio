@@ -19,7 +19,14 @@ let inFlight: Promise<void> | null = null;
 let lastRun = 0;
 const THROTTLE_MS = 5 * 60 * 1000;
 
-export async function generateNotifications(userId: string): Promise<void> {
+// Estas notificações são de CONTEÚDO DO CRIADOR (gancho do dia, lembretes de
+// postar, posts em andamento, meta semanal). Conta GESTOR/agência não trabalha
+// no próprio conteúdo, então passamos `isManager` pra pular a geração pra ela.
+// O gestor continua recebendo as notificações do trabalho dele (leads,
+// aprovações de cliente, aniversário de cliente, etc.), que vêm de outros
+// fluxos (edge functions / triggers), não daqui.
+export async function generateNotifications(userId: string, opts?: { isManager?: boolean }): Promise<void> {
+  if (opts?.isManager) return;
   if (inFlight) return inFlight;
   if (Date.now() - lastRun < THROTTLE_MS) return;
   inFlight = runGenerate(userId).finally(() => {
@@ -75,19 +82,32 @@ async function runGenerate(userId: string) {
     .sort()
     .reverse();
   const lastPublished = publishedDates[0];
+  // null = a pessoa nunca publicou (sem histórico). Antes virava 999 e mandava
+  // "Faz 999 dias desde seu último post", que é bobo. Tratamos o caso separado.
   const daysSinceLast = lastPublished
     ? Math.floor((now.getTime() - new Date(lastPublished).getTime()) / 86400000)
-    : 999;
+    : null;
 
   const todayReminder = existingNotifs.find(n => n.type === "lembrete_postar" && n.created_at?.startsWith(today));
-  if (daysSinceLast >= 3 && !todayReminder) {
-    await supabase.from("notifications").insert({
-      user_id: userId,
-      type: "lembrete_postar",
-      title: "Que tal publicar hoje?",
-      description: `Faz ${daysSinceLast} dias desde seu último post.`,
-      link: "/app/criando",
-    } as any);
+  if (!todayReminder) {
+    if (daysSinceLast !== null && daysSinceLast >= 3) {
+      await supabase.from("notifications").insert({
+        user_id: userId,
+        type: "lembrete_postar",
+        title: "Que tal publicar hoje?",
+        description: `Faz ${daysSinceLast} dias desde seu último post.`,
+        link: "/app/criando",
+      } as any);
+    } else if (daysSinceLast === null) {
+      // Nunca publicou: incentiva o primeiro post em vez do "999 dias".
+      await supabase.from("notifications").insert({
+        user_id: userId,
+        type: "lembrete_postar",
+        title: "Bora publicar seu primeiro post?",
+        description: "Escolha uma ideia do banco e leve até a publicação.",
+        link: "/app/criando",
+      } as any);
+    }
   }
 
   // 3. Scheduled posts for today

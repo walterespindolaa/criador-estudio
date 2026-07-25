@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive, Download, Play, FileImage, Link2, Paperclip, GripVertical, FolderOpen, CalendarRange } from "lucide-react";
+import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive, Download, Play, FileImage, Link2, Paperclip, GripVertical, FolderOpen, CalendarRange, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -143,6 +143,12 @@ export default function AgendaCriacao() {
     try { const v = localStorage.getItem("agenda_postchips_open"); return v === null ? false : v === "1"; } catch { return false; }
   });
   const togglePostChips = () => setPostChipsOpen((v) => { const n = !v; try { localStorage.setItem("agenda_postchips_open", n ? "1" : "0"); } catch { /* segue */ } return n; });
+  // Faixa "Em produção" (Tarefa 1): recolhível, começa RECOLHIDA por padrão ("0"), pra não
+  // dominar o topo. Estado aberto/recolhido persistido em localStorage.
+  const [producaoOpen, setProducaoOpen] = useState<boolean>(() => {
+    try { const v = localStorage.getItem("agenda_producao_open"); return v === null ? false : v === "1"; } catch { return false; }
+  });
+  const toggleProducao = () => setProducaoOpen((v) => { const n = !v; try { localStorage.setItem("agenda_producao_open", n ? "1" : "0"); } catch { /* segue */ } return n; });
   // Painel "ver todos" de um dia cheio.
   const [dayModal, setDayModal] = useState<string | null>(null);
   // Período personalizado (item 2): dois inputs "de"/"até". Quando preenchido e válido,
@@ -370,15 +376,27 @@ export default function AgendaCriacao() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [crmTasks, from, to, filters.tarefa, postClients, selectedCrmIds, selectedNames]);
 
-  const upcoming = useMemo(() => captures.filter((c) => c.status !== "cancelada" && c.capture_date >= today).slice(0, 30), [captures, today]);
-  // Próximas tarefas (item 3): pendentes/em andamento com vencimento a partir de hoje,
-  // pra a seção de baixo mostrar de fato captações E tarefas, sem confundir.
-  const upcomingTasks = useMemo(() =>
-    crmTasks
-      .filter((t) => t.status !== "concluida" && !!t.due_date && t.due_date >= today)
-      .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? "") || (a.due_time ?? "99:99").localeCompare(b.due_time ?? "99:99"))
-      .slice(0, 30),
-    [crmTasks, today]);
+  // Próximas captações: inclui as ATRASADAS (capture_date < hoje e ainda não concluídas),
+  // que antes sumiam por causa do filtro capture_date >= hoje. Atrasadas vêm PRIMEIRO
+  // (ordenadas por data/hora), seguidas das futuras. Fuso BR via hojeBR() (today).
+  const upcoming = useMemo(() => {
+    const notCancel = captures.filter((c) => c.status !== "cancelada");
+    const overdue = notCancel
+      .filter((c) => c.status !== "concluida" && c.capture_date < today)
+      .sort((a, b) => a.capture_date.localeCompare(b.capture_date) || (a.capture_time ?? "99:99").localeCompare(b.capture_time ?? "99:99"));
+    const future = notCancel.filter((c) => c.capture_date >= today);
+    return [...overdue, ...future].slice(0, 30);
+  }, [captures, today]);
+  // Próximas tarefas (item 3): pendentes/em andamento. Inclui as ATRASADAS (due_date < hoje
+  // e não concluídas), que antes sumiam pelo filtro due_date >= hoje. Atrasadas PRIMEIRO
+  // (ordem por data/hora), depois as próximas. Fuso BR via hojeBR() (today).
+  const upcomingTasks = useMemo(() => {
+    const pend = crmTasks.filter((t) => t.status !== "concluida" && !!t.due_date);
+    const byDate = (a: CrmTask, b: CrmTask) => (a.due_date ?? "").localeCompare(b.due_date ?? "") || (a.due_time ?? "99:99").localeCompare(b.due_time ?? "99:99");
+    const overdue = pend.filter((t) => t.due_date! < today).sort(byDate);
+    const future = pend.filter((t) => t.due_date! >= today).sort(byDate);
+    return [...overdue, ...future].slice(0, 30);
+  }, [crmTasks, today]);
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="pb-24 md:pb-0">
@@ -473,19 +491,23 @@ export default function AgendaCriacao() {
               os posts em produção (com ou sem data) + posts sem data. Arrastar um post daqui
               pra um dia agenda; arrastar de volta pra cá tira a data. */}
           {filters.post && producaoPosts.length > 0 && (
-            <Droppable droppableId={NO_DATE} direction="horizontal">
-              {(dp, ds) => (
-                <div ref={dp.innerRef} {...dp.droppableProps}
-                  className={cn("mb-3 rounded-xl border border-dashed p-2.5 transition-colors",
-                    ds.isDraggingOver ? "border-primary/60 bg-primary/5 ring-2 ring-primary/40" : "border-orange-500/40 bg-orange-500/[0.04]")}>
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <Layers className="h-3.5 w-3.5 text-orange-600" />
-                    <span className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground">Em produção</span>
-                    <span className="text-[9px] font-body text-muted-foreground/70 hidden sm:inline">(com ou sem data)</span>
-                    <span className="text-[10px] font-body font-semibold text-muted-foreground">{producaoPosts.length}</span>
-                    <span className="ml-auto text-[9px] font-body text-muted-foreground/70 hidden sm:inline">arraste pra um dia pra agendar</span>
-                  </div>
-                  <div className="flex gap-2 overflow-x-auto pb-1">
+            <div className="mb-3 rounded-xl border border-dashed border-orange-500/40 bg-orange-500/[0.04] transition-colors">
+              {/* Cabeçalho recolhível (Tarefa 1): recolhido mostra só título + contagem + setinha. */}
+              <button type="button" onClick={toggleProducao} aria-expanded={producaoOpen}
+                className="flex items-center gap-1.5 w-full text-left px-2.5 py-2">
+                <Layers className="h-3.5 w-3.5 text-orange-600" />
+                <span className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground">Em produção</span>
+                <span className="text-[9px] font-body text-muted-foreground/70 hidden sm:inline">(com ou sem data)</span>
+                <span className="text-[10px] font-body font-semibold text-muted-foreground">{producaoPosts.length}</span>
+                {producaoOpen && <span className="text-[9px] font-body text-muted-foreground/70 hidden sm:inline">arraste pra um dia pra agendar</span>}
+                <ChevronDown className={cn("ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform", producaoOpen && "rotate-180")} />
+              </button>
+              {producaoOpen && (
+                <Droppable droppableId={NO_DATE} direction="horizontal">
+                  {(dp, ds) => (
+                    <div ref={dp.innerRef} {...dp.droppableProps}
+                      className={cn("px-2.5 pb-2.5 rounded-b-xl transition-colors", ds.isDraggingOver && "bg-primary/5 ring-2 ring-primary/40")}>
+                      <div className="flex gap-2 overflow-x-auto pb-1">
                     {producaoPosts.map((p, idx) => {
                       const cli = extById.get(p.external_client_id);
                       const st = POST_STATUS[p.approval_status ?? "em_producao"];
@@ -511,10 +533,12 @@ export default function AgendaCriacao() {
                       );
                     })}
                     {dp.placeholder}
-                  </div>
-                </div>
+                      </div>
+                    </div>
+                  )}
+                </Droppable>
               )}
-            </Droppable>
+            </div>
           )}
           {view === "mes" && !rangeActive && (
             <div className="hidden lg:grid lg:grid-cols-7 gap-2 mb-1">
@@ -728,15 +752,20 @@ export default function AgendaCriacao() {
             {upcoming.map((c) => {
               const st = STATUS[c.status];
               const d = parseDateOnly(c.capture_date);
+              // Atrasada: data já passou e não foi concluída/cancelada. Destaque vermelho.
+              const overdue = c.status !== "concluida" && c.capture_date < today;
               return (
-                <div key={c.id} className="flex items-center gap-3 rounded-xl border border-border p-3 flex-wrap">
+                <div key={c.id} className={cn("flex items-center gap-3 rounded-xl border p-3 flex-wrap", overdue ? "border-red-300 bg-red-50/50 dark:bg-red-500/5" : "border-border")}>
                   <div className="text-center shrink-0 w-11">
-                    <p className="text-lg font-display font-extrabold text-foreground leading-none">{d.getDate()}</p>
+                    <p className={cn("text-lg font-display font-extrabold leading-none", overdue ? "text-red-600" : "text-foreground")}>{d.getDate()}</p>
                     <p className="text-[10px] font-body uppercase text-muted-foreground">{d.toLocaleDateString("pt-BR", { month: "short" })}</p>
                   </div>
-                  <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-primary shrink-0"><Video className="h-4 w-4" /></div>
+                  <div className={cn("grid h-9 w-9 place-items-center rounded-full shrink-0", overdue ? "bg-red-100 text-red-600" : "bg-primary/10 text-primary")}><Video className="h-4 w-4" /></div>
                   <button type="button" onClick={() => setEditCap(c)} className="min-w-0 flex-1 text-left">
-                    <p className="text-sm font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}</p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {overdue && <span className="text-[10px] font-body font-bold rounded-full px-2 py-0.5 bg-red-100 text-red-700 shrink-0">Atrasada</span>}
+                      <p className="text-sm font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}</p>
+                    </div>
                     <div className="flex items-center gap-2 flex-wrap text-[11px] font-body text-muted-foreground">
                       {c.capture_time && <span className="inline-flex items-center gap-0.5"><Clock className="h-3 w-3" />{c.capture_time.slice(0, 5)}</span>}
                       {c.location && <span className="inline-flex items-center gap-0.5"><MapPin className="h-3 w-3" />{c.location}</span>}
@@ -772,15 +801,20 @@ export default function AgendaCriacao() {
               const isLead = !!t.crm_lead_id;
               const clientColor = isLead ? "#0061EE" : ((t.crm_client_id ? clients.find((c) => c.id === t.crm_client_id)?.color : null) || TASK_CLIENT_DEFAULT_COLOR);
               const who = isLead ? (leadName(t.crm_lead_id) ?? "Lead") : nameOf(t.crm_client_id, null);
+              // Atrasada: venceu antes de hoje e não está concluída. Destaque vermelho.
+              const overdue = t.due_date! < today;
               return (
-                <div key={t.id} className="flex items-center gap-3 rounded-xl border border-border p-3 flex-wrap">
+                <div key={t.id} className={cn("flex items-center gap-3 rounded-xl border p-3 flex-wrap", overdue ? "border-red-300 bg-red-50/50 dark:bg-red-500/5" : "border-border")}>
                   <div className="text-center shrink-0 w-11">
-                    <p className="text-lg font-display font-extrabold text-foreground leading-none">{d.getDate()}</p>
+                    <p className={cn("text-lg font-display font-extrabold leading-none", overdue ? "text-red-600" : "text-foreground")}>{d.getDate()}</p>
                     <p className="text-[10px] font-body uppercase text-muted-foreground">{d.toLocaleDateString("pt-BR", { month: "short" })}</p>
                   </div>
                   <span className="grid h-9 w-9 place-items-center rounded-full shrink-0" style={{ background: `${clientColor}1f`, color: clientColor }}><ListChecks className="h-4 w-4" /></span>
                   <button type="button" onClick={() => setEditTask(t)} className="min-w-0 flex-1 text-left">
-                    <p className="text-sm font-body font-semibold text-foreground truncate">{t.title}</p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {overdue && <span className="text-[10px] font-body font-bold rounded-full px-2 py-0.5 bg-red-100 text-red-700 shrink-0">Atrasada</span>}
+                      <p className="text-sm font-body font-semibold text-foreground truncate">{t.title}</p>
+                    </div>
                     <div className="flex items-center gap-2 flex-wrap text-[11px] font-body text-muted-foreground">
                       <span className="truncate">{isLead ? `Lead · ${who}` : who}</span>
                       {t.due_time && <span className="inline-flex items-center gap-0.5"><Clock className="h-3 w-3" />{t.due_time.slice(0, 5)}</span>}

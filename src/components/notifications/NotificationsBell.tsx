@@ -4,6 +4,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { useProfile } from "@/hooks/useProfile";
 import { useNotifications, type Notification } from "@/hooks/useNotifications";
 import { generateNotifications } from "@/lib/notifications";
 import { confirmar } from "@/components/shared/Confirm";
@@ -55,13 +56,17 @@ function timeAgo(dateStr: string) {
 
 export function NotificationsBell() {
   const { user } = useAuth();
+  const { profile } = useProfile();
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteOne, clearAll } = useNotifications();
   const [open, setOpen] = useState(false);
 
+  // Mesmo padrão do resto do app (ManagerLayout/App): conta gestor/agência.
+  const isManager = profile?.account_type === "manager" || (profile?.seat_limit ?? 0) > 0;
+
   useEffect(() => {
     if (!user) return;
-    generateNotifications(user.id);
-  }, [user]);
+    generateNotifications(user.id, { isManager });
+  }, [user, isManager]);
 
   const handleMarkAllRead = () => {
     if (unreadCount === 0) return;
