@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveAccount } from "@/contexts/AccountContext";
+import { mensalidadeAtivaNoMes } from "@/lib/finance";
 import { toast } from "sonner";
 
 export type FinType = "entrada" | "despesa";
@@ -249,11 +250,14 @@ export function useEnsureMonthly() {
   return useMutation({
     mutationFn: async ({ monthRef, clients }: {
       monthRef: string;
-      clients: { id: string; monthly_value: number | null; payment_day: number | null; status?: string }[];
+      clients: { id: string; monthly_value: number | null; payment_day: number | null; status?: string; contract_end_date?: string | null }[];
     }) => {
       if (!agencyOwnerId) throw new Error("Sem sessão");
+      // Só gera/atualiza a instância do mês pra quem ainda conta neste mês.
+      // Cliente encerrado (contract_end_date) para de gerar a partir do mês seguinte.
+      const monthYYYYMM = monthRef.slice(0, 7);
       const rows = clients
-        .filter((c) => c.status !== "inativo" && Number(c.monthly_value) > 0)
+        .filter((c) => mensalidadeAtivaNoMes(c, monthYYYYMM))
         .map((c) => ({
           manager_id: agencyOwnerId,
           crm_client_id: c.id,

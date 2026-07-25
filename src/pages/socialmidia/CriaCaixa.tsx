@@ -8,9 +8,9 @@ import {
   type FinRecord, type FinType, type FinStatus, type FinContext, type FinRecordInput, type FinMonthly, type FinRecurring,
 } from "@/hooks/useFinance";
 import { MoneyInput } from "@/components/shared/MoneyInput";
-import { PAYMENT_METHODS, taxOfMonth, taxOfClient, regimeLabel, isPctRegime } from "@/lib/finance";
-import { useCrmClients } from "@/hooks/useCrm";
-import { useManagerProfile } from "@/hooks/useModules";
+import { PAYMENT_METHODS, taxOfMonth, taxOfClient, regimeLabel, isPctRegime, mensalidadeAtivaNoMes } from "@/lib/finance";
+import { useCrmClients, type CrmClient } from "@/hooks/useCrm";
+import { useManagerProfile, type FinSettings } from "@/hooks/useModules";
 import { ModuleGate } from "@/components/accounts/ModuleGate";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { ModuleHero, type SubTab } from "@/components/brand/ModuleHero";
@@ -82,7 +82,7 @@ function CaixaInner() {
   const fin = profile?.fin_settings ?? {};
   const now = new Date();
   const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   // Colaborador (acesso de equipe) só enxerga o financeiro da EMPRESA (PJ).
   // O Pessoal (PF) é privado do dono da conta.
   const { actingAsTeam } = useActiveAccount();
@@ -96,6 +96,9 @@ function CaixaInner() {
   // Colaborador nunca fica no contexto PF, mesmo digitando a URL direto.
   const ctx: FinContext = actingAsTeam ? "pj" : (wantsPf ? "pf" : "pj");
   const section = parts[3] ?? "visao";
+  // Sub-aba de "Mensalidades" (só PJ): ?sub=lancamentos abre a lista de lançamentos
+  // dentro da mesma aba. Deep-link coerente e a aba "Mensalidades" segue destacada.
+  const mensSub: "mensalidades" | "lancamentos" = new URLSearchParams(search).get("sub") === "lancamentos" ? "lancamentos" : "mensalidades";
 
   // Normaliza a URL (inclusive os links antigos /pessoafisica).
   useEffect(() => {
@@ -107,6 +110,12 @@ function CaixaInner() {
     if (parts.length < 4) {
       const c = wantsPf ? "pessoal" : "empresa";
       navigate(`/socialmidia/criacaixa/${c}/visao`, { replace: true });
+      return;
+    }
+    // No PJ, "Lançamentos" agora é sub-aba de Mensalidades. O link antigo
+    // /empresa/lancamentos passa a abrir /empresa/mensalidades?sub=lancamentos.
+    if (ctx === "pj" && section === "lancamentos") {
+      navigate(`/socialmidia/criacaixa/empresa/mensalidades?sub=lancamentos`, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, actingAsTeam]);
@@ -141,9 +150,12 @@ function CaixaInner() {
   const [skipping, setSkipping] = useState<FinMonthly | null>(null);
   const [skipReason, setSkipReason] = useState("");
 
+  // Carteira do MÊS VISTO: cliente encerrado (contract_end_date) conta só até o
+  // mês do encerramento; a partir do mês seguinte sai da carteira e do MRR.
+  const viewedMonth = `${ym.y}-${pad0(ym.m + 1)}`;
   const activeClients = useMemo(
-    () => clients.filter((c) => (c.status ?? "ativo") !== "inativo" && Number(c.monthly_value) > 0),
-    [clients],
+    () => clients.filter((c) => mensalidadeAtivaNoMes(c, viewedMonth)),
+    [clients, viewedMonth],
   );
 
   // Cria as instâncias do mês (idempotente, não sobrescreve o que já foi pago/pulado).
@@ -151,7 +163,7 @@ function CaixaInner() {
     if (!activeClients.length) return;
     ensureMonthly.mutate({
       monthRef,
-      clients: activeClients.map((c) => ({ id: c.id, monthly_value: c.monthly_value, payment_day: c.payment_day, status: c.status })),
+      clients: activeClients.map((c) => ({ id: c.id, monthly_value: c.monthly_value, payment_day: c.payment_day, status: c.status, contract_end_date: c.contract_end_date })),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [monthRef, activeClients.length]);
@@ -340,12 +352,13 @@ function CaixaInner() {
 
   // ── SUBMENU do módulo. Cada aba é uma URL. ──
   const base = `/socialmidia/criacaixa/${isPj ? "empresa" : "pessoal"}`;
+  // "Lançamentos" deixou de ser aba própria no PJ: virou uma sub-aba dentro de
+  // "Mensalidades" (as duas eram redundantes/complementares). No PF continua aba.
   const tabs: SubTab[] = isPj
     ? [
         { to: `${base}/visao`, label: "Visão geral" },
         { to: `${base}/mensalidades`, label: "Mensalidades" },
         { to: `${base}/calendario`, label: "Calendário" },
-        { to: `${base}/lancamentos`, label: "Lançamentos" },
         { to: `${base}/clientes`, label: "Clientes" },
         { to: `${base}/relatorios`, label: "Relatórios" },
       ]
@@ -379,6 +392,13 @@ function CaixaInner() {
   );
 
   const show = (s: string) => section === s;
+
+  // ── Mensalidades × Lançamentos ──
+  // No PJ os dois vivem na mesma aba "Mensalidades" (sub-abas). No PF, "Lançamentos"
+  // continua sendo aba própria (o PF não tem mensalidades).
+  const showMensTab = isPj && section === "mensalidades";
+  const showMensContent = showMensTab && mensSub === "mensalidades";
+  const showLancContent = (showMensTab && mensSub === "lancamentos") || (!isPj && section === "lancamentos");
 
   return (
     <div>
@@ -488,13 +508,26 @@ function CaixaInner() {
       {/* ═══════ RELATÓRIOS ═══════ */}
       {show("relatorios") && (
         <>
-          <RelatorioPeriodo records={records} ctx={ctx} />
+          <RelatorioPeriodo records={records} ctx={ctx} clients={clients} monthlies={monthlies} mrr={mrr} fin={fin} />
           <CashflowChart records={records} ctx={ctx} ym={ym} />
         </>
       )}
 
-      {/* ═══════ MENSALIDADES ═══════ */}
-      {show("mensalidades") && isPj && monthlies.length === 0 && (
+      {/* ═══════ MENSALIDADES (com sub-aba Lançamentos) ═══════ */}
+      {showMensTab && (
+        <div className="flex items-center gap-1 mb-4 rounded-2xl border border-border bg-card p-1 w-fit">
+          {([["mensalidades", "Mensalidades"], ["lancamentos", "Lançamentos"]] as const).map(([k, l]) => (
+            <button key={k}
+              onClick={() => navigate(k === "lancamentos" ? `${base}/mensalidades?sub=lancamentos` : `${base}/mensalidades`)}
+              className={cn("px-4 py-1.5 rounded-xl text-xs font-body font-bold transition-colors",
+                mensSub === k ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground")}>
+              {l}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {showMensContent && monthlies.length === 0 && (
         <div className="rounded-2xl border border-dashed border-border p-10 text-center">
           <p className="text-sm font-body text-foreground font-medium">Nenhuma mensalidade neste mês</p>
           <p className="text-xs text-muted-foreground font-body mt-1">
@@ -502,7 +535,7 @@ function CaixaInner() {
           </p>
         </div>
       )}
-      {show("mensalidades") && isPj && monthlies.length > 0 && (
+      {showMensContent && monthlies.length > 0 && (
         <div className="rounded-2xl border border-border bg-card p-4 mb-5">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <h3 className="text-sm font-display font-bold text-foreground">Mensalidades do mês</h3>
@@ -677,8 +710,8 @@ function CaixaInner() {
         </div>
       )}
 
-      {/* ═══════ LANÇAMENTOS ═══════ */}
-      {show("lancamentos") && (
+      {/* ═══════ LANÇAMENTOS (sub-aba de Mensalidades no PJ; aba própria no PF) ═══════ */}
+      {showLancContent && (
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           {(["todos", "entrada", "despesa"] as const).map((t) => (
             <button key={t} onClick={() => setTypeF(t)} className={cn("px-3 py-1.5 rounded-full text-xs font-body font-bold border", typeF === t ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground")}>{t === "todos" ? "Tudo" : t === "entrada" ? "Entradas" : "Despesas"}</button>
@@ -690,7 +723,7 @@ function CaixaInner() {
         </div>
       )}
 
-      {show("lancamentos") && (isLoading ? (
+      {showLancContent && (isLoading ? (
         <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-16 rounded-2xl bg-muted animate-pulse" />)}</div>
       ) : filteredItems.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border p-10 text-center">
@@ -1541,10 +1574,14 @@ function DiaDetalhe({ dia, mes, itens, clientName, acoes, onFechar }: {
 // RELATÓRIO POR PERÍODO, extrai mês / ano / intervalo livre,
 // com a evolução mês a mês e exportação em CSV.
 // ═══════════════════════════════════════════════════════════════════
-function RelatorioPeriodo({ records, ctx }: { records: FinRecord[]; ctx: FinContext }) {
+function RelatorioPeriodo({ records, ctx, clients = [], monthlies = [], mrr = 0, fin }: {
+  records: FinRecord[]; ctx: FinContext;
+  clients?: CrmClient[]; monthlies?: FinMonthly[]; mrr?: number; fin?: FinSettings;
+}) {
   const hoje = new Date();
   const [de, setDe] = useState(`${hoje.getFullYear()}-01-01`);
   const [ate, setAte] = useState(hojeBR());
+  const isPj = ctx === "pj";
 
   const preset = (kind: "mes" | "ano" | "12m") => {
     const y = hoje.getFullYear(), m = hoje.getMonth();
@@ -1556,6 +1593,49 @@ function RelatorioPeriodo({ records, ctx }: { records: FinRecord[]; ctx: FinCont
   const rows = records.filter((r) => (r.context ?? "pj") === ctx && r.date >= de && r.date <= ate);
   const entradas = rows.filter((r) => r.type === "entrada" && r.status === "pago").reduce((s, r) => s + Number(r.amount), 0);
   const saidas = rows.filter((r) => r.type === "despesa").reduce((s, r) => s + Number(r.amount), 0);
+
+  // ── Recorte da receita: mensalidade × avulso (só o que JÁ entrou). ──
+  const mensalRecebida = rows.filter((r) => r.type === "entrada" && r.status === "pago" && (r.category ?? "") === "Mensalidade").reduce((s, r) => s + Number(r.amount), 0);
+  const avulsaRecebida = entradas - mensalRecebida;
+
+  // ── A receber no período: entradas lançadas ainda não pagas (pendente/atrasado). ──
+  const aReceberRows = rows.filter((r) => r.type === "entrada" && r.status !== "pago");
+  const aReceber = aReceberRows.reduce((s, r) => s + Number(r.amount), 0);
+
+  // ── Inadimplência do MÊS CORRENTE (fin_monthly já vencido e não pago). ──
+  // Fonte real: as instâncias do mês. Só o que passou do vencimento e não foi pago/pulado.
+  const hojeStr = hojeBR();
+  const inadimplentes = monthlies
+    .filter((m) => m.status === "pendente" && m.due_date < hojeStr)
+    .map((m) => ({ nome: clients.find((c) => c.id === m.crm_client_id)?.name ?? "Cliente", valor: Number(m.amount), venc: m.due_date }))
+    .sort((a, b) => b.valor - a.valor);
+  const inadimplenciaTotal = inadimplentes.reduce((s, i) => s + i.valor, 0);
+
+  // ── Ranking por cliente no período: receita recebida, custo e margem. ──
+  const nomeCliente = (id: string | null) => clients.find((c) => c.id === id)?.name ?? "Sem cliente";
+  const porCliente = useMemo(() => {
+    const map = new Map<string, { recebido: number; custo: number }>();
+    for (const r of rows) {
+      if (!r.crm_client_id) continue;
+      const cur = map.get(r.crm_client_id) ?? { recebido: 0, custo: 0 };
+      if (r.type === "entrada" && r.status === "pago") cur.recebido += Number(r.amount);
+      else if (r.type === "despesa") cur.custo += Number(r.amount);
+      map.set(r.crm_client_id, cur);
+    }
+    const receitaTotal = [...map.values()].reduce((s, v) => s + v.recebido, 0);
+    return [...map.entries()]
+      .map(([id, v]) => {
+        const imposto = taxOfClient(fin, v.recebido, receitaTotal);
+        const margem = v.recebido - v.custo - imposto;
+        return { id, nome: nomeCliente(id), ...v, imposto, margem, margemPct: v.recebido > 0 ? (margem / v.recebido) * 100 : 0 };
+      })
+      .filter((x) => x.recebido > 0 || x.custo > 0)
+      .sort((a, b) => b.recebido - a.recebido);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, clients, fin]);
+  const maxReceita = Math.max(1, ...porCliente.map((c) => c.recebido));
+  const clientesComReceita = porCliente.filter((c) => c.recebido > 0).length;
+  const ticketMedio = clientesComReceita > 0 ? mensalRecebida / clientesComReceita : 0;
 
   // Evolução mês a mês dentro do período.
   const porMes = new Map<string, { receita: number; custo: number }>();
@@ -1605,6 +1685,84 @@ function RelatorioPeriodo({ records, ctx }: { records: FinRecord[]; ctx: FinCont
         <Metric label="Saídas" value={brl(saidas)} tone="red" />
         <Metric label="Resultado" value={brl(entradas - saidas)} tone={entradas - saidas >= 0 ? "green" : "red"} />
       </div>
+
+      {/* ── RECEITA: mensalidade × avulso, e o que ainda falta receber ── */}
+      {isPj && entradas > 0 && (
+        <div className="mb-4">
+          <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Composição da receita recebida</p>
+          <div className="h-2.5 rounded-full overflow-hidden flex bg-muted mb-2">
+            <div className="h-full bg-primary" style={{ width: `${(mensalRecebida / entradas) * 100}%` }} title="Mensalidades" />
+            <div className="h-full bg-emerald-400" style={{ width: `${(avulsaRecebida / entradas) * 100}%` }} title="Avulsas" />
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <MiniStat label="Mensalidades" value={brl(mensalRecebida)} tone="green" hint={`${((mensalRecebida / entradas) * 100).toFixed(0)}% da receita`} />
+            <MiniStat label="Avulsas" value={brl(avulsaRecebida)} tone="green" hint={`${((avulsaRecebida / entradas) * 100).toFixed(0)}% da receita`} />
+            <MiniStat label="A receber" value={brl(aReceber)} tone="muted" hint={aReceberRows.length ? `${aReceberRows.length} lançamento(s)` : "nada pendente"} />
+            <MiniStat label="Ticket médio" value={brl(ticketMedio)} tone="muted" hint="mensalidade ÷ clientes pagantes" />
+          </div>
+        </div>
+      )}
+
+      {/* ── INADIMPLÊNCIA: quem venceu neste mês e ainda não pagou ── */}
+      {isPj && inadimplentes.length > 0 && (
+        <div className="mb-4 rounded-xl border border-red-500/25 bg-red-500/[0.04] p-3">
+          <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
+            <p className="text-[11px] font-body font-bold text-red-600 uppercase tracking-wider flex items-center gap-1.5">
+              <AlertTriangle className="h-3.5 w-3.5" /> Inadimplência do mês
+            </p>
+            <span className="text-[12px] font-display font-bold text-red-600">{brl(inadimplenciaTotal)}</span>
+          </div>
+          <div className="space-y-1">
+            {inadimplentes.map((i) => (
+              <div key={i.nome + i.venc} className="flex items-center gap-2 text-[12px] font-body">
+                <span className="min-w-0 flex-1 truncate text-foreground">{i.nome}</span>
+                <span className="text-muted-foreground shrink-0">venceu {i.venc.split("-").reverse().slice(0, 2).join("/")}</span>
+                <span className="shrink-0 font-semibold text-red-600 tabular-nums">{brl(i.valor)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── RANKING POR CLIENTE: receita, custo e margem no período ── */}
+      {isPj && porCliente.length > 0 && (
+        <div className="mb-4">
+          <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Receita por cliente (recebido no período)</p>
+          <div className="space-y-2">
+            {porCliente.slice(0, 8).map((c) => (
+              <div key={c.id}>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className="text-[12.5px] font-body font-medium text-foreground truncate min-w-0">{c.nome}</span>
+                  <span className="text-[12px] font-body text-muted-foreground shrink-0 tabular-nums">
+                    <strong className="text-foreground">{brl(c.recebido)}</strong>
+                    {c.custo > 0 ? <> · custo {brl(c.custo)}</> : ""}
+                    {" · "}<span className={cn("font-semibold", c.margem >= 0 ? "text-green-700" : "text-red-600")}>margem {brl(c.margem)}</span>
+                  </span>
+                </div>
+                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div className="h-full rounded-full bg-primary/70" style={{ width: `${Math.max(2, (c.recebido / maxReceita) * 100)}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+          {porCliente.length > 8 && <p className="text-[10.5px] font-body text-muted-foreground mt-1.5">+{porCliente.length - 8} outro(s) cliente(s)</p>}
+        </div>
+      )}
+
+      {/* ── PROJEÇÃO: com base na carteira atual (MRR) ── */}
+      {isPj && mrr > 0 && (
+        <div className="mb-4 rounded-xl border border-primary/20 bg-primary/[0.03] p-3">
+          <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Projeção pela carteira atual</p>
+          <div className="grid grid-cols-3 gap-3">
+            <MiniStat label="Por mês" value={brl(mrr)} tone="green" hint="MRR da carteira" />
+            <MiniStat label="Trimestre" value={brl(mrr * 3)} tone="muted" hint="3 meses" />
+            <MiniStat label="12 meses" value={brl(mrr * 12)} tone="muted" hint="recorrência anual" />
+          </div>
+          <p className="text-[10.5px] font-body text-muted-foreground mt-2">
+            Estimativa: mantém a carteira de hoje, sem contar avulsos nem reajustes. Clientes encerrados já saíram da conta.
+          </p>
+        </div>
+      )}
 
       {meses.length === 0 ? (
         <p className="text-[12px] font-body text-muted-foreground text-center py-3">Nenhum lançamento nesse período.</p>

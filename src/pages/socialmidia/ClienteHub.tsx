@@ -5,6 +5,8 @@ import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Link2, Loader2, Plu
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useCrmClient, useUpdateCrmClient, useUploadCrmAsset, CLIENT_STATUSES, CLIENT_STATUS_META, type ClientStatus } from "@/hooks/useCrm";
+import { mensalidadeAtivaNoMes } from "@/lib/finance";
+import { InactivateClientDialog } from "@/components/accounts/crm/InactivateClientDialog";
 import { Camera } from "lucide-react";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { BrandColorPicker } from "@/components/accounts/BrandColorPicker";
@@ -193,10 +195,21 @@ export default function ClienteHub() {
   };
   // Ativar/pausar/inativar direto da ficha. Usa o mesmo campo `status` da lista
   // do Cria Gestão, então a lista e o Caixa/Home refletem na hora.
+  const [inativarOpen, setInativarOpen] = useState(false);
   const setStatus = async (s: ClientStatus) => {
     if (!client) return;
-    await updateClient.mutateAsync({ id: client.id, status: s } as never);
-    toast.success(s === "inativo" ? "Cliente inativado." : s === "pausado" ? "Cliente pausado." : "Cliente reativado.");
+    // Inativar pede a DATA DE ENCERRAMENTO (dialog). Só grava depois de confirmar.
+    if (s === "inativo") { setInativarOpen(true); return; }
+    // Reativar / pausar: limpa a data de encerramento (o contrato voltou a valer).
+    await updateClient.mutateAsync({ id: client.id, status: s, contract_end_date: null } as never);
+    toast.success(s === "pausado" ? "Cliente pausado." : "Cliente reativado.");
+  };
+  // Confirmou o encerramento no dialog: grava status inativo + a data escolhida.
+  const confirmInativar = async (endDate: string) => {
+    if (!client) return;
+    setInativarOpen(false);
+    await updateClient.mutateAsync({ id: client.id, status: "inativo", contract_end_date: endDate } as never);
+    toast.success("Cliente inativado. A mensalidade conta até o mês do encerramento.");
   };
   const doCopyLink = async () => {
     if (!extClient) return;
@@ -305,6 +318,12 @@ export default function ClienteHub() {
                   ? <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/12 text-emerald-600 font-body font-semibold">Link de aprovação ativo</span>
                   : <span className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-body">Cria Post não ativado</span>}
                 {pendCount > 0 && <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-body font-semibold">{pendCount} pendente{pendCount > 1 ? "s" : ""}</span>}
+                {/* Cliente encerrado: mostra QUANDO o contrato encerrou. */}
+                {(client as { status?: ClientStatus }).status === "inativo" && (client as { contract_end_date?: string | null }).contract_end_date && (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-body font-semibold">
+                    Encerrado em {parseDateOnly((client as { contract_end_date?: string | null }).contract_end_date!).toLocaleDateString("pt-BR")}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -324,6 +343,13 @@ export default function ClienteHub() {
             >
               {CLIENT_STATUSES.map((s) => <option key={s} value={s}>{CLIENT_STATUS_META[s].label}</option>)}
             </select>
+            {/* Ao escolher "Inativo": pede a data de encerramento antes de gravar. */}
+            <InactivateClientDialog
+              open={inativarOpen}
+              defaultDate={(client as { contract_end_date?: string | null }).contract_end_date}
+              onConfirm={confirmInativar}
+              onCancel={() => setInativarOpen(false)}
+            />
             {/* COR DO CLIENTE — pinta o card na lista, a logo e o link público. */}
             <Button variant="outline" className="px-3" onClick={() => setColorOpen((v) => !v)} title="Cor do cliente" aria-label="Cor do cliente">
               <span className="h-4 w-4 rounded-md ring-1 ring-border" style={{ background: (client as { color?: string | null }).color || "#cbd5e1" }} />
@@ -580,7 +606,7 @@ export default function ClienteHub() {
       {/* FINANCEIRO, exclusivo de quem assina o Cria Caixa. */}
       {activeTab === "financeiro" && (
         hasCaixa
-          ? <FinanceTab clientId={id!} clientName={client.name} monthlyValue={client.monthly_value} paymentDay={client.payment_day} clientStatus={client.status} />
+          ? <FinanceTab clientId={id!} clientName={client.name} monthlyValue={client.monthly_value} paymentDay={client.payment_day} clientStatus={client.status} contractEndDate={client.contract_end_date} />
           : <ModuleUpsell code="financeiro" clientName={client.name} />
       )}
       {/* Vitrine em popup: aparece quando a pessoa CLICA numa ação que exige
@@ -1191,7 +1217,7 @@ function mesesCompet(mesAtual: string): string[] {
   });
 }
 
-function FinanceTab({ clientId, clientName, monthlyValue, paymentDay, clientStatus }: { clientId: string; clientName: string; monthlyValue: number | null; paymentDay: number | null; clientStatus: string }) {
+function FinanceTab({ clientId, clientName, monthlyValue, paymentDay, clientStatus, contractEndDate }: { clientId: string; clientName: string; monthlyValue: number | null; paymentDay: number | null; clientStatus: string; contractEndDate: string | null }) {
   const { data: all = [], isLoading } = useFinRecords();
   const { profile } = useManagerProfile();
   const create = useCreateFinRecord();
@@ -1233,10 +1259,11 @@ function FinanceTab({ clientId, clientName, monthlyValue, paymentDay, clientStat
   // aparecer mesmo que a pessoa nunca tenha aberto o Cria Caixa neste mês.
   useEffect(() => {
     if (range !== "mes") return;
-    if (clientStatus === "inativo" || !(Number(monthlyValue) > 0)) return;
-    ensureMonthly.mutate({ monthRef: monthRefView, clients: [{ id: clientId, monthly_value: monthlyValue, payment_day: paymentDay, status: clientStatus }] });
+    // Encerrado (contract_end_date): não gera mensalidade depois do mês do encerramento.
+    if (!mensalidadeAtivaNoMes({ status: clientStatus, monthly_value: monthlyValue, contract_end_date: contractEndDate }, ymPrefix)) return;
+    ensureMonthly.mutate({ monthRef: monthRefView, clients: [{ id: clientId, monthly_value: monthlyValue, payment_day: paymentDay, status: clientStatus, contract_end_date: contractEndDate }] });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [monthRefView, range, clientId, monthlyValue, paymentDay, clientStatus]);
+  }, [monthRefView, range, clientId, monthlyValue, paymentDay, clientStatus, contractEndDate]);
 
   // fin_records.amount é em REAIS (mesma unidade do Cria Caixa).
   // Antes esta aba gravava *100 e lia /100, um custo de R$ 400 virava R$ 40.000 no Caixa.

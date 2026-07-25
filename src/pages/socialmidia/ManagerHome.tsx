@@ -19,6 +19,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useManagerOutlet, MODULE_ICON } from "@/components/accounts/ManagerLayout";
 import { readLastClient } from "@/components/accounts/ClientSwitcher";
 import { useCrmClients } from "@/hooks/useCrm";
+import { mensalidadeAtivaNoMes } from "@/lib/finance";
+import { hojeBR } from "@/lib/date-br";
 import { useAllExternalPosts, useExternalClients } from "@/hooks/useCriaPost";
 import { MonthOverviewPanel } from "@/components/accounts/MonthOverviewPanel";
 
@@ -103,8 +105,11 @@ export default function ManagerHome() {
 
   // O resumo do dia. Antes a frase prometia um resumo e nada aparecia.
   const ativos = crmClients.filter((c) => (c.status ?? "ativo") === "ativo").length;
+  // "Por mês na carteira": só entra quem ainda conta ESTE mês. Cliente encerrado
+  // (contract_end_date) sai da carteira a partir do mês seguinte ao encerramento.
+  const mesAtualBR = hojeBR().slice(0, 7);
   const mrr = crmClients
-    .filter((c) => (c.status ?? "ativo") !== "inativo")
+    .filter((c) => mensalidadeAtivaNoMes(c, mesAtualBR))
     .reduce((s, c) => s + (Number(c.monthly_value) || 0), 0);
   const { overview } = useManagerApprovalOverview();
   const pendentes = overview.reduce((s, r) => s + (r.pendentes ?? 0), 0);

@@ -31,6 +31,7 @@ import { formatBRL } from "@/lib/money";
 import { PAYMENT_METHODS } from "@/lib/finance";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 import { confirmar } from "@/components/shared/Confirm";
+import { InactivateClientDialog } from "@/components/accounts/crm/InactivateClientDialog";
 
 const CONSCIOUSNESS = ["Inconsciente do problema", "Consciente do problema", "Consciente da solução", "Consciente do produto", "Totalmente consciente"];
 const initial = (n?: string | null) => (n ? n.trim().charAt(0).toUpperCase() : "?");
@@ -109,6 +110,8 @@ function ClientWorkspace() {
   const lastServer = useRef<string>("");   // último estado vindo do servidor
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const [cropSrc, setCropSrc] = useState<string | null>(null);
+  // Inativar pede a data de encerramento (o autosave persiste status + data juntos).
+  const [inativarOpen, setInativarOpen] = useState(false);
 
   // Sincroniza do servidor SEM atropelar o que o usuário está digitando.
   // (Antes, qualquer refetch resetava o form → "coloco a info, saio e volta zerado".)
@@ -164,6 +167,11 @@ function ClientWorkspace() {
   const comps = form.competitors ?? [];
   const criaAvatar = form.cria_owner_id ? (managedAccounts.find((a) => a.owner_id === form.cria_owner_id)?.avatar_url ?? null) : null;
   const shownAvatar = form.logo && /^https?:\/\//.test(form.logo) ? form.logo : criaAvatar;
+  // Troca de status: inativar abre o dialog de encerramento; reativar limpa a data.
+  const onStatusChange = (s: ClientStatus) => {
+    if (s === "inativo") { setInativarOpen(true); return; }
+    setForm({ ...form, status: s, contract_end_date: null });
+  };
   const setBc = (k: string, v: string) => setForm({ ...form, brand_core: { ...bc, [k]: v } });
   const setPe = (k: string, v: string) => {
     const arr = personas.slice(); arr[idx] = { ...(arr[idx] ?? {}), [k]: v };
@@ -275,10 +283,21 @@ function ClientWorkspace() {
 
         {/* 2. O que é: chips numa tira só, que rola no mobile em vez de empilhar. */}
         <div className="flex items-center gap-2 mt-3.5 overflow-x-auto scrollbar-none scroll-snap-x sm:flex-wrap sm:overflow-visible pb-0.5">
-          <select value={form.status ?? "ativo"} onChange={(e) => setForm({ ...form, status: e.target.value as ClientStatus })}
+          <select value={form.status ?? "ativo"} onChange={(e) => onStatusChange(e.target.value as ClientStatus)}
             className={cn("shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full border cursor-pointer outline-none", CLIENT_STATUS_META[(form.status ?? "ativo") as ClientStatus].cls)}>
             {CLIENT_STATUSES.map((s) => <option key={s} value={s}>{CLIENT_STATUS_META[s].label}</option>)}
           </select>
+          <InactivateClientDialog
+            open={inativarOpen}
+            defaultDate={form.contract_end_date}
+            onConfirm={(endDate) => { setInativarOpen(false); setForm({ ...form, status: "inativo", contract_end_date: endDate }); }}
+            onCancel={() => setInativarOpen(false)}
+          />
+          {form.status === "inativo" && form.contract_end_date && (
+            <span className="shrink-0 whitespace-nowrap text-xs font-semibold px-3 py-1.5 rounded-full bg-muted text-muted-foreground border border-border">
+              Encerrado em {new Date(form.contract_end_date + "T00:00:00").toLocaleDateString("pt-BR")}
+            </span>
+          )}
           {form.segment && <span className="shrink-0 whitespace-nowrap text-xs font-semibold px-3 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/15">{form.segment}</span>}
           {isCria && <span className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full bg-muted text-foreground/70 border border-border">cria</span>}
           {/* Etiquetas VARIÁVEIS (multi-seleção) */}

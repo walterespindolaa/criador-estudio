@@ -59,3 +59,28 @@ export function taxOfClient(
 }
 
 export const regimeLabel = (r?: string) => REGIMES.find((x) => x.v === r)?.label ?? "não configurado";
+
+/**
+ * A mensalidade de um cliente só conta na carteira/MRR e só gera instância mensal
+ * (fin_monthly) ATÉ o mês do encerramento do contrato (contract_end_date).
+ * O mês do encerramento AINDA conta; a partir do mês seguinte, para de contar.
+ *
+ * Regra:
+ *  - sem valor mensal (> 0): nunca conta.
+ *  - com data de encerramento: conta enquanto o mês de referência for <= mês do encerramento.
+ *  - sem data de encerramento: o status manda (inativo não conta).
+ *
+ * @param monthYYYYMM  mês de referência no formato "YYYY-MM" (ex.: "2026-07").
+ *                     NÃO usar toISOString(); passe hojeBR().slice(0,7) ou o mês visto.
+ */
+export function mensalidadeAtivaNoMes(
+  client: { status?: string | null; monthly_value?: number | null; contract_end_date?: string | null },
+  monthYYYYMM: string,
+): boolean {
+  if (!(Number(client.monthly_value) > 0)) return false;
+  const end = client.contract_end_date ? client.contract_end_date.slice(0, 7) : null;
+  // Encerrado: conta até o mês do encerramento (inclusive), nunca depois.
+  if (end) return monthYYYYMM <= end;
+  // Sem data de encerramento: mantém a regra antiga, o status decide.
+  return (client.status ?? "ativo") !== "inativo";
+}
