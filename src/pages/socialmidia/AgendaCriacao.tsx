@@ -22,6 +22,7 @@ import {
 } from "@/hooks/useAgenda";
 import { useAllExternalPosts, useExternalClients, useMoveExternalPostDate, useUpdateExternalPost, type ExternalPostWithClient } from "@/hooks/useCriaPost";
 import { useCriaPostMedia, type CriaMedia } from "@/hooks/useCriaPostMedia";
+import { useClientCriaAgendaPosts, type ClientCriaAgendaPost, type ClientCriaLink } from "@/hooks/useManagerClientCria";
 import { isDriveMedia, isDriveUrl, isVideoMedia, getThumbnailUrl, getDriveImageFallbackUrl, downloadMediaFile, mediaDownloadName } from "@/lib/driveMedia";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 
@@ -33,6 +34,11 @@ const POST_STATUS: Record<string, { label: string; cls: string }> = {
   aprovado: { label: "Aprovado", cls: "bg-green-100 text-green-700" },
   postado: { label: "Postado", cls: "bg-slate-200 text-slate-600" },
 };
+
+// Rótulos dos estados "prontos" do kanban do cliente (Tarefa B), pro pill do card.
+const CRIA_POST_STATUS: Record<string, string> = { editando: "Pronto", agendado: "Agendado", publicado: "Publicado" };
+// Cor identidade dos posts do Cria do cliente na agenda (verde, distinta dos demais tipos).
+const CRIA_POST_COLOR = "#059669";
 
 const WD = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 // Inverso de parseDateOnly: formata um Date de meia-noite LOCAL de volta para YYYY-MM-DD.
@@ -122,14 +128,14 @@ export default function AgendaCriacao() {
     setView(v);
     try { localStorage.setItem("agenda_view", v); } catch { /* segue */ }
   };
-  // Filtros por tipo de item na grade (criação, tarefa, captação, post), persistidos.
-  const [filters, setFilters] = useState<{ criacao: boolean; tarefa: boolean; capta: boolean; post: boolean }>(() => {
+  // Filtros por tipo de item na grade (criação, tarefa, captação, post, cria do cliente), persistidos.
+  const [filters, setFilters] = useState<{ criacao: boolean; tarefa: boolean; capta: boolean; post: boolean; criapost: boolean }>(() => {
     try {
       const s = JSON.parse(localStorage.getItem("agenda_filters") || "{}");
-      return { criacao: s.criacao ?? true, tarefa: s.tarefa ?? true, capta: s.capta ?? true, post: s.post ?? true };
-    } catch { return { criacao: true, tarefa: true, capta: true, post: true }; }
+      return { criacao: s.criacao ?? true, tarefa: s.tarefa ?? true, capta: s.capta ?? true, post: s.post ?? true, criapost: s.criapost ?? true };
+    } catch { return { criacao: true, tarefa: true, capta: true, post: true, criapost: true }; }
   });
-  const toggleFilter = (k: "criacao" | "tarefa" | "capta" | "post") =>
+  const toggleFilter = (k: "criacao" | "tarefa" | "capta" | "post" | "criapost") =>
     setFilters((f) => { const nf = { ...f, [k]: !f[k] }; try { localStorage.setItem("agenda_filters", JSON.stringify(nf)); } catch { /* segue */ } return nf; });
   // Multi-seleção de clientes para os posts (vazio = todos).
   const [postClients, setPostClients] = useState<Set<string>>(new Set());
@@ -308,6 +314,30 @@ export default function AgendaCriacao() {
     return m;
   }, [allPosts, from, to, filters.post, postClients]);
 
+  // TAREFA B — Posts do Cria do CLIENTE (o kanban pessoal dele), já "prontos" em diante
+  // e com data. A social mídia vê pra se organizar, sem precisar entrar no Cria de cada um.
+  // Vínculo: só os clientes do CRM que têm conta Cria (cria_owner_id). Uma query só pra
+  // todos (RLS is_account_member filtra o que o gestor pode ver).
+  const criaLinks = useMemo<ClientCriaLink[]>(() =>
+    clients
+      .filter((c) => !!c.cria_owner_id)
+      .map((c) => ({ criaOwnerId: c.cria_owner_id!, crmClientId: c.id, name: c.name, color: c.color })),
+    [clients]);
+  const { data: clientCriaPosts = [] } = useClientCriaAgendaPosts(criaLinks, from, to);
+  // Posts do Cria do cliente por dia (aplicando o mesmo filtro de cliente da agenda).
+  const criaPostsByDay = useMemo(() => {
+    const m = new Map<string, ClientCriaAgendaPost[]>();
+    if (!filters.criapost) return m;
+    for (const p of clientCriaPosts) {
+      if (!p.scheduled_date || p.scheduled_date < from || p.scheduled_date > to) continue;
+      if (!clientMatches(p.crm_client_id, p.client_name)) continue;
+      (m.get(p.scheduled_date) ?? m.set(p.scheduled_date, []).get(p.scheduled_date)!).push(p);
+    }
+    for (const arr of m.values()) arr.sort((a, b) => (a.scheduled_time ?? "99:99").localeCompare(b.scheduled_time ?? "99:99"));
+    return m;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientCriaPosts, from, to, filters.criapost, postClients, selectedCrmIds, selectedNames]);
+
   // Faixa fixa do topo "Em produção": NUNCA some, independente do período/semana/mês.
   // Inclui TODOS os posts em produção (com OU sem data) mais qualquer post sem data
   // (qualquer status). Assim nenhum post em produção some ao sair da célula do dia, e os
@@ -416,7 +446,7 @@ export default function AgendaCriacao() {
           <div className="flex items-center gap-3 flex-wrap">
             <p className="text-sm font-display font-bold text-foreground">Agenda de criação</p>
             <div className="flex items-center gap-1.5 flex-wrap">
-              {([["criacao", "Criações", "#4B3FA8"], ["tarefa", "Tarefas", "#0061EE"], ["capta", "Captações", "#FF77B9"], ["post", "Posts", "#EA4918"]] as const).map(([k, label, color]) => (
+              {([["criacao", "Criações", "#4B3FA8"], ["tarefa", "Tarefas", "#0061EE"], ["capta", "Captações", "#FF77B9"], ["post", "Posts", "#EA4918"], ["criapost", "Cria do cliente", CRIA_POST_COLOR]] as const).map(([k, label, color]) => (
                 <button key={k} type="button" onClick={() => toggleFilter(k)}
                   className={cn("flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-body font-semibold transition-colors",
                     filters[k] ? "text-white border-transparent" : "bg-card border-border text-muted-foreground hover:text-foreground")}
@@ -553,7 +583,7 @@ export default function AgendaCriacao() {
               : "flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth lg:grid lg:grid-cols-7 lg:gap-2 lg:overflow-visible lg:pb-0",
           )}>
             {days.map((d, i) => {
-              const iso = ymd(d); const list = byDay.get(iso) ?? []; const caps = capturesByDay.get(iso) ?? []; const dayTasks = tasksByDay.get(iso) ?? []; const dayPosts = postsByDay.get(iso) ?? []; const totalDay = caps.length + dayTasks.length + list.length + dayPosts.length; const isToday = iso === today;
+              const iso = ymd(d); const list = byDay.get(iso) ?? []; const caps = capturesByDay.get(iso) ?? []; const dayTasks = tasksByDay.get(iso) ?? []; const dayPosts = postsByDay.get(iso) ?? []; const criaDay = criaPostsByDay.get(iso) ?? []; const totalDay = caps.length + dayTasks.length + list.length + dayPosts.length; const isToday = iso === today;
               // Lista única do dia, ordenada por horário (sem hora primeiro). Os index dos
               // Draggable saem daqui (0..n-1 contíguos), casando com a ordem renderizada pro dnd.
               const dayItems = buildDayItems(caps, dayTasks, list, dayPosts);
@@ -718,7 +748,28 @@ export default function AgendaCriacao() {
                         );
                       })}
                       {dropProvided.placeholder}
-                      {totalDay === 0 && <button onClick={() => { setAddKind("criacao"); setAddDay(iso); }} className="text-[11px] font-body text-muted-foreground/60 hover:text-primary py-1">+ cliente</button>}
+                      {/* TAREFA B — posts do Cria do cliente (prontos+data). Só LEITURA aqui
+                          (não arrastáveis, ficam FORA do índice do dnd pra não quebrar o
+                          arrastar). Visualmente distintos: verde tracejado + ícone. Clicar
+                          abre o Kanban do cliente na ficha dele. */}
+                      {criaDay.map((p) => (
+                        <button key={`cria:${p.id}`} type="button" title={p.title ?? undefined}
+                          onClick={() => { if (p.crm_client_id) navigate(`/socialmidia/clientes/${p.crm_client_id}/kanban-cliente`); }}
+                          className="rounded-lg border border-dashed px-2 py-1.5 text-left w-full overflow-hidden transition-colors hover:brightness-95"
+                          style={{ borderColor: `${(p.client_color || CRIA_POST_COLOR)}80`, background: `${(p.client_color || CRIA_POST_COLOR)}0F` }}>
+                          <div className="flex items-center gap-1" style={{ color: CRIA_POST_COLOR }}>
+                            <Layers className="h-3 w-3 shrink-0" />
+                            <span className="text-[10px] font-body font-bold truncate flex-1 text-foreground/80">
+                              {p.scheduled_time && <span className="tabular-nums">{p.scheduled_time.slice(0, 5)} · </span>}{p.client_name ?? "Cliente"}
+                            </span>
+                            <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: CRIA_POST_COLOR }}>
+                              {CRIA_POST_STATUS[p.status ?? ""] ?? "Cria"}
+                            </span>
+                          </div>
+                          <p className="text-[12px] font-body font-semibold leading-tight truncate text-foreground">{p.title || "Post"}</p>
+                        </button>
+                      ))}
+                      {totalDay === 0 && criaDay.length === 0 && <button onClick={() => { setAddKind("criacao"); setAddDay(iso); }} className="text-[11px] font-body text-muted-foreground/60 hover:text-primary py-1">+ cliente</button>}
                     </div>
                   )}
                 </Droppable>

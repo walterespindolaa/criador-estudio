@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Link2, Loader2, Plus, Settings2, Trash2, Wallet, Send, Check, Pencil, LogIn, Home, Layers, CalendarDays, BarChart3, BookOpen, Lightbulb, Search, Compass, Instagram, ArrowRight, Lock, FolderOpen, Package, File as FileIcon, RefreshCw } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Link2, Loader2, Plus, Settings2, Trash2, Wallet, Send, Check, Pencil, LogIn, Home, Layers, CalendarDays, BarChart3, BookOpen, Lightbulb, Search, Compass, Instagram, ArrowRight, Lock, FolderOpen, Package, File as FileIcon, RefreshCw, Kanban } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useCrmClient, useUpdateCrmClient, useUploadCrmAsset, CLIENT_STATUSES, CLIENT_STATUS_META, type ClientStatus } from "@/hooks/useCrm";
@@ -32,6 +32,7 @@ import { useCriaClientProfiles } from "@/hooks/useManagerClientCria";
 import { useDriveFolder, type DriveItem } from "@/hooks/useDriveFolder";
 import { ClienteInstagramCria } from "@/components/accounts/ClienteInstagramCria";
 import { ClienteBrandbookCria } from "@/components/accounts/ClienteBrandbookCria";
+import { ClienteKanbanCria } from "@/components/accounts/ClienteKanbanCria";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -94,6 +95,7 @@ type SubMeta = { label: string; desc: string; icon: LucideIcon };
 const SUB_META: Record<string, SubMeta> = {
   posts: { label: "Produção", desc: "Monte cada post e mande aprovar por link: aguardando cliente, ajuste, aprovado.", icon: Layers },
   cronograma: { label: "Cronograma", desc: "O calendário do mês do cliente, com as datas e o link público.", icon: CalendarDays },
+  "kanban-cliente": { label: "Kanban do cliente", desc: "O quadro real do Cria do cliente. Edite e arraste os posts dele direto daqui, sincronizado ao vivo.", icon: Kanban },
   relatorio: { label: "Relatório", desc: "O resultado white-label do mês pra enviar pro cliente.", icon: BarChart3 },
   portal: { label: "Portal", desc: "O que o cliente vê no link de aprovação. Personalize aqui.", icon: Link2 },
   materiais: { label: "Materiais", desc: "Demandas de material fora dos posts. O cliente pede pelo portal, você gerencia no kanban.", icon: Package },
@@ -106,7 +108,7 @@ const SUB_META: Record<string, SubMeta> = {
 type Grp = { key: string; label: string; modulo?: CriaColor2; icon: LucideIcon; landing?: boolean; subs: string[] };
 const GROUPS: Grp[] = [
   { key: "visao-geral", label: "Visão geral", icon: Home, subs: [] },
-  { key: "cria-post", label: "Cria Post", modulo: "laranja", icon: Layers, landing: true, subs: ["posts", "cronograma", "relatorio", "materiais", "portal"] },
+  { key: "cria-post", label: "Cria Post", modulo: "laranja", icon: Layers, landing: true, subs: ["posts", "cronograma", "kanban-cliente", "relatorio", "materiais", "portal"] },
   { key: "cria-gestao", label: "Cria Gestão", modulo: "rosa", icon: BookOpen, subs: ["brandbook"] },
   { key: "cria-caixa", label: "Cria Caixa", modulo: "azul", icon: Wallet, subs: ["financeiro"] },
   { key: "cria-radar", label: "Cria Radar", modulo: "lilas", icon: Search, landing: true, subs: ["ideias", "pesquisa"] },
@@ -139,13 +141,22 @@ export default function ClienteHub() {
   const { allowed: hasPost } = useHasModule("aprovapost_externo");
   const { data: client, isLoading } = useCrmClient(id);
   const { setActiveAccount } = useActiveAccount();
-  // A sub-página Pesquisa (Apify) só existe pra quem tem o HUB liberado.
-  const subVisible = (sub: string) => (sub === "pesquisa" ? hasHubCria : true);
+  // A sub-página Pesquisa (Apify) só existe pra quem tem o HUB liberado. O Kanban do
+  // cliente só aparece quando o cliente do CRM tem conta Cria vinculada (cria_owner_id).
+  const subVisible = (sub: string) => {
+    if (sub === "pesquisa") return hasHubCria;
+    if (sub === "kanban-cliente") return !!client?.cria_owner_id;
+    return true;
+  };
   const allTabKeys = useMemo(() => {
     const s = new Set<string>();
-    GROUPS.forEach((g) => { s.add(g.key); g.subs.forEach((x) => { if (x !== "pesquisa" || hasHubCria) s.add(x); }); });
+    GROUPS.forEach((g) => { s.add(g.key); g.subs.forEach((x) => {
+      if (x === "pesquisa" && !hasHubCria) return;
+      if (x === "kanban-cliente" && !client?.cria_owner_id) return;
+      s.add(x);
+    }); });
     return s;
-  }, [hasHubCria]);
+  }, [hasHubCria, client?.cria_owner_id]);
   // A URL manda: /clientes/:id/:tab. Se o tab é válido, é ele; senão, Visão geral.
   // É isso que faz o F5 preservar a sub-página em que a pessoa estava.
   const activeTab = tab && allTabKeys.has(tab) ? tab : "visao-geral";
@@ -596,6 +607,13 @@ export default function ClienteHub() {
 
       {/* MATERIAIS. Demandas fora do fluxo de posts. O cliente pede pelo portal. */}
       {activeTab === "materiais" && <MateriaisBoard clientId={id!} clientName={client.name} />}
+
+      {/* KANBAN DO CLIENTE. O quadro REAL do Cria do cliente (mesma base `posts` dele),
+          reaproveitando a tela Criando + PostEditor via impersonação escopada. Só pra
+          cliente com conta Cria vinculada. Editar/arrastar reflete direto no Cria dele. */}
+      {activeTab === "kanban-cliente" && client.cria_owner_id && (
+        <ClienteKanbanCria criaOwnerId={client.cria_owner_id} clientName={client.name} />
+      )}
 
       {/* LINKS ÚTEIS. Aba de topo: editor de rótulo+URL + as pastas do Drive de
           cada link salvo (paginadas 10 por página). */}

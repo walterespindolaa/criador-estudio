@@ -106,3 +106,21 @@ export function useActiveAccount() {
   if (!c) throw new Error("useActiveAccount must be used within AccountProvider");
   return c;
 }
+
+// ── IMPERSONAÇÃO ESCOPADA (só numa subárvore) ──
+// Sobrepõe o activeAccountId APENAS nos componentes filhos, sem tocar no estado
+// global nem limpar o cache do React Query (diferente do setActiveAccount, que
+// troca a conta do app inteiro e dá queryClient.clear()). Serve pra social mídia
+// operar o Cria do cliente de DENTRO do cockpit, reaproveitando os componentes que
+// já leem activeAccountId (usePosts, PostEditor, usePillars, useTasks...). O acesso
+// de verdade vem do RLS is_account_member: o gestor é membro ativo da conta Cria do
+// cliente (mesma trava que faz o botão "Entrar no Cria dele" funcionar).
+export function ScopedAccountProvider({ ownerId, children }: { ownerId: string; children: ReactNode }) {
+  const base = useActiveAccount();
+  const value = useMemo<Ctx>(() => ({
+    ...base,
+    activeAccountId: ownerId,
+    isManaging: true,
+  }), [base, ownerId]);
+  return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
+}

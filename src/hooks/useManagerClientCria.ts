@@ -109,6 +109,67 @@ export function useLinkClientMedia(criaOwnerId: string | null | undefined) {
   });
 }
 
+// ===================== Posts do Cria do cliente pra AGENDA da social mídia =====================
+// Os posts REAIS que o cliente tem no Cria DELE (tabela `posts`, user_id = conta do
+// cliente), já "prontos" em diante e COM data agendada. O gestor lê direto por RLS
+// (is_account_member: ele é membro ativo da conta do cliente), numa query só pra
+// todos os clientes vinculados de uma vez, pra não pesar. NÃO é post de aprovação por
+// link (esses vivem em `posts.external_client_id`); é o kanban pessoal do criador.
+
+// Estados "prontos em diante" do kanban do cliente (Criando.tsx):
+// editando = "Pronto", agendado = "Agendado", publicado = "Publicado".
+export const CLIENT_CRIA_READY_STATUSES = ["editando", "agendado", "publicado"] as const;
+
+export type ClientCriaAgendaPost = {
+  id: string;
+  user_id: string;
+  title: string | null;
+  status: string | null;
+  platform: string | null;
+  format: string | null;
+  scheduled_date: string | null;
+  scheduled_time: string | null;
+  crm_client_id: string | null;   // resolvido no map (pra abrir o kanban do cliente)
+  client_name: string | null;
+  client_color: string | null;
+};
+
+export type ClientCriaLink = { criaOwnerId: string; crmClientId: string; name: string; color: string | null };
+
+export function useClientCriaAgendaPosts(links: ClientCriaLink[], from: string, to: string) {
+  // Deduplica por conta Cria (o mesmo owner pode aparecer em teoria) e ordena a chave.
+  const byOwner = new Map(links.map((l) => [l.criaOwnerId, l]));
+  const owners = Array.from(byOwner.keys()).sort();
+  return useQuery<ClientCriaAgendaPost[]>({
+    queryKey: ["client-cria-agenda-posts", owners, from, to],
+    enabled: owners.length > 0 && !!from && !!to,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("posts")
+        .select("id, user_id, title, status, platform, format, scheduled_date, scheduled_time")
+        .in("user_id", owners)
+        .not("scheduled_date", "is", null)
+        .gte("scheduled_date", from)
+        .lte("scheduled_date", to)
+        .in("status", CLIENT_CRIA_READY_STATUSES as unknown as string[])
+        .is("deleted_at", null)
+        .is("external_client_id", null);   // só o kanban pessoal do criador, não os de aprovação
+      if (error) throw new Error(error.message);
+      type RawPost = Omit<ClientCriaAgendaPost, "crm_client_id" | "client_name" | "client_color">;
+      return (((data as unknown as RawPost[] | null) ?? [])).map((p) => {
+        const link = byOwner.get(p.user_id);
+        return {
+          ...p,
+          crm_client_id: link?.crmClientId ?? null,
+          client_name: link?.name ?? null,
+          client_color: link?.color ?? null,
+        };
+      });
+    },
+  });
+}
+
 // ===================== Brandbook do cliente (modo leitura) =====================
 export type CriaClientBrandItem = { type: string; name: string; value: string | null };
 export type CriaClientPersona = {
