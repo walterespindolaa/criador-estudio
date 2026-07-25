@@ -8,7 +8,7 @@ import {
   type FinRecord, type FinType, type FinStatus, type FinContext, type FinRecordInput, type FinMonthly, type FinRecurring,
 } from "@/hooks/useFinance";
 import { MoneyInput } from "@/components/shared/MoneyInput";
-import { PAYMENT_METHODS, taxOfMonth, taxOfClient, regimeLabel, isPctRegime, mensalidadeAtivaNoMes } from "@/lib/finance";
+import { PAYMENT_METHODS, taxOfMonth, taxOfClient, regimeLabel, isPctRegime, mensalidadeAtivaNoMes, receitaDoMesPJ } from "@/lib/finance";
 import { useCrmClients, type CrmClient } from "@/hooks/useCrm";
 import { useManagerProfile, type FinSettings } from "@/hooks/useModules";
 import { ModuleGate } from "@/components/accounts/ModuleGate";
@@ -170,36 +170,25 @@ function CaixaInner() {
 
   const mrr = activeClients.reduce((s, c) => s + Number(c.monthly_value), 0);
 
-  // ── A RECEBER ──
-  // Antes só contava mensalidade (fin_monthly). Uma entrada lançada à mão como
-  // "pendente" não aparecia em lugar nenhum, o card ignorava. Agora conta as duas fontes:
-  //   1) mensalidades do mês ainda pendentes (pulado NÃO entra)
-  //   2) lançamentos de entrada com status pendente/atrasado
-  const aReceberMensal = monthlies.filter((m) => m.status === "pendente").reduce((s, m) => s + Number(m.amount), 0);
-  const aReceberAvulso = monthCtx
-    .filter((r) => r.type === "entrada" && r.status !== "pago")
-    .reduce((s, r) => s + Number(r.amount), 0);
-  const aReceber = aReceberMensal + aReceberAvulso;
+  // ── RECEITA DO MÊS (PJ): fonte única (receitaDoMesPJ), a MESMA da Home ──
+  // Antes cada tela somava do seu jeito e a receita AVULSA (freelance/lançamento
+  // sem cliente) caía de fora do card da home. Agora a Visão geral do Caixa e o
+  // card "previsto neste mês" da home chamam esta mesma conta, então cruzam:
+  //   • recebido       = entradas pagas (mensalidade paga + avulso pago)
+  //   • aReceberMensal = mensalidades do mês ainda pendentes (pulado NÃO entra)
+  //   • aReceberAvulso = entradas lançadas à mão ainda não pagas (inclui SEM cliente)
+  //   • previstoBruto  = recebido + a receber (mensal + avulso)
+  //   • mensalidadesDoMes / outrasReceitas = recorte carteira × avulsos
+  // Só faz sentido no PJ; o PF usa a PessoalVisao (não lê estes números).
+  const receitaMes = receitaDoMesPJ(records, monthlies, clients, viewedMonth);
+  const { aReceberMensal, aReceberAvulso, aReceber, previstoBruto, mensalidadesDoMes, outrasReceitas } = receitaMes;
 
   // Despesas: separo o que já saiu do que ainda vai sair, a pessoa precisa ver as duas.
   const despesasPagas = monthCtx.filter((r) => r.type === "despesa" && r.status === "pago").reduce((s, r) => s + Number(r.amount), 0);
   const aPagar = despesas - despesasPagas;
 
-  // Previsão do mês: bruto = recebido + a receber; líquido = bruto − despesas (todas).
-  const previstoBruto = recebido + aReceber;
+  // Líquido previsto = previsão bruta − despesas (todas) do contexto.
   const previstoLiquido = previstoBruto - despesas;
-
-  // ── RECONCILIAÇÃO DA PREVISÃO ──
-  // A home mostra "por mês na carteira" (só mensalidades recorrentes). A previsão
-  // aqui é MAIOR quando há receita avulsa (um freelance, um projeto pontual, com
-  // ou sem cliente vinculado). Separamos os dois pra o número não parecer errado:
-  //   previstoBruto = mensalidades do mês + outras receitas (avulsas).
-  const mensalRecebida = monthCtx
-    .filter((r) => r.type === "entrada" && r.status === "pago" && (r.category ?? "") === "Mensalidade")
-    .reduce((s, r) => s + Number(r.amount), 0);
-  const mensalidadesDoMes = mensalRecebida + aReceberMensal;
-  // Tudo que entra e NÃO é mensalidade da carteira (inclusive receita sem cliente).
-  const outrasReceitas = previstoBruto - mensalidadesDoMes;
   // ── RENTABILIDADE POR CLIENTE ──
   // Pra cada cliente: quanto entrou, quanto ainda entra, quanto se gasta COM ele,
   // quanto de imposto ele gera, e o que sobra de fato (margem líquida).

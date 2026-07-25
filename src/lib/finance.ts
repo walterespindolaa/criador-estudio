@@ -84,3 +84,74 @@ export function mensalidadeAtivaNoMes(
   // Sem data de encerramento: mantém a regra antiga, o status decide.
   return (client.status ?? "ativo") !== "inativo";
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// RECEITA DO MÊS (PJ), fonte única da verdade.
+//
+// Era o buraco que fazia os números NÃO baterem entre a Home, a Visão geral
+// do Caixa e os Lançamentos: cada tela somava o dinheiro do seu jeito e a
+// receita AVULSA (freelance/lançamento sem cliente) caía de fora do card da
+// home (que só olhava o MRR da carteira). Agora a Home E o Caixa chamam esta
+// MESMA conta, então os três cruzam sempre.
+//
+// Componentes do mês (context "pj"):
+//   recebido        = entradas JÁ pagas (mensalidade paga + avulso pago)
+//   aReceberMensal  = mensalidades do mês ainda pendentes (fin_monthly)
+//   aReceberAvulso  = entradas lançadas à mão ainda não pagas (inclui SEM cliente)
+//   aReceber        = aReceberMensal + aReceberAvulso
+//   previstoBruto   = recebido + aReceber   (a "Previsão total do mês")
+//   mensalRecebida  = entradas pagas de categoria "Mensalidade"
+//   mensalidadesDoMes = mensalRecebida + aReceberMensal   (a carteira/MRR realizado)
+//   outrasReceitas  = previstoBruto − mensalidadesDoMes    (tudo que é avulso)
+//   mrr             = soma de monthly_value da carteira ativa no mês (recorrência pura)
+//
+// SEM contar 2x: a mensalidade paga vira fin_record (entra em `recebido`) e a
+// sua instância em fin_monthly fica "pago" (fora de aReceberMensal). A pendente
+// só existe em fin_monthly (aReceberMensal) e ainda não é fin_record.
+export type ReceitaMes = {
+  recebido: number;
+  aReceberMensal: number;
+  aReceberAvulso: number;
+  aReceber: number;
+  previstoBruto: number;
+  mensalRecebida: number;
+  mensalidadesDoMes: number;
+  outrasReceitas: number;
+  mrr: number;
+};
+
+// Tipos estruturais mínimos (evita import circular com useFinance).
+type RecLike = { context?: string | null; type: string; status: string; category?: string | null; amount: number | string; date: string };
+type MonthlyLike = { status: string; amount: number | string };
+type ClientLike = { status?: string | null; monthly_value?: number | null; contract_end_date?: string | null };
+
+/**
+ * Reconcilia a receita PJ de um mês a partir das 3 fontes já carregadas.
+ * @param records   fin_records (qualquer janela que contenha o mês).
+ * @param monthlies fin_monthly do mês (instâncias de mensalidade).
+ * @param clients   carteira (crm_clients) pro MRR puro.
+ * @param ym        mês de referência "YYYY-MM" (use hojeBR().slice(0,7) ou o mês visto).
+ */
+export function receitaDoMesPJ(
+  records: RecLike[],
+  monthlies: MonthlyLike[],
+  clients: ClientLike[],
+  ym: string,
+): ReceitaMes {
+  const inMonth = records.filter((r) => (r.context ?? "pj") === "pj" && String(r.date).slice(0, 7) === ym);
+  const sum = (arr: RecLike[]) => arr.reduce((s, r) => s + Number(r.amount), 0);
+
+  const recebido = sum(inMonth.filter((r) => r.type === "entrada" && r.status === "pago"));
+  const aReceberAvulso = sum(inMonth.filter((r) => r.type === "entrada" && r.status !== "pago"));
+  const aReceberMensal = monthlies.filter((m) => m.status === "pendente").reduce((s, m) => s + Number(m.amount), 0);
+  const aReceber = aReceberMensal + aReceberAvulso;
+  const previstoBruto = recebido + aReceber;
+
+  const mensalRecebida = sum(inMonth.filter((r) => r.type === "entrada" && r.status === "pago" && (r.category ?? "") === "Mensalidade"));
+  const mensalidadesDoMes = mensalRecebida + aReceberMensal;
+  const outrasReceitas = previstoBruto - mensalidadesDoMes;
+
+  const mrr = clients.filter((c) => mensalidadeAtivaNoMes(c, ym)).reduce((s, c) => s + (Number(c.monthly_value) || 0), 0);
+
+  return { recebido, aReceberMensal, aReceberAvulso, aReceber, previstoBruto, mensalRecebida, mensalidadesDoMes, outrasReceitas, mrr };
+}

@@ -1,7 +1,10 @@
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveAccount } from "@/contexts/AccountContext";
-import { mensalidadeAtivaNoMes } from "@/lib/finance";
+import { mensalidadeAtivaNoMes, receitaDoMesPJ, type ReceitaMes } from "@/lib/finance";
+import { useCrmClients } from "@/hooks/useCrm";
+import { hojeBR } from "@/lib/date-br";
 import { toast } from "sonner";
 
 export type FinType = "entrada" | "despesa";
@@ -240,6 +243,22 @@ export function useFinMonthly(monthRef: string) {
       return (data ?? []) as unknown as FinMonthly[];
     },
   });
+}
+
+// ── DINHEIRO DO MÊS (PJ) PRA HOME ──
+// A home mostrava só o MRR puro (soma de monthly_value) e ignorava a receita
+// avulsa, então o card não batia com a Visão geral do Cria Caixa. Aqui usamos a
+// MESMA conta do Caixa (receitaDoMesPJ) pro card refletir a receita real do mês
+// (mensalidades + avulsos). Janela leve: só o mês corrente de fin_records
+// (mesma query que a useOperationSignals já faz, então o React Query dedupa) +
+// as mensalidades do mês. Fuso BR via hojeBR().
+export function useMonthMoneyPJ(): ReceitaMes {
+  const ym = hojeBR().slice(0, 7);         // "YYYY-MM"
+  const monthRef = `${ym}-01`;             // 1º dia do mês, formato do banco
+  const { data: clients = [] } = useCrmClients();
+  const { data: records = [] } = useFinRecords({ since: monthRef });
+  const { data: monthlies = [] } = useFinMonthly(monthRef);
+  return useMemo(() => receitaDoMesPJ(records, monthlies, clients, ym), [records, monthlies, clients, ym]);
 }
 
 // Garante que existe uma instância do mês pra cada cliente ativo com mensalidade.

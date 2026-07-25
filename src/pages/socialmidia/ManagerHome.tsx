@@ -19,8 +19,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useManagerOutlet, MODULE_ICON } from "@/components/accounts/ManagerLayout";
 import { readLastClient } from "@/components/accounts/ClientSwitcher";
 import { useCrmClients } from "@/hooks/useCrm";
-import { mensalidadeAtivaNoMes } from "@/lib/finance";
-import { hojeBR } from "@/lib/date-br";
+import { useMonthMoneyPJ } from "@/hooks/useFinance";
 import { useAllExternalPosts, useExternalClients } from "@/hooks/useCriaPost";
 import { MonthOverviewPanel } from "@/components/accounts/MonthOverviewPanel";
 
@@ -105,12 +104,12 @@ export default function ManagerHome() {
 
   // O resumo do dia. Antes a frase prometia um resumo e nada aparecia.
   const ativos = crmClients.filter((c) => (c.status ?? "ativo") === "ativo").length;
-  // "Por mês na carteira": só entra quem ainda conta ESTE mês. Cliente encerrado
-  // (contract_end_date) sai da carteira a partir do mês seguinte ao encerramento.
-  const mesAtualBR = hojeBR().slice(0, 7);
-  const mrr = crmClients
-    .filter((c) => mensalidadeAtivaNoMes(c, mesAtualBR))
-    .reduce((s, c) => s + (Number(c.monthly_value) || 0), 0);
+  // Dinheiro do mês: MESMA conta da Visão geral do Cria Caixa (receitaDoMesPJ).
+  // Antes o card somava só o MRR puro (monthly_value da carteira) e ignorava a
+  // receita AVULSA (freelance/lançamento sem cliente), então não batia com o
+  // Caixa. Agora mostramos a "previsão do mês" (mensalidades + avulsos), que
+  // cruza com o Caixa e faz o freelance aparecer aqui na hora que é lançado.
+  const money = useMonthMoneyPJ();
   const { overview } = useManagerApprovalOverview();
   const pendentes = overview.reduce((s, r) => s + (r.pendentes ?? 0), 0);
   // Motor de sinais: alimenta o feed "Sua operação hoje" e a saúde dos clientes.
@@ -234,7 +233,7 @@ export default function ManagerHome() {
           </button>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
             <Painel color="rosa" icon={Users} valor={String(ativos)} label={ativos === 1 ? "cliente ativo" : "clientes ativos"} to="/socialmidia/clientes" masked={masked} />
-            <Painel color="azul" icon={Wallet} valor={formatBRL(mrr)} label="por mês na carteira" to="/socialmidia/criacaixa/empresa/visao" masked={masked} />
+            <Painel color="azul" icon={Wallet} valor={formatBRL(money.previstoBruto)} label="previsto neste mês" to="/socialmidia/criacaixa/empresa/visao" masked={masked} />
             <Painel color="laranja" icon={Send} valor={String(pendentes)} label={pendentes === 1 ? "post esperando o cliente" : "posts esperando o cliente"} to="/socialmidia/criapost/aprovacoes" destaque={pendentes > 0} masked={masked} />
             <Painel color="amarelo" icon={CalendarDays} valor="Agenda" label="a sua semana" to="/socialmidia/agenda" />
           </div>
