@@ -1,11 +1,12 @@
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Plus, Users, Loader2, Link2, Search, Send, Upload, FolderOpen } from "lucide-react";
+import { Plus, Users, Loader2, Link2, Search, Send, Upload, FolderOpen, Download } from "lucide-react";
 import { toast } from "sonner";
-import { useCrmClients, useCreateCrmClient, useUploadCrmAsset, type CrmClient } from "@/hooks/useCrm";
+import { useCrmClients, useCreateCrmClient, useUploadCrmAsset, useImportCriaClients, type CrmClient } from "@/hooks/useCrm";
 import { useExternalClients, type ExternalClient } from "@/hooks/useCriaPost";
 import { useCriaClientProfiles } from "@/hooks/useManagerClientCria";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { BrandColorPicker } from "@/components/accounts/BrandColorPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,11 +31,22 @@ export default function Clientes() {
   const { clients: ext, pending, copyLink } = useExternalClients();
   const createClient = useCreateCrmClient();
   const uploadAsset = useUploadCrmAsset();
+  // Mesma importação do Cria Gestão: puxa as contas Cria vinculadas pra cá,
+  // sem duplicar (o hook ignora quem já tem cria_owner_id no CRM).
+  const importCria = useImportCriaClients();
+  const { managedAccounts } = useActiveAccount();
   // Foto da conta CRIA do cliente sempre atual: avatar do profile → logo manual → inicial.
   const { data: criaProfiles } = useCriaClientProfiles();
   const avatarOf = (c: CrmClient) => {
     const criaAvatar = c.cria_owner_id ? criaProfiles?.[c.cria_owner_id]?.avatar_url : null;
     return criaAvatar ?? c.logo;
+  };
+  // Nome sempre atual: quando o cliente tem conta CRIA vinculada, mostra o nome AO VIVO
+  // do profile dele (via manager_clients_cria_profiles), nao a copia estagnada em
+  // crm_clients.name. Cliente sem CRIA continua com o nome editavel do CRM.
+  const nameOf = (c: CrmClient) => {
+    const live = c.cria_owner_id ? criaProfiles?.[c.cria_owner_id]?.name?.trim() : null;
+    return (live || c.name) ?? null;
   };
 
   const [filter, setFilter] = useState<"todos" | "cria" | "link">("todos");
@@ -86,11 +98,11 @@ export default function Clientes() {
     if (onlyPend && !((pendingByCrm[c.id] ?? 0) > 0)) return false;
     const term = q.trim().toLowerCase();
     if (term) {
-      const hay = `${c.name ?? ""} ${c.instagram ?? ""} ${c.segment ?? ""}`.toLowerCase();
+      const hay = `${nameOf(c) ?? ""} ${c.instagram ?? ""} ${c.segment ?? ""}`.toLowerCase();
       if (!hay.includes(term)) return false;
     }
     return true;
-  }), [clients, filter, statusF, onlyPend, q, pendingByCrm]);
+  }), [clients, filter, statusF, onlyPend, q, pendingByCrm, criaProfiles]);
 
   const open = (id: string) => navigate(`/socialmidia/clientes/${id}/visao-geral`);
 
@@ -122,7 +134,13 @@ export default function Clientes() {
           <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Clientes</h1>
           <p className="text-muted-foreground font-body text-sm mt-0.5">Todos os seus clientes num lugar só, usem o Cria ou aprovem por link.</p>
         </div>
-        <Button data-tour="cli-novo" onClick={() => setNewOpen(true)} className="shrink-0"><Plus className="h-4 w-4 mr-1.5" /> Novo cliente</Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button variant="outline" onClick={() => importCria.mutate()} disabled={importCria.isPending || managedAccounts.length === 0} className="shrink-0" title="Importar clientes do Cria">
+            {importCria.isPending ? <Loader2 className="h-4 w-4 sm:mr-1.5 animate-spin" /> : <Download className="h-4 w-4 sm:mr-1.5" />}
+            <span className="hidden sm:inline">Importar do Cria</span>
+          </Button>
+          <Button data-tour="cli-novo" onClick={() => setNewOpen(true)} className="shrink-0"><Plus className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Novo cliente</span><span className="sm:hidden">Novo</span></Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-2 mt-4 mb-3 flex-wrap">
@@ -170,10 +188,10 @@ export default function Clientes() {
                 <span aria-hidden className="absolute -top-10 -right-10 w-28 h-28 rounded-full blur-xl opacity-10 pointer-events-none" style={{ background: accent }} />
                 <span className="relative w-16 h-16 rounded-full grid place-items-center text-xl font-display font-bold overflow-hidden mb-3 ring-2 ring-white shadow-md transition-all"
                   style={{ background: cor ? accent : "linear-gradient(135deg,#0F6E56,#1d9e75)", color: cor ? textOn(accent) : "#fff" }}>
-                  {initial(c.name)}
+                  {initial(nameOf(c))}
                   {avatarOf(c) && <img src={avatarOf(c)!} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 w-full h-full object-cover" />}
                 </span>
-                <p className="font-display font-bold text-foreground truncate w-full">{c.name || "Sem nome"}</p>
+                <p className="font-display font-bold text-foreground truncate w-full">{nameOf(c) || "Sem nome"}</p>
                 {c.instagram && <p className="text-xs text-muted-foreground font-body truncate w-full">@{c.instagram.replace(/^@/, "")}</p>}
                 <p className={`text-[11px] font-body mt-1 truncate w-full ${aguardando > 0 ? "text-amber-600 font-semibold" : "text-muted-foreground/80"}`}>
                   {aguardando > 0 ? `${aguardando} ${aguardando > 1 ? "posts aguardando" : "post aguardando"}` : extc ? "Aprovações em dia" : c.segment || "Sem posts na fila"}

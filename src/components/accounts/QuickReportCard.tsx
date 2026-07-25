@@ -10,6 +10,8 @@ import { ClientReportDialog } from "@/components/accounts/ClientReportDialog";
 
 const LS_CLIENT = "cria.relatorio-rapido.cliente";
 const LS_PERIOD = "cria.relatorio-rapido.periodo";
+const LS_CUSTOM_FROM = "cria.relatorio-rapido.custom-de";
+const LS_CUSTOM_TO = "cria.relatorio-rapido.custom-ate";
 
 const PRESETS = [
   { key: "7d", label: "Últimos 7 dias" },
@@ -18,6 +20,8 @@ const PRESETS = [
   { key: "este-mes", label: "Este mês" },
 ] as const;
 type PresetKey = (typeof PRESETS)[number]["key"];
+// "custom" = período personalizado de/até (dois inputs date).
+type PeriodKey = PresetKey | "custom";
 
 function readLS(key: string): string | null {
   try { return localStorage.getItem(key); } catch { return null; }
@@ -31,10 +35,15 @@ export function QuickReportCard() {
   const active = useMemo(() => clients.filter((c) => c.active), [clients]);
 
   const [clientId, setClientId] = useState<string>(() => readLS(LS_CLIENT) ?? "");
-  const [periodKey, setPeriodKey] = useState<PresetKey>(() => {
+  const [periodKey, setPeriodKey] = useState<PeriodKey>(() => {
     const saved = readLS(LS_PERIOD);
+    if (saved === "custom") return "custom";
     return PRESETS.some((p) => p.key === saved) ? (saved as PresetKey) : "30d";
   });
+  // Período personalizado (de/até, YYYY-MM-DD). Só entra em ação quando periodKey === "custom".
+  const [customFrom, setCustomFrom] = useState<string>(() => readLS(LS_CUSTOM_FROM) ?? "");
+  const [customTo, setCustomTo] = useState<string>(() => readLS(LS_CUSTOM_TO) ?? "");
+  const customValid = !!customFrom && !!customTo && customFrom <= customTo;
   const [open, setOpen] = useState(false);
 
   // Se o cliente salvo sumiu (ou é o primeiro acesso), assume o primeiro da lista.
@@ -87,24 +96,81 @@ export function QuickReportCard() {
               {p.label}
             </button>
           ))}
+          {/* Período personalizado: ativa os dois inputs de/até abaixo. */}
+          <button
+            type="button"
+            onClick={() => { setPeriodKey("custom"); writeLS(LS_PERIOD, "custom"); }}
+            className={`px-3 py-1.5 rounded-full text-xs font-body border transition-colors ${
+              periodKey === "custom"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-card border-border text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Período
+          </button>
         </div>
 
-        <Button onClick={() => setOpen(true)} disabled={!selected} className="md:ml-auto shrink-0">
+        <Button
+          onClick={() => setOpen(true)}
+          disabled={!selected || (periodKey === "custom" && !customValid)}
+          className="md:ml-auto shrink-0"
+        >
           <FileText className="h-4 w-4 mr-1.5" /> Gerar relatório
         </Button>
       </div>
 
+      {/* Inputs de/até só aparecem no modo "Período". Mobile-first: empilham em 390px,
+          viram lado a lado a partir do sm. */}
+      {periodKey === "custom" && (
+        <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
+          <label className="flex items-center gap-2 text-xs font-body text-muted-foreground">
+            <span className="w-8 shrink-0">De</span>
+            <input
+              type="date"
+              value={customFrom}
+              max={customTo || undefined}
+              onChange={(e) => { setCustomFrom(e.target.value); writeLS(LS_CUSTOM_FROM, e.target.value); }}
+              aria-label="Data inicial do período"
+              className="w-full sm:w-44 rounded-xl border border-border bg-card px-3 py-2 text-sm font-body"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-xs font-body text-muted-foreground">
+            <span className="w-8 shrink-0">Até</span>
+            <input
+              type="date"
+              value={customTo}
+              min={customFrom || undefined}
+              onChange={(e) => { setCustomTo(e.target.value); writeLS(LS_CUSTOM_TO, e.target.value); }}
+              aria-label="Data final do período"
+              className="w-full sm:w-44 rounded-xl border border-border bg-card px-3 py-2 text-sm font-body"
+            />
+          </label>
+          {!customValid && (
+            <span className="text-[11px] font-body text-muted-foreground/80">Preencha de/até pra gerar o relatório.</span>
+          )}
+        </div>
+      )}
+
       {selected && open && (
-        <QuickReportDialog client={selected} periodKey={periodKey} open={open} onOpenChange={setOpen} />
+        <QuickReportDialog
+          client={selected}
+          periodKey={periodKey}
+          customFrom={periodKey === "custom" && customValid ? customFrom : undefined}
+          customTo={periodKey === "custom" && customValid ? customTo : undefined}
+          open={open}
+          onOpenChange={setOpen}
+        />
       )}
     </div>
   );
 }
 
 // Wrapper: carrega os posts do cliente escolhido e abre o relatório já no preset.
-function QuickReportDialog({ client, periodKey, open, onOpenChange }: {
+function QuickReportDialog({ client, periodKey, customFrom, customTo, open, onOpenChange }: {
   client: ExternalClient;
-  periodKey: PresetKey;
+  periodKey: PeriodKey;
+  customFrom?: string;
+  customTo?: string;
   open: boolean;
   onOpenChange: (o: boolean) => void;
 }) {
@@ -118,6 +184,8 @@ function QuickReportDialog({ client, periodKey, open, onOpenChange }: {
       posts={posts}
       managerName={profile?.name ?? undefined}
       initialPeriodKey={periodKey}
+      customSince={customFrom}
+      customUntil={customTo}
     />
   );
 }

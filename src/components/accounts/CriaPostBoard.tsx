@@ -366,10 +366,10 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               <Button onClick={() => openNew()}><Plus className="h-4 w-4 mr-1.5" /> Novo post</Button>
             </div>
           </div>
-      {/* Filtro de data: presets rápidos + período específico (popover) + limpar.
-          Mobile-first: os chips quebram linha; o período fica num popover discreto. */}
+      {/* Filtro de data: só Tudo (ver todos / limpar) + período específico (popover).
+          Mobile-first: o "Tudo" e o período ficam lado a lado; período num popover discreto. */}
       <div className="flex gap-1.5 flex-wrap items-center mb-3">
-        {([["all", "Tudo"], ["7", "7 dias"], ["15", "15 dias"], ["30", "30 dias"], ["60", "60 dias"]] as [PostFilter["preset"], string][]).map(([v, label]) => (
+        {([["all", "Tudo"]] as [PostFilter["preset"], string][]).map(([v, label]) => (
           <button key={v} onClick={() => setFilter((prev) => ({ ...prev, preset: v }))}
             className={`text-xs font-body font-semibold px-3 py-1.5 rounded-full border transition-colors ${filter.preset === v ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>{label}</button>
         ))}
@@ -450,7 +450,6 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                               onClick={(e) => e.stopPropagation()}
                               onChange={(e) => { e.stopPropagation(); setDate.mutate({ id: p.id, scheduled_date: e.target.value || null }); }}
                               className="mt-1 h-9 md:h-6 w-full rounded-md border border-border bg-card px-1.5 text-[11px] font-body text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
-                            {(p.caption || p.script) && <p className="text-xs text-muted-foreground font-body line-clamp-2 mt-0.5">{p.caption || p.script}</p>}
                             {p.reference_url && (
                               <a href={p.reference_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
                                 className="mt-1 inline-flex items-center gap-1 text-[11px] font-body font-semibold text-primary hover:underline">

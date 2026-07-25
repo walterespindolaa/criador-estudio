@@ -167,6 +167,11 @@ export default function ClienteHub() {
   const { data: criaProfiles } = useCriaClientProfiles();
   const criaAvatar = client?.cria_owner_id ? (criaProfiles?.[client.cria_owner_id]?.avatar_url ?? null) : null;
   const avatarUrl = criaAvatar ?? client?.logo ?? null;
+  // Nome sempre atual: cliente com conta CRIA vinculada mostra o nome AO VIVO do profile
+  // dele (nao a copia estagnada em crm_clients.name, que so era atualizada no sync manual
+  // da ficha do CRM). Cliente sem CRIA segue com o nome editavel do CRM.
+  const criaLiveName = client?.cria_owner_id ? (criaProfiles?.[client.cria_owner_id]?.name?.trim() || null) : null;
+  const displayName = criaLiveName ?? client?.name ?? "";
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const uploadAsset = useUploadCrmAsset();
   const updateClient = useUpdateCrmClient();
@@ -246,8 +251,8 @@ export default function ClienteHub() {
 
   // Último cliente visitado: alimenta o seletor global e o "Continuar em {cliente}" do dashboard.
   useEffect(() => {
-    if (client) saveLastClient(client.id, client.name);
-  }, [client]);
+    if (client) saveLastClient(client.id, displayName || client.name);
+  }, [client, displayName]);
 
   // URL de um Cria de aba única (ex.: /cria-gestao) cai direto na ferramenta dele,
   // pra nunca abrir em branco quando a pessoa cola/salva o link.
@@ -311,7 +316,7 @@ export default function ClienteHub() {
           <div className="flex items-center gap-3 md:gap-4 min-w-0 md:flex-1">
             <button type="button" onClick={() => avatarInputRef.current?.click()} aria-label="Trocar foto do cliente"
               className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-full grid place-items-center text-white text-xl font-display font-bold shrink-0 overflow-hidden ring-2 ring-border/60 hover:ring-primary/40 transition-all group/av" style={{ background: "linear-gradient(135deg,#0F6E56,#1d9e75)" }}>
-              {initial(client.name)}
+              {initial(displayName)}
               {/* Avatar do CRIA do cliente → logo manual → inicial. */}
               {avatarUrl && <img src={avatarUrl} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 w-full h-full object-cover" />}
               <span className="absolute inset-0 bg-black/40 opacity-0 group-hover/av:opacity-100 transition-opacity grid place-items-center"><Camera className="h-4 w-4 text-white" /></span>
@@ -319,7 +324,7 @@ export default function ClienteHub() {
             <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={onPickAvatar} />
             <ImageCropModal open={!!cropSrc} onOpenChange={(o) => { if (!o) setCropSrc(null); }} imageSrc={cropSrc ?? ""} onCropComplete={onCroppedAvatar} aspectRatio={1} />
             <div className="min-w-0 flex-1">
-              <h1 className="text-xl sm:text-2xl font-display font-extrabold text-foreground tracking-tight truncate">{client.name}</h1>
+              <h1 className="text-xl sm:text-2xl font-display font-extrabold text-foreground tracking-tight truncate">{displayName}</h1>
               <p className="text-sm text-muted-foreground font-body truncate">
                 {client.instagram ? `@${client.instagram.replace(/^@/, "")}` : "sem @"}{client.cria_owner_id ? " · usa o Cria" : " · aprova por link"}
               </p>
@@ -385,7 +390,7 @@ export default function ClienteHub() {
                 onClick={() => {
                   setActiveAccount(client.cria_owner_id!);
                   navigate("/app");
-                  toast.success(`Você está no Cria de ${client.name}.`);
+                  toast.success(`Você está no Cria de ${displayName || client.name}.`);
                 }}
               >
                 <LogIn className="h-4 w-4 sm:mr-1.5" />
@@ -552,7 +557,7 @@ export default function ClienteHub() {
       {/* Instagram de cliente que USA O CRIA: dados reais sincronizados pelo próprio
           cliente (independe do Cria Post estar ativado). Os demais casos seguem no ClientDetail. */}
       {activeTab === "instagram" && client.cria_owner_id ? (
-        <ClienteInstagramCria criaOwnerId={client.cria_owner_id} clientName={client.name} extClientId={extClient?.id ?? null} />
+        <ClienteInstagramCria criaOwnerId={client.cria_owner_id} clientName={displayName} extClientId={extClient?.id ?? null} />
       ) : OPERACIONAIS.has(activeTab) && (
         extClient ? (
           <ClientDetail client={extClient} embedded activeTab={activeTab} onTabChange={goTab} />
@@ -590,7 +595,7 @@ export default function ClienteHub() {
       {activeTab === "ideias" && <ClienteIdeias clientId={id!} criaOwnerId={client.cria_owner_id} />}
 
       {/* PESQUISA. Apify. A aba só existe pra quem tem o HUB liberado. */}
-      {activeTab === "pesquisa" && hasHubCria && <CriativoTab clientId={id!} clientName={client.name} />}
+      {activeTab === "pesquisa" && hasHubCria && <CriativoTab clientId={id!} clientName={displayName} />}
 
       {/* PORTAL, o que era o popup "Personalizar", agora com espaço pra respirar. */}
       {activeTab === "portal" && (
@@ -606,13 +611,13 @@ export default function ClienteHub() {
       )}
 
       {/* MATERIAIS. Demandas fora do fluxo de posts. O cliente pede pelo portal. */}
-      {activeTab === "materiais" && <MateriaisBoard clientId={id!} clientName={client.name} />}
+      {activeTab === "materiais" && <MateriaisBoard clientId={id!} clientName={displayName} />}
 
       {/* KANBAN DO CLIENTE. O quadro REAL do Cria do cliente (mesma base `posts` dele),
           reaproveitando a tela Criando + PostEditor via impersonação escopada. Só pra
           cliente com conta Cria vinculada. Editar/arrastar reflete direto no Cria dele. */}
       {activeTab === "kanban-cliente" && client.cria_owner_id && (
-        <ClienteKanbanCria criaOwnerId={client.cria_owner_id} clientName={client.name} />
+        <ClienteKanbanCria criaOwnerId={client.cria_owner_id} clientName={displayName} />
       )}
 
       {/* LINKS ÚTEIS. Aba de topo: editor de rótulo+URL + as pastas do Drive de
@@ -624,8 +629,8 @@ export default function ClienteHub() {
       {/* FINANCEIRO, exclusivo de quem assina o Cria Caixa. */}
       {activeTab === "financeiro" && (
         hasCaixa
-          ? <FinanceTab clientId={id!} clientName={client.name} monthlyValue={client.monthly_value} paymentDay={client.payment_day} clientStatus={client.status} contractEndDate={client.contract_end_date} />
-          : <ModuleUpsell code="financeiro" clientName={client.name} />
+          ? <FinanceTab clientId={id!} clientName={displayName} monthlyValue={client.monthly_value} paymentDay={client.payment_day} clientStatus={client.status} contractEndDate={client.contract_end_date} />
+          : <ModuleUpsell code="financeiro" clientName={displayName} />
       )}
       {/* Vitrine em popup: aparece quando a pessoa CLICA numa ação que exige
           um módulo que ela não assina (ex.: ativar o Cria Post num cliente). */}
@@ -633,7 +638,7 @@ export default function ClienteHub() {
         open={!!upsell}
         onOpenChange={(o) => !o && setUpsell(null)}
         code={upsell ?? "aprovapost_externo"}
-        clientName={client.name}
+        clientName={displayName}
       />
     </motion.div>
   );

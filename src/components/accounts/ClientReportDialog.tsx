@@ -9,6 +9,7 @@ import { usePdfExport } from "@/hooks/usePdfExport";
 import { useAuth } from "@/contexts/AuthContext";
 import { clientReportInsight } from "@/lib/ai/claude";
 import { useCrmClients } from "@/hooks/useCrm";
+import { parseDateOnly } from "@/lib/date-br";
 import { FORMAT_LABELS } from "@/lib/constants";
 import type { ExternalClient, ExternalPost } from "@/hooks/useCriaPost";
 import {
@@ -80,8 +81,12 @@ type Props = {
   client: ExternalClient;
   posts: ExternalPost[];
   managerName?: string;
-  // Preset vindo do "Relatório rápido" ("7d" | "30d" | "mes-passado" | "este-mes").
+  // Preset vindo do "Relatório rápido" ("7d" | "30d" | "mes-passado" | "este-mes" | "custom").
   initialPeriodKey?: string;
+  // Período personalizado (YYYY-MM-DD, de/até inclusivos). Quando ambos vêm preenchidos,
+  // vira uma opção "Período" no seletor, usada em vez dos presets.
+  customSince?: string;
+  customUntil?: string;
 };
 
 // Cores fixas (hex), html2canvas não lê variáveis CSS em oklch.
@@ -90,7 +95,7 @@ const C = {
   brand: "#EA4918", green: "#16a34a", amber: "#d97706", orange: "#ea580c",
 };
 
-export function ClientReportDialog({ open, onOpenChange, client, posts, managerName, initialPeriodKey }: Props) {
+export function ClientReportDialog({ open, onOpenChange, client, posts, managerName, initialPeriodKey, customSince, customUntil }: Props) {
   const { exportPdf, exportPdfBlob } = usePdfExport();
   const { user } = useAuth();
   const { data: crmClients = [] } = useCrmClients();
@@ -100,7 +105,20 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   );
   const reportRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
-  const periods = useMemo(buildPeriods, []);
+  // Período custom (de/até) do "Relatório rápido" entra como uma opção a mais no seletor.
+  // parseDateOnly evita o off-by-one de fuso; `until` é exclusivo (por isso +1 dia no fim).
+  const customPeriod = useMemo<ReportPeriod | null>(() => {
+    if (!customSince || !customUntil || customSince > customUntil) return null;
+    const since = parseDateOnly(customSince);
+    const until = parseDateOnly(customUntil);
+    until.setDate(until.getDate() + 1);
+    const fmtBR = (s: string) => parseDateOnly(s).toLocaleDateString("pt-BR");
+    return { key: "custom", label: `${fmtBR(customSince)} a ${fmtBR(customUntil)}`, since, until };
+  }, [customSince, customUntil]);
+  const periods = useMemo(
+    () => (customPeriod ? [customPeriod, ...buildPeriods()] : buildPeriods()),
+    [customPeriod],
+  );
   const [periodKey, setPeriodKey] = useState(initialPeriodKey ?? "este-mes");
   const [downloading, setDownloading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);

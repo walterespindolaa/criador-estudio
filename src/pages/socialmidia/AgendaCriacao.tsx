@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive, Download, Play, FileImage, Link2, Paperclip, GripVertical, FolderOpen, CalendarRange, ChevronDown } from "lucide-react";
+import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive, Download, Play, FileImage, Link2, Paperclip, GripVertical, FolderOpen, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -53,8 +53,6 @@ const TASK_STATUS_LABELS: Record<CrmTaskStatus, string> = {
 // droppableId da faixa fixa "Sem data (em produção)". Arrastar um post daqui pra um
 // dia agenda (seta a data); arrastar um post de um dia pra cá tira a data (volta pra cá).
 const NO_DATE = "no-date";
-// Teto de dias no período personalizado, pra grade não explodir.
-const RANGE_MAX_DAYS = 62;
 
 const STATUS: Record<Capture["status"], { label: string; cls: string }> = {
   agendada: { label: "Agendada", cls: "bg-primary/10 text-primary" },
@@ -157,25 +155,8 @@ export default function AgendaCriacao() {
   const toggleProducao = () => setProducaoOpen((v) => { const n = !v; try { localStorage.setItem("agenda_producao_open", n ? "1" : "0"); } catch { /* segue */ } return n; });
   // Painel "ver todos" de um dia cheio.
   const [dayModal, setDayModal] = useState<string | null>(null);
-  // Período personalizado (item 2): dois inputs "de"/"até". Quando preenchido e válido,
-  // a grade passa a mostrar os dias desse intervalo, ignorando semana/mês.
-  const [rangeFrom, setRangeFrom] = useState("");
-  const [rangeTo, setRangeTo] = useState("");
-  const rangeActive = !!rangeFrom && !!rangeTo && rangeFrom <= rangeTo;
-  const rangeReqDays = rangeActive ? Math.round((parseDateOnly(rangeTo).getTime() - parseDateOnly(rangeFrom).getTime()) / 86400000) + 1 : 0;
-  const rangeCapped = rangeReqDays > RANGE_MAX_DAYS; // passou do teto: mostramos só os primeiros RANGE_MAX_DAYS.
-  const clearRange = () => { setRangeFrom(""); setRangeTo(""); };
   // Semana = 7 dias a partir da segunda. Mês = grade completa (segunda a domingo) cobrindo o mês do anchor.
-  // Período = os dias do intervalo escolhido (com teto de RANGE_MAX_DAYS).
   const days = useMemo(() => {
-    if (rangeActive) {
-      const start = parseDateOnly(rangeFrom);
-      const end = parseDateOnly(rangeTo);
-      let n = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
-      if (n > RANGE_MAX_DAYS) n = RANGE_MAX_DAYS;
-      if (n < 1) n = 1;
-      return Array.from({ length: n }, (_, i) => { const d = new Date(start); d.setDate(d.getDate() + i); return d; });
-    }
     if (view === "semana") {
       return Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d; });
     }
@@ -185,9 +166,9 @@ export default function AgendaCriacao() {
     const gridEnd = mondayOf(last); gridEnd.setDate(gridEnd.getDate() + 6);
     const n = Math.round((gridEnd.getTime() - gridStart.getTime()) / 86400000) + 1;
     return Array.from({ length: n }, (_, i) => { const d = new Date(gridStart); d.setDate(d.getDate() + i); return d; });
-  }, [weekStart, view, rangeActive, rangeFrom, rangeTo]);
-  // A grade usa layout de GRADE (não o scroll horizontal da semana) no mês e no período.
-  const gridLayout = view === "mes" || rangeActive;
+  }, [weekStart, view]);
+  // A grade usa layout de GRADE (não o scroll horizontal da semana) no mês.
+  const gridLayout = view === "mes";
   const from = ymd(days[0]); const to = ymd(days[days.length - 1]);
   const today = hojeBR();
   const curMonth = weekStart.getMonth();
@@ -355,7 +336,7 @@ export default function AgendaCriacao() {
   const todayColRef = useRef<HTMLDivElement | null>(null);
   const todayVisible = days.some((d) => ymd(d) === today);
   useEffect(() => {
-    if (view !== "semana" || rangeActive) return;
+    if (view !== "semana") return;
     const cont = weekScrollRef.current;
     if (!cont) return;
     // No desktop a grade não rola (lg:grid), então mexer no scrollLeft é inócuo lá.
@@ -365,7 +346,7 @@ export default function AgendaCriacao() {
     if (col && todayVisible) cont.scrollTo({ left: Math.max(0, col.offsetLeft - cont.offsetLeft - 8), behavior: "auto" });
     else cont.scrollTo({ left: 0, behavior: "auto" });
     // Reexecuta ao trocar de semana/visão (ex.: botão "Hoje").
-  }, [view, weekStart, todayVisible, rangeActive]);
+  }, [view, weekStart, todayVisible]);
 
   // Captações da semana exibida, indexadas por dia (YYYY-MM-DD), para aparecerem na grade.
   const capturesByDay = useMemo(() => {
@@ -481,18 +462,6 @@ export default function AgendaCriacao() {
             </div>
           </div>
         </div>
-        {/* Período personalizado (item 2): dois inputs "de"/"até". Preenchido, a grade
-            mostra só os dias do intervalo; os posts SEM data seguem na faixa acima. */}
-        <div className="mb-3 flex items-center gap-2 flex-wrap rounded-xl border border-border bg-background/60 px-3 py-2">
-          <span className="inline-flex items-center gap-1 text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground"><CalendarRange className="h-3.5 w-3.5" /> Período</span>
-          <Input type="date" value={rangeFrom} onChange={(e) => setRangeFrom(e.target.value)} aria-label="De" className="h-8 w-[9.5rem] rounded-lg px-2.5 text-xs" />
-          <span className="text-[11px] font-body text-muted-foreground">até</span>
-          <Input type="date" value={rangeTo} onChange={(e) => setRangeTo(e.target.value)} aria-label="Até" className="h-8 w-[9.5rem] rounded-lg px-2.5 text-xs" />
-          {rangeActive && <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={clearRange}>Limpar</Button>}
-          {rangeActive
-            ? <span className="text-[11px] font-body font-semibold text-primary">{rangeCapped ? `Mostrando os primeiros ${RANGE_MAX_DAYS} dias` : `${days.length} dia(s)`}</span>
-            : <span className="text-[11px] font-body text-muted-foreground/70 hidden sm:inline">preencha de/até pra ver um intervalo específico</span>}
-        </div>
         {extClients.length > 0 && (
           <div className="mb-3 rounded-xl border border-dashed border-border bg-background/60 px-3 py-2">
             <button type="button" onClick={togglePostChips} className="flex items-center gap-2 w-full text-left">
@@ -570,7 +539,7 @@ export default function AgendaCriacao() {
               )}
             </div>
           )}
-          {view === "mes" && !rangeActive && (
+          {view === "mes" && (
             <div className="hidden lg:grid lg:grid-cols-7 gap-2 mb-1">
               {WD.map((w) => <p key={w} className="text-[10px] uppercase tracking-wider font-body font-semibold text-muted-foreground text-center">{w}</p>)}
             </div>
@@ -587,13 +556,13 @@ export default function AgendaCriacao() {
               // Lista única do dia, ordenada por horário (sem hora primeiro). Os index dos
               // Draggable saem daqui (0..n-1 contíguos), casando com a ordem renderizada pro dnd.
               const dayItems = buildDayItems(caps, dayTasks, list, dayPosts);
-              const outOfMonth = view === "mes" && !rangeActive && d.getMonth() !== curMonth;
-              // No mês/período mostramos o dia da semana real do dia (WD[getDay]); na semana idem.
-              const showWeekday = view === "semana" || rangeActive;
+              const outOfMonth = view === "mes" && d.getMonth() !== curMonth;
+              // No mês mostramos o dia da semana real do dia (WD[getDay]); na semana idem.
+              const showWeekday = view === "semana";
               return (
                 <Droppable droppableId={iso} key={iso}>
                   {(dropProvided, dropSnapshot) => (
-                    <div ref={(el) => { dropProvided.innerRef(el); if (view === "semana" && !rangeActive && isToday) todayColRef.current = el; }} {...dropProvided.droppableProps}
+                    <div ref={(el) => { dropProvided.innerRef(el); if (view === "semana" && isToday) todayColRef.current = el; }} {...dropProvided.droppableProps}
                       className={cn("rounded-xl border p-2.5 flex flex-col gap-1.5 transition-shadow",
                         gridLayout ? "min-h-[110px]" : "w-[85vw] max-w-[380px] shrink-0 snap-start lg:w-auto lg:max-w-none lg:snap-align-none min-h-[240px] lg:min-h-[280px]",
                         isToday ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-background",
