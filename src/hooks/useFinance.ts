@@ -48,7 +48,11 @@ export function useCreateFinRecord() {
       const { error } = await sbFrom("fin_records").insert({ ...input, manager_id: agencyOwnerId } as never);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId] }),
+    // refetchType "all": a home (useOperationSignals) e a ficha do cliente usam
+    // janelas de fin-records que ficam INATIVAS quando você está no Cria Caixa.
+    // Com o refetchOnMount:false global, sem isto elas não recarregavam ao voltar
+    // e a pendência/valor não atualizava. "all" revalida até as inativas.
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId], refetchType: "all" }),
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao salvar lançamento."),
   });
 }
@@ -60,7 +64,11 @@ export function useUpdateFinRecord() {
       const { error } = await sbFrom("fin_records").update(updates as never).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId] }),
+    // refetchType "all": a home (useOperationSignals) e a ficha do cliente usam
+    // janelas de fin-records que ficam INATIVAS quando você está no Cria Caixa.
+    // Com o refetchOnMount:false global, sem isto elas não recarregavam ao voltar
+    // e a pendência/valor não atualizava. "all" revalida até as inativas.
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId], refetchType: "all" }),
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao atualizar."),
   });
 }
@@ -69,7 +77,11 @@ export function useDeleteFinRecord() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => { const { error } = await sbFrom("fin_records").delete().eq("id", id); if (error) throw error; },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId] }),
+    // refetchType "all": a home (useOperationSignals) e a ficha do cliente usam
+    // janelas de fin-records que ficam INATIVAS quando você está no Cria Caixa.
+    // Com o refetchOnMount:false global, sem isto elas não recarregavam ao voltar
+    // e a pendência/valor não atualizava. "all" revalida até as inativas.
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId], refetchType: "all" }),
     onError: () => toast.error("Erro ao excluir."),
   });
 }
@@ -141,7 +153,11 @@ export function useGenerateRecurring() {
       if (error) throw error;
       return rows.length;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId] }),
+    // refetchType "all": a home (useOperationSignals) e a ficha do cliente usam
+    // janelas de fin-records que ficam INATIVAS quando você está no Cria Caixa.
+    // Com o refetchOnMount:false global, sem isto elas não recarregavam ao voltar
+    // e a pendência/valor não atualizava. "all" revalida até as inativas.
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId], refetchType: "all" }),
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao lançar recorrentes."),
   });
 }
@@ -162,7 +178,11 @@ export function useCreateFinTransfer() {
       const { error } = await sbFrom("fin_records").insert(rows as never);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId] }),
+    // refetchType "all": a home (useOperationSignals) e a ficha do cliente usam
+    // janelas de fin-records que ficam INATIVAS quando você está no Cria Caixa.
+    // Com o refetchOnMount:false global, sem isto elas não recarregavam ao voltar
+    // e a pendência/valor não atualizava. "all" revalida até as inativas.
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId], refetchType: "all" }),
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro na transferência."),
   });
 }
@@ -171,7 +191,11 @@ export function useDeleteFinByGroup() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (group: string) => { const { error } = await sbFrom("fin_records").delete().eq("transfer_group", group); if (error) throw error; },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId] }),
+    // refetchType "all": a home (useOperationSignals) e a ficha do cliente usam
+    // janelas de fin-records que ficam INATIVAS quando você está no Cria Caixa.
+    // Com o refetchOnMount:false global, sem isto elas não recarregavam ao voltar
+    // e a pendência/valor não atualizava. "all" revalida até as inativas.
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId], refetchType: "all" }),
     onError: () => toast.error("Erro ao excluir transferência."),
   });
 }
@@ -274,8 +298,10 @@ export function useConfirmMonthly() {
       if (e2) throw e2;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["fin-monthly", agencyOwnerId] });
-      qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId] });
+      // "all" pra que a home e a ficha do cliente (queries inativas) reflitam o
+      // check na hora, mesmo com o refetchOnMount:false global.
+      qc.invalidateQueries({ queryKey: ["fin-monthly", agencyOwnerId], refetchType: "all" });
+      qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId], refetchType: "all" });
       toast.success("Recebimento confirmado.");
     },
     onError: () => toast.error("Não consegui confirmar."),
@@ -298,8 +324,8 @@ export function useUndoMonthly() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["fin-monthly", agencyOwnerId] });
-      qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId] });
+      qc.invalidateQueries({ queryKey: ["fin-monthly", agencyOwnerId], refetchType: "all" });
+      qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId], refetchType: "all" });
       toast.success("Desfeito. A mensalidade voltou pra pendente.");
     },
     onError: () => toast.error("Não consegui desfazer."),
@@ -320,8 +346,8 @@ export function useSkipMonthly() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["fin-monthly", agencyOwnerId] });
-      qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId] });
+      qc.invalidateQueries({ queryKey: ["fin-monthly", agencyOwnerId], refetchType: "all" });
+      qc.invalidateQueries({ queryKey: ["fin-records", agencyOwnerId], refetchType: "all" });
       toast.success("Mensalidade pulada neste mês.");
     },
     onError: () => toast.error("Não consegui pular."),

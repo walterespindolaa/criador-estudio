@@ -14,6 +14,7 @@ import { datasPara, segmentoDoTexto, DATAS_COMEMORATIVAS } from "@/lib/datasCome
 import {
   useFinRecords, useCreateFinRecord, useUpdateFinRecord, useDeleteFinRecord,
   useFinRecurring, useCreateFinRecurring, type FinType, type FinRecord,
+  useFinMonthly, useEnsureMonthly, useConfirmMonthly, useUndoMonthly, type FinMonthly,
 } from "@/hooks/useFinance";
 import { ClienteIdeias } from "@/components/accounts/ClienteIdeias";
 import { ClientePortalTab } from "@/components/accounts/ClientePortalTab";
@@ -579,7 +580,7 @@ export default function ClienteHub() {
       {/* FINANCEIRO, exclusivo de quem assina o Cria Caixa. */}
       {activeTab === "financeiro" && (
         hasCaixa
-          ? <FinanceTab clientId={id!} clientName={client.name} monthlyValue={client.monthly_value} />
+          ? <FinanceTab clientId={id!} clientName={client.name} monthlyValue={client.monthly_value} paymentDay={client.payment_day} clientStatus={client.status} />
           : <ModuleUpsell code="financeiro" clientName={client.name} />
       )}
       {/* Vitrine em popup: aparece quando a pessoa CLICA numa ação que exige
@@ -1190,7 +1191,7 @@ function mesesCompet(mesAtual: string): string[] {
   });
 }
 
-function FinanceTab({ clientId, clientName, monthlyValue }: { clientId: string; clientName: string; monthlyValue: number | null }) {
+function FinanceTab({ clientId, clientName, monthlyValue, paymentDay, clientStatus }: { clientId: string; clientName: string; monthlyValue: number | null; paymentDay: number | null; clientStatus: string }) {
   const { data: all = [], isLoading } = useFinRecords();
   const { profile } = useManagerProfile();
   const create = useCreateFinRecord();
@@ -1213,10 +1214,38 @@ function FinanceTab({ clientId, clientName, monthlyValue }: { clientId: string; 
     [records, range, ymPrefix],
   );
 
+  // ── MENSALIDADE DO MÊS (fin_monthly) ──
+  // A mensalidade pendente vive em fin_monthly e só vira fin_record quando
+  // recebida. Sem trazer isso aqui, um cliente que ainda não pagou aparecia com
+  // a aba financeira VAZIA (mesmo estando "urgente" na home). Trazemos a
+  // instância do mês visto e deixamos marcar recebido daqui, mesma fonte de
+  // verdade do Cria Caixa (o check reflete nos dois lados e na home).
+  const monthRefView = `${ymPrefix}-01`;
+  const { data: monthliesView = [] } = useFinMonthly(monthRefView);
+  const monthlyDoMes = useMemo(
+    () => monthliesView.find((m) => m.crm_client_id === clientId) ?? null,
+    [monthliesView, clientId],
+  );
+  const ensureMonthly = useEnsureMonthly();
+  const confirmMonthly = useConfirmMonthly();
+  const undoMonthly = useUndoMonthly();
+  // Garante a instância do mês visto pra este cliente (idempotente), pra ela
+  // aparecer mesmo que a pessoa nunca tenha aberto o Cria Caixa neste mês.
+  useEffect(() => {
+    if (range !== "mes") return;
+    if (clientStatus === "inativo" || !(Number(monthlyValue) > 0)) return;
+    ensureMonthly.mutate({ monthRef: monthRefView, clients: [{ id: clientId, monthly_value: monthlyValue, payment_day: paymentDay, status: clientStatus }] });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monthRefView, range, clientId, monthlyValue, paymentDay, clientStatus]);
+
   // fin_records.amount é em REAIS (mesma unidade do Cria Caixa).
   // Antes esta aba gravava *100 e lia /100, um custo de R$ 400 virava R$ 40.000 no Caixa.
   const recebido = rows.filter((r) => r.type === "entrada" && r.status === "pago").reduce((s, r) => s + Number(r.amount), 0);
-  const aReceber = rows.filter((r) => r.type === "entrada" && r.status !== "pago").reduce((s, r) => s + Number(r.amount), 0);
+  // A mensalidade PENDENTE do mês (ainda sem fin_record) entra como "a receber",
+  // igual à aba Clientes do Cria Caixa, pra os números baterem entre as telas.
+  // Quando recebida, ela vira fin_record pago e já cai em "recebido" acima.
+  const aReceberMensal = range === "mes" && monthlyDoMes?.status === "pendente" ? Number(monthlyDoMes.amount) : 0;
+  const aReceber = rows.filter((r) => r.type === "entrada" && r.status !== "pago").reduce((s, r) => s + Number(r.amount), 0) + aReceberMensal;
   const receita = recebido + aReceber;
   const custo = rows.filter((r) => r.type === "despesa").reduce((s, r) => s + Number(r.amount), 0);
 
@@ -1301,6 +1330,41 @@ function FinanceTab({ clientId, clientName, monthlyValue }: { clientId: string; 
           <span className="text-[11px] font-body text-muted-foreground ml-auto">Mensalidade contratada: <strong className="text-foreground">{formatBRL(monthlyValue)}</strong></span>
         ) : null}
       </div>
+
+      {/* MENSALIDADE DO MÊS: mesma instância do Cria Caixa. Marcar recebido aqui
+          cria o lançamento e atualiza o Caixa e a pendência da home. */}
+      {range === "mes" && monthlyDoMes && (
+        <div className="bg-card border border-border rounded-2xl p-4 flex items-center gap-3 flex-wrap">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-display font-bold text-foreground">Mensalidade de {labelMesBR(ymPrefix)}</p>
+            <p className="text-[11px] font-body text-muted-foreground mt-0.5">
+              vence {parseDateOnly(monthlyDoMes.due_date).toLocaleDateString("pt-BR")}
+              {monthlyDoMes.status === "pendente" && monthlyDoMes.due_date < hojeStr ? " · vencida" : ""}
+              {monthlyDoMes.status === "pulado" && monthlyDoMes.skip_reason ? ` · pulada: ${monthlyDoMes.skip_reason}` : ""}
+            </p>
+          </div>
+          <span className="text-base font-display font-extrabold text-foreground shrink-0">{formatBRL(Number(monthlyDoMes.amount))}</span>
+          {monthlyDoMes.status === "pago" ? (
+            <button onClick={() => undoMonthly.mutate(monthlyDoMes)} disabled={undoMonthly.isPending}
+              title="Recebido, clique pra desfazer" aria-label="Recebido, clique pra desfazer"
+              className="flex items-center gap-1.5 rounded-xl bg-green-600 text-white px-3 h-9 text-xs font-body font-bold shrink-0 disabled:opacity-60">
+              <Check className="h-3.5 w-3.5" strokeWidth={3} /> Recebido
+            </button>
+          ) : monthlyDoMes.status === "pulado" ? (
+            <button onClick={() => undoMonthly.mutate(monthlyDoMes)} disabled={undoMonthly.isPending}
+              title="Reverter" aria-label="Reverter"
+              className="flex items-center gap-1.5 rounded-xl border border-border text-muted-foreground px-3 h-9 text-xs font-body font-bold shrink-0 disabled:opacity-60">
+              Reverter
+            </button>
+          ) : (
+            <button onClick={() => confirmMonthly.mutate({ m: monthlyDoMes, clientName })} disabled={confirmMonthly.isPending}
+              title="Marcar recebido" aria-label="Marcar recebido"
+              className="flex items-center gap-1.5 rounded-xl border border-green-600 text-green-700 hover:bg-green-600 hover:text-white px-3 h-9 text-xs font-body font-bold shrink-0 transition-colors disabled:opacity-60">
+              <Check className="h-3.5 w-3.5" strokeWidth={3} /> Marcar recebido
+            </button>
+          )}
+        </div>
+      )}
 
       {/* O quadro do cliente: entra, sai, imposto, sobra. */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

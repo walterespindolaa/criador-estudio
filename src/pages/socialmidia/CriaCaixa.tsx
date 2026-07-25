@@ -176,6 +176,18 @@ function CaixaInner() {
   // Previsão do mês: bruto = recebido + a receber; líquido = bruto − despesas (todas).
   const previstoBruto = recebido + aReceber;
   const previstoLiquido = previstoBruto - despesas;
+
+  // ── RECONCILIAÇÃO DA PREVISÃO ──
+  // A home mostra "por mês na carteira" (só mensalidades recorrentes). A previsão
+  // aqui é MAIOR quando há receita avulsa (um freelance, um projeto pontual, com
+  // ou sem cliente vinculado). Separamos os dois pra o número não parecer errado:
+  //   previstoBruto = mensalidades do mês + outras receitas (avulsas).
+  const mensalRecebida = monthCtx
+    .filter((r) => r.type === "entrada" && r.status === "pago" && (r.category ?? "") === "Mensalidade")
+    .reduce((s, r) => s + Number(r.amount), 0);
+  const mensalidadesDoMes = mensalRecebida + aReceberMensal;
+  // Tudo que entra e NÃO é mensalidade da carteira (inclusive receita sem cliente).
+  const outrasReceitas = previstoBruto - mensalidadesDoMes;
   // ── RENTABILIDADE POR CLIENTE ──
   // Pra cada cliente: quanto entrou, quanto ainda entra, quanto se gasta COM ele,
   // quanto de imposto ele gera, e o que sobra de fato (margem líquida).
@@ -419,6 +431,11 @@ function CaixaInner() {
                 <p className="text-3xl font-display font-extrabold text-foreground mt-0.5">{brl(previstoBruto)}</p>
                 <p className="text-[12px] font-body text-muted-foreground mt-0.5">
                   {brl(recebido)} já recebido + {brl(aReceber)} a receber
+                </p>
+                {/* Reconcilia com a home: mensalidades da carteira + o que é avulso. */}
+                <p className="text-[12px] font-body text-muted-foreground mt-0.5">
+                  {brl(mensalidadesDoMes)} em mensalidades da carteira
+                  {outrasReceitas > 0.005 ? <> + <strong className="text-foreground">{brl(outrasReceitas)}</strong> em outras receitas (avulsas)</> : ""}
                 </p>
               </div>
               <div className="text-right">
