@@ -74,7 +74,15 @@ export default function ManagerHome() {
   const [cropOpen, setCropOpen] = useState(false);
   // Modo privacidade: um olho oculta TODOS os números dos cards (útil pra gravar
   // tela ou mostrar pra alguém sem expor faturamento/pendências).
-  const [masked, setMasked] = useState(false);
+  // Persistido em localStorage pra lembrar a última escolha após F5. Default visível.
+  const [masked, setMasked] = useState<boolean>(() => {
+    try { return localStorage.getItem("home_kpis_hidden") === "1"; } catch { return false; }
+  });
+  const toggleMasked = () => setMasked((v) => {
+    const n = !v;
+    try { localStorage.setItem("home_kpis_hidden", n ? "1" : "0"); } catch { /* segue */ }
+    return n;
+  });
   // Faixa "Seus clientes" recolhível (mesmo padrão da Agenda). Default aberto;
   // o estado fica no localStorage pra persistir entre sessões.
   const [clientesOpen, setClientesOpen] = useState<boolean>(() => {
@@ -213,7 +221,7 @@ export default function ManagerHome() {
         {/* Os números que importam. Antes o dashboard não mostrava NENHUM. */}
         <div data-tour="gh-numeros" className="relative mt-6">
           {/* Olho único: oculta TODOS os números dos cards de uma vez. */}
-          <button type="button" onClick={() => setMasked((v) => !v)}
+          <button type="button" onClick={toggleMasked}
             className="absolute -top-6 right-0 flex items-center gap-1.5 text-[11px] font-body font-semibold text-muted-foreground hover:text-foreground transition-colors"
             aria-label={masked ? "Mostrar números" : "Ocultar números"}>
             {masked ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}

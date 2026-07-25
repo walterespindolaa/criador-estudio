@@ -55,6 +55,21 @@ export function definirBadge(n: number): void {
 }
 
 /**
+ * Zera a bolinha do ícone do app. `setAppBadge` é um estado do SISTEMA
+ * OPERACIONAL: uma vez marcado, ele fica no ícone mesmo depois que o motivo
+ * some, até alguém mandar limpar. Por isso "ler tudo" precisa chamar isto
+ * explicitamente, senão o ícone continua mostrando "1 em aberto" fantasma.
+ */
+export function limparBadge(): void {
+  const nav = navigator as Navigator & { clearAppBadge?: () => Promise<void> };
+  try {
+    void nav.clearAppBadge?.();
+  } catch {
+    /* não suportado: silêncio, é enfeite */
+  }
+}
+
+/**
  * Vibração curtinha. É o que faz o arrastar do card "parecer nativo": o dedo
  * sente que pegou e que soltou. iOS ignora (não expõe a API), Android responde.
  */

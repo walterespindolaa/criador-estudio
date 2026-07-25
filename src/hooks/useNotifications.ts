@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { limparBadge } from "@/lib/pwa";
 import type { Database } from "@/integrations/supabase/types";
 
 export type Notification = Database["public"]["Tables"]["notifications"]["Row"];
@@ -10,6 +11,7 @@ export function useNotifications() {
   const queryClient = useQueryClient();
   const userId = user?.id;
   const queryKey = ["notifications", userId] as const;
+  const unreadKey = ["notifications-unread", userId] as const;
 
   const {
     data: notifications = [],
@@ -30,7 +32,30 @@ export function useNotifications() {
     enabled: !!userId,
   });
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  // O contador do sino NÃO pode sair da lista acima: ela é cortada em 50 itens,
+  // então uma não-lida mais antiga (fora dos 50) sumia da lista mas continuava
+  // no banco, e o número ficava dessincronizado da realidade. Aqui contamos as
+  // não-lidas direto no banco (head/count), sem trazer linha nenhuma.
+  const { data: unreadCount = 0 } = useQuery<number>({
+    queryKey: unreadKey,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId!)
+        .eq("read", false);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!userId,
+  });
+
+  // Toda alteração precisa revalidar a lista E a contagem, senão o badge fica
+  // preso num valor velho.
+  const invalidar = () => {
+    void queryClient.invalidateQueries({ queryKey });
+    void queryClient.invalidateQueries({ queryKey: unreadKey });
+  };
 
   const markAsRead = useMutation({
     mutationFn: async (id: string): Promise<void> => {
@@ -40,7 +65,7 @@ export function useNotifications() {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: invalidar,
   });
 
   const markAllAsRead = useMutation({
@@ -53,7 +78,12 @@ export function useNotifications() {
         .eq("read", false);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: () => {
+      // Zerou as não-lidas: tira também a bolinha do ícone do app, senão o PWA
+      // segue mostrando "1 em aberto" fantasma mesmo sem nada pra ler.
+      limparBadge();
+      invalidar();
+    },
   });
 
   const deleteOne = useMutation({
@@ -61,7 +91,7 @@ export function useNotifications() {
       const { error } = await supabase.from("notifications").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: invalidar,
   });
 
   const clearAll = useMutation({
@@ -70,7 +100,10 @@ export function useNotifications() {
       const { error } = await supabase.from("notifications").delete().eq("user_id", userId);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: () => {
+      limparBadge();
+      invalidar();
+    },
   });
 
   return { notifications, unreadCount, isLoading, error, markAsRead, markAllAsRead, deleteOne, clearAll };

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Lightbulb, Bookmark, Sparkles, Plus, Trash2, ExternalLink, Instagram, Loader2 } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { Lightbulb, Bookmark, Sparkles, Plus, Trash2, ExternalLink, Instagram, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCriaClientIdeas, useCrmSavedRefs, useAddCrmSavedRef, useDeleteCrmSavedRef } from "@/hooks/useBancoIdeias";
 import { useCreativeIdeas, useUpdateIdeaStatus, useDeleteIdea } from "@/hooks/useHubCria";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,10 @@ import { confirmar } from "@/components/shared/Confirm";
 
 type Fonte = "cliente" | "salvos-cliente" | "hub" | "meus";
 
+// Paginação: ~10 linhas por página. No desktop o grid tem 6 colunas,
+// então 6 x 10 = 60 itens por página. Espelha o padrão do SavedRefs.
+const PAGE_SIZE = 60;
+
 const ABAS: { key: Fonte; label: string; icon: typeof Lightbulb; hint: string }[] = [
   { key: "cliente", label: "Do cliente", icon: Lightbulb, hint: "Ideias que o próprio cliente escreveu na conta CRIA dele. Ele pensa, você executa." },
   { key: "salvos-cliente", label: "Salvos dele", icon: Bookmark, hint: "Posts que o cliente guardou como referência. É o gosto dele, em imagem." },
@@ -45,6 +49,37 @@ export function ClienteIdeias({ clientId, criaOwnerId }: { clientId: string; cri
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
+
+  // Filtro por pasta + paginação da aba "Salvos dele" (posts que o cliente guardou).
+  const [savedFolder, setSavedFolder] = useState<string | null>(null);
+  const [savedPage, setSavedPage] = useState(1);
+  // Paginação da aba "Seus salvos" (os salvos privados da social mídia; sem pasta).
+  const [meusPage, setMeusPage] = useState(1);
+
+  // Pastas reais dos salvos DESTE cliente, na ordem alfabética.
+  const savedFolders = useMemo(() => {
+    const set = new Set<string>();
+    (doCria?.saved ?? []).forEach((s) => { const f = s.folder?.trim(); if (f) set.add(f); });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [doCria]);
+
+  // Lista de "Salvos dele" já filtrada pela pasta ativa.
+  const savedFiltered = useMemo(() => {
+    const list = doCria?.saved ?? [];
+    if (!savedFolder) return list;
+    return list.filter((s) => (s.folder ?? "").trim() === savedFolder);
+  }, [doCria, savedFolder]);
+
+  const savedTotalPages = Math.max(1, Math.ceil(savedFiltered.length / PAGE_SIZE));
+  // Troca de pasta/aba volta pra página 1; e reajusta se a página passou do total.
+  useEffect(() => { setSavedPage(1); }, [savedFolder, aba]);
+  useEffect(() => { if (savedPage > savedTotalPages) setSavedPage(savedTotalPages); }, [savedPage, savedTotalPages]);
+  const savedPaged = useMemo(() => savedFiltered.slice((savedPage - 1) * PAGE_SIZE, savedPage * PAGE_SIZE), [savedFiltered, savedPage]);
+
+  // "Seus salvos" não tem pasta, mas também pagina pra não explodir a lista.
+  const meusTotalPages = Math.max(1, Math.ceil(meusRefs.length / PAGE_SIZE));
+  useEffect(() => { if (meusPage > meusTotalPages) setMeusPage(meusTotalPages); }, [meusPage, meusTotalPages]);
+  const meusPaged = useMemo(() => meusRefs.slice((meusPage - 1) * PAGE_SIZE, meusPage * PAGE_SIZE), [meusRefs, meusPage]);
 
   const abaAtual = ABAS.find((a) => a.key === aba)!;
   const semCria = !criaOwnerId;
@@ -126,10 +161,28 @@ export function ClienteIdeias({ clientId, criaOwnerId }: { clientId: string; cri
         (doCria?.saved.length ?? 0) === 0 ? (
           <Vazio titulo="Nada salvo ainda" texto="Os posts que o cliente guardar como referência na conta dele aparecem aqui." />
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {doCria!.saved.map((s) => (
-              <RefCard key={s.id} url={s.url} thumb={s.thumbnail_url} title={s.caption} author={s.author} note={s.note} />
-            ))}
+          <div className="space-y-3">
+            {/* Pastas reais do cliente: filtram a lista ao clicar. */}
+            {savedFolders.length > 0 && (
+              <div className="flex gap-1.5 flex-wrap">
+                <FolderChip active={!savedFolder} onClick={() => setSavedFolder(null)}>Todas</FolderChip>
+                {savedFolders.map((f) => (
+                  <FolderChip key={f} active={savedFolder === f} onClick={() => setSavedFolder(savedFolder === f ? null : f)}>{f}</FolderChip>
+                ))}
+              </div>
+            )}
+            {savedFiltered.length === 0 ? (
+              <Vazio titulo="Nada nesta pasta" texto="Escolha outra pasta ou volte pra Todas." />
+            ) : (
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2">
+                  {savedPaged.map((s) => (
+                    <RefCard key={s.id} url={s.url} thumb={s.thumbnail_url} title={s.caption} author={s.author} note={s.note} folder={s.folder} />
+                  ))}
+                </div>
+                <Paginacao page={savedPage} totalPages={savedTotalPages} onChange={setSavedPage} />
+              </>
+            )}
           </div>
         )
       )}
@@ -192,12 +245,15 @@ export function ClienteIdeias({ clientId, criaOwnerId }: { clientId: string; cri
             meusRefs.length === 0 ? (
               <Vazio titulo="Você ainda não salvou nada" texto="Vá guardando os posts que te inspiram pra este cliente, vira o seu banco particular." />
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {meusRefs.map((r) => (
-                  <RefCard key={r.id} url={r.url} thumb={r.thumbnail_url} title={r.title} author={r.author} note={r.note}
-                    onDelete={async () => { if (await confirmar({ titulo: "Excluir esta referência?" })) delRef.mutate(r.id); }} />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2">
+                  {meusPaged.map((r) => (
+                    <RefCard key={r.id} url={r.url} thumb={r.thumbnail_url} title={r.title} author={r.author} note={r.note}
+                      onDelete={async () => { if (await confirmar({ titulo: "Excluir esta referência?" })) delRef.mutate(r.id); }} />
+                  ))}
+                </div>
+                <Paginacao page={meusPage} totalPages={meusTotalPages} onChange={setMeusPage} />
+              </>
             )}
         </>
       )}
@@ -205,11 +261,11 @@ export function ClienteIdeias({ clientId, criaOwnerId }: { clientId: string; cri
   );
 }
 
-function RefCard({ url, thumb, title, author, note, onDelete }: {
-  url: string; thumb?: string | null; title?: string | null; author?: string | null; note?: string | null; onDelete?: () => void;
+function RefCard({ url, thumb, title, author, note, folder, onDelete }: {
+  url: string; thumb?: string | null; title?: string | null; author?: string | null; note?: string | null; folder?: string | null; onDelete?: () => void;
 }) {
   return (
-    <div className="group relative rounded-2xl border border-border bg-card overflow-hidden">
+    <div className="group relative rounded-xl border border-border bg-card overflow-hidden">
       <a href={url} target="_blank" rel="noopener noreferrer" className="block">
         {/* referrerPolicy="no-referrer" é OBRIGATÓRIO aqui.
             O CDN do Instagram recusa a imagem quando o navegador manda o Referer
@@ -218,7 +274,7 @@ function RefCard({ url, thumb, title, author, note, onDelete }: {
             Sem o Referer, o CDN serve normalmente.
             O ícone fica ATRÁS: se a imagem carrega, ela cobre. Se falhar, o onError
             some com a <img> e sobra o ícone, em vez do quadrado de imagem quebrada. */}
-        <div className="relative aspect-square bg-muted overflow-hidden">
+        <div className="relative aspect-[4/5] bg-muted overflow-hidden">
           <span className="absolute inset-0 grid place-items-center">
             <Instagram className="h-6 w-6 text-muted-foreground/40" />
           </span>
@@ -233,22 +289,51 @@ function RefCard({ url, thumb, title, author, note, onDelete }: {
             />
           )}
         </div>
-        <div className="p-3">
-          {author && <p className="text-[11px] font-body text-muted-foreground truncate">@{author.replace(/^@/, "")}</p>}
-          {title && <p className="text-[12.5px] font-body text-foreground line-clamp-2 leading-snug">{title}</p>}
-          {note && <p className="text-[11px] font-body text-muted-foreground mt-1 line-clamp-2 italic">{note}</p>}
-          <span className="inline-flex items-center gap-1 text-[11px] font-body font-semibold text-primary mt-1.5">
-            <ExternalLink className="h-3 w-3" /> abrir no Instagram
+        {/* Mobile (2 col): textos maiores pra ler; a partir de sm o grid aperta e encolhe. */}
+        <div className="p-2 sm:p-1.5">
+          {author && <p className="text-xs sm:text-[10px] font-body font-semibold text-foreground truncate">@{author.replace(/^@/, "")}</p>}
+          {title && <p className="text-[11px] sm:text-[9.5px] font-body text-muted-foreground line-clamp-2 mt-0.5 leading-snug">{title}</p>}
+          {note && <p className="text-[10px] sm:text-[9px] font-body text-muted-foreground mt-0.5 line-clamp-1 italic">{note}</p>}
+          {folder && <span className="inline-block mt-1 text-[9px] sm:text-[8px] font-body px-1.5 py-0.5 rounded-full bg-primary/10 text-primary truncate max-w-full">{folder}</span>}
+          <span className="flex items-center gap-1 text-[10px] sm:text-[9px] font-body font-semibold text-primary mt-1">
+            <ExternalLink className="h-3 w-3 sm:h-2.5 sm:w-2.5" /> abrir no Instagram
           </span>
         </div>
       </a>
       {onDelete && (
         <button onClick={onDelete}
-          className="absolute top-2 right-2 h-7 w-7 grid place-items-center rounded-lg bg-background/90 text-muted-foreground hover:text-destructive opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+          className="absolute top-1.5 right-1.5 h-7 w-7 grid place-items-center rounded-lg bg-background/90 text-muted-foreground hover:text-destructive opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
           aria-label="Excluir referência">
           <Trash2 className="h-3.5 w-3.5" />
         </button>
       )}
+    </div>
+  );
+}
+
+// Chip de pasta: espelha o visual dos chips do SavedRefs.
+function FolderChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button onClick={onClick}
+      className={cn("px-3 h-8 rounded-full text-xs font-body border",
+        active ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground")}>
+      {children}
+    </button>
+  );
+}
+
+// Controles de página: só aparecem quando há mais de uma página.
+function Paginacao({ page, totalPages, onChange }: { page: number; totalPages: number; onChange: (p: number) => void }) {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="flex items-center justify-center gap-3 pt-2">
+      <Button variant="outline" size="sm" className="h-8 text-xs" disabled={page <= 1} onClick={() => onChange(Math.max(1, page - 1))}>
+        <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Anterior
+      </Button>
+      <span className="text-xs font-body text-muted-foreground">Página {page} de {totalPages}</span>
+      <Button variant="outline" size="sm" className="h-8 text-xs" disabled={page >= totalPages} onClick={() => onChange(Math.min(totalPages, page + 1))}>
+        Próxima <ChevronRight className="h-3.5 w-3.5 ml-1" />
+      </Button>
     </div>
   );
 }
