@@ -1,5 +1,6 @@
 import { Kanban } from "lucide-react";
 import { ScopedAccountProvider } from "@/contexts/AccountContext";
+import { UploadProgressProvider } from "@/contexts/UploadProgressContext";
 import Criando from "@/pages/app/Criando";
 
 // ── KANBAN DO CLIENTE (dentro do cockpit da social mídia) ──
@@ -25,9 +26,18 @@ export function ClienteKanbanCria({ criaOwnerId, clientName }: { criaOwnerId: st
         </p>
       </div>
       {/* Reaproveita a tela "Estou Criando" inteira (kanban + calendário + tabela +
-          PostEditor), escopada pra conta Cria do cliente. */}
+          PostEditor), escopada pra conta Cria do cliente.
+          O PostEditor consome useUploadProgress, provider que no criador vem do
+          AppLayout mas NÃO existe no cockpit do gestor (ManagerLayout). Sem ele a
+          aba quebrava com "useUploadProgress must be used inside
+          UploadProgressProvider" (e o React #310 caía junto). Então provemos aqui.
+          O TourProvider (useTour, também usado pelo Criando/PostEditor) já vem do
+          ManagerLayout, então não precisa ser reprovido. AuthContext, AccountContext
+          e QueryClient são globais no App.tsx. */}
       <ScopedAccountProvider ownerId={criaOwnerId}>
-        <Criando />
+        <UploadProgressProvider>
+          <Criando />
+        </UploadProgressProvider>
       </ScopedAccountProvider>
     </div>
   );
