@@ -14,6 +14,7 @@ type Ctx = {
   managedAccounts: ManagedAccount[];
   hasManagedAccounts: boolean;
   accountsLoading: boolean;
+  teamLoading: boolean;             // carregando as contas de time (colaborador)
   setActiveAccount: (ownerId: string | null) => void; // null => volta pra própria conta
   // Colaboradores (acesso de equipe): contas de gestor onde o usuário atua como time.
   teamAccounts: ManagedAccount[];
@@ -51,7 +52,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   });
 
   // Contas de gestor onde o usuário atua como COLABORADOR (acesso de equipe).
-  const { data: teamAccounts = [] } = useQuery<ManagedAccount[]>({
+  const { data: teamAccounts = [], isLoading: teamLoading } = useQuery<ManagedAccount[]>({
     queryKey: ["team-accounts", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
@@ -88,13 +89,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     managedAccounts,
     hasManagedAccounts: managedAccounts.length > 0,
     accountsLoading,
+    teamLoading,
     setActiveAccount,
     teamAccounts,
     isCollaborator: teamAccounts.length > 0,
     actingAsTeam,
     // Na agência: se atuo como time, o dono é o gestor (activeAccountId); senão, sou eu.
     agencyOwnerId: actingAsTeam ? activeAccountId : (user?.id ?? null),
-  }), [effectiveId, activeAccountId, user?.id, managedAccounts, accountsLoading, teamAccounts, actingAsTeam]);
+  }), [effectiveId, activeAccountId, user?.id, managedAccounts, accountsLoading, teamLoading, teamAccounts, actingAsTeam]);
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
 }

@@ -94,6 +94,15 @@ button, a, [role="button"] {
 [data-rfd-drag-handle-draggable-id] {
   touch-action: none !important;
 }
+/* Cards do "Estou Criando": aqui a gente QUER que o dedo passando por cima do
+   card ROLE o board (horizontal e vertical), e o long-press do dnd (150ms) é
+   quem inicia o arraste. Por isso liberamos o pan SÓ nesses cards, com
+   especificidade maior (.criando-drag-card + atributo) pra vencer a regra
+   global acima sem tocá-la, mantendo os outros kanbans (Agenda, Cria Post,
+   Pipeline, Cronograma) exatamente como estão, que dependem do touch-action:none. */
+.criando-drag-card[data-rfd-drag-handle-draggable-id] {
+  touch-action: pan-x pan-y !important;
+}
 
 /* Rolagem horizontal (abas, chips) com pegada de app: para no item. */
 .scroll-snap-x {

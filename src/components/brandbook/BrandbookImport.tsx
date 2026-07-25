@@ -64,7 +64,7 @@ export function BrandbookImport({ alvo, campos = CAMPOS_CLIENTE, atual, onSalvar
   const [arrastando, setArrastando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [rascunho, setRascunho] = useState<Record<string, string>>({});
-  const { etapa, progresso, leitura, arquivo, importar, cancelar } = useBrandbookImport(alvo);
+  const { etapa, progresso, leitura, arquivos, importar, cancelar } = useBrandbookImport(alvo);
 
   // Quando a leitura chega, ela vira um RASCUNHO editável. A pessoa mexe à
   // vontade antes de salvar — o que a IA devolveu é sugestão, não decisão.
@@ -78,7 +78,10 @@ export function BrandbookImport({ alvo, campos = CAMPOS_CLIENTE, atual, onSalvar
     setRascunho(r);
   }, [etapa, leitura, campos]);
 
-  const pick = (file?: File | null) => { if (file) void importar(file); };
+  // Aceita 1 ou 2 arquivos. Pega no máximo 2 e manda os dois pra uma leitura só.
+  const pick = (files?: FileList | null) => {
+    if (files && files.length) void importar(Array.from(files).slice(0, 2));
+  };
 
   const salvar = async () => {
     setSalvando(true);
@@ -101,7 +104,7 @@ export function BrandbookImport({ alvo, campos = CAMPOS_CLIENTE, atual, onSalvar
       <div
         onDragOver={(e) => { e.preventDefault(); setArrastando(true); }}
         onDragLeave={() => setArrastando(false)}
-        onDrop={(e) => { e.preventDefault(); setArrastando(false); pick(e.dataTransfer.files?.[0]); }}
+        onDrop={(e) => { e.preventDefault(); setArrastando(false); pick(e.dataTransfer.files); }}
         className={cn(
           "rounded-3xl border-2 border-dashed px-5 py-7 text-center transition-colors",
           arrastando ? "border-primary bg-primary/[0.04]" : "border-border bg-muted/20",
@@ -122,16 +125,17 @@ export function BrandbookImport({ alvo, campos = CAMPOS_CLIENTE, atual, onSalvar
           ref={inputRef}
           type="file"
           accept="application/pdf,image/*"
+          multiple
           className="hidden"
-          onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }}
+          onChange={(e) => { pick(e.target.files); e.target.value = ""; }}
         />
         <Button className="mt-4" onClick={() => inputRef.current?.click()} disabled={lendo}>
           {lendo ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
-          {lendo ? "Lendo…" : "Escolher o arquivo"}
+          {lendo ? "Lendo…" : "Escolher os arquivos"}
         </Button>
 
         <p className="text-[11.5px] font-body text-muted-foreground mt-3">
-          PDF ou imagem · até 10 MB · consome 1 geração da cota de IA
+          PDF ou imagem · até 2 arquivos · até 10 MB cada · consome 1 geração da cota de IA
         </p>
       </div>
 
@@ -139,7 +143,9 @@ export function BrandbookImport({ alvo, campos = CAMPOS_CLIENTE, atual, onSalvar
       {lendo && (
         <div className="mt-3 rounded-2xl border border-border bg-card px-4 py-3.5">
           <p className="font-display text-[13.5px] font-bold text-foreground truncate">
-            Lendo “{arquivo?.name}”
+            {arquivos.length > 1
+              ? `Lendo ${arquivos.length} arquivos`
+              : `Lendo “${arquivos[0]?.name ?? ""}”`}
           </p>
           <div className="mt-2.5 space-y-1.5">
             <Passo

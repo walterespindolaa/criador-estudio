@@ -185,14 +185,22 @@ const BRAND_ITEM_SECTIONS = [
   { type: "evitar", label: "Palavras que evito", icon: Ban, placeholder: "Ex: Não use gírias" },
 ];
 
-/* Os campos que a gente importa pro criador. É menos que o do cliente de
-   propósito: cor, fonte, tom e o que evitar são o que a IA REALMENTE usa pra
-   escrever no tom da pessoa. Importar vinte campos que ninguém lê é teatro. */
+/* Os campos que a gente importa pro criador e ESPALHA nas seções do brandbook.
+   Cada chave abaixo tem um destino certo (ver distribuirDoPdf): cor/fonte vão
+   pra Identidade; direção visual pro Visual; tom e o que evitar pro Tom de Voz;
+   personalidade pra Identidade; diferencial pros Valores; temas pra Comunicação;
+   público vira uma persona. Assim um único upload preenche o brandbook inteiro,
+   não só a aba Identidade. */
 const CAMPOS_CRIADOR: CampoDef[] = [
   { chave: "colorPalette", rotulo: "Cores da marca", ajuda: "os hex" },
   { chave: "typography", rotulo: "Fontes" },
+  { chave: "visualExpression", rotulo: "Direção visual", ajuda: "tipo de imagem, luz, composição", multi: true },
   { chave: "toneOfVoice", rotulo: "Tom de voz", multi: true },
   { chave: "avoid", rotulo: "Palavras e coisas que você evita", multi: true },
+  { chave: "personality", rotulo: "Personalidade e palavras-chave", multi: true },
+  { chave: "valueProp", rotulo: "Diferencial e propósito", multi: true },
+  { chave: "contentThemes", rotulo: "Temas de conteúdo", multi: true },
+  { chave: "audience", rotulo: "Público-alvo", multi: true },
 ];
 
 const Brandbook = () => {
@@ -272,28 +280,41 @@ const Brandbook = () => {
   }, [answers, saveAnswer]);
 
   /* ═════════════════════════════════════════════════════════════════════════
-     IMPORTAR A IDENTIDADE DE UM PDF
+     IMPORTAR O BRANDBOOK DE UM (OU DOIS) PDF/IMAGEM E DISTRIBUIR NAS SEÇÕES
 
-     O brandbook do criador não é um JSON: é uma lista (brand_items), uma linha
-     por cor, por fonte, por expressão. Então a leitura do PDF precisa ser
-     TRADUZIDA pra esse formato — "#6B4E71, #E8B4BC" vira duas linhas do tipo
-     "cor", e não uma linha com as duas cores dentro.
+     A leitura do arquivo não cai só na aba Identidade: cada pedaço vai pro lugar
+     que o Cria pré-determinou, exatamente como os cards do topo (BrandHubOverview):
 
-     E ela NÃO apaga o que já existe: só acrescenta o que ainda não está lá.
-     Apagar a mão da pessoa por causa de uma leitura automática é o jeito mais
-     rápido de ela nunca mais usar isto.
+       Identidade  → brand_items (cor) + moodboard-identidade/palavras-chave
+       Visual      → brand_items (cor, fonte) + moodboard-visual/cores, /estetica
+       Comunicação → linha-editorial/temas
+       Público     → personas (cria UMA persona se ainda não houver)
+       Valores     → moodboard-contexto/diferencial
+       Tom de Voz  → brand_items (tom, evitar) + tom-de-voz/estilo, /evitar
+
+     DUAS REGRAS QUE NÃO SE NEGOCIAM:
+     1. brand_items: só ACRESCENTA o que ainda não está lá (nunca duplica).
+     2. Perguntas guiadas e persona: só preenche o VAZIO. Onde a pessoa já
+        escreveu à mão, a leitura automática NÃO sobrescreve. Apagar a mão dela
+        é o jeito mais rápido de ela nunca mais usar isto.
      ═════════════════════════════════════════════════════════════════════════ */
   const identidadeAtual = useMemo(() => ({
     colorPalette: brandItems.filter((i) => i.type === "cor").map((i) => i.name).join(", "),
     typography: brandItems.filter((i) => i.type === "fonte").map((i) => i.name).join(", "),
     toneOfVoice: brandItems.filter((i) => i.type === "tom").map((i) => i.name).join(", "),
     avoid: brandItems.filter((i) => i.type === "evitar").map((i) => i.name).join(", "),
-  }), [brandItems]);
+    visualExpression: answers["moodboard-visual"]?.["estetica"] ?? "",
+    personality: answers["moodboard-identidade"]?.["palavras-chave"] ?? "",
+    valueProp: answers["moodboard-contexto"]?.["diferencial"] ?? "",
+    contentThemes: answers["linha-editorial"]?.["temas"] ?? "",
+    audience: personas[0]?.notes ?? personas[0]?.name ?? "",
+  }), [brandItems, answers, personas]);
 
-  const salvarIdentidadeDoPdf = async (valores: Record<string, string>) => {
+  const distribuirDoPdf = async (valores: Record<string, string>) => {
     const paraLista = (v?: string) =>
       (v ?? "").split(/[,;\n]+/).map((s) => s.trim()).filter(Boolean);
 
+    // 1) Itens de marca (Identidade/Visual/Tom): cor, fonte, tom, evitar. Só acrescenta.
     const planos: { type: string; nomes: string[] }[] = [
       { type: "cor", nomes: paraLista(valores.colorPalette) },
       { type: "fonte", nomes: paraLista(valores.typography) },
@@ -318,7 +339,51 @@ const Brandbook = () => {
         novos++;
       }
     }
-    toast.success(novos > 0 ? `${novos} ${novos === 1 ? "item adicionado" : "itens adicionados"} ao seu Brandbook.` : "Nada de novo pra adicionar.");
+
+    // 2) Perguntas guiadas (Visual, Identidade, Valores, Comunicação, Tom).
+    //    Só preenche o campo VAZIO — nunca apaga o que a pessoa escreveu à mão.
+    const guiados: { section: string; key: string; valor?: string }[] = [
+      { section: "moodboard-visual", key: "cores", valor: valores.colorPalette },
+      { section: "moodboard-visual", key: "estetica", valor: valores.visualExpression },
+      { section: "moodboard-identidade", key: "palavras-chave", valor: valores.personality },
+      { section: "moodboard-contexto", key: "diferencial", valor: valores.valueProp },
+      { section: "linha-editorial", key: "temas", valor: valores.contentThemes },
+      { section: "tom-de-voz", key: "estilo", valor: valores.toneOfVoice },
+      { section: "tom-de-voz", key: "evitar", valor: valores.avoid },
+    ];
+
+    let preenchidos = 0;
+    const novosAnswers: Record<string, EntryMap> = { ...answers };
+    for (const g of guiados) {
+      const v = (g.valor ?? "").trim();
+      if (!v) continue;
+      const jaEscrito = (answers[g.section]?.[g.key] ?? "").trim();
+      if (jaEscrito) continue; // respeita o que já estava preenchido
+      await saveAnswer.mutateAsync({ section: g.section, question_key: g.key, answer: v });
+      novosAnswers[g.section] = { ...(novosAnswers[g.section] ?? {}), [g.key]: v };
+      preenchidos++;
+    }
+    if (preenchidos > 0) setAnswers(novosAnswers);
+
+    // 3) Público-alvo: cria UMA persona a partir do que o arquivo trouxe, só se
+    //    ainda não existir nenhuma. Nunca mexe numa persona que a pessoa criou.
+    let personaCriada = false;
+    const publico = (valores.audience ?? "").trim();
+    if (publico && personas.length === 0) {
+      await savePersonaMutation.mutateAsync({
+        name: "Público principal",
+        icon: "bot",
+        notes: publico,
+      });
+      personaCriada = true;
+    }
+
+    const total = novos + preenchidos + (personaCriada ? 1 : 0);
+    toast.success(
+      total > 0
+        ? `Brandbook atualizado: ${total} ${total === 1 ? "campo preenchido" : "campos preenchidos"} nas seções certas.`
+        : "Nada de novo pra adicionar, o que o arquivo trouxe você já tinha.",
+    );
   };
 
   const addBrandItem = async (type: string) => {
@@ -518,6 +583,22 @@ const Brandbook = () => {
           </div>
           <div className="flex items-center gap-3 shrink-0">
             <Button
+              variant="default"
+              size="sm"
+              onClick={() => {
+                // Leva pra Visão Geral e rola até o bloco de importar (o card fica
+                // logo no topo). Torna o upload acessível de qualquer aba.
+                setActiveTab("visao-geral");
+                requestAnimationFrame(() =>
+                  document.getElementById("brandbook-importar")?.scrollIntoView({ behavior: "smooth", block: "start" }),
+                );
+              }}
+              className="gap-1.5"
+            >
+              <Sparkles className="h-4 w-4" />
+              <span className="hidden sm:inline">Importar de PDF</span>
+            </Button>
+            <Button
               variant="outline"
               size="sm"
               onClick={handleExportPdf}
@@ -576,6 +657,22 @@ const Brandbook = () => {
           {/* ═══ VISÃO GERAL ═══ */}
           <TabsContent value="visao-geral">
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              {/* IMPORTAR DE PDF — proeminente, logo na entrada.
+                  Antes vivia escondido só na aba Identidade. Aqui é a primeira
+                  coisa que a pessoa vê, e a leitura preenche o brandbook INTEIRO
+                  (cores, fontes, tom, visual, valores, temas e público), não só
+                  a Identidade. */}
+              <div id="brandbook-importar" className="scroll-mt-24">
+                <BrandbookImport
+                  alvo="criador"
+                  campos={CAMPOS_CRIADOR}
+                  atual={identidadeAtual}
+                  titulo="Importar de PDF: o Cria preenche o brandbook todo"
+                  descricao="Sobe seu manual de marca, moodboard ou um print da paleta (até 2 arquivos). A gente lê e distribui nas seções certas: cores, fontes, tom de voz, visual, valores, temas e público. Você só confere."
+                  onSalvar={distribuirDoPdf}
+                />
+              </div>
+
               <Card className="border-primary/20 bg-primary/5">
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3 mb-4">
@@ -762,8 +859,8 @@ const Brandbook = () => {
                 campos={CAMPOS_CRIADOR}
                 atual={identidadeAtual}
                 titulo="Já tem sua identidade num PDF? Sobe aqui."
-                descricao="Se você tem um manual de marca, moodboard ou até um print da sua paleta, a gente lê as cores, as fontes e o seu tom de voz — e você só confere."
-                onSalvar={salvarIdentidadeDoPdf}
+                descricao="Se você tem um manual de marca, moodboard ou até um print da sua paleta, a gente lê as cores, as fontes e o seu tom de voz — e você só confere. Pode subir até 2 arquivos."
+                onSalvar={distribuirDoPdf}
               />
             </div>
             <BrandValuesSection

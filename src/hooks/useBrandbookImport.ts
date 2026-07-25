@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { callAIContextBuilder } from "@/lib/ai/claude";
-import { lerPaginas, validarArquivo } from "@/lib/pdfPages";
+import { lerPaginas, validarArquivo, MAX_PAGINAS } from "@/lib/pdfPages";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    IMPORTAR O BRANDBOOK DE UM PDF
@@ -31,31 +31,56 @@ export type LeituraBrandbook = {
 
 export type Etapa = "parado" | "lendo" | "pensando" | "pronto";
 
+/** Quantos arquivos a pessoa pode subir de uma vez. Dois cobre o caso real
+ *  (manual de marca + print da paleta, ou moodboard + persona em PDFs
+ *  separados) sem estourar o teto de páginas que o modelo enxerga. */
+export const MAX_ARQUIVOS = 2;
+
 export function useBrandbookImport(alvo: "cliente" | "criador") {
   const [etapa, setEtapa] = useState<Etapa>("parado");
   const [progresso, setProgresso] = useState<{ lidas: number; total: number } | null>(null);
   const [leitura, setLeitura] = useState<LeituraBrandbook | null>(null);
-  const [arquivo, setArquivo] = useState<File | null>(null);
+  const [arquivos, setArquivos] = useState<File[]>([]);
 
-  const importar = async (file: File) => {
-    const invalido = validarArquivo(file);
-    if (invalido) {
-      toast.error(invalido.erro);
-      return;
+  const importar = async (entrada: File | File[]) => {
+    const files = (Array.isArray(entrada) ? entrada : [entrada]).slice(0, MAX_ARQUIVOS);
+    if (files.length === 0) return;
+    for (const f of files) {
+      const invalido = validarArquivo(f);
+      if (invalido) {
+        toast.error(invalido.erro);
+        return;
+      }
     }
-    setArquivo(file);
+    setArquivos(files);
     setEtapa("lendo");
     setProgresso(null);
     setLeitura(null);
 
     try {
-      const paginas = await lerPaginas(file, (lidas, total) => setProgresso({ lidas, total }));
-      if (paginas.length === 0) throw new Error("Não consegui abrir esse arquivo.");
+      // Renderiza as páginas de CADA arquivo e junta tudo num só lote de imagens,
+      // respeitando o teto de páginas (o modelo lê as primeiras). Assim 1 ou 2
+      // arquivos viram uma única leitura consolidada, e o conteúdo dos dois cai
+      // nas seções certas de uma vez.
+      const imagens: string[] = [];
+      let lidasAcum = 0;
+      for (const f of files) {
+        if (imagens.length >= MAX_PAGINAS) break;
+        const paginas = await lerPaginas(f, (lidas, total) =>
+          setProgresso({ lidas: lidasAcum + lidas, total: lidasAcum + total }),
+        );
+        for (const p of paginas) {
+          if (imagens.length >= MAX_PAGINAS) break;
+          imagens.push(p.dataUrl);
+        }
+        lidasAcum += paginas.length;
+      }
+      if (imagens.length === 0) throw new Error("Não consegui abrir esse arquivo.");
 
       setEtapa("pensando");
       const r = (await callAIContextBuilder({
         operation: "brandbook-read",
-        data: { imagens: paginas.map((p) => p.dataUrl), alvo },
+        data: { imagens, alvo },
       })) as LeituraBrandbook;
 
       const achou = Object.values(r?.campos ?? {}).some((c) => c && c.valor);
@@ -82,9 +107,9 @@ export function useBrandbookImport(alvo: "cliente" | "criador") {
   const cancelar = () => {
     setEtapa("parado");
     setLeitura(null);
-    setArquivo(null);
+    setArquivos([]);
     setProgresso(null);
   };
 
-  return { etapa, progresso, leitura, arquivo, importar, cancelar };
+  return { etapa, progresso, leitura, arquivos, importar, cancelar };
 }

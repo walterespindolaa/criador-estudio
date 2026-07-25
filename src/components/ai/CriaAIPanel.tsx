@@ -251,12 +251,31 @@ export function CriaAIPanel() {
   const showFab = open && minimized;
   const hasMessages = messages.length > 0;
 
+  // MOBILE: o painel precisa abrir DENTRO da tela, respeitando a área segura do
+  // topo (notch/status bar) e sem estourar por cima. O DialogContent base usa
+  // top-4 fixo (ignora o notch) + altura fixa de 600px, o que corta o topo em
+  // telas curtas. Aqui, só no celular, ancoramos abaixo da safe-area e deixamos
+  // a altura preencher o espaço disponível (com rolagem interna no chat e o input
+  // fixo embaixo). Estilo inline vence as classes, então também neutralizamos o
+  // translate-y do desktop (evita empurrar o painel pra cima entre 640-767px).
+  // No desktop, style fica undefined e o comportamento centralizado atual segue igual.
+  const mobilePanelStyle: React.CSSProperties | undefined = isMobile
+    ? {
+        top: "calc(env(safe-area-inset-top, 0px) + 0.75rem)",
+        height:
+          "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1.5rem)",
+        maxHeight: "85dvh",
+        transform: "translate(-50%, 0)",
+      }
+    : undefined;
+
   return (
     <>
       <Dialog open={dialogOpen} onOpenChange={(o) => { if (!o) handleClose(); }}>
         <DialogPortal>
           <DialogContent
             className="max-w-md p-0 rounded-2xl overflow-hidden gap-0 h-[600px] flex flex-col [&>button.absolute]:hidden"
+            style={mobilePanelStyle}
             onInteractOutside={(e) => e.preventDefault()}
           >
             {/* Top controls */}

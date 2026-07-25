@@ -250,6 +250,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   const [showPublishCeleb, setShowPublishCeleb] = useState(false);
   const [sections, setSections] = useState<Section[]>(Array(5).fill(null).map(emptySection));
   const [referenceLink, setReferenceLink] = useState("");
+  // Link do conteúdo final (arte no Canva, arquivo no Drive, etc.). Reaproveita
+  // a coluna drive_folder_url da tabela posts, já usada pelos posts externos.
+  const [contentLink, setContentLink] = useState("");
 
   // AI / generation state (inlined from AIAssistantSection so we can render
   // the controls as pills in the new layout).
@@ -419,6 +422,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
       setShares(post.result_shares?.toString() || "");
       setShowResults(post.status === "publicado");
       setReferenceLink((post as unknown as { reference_link?: string }).reference_link || "");
+      setContentLink((post as unknown as { drive_folder_url?: string }).drive_folder_url || "");
       try {
         const parsed = JSON.parse((post as unknown as { sections?: string }).sections || "[]");
         setSections(
@@ -437,7 +441,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
       setCaption(""); setCta(""); setScheduledDate(""); setScheduledTime(""); setNotes("");
       setWeekNumber(null);
       
-      setViews(""); setSaves(""); setComments(""); setReach(""); setShares(""); setShowResults(false); setReferenceLink("");
+      setViews(""); setSaves(""); setComments(""); setReach(""); setShares(""); setShowResults(false); setReferenceLink(""); setContentLink("");
       setSections(Array(5).fill(null).map(emptySection));
       setDriveMedia([]);
       setPendingDriveFiles([]);
@@ -490,9 +494,11 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
       sections.map((s) => ({ ...s, text: sanitizeText(s.text), captacao: sanitizeText(s.captacao) }))
     ),
     reference_link: referenceLink || null,
+    // Link do conteúdo final (Drive/Canva). Reaproveita drive_folder_url.
+    drive_folder_url: contentLink || null,
     user_id: userId,
   }), [title, platform, format, pillarId, status, hook, script, caption, cta,
-       scheduledDate, scheduledTime, notes, weekNumber, views, saves, comments, reach, shares, sections, referenceLink, userId]);
+       scheduledDate, scheduledTime, notes, weekNumber, views, saves, comments, reach, shares, sections, referenceLink, contentLink, userId]);
 
   // Debounced auto-save for existing posts.
   // Skipped for new posts (would create empty drafts) and during initial load.
@@ -516,7 +522,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title, platform, format, pillarId, status, hook, script, caption, cta,
-       scheduledDate, scheduledTime, notes, weekNumber, referenceLink, sections, open, post?.id]);
+       scheduledDate, scheduledTime, notes, weekNumber, referenceLink, contentLink, sections, open, post?.id]);
 
   const handleAiReferences = async () => {
     if (aiHookCategories.length > 0 || isRefAiLoading) return;
@@ -1596,6 +1602,33 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                       onChange={(e) => setReferenceLink(e.target.value)}
                       className="rounded-xl h-10 text-sm bg-card"
                     />
+                  </div>
+                </section>
+
+                {/* Link do conteúdo final (Drive/Canva/arquivo pronto).
+                    Separado da referência: aqui vai o arquivo/arte pronta. */}
+                <section className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80 flex items-center gap-1.5">
+                      <Cloud className="h-3 w-3" /> Link do conteúdo (Drive/Canva)
+                    </Label>
+                    <Input
+                      placeholder="Cole o link do Drive, Canva ou arquivo final..."
+                      value={contentLink}
+                      onChange={(e) => setContentLink(e.target.value)}
+                      className="rounded-xl h-10 text-sm bg-card"
+                    />
+                    {contentLink.trim() && /^https?:\/\//i.test(contentLink.trim()) && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 mt-1"
+                        onClick={() => window.open(contentLink.trim(), "_blank", "noopener,noreferrer")}
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" /> Abrir conteúdo
+                      </Button>
+                    )}
                   </div>
                 </section>
 

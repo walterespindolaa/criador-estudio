@@ -256,6 +256,17 @@ export function crossHeadlines(data: CrossAnalysisData): string[] {
       }
     }
   }
+  // Formato que mais ENGAJA (interações ÷ alcance), quando for outro que o campeão de
+  // alcance: alcance grande nem sempre é o que mais gera relacionamento. Só com >=2 posts
+  // pra a média fazer sentido.
+  const engFormats = data.byFormat.filter((g) => g.count >= 2 && g.avgEng > 0);
+  if (engFormats.length > 1) {
+    const topEng = [...engFormats].sort((a, b) => b.avgEng - a.avgEng)[0];
+    if (topEng && (!f1 || topEng.label !== f1.label) && topEng.avgEng >= 1) {
+      out.push(`${topEng.label} são os que mais engajam: ${topEng.avgEng.toFixed(1).replace(".", ",")}% de interações sobre o alcance. Bom formato pra fortalecer relacionamento com a audiência.`);
+    }
+  }
+
   const topPillar = data.byPillar[0];
   if (topPillar && data.byPillar.length > 1) {
     out.push(`O pilar "${topPillar.label}" puxa mais alcance (${fmtNum(topPillar.avgReach)} em média). Vale reforçar esse tema.`);
@@ -267,6 +278,13 @@ export function crossHeadlines(data: CrossAnalysisData): string[] {
   const topTime = data.byTime[0];
   if (topTime && data.byTime.length > 1) {
     out.push(`Seus posts da ${topTime.label.toLowerCase()} rendem mais (${fmtNum(topTime.avgReach)} de alcance médio). Concentre as publicações nesse período.`);
+  }
+
+  // Gancho/tema (dos posts vinculados) que vem rendendo acima da média: >=2 posts e
+  // pelo menos 10% acima da média geral pra ser um sinal, não ruído.
+  const topHook = data.byHook[0];
+  if (topHook && topHook.count >= 2 && base > 0 && topHook.avgReach >= base * 1.1) {
+    out.push(`Ganchos tipo "${topHook.label}" vêm rendendo acima da média (${fmtNum(topHook.avgReach)} de alcance médio em ${topHook.count} posts). Explore mais esse ângulo.`);
   }
   return out;
 }

@@ -632,7 +632,7 @@ const Criando = () => {
             const cSub = savedC ? "rgba(255,255,255,.78)" : step.sub;
             const cTitle = savedC?.label || col.label;
             return (
-              <div key={col.key} className={`w-[85vw] max-w-[320px] sm:w-auto sm:max-w-none sm:min-w-[200px] flex-shrink-0 sm:flex-1 snap-start ${showDividerBefore ? "border-l-2 border-dashed border-border pl-4" : ""}`}>
+              <div key={col.key} className={`w-[85vw] max-w-[320px] sm:w-auto sm:max-w-none sm:min-w-[200px] flex-shrink-0 sm:flex-1 snap-start flex flex-col ${showDividerBefore ? "border-l-2 border-dashed border-border pl-4" : ""}`}>
                 <div className="relative mb-3 group/cover">
                   <CoverHeader label="Status" title={cTitle} count={colPosts.length} from={cFrom} to={cTo} ink={cInk} sub={cSub} hint={COLUMN_TOOLTIPS[col.key]} compact />
                   <button onClick={() => openEditCover(col.key)} aria-label="Editar capa"
@@ -643,7 +643,7 @@ const Criando = () => {
                 <Droppable droppableId={col.key}>
                 {(dropProvided, dropSnapshot) => (
                 <div ref={dropProvided.innerRef} {...dropProvided.droppableProps}
-                  className={`space-y-3 min-h-[200px] rounded-xl transition-all ${dropSnapshot.isDraggingOver ? "ring-2 ring-primary bg-primary/5" : ""}`}>
+                  className={`space-y-3 flex-1 min-h-[200px] rounded-xl transition-all ${dropSnapshot.isDraggingOver ? "ring-2 ring-primary bg-primary/5" : ""}`}>
                   {colPosts.map((post, pIdx) => {
                     const pillar = getPillar(post.pillar_id);
                     const tc = taskCounts.get(post.id);
@@ -657,7 +657,7 @@ const Criando = () => {
                       {(dragProvided, dragSnapshot) => (
                       <div ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps} onClick={() => openEdit(post)}
                         style={{ borderLeftColor: ramp[post.status ?? "ideia"]?.line ?? "transparent", borderLeftWidth: 4, ...dragProvided.draggableProps.style }}
-                        className={`group relative bg-card rounded-xl p-4 shadow-warm-sm border border-border cursor-grab active:cursor-grabbing hover:shadow-warm-md transition-all duration-200 ${dragSnapshot.isDragging ? "shadow-warm-lg ring-2 ring-primary/40" : ""} ${isPublished ? "opacity-70" : ""}`}>
+                        className={`criando-drag-card group relative bg-card rounded-xl p-4 shadow-warm-sm border border-border cursor-grab active:cursor-grabbing hover:shadow-warm-md transition-all duration-200 ${dragSnapshot.isDragging ? "shadow-warm-lg ring-2 ring-primary/40" : ""} ${isPublished ? "opacity-70" : ""}`}>
                         <button
                           type="button"
                           onClick={(e) => {
@@ -984,7 +984,7 @@ const Criando = () => {
                           {(dragProvided, dragSnapshot) => (
                           <div ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
                             onClick={() => openEdit(post)}
-                            className={`relative bg-card rounded-[10px] pl-3 pr-2.5 py-2 text-left shadow-warm-sm border border-border cursor-grab active:cursor-grabbing ${dragSnapshot.isDragging ? "shadow-warm-lg ring-2 ring-primary/40" : ""}`}
+                            className={`criando-drag-card relative bg-card rounded-[10px] pl-3 pr-2.5 py-2 text-left shadow-warm-sm border border-border cursor-grab active:cursor-grabbing ${dragSnapshot.isDragging ? "shadow-warm-lg ring-2 ring-primary/40" : ""}`}
                             style={{ borderLeftColor: step.line, borderLeftWidth: 3, ...dragProvided.draggableProps.style }}>
                             <span className="block text-[11.5px] font-body font-semibold leading-tight line-clamp-2">{post.title}</span>
                             <span className="block text-[9.5px] text-muted-foreground mt-1 truncate">{FORMAT_LABELS[post.format] || post.format}{pil ? ` · ${pil.name}` : ""}</span>

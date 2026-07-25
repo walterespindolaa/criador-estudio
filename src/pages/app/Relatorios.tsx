@@ -391,6 +391,13 @@ const Relatorios = () => {
   const hasPerformance = igConnected && cross.hasData;
   // Há posts do IG vinculados a posts do CRIA com pilar? (habilita a leitura por pilar)
   const hasLinkedPillar = crossItems.some((i) => i.pillar);
+  // Há mídia do IG vinculada a um post do CRIA no período (independe de ter pilar).
+  // Sem isso o card de pilar dizia "vincule seus posts" mesmo com o vínculo JÁ feito:
+  // o vínculo existe, mas o post do CRIA está sem pilar (pillar_id nulo), então o
+  // cruzamento por pilar não enxergava nada. Aqui separamos "não vinculou" de
+  // "vinculou mas sem pilar" pra orientar a ação certa (definir o pilar, não vincular).
+  const hasLinkedPosts = periodMedia.some((mi) => !!mi.post_id);
+  const linkedWithoutPillar = hasLinkedPosts && !hasLinkedPillar;
 
   const avgReach = cross.overallAvgReach;
   const prevAvgReach = useMemo(() => {
@@ -404,6 +411,24 @@ const Relatorios = () => {
     const withReach = periodMedia.filter((mi) => mVal(mi, "reach") > 0);
     if (withReach.length === 0) return 0;
     return mean(withReach.map((mi) => (mInteractions(mi) / mVal(mi, "reach")) * 100));
+  }, [periodMedia]);
+
+  // Engajamento médio do período anterior (pra dizer se subiu/caiu, sem inventar).
+  const prevAvgEngagement = useMemo(() => {
+    const withReach = prevMedia.filter((mi) => mVal(mi, "reach") > 0);
+    if (withReach.length === 0) return 0;
+    return mean(withReach.map((mi) => (mInteractions(mi) / mVal(mi, "reach")) * 100));
+  }, [prevMedia]);
+
+  // Retenção real dos Reels no período: tempo médio assistido (ms) direto da Meta.
+  // Só existe quando o Instagram devolve ig_reels_avg_watch_time; senão fica null.
+  const reelsWatch = useMemo(() => {
+    const list = periodMedia
+      .filter((mi) => mi.media_type === "REELS" || mi.media_type === "VIDEO")
+      .map((mi) => mVal(mi, "ig_reels_avg_watch_time"))
+      .filter((ms) => ms > 0);
+    if (list.length === 0) return null;
+    return { count: list.length, avgSec: mean(list) / 1000 };
   }, [periodMedia]);
 
   // Alcance médio por formato (rótulo plural do IG) com a cor Cria.
@@ -463,21 +488,77 @@ const Relatorios = () => {
   const postsPerWeek = publishedCount / weeksInPeriod;
   const paceAbove = postsPerWeek >= weeklyGoal;
 
-  // Leitura "O que tá indo bem": frases de direção dos cruzamentos.
-  const goodPoints = useMemo(() => (hasPerformance ? crossHeadlines(cross) : []), [hasPerformance, cross]);
+  // Leitura "O que tá indo bem": além das frases de direção dos cruzamentos (formato,
+  // engajamento, pilar, dia, período, gancho), cruza com sinais reais que só existem
+  // aqui: variação de alcance/engajamento vs período anterior, retenção dos Reels e o
+  // post âncora bem acima da média. Nada inventado: se o dado não existe, a frase não sai.
+  const goodPoints = useMemo(() => {
+    if (!hasPerformance) return [] as string[];
+    const out: string[] = [];
 
-  // Leitura "O que dá pra melhorar": pilar sem post, formato fraco, constância baixa.
+    // Alcance médio subindo vs período anterior (comparação honesta, dado real).
+    if (prevAvgReach > 0 && avgReachDelta >= 8) {
+      out.push(
+        `Seu alcance médio subiu ${Math.round(avgReachDelta)}% vs o período anterior (${fmtNum(avgReach)} por post agora). O que você mudou está funcionando, mantenha a linha.`
+      );
+    }
+
+    // Direcionamentos dos cruzamentos (formato/engajamento/pilar/dia/período/gancho).
+    out.push(...crossHeadlines(cross));
+
+    // Retenção dos Reels: tempo médio assistido, o sinal que o algoritmo mais premia.
+    if (reelsWatch && reelsWatch.avgSec >= 1) {
+      const avg = reelsWatch.avgSec.toFixed(1).replace(".", ",");
+      out.push(
+        `Seus Reels seguraram ${avg}s de tempo médio assistido em ${reelsWatch.count} ${reelsWatch.count === 1 ? "vídeo" : "vídeos"}. Retenção é o que mais destrava alcance, siga nesse ritmo de edição.`
+      );
+    }
+
+    // Post âncora: um destaque bem acima da média mostra a fórmula a repetir.
+    const top = topPosts[0];
+    if (top && avgReach > 0 && top.reach >= avgReach * 1.5) {
+      const x = (top.reach / avgReach).toFixed(1).replace(".0", "").replace(".", ",");
+      out.push(
+        `Seu melhor post alcançou ${fmtNum(top.reach)} (${x}x a sua média) com ${fmtNum(top.saved)} salvos. Destrinche o gancho e o tema dele e repita a fórmula.`
+      );
+    }
+
+    // Engajamento subindo vs período anterior (audiência mais reativa).
+    if (prevAvgEngagement > 0 && avgEngagement > prevAvgEngagement * 1.1) {
+      const d = Math.round(((avgEngagement - prevAvgEngagement) / prevAvgEngagement) * 100);
+      out.push(
+        `Engajamento médio subiu ${d}% vs o período anterior (${formatEngagement(avgEngagement)} por post). Sua audiência está mais reativa ao que você posta.`
+      );
+    }
+
+    // Teto de 6 pra não virar um paredão no mobile (as mais fortes vêm primeiro).
+    return out.slice(0, 6);
+  }, [hasPerformance, cross, prevAvgReach, avgReachDelta, avgReach, reelsWatch, topPosts, prevAvgEngagement, avgEngagement]);
+
+  // Leitura "O que dá pra melhorar": vínculo sem pilar, pilar sem post, alcance caindo,
+  // formato fraco, constância baixa e ressalva de amostra pequena. Tudo com número real.
   const improvePoints = useMemo(() => {
     if (!hasPerformance) return [] as string[];
     const out: string[] = [];
-    // Pilar sem post publicado no período (só quando há vínculos pra afirmar isso).
-    if (hasLinkedPillar) {
+    // Vinculou posts mas sem pilar definido: orienta a DEFINIR o pilar (não a vincular).
+    if (linkedWithoutPillar) {
+      out.push(
+        `Você já vinculou posts do Instagram, mas eles estão sem pilar definido no CRIA. Defina o pilar de cada um pra descobrir qual tema rende mais.`
+      );
+    } else if (hasLinkedPillar) {
+      // Pilar sem post publicado no período (só quando há vínculos pra afirmar isso).
       const active = new Set(crossItems.filter((i) => i.pillar).map((i) => i.pillar));
       const missing = pillars.filter((p) => !active.has(p.name));
       if (missing.length > 0) {
         const names = missing.slice(0, 2).map((p) => `"${p.name}"`).join(" e ");
         out.push(`Você não publicou nada de ${names} no período. Vale equilibrar os pilares.`);
       }
+    }
+    // Alcance médio caindo vs período anterior (sinal real de atenção).
+    if (prevAvgReach > 0 && avgReachDelta <= -8) {
+      out.push(
+        `Seu alcance médio caiu ${Math.abs(Math.round(avgReachDelta))}% vs o período anterior (${fmtNum(avgReach)} por post). Reveja tema, gancho e formato dos últimos posts.`
+      );
     }
     // Formato com alcance abaixo da média geral.
     if (cross.byFormat.length > 1 && avgReach > 0) {
@@ -495,8 +576,14 @@ const Relatorios = () => {
         `Você publicou ${perWeek}/semana, abaixo do seu ritmo de ${weeklyGoal}. Consistência puxa alcance.`
       );
     }
+    // Amostra pequena: honestidade antes de firula (números oscilam com poucos posts).
+    if (periodMedia.length > 0 && periodMedia.length < 4) {
+      out.push(
+        `Só ${periodMedia.length} ${periodMedia.length === 1 ? "post" : "posts"} com alcance no período. A base ainda é pequena, então trate os números como tendência, não veredito.`
+      );
+    }
     return out;
-  }, [hasPerformance, hasLinkedPillar, crossItems, pillars, cross, avgReach, paceAbove, postsPerWeek, weeklyGoal]);
+  }, [hasPerformance, linkedWithoutPillar, hasLinkedPillar, crossItems, pillars, cross, avgReach, prevAvgReach, avgReachDelta, paceAbove, postsPerWeek, weeklyGoal, periodMedia]);
 
   const handleGenerateInsight = async () => {
     if (insightLoading) return;
@@ -534,6 +621,12 @@ const Relatorios = () => {
               melhor_dia: topWeekday
                 ? { dia: topWeekday.label, alcance_medio: Math.round(topWeekday.avgReach) }
                 : null,
+              engajamento_medio_delta_pct:
+                prevAvgEngagement > 0
+                  ? Math.round(((avgEngagement - prevAvgEngagement) / prevAvgEngagement) * 100)
+                  : null,
+              retencao_reels_seg: reelsWatch ? Number(reelsWatch.avgSec.toFixed(1)) : null,
+              pontos_positivos: goodPoints,
               pontos_de_melhoria: improvePoints,
             }
           : null,
@@ -544,7 +637,7 @@ const Relatorios = () => {
         operation: "cria-chat",
         data: {
           mensagem:
-            "Você é a Cria, analista de conteúdo. Olhe os dados abaixo e me dê 2-3 insights curtos e acionáveis. Comente não só a consistência e a distribuição, mas também o que está PERFORMANDO: use o bloco 'desempenho' (dados reais do Instagram: formato que mais rende, pilar que mais alcança, melhor dia, engajamento médio, a variação de alcance médio vs período anterior e os pontos_de_melhoria) pra recomendar o que eu deveria priorizar e testar essa semana. Se 'desempenho' vier null, foque em consistência e me sugira conectar o Instagram pra ver o desempenho real. Linguagem natural, em português brasileiro, sem markdown.",
+            "Você é a Cria, analista de conteúdo. Olhe os dados abaixo e me dê 2-3 insights curtos e acionáveis. Comente não só a consistência e a distribuição, mas também o que está PERFORMANDO: use o bloco 'desempenho' (dados reais do Instagram: formato que mais rende, pilar que mais alcança, melhor dia, engajamento médio e sua variação vs período anterior, a variação de alcance médio vs período anterior, a retenção média dos Reels em segundos, os pontos_positivos e os pontos_de_melhoria) pra recomendar o que eu deveria priorizar e testar essa semana. Cite números concretos. Se um campo vier null, não fale dele. Se 'desempenho' vier null, foque em consistência e me sugira conectar o Instagram pra ver o desempenho real. Linguagem natural, em português brasileiro, sem markdown.",
           nicho: activeProfile?.niche,
           analise: summary,
         },
@@ -796,13 +889,21 @@ const Relatorios = () => {
                 <WinnerCard
                   icon={<Layers className="h-4 w-4 text-white" strokeWidth={1.75} />}
                   iconBg="bg-gradient-to-br from-[#4B3FA8] to-[#0061EE]"
-                  label={hasLinkedPillar ? "Pilar que mais alcança" : "Pilar (vincule pra ver)"}
+                  label={
+                    hasLinkedPillar
+                      ? "Pilar que mais alcança"
+                      : linkedWithoutPillar
+                        ? "Pilar (defina no post)"
+                        : "Pilar (vincule pra ver)"
+                  }
                   value={hasLinkedPillar ? pillarPerf[0]?.label ?? "-" : "—"}
                   valueColor={hasLinkedPillar ? pillarPerf[0]?.color : undefined}
                   sub={
                     hasLinkedPillar
                       ? `${fmtNum(pillarPerf[0]?.avg ?? 0)} de alcance médio`
-                      : "Vincule seus posts do IG"
+                      : linkedWithoutPillar
+                        ? "Defina o pilar dos posts vinculados"
+                        : "Vincule seus posts do IG"
                   }
                 />
                 <WinnerCard
@@ -958,11 +1059,18 @@ const Relatorios = () => {
                 <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 rounded-2xl border border-dashed border-border bg-muted/20 p-4">
                   <Link2 className="h-5 w-5 text-muted-foreground shrink-0" />
                   <p className="flex-1 text-[13px] font-body text-muted-foreground">
-                    Vincule seus posts do Instagram aos do CRIA pra ver o alcance médio por pilar e o tema
-                    que mais rende.
+                    {linkedWithoutPillar
+                      ? "Seus posts vinculados ainda estão sem pilar definido. Defina o pilar de cada post pra ver o alcance médio por pilar e o tema que mais rende."
+                      : "Vincule seus posts do Instagram aos do CRIA pra ver o alcance médio por pilar e o tema que mais rende."}
                   </p>
-                  <Button variant="secondary" size="sm" onClick={() => navigate("/app/insights")} className="shrink-0">
-                    Vincular nos Insights <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => navigate(linkedWithoutPillar ? "/app/criando" : "/app/insights")}
+                    className="shrink-0"
+                  >
+                    {linkedWithoutPillar ? "Definir pilar dos posts" : "Vincular nos Insights"}
+                    <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
                   </Button>
                 </div>
               )}

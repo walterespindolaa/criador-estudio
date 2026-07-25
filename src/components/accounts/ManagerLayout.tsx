@@ -85,7 +85,7 @@ export default function ManagerLayout() {
   const location = useLocation();
   const { signOut } = useAuth();
   const { profile, isLoading } = useProfile();
-  const { hasManagedAccounts, actingAsTeam, agencyOwnerId } = useActiveAccount();
+  const { hasManagedAccounts, actingAsTeam, agencyOwnerId, accountsLoading, teamLoading, isCollaborator } = useActiveAccount();
   const { isPartner } = usePartner();
   const { modules: allModules } = useModules();
   const { allowed: hasHubCriaRaw } = useHasHubCria();
@@ -163,10 +163,15 @@ export default function ManagerLayout() {
   );
 
   // Guards
-  if (isLoading) return <LoadingScreen />;
+  // No F5 o profile chega ANTES das contas (managed/time). Se a gente decidisse o
+  // redirect agora, hasManagedAccounts/actingAsTeam ainda seriam false e o gestor
+  // seria jogado pro /app (e de lá pro dashboard), perdendo a rota do cliente.
+  // Então esperamos as contas carregarem antes de decidir quem pode ver o hub.
+  if (isLoading || accountsLoading || teamLoading) return <LoadingScreen />;
   if (profile?.must_change_password === true) return <Navigate to="/app/trocar-senha" replace />;
-  // criadores (não-manager) não entram no hub, exceto colaboradores atuando no time.
-  if (profile && profile.account_type !== "manager" && !hasManagedAccounts && !actingAsTeam) return <Navigate to="/app" replace />;
+  // criadores (não-manager) não entram no hub, exceto quem gerencia contas ou é
+  // colaborador de alguma agência (a conta de time é restaurada só no próximo render).
+  if (profile && profile.account_type !== "manager" && !hasManagedAccounts && !actingAsTeam && !isCollaborator) return <Navigate to="/app" replace />;
 
   const ctx: ManagerOutletContext = { openModule, openSettings: () => setSettingsOpen(true) };
 
