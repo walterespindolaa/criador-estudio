@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { confirmar } from "@/components/shared/Confirm";
@@ -82,6 +83,52 @@ function ddmm(iso: string): string {
   if (!iso) return "";
   const [, m, d] = iso.split("-");
   return `${d}/${m}`;
+}
+
+// DD/MM/AAAA pra mostrar no gatilho do campo de data.
+function ddmmyyyy(iso: string): string {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+// Date -> YYYY-MM-DD montando pelos componentes locais (dia de calendário, sem UTC).
+function isoFromDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Campo de data visual: clica no campo -> abre o calendário shadcn num popover;
+// seleciona o dia -> fecha e guarda como string YYYY-MM-DD (fuso BR, dia de calendário).
+function DateField({ label, value, onChange }: { label: string; value: string; onChange: (iso: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const selected = value ? parseDateOnly(value) : undefined;
+  return (
+    <div className="flex-1 min-w-0">
+      <Label className="text-[11px] text-muted-foreground">{label}</Label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className={cn(
+              "flex h-10 w-full items-center gap-1.5 rounded-lg border border-input bg-card px-3 text-sm transition-colors hover:border-primary/50",
+              value ? "text-foreground" : "text-muted-foreground",
+            )}
+          >
+            <CalendarIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <span className="truncate">{value ? ddmmyyyy(value) : "dd/mm/aaaa"}</span>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={selected}
+            defaultMonth={selected}
+            onSelect={(dt) => { if (dt) { onChange(isoFromDate(dt)); setOpen(false); } }}
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
 }
 
 // Rótulo do gatilho do popover conforme o período ativo.
@@ -208,14 +255,8 @@ export function TasksTab() {
             </div>
             <p className="text-xs font-semibold text-foreground mb-2">Período específico</p>
             <div className="flex gap-2">
-              <div className="flex-1 min-w-0">
-                <Label className="text-[11px] text-muted-foreground">De</Label>
-                <Input type="date" value={periodo.from} onChange={(e) => setPeriodo((prev) => ({ ...prev, from: e.target.value, preset: "custom" }))} className="rounded-lg" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <Label className="text-[11px] text-muted-foreground">Até</Label>
-                <Input type="date" value={periodo.to} onChange={(e) => setPeriodo((prev) => ({ ...prev, to: e.target.value, preset: "custom" }))} className="rounded-lg" />
-              </div>
+              <DateField label="De" value={periodo.from} onChange={(iso) => setPeriodo((prev) => ({ ...prev, from: iso, preset: "custom" }))} />
+              <DateField label="Até" value={periodo.to} onChange={(iso) => setPeriodo((prev) => ({ ...prev, to: iso, preset: "custom" }))} />
             </div>
             {periodoAtivo && (
               <button onClick={() => setPeriodo({ ...PERIODO_DEFAULT })}
