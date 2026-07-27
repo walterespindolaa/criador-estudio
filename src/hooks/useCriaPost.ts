@@ -258,8 +258,24 @@ export function useExternalPosts(clientId: string | null) {
         patch.approval_updated_at = new Date().toISOString();
       }
       const { error } = await sbFrom("posts").update(patch).eq("id", id); if (error) throw error;
+      // Reenvio após ajuste: grava um evento no histórico de aprovação pra não perder
+      // o "vai e volta" com o cliente (cada pedido de ajuste dele + cada reenvio nosso
+      // ficam registrados em post_approval_comments). Best-effort: se falhar, não trava
+      // o save do post. author_role "social_media" = nós (o card do cliente é "cliente_externo").
+      if (resend) {
+        await sbFrom("post_approval_comments").insert({
+          post_id: id, author_id: agencyOwnerId, author_role: "social_media",
+          content: "Ajustado e reenviado pro cliente.",
+        } as never).then(undefined, () => undefined);
+      }
     },
-    onSuccess: () => { toast.success("Post atualizado!"); qc.invalidateQueries({ queryKey: key }); qc.invalidateQueries({ queryKey: ["external-pending", agencyOwnerId] }); },
+    onSuccess: (_d, vars) => {
+      toast.success("Post atualizado!");
+      qc.invalidateQueries({ queryKey: key });
+      qc.invalidateQueries({ queryKey: ["external-pending", agencyOwnerId] });
+      // Atualiza o histórico aberto no editor (a aba de Histórico lê essa chave).
+      qc.invalidateQueries({ queryKey: ["approval-comments", vars.id] });
+    },
     onError: () => toast.error("Erro ao atualizar."),
   });
 

@@ -18,7 +18,8 @@ import {
 } from "@/hooks/useCrm";
 import {
   useCreations, useAddCreation, useUpdateCreation, useDeleteCreation,
-  useCaptures, useAddCapture, useUpdateCapture, useDeleteCapture, useCollaboratorNames, type Capture, type Creation,
+  useCaptures, useAddCapture, useUpdateCapture, useDeleteCapture, useCollaboratorNames,
+  useDayOrders, useSaveDayOrder, type Capture, type Creation,
 } from "@/hooks/useAgenda";
 import { useAllExternalPosts, useExternalClients, useMoveExternalPostDate, useUpdateExternalPost, type ExternalPostWithClient } from "@/hooks/useCriaPost";
 import { useCriaPostMedia, type CriaMedia } from "@/hooks/useCriaPostMedia";
@@ -73,16 +74,41 @@ type DayItem =
   | { kind: "cria"; time: string | null; cria: Creation }
   | { kind: "post"; time: string | null; post: ExternalPostWithClient };
 
-// Monta a lista do dia ordenada: itens SEM horário primeiro (topo), depois os COM
-// horário em ordem crescente. Fontes de hora: captação=capture_time, post=scheduled_time,
-// tarefa=due_time, criação=sem horário. Sort estável mantém a ordem por tipo no empate.
-function buildDayItems(caps: Capture[], tasks: CrmTask[], cris: Creation[], posts: ExternalPostWithClient[]): DayItem[] {
+// Chave estável de um item do dia (mesma string do draggableId): "<kind>:<id>". É por ela
+// que a ordem manual do dia é persistida e reaplicada (ver buildDayItems + handleDragEnd).
+function dayItemKey(item: DayItem): string {
+  switch (item.kind) {
+    case "cap": return `cap:${item.cap.id}`;
+    case "task": return `task:${item.task.id}`;
+    case "cria": return `cria:${item.cria.id}`;
+    case "post": return `post:${item.post.id}`;
+  }
+}
+
+// Monta a lista do dia ordenada. Quando há ORDEM MANUAL persistida pro dia (order = array
+// de chaves "<kind>:<id>"), ela SOBREPÕE a ordem por horário: os itens presentes na ordem
+// vêm primeiro na posição salva; itens novos (ainda sem posição) caem no fim, aí sim por
+// horário. Sem ordem manual, mantém o comportamento antigo: itens SEM horário primeiro
+// (topo), depois os COM horário em ordem crescente. Fontes de hora: captação=capture_time,
+// post=scheduled_time, tarefa=due_time, criação=sem horário.
+function buildDayItems(caps: Capture[], tasks: CrmTask[], cris: Creation[], posts: ExternalPostWithClient[], order?: string[]): DayItem[] {
   const items: DayItem[] = [
     ...caps.map((c) => ({ kind: "cap" as const, time: hhmm(c.capture_time), cap: c })),
     ...tasks.map((t) => ({ kind: "task" as const, time: hhmm(t.due_time), task: t })),
     ...cris.map((c) => ({ kind: "cria" as const, time: null, cria: c })),
     ...posts.map((p) => ({ kind: "post" as const, time: hhmm((p as { scheduled_time?: string | null }).scheduled_time), post: p })),
   ];
+  if (order && order.length) {
+    const idx = new Map(order.map((k, i) => [k, i]));
+    // Posição manual manda; empate (item novo sem posição) cai pro horário.
+    items.sort((a, b) => {
+      const ai = idx.get(dayItemKey(a)) ?? Infinity;
+      const bi = idx.get(dayItemKey(b)) ?? Infinity;
+      if (ai !== bi) return ai - bi;
+      return (a.time ?? "").localeCompare(b.time ?? "");
+    });
+    return items;
+  }
   // "" (sem hora) ordena antes de qualquer "HH:MM"; timed em ordem crescente.
   items.sort((a, b) => (a.time ?? "").localeCompare(b.time ?? ""));
   return items;
@@ -191,6 +217,9 @@ export default function AgendaCriacao() {
   const { clients: extClients } = useExternalClients();
   const movePost = useMoveExternalPostDate();
   const qc = useQueryClient();
+  // Ordem manual por dia (reordenar dentro do dia): mapa day -> array de chaves "<kind>:<id>".
+  const { data: dayOrders = {} } = useDayOrders(from, to);
+  const saveDayOrder = useSaveDayOrder();
 
   // external_client_id -> dados do cliente (nome, cor, crm_client_id pra abrir a ficha).
   const extById = useMemo(() => {
@@ -234,7 +263,28 @@ export default function AgendaCriacao() {
   // Arrastar item pra outro dia: atualização otimista no cache + persistência conforme o tipo.
   const handleDragEnd = (result: DropResult) => {
     const { source, destination, draggableId } = result;
-    if (!destination || destination.droppableId === source.droppableId) return;
+    if (!destination) return;
+    // REORDENAR dentro do MESMO dia: antes o drop caía aqui e retornava sem fazer nada, e
+    // como a lista é ordenada por horário o card "voltava" pro lugar. Agora gravamos uma
+    // ORDEM MANUAL persistida por dia (agenda_day_order) que sobrepõe a ordem por horário.
+    if (destination.droppableId === source.droppableId) {
+      // A faixa "Sem data (em produção)" só agrupa; não tem ordenação manual.
+      if (source.droppableId === NO_DATE) return;
+      if (destination.index === source.index) return;
+      const iso = source.droppableId;
+      // Recalcula a MESMA lista renderizada do dia (com a ordem atual aplicada) e move a chave.
+      const keys = buildDayItems(
+        capturesByDay.get(iso) ?? [], tasksByDay.get(iso) ?? [], byDay.get(iso) ?? [], postsByDay.get(iso) ?? [],
+        dayOrders[iso],
+      ).map(dayItemKey);
+      if (source.index >= keys.length) return;
+      const [moved] = keys.splice(source.index, 1);
+      keys.splice(destination.index, 0, moved);
+      // Otimista: grava a nova ordem no cache já pra o card ficar onde foi solto.
+      qc.setQueriesData<Record<string, string[]>>({ queryKey: ["agenda-day-order"] }, (old) => ({ ...(old ?? {}), [iso]: keys }));
+      saveDayOrder.mutate({ day: iso, order: keys });
+      return;
+    }
     const day = destination.droppableId; // droppableId = YYYY-MM-DD do dia (ou NO_DATE)
     const sep = draggableId.indexOf(":");
     const kind = draggableId.slice(0, sep);
@@ -555,7 +605,7 @@ export default function AgendaCriacao() {
               const iso = ymd(d); const list = byDay.get(iso) ?? []; const caps = capturesByDay.get(iso) ?? []; const dayTasks = tasksByDay.get(iso) ?? []; const dayPosts = postsByDay.get(iso) ?? []; const criaDay = criaPostsByDay.get(iso) ?? []; const totalDay = caps.length + dayTasks.length + list.length + dayPosts.length + criaDay.length; const isToday = iso === today;
               // Lista única do dia, ordenada por horário (sem hora primeiro). Os index dos
               // Draggable saem daqui (0..n-1 contíguos), casando com a ordem renderizada pro dnd.
-              const dayItems = buildDayItems(caps, dayTasks, list, dayPosts);
+              const dayItems = buildDayItems(caps, dayTasks, list, dayPosts, dayOrders[iso]);
               const outOfMonth = view === "mes" && d.getMonth() !== curMonth;
               // No mês mostramos o dia da semana real do dia (WD[getDay]); na semana idem.
               const showWeekday = view === "semana";
@@ -596,7 +646,9 @@ export default function AgendaCriacao() {
                                   <div className="flex items-center gap-1 text-teal-700 dark:text-teal-300">
                                     <DragGrip className="text-teal-700/40 dark:text-teal-300/40" />
                                     <Video className="h-3 w-3 shrink-0" />
-                                    <span className="text-[10px] font-body font-bold">{c.capture_time ? c.capture_time.slice(0, 5) : "Captação"}</span>
+                                    <span className="text-[10px] font-body font-bold flex-1">{c.capture_time ? c.capture_time.slice(0, 5) : ""}</span>
+                                    {/* Etiqueta fixa "Captação": mesmo padrão de pill das etiquetas de status dos posts (posição à direita/estilo). */}
+                                    <span className="shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full bg-teal-500/15 text-teal-700 dark:text-teal-300">Captação</span>
                                   </div>
                                   <p className="text-[12px] font-body font-semibold text-foreground leading-tight truncate">{nameOf(c.crm_client_id, c.client_name)}</p>
                                 </button>
@@ -901,8 +953,8 @@ export default function AgendaCriacao() {
         const cri = byDay.get(iso) ?? []; const pts = postsByDay.get(iso) ?? [];
         // Posts do Cria do cliente (5o tipo): entram no modal e na contagem, iguais à célula.
         const criaCli = criaPostsByDay.get(iso) ?? [];
-        // Mesma ordenação da grade (sem hora primeiro, depois por horário crescente).
-        const items = buildDayItems(caps, tks, cri, pts);
+        // Mesma ordenação da grade (ordem manual do dia quando houver; senão por horário).
+        const items = buildDayItems(caps, tks, cri, pts, dayOrders[iso]);
         const d = parseDateOnly(iso);
         const rowCls = "w-full flex items-center gap-2.5 rounded-xl border border-border p-2.5 text-left hover:border-primary/50 hover:bg-primary/5 transition-colors";
         const dot = (c: string) => <span className="h-2 w-2 rounded-full shrink-0" style={{ background: c }} />;

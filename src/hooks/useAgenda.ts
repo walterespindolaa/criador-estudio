@@ -102,6 +102,45 @@ export function useDeleteCreation() {
   });
 }
 
+// Ordem manual por DIA da grade da agenda (Tarefa: reordenar dentro do dia). Guarda um
+// array de chaves "<kind>:<id>" que sobrepõe a ordem por horário. Chaveado por (manager_id, day).
+export function useDayOrders(fromDate: string, toDate: string) {
+  const { agencyOwnerId } = useActiveAccount();
+  return useQuery<Record<string, string[]>>({
+    queryKey: ["agenda-day-order", agencyOwnerId, fromDate, toDate],
+    enabled: !!agencyOwnerId,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("agenda_day_order")
+        .select("day, item_order").eq("manager_id", agencyOwnerId!)
+        .gte("day", fromDate).lte("day", toDate);
+      if (error) throw error;
+      const m: Record<string, string[]> = {};
+      for (const row of (data ?? []) as unknown as { day: string; item_order: string[] | null }[]) {
+        m[row.day] = Array.isArray(row.item_order) ? row.item_order : [];
+      }
+      return m;
+    },
+  });
+}
+
+// Persiste (upsert) a ordem manual de um dia. Otimista fica a cargo de quem chama (a grade
+// atualiza o cache no drop pra o card não "voltar" pro lugar).
+export function useSaveDayOrder() {
+  const { agencyOwnerId } = useActiveAccount();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ day, order }: { day: string; order: string[] }) => {
+      if (!agencyOwnerId) throw new Error("Not authenticated");
+      const { error } = await sbFrom("agenda_day_order").upsert({
+        manager_id: agencyOwnerId, day, item_order: order, updated_at: new Date().toISOString(),
+      } as never, { onConflict: "manager_id,day" });
+      if (error) throw error;
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["agenda-day-order"] }),
+    onError: () => toast.error("Não consegui salvar a ordem."),
+  });
+}
+
 export function useCaptures() {
   const { agencyOwnerId } = useActiveAccount();
   return useQuery<Capture[]>({

@@ -15,7 +15,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CronogramaBoard } from "@/components/accounts/CronogramaBoard";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
-import { Plus, Link2, Pencil, Loader2, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare, Eye, Clock, Settings2, Palette, Copy, CalendarDays, X } from "lucide-react";
+import { Plus, Link2, Pencil, Loader2, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare, Eye, Clock, Settings2, Palette, Copy, CalendarDays, X, ChevronDown, History } from "lucide-react";
+import { usePostApprovalComments } from "@/hooks/useApprovals";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { CriaPostMedia } from "@/components/accounts/CriaPostMedia";
 import { ImportKanbanDialog } from "@/components/accounts/ImportKanbanDialog";
@@ -66,6 +67,49 @@ function relTimeBR(iso: string): string {
 function daysWaiting(p: ExternalPost): number {
   const base = p.approval_updated_at ?? p.created_at;
   return Math.floor((Date.now() - new Date(base).getTime()) / 86400000);
+}
+// Data + hora do histórico no fuso BR (só exibição; o instante já vem em UTC do banco).
+const DT_FMT_BR = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+function fmtDateTimeBR(iso: string): string {
+  try { return DT_FMT_BR.format(new Date(iso)); } catch { return ""; }
+}
+
+// Histórico de aprovação do post: TODO o vai e volta com o cliente, em ordem
+// cronológica. Reaproveita post_approval_comments (todos os comentários, não só o
+// último): cada pedido de ajuste do cliente ("cliente_externo") e cada reenvio
+// nosso ("social_media"). Fica recolhido por padrão pra não poluir o editor.
+function ApprovalHistory({ postId }: { postId: string }) {
+  const { comments, isLoading } = usePostApprovalComments(postId);
+  const [open, setOpen] = useState(false);
+  if (isLoading || comments.length === 0) return null;
+  return (
+    <div className="rounded-xl border border-border bg-muted/20 overflow-hidden">
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
+        className="w-full min-h-[44px] flex items-center justify-between gap-2 px-3 py-2.5 text-left hover:bg-muted/40 transition-colors">
+        <span className="flex items-center gap-1.5 text-xs font-body font-bold text-foreground">
+          <History className="h-3.5 w-3.5 text-muted-foreground" /> Histórico de aprovação ({comments.length})
+        </span>
+        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="px-3 pb-3 space-y-2 max-h-72 overflow-y-auto">
+          {comments.map((c) => {
+            // "cliente_externo" (portal por link) e "cliente" (aprovação interna) = o cliente.
+            const isClient = c.author_role === "cliente_externo" || c.author_role === "cliente";
+            return (
+              <div key={c.id} className={`rounded-lg border px-2.5 py-2 ${isClient ? "border-orange-100 bg-orange-50" : "border-primary/15 bg-primary/[0.04]"}`}>
+                <div className="flex items-center justify-between gap-2 mb-0.5">
+                  <span className={`text-[11px] font-body font-bold ${isClient ? "text-orange-700" : "text-primary"}`}>{isClient ? "Cliente" : "Você"}</span>
+                  <span className="text-[10px] font-body text-muted-foreground shrink-0">{fmtDateTimeBR(c.created_at)}</span>
+                </div>
+                <p className="text-[12.5px] font-body text-foreground whitespace-pre-wrap leading-relaxed">{c.content}</p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 const STATUS: Record<string, { label: string; cls: string }> = {
   em_producao: { label: "Em produção", cls: "bg-violet-100 text-violet-700" },
@@ -631,6 +675,10 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                   <p className="text-[13px] font-body text-orange-800 whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto">{editing.last_comment}</p>
                 </div>
               )}
+              {/* Histórico completo da aprovação (só ao editar um post já existente, não
+                  no rascunho/novo). Guarda TODO o vai e volta pra a gestora não perder o
+                  que o cliente pediu, mesmo depois de "Salvar e reenviar". */}
+              {editing?.id && !draftId && <ApprovalHistory postId={editing.id} />}
               {/* Título */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-body">Título *</Label>

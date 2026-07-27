@@ -225,6 +225,27 @@ export type Database = {
           },
         ]
       }
+      agenda_day_order: {
+        Row: {
+          day: string
+          item_order: Json
+          manager_id: string
+          updated_at: string
+        }
+        Insert: {
+          day: string
+          item_order?: Json
+          manager_id: string
+          updated_at?: string
+        }
+        Update: {
+          day?: string
+          item_order?: Json
+          manager_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ai_rate_limit: {
         Row: {
           call_count: number
