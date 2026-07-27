@@ -552,7 +552,7 @@ export default function AgendaCriacao() {
               : "flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth lg:grid lg:grid-cols-7 lg:gap-2 lg:overflow-visible lg:pb-0",
           )}>
             {days.map((d, i) => {
-              const iso = ymd(d); const list = byDay.get(iso) ?? []; const caps = capturesByDay.get(iso) ?? []; const dayTasks = tasksByDay.get(iso) ?? []; const dayPosts = postsByDay.get(iso) ?? []; const criaDay = criaPostsByDay.get(iso) ?? []; const totalDay = caps.length + dayTasks.length + list.length + dayPosts.length; const isToday = iso === today;
+              const iso = ymd(d); const list = byDay.get(iso) ?? []; const caps = capturesByDay.get(iso) ?? []; const dayTasks = tasksByDay.get(iso) ?? []; const dayPosts = postsByDay.get(iso) ?? []; const criaDay = criaPostsByDay.get(iso) ?? []; const totalDay = caps.length + dayTasks.length + list.length + dayPosts.length + criaDay.length; const isToday = iso === today;
               // Lista única do dia, ordenada por horário (sem hora primeiro). Os index dos
               // Draggable saem daqui (0..n-1 contíguos), casando com a ordem renderizada pro dnd.
               const dayItems = buildDayItems(caps, dayTasks, list, dayPosts);
@@ -899,6 +899,8 @@ export default function AgendaCriacao() {
         const iso = dayModal;
         const caps = capturesByDay.get(iso) ?? []; const tks = tasksByDay.get(iso) ?? [];
         const cri = byDay.get(iso) ?? []; const pts = postsByDay.get(iso) ?? [];
+        // Posts do Cria do cliente (5o tipo): entram no modal e na contagem, iguais à célula.
+        const criaCli = criaPostsByDay.get(iso) ?? [];
         // Mesma ordenação da grade (sem hora primeiro, depois por horário crescente).
         const items = buildDayItems(caps, tks, cri, pts);
         const d = parseDateOnly(iso);
@@ -908,7 +910,7 @@ export default function AgendaCriacao() {
           <Dialog open onOpenChange={(o) => { if (!o) setDayModal(null); }}>
             <DialogContent className="sm:max-w-md rounded-2xl max-h-[80vh] overflow-y-auto">
               <DialogHeader><DialogTitle className="font-display capitalize">{d.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}</DialogTitle></DialogHeader>
-              <p className="text-[12px] font-body text-muted-foreground -mt-2">{items.length} item(ns) · clique pra editar</p>
+              <p className="text-[12px] font-body text-muted-foreground -mt-2">{items.length + criaCli.length} item(ns) · clique pra editar</p>
               <div className="space-y-1.5 mt-1">
                 {items.map((item) => {
                   if (item.kind === "cria") { const c = item.cria; return <button key={`c${c.id}`} onClick={() => { setDayModal(null); setEditCreation(c); }} className={rowCls}>{dot("#4B3FA8")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}</span><span className="ml-auto text-[10px] text-muted-foreground">Criação</span></button>; }
@@ -916,6 +918,14 @@ export default function AgendaCriacao() {
                   if (item.kind === "cap") { const c = item.cap; return <button key={`p${c.id}`} onClick={() => { setDayModal(null); setEditCap(c); }} className={rowCls}>{dot("#FF77B9")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}{c.capture_time ? ` · ${c.capture_time.slice(0, 5)}` : ""}</span><span className="ml-auto text-[10px] text-muted-foreground">Captação</span></button>; }
                   const p = item.post; const st = POST_STATUS[p.approval_status ?? "em_producao"]; return <button key={`o${p.id}`} onClick={() => { setDayModal(null); openPost(p); }} className={rowCls}>{dot("#EA4918")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{p.title || "Post"}</span>{st && <span className={cn("ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}</button>;
                 })}
+                {/* Cria do cliente: 5o tipo, só leitura. Clicar abre o kanban do cliente. */}
+                {criaCli.map((p) => (
+                  <button key={`cc${p.id}`} onClick={() => { setDayModal(null); if (p.crm_client_id) navigate(`/socialmidia/clientes/${p.crm_client_id}/kanban-cliente`); }} className={rowCls}>
+                    {dot(CRIA_POST_COLOR)}
+                    <span className="text-[13px] font-body font-semibold text-foreground truncate">{p.scheduled_time ? `${p.scheduled_time.slice(0, 5)} · ` : ""}{p.title || "Post"}</span>
+                    <span className="ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: CRIA_POST_COLOR }}>{CRIA_POST_STATUS[p.status ?? ""] ?? "Cria"}</span>
+                  </button>
+                ))}
               </div>
             </DialogContent>
           </Dialog>

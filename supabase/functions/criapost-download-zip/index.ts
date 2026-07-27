@@ -5,9 +5,17 @@ const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+  // Expõe os metadados do zip pro fetch do front conseguir ler (nome + quantos pularam).
+  "Access-Control-Expose-Headers": "X-Zip-Filename, X-Zip-Count, X-Zip-Skipped",
 };
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
+
+// Teto de memória: o edge tem RAM limitada e as fotos têm 7-8MB cada. Se juntar
+// tudo em memória (bytes crus + zip + base64) o worker é morto e o front recebe um
+// "non-2xx" sem corpo. Somamos os bytes e paramos antes de estourar; o resto vira aviso.
+const MAX_TOTAL_BYTES = 120 * 1024 * 1024; // ~120MB de mídia por zip
+const MAX_FILE_BYTES = 50 * 1024 * 1024; // pula arquivo gigante isolado
 
 // Nome de arquivo seguro pro zip.
 function slug(s: string): string {
@@ -60,10 +68,14 @@ Deno.serve(async (req) => {
 
     const skipped: string[] = [];
     let n = 0;
+    let total = 0;
     for (const m of (refs ?? []) as Array<Record<string, string | null>>) {
       const provider = (m.provider ?? "").toLowerCase();
       // Vídeo do Bunny Stream não tem MP4 direto — anota e pula.
-      if (m.bunny_video_id || provider === "bunny_stream") { skipped.push(m.file_name || "vídeo"); continue; }
+      if (m.bunny_video_id || provider === "bunny_stream") { skipped.push(`${m.file_name || "vídeo"} (vídeo)`); continue; }
+
+      // Já bateu no teto de memória: manda o resto pro aviso pra não derrubar o worker.
+      if (total >= MAX_TOTAL_BYTES) { skipped.push(`${m.file_name || "mídia"} (limite do zip)`); continue; }
 
       let url: string | null = null;
       if (provider === "gdrive" || provider === "google_drive" || provider === "drive") {
@@ -80,25 +92,54 @@ Deno.serve(async (req) => {
         if (ct.includes("text/html") && (provider.includes("drive") || provider === "gdrive")) {
           resp = await fetch(url + "&confirm=t");
         }
-        if (!resp.ok) { skipped.push(m.file_name || "mídia"); continue; }
+        if (!resp.ok) { skipped.push(`${m.file_name || "mídia"} (erro ${resp.status})`); continue; }
         const buf = new Uint8Array(await resp.arrayBuffer());
+        // Arquivo gigante isolado ou que estouraria o teto: pula com aviso.
+        if (buf.byteLength > MAX_FILE_BYTES || total + buf.byteLength > MAX_TOTAL_BYTES) {
+          skipped.push(`${m.file_name || "mídia"} (arquivo grande, baixe individual)`);
+          continue;
+        }
+        total += buf.byteLength;
         n++;
         const isVid = (m.file_type ?? "").startsWith("video") || provider === "bunny_stream";
         const base = isVid ? "video" : "imagem";
         const ext = extFrom(m.file_type, m.file_name, isVid ? "mp4" : "jpg");
-        zip.file(`${base}-${n}.${ext}`, buf);
-      } catch {
-        skipped.push(m.file_name || "mídia");
+        // STORE (sem compressão): imagens/vídeos já são comprimidos, deflate só gasta
+        // CPU e memória à toa. Assim o zip sai rápido e leve.
+        zip.file(`${base}-${n}.${ext}`, buf, { compression: "STORE" });
+      } catch (e) {
+        skipped.push(`${m.file_name || "mídia"} (${e instanceof Error ? e.message : "falha"})`);
       }
     }
 
     if (skipped.length) {
-      zip.file("_avisos.txt", "Não foi possível baixar automaticamente (baixe manualmente):\n- " + skipped.join("\n- "));
+      zip.file("_avisos.txt", "Não foi possível incluir automaticamente (baixe individualmente):\n- " + skipped.join("\n- "));
     }
 
-    const b64 = await zip.generateAsync({ type: "base64" });
-    return json({ filename: `${slug(post.title || "post")}.zip`, zip_base64: b64, count: n, skipped: skipped.length });
+    const filename = `${slug(post.title || "post")}.zip`;
+    // Gera o zip em STREAM e devolve como binário (application/zip). Evita montar o
+    // base64 gigante em memória (o que estourava o edge e causava o non-2xx).
+    const internal = zip.generateInternalStream({ type: "uint8array", streamFiles: true });
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        internal.on("data", (chunk: Uint8Array) => controller.enqueue(chunk));
+        internal.on("error", (err: unknown) => controller.error(err));
+        internal.on("end", () => controller.close());
+        internal.resume();
+      },
+    });
+
+    return new Response(body, {
+      headers: {
+        ...cors,
+        "Content-Type": "application/zip",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+        "X-Zip-Filename": filename,
+        "X-Zip-Count": String(n),
+        "X-Zip-Skipped": String(skipped.length),
+      },
+    });
   } catch (e) {
-    return json({ error: String(e) }, 500);
+    return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }
 });

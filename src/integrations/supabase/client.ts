@@ -17,3 +17,8 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
   }
 });
+
+// Base das edge functions e a chave anon, pra chamadas via fetch direto (ex.: baixar
+// binário/zip lendo os headers da resposta, o que o supabase.functions.invoke não expõe).
+export const SUPABASE_FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`;
+export const SUPABASE_ANON_KEY = SUPABASE_PUBLISHABLE_KEY;

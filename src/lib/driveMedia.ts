@@ -2,7 +2,10 @@
 // O view_url do Drive (drive.google.com/file/d/ID/view ou /preview) é uma PÁGINA,
 // não serve como src de <img>. Aqui convertemos a referência numa URL exibível.
 
+import { supabase } from "@/integrations/supabase/client";
+
 export type MediaLike = {
+  id?: string | null;
   provider?: string | null;
   external_file_id?: string | null;
   view_url?: string | null;
@@ -162,8 +165,28 @@ export function mediaDownloadName(title: string | undefined, index: number, m: M
   return `${base}-${index + 1}.${ext}`;
 }
 
+// Dispara o download de um blob com nome coerente. O blob: é same-origin, então o
+// atributo download é respeitado (inclusive no iOS Safari: cai em Arquivos).
+function triggerBlobDownload(blob: Blob, fileName: string) {
+  const obj = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = obj; a.download = fileName;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(obj);
+}
+
+// Baixa a mídia pelo edge proxy (criapost-download-file): o servidor busca no Bunny
+// (sem CORS) e devolve os bytes com CORS liberado, então o navegador recebe um blob
+// de verdade e força o download. Devolve false se não deu (pra tentar outra rota).
+async function downloadViaProxy(mediaId: string, fileName: string): Promise<boolean> {
+  const { data, error } = await supabase.functions.invoke("criapost-download-file", { body: { media_id: mediaId } });
+  if (error || !(data instanceof Blob)) return false;
+  triggerBlobDownload(data, fileName);
+  return true;
+}
+
 // Abre uma URL numa nova aba/força download nativo sem passar pelo fetch-blob.
-// É o fallback do mobile: no Safari/webview o fetch de uma imagem de outra origem
+// É o fallback final do mobile: no Safari/webview o fetch de uma imagem de outra origem
 // falha ("Load failed"), então a gente entrega a imagem pra pessoa segurar e salvar.
 function openForSave(url: string, fileName: string) {
   try {
@@ -203,22 +226,25 @@ export async function downloadMediaFile(m: MediaLike, fileName: string): Promise
     document.body.appendChild(a); a.click(); a.remove();
     return "file";
   }
-  // Imagem no Storage: baixa os bytes e força o download com nome coerente.
+  // Imagem no Bunny Storage/CDN: o CDN não manda CORS, então o fetch-blob direto
+  // quebra no mobile. Baixa pelo edge proxy (bytes com CORS liberado) e força o
+  // download nomeado. É a rota que funciona no iOS.
   const url = m.view_url || m.thumbnail_url;
   if (!url) throw new Error("Arquivo indisponível.");
+  if (m.id) {
+    try {
+      if (await downloadViaProxy(m.id, fileName)) return "file";
+    } catch { /* tenta as rotas abaixo */ }
+  }
+  // Sem id (ou proxy indisponível): tenta o fetch-blob direto (funciona quando o
+  // arquivo é same-origin ou o CDN manda CORS, ex.: desktop).
   try {
     const res = await fetch(url);
     if (!res.ok) throw new Error("Não consegui baixar o arquivo.");
-    const blob = await res.blob();
-    const obj = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = obj; a.download = fileName;
-    document.body.appendChild(a); a.click(); a.remove();
-    URL.revokeObjectURL(obj);
+    triggerBlobDownload(await res.blob(), fileName);
     return "file";
   } catch {
-    // Mobile (Safari/webview): o fetch-blob de uma imagem de outra origem quebra com
-    // "Load failed". Em vez de mostrar o erro, abre a imagem pra pessoa salvar de lá.
+    // Última cartada: abre a imagem pra pessoa segurar e salvar.
     openForSave(url, fileName);
     return "opened";
   }

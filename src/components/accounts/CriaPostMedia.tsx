@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { ImagePlus, Video, FileImage, Link2, Loader2, Heart, MessageCircle, Send, Bookmark, GripVertical, X, Play, Download, ExternalLink, Paperclip, ChevronDown, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { confirmar } from "@/components/shared/Confirm";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, SUPABASE_FUNCTIONS_URL, SUPABASE_ANON_KEY } from "@/integrations/supabase/client";
 
 // Lembra se a seção "Anexos e links" fica aberta (colapsada por padrão).
 const ATT_OPEN_KEY = "criapost_att_open";
@@ -169,17 +169,35 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
 
   const [zipping, setZipping] = useState(false);
   // Baixa todas as mídias (qualidade original) numeradas + legenda.txt num .zip.
+  // Fetch direto (não invoke) pra receber o zip como BINÁRIO em stream e conseguir
+  // ler o corpo do erro (motivo real) e os headers (nome + quantos pularam).
   const onDownloadZip = async () => {
     setZipping(true);
     try {
-      const { data, error } = await supabase.functions.invoke("criapost-download-zip", { body: { post_id: postId } });
-      if (error) throw error;
-      const d = data as { filename: string; zip_base64: string; skipped?: number };
-      const bytes = Uint8Array.from(atob(d.zip_base64), (c) => c.charCodeAt(0));
-      const url = URL.createObjectURL(new Blob([bytes], { type: "application/zip" }));
-      const a = document.createElement("a"); a.href = url; a.download = d.filename; a.click();
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/criapost-download-zip`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
+        },
+        body: JSON.stringify({ post_id: postId }),
+      });
+      if (!res.ok) {
+        // Lê o motivo real da edge em vez de só "non-2xx status code".
+        let motivo = `Erro ${res.status}`;
+        try { const j = await res.json(); if (j?.error) motivo = String(j.error); } catch { /* corpo não-JSON */ }
+        throw new Error(motivo);
+      }
+      const blob = await res.blob();
+      const filename = res.headers.get("X-Zip-Filename") || "post.zip";
+      const skipped = Number(res.headers.get("X-Zip-Skipped") || "0");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
       URL.revokeObjectURL(url);
-      if (d.skipped) toast.warning(`${d.skipped} mídia(s) não baixaram (ex.: vídeo). Veja _avisos.txt no zip.`);
+      if (skipped) toast.warning(`${skipped} mídia(s) não entraram (ex.: vídeo ou arquivo muito grande). Veja _avisos.txt no zip.`);
       else toast.success("Download pronto!");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Não consegui gerar o zip.");
