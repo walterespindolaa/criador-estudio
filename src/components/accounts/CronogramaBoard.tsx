@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ArrowLeft, Plus, Pencil, Trash2, Send, Link2, CalendarRange, Building2, PartyPopper, Check, AtSign, LayoutGrid, GripVertical } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +33,18 @@ const ST_CLASS: Record<ItemStatus, string> = {
 };
 
 const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+// Converte o tipo do cronograma ("Reels", "Feed", "Carrossel/Stories"...) no formato
+// que o Cria Post entende (minusculo: reels/carrossel/foto/story/video). Sem isto o post
+// convertido nascia com format "Feed"/"Reels" (fora do padrao do board) e o filtro de
+// formato / a cor do card nao reconheciam. Pega a primeira parte de tipos compostos.
+const CRONOGRAMA_TO_POST_FORMAT: Record<string, string> = {
+  reels: "reels", carrossel: "carrossel", feed: "foto", stories: "story", story: "story",
+};
+const tipoParaFormato = (tipo: string | null | undefined): string => {
+  const base = (tipo ?? "").split("/")[0].trim().toLowerCase();
+  return CRONOGRAMA_TO_POST_FORMAT[base] ?? "reels";
+};
 
 // máscara DD/MM enquanto digita (ex.: "1505" -> "15/05")
 const maskDay = (v: string) => {
@@ -171,7 +183,12 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
     next.splice(r.destination.index, 0, moved);
     reorder.mutate(next);
   };
-  const { user } = useAuth();
+  // Dono do tenant (mesmo que o resto do Cria Post usa). ANTES a conversao usava
+  // useAuth().user.id: quando o operador nao e o dono da agencia (colaborador ou conta
+  // trocada no switcher), o post nascia com user_id "errado" e o RLS/kanban do cliente
+  // nao o mostravam, mesmo com o selo "no Cria Post" ligado. Agora nasce igualzinho a
+  // um post criado pelo botao "Novo post" (mesmo dono).
+  const { agencyOwnerId } = useActiveAccount();
   const [editing, setEditing] = useState<CronogramaItem | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [f, setF] = useState<Partial<CronogramaItem>>({});
@@ -182,19 +199,22 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
 
   const convertApproved = async () => {
     if (!c.external_client_id) { toast.error("Esse cronograma não está vinculado a um cliente."); return; }
-    if (!user || approvedToConvert.length === 0) return;
+    if (!agencyOwnerId || approvedToConvert.length === 0) return;
     setConverting(true);
     try {
       for (const it of approvedToConvert) {
+        // Nasce EM PRODUCAO (mesma coluna/estado de um post novo do board). "pendente"
+        // mandaria pro cliente um post ainda sem midia; a social midia libera pro cliente
+        // quando estiver pronto. So marcamos o selo "no Cria Post" DEPOIS do insert dar certo.
         const { data, error } = await sbFrom("posts").insert({
-          user_id: user.id,
+          user_id: agencyOwnerId,
           external_client_id: c.external_client_id,
           title: it.title ?? it.copy ?? "(sem título)",
           platform: "instagram",
-          format: it.type ?? "Feed",
+          format: tipoParaFormato(it.type),
           caption: it.description ?? null,
           status: "editando",
-          approval_status: "pendente",
+          approval_status: "em_producao",
           approval_mode: "fast",
           scheduled_date: it.date ?? null,
         } as never).select("id").single();
@@ -211,10 +231,19 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
 
   const openNew = () => { setEditing(null); setF({ type: "Reels" }); setFormOpen(true); };
   const openEdit = (it: CronogramaItem) => { setEditing(it); setF(it); setFormOpen(true); };
+  // Trava de reentrada: duplo clique/tap disparava dois inserts idênticos (o item duplicava).
+  // O ref é síncrono, então bloqueia o 2º clique antes do React re-renderizar o botão.
+  const savingRef = useRef(false);
   const saveItem = async () => {
-    if (editing) await updateItem.mutateAsync({ id: editing.id, title: f.title ?? null, copy: f.copy ?? null, description: f.description ?? null, date: f.date ?? null, type: f.type ?? null, ref_url: f.ref_url ?? null });
-    else await addItem.mutateAsync({ title: f.title ?? null, copy: f.copy ?? null, description: f.description ?? null, date: f.date ?? null, type: f.type ?? null, ref_url: f.ref_url ?? null });
-    setFormOpen(false);
+    if (savingRef.current) return;
+    savingRef.current = true;
+    try {
+      if (editing) await updateItem.mutateAsync({ id: editing.id, title: f.title ?? null, copy: f.copy ?? null, description: f.description ?? null, date: f.date ?? null, type: f.type ?? null, ref_url: f.ref_url ?? null });
+      else await addItem.mutateAsync({ title: f.title ?? null, copy: f.copy ?? null, description: f.description ?? null, date: f.date ?? null, type: f.type ?? null, ref_url: f.ref_url ?? null });
+      setFormOpen(false);
+    } finally {
+      savingRef.current = false;
+    }
   };
 
   const link = `${window.location.origin}/cronograma/${c.token}`;
@@ -378,7 +407,7 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFormOpen(false)} className="rounded-xl">Cancelar</Button>
-            <Button onClick={saveItem} className="rounded-xl">{editing ? "Salvar" : "Adicionar"}</Button>
+            <Button onClick={saveItem} disabled={addItem.isPending || updateItem.isPending} className="rounded-xl">{editing ? "Salvar" : "Adicionar"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -393,10 +422,17 @@ function DatasComemorativasSection({ cronogramaId, clientSegment }: { cronograma
   const [pickerOpen, setPickerOpen] = useState(false);
   const [calOpen, setCalOpen] = useState(false);
 
+  // Mesma trava do saveItem: evita que duplo clique/tap adicione a data duplicada.
+  const addingRef = useRef(false);
   const addCustom = async () => {
-    if (!label.trim()) return;
-    await addData.mutateAsync({ label: label.trim(), day_label: day.trim() || null });
-    setLabel(""); setDay("");
+    if (!label.trim() || addingRef.current) return;
+    addingRef.current = true;
+    try {
+      await addData.mutateAsync({ label: label.trim(), day_label: day.trim() || null });
+      setLabel(""); setDay("");
+    } finally {
+      addingRef.current = false;
+    }
   };
 
   const onDragEnd = (r: DropResult) => {
@@ -463,7 +499,7 @@ function DatasComemorativasSection({ cronogramaId, clientSegment }: { cronograma
             </PopoverContent>
           </Popover>
         </div>
-        <Button onClick={addCustom} disabled={!label.trim()} className="rounded-xl h-9 gap-1.5"><Plus className="h-4 w-4" /> Adicionar</Button>
+        <Button onClick={addCustom} disabled={!label.trim() || addData.isPending} className="rounded-xl h-9 gap-1.5"><Plus className="h-4 w-4" /> Adicionar</Button>
       </div>
 
       <AnnualDatesDialog
