@@ -40,10 +40,22 @@ export function FeedEditProfileDialog({ open, onOpenChange }: Props) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Marca que os campos ja foram semeados nesta abertura do dialog. Sem isso,
+  // qualquer mudanca do profile (ex.: trocar a foto atualiza a query) re-semeava
+  // name/niche/bio com os valores antigos do banco e apagava o que a pessoa digitou.
+  const seededRef = useRef(false);
 
-  // Recarrega os campos do profile toda vez que o dialog abre.
+  // Semeia os campos UMA vez por abertura do dialog, nunca a cada mudanca do
+  // profile. Reabrir o dialog reseta a flag e volta a semear com os valores atuais.
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      seededRef.current = false;
+      return;
+    }
+    // Espera o profile carregar antes de semear (evita semear vazio na corrida
+    // de abertura) e so semeia uma vez por abertura.
+    if (seededRef.current || !profile) return;
+    seededRef.current = true;
     setName(profile?.name || "");
     setNiche(profile?.niche || "");
     setBio(profile?.bio || "");

@@ -18,7 +18,7 @@ import {
   useCronogramas, useCronogramaItems, useCronogramaDatas, CRONOGRAMA_TYPES,
   type Cronograma, type CronogramaItem, type ItemStatus,
 } from "@/hooks/useCronograma";
-import { useExternalClients } from "@/hooks/useCriaPost";
+import { useExternalClients, invalidatePostsEverywhere } from "@/hooks/useCriaPost";
 import { SEGMENTOS, datasPara, segmentoDoTexto, type SegmentKey } from "@/lib/datasComemorativas";
 import { useCrmClients } from "@/hooks/useCrm";
 import { confirmar } from "@/components/shared/Confirm";
@@ -196,12 +196,18 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
   const [f, setF] = useState<Partial<CronogramaItem>>({});
   const [handle, setHandle] = useState(c.client_handle ?? "");
   const [converting, setConverting] = useState(false);
+  // Trava SINCRONA de reentrancia (mesma tecnica do saveItem): o duplo clique/tap
+  // dispara dois convertApproved antes do React re-renderizar o botao "converting".
+  // Sem isto, os dois passavam pelo insert e criavam posts DUPLICADOS.
+  const convertingRef = useRef(false);
 
   const approvedToConvert = items.filter((it) => it.approval_status === "aprovado" && !it.converted_post_id);
 
   const convertApproved = async () => {
+    if (convertingRef.current) return;
     if (!c.external_client_id) { toast.error("Esse cronograma não está vinculado a um cliente."); return; }
     if (!agencyOwnerId || approvedToConvert.length === 0) return;
+    convertingRef.current = true;
     setConverting(true);
     try {
       for (const it of approvedToConvert) {
@@ -231,19 +237,28 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
           scheduled_date: it.date || null,
         } as never).select("id").single();
         if (error) throw error;
-        await updateItem.mutateAsync({ id: it.id, converted_post_id: (data as { id: string }).id });
+        const newPostId = (data as { id: string }).id;
+        // O insert deu certo. Agora TEMOS que gravar converted_post_id no item, senao
+        // ele continua elegivel e uma proxima conversao recria o post (duplicata). Se o
+        // update falhar logo depois do insert, tenta uma vez mais com um respiro curto
+        // ANTES de seguir; so aborta o loop se ainda assim falhar (o item ja tem post,
+        // entao nao da pra ignorar o erro e deixar o item elegivel calado).
+        try {
+          await updateItem.mutateAsync({ id: it.id, converted_post_id: newPostId });
+        } catch {
+          await new Promise((r) => setTimeout(r, 400));
+          await updateItem.mutateAsync({ id: it.id, converted_post_id: newPostId });
+        }
       }
-      // Avisa o kanban do cliente, a agenda e o contador de pendentes que nasceram
-      // posts novos, senao a agenda (external-posts-all) fica desatualizada e o post
-      // convertido so aparece depois de um reload manual (era o bug do "no kanban mas
-      // nao na agenda").
-      qc.invalidateQueries({ queryKey: ["cria-posts", c.external_client_id] });
-      qc.invalidateQueries({ queryKey: ["external-posts-all"] });
-      qc.invalidateQueries({ queryKey: ["external-pending"] });
+      // Avisa o kanban do cliente, a agenda, o contador de pendentes, a home copiloto e
+      // o calendario do gestor que nasceram posts novos, senao essas telas ficam
+      // desatualizadas e o post convertido so aparece depois de um reload manual.
+      invalidatePostsEverywhere(qc, agencyOwnerId, c.external_client_id);
       toast.success(`${approvedToConvert.length} post(s) criado(s) no Cria Post do cliente!`);
     } catch {
       toast.error("Erro ao converter pro Cria Post. Tente de novo.");
     } finally {
+      convertingRef.current = false;
       setConverting(false);
     }
   };

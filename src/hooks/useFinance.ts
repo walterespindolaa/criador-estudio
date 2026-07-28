@@ -309,6 +309,17 @@ export function useConfirmMonthly() {
   return useMutation({
     mutationFn: async ({ m, clientName }: { m: FinMonthly; clientName: string }) => {
       if (!agencyOwnerId) throw new Error("Sem sessão");
+      // BUG 2 (trava idempotente): o disabled={isPending} é assíncrono, então um
+      // duplo toque no mobile podia disparar 2 vezes e inserir 2 fin_records da
+      // MESMA mensalidade (ambos contando), com o Desfazer apagando só o último.
+      // Antes de lançar, relemos a instância no banco: se ela já está "pago" (ou
+      // já tem fin_record vinculado), o recebimento já existe, então saímos sem
+      // inserir de novo. Assim, mesmo com 2 cliques, só nasce 1 recebimento.
+      const { data: fresh, error: e0 } = await sbFrom("fin_monthly")
+        .select("status, fin_record_id").eq("id", m.id).single();
+      if (e0) throw e0;
+      const cur = fresh as { status: string; fin_record_id: string | null } | null;
+      if (cur && (cur.status === "pago" || cur.fin_record_id)) return;
       const { data: rec, error: e1 } = await sbFrom("fin_records").insert({
         manager_id: agencyOwnerId, crm_client_id: m.crm_client_id, context: "pj",
         type: "entrada", description: `Mensalidade, ${clientName}`, category: "Mensalidade",

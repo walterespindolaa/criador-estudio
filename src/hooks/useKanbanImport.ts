@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { toast } from "sonner";
 import { FORMATS_BY_PLATFORM } from "@/lib/constants";
+import { invalidatePostsEverywhere } from "@/hooks/useCriaPost";
 
 // posts/external_media_refs fora dos types em alguns campos + RPC nova: cast padrão (ver src/lib/push.ts).
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
@@ -125,8 +126,7 @@ export function useKanbanImport(criaOwnerId: string | null, externalClientId: st
     onSuccess: ({ count, mediaFails }) => {
       toast.success(count === 1 ? "1 post importado, já está na fila de aprovação!" : `${count} posts importados, já estão na fila de aprovação!`);
       if (mediaFails > 0) toast.warning(`${mediaFails} mídia(s) não puderam ser copiadas, confira nos posts.`);
-      qc.invalidateQueries({ queryKey: ["cria-posts", externalClientId] });
-      qc.invalidateQueries({ queryKey: ["external-pending", agencyOwnerId] });
+      invalidatePostsEverywhere(qc, agencyOwnerId, externalClientId);
     },
     onError: () => toast.error("Erro ao importar os posts do kanban."),
   });

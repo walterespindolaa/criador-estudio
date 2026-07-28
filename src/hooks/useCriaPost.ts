@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { toast } from "sonner";
@@ -49,6 +49,27 @@ export type ExternalPostInput = { title: string; platform: string; format: strin
 // via cast pelas telas que consomem estas queries).
 const POST_BOARD_COLUMNS =
   "id, title, platform, format, caption, hook, approval_status, scheduled_date, scheduled_time, created_at, approval_mode, script, approval_updated_at, reference_url, drive_folder_url, board_order, external_client_id";
+
+// Invalida TODAS as queries que renderizam um mesmo post externo em telas diferentes.
+// O mesmo post aparece no kanban do cliente (cria-posts), na Agenda + painel de
+// Aprovacoes (external-posts-all), no badge de pendentes (external-pending), na home
+// copiloto (operation-posts) e no calendario do gestor (manager-calendar). Cada mutation
+// de post externo (criar/editar/mover/aprovar/excluir/importar/converter) deve chamar
+// isto pra que a UICP reflita na hora em todas elas, sem depender de reload.
+// clientId: se vier, mira so o kanban daquele cliente (["cria-posts", clientId]); se nao
+// vier, invalida todos os kanbans (["cria-posts"]). manager-calendar vai sem id de
+// proposito: a chave real usa o user.id do gestor, entao invalidamos o prefixo inteiro.
+export function invalidatePostsEverywhere(
+  qc: QueryClient,
+  agencyOwnerId: string | null | undefined,
+  clientId?: string | null,
+) {
+  qc.invalidateQueries({ queryKey: clientId ? ["cria-posts", clientId] : ["cria-posts"] });
+  qc.invalidateQueries({ queryKey: ["external-posts-all", agencyOwnerId] });
+  qc.invalidateQueries({ queryKey: ["external-pending", agencyOwnerId] });
+  qc.invalidateQueries({ queryKey: ["operation-posts", agencyOwnerId] });
+  qc.invalidateQueries({ queryKey: ["manager-calendar"] });
+}
 
 export function useExternalClients() {
   const { agencyOwnerId } = useActiveAccount();
@@ -222,7 +243,7 @@ export function useExternalPosts(clientId: string | null) {
       if (error) throw error;
       return data as unknown as ExternalPost;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); qc.invalidateQueries({ queryKey: ["external-pending", agencyOwnerId] }); },
+    onSuccess: () => { invalidatePostsEverywhere(qc, agencyOwnerId, clientId); },
     onError: () => toast.error("Erro ao criar post."),
   });
 
@@ -271,8 +292,7 @@ export function useExternalPosts(clientId: string | null) {
     },
     onSuccess: (_d, vars) => {
       toast.success("Post atualizado!");
-      qc.invalidateQueries({ queryKey: key });
-      qc.invalidateQueries({ queryKey: ["external-pending", agencyOwnerId] });
+      invalidatePostsEverywhere(qc, agencyOwnerId, clientId);
       // Atualiza o histórico aberto no editor (a aba de Histórico lê essa chave).
       qc.invalidateQueries({ queryKey: ["approval-comments", vars.id] });
     },
@@ -281,7 +301,7 @@ export function useExternalPosts(clientId: string | null) {
 
   const remove = useMutation({
     mutationFn: async (id: string) => { const { error } = await sbFrom("posts").delete().eq("id", id); if (error) throw error; },
-    onSuccess: () => { toast.success("Post removido."); qc.invalidateQueries({ queryKey: key }); qc.invalidateQueries({ queryKey: ["external-pending", agencyOwnerId] }); },
+    onSuccess: () => { toast.success("Post removido."); invalidatePostsEverywhere(qc, agencyOwnerId, clientId); },
     onError: () => toast.error("Erro ao remover o post."),
   });
 
@@ -310,8 +330,10 @@ export function useExternalPosts(clientId: string | null) {
       toast.error("Erro ao mover o post.");
     },
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: key, refetchType: "none" });
-      qc.invalidateQueries({ queryKey: ["external-pending", agencyOwnerId] });
+      // Mantem o card onde a pessoa soltou (o cache otimista ja bate com o servidor),
+      // e propaga pro resto das telas. cria-posts refaz sem "pular" porque o valor
+      // otimista e o do banco sao iguais apos o sucesso.
+      invalidatePostsEverywhere(qc, agencyOwnerId, clientId);
     },
   });
 
@@ -333,7 +355,7 @@ export function useExternalPosts(clientId: string | null) {
       if (c?.prev) qc.setQueryData(key, c.prev);
       toast.error("Não consegui mudar a data.");
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: key, refetchType: "none" }),
+    onSettled: () => invalidatePostsEverywhere(qc, agencyOwnerId, clientId),
   });
 
   // Reorder OTIMISTA do kanban do Cria Post (dentro da coluna e entre colunas):
@@ -499,9 +521,7 @@ export function useUpdateExternalPost() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["external-posts-all", agencyOwnerId] });
-      qc.invalidateQueries({ queryKey: ["cria-posts"] });
-      qc.invalidateQueries({ queryKey: ["external-pending", agencyOwnerId] });
+      invalidatePostsEverywhere(qc, agencyOwnerId);
     },
     onError: () => toast.error("Não consegui salvar o post."),
   });
@@ -518,8 +538,7 @@ export function useMoveExternalPostDate() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["external-posts-all", agencyOwnerId] });
-      qc.invalidateQueries({ queryKey: ["cria-posts"] });
+      invalidatePostsEverywhere(qc, agencyOwnerId);
     },
   });
 }

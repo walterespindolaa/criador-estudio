@@ -9,7 +9,8 @@ import { ptBR } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, CalendarDays, Clock, ChevronDown, Users, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useExternalClients } from "@/hooks/useCriaPost";
+import { useActiveAccount } from "@/contexts/AccountContext";
+import { useExternalClients, invalidatePostsEverywhere } from "@/hooks/useCriaPost";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,6 +76,7 @@ const dkey = (d: Date) => format(d, "yyyy-MM-dd");
 
 export function ManagerCalendar() {
   const { user } = useAuth();
+  const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   const { clients } = useExternalClients();
   const [cursor, setCursor] = useState(() => new Date());
@@ -163,7 +165,9 @@ export function ManagerCalendar() {
       if (c?.prev) qc.setQueryData(["manager-calendar", user?.id], c.prev);
       toast.error("Erro ao atualizar.");
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ["manager-calendar", user?.id], refetchType: "none" }),
+    // Propaga o remarcar pro kanban, agenda, aprovacoes, home e o proprio calendario.
+    // O card ja esta no dia certo pelo update otimista, o refetch so confirma.
+    onSettled: () => invalidatePostsEverywhere(qc, agencyOwnerId),
   });
 
   // Salva os campos editáveis do post pelo popup (título, data, horário, status, legenda).
@@ -175,10 +179,7 @@ export function ManagerCalendar() {
     },
     onSuccess: () => {
       toast.success("Post atualizado!");
-      qc.invalidateQueries({ queryKey: ["manager-calendar", user?.id] });
-      qc.invalidateQueries({ queryKey: ["cria-posts"] });
-      qc.invalidateQueries({ queryKey: ["external-posts-all", user?.id] });
-      qc.invalidateQueries({ queryKey: ["external-pending", user?.id] });
+      invalidatePostsEverywhere(qc, agencyOwnerId);
       setEditPost(null);
     },
     onError: () => toast.error("Não consegui salvar o post."),

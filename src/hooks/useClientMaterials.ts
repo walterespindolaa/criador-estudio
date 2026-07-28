@@ -85,6 +85,13 @@ export function useClientMaterials(crmClientId: string | undefined) {
   });
 
   const invalidate = () => qc.invalidateQueries({ queryKey: key });
+  // Alem do quadro do cliente, atuar num material (mudar status / excluir) precisa
+  // baixar o contador da Central de Aprovacoes do gestor. Sem isto, aprovar/mexer num
+  // material que o cliente pediu nao atualizava a fila ["manager-pending-materials"].
+  const invalidateWithPending = () => {
+    qc.invalidateQueries({ queryKey: key });
+    qc.invalidateQueries({ queryKey: ["manager-pending-materials", agencyOwnerId] });
+  };
 
   const createMaterial = useMutation({
     mutationFn: async (input: MaterialInput): Promise<ClientMaterial> => {
@@ -146,7 +153,7 @@ export function useClientMaterials(crmClientId: string | undefined) {
       if (c?.prev) qc.setQueryData(key, c.prev);
       toast.error((e as Error)?.message ?? "Erro ao atualizar.");
     },
-    onSettled: invalidate,
+    onSettled: invalidateWithPending,
   });
 
   const deleteMaterial = useMutation({
@@ -154,7 +161,7 @@ export function useClientMaterials(crmClientId: string | undefined) {
       const { error } = await sbFrom("client_materials").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: invalidate,
+    onSuccess: invalidateWithPending,
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao excluir."),
   });
 
