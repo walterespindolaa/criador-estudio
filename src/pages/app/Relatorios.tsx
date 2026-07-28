@@ -404,8 +404,11 @@ const Relatorios = () => {
     const withReach = prevMedia.filter((mi) => mVal(mi, "reach") > 0);
     return mean(withReach.map((mi) => mVal(mi, "reach")));
   }, [prevMedia]);
-  const avgReachDelta =
-    prevAvgReach === 0 ? (avgReach > 0 ? 100 : 0) : ((avgReach - prevAvgReach) / prevAvgReach) * 100;
+  // Só há delta REAL quando existe base de comparação (período anterior > 0).
+  // Sem base (conta nova / não postou antes) NÃO inventamos "+100%": isso ia
+  // parar no relatório white-label entregue ao cliente final como crescimento falso.
+  const hasReachBaseline = prevAvgReach > 0;
+  const avgReachDelta = hasReachBaseline ? ((avgReach - prevAvgReach) / prevAvgReach) * 100 : 0;
 
   const avgEngagement = useMemo(() => {
     const withReach = periodMedia.filter((mi) => mVal(mi, "reach") > 0);
@@ -610,7 +613,7 @@ const Relatorios = () => {
           ? {
               posts_analisados: periodMedia.length,
               alcance_medio: Math.round(avgReach),
-              alcance_medio_delta_pct: Math.round(avgReachDelta),
+              alcance_medio_delta_pct: hasReachBaseline ? Math.round(avgReachDelta) : null,
               engajamento_medio_pct: Number(avgEngagement.toFixed(1)),
               formato_que_mais_rende: formatPerf[0]
                 ? { formato: formatPerf[0].label, alcance_medio: Math.round(formatPerf[0].avg) }
@@ -802,14 +805,16 @@ const Relatorios = () => {
                 <span
                   className={cn(
                     "font-semibold",
-                    avgReachDelta > 0
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : avgReachDelta < 0
-                        ? "text-red-600 dark:text-red-400"
-                        : "text-muted-foreground"
+                    !hasReachBaseline
+                      ? "text-muted-foreground"
+                      : avgReachDelta > 0
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : avgReachDelta < 0
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-muted-foreground"
                   )}
                 >
-                  {formatPercent(avgReachDelta)}
+                  {hasReachBaseline ? formatPercent(avgReachDelta) : "—"}
                 </span>{" "}
                 vs período anterior · eng.{" "}
                 <span className="font-semibold text-foreground">{formatEngagement(avgEngagement)}</span>

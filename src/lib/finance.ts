@@ -124,8 +124,63 @@ export type ReceitaMes = {
 // crm_client_id / month_ref entram aqui pra cruzar mensalidade × cliente × mês
 // (dedup da paga manualmente e corte do cliente inativo, ver receitaDoMesPJ).
 type RecLike = { context?: string | null; type: string; status: string; category?: string | null; amount: number | string; date: string; crm_client_id?: string | null };
-type MonthlyLike = { status: string; amount: number | string; crm_client_id?: string | null; month_ref?: string | null };
+type MonthlyLike = { id?: string | null; status: string; amount: number | string; crm_client_id?: string | null; month_ref?: string | null };
 type ClientLike = { id?: string | null; status?: string | null; monthly_value?: number | null; contract_end_date?: string | null };
+
+/**
+ * Clientes cuja mensalidade do mês JÁ foi lançada como fin_record pago
+ * (entrada/pago/categoria "Mensalidade"). Esse dinheiro já está em `recebido`,
+ * então a instância pendente correspondente NÃO deve somar de novo.
+ */
+export function paidMonthlyClientIds(records: RecLike[], ym: string): Set<string> {
+  return new Set(
+    records
+      .filter(
+        (r) =>
+          (r.context ?? "pj") === "pj" &&
+          String(r.date).slice(0, 7) === ym &&
+          r.type === "entrada" &&
+          r.status === "pago" &&
+          (r.category ?? "") === "Mensalidade" &&
+          r.crm_client_id,
+      )
+      .map((r) => String(r.crm_client_id)),
+  );
+}
+
+/**
+ * FONTE ÚNICA das mensalidades pendentes que REALMENTE contam como "a receber".
+ * Use em TODA agregação do Caixa (visão geral, rentabilidade, lançamentos,
+ * calendário, inadimplência, ficha do cliente) pra os números baterem entre abas.
+ *
+ * Tira da conta:
+ *  - BUG 1 (dedup): mensalidade do mês já lançada à mão como paga (senão conta 2x).
+ *  - BUG 3 (fantasma): cliente inativo/encerrado no mês da instância.
+ *  - BUG 3b (excluído): cliente que saiu da carteira (soft delete) — a instância
+ *    pendente vira "a receber" invisível. Se há carteira carregada e o cliente
+ *    não está nela, não soma. (Guardado por clients.length > 0 pra não zerar
+ *    durante o carregamento.)
+ */
+export function billablePendingMonthlies<M extends MonthlyLike>(
+  monthlies: M[],
+  records: RecLike[],
+  clients: ClientLike[],
+  ym: string,
+): M[] {
+  const pagos = paidMonthlyClientIds(records, ym);
+  const clientById = new Map(clients.filter((c) => c.id).map((c) => [String(c.id), c] as const));
+  const temCarteira = clients.length > 0;
+  return monthlies.filter((m) => {
+    if (m.status !== "pendente") return false;
+    const cid = m.crm_client_id ? String(m.crm_client_id) : null;
+    if (!cid) return true; // instância sem cliente vinculado, mantém.
+    if (pagos.has(cid)) return false; // BUG 1
+    const c = clientById.get(cid);
+    if (!c) return !temCarteira; // BUG 3b: cliente excluído da carteira.
+    const mesInstancia = m.month_ref ? String(m.month_ref).slice(0, 7) : ym;
+    return mensalidadeAtivaNoMes(c, mesInstancia); // BUG 3
+  });
+}
 
 /**
  * Reconcilia a receita PJ de um mês a partir das 3 fontes já carregadas.
@@ -146,37 +201,9 @@ export function receitaDoMesPJ(
   const recebido = sum(inMonth.filter((r) => r.type === "entrada" && r.status === "pago"));
   const aReceberAvulso = sum(inMonth.filter((r) => r.type === "entrada" && r.status !== "pago"));
 
-  // BUG 1 (dedup): clientes cujo mês JÁ tem uma mensalidade PAGA lançada como
-  // fin_record (entrada/pago/categoria "Mensalidade"). Esse dinheiro já entrou
-  // em `recebido`. Se o usuário lançou a mensalidade à mão (em vez de "Marcar
-  // recebido"), a instância em fin_monthly continua "pendente" e a MESMA
-  // mensalidade entraria de novo em aReceberMensal. Aqui ignoramos a pendente
-  // desses clientes pra não contar o mesmo dinheiro 2x. Match por cliente (o
-  // recorte já é do mês ym, tanto o record quanto a instância).
-  const pagosMensalidade = new Set(
-    inMonth
-      .filter((r) => r.type === "entrada" && r.status === "pago" && (r.category ?? "") === "Mensalidade" && r.crm_client_id)
-      .map((r) => String(r.crm_client_id)),
-  );
-
-  // BUG 3: cliente inativado/encerrado deixava a instância pendente "fantasma"
-  // contando como a receber/inadimplente. Cruzamos a instância com o cliente
-  // (por crm_client_id) e só somamos se ele ainda está ativo naquele mês.
-  const clientById = new Map(clients.filter((c) => c.id).map((c) => [String(c.id), c] as const));
-
-  const aReceberMensal = monthlies
-    .filter((m) => m.status === "pendente")
-    .filter((m) => {
-      const cid = m.crm_client_id ? String(m.crm_client_id) : null;
-      if (!cid) return true; // instância sem cliente vinculado, mantém como antes.
-      // BUG 1: mensalidade do mesmo cliente já entrou como paga, não soma de novo.
-      if (pagosMensalidade.has(cid)) return false;
-      // BUG 3: cliente não ativo no mês da instância, para de contar.
-      const c = clientById.get(cid);
-      const mesInstancia = m.month_ref ? String(m.month_ref).slice(0, 7) : ym;
-      if (c && !mensalidadeAtivaNoMes(c, mesInstancia)) return false;
-      return true;
-    })
+  // Mensalidades pendentes que realmente contam (dedup da paga à mão + corte de
+  // cliente inativo/excluído). MESMA regra usada em todas as abas do Caixa.
+  const aReceberMensal = billablePendingMonthlies(monthlies, records, clients, ym)
     .reduce((s, m) => s + Number(m.amount), 0);
   const aReceber = aReceberMensal + aReceberAvulso;
   const previstoBruto = recebido + aReceber;

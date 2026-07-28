@@ -447,14 +447,23 @@ const Arquivos = () => {
   const deleteDriveRef = async (ref: DriveRef) => {
     try {
       // 1) Bunny: deletar no Bunny PRIMEIRO (a edge confere a ref antes de remover).
+      // A edge trata 404 como sucesso (idempotência); só retorna erro em falha real.
+      // Se o invoke falhar, ABORTA: NÃO apagamos a ref (senão o vídeo pago fica órfão
+      // no Bunny sem ninguém pra rastreá-lo). O usuário tenta de novo.
       if (ref.provider === "bunny" && ref.external_file_id) {
+        let bunnyFailed = false;
         try {
           const { error } = await supabase.functions.invoke("bunny-delete-video", {
             body: { videoGuid: ref.external_file_id, accountId: ownerId },
           });
-          if (error) console.error("[bunny-delete-video] invoke error", error);
+          if (error) { console.error("[bunny-delete-video] invoke error", error); bunnyFailed = true; }
         } catch (e) {
           console.error("[bunny-delete-video] invoke threw", e);
+          bunnyFailed = true;
+        }
+        if (bunnyFailed) {
+          toast.error("Não foi possível remover o vídeo agora, tente de novo.");
+          return;
         }
       }
       // 2) Storage: remover do bucket "media" (external_file_id guarda o path).

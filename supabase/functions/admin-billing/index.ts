@@ -58,7 +58,9 @@ serve(async (req) => {
             const interval = price?.recurring?.interval ?? "month";
             const factor = interval === "year" ? 1 / 12 : interval === "week" ? 4.345 : interval === "day" ? 30 : 1;
             const monthly = amt * factor;
-            mrrCents += monthly;
+            // MRR = só pagantes reais. Trial ainda não paga, então NÃO entra no MRR
+            // (o card e o breakdown por plano só contam "active", batendo entre si).
+            if (status === "active") mrrCents += monthly;
             subMrr += monthly;
             const product = price?.product as { name?: string } | string | undefined;
             const pName = typeof product === "object" ? product?.name : undefined;

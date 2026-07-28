@@ -99,15 +99,26 @@ async function syncConnection(
     tot[row.name] = Number(row.total_value?.value ?? row.values?.[0]?.value ?? 0);
   }
 
-  await admin.from('social_metrics_daily').upsert({
+  // Payload base do dia: só o que veio do /me (sempre disponível quando meRes.ok).
+  // Os totais de conta (profile_views/accounts_engaged/total_interactions) vêm de
+  // uma chamada best-effort que pode falhar por rate limit e voltar VAZIA. Se
+  // incluíssemos essas chaves sempre, um sync que falhou os totais gravaria null
+  // por cima do valor já capturado do dia. Por isso só damos spread dos campos de
+  // `tot` que realmente vieram (chave presente no objeto), preservando o resto.
+  const dailyRow: Record<string, unknown> = {
     user_id: userId, crm_client_id: crmClientId, provider: 'instagram', date: today,
     followers: me.followers_count ?? null,
-    profile_views: tot.profile_views ?? null,
-    accounts_engaged: tot.accounts_engaged ?? null,
-    total_interactions: tot.total_interactions ?? null,
     metrics: { media_count: me.media_count ?? null },
     captured_at: new Date().toISOString(),
-  } as never, { onConflict: 'user_id,crm_client_id,provider,date' });
+  };
+  if ('profile_views' in tot) dailyRow.profile_views = tot.profile_views;
+  if ('accounts_engaged' in tot) dailyRow.accounts_engaged = tot.accounts_engaged;
+  if ('total_interactions' in tot) dailyRow.total_interactions = tot.total_interactions;
+
+  await admin.from('social_metrics_daily').upsert(
+    dailyRow as never,
+    { onConflict: 'user_id,crm_client_id,provider,date' },
+  );
   await admin.from('social_connections').update({
     username: me.username ?? null, account_type: me.account_type ?? null,
     profile_picture_url: me.profile_picture_url ?? null, updated_at: new Date().toISOString(),

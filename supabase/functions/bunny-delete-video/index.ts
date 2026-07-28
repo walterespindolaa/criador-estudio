@@ -49,16 +49,21 @@ Deno.serve(async (req) => {
       if (!membership) return json({ error: "Sem permissão para essa conta" }, 403);
     }
 
-    // A checagem de permissão da conta acima já é o guard suficiente, o guid é
-    // um UUID aleatório só conhecido por quem subiu. Buscamos a ref só pra log
-    // (vídeo pode estar pending, sem row ainda, orphan no Bunny senão).
+    // POSSE OBRIGATÓRIA: o videoGuid NÃO é segredo — ele aparece na URL de embed
+    // do player (iframe.mediadelivery.net/embed/{lib}/{guid}), visível pra
+    // clientes no portal de aprovação e pra colaboradores. Sem checar posse,
+    // qualquer usuário logado deletaria o vídeo de outra conta. Exigimos que
+    // exista uma ref ligando este guid à conta `owner` (que o usuário já provou
+    // ser dono/gerente ativo acima). Sem ref correspondente → nega.
     const { data: ref } = await supabase
       .from("external_media_refs")
-      .select("id")
+      .select("id, user_id")
       .eq("bunny_video_id", videoGuid)
-      .eq("user_id", owner)
       .maybeSingle();
-    console.log("[bunny-delete-video] ref lookup", { videoGuid, owner, refExists: !!ref });
+    if (!ref || String((ref as { user_id?: string }).user_id) !== String(owner)) {
+      console.warn("[bunny-delete-video] posse negada", { videoGuid, owner, userId });
+      return json({ error: "Vídeo não pertence a esta conta" }, 403);
+    }
 
     const delRes = await fetch(
       `https://video.bunnycdn.com/library/${libraryId}/videos/${videoGuid}`,

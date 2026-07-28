@@ -33,9 +33,17 @@ serve(async (req) => {
 
     let deleted = 0;
     for (const file of expiredFiles) {
-      // Deleta do Supabase Storage
+      // Deleta do Supabase Storage. Só apagamos a linha do banco (nosso índice do
+      // arquivo) se o remove do bucket confirmar — senão o arquivo fica órfão no
+      // storage sem ninguém pra rastreá-lo. Erro de "não encontrado" conta como ok
+      // (o objeto já sumiu). Qualquer outro erro: loga e PULA (fica pra próxima rodada).
       if (file.storage_path) {
-        await supabase.storage.from("files").remove([file.storage_path]);
+        const { error: remErr } = await supabase.storage.from("files").remove([file.storage_path]);
+        const naoEncontrado = remErr && /not[_ ]?found|does not exist|no such/i.test(remErr.message || "");
+        if (remErr && !naoEncontrado) {
+          console.error("[storage-cleanup] remove falhou, mantém a linha:", file.id, remErr.message);
+          continue;
+        }
       }
       // Deleta o registro (trigger atualiza storage_used_bytes automaticamente)
       const { error: delErr } = await supabase
@@ -69,6 +77,9 @@ async function notifyHighUsageUsers() {
   if (!users) return;
 
   for (const user of users) {
+    // Sem cota definida (0/null): dividir daria Infinity e notificaria "Infinity%".
+    // Pula o usuário — não dá pra calcular percentual sem um denominador válido.
+    if (!user.storage_quota_bytes || user.storage_quota_bytes <= 0) continue;
     const pct = user.storage_used_bytes / user.storage_quota_bytes;
     if (pct >= 0.8) {
       // Verifica se já enviou notificação hoje

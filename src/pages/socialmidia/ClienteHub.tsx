@@ -1306,7 +1306,22 @@ function FinanceTab({ clientId, clientName, monthlyValue, paymentDay, clientStat
   // A mensalidade PENDENTE do mês (ainda sem fin_record) entra como "a receber",
   // igual à aba Clientes do Cria Caixa, pra os números baterem entre as telas.
   // Quando recebida, ela vira fin_record pago e já cai em "recebido" acima.
-  const aReceberMensal = range === "mes" && monthlyDoMes?.status === "pendente" ? Number(monthlyDoMes.amount) : 0;
+  // DEDUP: se a mensalidade do mês já foi lançada à mão como paga (fin_record
+  // entrada/pago/categoria "Mensalidade"), NÃO soma de novo em "a receber",
+  // senão a ficha contava a mesma mensalidade 2x (recebido + a receber).
+  const mensalPagaNoMes =
+    range === "mes" &&
+    rows.some(
+      (r) =>
+        r.type === "entrada" &&
+        r.status === "pago" &&
+        (r.category ?? "") === "Mensalidade" &&
+        String(r.date).slice(0, 7) === ymPrefix,
+    );
+  const aReceberMensal =
+    range === "mes" && monthlyDoMes?.status === "pendente" && !mensalPagaNoMes
+      ? Number(monthlyDoMes.amount)
+      : 0;
   const aReceber = rows.filter((r) => r.type === "entrada" && r.status !== "pago").reduce((s, r) => s + Number(r.amount), 0) + aReceberMensal;
   const receita = recebido + aReceber;
   const custo = rows.filter((r) => r.type === "despesa").reduce((s, r) => s + Number(r.amount), 0);

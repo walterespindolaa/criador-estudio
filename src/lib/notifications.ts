@@ -39,6 +39,16 @@ export async function generateNotifications(userId: string, opts?: { isManager?:
 async function runGenerate(userId: string) {
   const today = toISODateBR();
 
+  // Dedup diária no fuso BR: `created_at` é timestamp UTC, então entre ~21h-00h BRT
+  // ele já cai no dia UTC seguinte. Comparar `created_at.startsWith(today)` (com
+  // today em BR) falhava nesse intervalo e gerava dica/lembrete + push duplicados.
+  // Convertemos o created_at pro dia de calendário BR ANTES de comparar.
+  const isTodayBR = (createdAt?: string | null) => {
+    if (!createdAt) return false;
+    const d = new Date(createdAt);
+    return !isNaN(d.getTime()) && toISODateBR(d) === today;
+  };
+
   // Get current week range (dias de calendário no fuso BR)
   const now = new Date();
   const monday = new Date(now);
@@ -88,7 +98,7 @@ async function runGenerate(userId: string) {
     ? Math.floor((now.getTime() - new Date(lastPublished).getTime()) / 86400000)
     : null;
 
-  const todayReminder = existingNotifs.find(n => n.type === "lembrete_postar" && n.created_at?.startsWith(today));
+  const todayReminder = existingNotifs.find(n => n.type === "lembrete_postar" && isTodayBR(n.created_at));
   if (!todayReminder) {
     if (daysSinceLast !== null && daysSinceLast >= 3) {
       await supabase.from("notifications").insert({
@@ -112,7 +122,7 @@ async function runGenerate(userId: string) {
 
   // 3. Scheduled posts for today
   const todayScheduled = posts.filter(p => p.scheduled_date === today && p.status !== "publicado");
-  const todayScheduledNotif = existingNotifs.find(n => n.type === "lembrete_postar" && n.created_at?.startsWith(today));
+  const todayScheduledNotif = existingNotifs.find(n => n.type === "lembrete_postar" && isTodayBR(n.created_at));
   if (todayScheduled.length > 0 && !todayScheduledNotif) {
     await supabase.from("notifications").insert({
       user_id: userId,
@@ -125,7 +135,7 @@ async function runGenerate(userId: string) {
 
   // 4. Posts em andamento (pendentes de publicação)
   const pendentes = posts.filter(p => p.status !== "publicado").length;
-  const pendentesHoje = existingNotifs.find(n => n.type === "posts_pendentes" && n.created_at?.startsWith(today));
+  const pendentesHoje = existingNotifs.find(n => n.type === "posts_pendentes" && isTodayBR(n.created_at));
   if (pendentes >= 3 && !pendentesHoje) {
     await supabase.from("notifications").insert({
       user_id: userId,
@@ -137,7 +147,7 @@ async function runGenerate(userId: string) {
   }
 
   // 5. Dica do dia (rotativa, leva pra biblioteca)
-  const tipHoje = existingNotifs.find(n => n.type === "dica_dia" && n.created_at?.startsWith(today));
+  const tipHoje = existingNotifs.find(n => n.type === "dica_dia" && isTodayBR(n.created_at));
   if (!tipHoje) {
     const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000);
     const tip = TIPS[dayOfYear % TIPS.length];

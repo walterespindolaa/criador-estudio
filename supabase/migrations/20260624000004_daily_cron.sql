@@ -21,7 +21,7 @@ select cron.schedule(
       url := 'https://exuxlwdnkgmhtnwoyvwo.supabase.co/functions/v1/daily-notifications',
       headers := jsonb_build_object(
         'Content-Type', 'application/json',
-        'x-internal-secret', '57892381207d35096c8b2eca38a0bca7f286040322401a2c'
+        'x-internal-secret', '__INTERNAL_PUSH_SECRET__'  -- SEGREDO ROTACIONADO: preencher antes de rodar (Vault / SQL manual). NAO commitar valor real.
       ),
       body := '{}'::jsonb
     );

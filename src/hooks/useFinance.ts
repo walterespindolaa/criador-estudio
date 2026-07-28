@@ -152,10 +152,27 @@ export function useGenerateRecurring() {
     mutationFn: async (rows: FinRecordInput[]): Promise<number> => {
       if (!agencyOwnerId) throw new Error("Sem sessão");
       if (rows.length === 0) return 0;
-      const payload = rows.map((r) => ({ ...r, manager_id: agencyOwnerId }));
+      // Dedup à prova de duplo clique: o `disabled` do botão é assíncrono e não
+      // segura 2 cliques rápidos. Antes de inserir, relemos o que já existe pra
+      // esses recorrentes no mês e removemos, pra não duplicar as despesas/entradas.
+      const ids = rows.map((r) => r.recurring_id).filter(Boolean) as string[];
+      let toInsert = rows;
+      if (ids.length > 0) {
+        const { data: existing } = await sbFrom("fin_records")
+          .select("recurring_id, date")
+          .eq("manager_id", agencyOwnerId)
+          .in("recurring_id", ids);
+        const taken = new Set(
+          ((existing ?? []) as { recurring_id: string | null; date: string }[])
+            .map((e) => `${e.recurring_id}|${String(e.date).slice(0, 7)}`),
+        );
+        toInsert = rows.filter((r) => !taken.has(`${r.recurring_id}|${String(r.date).slice(0, 7)}`));
+      }
+      if (toInsert.length === 0) return 0;
+      const payload = toInsert.map((r) => ({ ...r, manager_id: agencyOwnerId }));
       const { error } = await sbFrom("fin_records").insert(payload as never);
       if (error) throw error;
-      return rows.length;
+      return toInsert.length;
     },
     // refetchType "all": a home (useOperationSignals) e a ficha do cliente usam
     // janelas de fin-records que ficam INATIVAS quando você está no Cria Caixa.
@@ -309,25 +326,30 @@ export function useConfirmMonthly() {
   return useMutation({
     mutationFn: async ({ m, clientName }: { m: FinMonthly; clientName: string }) => {
       if (!agencyOwnerId) throw new Error("Sem sessão");
-      // BUG 2 (trava idempotente): o disabled={isPending} é assíncrono, então um
-      // duplo toque no mobile podia disparar 2 vezes e inserir 2 fin_records da
-      // MESMA mensalidade (ambos contando), com o Desfazer apagando só o último.
-      // Antes de lançar, relemos a instância no banco: se ela já está "pago" (ou
-      // já tem fin_record vinculado), o recebimento já existe, então saímos sem
-      // inserir de novo. Assim, mesmo com 2 cliques, só nasce 1 recebimento.
-      const { data: fresh, error: e0 } = await sbFrom("fin_monthly")
-        .select("status, fin_record_id").eq("id", m.id).single();
+      // BUG 2 (trava idempotente ATÔMICA): o disabled={isPending} é assíncrono,
+      // então um duplo toque no mobile podia disparar 2x e inserir 2 fin_records
+      // da MESMA mensalidade. A leitura-checagem-inserção antiga tinha janela de
+      // corrida (os 2 cliques liam "pendente" antes de qualquer gravar). Agora
+      // REIVINDICAMOS a instância de forma atômica: um único UPDATE condicional
+      // (id + status='pendente'). O Postgres garante que só UM clique casa a
+      // linha; o outro casa 0 linhas e sai. Só quem reivindicou insere o lançamento.
+      const { data: claimed, error: e0 } = await sbFrom("fin_monthly")
+        .update({ status: "pago", paid_at: new Date().toISOString() } as never)
+        .eq("id", m.id).eq("status", "pendente").select("id").maybeSingle();
       if (e0) throw e0;
-      const cur = fresh as { status: string; fin_record_id: string | null } | null;
-      if (cur && (cur.status === "pago" || cur.fin_record_id)) return;
+      if (!claimed) return; // já estava pago/pulado, ou o outro clique venceu a corrida.
       const { data: rec, error: e1 } = await sbFrom("fin_records").insert({
         manager_id: agencyOwnerId, crm_client_id: m.crm_client_id, context: "pj",
         type: "entrada", description: `Mensalidade, ${clientName}`, category: "Mensalidade",
         amount: m.amount, status: "pago", date: m.due_date, recurring: true,
       } as never).select("id").single();
-      if (e1) throw e1;
+      if (e1) {
+        // Rollback: destrava a instância pra não ficar "pago" sem lançamento.
+        await sbFrom("fin_monthly").update({ status: "pendente", paid_at: null } as never).eq("id", m.id);
+        throw e1;
+      }
       const { error: e2 } = await sbFrom("fin_monthly").update({
-        status: "pago", paid_at: new Date().toISOString(), fin_record_id: (rec as { id: string }).id,
+        fin_record_id: (rec as { id: string }).id,
       } as never).eq("id", m.id);
       if (e2) throw e2;
     },

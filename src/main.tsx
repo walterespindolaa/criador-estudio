@@ -20,22 +20,29 @@ try {
   if (savedSidebar) applySidebarColor(savedSidebar);
 } catch { /* localStorage indisponível: segue com o padrão */ }
 
-// Apply saved font immediately to avoid flash of unstyled text
-const savedFont = localStorage.getItem("theme_font");
-if (savedFont) {
-  const FONT_MAP: Record<string, { display: string; body: string }> = {
-    moderno: { display: "'Plus Jakarta Sans', sans-serif", body: "'Nunito Sans', sans-serif" },
-    elegante: { display: "'DM Serif Display', serif", body: "'DM Sans', sans-serif" },
-    criativo: { display: "'Space Grotesk', sans-serif", body: "'Outfit', sans-serif" },
-    suave: { display: "'Quicksand', sans-serif", body: "'Nunito', sans-serif" },
-    bold: { display: "'Sora', sans-serif", body: "'Inter', sans-serif" },
-  };
-  const opt = FONT_MAP[savedFont];
-  if (opt) {
-    document.documentElement.style.setProperty("--active-font-display", opt.display);
-    document.documentElement.style.setProperty("--active-font-body", opt.body);
+// Apply saved font immediately to avoid flash of unstyled text.
+// try/catch OBRIGATÓRIO: em navegador/webview com storage bloqueado (cookies
+// desabilitados, modo restrito), localStorage.getItem LANÇA SecurityError. Como
+// isto roda no load do módulo, antes do React e de qualquer ErrorBoundary, sem
+// o guard o bundle inteiro quebrava → tela branca em TODAS as rotas (inclusive
+// os links públicos de aprovação do cliente).
+try {
+  const savedFont = localStorage.getItem("theme_font");
+  if (savedFont) {
+    const FONT_MAP: Record<string, { display: string; body: string }> = {
+      moderno: { display: "'Plus Jakarta Sans', sans-serif", body: "'Nunito Sans', sans-serif" },
+      elegante: { display: "'DM Serif Display', serif", body: "'DM Sans', sans-serif" },
+      criativo: { display: "'Space Grotesk', sans-serif", body: "'Outfit', sans-serif" },
+      suave: { display: "'Quicksand', sans-serif", body: "'Nunito', sans-serif" },
+      bold: { display: "'Sora', sans-serif", body: "'Inter', sans-serif" },
+    };
+    const opt = FONT_MAP[savedFont];
+    if (opt) {
+      document.documentElement.style.setProperty("--active-font-display", opt.display);
+      document.documentElement.style.setProperty("--active-font-body", opt.body);
+    }
   }
-}
+} catch { /* localStorage indisponível: segue com a fonte padrão */ }
 
 createRoot(document.getElementById("root")!).render(
   <I18nProvider>

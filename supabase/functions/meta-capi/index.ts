@@ -78,11 +78,21 @@ serve(async (req) => {
       }],
     };
 
-    const res = await fetch(`https://graph.facebook.com/v19.0/${PIXEL_ID}/events?access_token=${encodeURIComponent(TOKEN)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    // Timeout de 15s: se a Graph travar, não deixamos a request pendurada. O abort
+    // vira exceção e cai no catch abaixo, que responde ok:false 200 (não quebra o front).
+    let res: Response;
+    try {
+      res = await fetch(`https://graph.facebook.com/v19.0/${PIXEL_ID}/events?access_token=${encodeURIComponent(TOKEN)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(15000),
+      });
+    } catch (e) {
+      const timeout = e instanceof DOMException && e.name === "TimeoutError";
+      console.error("[meta-capi] graph fetch falhou", timeout ? "(timeout 15s)" : String(e));
+      return json(cors, { ok: false }, 200); // não quebra o front
+    }
     if (!res.ok) {
       const t = await res.text();
       console.error("[meta-capi] graph error", res.status, t);

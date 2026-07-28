@@ -349,6 +349,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
       next.add(ref.id);
       return next;
     });
+    // Só limpamos a UI local quando a remoção realmente foi concluída; se abortar
+    // (falha no Bunny), o item precisa continuar visível pra o usuário tentar de novo.
+    let removalDone = false;
     try {
       // Pega o file_size pra devolver pra cota (DriveRef em memória não tem esse campo).
       let refSize: number | null = null;
@@ -363,18 +366,27 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
       }
 
       // Vídeos do Bunny: tentar deletar no Bunny PRIMEIRO (a edge confere a ref antes de deletar).
-      // Se o invoke falhar, ainda removemos a row localmente, o purge de 30 dias é a rede de segurança.
+      // A edge trata 404 como sucesso (idempotência); só retorna erro em falha real.
+      // Se o invoke falhar, ABORTA a remoção: NÃO apagamos a ref (senão o vídeo pago
+      // fica órfão no Bunny sem ninguém pra rastreá-lo). O usuário tenta de novo.
       if (ref.provider === "bunny" && ref.external_file_id) {
+        let bunnyFailed = false;
         try {
           const { error } = await supabase.functions.invoke("bunny-delete-video", {
             body: { videoGuid: ref.external_file_id, accountId: userId },
           });
-          if (error) console.error("[bunny-delete-video] invoke error", error);
+          if (error) { console.error("[bunny-delete-video] invoke error", error); bunnyFailed = true; }
         } catch (e) {
           console.error("[bunny-delete-video] invoke threw", e);
+          bunnyFailed = true;
+        }
+        if (bunnyFailed) {
+          toast.error("Não foi possível remover o vídeo agora, tente de novo.");
+          return; // finally libera o lock; a ref e a UI local permanecem
         }
       }
       await supabase.from("external_media_refs").delete().eq("id", ref.id);
+      removalDone = true;
 
       // Devolve cota (bunny + storage). Drive nunca conta.
       if (countsTowardQuota && refSize && refSize > 0 && userId) {
@@ -386,9 +398,12 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
         queryClient.invalidateQueries({ queryKey: ["profile"] });
       }
     } finally {
-      // Sempre limpar UI local, em ambos os arrays, e liberar o lock.
-      setPendingDriveFiles((prev) => prev.filter((f) => f.id !== ref.id));
-      setDriveMedia((prev) => prev.filter((m) => m.id !== ref.id));
+      // Só limpa a UI local se a remoção foi concluída (abortou = item permanece).
+      // O lock é SEMPRE liberado.
+      if (removalDone) {
+        setPendingDriveFiles((prev) => prev.filter((f) => f.id !== ref.id));
+        setDriveMedia((prev) => prev.filter((m) => m.id !== ref.id));
+      }
       setRemovingIds((prev) => {
         const next = new Set(prev);
         next.delete(ref.id);

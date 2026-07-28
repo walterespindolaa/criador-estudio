@@ -12,12 +12,26 @@ Deno.serve(async (req) => {
       .select("id, provider, external_file_id, bunny_video_id")
       .not("expires_at", "is", null).lt("expires_at", new Date().toISOString()).limit(200);
     let removed = 0;
+    // 404 = o arquivo já não existe no Bunny → tratamos como sucesso (ok deletar a ref).
+    const okOrGone = (res: Response) => res.ok || res.status === 404;
     for (const r of refs ?? []) {
       try {
-        if (r.provider === "bunny_storage" && r.external_file_id)
-          await fetch(`https://${host}/${zone}/${r.external_file_id}`, { method: "DELETE", headers: { AccessKey: pass } }).catch(() => {});
-        if (r.bunny_video_id)
-          await fetch(`https://video.bunnycdn.com/library/${lib}/videos/${r.bunny_video_id}`, { method: "DELETE", headers: { AccessKey: apiKey } }).catch(() => {});
+        // Só apagamos a ref do banco (nosso ÚNICO índice do arquivo) se o delete
+        // remoto realmente confirmou. Se o Bunny falhar (rate limit / instabilidade),
+        // logamos e PULAMOS esta ref — na próxima rodada ela ainda estará aqui pra
+        // ser removida. Perder a ref sem apagar o arquivo = mídia órfã paga.
+        let remoteOk = true;
+        if (r.provider === "bunny_storage" && r.external_file_id) {
+          const res = await fetch(`https://${host}/${zone}/${r.external_file_id}`, { method: "DELETE", headers: { AccessKey: pass } })
+            .catch((e) => { console.error("[criapost-media-cleanup] bunny storage delete threw", r.id, String(e)); return null; });
+          if (!res || !okOrGone(res)) { console.error("[criapost-media-cleanup] bunny storage delete falhou", r.id, res?.status); remoteOk = false; }
+        }
+        if (remoteOk && r.bunny_video_id) {
+          const res = await fetch(`https://video.bunnycdn.com/library/${lib}/videos/${r.bunny_video_id}`, { method: "DELETE", headers: { AccessKey: apiKey } })
+            .catch((e) => { console.error("[criapost-media-cleanup] bunny video delete threw", r.id, String(e)); return null; });
+          if (!res || !okOrGone(res)) { console.error("[criapost-media-cleanup] bunny video delete falhou", r.id, res?.status); remoteOk = false; }
+        }
+        if (!remoteOk) continue; // não apaga a ref: preserva o único índice do arquivo
         await svc.from("external_media_refs").delete().eq("id", r.id);
         removed++;
       } catch (_) {}

@@ -15,8 +15,6 @@ Deno.serve(async (req) => {
     if (!secret || secret !== Deno.env.get("INTERNAL_PUSH_SECRET")) return json({ error: "unauthorized" }, 401);
 
     const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    // Heartbeat: registra que este cron executou (visível no admin). Não-fatal.
-    await svc.from("cron_runs").upsert({ job: "daily-notifications", last_run_at: new Date().toISOString(), ok: true }, { onConflict: "job" });
     const dayMs = 86400000;
     const now = Date.now();
     const iso = (ms: number) => new Date(ms).toISOString();
@@ -84,11 +82,27 @@ Deno.serve(async (req) => {
     }
 
     // Insert em lote (1 chamada), o trigger de push dispara por linha.
-    if (rows.length) await svc.from("notifications").insert(rows);
+    // Checa o erro: sem isso, uma falha no insert passava batido e o cron
+    // reportava "created:N" sem ter criado nada (e o heartbeat dizia ok:true).
+    if (rows.length) {
+      const { error: insErr } = await svc.from("notifications").insert(rows);
+      if (insErr) {
+        console.error("[daily-notifications] insert error:", insErr);
+        await svc.from("cron_runs").upsert({ job: "daily-notifications", last_run_at: new Date().toISOString(), ok: false, detail: insErr.message }, { onConflict: "job" });
+        return json({ ok: false, error: insErr.message }, 500);
+      }
+    }
 
+    // Heartbeat de SUCESSO só depois do insert dar certo (honesto no admin).
+    await svc.from("cron_runs").upsert({ job: "daily-notifications", last_run_at: new Date().toISOString(), ok: true, detail: null }, { onConflict: "job" });
     return json({ ok: true, created: rows.length });
   } catch (e) {
     console.error("[daily-notifications] error:", e);
+    // Heartbeat de FALHA: registra que a rodada quebrou (visível no admin).
+    try {
+      const svc2 = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      await svc2.from("cron_runs").upsert({ job: "daily-notifications", last_run_at: new Date().toISOString(), ok: false, detail: String(e) }, { onConflict: "job" });
+    } catch (_) { /* heartbeat é best-effort */ }
     return json({ error: "internal_error" }, 500);
   }
 });

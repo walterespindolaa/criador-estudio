@@ -15,9 +15,15 @@ async function rateOk(svc: SupabaseClient, userId: string): Promise<boolean> {
     const { data, error } = await svc.rpc("check_and_increment_rate_limit", {
       _user_id: userId, _scope: "saved-fetch", _window_key: windowKey, _limit: 20,
     });
-    if (error) return true;
-    return data !== false;
-  } catch { return true; }
+    // O RPC devolve uma LINHA com { allowed, current_count, limit } — nunca o
+    // boolean `false`. O código antigo (`data !== false`) era sempre true, então
+    // o limite de 20/min NUNCA bloqueava (cada chamada dispara scrape pago no
+    // Apify). Lemos allowed da linha, igual ao ai-context-builder.
+    if (error) { console.error("[saved-fetch] rate-limit rpc error, fail-closed:", error.message); return false; }
+    if (data == null) return false;
+    const row = Array.isArray(data) ? data[0] : data;
+    return row?.allowed === true;
+  } catch (e) { console.error("[saved-fetch] rate-limit exception, fail-closed:", e); return false; }
 }
 
 function platformOf(url: string): string {
@@ -88,10 +94,22 @@ Deno.serve(async (req) => {
     if (!token) return json({ ok: true, platform, thumbnail: null, caption: null, author: null, media_type: null, note: "sem apify token" });
 
     const apifyUrl = `https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=${token}&maxItems=1`;
-    const r = await fetch(apifyUrl, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ directUrls: [url], resultsType: "details", resultsLimit: 1, addParentData: false }),
-    });
+    // Timeout de 90s: o run-sync do Apify pode levar 60s+, mas se travar não deixamos
+    // a request pendurada indefinidamente. No abort, devolvemos mensagem clara pro app.
+    let r: Response;
+    try {
+      r = await fetch(apifyUrl, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ directUrls: [url], resultsType: "details", resultsLimit: 1, addParentData: false }),
+        signal: AbortSignal.timeout(90000),
+      });
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "TimeoutError") {
+        console.error("[saved-fetch] apify timeout 90s");
+        return json({ error: "timeout", message: "A busca demorou demais, tente de novo." }, 504);
+      }
+      throw e; // outros erros: caem no catch geral (internal_error)
+    }
     if (!r.ok) {
       console.error("[saved-fetch] apify", r.status);
       return json({ ok: true, platform, thumbnail: null, caption: null, author: null, media_type: null, note: `apify ${r.status}` });

@@ -8,7 +8,7 @@ import {
   type FinRecord, type FinType, type FinStatus, type FinContext, type FinRecordInput, type FinMonthly, type FinRecurring,
 } from "@/hooks/useFinance";
 import { MoneyInput } from "@/components/shared/MoneyInput";
-import { PAYMENT_METHODS, taxOfMonth, taxOfClient, regimeLabel, isPctRegime, mensalidadeAtivaNoMes, receitaDoMesPJ } from "@/lib/finance";
+import { PAYMENT_METHODS, taxOfMonth, taxOfClient, regimeLabel, isPctRegime, mensalidadeAtivaNoMes, receitaDoMesPJ, billablePendingMonthlies } from "@/lib/finance";
 import { useCrmClients, type CrmClient } from "@/hooks/useCrm";
 import { useManagerProfile, type FinSettings } from "@/hooks/useModules";
 import { ModuleGate } from "@/components/accounts/ModuleGate";
@@ -25,11 +25,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 
 const pad0 = (n: number) => String(n).padStart(2, "0");
 import { cn } from "@/lib/utils";
-import { hojeBR, toISODateBR } from "@/lib/date-br";
+import { hojeBR, toISODateBR, parseDateOnly } from "@/lib/date-br";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { confirmar } from "@/components/shared/Confirm";
 
-const brl = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+const brl = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const STATUS_STYLE: Record<FinStatus, string> = {
   pago: "bg-green-100 text-green-700", pendente: "bg-amber-100 text-amber-700", atrasado: "bg-destructive/10 text-destructive",
@@ -80,7 +80,7 @@ function CaixaInner() {
   const delGroup = useDeleteFinByGroup();
 
   const fin = profile?.fin_settings ?? {};
-  const now = new Date();
+  const now = parseDateOnly(hojeBR()); // fuso BR: não vira o mês/dia após ~21h (UTC)
   const navigate = useNavigate();
   const { pathname, search } = useLocation();
   // Colaborador (acesso de equipe) só enxerga o financeiro da EMPRESA (PJ).
@@ -183,6 +183,17 @@ function CaixaInner() {
   const receitaMes = receitaDoMesPJ(records, monthlies, clients, viewedMonth);
   const { aReceberMensal, aReceberAvulso, aReceber, previstoBruto, mensalidadesDoMes, outrasReceitas } = receitaMes;
 
+  // Mensalidades pendentes que REALMENTE contam (dedup da paga à mão + corte de
+  // cliente inativo/excluído). Mesma regra da Visão geral, reusada nas abas.
+  const billableMonthlies = useMemo(
+    () => billablePendingMonthlies(monthlies, records, clients, viewedMonth),
+    [monthlies, records, clients, viewedMonth],
+  );
+  const billablePendingIds = useMemo(
+    () => new Set(billableMonthlies.map((m) => m.id)),
+    [billableMonthlies],
+  );
+
   // Despesas: separo o que já saiu do que ainda vai sair, a pessoa precisa ver as duas.
   const despesasPagas = monthCtx.filter((r) => r.type === "despesa" && r.status === "pago").reduce((s, r) => s + Number(r.amount), 0);
   const aPagar = despesas - despesasPagas;
@@ -211,8 +222,10 @@ function CaixaInner() {
       else { cur.custo += v; cur.custos.push({ label: r.subcategory || r.category || r.description, v }); }
     });
     // Mensalidade pendente é receita prevista do cliente, mesmo sem lançamento.
-    monthlies.forEach((m) => {
-      if (!m.crm_client_id || m.status !== "pendente") return;
+    // Só as que realmente contam (dedup da paga à mão + cliente ativo), pra a
+    // rentabilidade bater com a Visão geral.
+    billableMonthlies.forEach((m) => {
+      if (!m.crm_client_id) return;
       touch(m.crm_client_id).aReceber += Number(m.amount);
     });
 
@@ -230,7 +243,7 @@ function CaixaInner() {
       })
       .filter((x) => x.receita > 0 || x.custo > 0)
       .sort((a, b) => b.margem - a.margem);
-  }, [monthCtx, monthlies, clients, fin]);
+  }, [monthCtx, billableMonthlies, clients, fin]);
 
   const imposto = taxOfMonth(fin, recebido);          // sobre o que JÁ entrou
   const impostoPrevisto = taxOfMonth(fin, previstoBruto); // sobre o previsto do mês
@@ -259,8 +272,7 @@ function CaixaInner() {
   const lancItems = useMemo<LancItem[]>(() => {
     const recs: LancItem[] = monthCtx.map((rec) => ({ kind: "record", rec }));
     if (!isPj) return recs;
-    const proj: LancItem[] = monthlies
-      .filter((m) => m.status === "pendente")
+    const proj: LancItem[] = billableMonthlies
       .map((m) => ({
         kind: "monthly", m,
         nome: clients.find((c) => c.id === m.crm_client_id)?.name ?? "Cliente",
@@ -276,7 +288,7 @@ function CaixaInner() {
       return db.localeCompare(da);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [monthCtx, monthlies, isPj, clients, todayISO]);
+  }, [monthCtx, billableMonthlies, isPj, clients, todayISO]);
 
   const filteredItems = lancItems.filter((it) => {
     const type: FinType = it.kind === "record" ? it.rec.type : "entrada";
@@ -476,6 +488,7 @@ function CaixaInner() {
       {show("calendario") && (
         <CalendarioFinanceiro
           monthlies={isPj ? monthlies : []}
+          billablePendingIds={isPj ? billablePendingIds : new Set()}
           records={records}
           recurring={recurring}
           pendingRecurring={pendingRecurring}
@@ -1020,7 +1033,7 @@ function CashflowChart({ records, ctx, ym }: { records: FinRecord[]; ctx: FinCon
       });
       arr.push({
         label: MONTHS[d.getMonth()],
-        receitas: recs.filter((r) => r.type === "entrada").reduce((s, r) => s + Number(r.amount), 0),
+        receitas: recs.filter((r) => r.type === "entrada" && r.status === "pago").reduce((s, r) => s + Number(r.amount), 0),
         despesas: recs.filter((r) => r.type === "despesa").reduce((s, r) => s + Number(r.amount), 0),
       });
     }
@@ -1225,8 +1238,9 @@ type Ev = {
   src: EvSrc;
 };
 
-function CalendarioFinanceiro({ monthlies, records, recurring, pendingRecurring, ctx, ym, clientName, acoes }: {
+function CalendarioFinanceiro({ monthlies, billablePendingIds, records, recurring, pendingRecurring, ctx, ym, clientName, acoes }: {
   monthlies: FinMonthly[];
+  billablePendingIds: Set<string>;
   records: FinRecord[];
   recurring: FinRecurring[];
   pendingRecurring: FinRecurring[];
@@ -1254,8 +1268,11 @@ function CalendarioFinanceiro({ monthlies, records, recurring, pendingRecurring,
     const out: Ev[] = [];
 
     // 1) Mensalidades do mês (só PJ), cada uma no vencimento do cliente.
-    //    Mantemos as PULADAS aqui: escondê-las tirava a chance de reverter.
+    //    Mantemos as PULADAS/PAGAS aqui: escondê-las tirava a chance de reverter.
+    //    Mas a pendente que NÃO conta (paga à mão / cliente inativo-excluído) é
+    //    pulada, pra o "entra R$" não somar dinheiro que já entrou ou fantasma.
     for (const m of monthlies) {
+      if (m.status === "pendente" && !billablePendingIds.has(m.id)) continue;
       out.push({
         id: "m-" + m.id, day: Number(m.due_date.slice(8, 10)), kind: "receber",
         label: clientName(m.crm_client_id) ?? "Cliente", amount: Number(m.amount),
@@ -1294,7 +1311,7 @@ function CalendarioFinanceiro({ monthlies, records, recurring, pendingRecurring,
       });
     }
     return out;
-  }, [monthlies, records, recurring, pendingRecurring, ctx, ym, lastDay, clientName]);
+  }, [monthlies, billablePendingIds, records, recurring, pendingRecurring, ctx, ym, lastDay, clientName]);
 
   const byDay = new Map<number, Ev[]>();
   for (const e of evs) { const a = byDay.get(e.day) ?? []; a.push(e); byDay.set(e.day, a); }
@@ -1567,7 +1584,7 @@ function RelatorioPeriodo({ records, ctx, clients = [], monthlies = [], mrr = 0,
   records: FinRecord[]; ctx: FinContext;
   clients?: CrmClient[]; monthlies?: FinMonthly[]; mrr?: number; fin?: FinSettings;
 }) {
-  const hoje = new Date();
+  const hoje = parseDateOnly(hojeBR()); // fuso BR
   const [de, setDe] = useState(`${hoje.getFullYear()}-01-01`);
   const [ate, setAte] = useState(hojeBR());
   const isPj = ctx === "pj";
@@ -1592,10 +1609,12 @@ function RelatorioPeriodo({ records, ctx, clients = [], monthlies = [], mrr = 0,
   const aReceber = aReceberRows.reduce((s, r) => s + Number(r.amount), 0);
 
   // ── Inadimplência do MÊS CORRENTE (fin_monthly já vencido e não pago). ──
-  // Fonte real: as instâncias do mês. Só o que passou do vencimento e não foi pago/pulado.
+  // Fonte real: as instâncias do mês, MESMA regra billable das outras abas
+  // (tira a paga à mão e o cliente inativo/excluído, senão vira inadimplente falso).
   const hojeStr = hojeBR();
-  const inadimplentes = monthlies
-    .filter((m) => m.status === "pendente" && m.due_date < hojeStr)
+  const mesCorrente = hojeStr.slice(0, 7);
+  const inadimplentes = billablePendingMonthlies(monthlies, records, clients, mesCorrente)
+    .filter((m) => m.due_date < hojeStr)
     .map((m) => ({ nome: clients.find((c) => c.id === m.crm_client_id)?.name ?? "Cliente", valor: Number(m.amount), venc: m.due_date }))
     .sort((a, b) => b.valor - a.valor);
   const inadimplenciaTotal = inadimplentes.reduce((s, i) => s + i.valor, 0);
@@ -1623,8 +1642,14 @@ function RelatorioPeriodo({ records, ctx, clients = [], monthlies = [], mrr = 0,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, clients, fin]);
   const maxReceita = Math.max(1, ...porCliente.map((c) => c.recebido));
-  const clientesComReceita = porCliente.filter((c) => c.recebido > 0).length;
-  const ticketMedio = clientesComReceita > 0 ? mensalRecebida / clientesComReceita : 0;
+  // Ticket médio de MENSALIDADE: divide pela quantidade de clientes que pagaram
+  // mensalidade no período (não por quem só teve avulso, que puxava o ticket pra baixo).
+  const clientesComMensalidade = new Set(
+    rows
+      .filter((r) => r.type === "entrada" && r.status === "pago" && (r.category ?? "") === "Mensalidade" && r.crm_client_id)
+      .map((r) => String(r.crm_client_id)),
+  ).size;
+  const ticketMedio = clientesComMensalidade > 0 ? mensalRecebida / clientesComMensalidade : 0;
 
   // Evolução mês a mês dentro do período.
   const porMes = new Map<string, { receita: number; custo: number }>();
