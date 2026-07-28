@@ -56,6 +56,23 @@ function shadeHex(hex: string, pct: number): string {
   return `#${f(0)}${f(2)}${f(4)}`;
 }
 
+// Luminância relativa (0 = preto, 1 = branco). Usada pra escolher texto legível
+// em cima da cor da marca: se a marca é clara (creme, bege, amarelo), texto
+// branco some — aí o botão usa texto escuro.
+function luminance(hex: string): number {
+  const clean = hex.replace("#", "");
+  if (clean.length !== 6) return 1;
+  const ch = (i: number) => {
+    const v = parseInt(clean.slice(i, i + 2), 16) / 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * ch(0) + 0.7152 * ch(2) + 0.0722 * ch(4);
+}
+// Texto legível (HSL, pro --primary-foreground) em cima da cor da marca.
+function readableFg(hex: string): string {
+  return luminance(hex) > 0.6 ? "24 10% 12%" : "0 0% 100%";
+}
+
 function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
   const media = Array.isArray(post.media) ? post.media : [];
   // @ do Instagram: usa o handle real quando existe; senão placeholder neutro
@@ -372,7 +389,7 @@ export default function AprovarPortal() {
   const brand = c.brand_color ?? null;
   // Cor da marca do cliente vira o accent local da página (CSS vars no wrapper).
   const brandVars = (brand
-    ? { "--primary": hexToHsl(brand), "--ring": hexToHsl(brand) }
+    ? { "--primary": hexToHsl(brand), "--ring": hexToHsl(brand), "--primary-foreground": readableFg(brand) }
     : {}) as CSSProperties;
   const heroBg = brand
     ? `linear-gradient(130deg, ${brand} 0%, ${shadeHex(brand, -32)} 100%)`
@@ -627,7 +644,7 @@ function SolicitarMaterial({ token }: { token: string | undefined }) {
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {MAT_KINDS.map((k) => (
                   <button key={k.key} type="button" onClick={() => setKind(k.key)}
-                    className={`text-[13px] font-body font-semibold rounded-xl px-3 py-2 border transition-colors ${kind === k.key ? "bg-primary text-white border-primary" : "bg-white text-muted-foreground border-border"}`}>
+                    className={`text-[13px] font-body font-semibold rounded-xl px-3 py-2 border transition-colors ${kind === k.key ? "bg-primary text-primary-foreground border-primary" : "bg-white text-muted-foreground border-border"}`}>
                     {k.label}
                   </button>
                 ))}

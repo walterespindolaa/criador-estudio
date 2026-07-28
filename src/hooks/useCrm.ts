@@ -540,6 +540,8 @@ export type CrmTask = {
   status: CrmTaskStatus; priority: CrmTaskPriority;
   // due_time: horário opcional (HH:MM) da tarefa. Coluna nova em crm_tasks (ver SQL).
   due_date: string | null; due_time: string | null; created_at: string; updated_at: string;
+  // color: cor opcional (hex) da tarefa na agenda. Null = cor padrão. Coluna nova (ver SQL).
+  color: string | null;
 };
 export type CrmTaskInput = Partial<Omit<CrmTask, "id" | "manager_id" | "created_at" | "updated_at">> & { title: string };
 

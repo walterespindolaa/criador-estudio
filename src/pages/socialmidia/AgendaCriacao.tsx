@@ -63,6 +63,13 @@ const STATUS: Record<Capture["status"], { label: string; cls: string }> = {
 
 // Cor padrão da tarefa de cliente quando o cliente não tem cor definida no cadastro.
 const TASK_CLIENT_DEFAULT_COLOR = "#01A652"; // verde
+// Paleta de cores pra tarefa (útil pra tarefa sem cliente ganhar destaque próprio).
+const TASK_COLORS = ["#0061EE", "#01A652", "#EA4918", "#FF77B9", "#4B3FA8", "#F5A623", "#111827"];
+// Cor efetiva da tarefa na agenda: a cor escolhida na tarefa vence; senão a do
+// cliente; senão a padrão. Lead segue com o azul dele (tratado à parte).
+function taskColor(t: { color?: string | null; crm_client_id: string | null }, clientColor: string | null): string {
+  return (t.color && t.color.trim()) || clientColor || TASK_CLIENT_DEFAULT_COLOR;
+}
 // HH:MM a partir de "HH:MM:SS" (ou null).
 const hhmm = (s: string | null | undefined) => (s ? s.slice(0, 5) : null);
 
@@ -691,7 +698,7 @@ export default function AgendaCriacao() {
                           // Tarefa de LEAD é azul. Tarefa de CLIENTE usa a COR DO CLIENTE (cadastro); sem cor -> verde.
                           const isLead = !!t.crm_lead_id;
                           const client = t.crm_client_id ? clients.find((c) => c.id === t.crm_client_id) : null;
-                          const clientColor = client?.color || TASK_CLIENT_DEFAULT_COLOR;
+                          const clientColor = taskColor(t, client?.color ?? null);
                           const who = isLead ? (leadName(t.crm_lead_id) ?? "Lead") : nameOf(t.crm_client_id, null);
                           return (
                             <Draggable key={`task:${t.id}`} draggableId={`task:${t.id}`} index={idx} disableInteractiveElementBlocking>
@@ -901,7 +908,7 @@ export default function AgendaCriacao() {
             {upcomingTasks.map((t) => {
               const d = parseDateOnly(t.due_date!);
               const isLead = !!t.crm_lead_id;
-              const clientColor = isLead ? "#0061EE" : ((t.crm_client_id ? clients.find((c) => c.id === t.crm_client_id)?.color : null) || TASK_CLIENT_DEFAULT_COLOR);
+              const clientColor = isLead ? "#0061EE" : taskColor(t, (t.crm_client_id ? clients.find((c) => c.id === t.crm_client_id)?.color ?? null : null));
               const who = isLead ? (leadName(t.crm_lead_id) ?? "Lead") : nameOf(t.crm_client_id, null);
               // Atrasada: venceu antes de hoje e não está concluída. Destaque vermelho.
               const overdue = t.due_date! < today;
@@ -1001,7 +1008,7 @@ export default function AgendaCriacao() {
               <div className="space-y-1.5 mt-1">
                 {items.map((item) => {
                   if (item.kind === "cria") { const c = item.cria; return <button key={`c${c.id}`} onClick={() => { setDayModal(null); setEditCreation(c); }} className={rowCls}>{dot("#4B3FA8")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}</span><span className="ml-auto text-[10px] text-muted-foreground">Criação</span></button>; }
-                  if (item.kind === "task") { const t = item.task; const isLead = !!t.crm_lead_id; const dotColor = isLead ? "#0061EE" : ((t.crm_client_id ? clients.find((x) => x.id === t.crm_client_id)?.color : null) || TASK_CLIENT_DEFAULT_COLOR); return <button key={`t${t.id}`} onClick={() => { setDayModal(null); setEditTask(t); }} className={rowCls}>{dot(dotColor)}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{t.title}</span><span className="ml-auto text-[10px] text-muted-foreground">Tarefa</span></button>; }
+                  if (item.kind === "task") { const t = item.task; const isLead = !!t.crm_lead_id; const dotColor = isLead ? "#0061EE" : taskColor(t, (t.crm_client_id ? clients.find((x) => x.id === t.crm_client_id)?.color ?? null : null)); return <button key={`t${t.id}`} onClick={() => { setDayModal(null); setEditTask(t); }} className={rowCls}>{dot(dotColor)}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{t.title}</span><span className="ml-auto text-[10px] text-muted-foreground">Tarefa</span></button>; }
                   if (item.kind === "cap") { const c = item.cap; return <button key={`p${c.id}`} onClick={() => { setDayModal(null); setEditCap(c); }} className={rowCls}>{dot("#FF77B9")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}{c.capture_time ? ` · ${c.capture_time.slice(0, 5)}` : ""}</span><span className="ml-auto text-[10px] text-muted-foreground">Captação</span></button>; }
                   const p = item.post; const st = POST_STATUS[p.approval_status ?? "em_producao"]; return <button key={`o${p.id}`} onClick={() => { setDayModal(null); openPost(p); }} className={rowCls}>{dot("#EA4918")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{p.title || "Post"}</span>{st && <span className={cn("ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}</button>;
                 })}
@@ -1080,7 +1087,7 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
   open: boolean; day: string | null; clients: Client[]; teamNames: string[]; onClose: () => void;
   initialKind?: "tarefa" | "captacao" | "criacao";
   onCreation: (crm: string | null, name: string | null, team: string | null, note: string | null, day: string) => void;
-  onTask: (v: { title: string; description: string | null; crm_client_id: string | null; priority: CrmTaskPriority; status: CrmTaskStatus; due_date: string; due_time: string | null }) => void;
+  onTask: (v: { title: string; description: string | null; crm_client_id: string | null; priority: CrmTaskPriority; status: CrmTaskStatus; due_date: string; due_time: string | null; color: string | null }) => void;
   onCapture: (v: { capture_date: string; capture_time?: string | null; location?: string | null; crm_client_id?: string | null; client_name?: string | null; team?: string | null; note?: string | null }) => void;
 }) {
   const [kind, setKind] = useState<"criacao" | "tarefa" | "captacao">("criacao");
@@ -1093,11 +1100,12 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
   const [time, setTime] = useState("");
   const [loc, setLoc] = useState("");
   const [date, setDate] = useState(""); // data do item (padrao o dia clicado, mas editavel)
+  const [taskCol, setTaskCol] = useState<string | null>(null); // cor opcional da tarefa
   const [seeded, setSeeded] = useState("");
 
   if (open && day && seeded !== day) {
     setSeeded(day);
-    setKind(initialKind); setCrm(null); setName(""); setTeam(""); setNote(""); setTitle(""); setPrio("media"); setTime(""); setLoc(""); setDate(day);
+    setKind(initialKind); setCrm(null); setName(""); setTeam(""); setNote(""); setTitle(""); setPrio("media"); setTime(""); setLoc(""); setDate(day); setTaskCol(null);
   }
   if (!open && seeded) setSeeded("");
 
@@ -1108,7 +1116,7 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
     const d = date || day;
     if (!d) return;
     if (kind === "criacao") onCreation(crm, name.trim() || null, team.trim() || null, note.trim() || null, d);
-    else if (kind === "tarefa") onTask({ title: title.trim(), description: note.trim() || null, crm_client_id: crm, priority: prio, status: "pendente", due_date: d, due_time: time || null });
+    else if (kind === "tarefa") onTask({ title: title.trim(), description: note.trim() || null, crm_client_id: crm, priority: prio, status: "pendente", due_date: d, due_time: time || null, color: taskCol });
     else onCapture({ capture_date: d, capture_time: time || null, location: loc.trim() || null, crm_client_id: crm, client_name: name.trim() || null, team: team.trim() || null, note: note.trim() || null });
   };
 
@@ -1136,10 +1144,25 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
           </div>
 
           {kind === "tarefa" && (
-            <div>
-              <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Tarefa *</p>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="O que precisa ser feito" />
-            </div>
+            <>
+              <div>
+                <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Tarefa *</p>
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="O que precisa ser feito" />
+              </div>
+              <div>
+                <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Cor</p>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button type="button" onClick={() => setTaskCol(null)}
+                    className={cn("h-7 w-7 rounded-full border grid place-items-center text-muted-foreground transition-colors", !taskCol ? "border-foreground" : "border-border hover:border-foreground/40")}
+                    aria-label="Sem cor" title="Sem cor"><X className="h-3.5 w-3.5" /></button>
+                  {TASK_COLORS.map((hex) => (
+                    <button key={hex} type="button" onClick={() => setTaskCol(hex)}
+                      className={cn("h-7 w-7 rounded-full border-2 transition-transform", taskCol === hex ? "border-foreground scale-110" : "border-transparent hover:scale-105")}
+                      style={{ background: hex }} aria-label={`Cor ${hex}`} title={hex} />
+                  ))}
+                </div>
+              </div>
+            </>
           )}
 
           {/* Data do item (padrao o dia clicado, mas da pra mudar aqui). */}
@@ -1260,7 +1283,7 @@ function TaskDialog({ task, clients, onClose, onOpenCrm, onSave, onDelete }: {
   clients: Client[];
   onClose: () => void;
   onOpenCrm: () => void;
-  onSave: (patch: { title: string; description: string | null; priority: CrmTaskPriority; status: CrmTaskStatus; due_date: string | null; due_time: string | null; crm_client_id: string | null }) => void;
+  onSave: (patch: { title: string; description: string | null; priority: CrmTaskPriority; status: CrmTaskStatus; due_date: string | null; due_time: string | null; crm_client_id: string | null; color: string | null }) => void;
   onDelete: () => void;
 }) {
   const open = !!task;
@@ -1273,6 +1296,8 @@ function TaskDialog({ task, clients, onClose, onOpenCrm, onSave, onDelete }: {
   // Cliente vinculado, editavel aqui: permite vincular/trocar/desvincular mesmo em tarefa
   // criada sem cliente. Guarda em crm_client_id.
   const [clientId, setClientId] = useState<string | null>(null);
+  // Cor opcional da tarefa (destaque próprio, principalmente pra tarefa sem cliente).
+  const [color, setColor] = useState<string | null>(null);
   // Confirmacao leve do excluir (dois toques): primeiro clique arma, segundo confirma.
   const [confirmDel, setConfirmDel] = useState(false);
   const [seeded, setSeeded] = useState("");
@@ -1280,7 +1305,7 @@ function TaskDialog({ task, clients, onClose, onOpenCrm, onSave, onDelete }: {
     setSeeded(task.id);
     setTitle(task.title); setDesc(task.description ?? "");
     setPrio(task.priority); setStatus(task.status); setDue(task.due_date ?? ""); setDueTime(task.due_time ? task.due_time.slice(0, 5) : "");
-    setClientId(task.crm_client_id ?? null); setConfirmDel(false);
+    setClientId(task.crm_client_id ?? null); setColor(task.color ?? null); setConfirmDel(false);
   }
   if (!open && seeded) setSeeded("");
   // Tarefa de LEAD nao troca de cliente por aqui (o vinculo dela e com o lead).
@@ -1324,6 +1349,21 @@ function TaskDialog({ task, clients, onClose, onOpenCrm, onSave, onDelete }: {
             <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Vencimento</p><Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="w-full h-10" /></div>
             <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Horário</p><Input type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)} className="w-full h-10" /></div>
           </div>
+          {/* Cor da tarefa: destaque próprio na agenda. Vence sobre a cor do cliente
+              quando escolhida; principalmente útil pra tarefa sem cliente. */}
+          <div>
+            <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Cor</p>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button type="button" onClick={() => setColor(null)}
+                className={cn("h-7 w-7 rounded-full border grid place-items-center text-muted-foreground transition-colors", !color ? "border-foreground" : "border-border hover:border-foreground/40")}
+                aria-label="Sem cor" title="Sem cor"><X className="h-3.5 w-3.5" /></button>
+              {TASK_COLORS.map((hex) => (
+                <button key={hex} type="button" onClick={() => setColor(hex)}
+                  className={cn("h-7 w-7 rounded-full border-2 transition-transform", color === hex ? "border-foreground scale-110" : "border-transparent hover:scale-105")}
+                  style={{ background: hex }} aria-label={`Cor ${hex}`} title={hex} />
+              ))}
+            </div>
+          </div>
           <button type="button" onClick={onOpenCrm} className="inline-flex items-center gap-1 text-[11px] font-body text-muted-foreground hover:text-primary transition-colors">
             <ExternalLink className="h-3 w-3" /> Abrir no CRM
           </button>
@@ -1338,7 +1378,7 @@ function TaskDialog({ task, clients, onClose, onOpenCrm, onSave, onDelete }: {
           </Button>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button onClick={() => onSave({ title: title.trim(), description: desc.trim() || null, priority: prio, status, due_date: due || null, due_time: dueTime || null, crm_client_id: isLead ? (task?.crm_client_id ?? null) : clientId })} disabled={!title.trim()}>Salvar</Button>
+            <Button onClick={() => onSave({ title: title.trim(), description: desc.trim() || null, priority: prio, status, due_date: due || null, due_time: dueTime || null, crm_client_id: isLead ? (task?.crm_client_id ?? null) : clientId, color })} disabled={!title.trim()}>Salvar</Button>
           </div>
         </DialogFooter>
       </DialogContent>
