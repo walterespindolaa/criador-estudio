@@ -358,9 +358,9 @@ function CaixaInner() {
   const tabs: SubTab[] = isPj
     ? [
         { to: `${base}/visao`, label: "Visão geral" },
-        { to: `${base}/mensalidades`, label: "Mensalidades" },
-        { to: `${base}/calendario`, label: "Calendário" },
         { to: `${base}/clientes`, label: "Clientes" },
+        { to: `${base}/calendario`, label: "Calendário" },
+        { to: `${base}/mensalidades`, label: "Mensalidades" },
         { to: `${base}/relatorios`, label: "Relatórios" },
       ]
     : [

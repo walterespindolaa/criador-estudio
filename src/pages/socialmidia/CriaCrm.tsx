@@ -6,6 +6,7 @@ import {
   useCrmClients, useCreateCrmClient, useImportCriaClients, useCrmTags,
   CLIENT_STATUS_META, TAG_COLOR_CLS, type CrmClient, type ClientStatus,
 } from "@/hooks/useCrm";
+import { useCriaClientProfiles } from "@/hooks/useManagerClientCria";
 import { ModuleGate } from "@/components/accounts/ModuleGate";
 import { ModuleHero, type SubTab } from "@/components/brand/ModuleHero";
 import { Button } from "@/components/ui/button";
@@ -98,12 +99,14 @@ function ClientsTab() {
     try { localStorage.setItem(STATUS_FILTER_KEY, s); } catch { /* ignore */ }
   };
 
-  // avatar dos clientes importados do cria
-  const criaAvatar = useMemo(() => {
-    const m = new Map<string, string | null>();
-    managedAccounts.forEach((a) => m.set(a.owner_id, a.avatar_url));
-    return m;
-  }, [managedAccounts]);
+  // Foto do cliente sempre atual: avatar da conta Cria vinculada → logo cadastrada → inicial.
+  // Mesmo padrão da lista de Clientes da social mídia (helper avatarOf).
+  const { data: criaProfiles } = useCriaClientProfiles();
+  const avatarOf = (c: CrmClient) => {
+    const criaAvatar = c.cria_owner_id ? criaProfiles?.[c.cria_owner_id]?.avatar_url : null;
+    const logoUrl = c.logo && /^https?:\/\//i.test(c.logo) ? c.logo : null;
+    return criaAvatar ?? logoUrl;
+  };
 
   const segments = useMemo(() => Array.from(new Set(clients.flatMap((c) => splitSeg(c.segment)))).sort(), [clients]);
   const filtered = clients.filter((c) => {
@@ -182,7 +185,7 @@ function ClientsTab() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {filtered.map((c) => {
-            const avatar = c.cria_owner_id ? criaAvatar.get(c.cria_owner_id) : null;
+            const avatar = avatarOf(c);
             return (
               // O card era uma pilha: foto+nome, depois status solto numa linha, depois
               // o valor solto em outra. No mobile virava um bloco alto e sem hierarquia.
