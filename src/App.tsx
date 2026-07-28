@@ -163,8 +163,14 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       // Voltou a ter internet? Revalida. É o caso do metrô, do elevador.
       refetchOnReconnect: true,
-      // Dado em cache aparece na hora; a atualização vem por trás, sem pisca.
-      refetchOnMount: false,
+      // refetchOnMount TRUE (respeitando o staleTime de 5min): ao ABRIR uma tela,
+      // se o dado estiver velho (> staleTime), rebusca. Antes era false e o app
+      // mostrava cache velho ao navegar/reabrir, atualizando so no "focus" da janela
+      // - que quase NAO dispara na PWA do celular. Resultado: celular preso num dado
+      // velho de outra sessao/aparelho (tarefa/post que nao aparecia). Como o cache
+      // ainda pinta na hora e o refetch vem por baixo, nao ha pisca de esqueleto; o
+      // staleTime evita rebuscar a toa em navegacao rapida (< 5min).
+      refetchOnMount: true,
     },
     mutations: { retry: 0 },
   },
