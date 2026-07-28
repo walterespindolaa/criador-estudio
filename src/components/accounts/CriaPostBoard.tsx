@@ -18,6 +18,7 @@ import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-p
 import { Plus, Link2, Pencil, Loader2, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare, Eye, Clock, Settings2, Palette, Copy, CalendarDays, X, ChevronDown, History } from "lucide-react";
 import { usePostApprovalComments } from "@/hooks/useApprovals";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
+import { Calendar } from "@/components/ui/calendar";
 import { CriaPostMedia } from "@/components/accounts/CriaPostMedia";
 import { ImportKanbanDialog } from "@/components/accounts/ImportKanbanDialog";
 import { ClientReportDialog } from "@/components/accounts/ClientReportDialog";
@@ -189,6 +190,40 @@ function ddmm(iso: string): string {
   if (!iso) return "";
   const [, m, d] = iso.split("-");
   return `${d}/${m}`;
+}
+
+// DD/MM/AAAA pro gatilho do campo de data.
+function ddmmyyyy(iso: string): string {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
+// Date -> YYYY-MM-DD pelos componentes locais (dia de calendário, sem UTC).
+function isoFromDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+// Campo de data visual: clica -> abre o calendário shadcn num popover; seleciona
+// o dia -> fecha e guarda como string YYYY-MM-DD (fuso BR). Mesmo padrao do TasksTab.
+function DateField({ label, value, onChange }: { label: string; value: string; onChange: (iso: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const selected = value ? parseDateOnly(value) : undefined;
+  return (
+    <div className="flex-1 min-w-0">
+      <Label className="text-[11px] font-body text-muted-foreground">{label}</Label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button type="button" className="mt-1 flex w-full items-center gap-1.5 h-10 rounded-lg border border-input bg-card px-2.5 text-sm text-foreground">
+            <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <span className="truncate">{value ? ddmmyyyy(value) : "dd/mm/aaaa"}</span>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar mode="single" selected={selected} defaultMonth={selected}
+            onSelect={(dt) => { if (dt) { onChange(isoFromDate(dt)); setOpen(false); } }} />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
 }
 
 export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange }: { client: ExternalClient; onBack?: () => void; embedded?: boolean; activeTab?: string; onTabChange?: (t: string) => void }) {
@@ -427,14 +462,8 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
           <PopoverContent align="start" className="w-64">
             <p className="text-xs font-body font-semibold text-foreground mb-2">Período específico</p>
             <div className="flex gap-2">
-              <div className="flex-1 min-w-0">
-                <Label className="text-[11px] font-body text-muted-foreground">De</Label>
-                <Input type="date" value={filter.from} onChange={(e) => setFilter((prev) => ({ ...prev, from: e.target.value, preset: "custom" }))} className="rounded-lg" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <Label className="text-[11px] font-body text-muted-foreground">Até</Label>
-                <Input type="date" value={filter.to} onChange={(e) => setFilter((prev) => ({ ...prev, to: e.target.value, preset: "custom" }))} className="rounded-lg" />
-              </div>
+              <DateField label="De" value={filter.from} onChange={(iso) => setFilter((prev) => ({ ...prev, from: iso, preset: "custom" }))} />
+              <DateField label="Até" value={filter.to} onChange={(iso) => setFilter((prev) => ({ ...prev, to: iso, preset: "custom" }))} />
             </div>
           </PopoverContent>
         </Popover>
