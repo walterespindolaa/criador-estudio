@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveAccount } from "@/contexts/AccountContext";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -189,6 +190,7 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
   // nao o mostravam, mesmo com o selo "no Cria Post" ligado. Agora nasce igualzinho a
   // um post criado pelo botao "Novo post" (mesmo dono).
   const { agencyOwnerId } = useActiveAccount();
+  const qc = useQueryClient();
   const [editing, setEditing] = useState<CronogramaItem | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [f, setF] = useState<Partial<CronogramaItem>>({});
@@ -231,6 +233,13 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
         if (error) throw error;
         await updateItem.mutateAsync({ id: it.id, converted_post_id: (data as { id: string }).id });
       }
+      // Avisa o kanban do cliente, a agenda e o contador de pendentes que nasceram
+      // posts novos, senao a agenda (external-posts-all) fica desatualizada e o post
+      // convertido so aparece depois de um reload manual (era o bug do "no kanban mas
+      // nao na agenda").
+      qc.invalidateQueries({ queryKey: ["cria-posts", c.external_client_id] });
+      qc.invalidateQueries({ queryKey: ["external-posts-all"] });
+      qc.invalidateQueries({ queryKey: ["external-pending"] });
       toast.success(`${approvedToConvert.length} post(s) criado(s) no Cria Post do cliente!`);
     } catch {
       toast.error("Erro ao converter pro Cria Post. Tente de novo.");
