@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive, Download, Play, FileImage, Link2, Paperclip, GripVertical, FolderOpen, ChevronDown } from "lucide-react";
+import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive, Download, Play, FileImage, Link2, Paperclip, GripVertical, FolderOpen, ChevronDown, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
-  useCrmClients, useCrmTasks, useUpdateCrmTask, useCreateCrmTask, useCrmLeads,
+  useCrmClients, useCrmTasks, useUpdateCrmTask, useCreateCrmTask, useDeleteCrmTask, useCrmLeads,
   CRM_TASK_PRIORITIES, CRM_TASK_PRIORITY_LABELS, CRM_TASK_STATUSES,
   type CrmTask, type CrmTaskPriority, type CrmTaskStatus,
 } from "@/hooks/useCrm";
@@ -21,9 +21,9 @@ import {
   useCaptures, useAddCapture, useUpdateCapture, useDeleteCapture, useCollaboratorNames,
   useDayOrders, useSaveDayOrder, type Capture, type Creation,
 } from "@/hooks/useAgenda";
-import { useAllExternalPosts, useExternalClients, useMoveExternalPostDate, useUpdateExternalPost, type ExternalPostWithClient } from "@/hooks/useCriaPost";
+import { useAllExternalPosts, useExternalClients, useMoveExternalPostDate, useUpdateExternalPost, type ExternalPostWithClient, type ExternalClient } from "@/hooks/useCriaPost";
 import { useCriaPostMedia, type CriaMedia } from "@/hooks/useCriaPostMedia";
-import { useClientCriaAgendaPosts, type ClientCriaAgendaPost, type ClientCriaLink } from "@/hooks/useManagerClientCria";
+import { useClientCriaAgendaPosts, useCriaClientProfiles, type ClientCriaAgendaPost, type ClientCriaLink } from "@/hooks/useManagerClientCria";
 import { isDriveMedia, isDriveUrl, isVideoMedia, getThumbnailUrl, getDriveImageFallbackUrl, downloadMediaFile, mediaDownloadName } from "@/lib/driveMedia";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 
@@ -213,6 +213,7 @@ export default function AgendaCriacao() {
   const delCapture = useDeleteCapture();
   const updCreation = useUpdateCreation();
   const updTask = useUpdateCrmTask();
+  const delTask = useDeleteCrmTask();
   const { data: allPosts = [] } = useAllExternalPosts();
   const { clients: extClients } = useExternalClients();
   const movePost = useMoveExternalPostDate();
@@ -227,6 +228,18 @@ export default function AgendaCriacao() {
     extClients.forEach((e) => m.set(e.id, { name: e.name, color: e.color ?? null, crm_client_id: e.crm_client_id ?? null }));
     return m;
   }, [extClients]);
+
+  // Nome AO VIVO da conta Cria (mesmo padrao da lista de Clientes e do cockpit): quando o
+  // external esta vinculado a um cliente do CRM que usa o Cria (cria_owner_id), pega o nome
+  // atual do profile via manager_clients_cria_profiles, em vez da copia estagnada em
+  // external_clients.name. Cliente sem Cria mantem o nome normal do external.
+  const { data: criaProfiles } = useCriaClientProfiles();
+  const crmById = useMemo(() => new Map(clients.map((c) => [c.id, c])), [clients]);
+  const extLiveName = (e: ExternalClient) => {
+    const crm = e.crm_client_id ? crmById.get(e.crm_client_id) : null;
+    const live = crm?.cria_owner_id ? criaProfiles?.[crm.cria_owner_id]?.name?.trim() : null;
+    return live || e.name;
+  };
 
   // Filtro de cliente vale pra TODOS os tipos da agenda. Só os posts guardam
   // external_client_id; tarefas/captações/criações guardam crm_client_id (e às vezes
@@ -252,7 +265,7 @@ export default function AgendaCriacao() {
   };
 
   const [addDay, setAddDay] = useState<string | null>(null);
-  const [addKind, setAddKind] = useState<"criacao" | "tarefa" | "captacao">("criacao");
+  const [addKind, setAddKind] = useState<"criacao" | "tarefa" | "captacao">("tarefa");
   const [capOpen, setCapOpen] = useState(false);
   const [editCap, setEditCap] = useState<Capture | null>(null);
   const [editTask, setEditTask] = useState<CrmTask | null>(null);
@@ -336,9 +349,9 @@ export default function AgendaCriacao() {
     if (!filters.post) return m;
     for (const p of allPosts) {
       if (!p.scheduled_date || p.scheduled_date < from || p.scheduled_date > to) continue;
-      // DECISÃO: posts "Em produção" NÃO aparecem nas células de dia; ficam só na faixa
-      // do topo (approval_status nulo conta como em_producao, o padrão da criação).
-      if ((p.approval_status ?? "em_producao") === "em_producao") continue;
+      // Post COM data marcada cai no dia certo, INCLUSIVE "Em produção" (ex.: convertido do
+      // cronograma). Quem marcou a data quer ver o post naquele dia. Só os posts SEM data
+      // ficam exclusivamente na faixa "Em produção" do topo (ver producaoPosts).
       if (postClients.size > 0 && !postClients.has(p.external_client_id)) continue;
       (m.get(p.scheduled_date) ?? m.set(p.scheduled_date, []).get(p.scheduled_date)!).push(p);
     }
@@ -370,14 +383,14 @@ export default function AgendaCriacao() {
   }, [clientCriaPosts, from, to, filters.criapost, postClients, selectedCrmIds, selectedNames]);
 
   // Faixa fixa do topo "Em produção": NUNCA some, independente do período/semana/mês.
-  // Inclui TODOS os posts em produção (com OU sem data) mais qualquer post sem data
-  // (qualquer status). Assim nenhum post em produção some ao sair da célula do dia, e os
-  // posts sem data seguem sempre visíveis. Arrastar daqui pra um dia agenda (seta a data);
-  // o arraste NÃO altera o status (post em produção arrastado continua em produção).
+  // Agrupa os posts SEM data (em produção ou não): sem dia, não teriam onde aparecer na
+  // grade. Post COM data (inclusive em produção, ex.: convertido do cronograma) já cai no
+  // dia certo, então sai da faixa pra não duplicar. Arrastar daqui pra um dia agenda (seta
+  // a data); o arraste NÃO altera o status (post em produção arrastado continua em produção).
   const producaoPosts = useMemo(() => {
     if (!filters.post) return [] as ExternalPostWithClient[];
     return allPosts.filter((p) =>
-      ((p.approval_status ?? "em_producao") === "em_producao" || !p.scheduled_date)
+      !p.scheduled_date
       && (postClients.size === 0 || postClients.has(p.external_client_id)));
   }, [allPosts, filters.post, postClients]);
 
@@ -526,11 +539,14 @@ export default function AgendaCriacao() {
                 <button type="button" onClick={() => togglePostClient(null)} className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-body font-semibold transition-colors", postClients.size === 0 ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
                   <span className={cn("grid h-3.5 w-3.5 place-items-center rounded-full", postClients.size === 0 ? "bg-background/25" : "bg-muted")}><Users className="h-2.5 w-2.5" /></span>Todos
                 </button>
-                {extClients.map((e) => (
+                {extClients.map((e) => {
+                  const nm = extLiveName(e);
+                  return (
                   <button key={e.id} type="button" onClick={() => togglePostClient(e.id)} className={cn("flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-body font-semibold transition-colors", postClients.has(e.id) ? "border-foreground text-foreground bg-muted/40" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
-                    <span className="grid h-3.5 w-3.5 place-items-center rounded-full text-white text-[7px] font-bold" style={{ background: e.color || "#EA4918" }}>{e.name.trim().charAt(0).toUpperCase()}</span>{e.name}
+                    <span className="grid h-3.5 w-3.5 place-items-center rounded-full text-white text-[7px] font-bold" style={{ background: e.color || "#EA4918" }}>{nm.trim().charAt(0).toUpperCase()}</span>{nm}
                   </button>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -546,7 +562,7 @@ export default function AgendaCriacao() {
                 className="flex items-center gap-1.5 w-full text-left px-2.5 py-2">
                 <Layers className="h-3.5 w-3.5 text-orange-600" />
                 <span className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground">Em produção</span>
-                <span className="text-[9px] font-body text-muted-foreground/70 hidden sm:inline">(com ou sem data)</span>
+                <span className="text-[9px] font-body text-muted-foreground/70 hidden sm:inline">(sem data)</span>
                 <span className="text-[10px] font-body font-semibold text-muted-foreground">{producaoPosts.length}</span>
                 {producaoOpen && <span className="text-[9px] font-body text-muted-foreground/70 hidden sm:inline">arraste pra um dia pra agendar</span>}
                 <ChevronDown className={cn("ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform", producaoOpen && "rotate-180")} />
@@ -625,7 +641,7 @@ export default function AgendaCriacao() {
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
                           {totalDay > 4 && <button onClick={() => setDayModal(iso)} className="text-[10px] font-body font-bold text-primary hover:underline" aria-label="Ver todos do dia">Ver todos ({totalDay})</button>}
-                          <button onClick={() => { setAddKind("criacao"); setAddDay(iso); }} className="text-muted-foreground hover:text-primary" aria-label="Adicionar"><Plus className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => { setAddKind("tarefa"); setAddDay(iso); }} className="text-muted-foreground hover:text-primary" aria-label="Adicionar"><Plus className="h-3.5 w-3.5" /></button>
                         </div>
                       </div>
                       {/* Um único map na ordem já ordenada por horário: os index viram 0..n-1
@@ -939,6 +955,11 @@ export default function AgendaCriacao() {
             updTask.mutate({ id: editTask.id, ...patch }, { onSuccess: () => toast.success("Tarefa atualizada.") });
           }
           setEditTask(null);
+        }}
+        onDelete={() => {
+          // Exclusao independe de ter cliente vinculado (delete por id, RLS por manager_id).
+          if (editTask) delTask.mutate(editTask.id, { onSuccess: () => toast.success("Tarefa excluída.") });
+          setEditTask(null);
         }} />
 
       <PostEditDialog post={editPost} clientName={editPost ? (extById.get(editPost.external_client_id)?.name ?? null) : null}
@@ -1041,9 +1062,9 @@ function AddCreationDialog({ open, day, initial, clients, teamNames, onClose, on
 }
 
 // "+" do dia: primeiro escolhe O QUE é (criação / tarefa / captação), depois preenche.
-function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTask, onCapture, initialKind = "criacao" }: {
+function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTask, onCapture, initialKind = "tarefa" }: {
   open: boolean; day: string | null; clients: Client[]; teamNames: string[]; onClose: () => void;
-  initialKind?: "criacao" | "tarefa" | "captacao";
+  initialKind?: "tarefa" | "captacao" | "criacao";
   onCreation: (crm: string | null, name: string | null, team: string | null, note: string | null, day: string) => void;
   onTask: (v: { title: string; description: string | null; crm_client_id: string | null; priority: CrmTaskPriority; status: CrmTaskStatus; due_date: string; due_time: string | null }) => void;
   onCapture: (v: { capture_date: string; capture_time?: string | null; location?: string | null; crm_client_id?: string | null; client_name?: string | null; team?: string | null; note?: string | null }) => void;
@@ -1077,10 +1098,11 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
     else onCapture({ capture_date: d, capture_time: time || null, location: loc.trim() || null, crm_client_id: crm, client_name: name.trim() || null, team: team.trim() || null, note: note.trim() || null });
   };
 
+  // Ordem das abas: Tarefa primeiro (aba default), depois Captação e Criação.
   const KINDS = [
-    { k: "criacao", label: "Criação" },
     { k: "tarefa", label: "Tarefa" },
     { k: "captacao", label: "Captação" },
+    { k: "criacao", label: "Criação" },
   ] as const;
 
   return (
@@ -1219,12 +1241,13 @@ function CaptureDialog({ open, initial, clients, teamNames, onClose, onSave, pen
 }
 
 // Edição rápida da tarefa do CRM direto da grade, sem sair da Agenda.
-function TaskDialog({ task, clients, onClose, onOpenCrm, onSave }: {
+function TaskDialog({ task, clients, onClose, onOpenCrm, onSave, onDelete }: {
   task: CrmTask | null;
   clients: Client[];
   onClose: () => void;
   onOpenCrm: () => void;
-  onSave: (patch: { title: string; description: string | null; priority: CrmTaskPriority; status: CrmTaskStatus; due_date: string | null; due_time: string | null }) => void;
+  onSave: (patch: { title: string; description: string | null; priority: CrmTaskPriority; status: CrmTaskStatus; due_date: string | null; due_time: string | null; crm_client_id: string | null }) => void;
+  onDelete: () => void;
 }) {
   const open = !!task;
   const [title, setTitle] = useState("");
@@ -1233,20 +1256,39 @@ function TaskDialog({ task, clients, onClose, onOpenCrm, onSave }: {
   const [status, setStatus] = useState<CrmTaskStatus>("pendente");
   const [due, setDue] = useState("");
   const [dueTime, setDueTime] = useState("");
+  // Cliente vinculado, editavel aqui: permite vincular/trocar/desvincular mesmo em tarefa
+  // criada sem cliente. Guarda em crm_client_id.
+  const [clientId, setClientId] = useState<string | null>(null);
+  // Confirmacao leve do excluir (dois toques): primeiro clique arma, segundo confirma.
+  const [confirmDel, setConfirmDel] = useState(false);
   const [seeded, setSeeded] = useState("");
   if (open && task && seeded !== task.id) {
     setSeeded(task.id);
     setTitle(task.title); setDesc(task.description ?? "");
     setPrio(task.priority); setStatus(task.status); setDue(task.due_date ?? ""); setDueTime(task.due_time ? task.due_time.slice(0, 5) : "");
+    setClientId(task.crm_client_id ?? null); setConfirmDel(false);
   }
   if (!open && seeded) setSeeded("");
-  const clientName = task?.crm_client_id ? clients.find((c) => c.id === task.crm_client_id)?.name : null;
+  // Tarefa de LEAD nao troca de cliente por aqui (o vinculo dela e com o lead).
+  const isLead = !!task?.crm_lead_id;
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader><DialogTitle className="font-display">Editar tarefa</DialogTitle></DialogHeader>
         <div className="space-y-2">
-          {clientName && <p className="text-[11px] font-body text-muted-foreground">Cliente: <span className="font-semibold text-foreground">{clientName}</span></p>}
+          {/* Cliente vinculado: seletor que permite vincular/trocar/desvincular, inclusive
+              em tarefa criada sem cliente. Tarefa de lead nao muda cliente por aqui. */}
+          {isLead
+            ? <p className="text-[11px] font-body text-muted-foreground">Tarefa vinculada a um lead.</p>
+            : (
+              <div>
+                <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Cliente</p>
+                <select value={clientId ?? ""} onChange={(e) => setClientId(e.target.value || null)} className="w-full h-10 rounded-xl border border-border bg-card px-3 text-sm font-body">
+                  <option value="">Sem cliente</option>
+                  {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+            )}
           <div><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Título</p><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="O que precisa ser feito" /></div>
           <div><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Descrição (opcional)</p><Textarea rows={3} value={desc} onChange={(e) => setDesc(e.target.value)} className="rounded-xl text-sm" placeholder="Detalhes, contexto..." /></div>
           <div className="flex gap-2">
@@ -1272,9 +1314,18 @@ function TaskDialog({ task, clients, onClose, onOpenCrm, onSave }: {
             <ExternalLink className="h-3 w-3" /> Abrir no CRM
           </button>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => onSave({ title: title.trim(), description: desc.trim() || null, priority: prio, status, due_date: due || null, due_time: dueTime || null })} disabled={!title.trim()}>Salvar</Button>
+        <DialogFooter className="sm:justify-between gap-2">
+          {/* Excluir com confirmacao leve (dois toques). Funciona pra tarefa sem cliente:
+              o delete e por id, nao depende de crm_client_id. */}
+          <Button variant="ghost"
+            onClick={() => { if (confirmDel) onDelete(); else setConfirmDel(true); }}
+            className="text-destructive hover:text-destructive hover:bg-destructive/10 sm:mr-auto">
+            <Trash2 className="h-4 w-4 mr-1" /> {confirmDel ? "Confirmar exclusão" : "Excluir"}
+          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={onClose}>Cancelar</Button>
+            <Button onClick={() => onSave({ title: title.trim(), description: desc.trim() || null, priority: prio, status, due_date: due || null, due_time: dueTime || null, crm_client_id: isLead ? (task?.crm_client_id ?? null) : clientId })} disabled={!title.trim()}>Salvar</Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

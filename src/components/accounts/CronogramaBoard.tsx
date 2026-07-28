@@ -209,14 +209,24 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
         const { data, error } = await sbFrom("posts").insert({
           user_id: agencyOwnerId,
           external_client_id: c.external_client_id,
-          title: it.title ?? it.copy ?? "(sem título)",
+          // Nome do post = titulo do item (cai pra copy se nao tiver nome). "||" trata
+          // string vazia como ausente, igual ao card do cronograma.
+          title: it.title || it.copy || "(sem título)",
           platform: "instagram",
           format: tipoParaFormato(it.type),
-          caption: it.description ?? null,
+          // No cronograma "copy" e a LEGENDA e "description" e o ROTEIRO/ideia. Cada um vai
+          // pro campo certo do post (antes a legenda ia pro caption errado e a copy sumia).
+          caption: it.copy || null,
+          script: it.description || null,
+          reference_url: it.ref_url || null,
           status: "editando",
           approval_status: "em_producao",
           approval_mode: "fast",
-          scheduled_date: it.date ?? null,
+          // Rascunho explicitamente falso: kanban e agenda filtram is_draft, entao o post
+          // convertido tem que nascer publicado (nao rascunho) pra aparecer nos dois.
+          is_draft: false,
+          // Data do item vira a data agendada: assim o post cai no dia certo da Agenda.
+          scheduled_date: it.date || null,
         } as never).select("id").single();
         if (error) throw error;
         await updateItem.mutateAsync({ id: it.id, converted_post_id: (data as { id: string }).id });

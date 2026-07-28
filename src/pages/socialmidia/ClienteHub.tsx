@@ -333,7 +333,19 @@ export default function ClienteHub() {
                 {extClient
                   ? <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/12 text-emerald-600 font-body font-semibold">Link de aprovação ativo</span>
                   : <span className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-body">Cria Post não ativado</span>}
-                {pendCount > 0 && <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-body font-semibold">{pendCount} pendente{pendCount > 1 ? "s" : ""}</span>}
+                {/* Selo clicável: leva pra Produção (kanban) do Cria Post, onde ficam
+                    os posts aguardando o cliente. Atalho direto do cabeçalho. */}
+                {pendCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => goTab("posts")}
+                    title="Ver os posts aguardando o cliente na Produção"
+                    aria-label={`${pendCount} post${pendCount > 1 ? "s" : ""} aguardando o cliente. Abrir a Produção.`}
+                    className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-body font-semibold hover:bg-amber-200 transition-colors cursor-pointer"
+                  >
+                    {pendCount} pendente{pendCount > 1 ? "s" : ""}
+                  </button>
+                )}
                 {/* Cliente encerrado: mostra QUANDO o contrato encerrou. */}
                 {(client as { status?: ClientStatus }).status === "inativo" && (client as { contract_end_date?: string | null }).contract_end_date && (
                   <span className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-body font-semibold">

@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useT } from "@/lib/i18n";
 import {
-  Instagram, Users, Eye, Zap, UserPlus, RefreshCw, Unplug, Link2, Bookmark, Heart, Play, Image as ImageIcon, Images, Sparkles, Info, TrendingUp, BarChart3, Search,
+  Instagram, Users, Eye, Zap, UserPlus, RefreshCw, Unplug, Link2, Unlink, Bookmark, Heart, Play, Image as ImageIcon, Images, Sparkles, Info, TrendingUp, BarChart3, Search,
 } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -356,9 +356,18 @@ export default function Insights() {
                   </div>
                   <div className="mt-2">
                     {mi.post_id && mi.posts ? (
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full">
-                        <Link2 className="h-3 w-3" /> {[mi.posts.format, mi.posts.hook].filter(Boolean).join(" · ") || mi.posts.title || t("insights.linked")}
-                      </span>
+                      // Já vinculado: mostra o post ligado + trocar (reabre seletor) e desvincular (postId null).
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full">
+                          <Link2 className="h-3 w-3" /> {[mi.posts.format, mi.posts.hook].filter(Boolean).join(" · ") || mi.posts.title || t("insights.linked")}
+                        </span>
+                        <button onClick={() => setLinkFor(mi)} className="text-[11px] font-semibold text-muted-foreground hover:text-primary px-1.5 py-1 transition-colors">
+                          Trocar
+                        </button>
+                        <button onClick={() => link.mutate({ insightId: mi.id, postId: null })} disabled={link.isPending} className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground hover:text-red-600 px-1.5 py-1 transition-colors disabled:opacity-50">
+                          <Unlink className="h-3 w-3" /> Desvincular
+                        </button>
+                      </div>
                     ) : (
                       <button onClick={() => setLinkFor(mi)} className="inline-flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground bg-background border border-dashed border-border px-2.5 py-1 rounded-full hover:border-primary/40 hover:text-primary">
                         <Link2 className="h-3 w-3" /> Vincular ao conteúdo do CRIA
@@ -471,7 +480,7 @@ const GROUP_LIMIT = 8;
 
 // Dialog de vínculo manual: lista posts do CRIA pra ligar à mídia, agrupados por
 // status (tipo kanban empilhado), com busca por título e limite por grupo.
-function LinkDialog({ insight, onClose, onPick }: { insight: MediaInsight | null; onClose: () => void; onPick: (postId: string) => void }) {
+function LinkDialog({ insight, onClose, onPick }: { insight: MediaInsight | null; onClose: () => void; onPick: (postId: string | null) => void }) {
   const { user } = useAuth();
   const [q, setQ] = useState("");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -510,8 +519,20 @@ function LinkDialog({ insight, onClose, onPick }: { insight: MediaInsight | null
   return (
     <Dialog open={!!insight} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md max-h-[82vh] overflow-hidden flex flex-col">
-        <DialogHeader><DialogTitle className="font-display">Vincular ao conteúdo do CRIA</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle className="font-display">{insight?.post_id ? "Trocar vínculo" : "Vincular ao conteúdo do CRIA"}</DialogTitle></DialogHeader>
         <p className="text-xs text-muted-foreground -mt-1">Escolha o post do CRIA que originou esta publicação. Isso permite cruzar roteiro, legenda e hook com o desempenho.</p>
+
+        {/* Já vinculado: mostra o vínculo atual e permite desvincular (postId null). */}
+        {insight?.post_id && (
+          <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-border bg-muted/40 px-3 py-2">
+            <span className="text-[11px] text-muted-foreground min-w-0">
+              Vinculado a: <span className="font-semibold text-foreground">{[insight.posts?.format, insight.posts?.hook].filter(Boolean).join(" · ") || insight.posts?.title || "post do CRIA"}</span>
+            </span>
+            <button onClick={() => onPick(null)} className="inline-flex items-center gap-1 text-[11px] font-bold text-red-600 hover:underline shrink-0">
+              <Unlink className="h-3 w-3" /> Desvincular
+            </button>
+          </div>
+        )}
 
         {/* Busca por título (filtra todos os grupos) */}
         <div className="relative mt-3 shrink-0">

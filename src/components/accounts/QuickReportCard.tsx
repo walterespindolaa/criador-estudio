@@ -1,9 +1,47 @@
 import { useEffect, useMemo, useState } from "react";
-import { FileText, Zap } from "lucide-react";
+import { CalendarDays, FileText, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { parseDateOnly } from "@/lib/date-br";
 import { useExternalClients, useExternalPosts, type ExternalClient } from "@/hooks/useCriaPost";
 import { useProfile } from "@/hooks/useProfile";
 import { ClientReportDialog } from "@/components/accounts/ClientReportDialog";
+
+// DD/MM/AAAA pro gatilho do campo de data (a string já é YYYY-MM-DD, dá pra fatiar).
+function ddmmyyyy(iso: string): string {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
+// Date -> YYYY-MM-DD pelos componentes locais (dia de calendário, sem UTC).
+function isoFromDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+// Campo de data visual: clica -> abre o calendário shadcn num popover; seleciona
+// o dia -> fecha e guarda como string YYYY-MM-DD (fuso BR). Mesmo padrão do TasksTab/CriaPostBoard.
+function DateField({ label, value, onChange }: { label: string; value: string; onChange: (iso: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const selected = value ? parseDateOnly(value) : undefined;
+  return (
+    <div className="flex-1 min-w-0">
+      <Label className="text-[11px] font-body text-muted-foreground">{label}</Label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button type="button" className="mt-1 flex w-full sm:w-44 items-center gap-1.5 h-10 rounded-xl border border-border bg-card px-3 text-sm font-body text-foreground">
+            <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <span className="truncate">{value ? ddmmyyyy(value) : "dd/mm/aaaa"}</span>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar mode="single" selected={selected} defaultMonth={selected}
+            onSelect={(dt) => { if (dt) { onChange(isoFromDate(dt)); setOpen(false); } }} />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
 
 // Relatório pronto em segundos: cliente + período + 1 clique.
 // Personalização (análise da IA, editor, mês a mês) continua dentro do relatório.
@@ -119,34 +157,15 @@ export function QuickReportCard() {
         </Button>
       </div>
 
-      {/* Inputs de/até só aparecem no modo "Período". Mobile-first: empilham em 390px,
-          viram lado a lado a partir do sm. */}
+      {/* Campos de/até só aparecem no modo "Período". Clicar abre o calendário visual
+          (mesmo DateField do TasksTab/CriaPostBoard). Mobile-first: empilham em 390px,
+          viram lado a lado a partir do sm. A data continua indo como YYYY-MM-DD. */}
       {periodKey === "custom" && (
-        <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
-          <label className="flex items-center gap-2 text-xs font-body text-muted-foreground">
-            <span className="w-8 shrink-0">De</span>
-            <input
-              type="date"
-              value={customFrom}
-              max={customTo || undefined}
-              onChange={(e) => { setCustomFrom(e.target.value); writeLS(LS_CUSTOM_FROM, e.target.value); }}
-              aria-label="Data inicial do período"
-              className="w-full sm:w-44 rounded-xl border border-border bg-card px-3 py-2 text-sm font-body"
-            />
-          </label>
-          <label className="flex items-center gap-2 text-xs font-body text-muted-foreground">
-            <span className="w-8 shrink-0">Até</span>
-            <input
-              type="date"
-              value={customTo}
-              min={customFrom || undefined}
-              onChange={(e) => { setCustomTo(e.target.value); writeLS(LS_CUSTOM_TO, e.target.value); }}
-              aria-label="Data final do período"
-              className="w-full sm:w-44 rounded-xl border border-border bg-card px-3 py-2 text-sm font-body"
-            />
-          </label>
+        <div className="mt-3 flex flex-col sm:flex-row sm:items-end gap-2">
+          <DateField label="De" value={customFrom} onChange={(iso) => { setCustomFrom(iso); writeLS(LS_CUSTOM_FROM, iso); }} />
+          <DateField label="Até" value={customTo} onChange={(iso) => { setCustomTo(iso); writeLS(LS_CUSTOM_TO, iso); }} />
           {!customValid && (
-            <span className="text-[11px] font-body text-muted-foreground/80">Preencha de/até pra gerar o relatório.</span>
+            <span className="text-[11px] font-body text-muted-foreground/80 sm:pb-2.5">Preencha de/até pra gerar o relatório.</span>
           )}
         </div>
       )}

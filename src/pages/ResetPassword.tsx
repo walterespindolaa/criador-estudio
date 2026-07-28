@@ -20,6 +20,8 @@ const ResetPassword = () => {
   const t = useT();
   const [loading, setLoading] = useState(false);
   const [isRecovery, setIsRecovery] = useState(false);
+  // Enquanto o token do link ainda está sendo processado não mostramos "inválido".
+  const [checking, setChecking] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -36,16 +38,67 @@ const ResetPassword = () => {
   });
 
   useEffect(() => {
-    const hash = window.location.hash;
-    if (hash.includes("type=recovery")) {
-      setIsRecovery(true);
-    }
+    let active = true;
+
+    // Escuta o evento de recuperação. No fluxo implícito o detectSessionInUrl do
+    // client processa o hash (#access_token...&type=recovery) e dispara este evento.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         setIsRecovery(true);
+        setChecking(false);
       }
     });
-    return () => subscription.unsubscribe();
+
+    const processarLink = async () => {
+      const query = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+
+      // Erro explícito devolvido pelo Supabase (ex.: token expirado/já usado).
+      const erro = query.get("error_description") || hashParams.get("error_description")
+        || query.get("error") || hashParams.get("error");
+
+      // Fluxo PKCE: o link volta com ?code=... e é preciso trocar pela sessão.
+      const code = query.get("code");
+      if (code && !erro) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (!active) return;
+        if (!error) {
+          setIsRecovery(true);
+          setChecking(false);
+          return;
+        }
+      }
+
+      // Fluxo implícito com o hash ainda presente (caso o detectSessionInUrl ainda
+      // não tenha limpado a URL).
+      if (!erro && window.location.hash.includes("type=recovery")) {
+        setIsRecovery(true);
+        setChecking(false);
+        return;
+      }
+
+      if (erro) {
+        setChecking(false);
+        return;
+      }
+
+      // O detectSessionInUrl pode já ter consumido o token e limpado a URL (deixando
+      // apenas "#" vazio). getSession aguarda essa inicialização terminar: se existe
+      // uma sessão, o link de recuperação foi validado com sucesso.
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!active) return;
+      if (session) {
+        setIsRecovery(true);
+      }
+      setChecking(false);
+    };
+
+    processarLink();
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const onSubmit = async (data: ResetFormData) => {
@@ -59,6 +112,19 @@ const ResetPassword = () => {
       navigate("/app");
     }
   };
+
+  // Enquanto processa o token do link, não decide nada (evita mostrar "inválido"
+  // antes do Supabase terminar de ler a URL).
+  if (checking) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-8">
+        <div className="text-center">
+          <Lock className="h-12 w-12 text-muted-foreground mx-auto mb-4 animate-pulse" />
+          <p className="text-muted-foreground font-body">{t("common.loading")}</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isRecovery) {
     return (
