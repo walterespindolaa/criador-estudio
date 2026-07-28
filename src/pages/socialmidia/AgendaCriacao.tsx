@@ -651,13 +651,15 @@ export default function AgendaCriacao() {
                           const c = item.cap;
                           return (
                             <Draggable key={`cap:${c.id}`} draggableId={`cap:${c.id}`} index={idx} disableInteractiveElementBlocking>
-                              {(dragProvided, dragSnapshot) => (
+                              {(dragProvided, dragSnapshot) => {
+                                const done = c.status === "concluida";
+                                return (
                                 <button ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
                                   type="button" title={c.location ?? undefined}
                                   onClick={() => setEditCap(c)}
                                   style={{ ...dragProvided.draggableProps.style, ...dragTouchStyle }}
                                   className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors cursor-grab active:cursor-grabbing",
-                                    c.status === "concluida" ? "border-teal-500/25 bg-teal-500/5 opacity-70" : "border-teal-500/40 bg-teal-500/10 hover:bg-teal-500/15",
+                                    done ? "border-teal-500/25 bg-teal-500/5 opacity-70" : "border-teal-500/40 bg-teal-500/10 hover:bg-teal-500/15",
                                     dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
                                   <div className="flex items-center gap-1 text-teal-700 dark:text-teal-300">
                                     <DragGrip className="text-teal-700/40 dark:text-teal-300/40" />
@@ -665,10 +667,22 @@ export default function AgendaCriacao() {
                                     <span className="text-[10px] font-body font-bold flex-1">{c.capture_time ? c.capture_time.slice(0, 5) : ""}</span>
                                     {/* Etiqueta fixa "Captação": mesmo padrão de pill das etiquetas de status dos posts (posição à direita/estilo). */}
                                     <span className="shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full bg-teal-500/15 text-teal-700 dark:text-teal-300">Captação</span>
+                                    {/* Check pra concluir a captação: mesmo padrão do check da tarefa (círculo/quadrado
+                                        que alterna concluída <-> agendada). Span pra não aninhar button; stopPropagation
+                                        pra não abrir o editor. Alvo de toque ampliado no mobile (~40px) sem mexer no layout. */}
+                                    <span role="button" tabIndex={0} aria-label={done ? "Reabrir captação" : "Concluir captação"}
+                                      onClick={(e) => { e.stopPropagation(); updCapture.mutate({ id: c.id, patch: { status: done ? "agendada" : "concluida" } }); }}
+                                      className="grid shrink-0 place-items-center cursor-pointer p-2 -m-2 md:p-0 md:m-0">
+                                      <span className={cn("grid h-6 w-6 md:h-4 md:w-4 place-items-center rounded border transition-colors",
+                                        done ? "bg-emerald-500 border-emerald-500 text-white" : "border-current/50 hover:border-emerald-500 hover:text-emerald-600")}>
+                                        {done && <Check className="h-3 w-3" strokeWidth={3} />}
+                                      </span>
+                                    </span>
                                   </div>
-                                  <p className="text-[12px] font-body font-semibold text-foreground leading-tight truncate">{nameOf(c.crm_client_id, c.client_name)}</p>
+                                  <p className={cn("text-[12px] font-body font-semibold leading-tight truncate", done ? "line-through text-muted-foreground" : "text-foreground")}>{nameOf(c.crm_client_id, c.client_name)}</p>
                                 </button>
-                              )}
+                                );
+                              }}
                             </Draggable>
                           );
                         }
