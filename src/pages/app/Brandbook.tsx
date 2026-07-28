@@ -42,6 +42,7 @@ interface PersonaData {
   interests: string[];
   pain_points: string[];
   desires: string[];
+  objections: string[];
   how_you_help: string;
   platforms: string[];
   notes: string;
@@ -201,6 +202,12 @@ const CAMPOS_CRIADOR: CampoDef[] = [
   { chave: "valueProp", rotulo: "Diferencial e propósito", multi: true },
   { chave: "contentThemes", rotulo: "Temas de conteúdo", multi: true },
   { chave: "audience", rotulo: "Público-alvo", multi: true },
+  // Persona estruturada: cada um vira um campo da persona (ver distribuirDoPdf).
+  { chave: "personaPains", rotulo: "Dores do público", multi: true },
+  { chave: "personaDesires", rotulo: "Desejos do público", multi: true },
+  { chave: "personaObjections", rotulo: "Objeções do público", multi: true },
+  { chave: "personaInterests", rotulo: "Interesses do público", multi: true },
+  { chave: "personaChannels", rotulo: "Canais do público", multi: true },
 ];
 
 const Brandbook = () => {
@@ -237,7 +244,7 @@ const Brandbook = () => {
 
   const emptyPersona: PersonaData = {
     id: null, name: "", icon: "bot", age_range: "", gender: "",
-    location: "", interests: [], pain_points: [], desires: [], how_you_help: "", platforms: [], notes: "",
+    location: "", interests: [], pain_points: [], desires: [], objections: [], how_you_help: "", platforms: [], notes: "",
   };
   const [editingPersona, setEditingPersona] = useState<PersonaData | null>(null);
   const [deletingPersonaId, setDeletingPersonaId] = useState<string | null>(null);
@@ -308,6 +315,12 @@ const Brandbook = () => {
     valueProp: answers["moodboard-contexto"]?.["diferencial"] ?? "",
     contentThemes: answers["linha-editorial"]?.["temas"] ?? "",
     audience: personas[0]?.notes ?? personas[0]?.name ?? "",
+    // Persona estruturada (antes → depois): junta com "; " pra bater com o parse.
+    personaPains: (personas[0]?.pain_points ?? []).join("; "),
+    personaDesires: (personas[0]?.desires ?? []).join("; "),
+    personaObjections: (personas[0]?.objections ?? []).join("; "),
+    personaInterests: (personas[0]?.interests ?? []).join("; "),
+    personaChannels: (personas[0]?.platforms ?? []).join("; "),
   }), [brandItems, answers, personas]);
 
   const distribuirDoPdf = async (valores: Record<string, string>) => {
@@ -367,13 +380,31 @@ const Brandbook = () => {
 
     // 3) Público-alvo: cria UMA persona a partir do que o arquivo trouxe, só se
     //    ainda não existir nenhuma. Nunca mexe numa persona que a pessoa criou.
+    //    Agora a persona vem ESTRUTURADA: dores, desejos, objeções, interesses e
+    //    canais viram arrays nos campos certos (não mais só um texto solto).
+    //    Listas de frases quebram só por ";" e quebra de linha — vírgula picotaria
+    //    frases tipo "acha caro, não confia".
+    const paraFrases = (v?: string) =>
+      (v ?? "").split(/[;\n]+/).map((s) => s.trim()).filter(Boolean);
+
     let personaCriada = false;
     const publico = (valores.audience ?? "").trim();
-    if (publico && personas.length === 0) {
+    const dores = paraFrases(valores.personaPains);
+    const desejos = paraFrases(valores.personaDesires);
+    const objecoes = paraFrases(valores.personaObjections);
+    const interesses = paraFrases(valores.personaInterests);
+    const canais = paraFrases(valores.personaChannels);
+    const temPersona = publico || dores.length || desejos.length || objecoes.length || interesses.length || canais.length;
+    if (temPersona && personas.length === 0) {
       await savePersonaMutation.mutateAsync({
         name: "Público principal",
         icon: "bot",
-        notes: publico,
+        notes: publico || null,
+        pain_points: dores.length ? dores : null,
+        desires: desejos.length ? desejos : null,
+        objections: objecoes.length ? objecoes : null,
+        interests: interesses.length ? interesses : null,
+        platforms: canais.length ? canais : null,
       });
       personaCriada = true;
     }
@@ -428,6 +459,7 @@ const Brandbook = () => {
         interests: editingPersona.interests.length > 0 ? editingPersona.interests : null,
         pain_points: editingPersona.pain_points.length > 0 ? editingPersona.pain_points : null,
         desires: editingPersona.desires.length > 0 ? editingPersona.desires : null,
+        objections: editingPersona.objections.length > 0 ? editingPersona.objections : null,
         how_you_help: editingPersona.how_you_help || null,
         platforms: editingPersona.platforms.length > 0 ? editingPersona.platforms : null,
         notes: editingPersona.notes || null,
@@ -470,6 +502,7 @@ const Brandbook = () => {
       interests: target.interests || [],
       pain_points: target.pain_points || [],
       desires: target.desires || [],
+      objections: target.objections || [],
       how_you_help: target.how_you_help || "",
       platforms: target.platforms || [],
       notes: target.notes || "",
@@ -879,7 +912,7 @@ const Brandbook = () => {
       </motion.div>
 
       <Dialog open={editingPersona !== null} onOpenChange={(open) => { if (!open) setEditingPersona(null); }}>
-        <DialogContent className="max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-display">
               {editingPersona?.id ? "Editar persona" : "Nova persona"}

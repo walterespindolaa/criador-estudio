@@ -14,6 +14,7 @@ import { usePillars } from "@/hooks/usePillars";
 type FeedProfile = Pick<Profile, "name" | "avatar_url" | "niche" | "instagram_handle" | "bio">;
 import { Button } from "@/components/ui/button";
 import { FeedProfileHeader } from "@/components/feed/FeedProfileHeader";
+import { FeedEditProfileDialog } from "@/components/feed/FeedEditProfileDialog";
 import { FeedAddSheet } from "@/components/feed/FeedAddSheet";
 import { FeedGrid, GRID_DROPPABLE_ID } from "@/components/feed/FeedGrid";
 import { FeedSidebar, SIDEBAR_DROPPABLE_ID, type StatusFilter } from "@/components/feed/FeedSidebar";
@@ -67,6 +68,7 @@ const Feed = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("todos");
   const [searchFilter, setSearchFilter] = useState("");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
   const initializedRef = useRef(false);
 
   useEffect(() => {
@@ -298,7 +300,11 @@ const Feed = () => {
             </aside>
 
             <section data-tour="feed-grid">
-              <FeedProfileHeader profile={profile} postCount={gridPosts.length} />
+              <FeedProfileHeader
+                profile={profile}
+                postCount={gridPosts.length}
+                onEdit={isOwnAccount ? () => setEditProfileOpen(true) : undefined}
+              />
               <FeedGrid
                 posts={gridPosts}
                 pillars={pillars}
@@ -318,6 +324,10 @@ const Feed = () => {
           </div>
         </motion.div>
       </div>
+
+      {isOwnAccount && (
+        <FeedEditProfileDialog open={editProfileOpen} onOpenChange={setEditProfileOpen} />
+      )}
     </DragDropContext>
   );
 };

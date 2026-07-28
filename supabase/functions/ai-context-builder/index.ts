@@ -505,6 +505,7 @@ REGRAS:
 - Só afirme o que você REALMENTE VÊ. Campo que não aparece no documento vem como null. NUNCA invente pra preencher: preencher chutando destrói a confiança e sai errado em dezenas de posts depois.
 - Cores: devolva os HEX que você vê nas páginas de paleta (ex: "#6B4E71"). Se a página mostra a cor mas não o código, estime o hex mais próximo e diga na origem que foi estimado.
 - Fontes: os nomes das famílias tipográficas, e pra que serve cada uma (título, corpo).
+- Persona/público: se o documento descreve o público-alvo, DESTRINCHE em campos separados: quem é (audience), dores/frustrações (personaPains), desejos/objetivos (personaDesires), OBJEÇÕES/medos/barreiras que travam a decisão (personaObjections), interesses/temas (personaInterests) e canais/onde consome conteúdo (personaChannels). Em cada um desses, separe os itens por ponto e vírgula (";"), não por vírgula, pra não picotar frases. Campo que o documento não trouxer vem null.
 - "origem": em que página do documento você viu aquilo (número). Isso é o que permite a pessoa conferir.
 
 RESPONDA APENAS JSON válido:
@@ -513,7 +514,12 @@ RESPONDA APENAS JSON válido:
  "typography":{"valor":"Playfair Display (títulos), Inter (corpo)","origem":"página 5"} | null,
  "toneOfVoice":{"valor":"como a marca fala","origem":"página 7"} | null,
  "personality":{"valor":"traços de personalidade da marca","origem":"..."} | null,
- "audience":{"valor":"quem é o público","origem":"..."} | null,
+ "audience":{"valor":"quem é o público (resumo em 1-2 frases)","origem":"..."} | null,
+ "personaPains":{"valor":"dor 1; dor 2; dor 3","origem":"..."} | null,
+ "personaDesires":{"valor":"desejo 1; desejo 2","origem":"..."} | null,
+ "personaObjections":{"valor":"objeção 1; objeção 2","origem":"..."} | null,
+ "personaInterests":{"valor":"interesse 1; interesse 2","origem":"..."} | null,
+ "personaChannels":{"valor":"Instagram; TikTok; newsletter","origem":"..."} | null,
  "valueProp":{"valor":"o que a marca promete","origem":"..."} | null,
  "avoid":{"valor":"o que NUNCA fazer (visual e verbal)","origem":"..."} | null,
  "visualExpression":{"valor":"direção de arte: tipo de imagem, luz, composição","origem":"..."} | null,

@@ -3273,6 +3273,7 @@ export type Database = {
           location: string | null
           name: string
           notes: string | null
+          objections: string[] | null
           pain_points: string[] | null
           platforms: string[] | null
           user_id: string
@@ -3289,6 +3290,7 @@ export type Database = {
           location?: string | null
           name?: string
           notes?: string | null
+          objections?: string[] | null
           pain_points?: string[] | null
           platforms?: string[] | null
           user_id: string
@@ -3305,6 +3307,7 @@ export type Database = {
           location?: string | null
           name?: string
           notes?: string | null
+          objections?: string[] | null
           pain_points?: string[] | null
           platforms?: string[] | null
           user_id?: string

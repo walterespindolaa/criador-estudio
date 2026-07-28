@@ -35,6 +35,13 @@ const EDITORIAL_QUESTIONS: Array<{ key: string; label: string }> = [
   { key: "lema", label: "Lema / frase-guia" },
 ];
 
+// A cor pode estar no value (cor adicionada à mão) OU no name (cor importada
+// do PDF, onde o hex cai no nome e o value fica nulo). Pega o primeiro hex válido.
+const hexDe = (s?: string | null): string | null => {
+  const m = String(s ?? "").match(/#[0-9a-fA-F]{3,8}/);
+  return m ? m[0] : null;
+};
+
 export const BrandPdfTemplate = forwardRef<HTMLDivElement, BrandPdfProps>(
   ({ profile, brandItems, persona, pillars = [], moodboardEntries = [] }, ref) => {
     const tom = brandItems.find(b => b.type === "tom")?.name;
@@ -179,11 +186,15 @@ export const BrandPdfTemplate = forwardRef<HTMLDivElement, BrandPdfProps>(
           )}
 
           {/* Persona */}
-          {persona && (persona.name || persona.age_range || persona.location || persona.pain_points?.length || persona.desires?.length || persona.interests?.length) && (
+          {persona && (persona.name || persona.age_range || persona.location || persona.notes || persona.how_you_help || persona.pain_points?.length || persona.desires?.length || persona.objections?.length || persona.interests?.length || persona.platforms?.length) && (
             <div>
               <h2 style={blockTitle}>Persona</h2>
               <div style={{ background: "#f9f9f9", padding: 20, borderRadius: 8 }}>
                 <p style={{ fontWeight: 600, fontSize: 14, margin: "0 0 8px" }}>{persona.name || "Persona principal"}</p>
+                {/* Descrição do público (o texto puxado do brandbook fica em notes). */}
+                {persona.notes && (
+                  <p style={{ fontSize: 12.5, color: "#333", margin: "0 0 12px", lineHeight: 1.5 }}>{persona.notes}</p>
+                )}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
                   {persona.age_range && (
                     <div>
@@ -220,11 +231,35 @@ export const BrandPdfTemplate = forwardRef<HTMLDivElement, BrandPdfProps>(
                     ))}
                   </div>
                 )}
+                {persona.objections?.length > 0 && (
+                  <div style={{ marginTop: 10 }}>
+                    <p style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>Objeções</p>
+                    {persona.objections.map((d: string, i: number) => (
+                      <p key={i} style={{ fontSize: 12, color: "#333", paddingLeft: 12, margin: "2px 0" }}>· {d}</p>
+                    ))}
+                  </div>
+                )}
+                {persona.how_you_help && (
+                  <div style={{ marginTop: 10 }}>
+                    <p style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>Como você ajuda</p>
+                    <p style={{ fontSize: 12, color: "#333", margin: 0, lineHeight: 1.5 }}>{persona.how_you_help}</p>
+                  </div>
+                )}
                 {persona.interests?.length > 0 && (
                   <div style={{ marginTop: 10 }}>
                     <p style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>Interesses</p>
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                       {persona.interests.map((d: string, i: number) => (
+                        <span key={i} style={{ padding: "3px 10px", background: "#fff", border: "1px solid #e5e5e5", borderRadius: 100, fontSize: 11 }}>{d}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {persona.platforms?.length > 0 && (
+                  <div style={{ marginTop: 10 }}>
+                    <p style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>Canais</p>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {persona.platforms.map((d: string, i: number) => (
                         <span key={i} style={{ padding: "3px 10px", background: "#fff", border: "1px solid #e5e5e5", borderRadius: 100, fontSize: 11 }}>{d}</span>
                       ))}
                     </div>
@@ -242,15 +277,21 @@ export const BrandPdfTemplate = forwardRef<HTMLDivElement, BrandPdfProps>(
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ fontSize: 11, color: "#888", marginBottom: 8 }}>Paleta de cores</p>
                   <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                    {cores.map((c, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 12px", border: "1px solid #e5e5e5", borderRadius: 8 }}>
-                        <span style={{ width: 18, height: 18, borderRadius: 4, background: c.value || "#ddd", border: "1px solid #e5e5e5" }} />
-                        <div>
-                          <p style={{ fontSize: 12, fontWeight: 600, margin: 0 }}>{c.name}</p>
-                          {c.value && <p style={{ fontSize: 10, color: "#888", margin: 0 }}>{c.value}</p>}
+                    {cores.map((c, i) => {
+                      const hex = hexDe(c.value) || hexDe(c.name);
+                      // Se o nome já é o próprio hex (cor importada), não repete embaixo.
+                      const rotulo = c.name;
+                      const sub = c.value && hexDe(c.value) !== rotulo ? c.value : null;
+                      return (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 12px", border: "1px solid #e5e5e5", borderRadius: 8 }}>
+                          <span style={{ width: 18, height: 18, borderRadius: 4, background: hex || "#ddd", border: "1px solid #e5e5e5" }} />
+                          <div>
+                            <p style={{ fontSize: 12, fontWeight: 600, margin: 0 }}>{rotulo}</p>
+                            {sub && <p style={{ fontSize: 10, color: "#888", margin: 0 }}>{sub}</p>}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}

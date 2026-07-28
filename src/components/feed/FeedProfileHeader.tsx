@@ -1,12 +1,15 @@
-import { Film, Grid3X3, UserCircle } from "lucide-react";
+import { Film, Grid3X3, Pencil, UserCircle } from "lucide-react";
 import type { Profile } from "@/hooks/useProfile";
+import { Button } from "@/components/ui/button";
 
 type Props = {
   profile: Profile | null;
   postCount: number;
+  // So aparece quando e a propria conta (manager gerenciando outro nao edita aqui).
+  onEdit?: () => void;
 };
 
-export function FeedProfileHeader({ profile, postCount }: Props) {
+export function FeedProfileHeader({ profile, postCount, onEdit }: Props) {
   const name = profile?.name || "Criador";
   const niche = profile?.niche || "";
   const bio = profile?.bio || "";
@@ -49,6 +52,19 @@ export function FeedProfileHeader({ profile, postCount }: Props) {
             <p className="text-sm text-foreground font-body mt-1.5 leading-relaxed whitespace-pre-line">{bio}</p>
           )}
         </div>
+
+        {onEdit && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full mt-4"
+            onClick={onEdit}
+          >
+            <Pencil className="h-4 w-4 mr-1.5" strokeWidth={1.75} />
+            Editar perfil
+          </Button>
+        )}
       </div>
 
       <div className="flex border-t border-border">

@@ -12,6 +12,8 @@ export interface Persona {
   interests?: string[] | null;
   pain_points?: string[] | null;
   desires?: string[] | null;
+  // Objeções: medos/barreiras que travam a decisão. Coluna nova em personas.
+  objections?: string[] | null;
   platforms?: string[] | null;
   notes?: string | null;
   how_you_help?: string | null;

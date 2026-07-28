@@ -277,7 +277,9 @@ const Onboarding = () => {
       if (sanitizedName) profileUpdates.name = sanitizedName;
       if (avatarUrl) profileUpdates.avatar_url = avatarUrl;
       if (sanitizedHandle) profileUpdates.instagram_handle = sanitizedHandle;
-      if (niches.length > 0) profileUpdates.niche = niches[0];
+      // Salva TODOS os nichos selecionados (inclui o personalizado digitado) numa string separada por virgula,
+      // mesmo formato usado nas Configuracoes, pra nao perder os demais nichos escolhidos.
+      if (niches.length > 0) profileUpdates.niche = niches.map((n) => n.trim()).filter(Boolean).join(", ");
       if (platforms.length > 0) profileUpdates.platforms = platforms;
 
       await updateProfile.mutateAsync(profileUpdates);
