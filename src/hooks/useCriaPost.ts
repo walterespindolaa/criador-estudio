@@ -207,8 +207,10 @@ export function useExternalPosts(clientId: string | null) {
     enabled: !!agencyOwnerId && !!clientId,
     // Revalida ao focar (cliente aprova por link e o kanban precisa refletir), mas com
     // janela de 30s pra não rebaixar tudo a cada montagem/foco. As mutações já invalidam
-    // quando algo muda de verdade.
-    staleTime: 30_000, refetchOnWindowFocus: true,
+    // quando algo muda de verdade. refetchOnMount:true (respeita o staleTime de 30s):
+    // abrir a tela busca de novo se o dado tiver >30s, pra o celular (PWA, onde o
+    // "focus" quase nao dispara) nao ficar preso num dado velho de outra sessao/aparelho.
+    staleTime: 30_000, refetchOnWindowFocus: true, refetchOnMount: true,
     queryFn: async () => {
       // Rascunhos (is_draft) NÃO aparecem no kanban/calendário nem vão pro cliente.
       const { data, error } = await sbFrom("posts").select(POST_BOARD_COLUMNS).eq("external_client_id", clientId!)
@@ -409,7 +411,9 @@ export function useAllExternalPosts() {
     enabled: !!agencyOwnerId,
     // O cliente aprova por link; revalida ao focar pra o painel sair do "pendente",
     // mas com janela de 30s pra não rebaixar todos os posts a cada montagem/foco.
-    staleTime: 30_000, refetchOnWindowFocus: true,
+    // refetchOnMount:true: abrir a Agenda busca de novo se o dado tiver >30s (o
+    // "focus" da PWA mobile e instavel; senao a agenda fica presa num dado velho).
+    staleTime: 30_000, refetchOnWindowFocus: true, refetchOnMount: true,
     queryFn: async () => {
       const { data, error } = await sbFrom("posts").select(POST_BOARD_COLUMNS)
         .eq("user_id", agencyOwnerId!)
@@ -458,7 +462,9 @@ export function useOperationPosts() {
     enabled: !!agencyOwnerId,
     // Mesma cadência do painel: cliente aprova por link, revalida ao focar, com janela
     // de 30s pra não rebaixar tudo a cada montagem/foco.
-    staleTime: 30_000, refetchOnWindowFocus: true,
+    // refetchOnMount:true (respeita staleTime 30s): abrir a home busca de novo se
+    // o dado tiver >30s, pra o celular nao ficar com sinais velhos.
+    staleTime: 30_000, refetchOnWindowFocus: true, refetchOnMount: true,
     queryFn: async () => {
       // Corte da janela: hoje menos 60 dias, no fuso BR.
       const cutoffDate = parseDateOnly(hojeBR());
