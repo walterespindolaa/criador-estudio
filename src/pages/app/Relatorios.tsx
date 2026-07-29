@@ -664,54 +664,10 @@ const Relatorios = () => {
     );
   }
 
-  if (!isAdmin) {
-    const bullets = [
-      "Alcance e impressões por post",
-      "Taxa de engajamento por formato",
-      "Crescimento de seguidores",
-      "Melhores horários para publicar",
-      "Comparativo entre plataformas",
-    ];
-    return (
-      <div className="pb-20 md:pb-0">
-        <div className="max-w-lg mx-auto mt-16 rounded-2xl bg-card border border-border shadow-warm p-10 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-muted/60 flex items-center justify-center mx-auto mb-5">
-            <BarChart3 className="h-7 w-7 text-foreground/70" strokeWidth={1.75} />
-          </div>
-
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[11px] font-body font-semibold mb-4">
-            🔒 Acesso Restrito · Apenas Admin
-          </span>
-
-          <h1 className="text-2xl font-display font-extrabold text-foreground tracking-tight mb-2">
-            Relatórios de Performance
-          </h1>
-          <p className="text-sm font-body text-muted-foreground leading-relaxed mb-6">
-            Conecte suas redes sociais e acesse dados reais de alcance, impressões e engajamento via API.
-          </p>
-
-          <div className="bg-muted/40 rounded-xl p-4 text-left mb-6">
-            <ul className="space-y-2">
-              {bullets.map((b) => (
-                <li key={b} className="flex items-start gap-2 text-sm font-body text-foreground/85">
-                  <Sparkles className="h-3 w-3 text-primary mt-1 shrink-0" strokeWidth={2} />
-                  <span>{b}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <p className="text-xs font-body text-muted-foreground mb-5">
-            Acesso disponível para administradores do sistema.
-          </p>
-
-          <Button variant="ghost" size="sm" onClick={() => navigate("/app")}>
-            ← Voltar ao Dashboard
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  // Relatórios liberado pra TODOS os usuários (não só admin): já integramos a Meta e
+  // seguimos ajustando essa parte. A trava "Apenas Admin" foi removida de propósito.
+  // (Mantido isAdmin no arquivo caso volte a valer pra algum bloco específico.)
+  void isAdmin;
 
   return (
     <div className="pb-20 md:pb-0">

@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useT } from "@/lib/i18n";
 import {
-  Instagram, Users, Eye, Zap, UserPlus, RefreshCw, Unplug, Link2, Unlink, Bookmark, Heart, Play, Image as ImageIcon, Images, Sparkles, Info, TrendingUp, BarChart3, Search,
+  Instagram, Users, Eye, Zap, UserPlus, RefreshCw, Unplug, Link2, Unlink, Bookmark, Heart, Play, Image as ImageIcon, Images, Sparkles, Info, TrendingUp, BarChart3, Search, AlertTriangle,
 } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -231,6 +231,20 @@ export default function Insights() {
           </Button>
         </div>
       </div>
+
+      {/* Aviso de conta NÃO profissional: o Instagram só devolve seguidores, alcance e
+          insights pra contas Comercial/Criador. Se a conta for pessoal, tudo fica "-" e
+          antes não havia pista nenhuma do porquê. Só mostra quando o account_type já
+          veio do sync e não é profissional (não incomoda conta nova/pro sem dado ainda). */}
+      {conn.account_type && !["BUSINESS", "CREATOR", "MEDIA_CREATOR"].includes((conn.account_type || "").toUpperCase()) && (
+        <div className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 flex items-start gap-2.5">
+          <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+          <div className="text-[13px] font-body text-amber-900 leading-snug">
+            <p className="font-bold">Sua conta do Instagram é pessoal.</p>
+            <p className="mt-0.5">O Instagram só libera seguidores, alcance e insights pra contas Profissionais (Comercial ou Criador de conteúdo). No app do Instagram: Configurações, Tipo de conta e ferramentas, Mudar para conta profissional. Depois volte aqui e toque em Atualizar.</p>
+          </div>
+        </div>
+      )}
 
       {/* KPIs */}
       <div data-tour="insights-kpis" className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
