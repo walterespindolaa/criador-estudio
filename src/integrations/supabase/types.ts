@@ -1400,6 +1400,7 @@ export type Database = {
       }
       crm_tasks: {
         Row: {
+          color: string | null
           created_at: string
           crm_client_id: string | null
           crm_lead_id: string | null
@@ -1414,6 +1415,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          color?: string | null
           created_at?: string
           crm_client_id?: string | null
           crm_lead_id?: string | null
@@ -1428,6 +1430,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          color?: string | null
           created_at?: string
           crm_client_id?: string | null
           crm_lead_id?: string | null
@@ -4974,6 +4977,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      first_handle: { Args: { _vals: string[] }; Returns: string }
       get_admin_stats: {
         Args: never
         Returns: {
