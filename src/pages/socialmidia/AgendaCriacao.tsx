@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
+import { DragDropContext, Droppable, Draggable, type DropResult, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive, Download, Play, FileImage, Link2, Paperclip, GripVertical, FolderOpen, ChevronDown, Trash2 } from "lucide-react";
@@ -137,13 +137,21 @@ function buildDayItems(caps: Capture[], tasks: CrmTask[], cris: Creation[], post
 //     [data-rfd-drag-handle-draggable-id], atributo que o dragHandleProps injeta no card)
 //     garante que o long-press de 120ms do dnd não seja roubado pelo scroll horizontal
 //     da semana nem pela rolagem vertical da página.
-// O grip vira só pista visual (decorativo); quem arrasta é o card inteiro.
-const dragTouchStyle: CSSProperties = { touchAction: "none", WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" };
-function DragGrip({ className }: { className?: string }) {
+// REVISÃO (mobile): antes o card INTEIRO era a alça com touch-action:none. Isso travava
+// a rolagem: sobre qualquer card a página não rolava nativamente, então o toque só "andava"
+// depois que o long-press do dnd disparava (a sensação de travar e destravar do nada).
+// Agora quem arrasta é SÓ o grip (o data-rfd-drag-handle mora nele, então a regra global
+// [data-rfd-drag-handle-draggable-id]{touch-action:none} vale só pro grip). O CORPO do card
+// volta a rolar nativo (sem touch-action), o tap edita, e o arraste começa pegando o grip.
+// disableInteractiveElementBlocking segue ligado, então o grip dentro do <button> funciona.
+const dragCardStyle: CSSProperties = { WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" };
+function DragGrip({ className, handleProps }: { className?: string; handleProps?: DraggableProvidedDragHandleProps }) {
+  // Alvo de toque generoso no mobile (p-2 -m-2 ~ 40px) sem inflar o visual do grip.
   return (
-    <span aria-hidden="true"
-      className={cn("shrink-0 grid place-items-center h-5 w-4 -ml-0.5 rounded text-muted-foreground/50", className)}>
-      <GripVertical className="h-3.5 w-3.5" />
+    <span {...(handleProps ?? {})} aria-label="Arrastar para reordenar"
+      onClick={(e) => e.stopPropagation()}
+      className={cn("shrink-0 grid place-items-center rounded text-muted-foreground/50 cursor-grab active:cursor-grabbing touch-none p-2 -m-2 md:p-0 md:m-0 -ml-1 md:-ml-0.5", className)}>
+      <GripVertical className="h-4 w-4 md:h-3.5 md:w-3.5" />
     </span>
   );
 }
@@ -586,13 +594,13 @@ export default function AgendaCriacao() {
                       return (
                         <Draggable key={`post:${p.id}`} draggableId={`post:${p.id}`} index={idx} disableInteractiveElementBlocking>
                           {(dragProvided, dragSnapshot) => (
-                            <button ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
+                            <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
                               type="button" title={p.title ?? undefined} onClick={() => openPost(p)}
-                              style={{ ...dragProvided.draggableProps.style, ...dragTouchStyle }}
-                              className={cn("rounded-lg border border-orange-500/40 bg-card hover:bg-orange-500/10 px-2 py-1.5 text-left transition-colors w-[180px] shrink-0 overflow-hidden cursor-grab active:cursor-grabbing",
+                              style={{ ...dragProvided.draggableProps.style, ...dragCardStyle }}
+                              className={cn("rounded-lg border border-orange-500/40 bg-card hover:bg-orange-500/10 px-2 py-1.5 text-left transition-colors w-[180px] shrink-0 overflow-hidden",
                                 dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
                               <div className="flex items-center gap-1 text-orange-700 dark:text-orange-300">
-                                <DragGrip className="text-orange-700/40 dark:text-orange-300/40" />
+                                <DragGrip className="text-orange-700/40 dark:text-orange-300/40" handleProps={dragProvided.dragHandleProps ?? undefined} />
                                 <Send className="h-3 w-3 shrink-0" />
                                 <span className="text-[10px] font-body font-bold truncate flex-1">{cli?.name ?? "Post"}</span>
                                 {p.drive_folder_url && <FolderOpen className="h-3 w-3 shrink-0 text-primary opacity-80" aria-label="Tem pasta no Drive" />}
@@ -661,15 +669,15 @@ export default function AgendaCriacao() {
                               {(dragProvided, dragSnapshot) => {
                                 const done = c.status === "concluida";
                                 return (
-                                <button ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
+                                <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
                                   type="button" title={c.location ?? undefined}
                                   onClick={() => setEditCap(c)}
-                                  style={{ ...dragProvided.draggableProps.style, ...dragTouchStyle }}
-                                  className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors cursor-grab active:cursor-grabbing",
+                                  style={{ ...dragProvided.draggableProps.style, ...dragCardStyle }}
+                                  className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors",
                                     done ? "border-teal-500/25 bg-teal-500/5 opacity-70" : "border-teal-500/40 bg-teal-500/10 hover:bg-teal-500/15",
                                     dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
                                   <div className="flex items-center gap-1 text-teal-700 dark:text-teal-300">
-                                    <DragGrip className="text-teal-700/40 dark:text-teal-300/40" />
+                                    <DragGrip className="text-teal-700/40 dark:text-teal-300/40" handleProps={dragProvided.dragHandleProps ?? undefined} />
                                     <Video className="h-3 w-3 shrink-0" />
                                     <span className="text-[10px] font-body font-bold flex-1">{c.capture_time ? c.capture_time.slice(0, 5) : ""}</span>
                                     {/* Etiqueta fixa "Captação": mesmo padrão de pill das etiquetas de status dos posts (posição à direita/estilo). */}
@@ -705,18 +713,18 @@ export default function AgendaCriacao() {
                               {(dragProvided, dragSnapshot) => {
                                 const done = t.status === "concluida";
                                 return (
-                                  <button ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
+                                  <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
                                     type="button" title={t.description ?? undefined}
                                     onClick={() => setEditTask(t)}
-                                    className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors cursor-grab active:cursor-grabbing",
+                                    className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors",
                                       isLead ? "border-sky-500/45 bg-sky-500/10 hover:bg-sky-500/15" : "hover:brightness-95",
                                       done && "opacity-60",
                                       dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}
                                     // Cliente: acento na cor do cliente (borda esquerda + fundo bem suave). Texto fica no foreground pra não perder contraste.
                                     // Merge com draggableProps.style: sem isso o style explícito venceria o do spread e o transform do drag sumiria.
-                                    style={{ ...dragProvided.draggableProps.style, ...(!isLead ? { borderColor: `${clientColor}59`, borderLeftColor: clientColor, borderLeftWidth: 3, background: `${clientColor}12` } : {}), ...dragTouchStyle }}>
+                                    style={{ ...dragProvided.draggableProps.style, ...(!isLead ? { borderColor: `${clientColor}59`, borderLeftColor: clientColor, borderLeftWidth: 3, background: `${clientColor}12` } : {}), ...dragCardStyle }}>
                                     <div className={cn("flex items-center gap-1", isLead && "text-sky-700 dark:text-sky-300")}>
-                                      <DragGrip />
+                                      <DragGrip handleProps={dragProvided.dragHandleProps ?? undefined} />
                                       {isLead
                                         ? <ListChecks className="h-3 w-3 shrink-0" />
                                         : <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: clientColor }} />}
@@ -748,15 +756,15 @@ export default function AgendaCriacao() {
                           return (
                             <Draggable key={`cria:${c.id}`} draggableId={`cria:${c.id}`} index={idx} disableInteractiveElementBlocking>
                               {(dragProvided, dragSnapshot) => (
-                                <div ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
+                                <div ref={dragProvided.innerRef} {...dragProvided.draggableProps}
                                   role="button" tabIndex={0}
                                   onClick={() => setEditCreation(c)}
                                   onKeyDown={(e) => { if (e.key === "Enter") setEditCreation(c); }}
-                                  style={{ ...dragProvided.draggableProps.style, ...dragTouchStyle }}
-                                  className={cn("group rounded-lg border border-border bg-card px-2 py-1.5 cursor-grab active:cursor-grabbing hover:bg-muted/40 transition-colors",
+                                  style={{ ...dragProvided.draggableProps.style, ...dragCardStyle }}
+                                  className={cn("group rounded-lg border border-border bg-card px-2 py-1.5 hover:bg-muted/40 transition-colors",
                                     dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
                                   <div className="flex items-start gap-1">
-                                    <DragGrip className="mt-px" />
+                                    <DragGrip className="mt-px" handleProps={dragProvided.dragHandleProps ?? undefined} />
                                     <p className="text-[12px] font-body font-semibold text-foreground leading-tight flex-1 min-w-0 truncate">{nameOf(c.crm_client_id, c.client_name)}</p>
                                     <button onClick={(e) => { e.stopPropagation(); delCreation.mutate(c.id); }} className="text-muted-foreground/50 hover:text-destructive shrink-0" aria-label="Remover"><X className="h-3 w-3" /></button>
                                   </div>
@@ -775,14 +783,14 @@ export default function AgendaCriacao() {
                           <Draggable key={`post:${p.id}`} draggableId={`post:${p.id}`} index={idx} disableInteractiveElementBlocking>
                             {(dragProvided, dragSnapshot) => {
                               return (
-                              <button ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
+                              <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
                                 type="button" title={p.title ?? undefined} onClick={() => openPost(p)}
-                                style={{ ...dragProvided.draggableProps.style, ...dragTouchStyle }}
-                                className={cn("rounded-lg border border-orange-500/40 bg-orange-500/10 hover:bg-orange-500/15 px-2 py-1.5 text-left transition-colors w-full overflow-hidden cursor-grab active:cursor-grabbing",
+                                style={{ ...dragProvided.draggableProps.style, ...dragCardStyle }}
+                                className={cn("rounded-lg border border-orange-500/40 bg-orange-500/10 hover:bg-orange-500/15 px-2 py-1.5 text-left transition-colors w-full overflow-hidden",
                                   posted && "opacity-60",
                                   dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
                                 <div className="flex items-center gap-1 text-orange-700 dark:text-orange-300">
-                                  <DragGrip className="text-orange-700/40 dark:text-orange-300/40" />
+                                  <DragGrip className="text-orange-700/40 dark:text-orange-300/40" handleProps={dragProvided.dragHandleProps ?? undefined} />
                                   <Send className="h-3 w-3 shrink-0" />
                                   <span className="text-[10px] font-body font-bold truncate flex-1">{item.time && <span className="tabular-nums">{item.time} · </span>}{cli?.name ?? "Post"}</span>
                                   {/* Indicador discreto: post tem link do Drive no campo Ideia/Referência. */}
