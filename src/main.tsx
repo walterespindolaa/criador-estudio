@@ -1,4 +1,5 @@
 import { createRoot } from "react-dom/client";
+import * as Sentry from "@sentry/react";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { I18nProvider } from "./lib/i18n";
 import App from "./App.tsx";
@@ -6,6 +7,20 @@ import "./index.css";
 import { installGlobalErrorLogging } from "./lib/logError";
 import { applyTheme, applyAccent } from "./lib/applyTheme";
 import { applySidebarColor } from "./lib/sidebarTheme";
+
+// Sentry: monitoramento de erros. Convive com o app_logs (o Admin → Logs continua
+// funcionando); o Sentry agrupa/alerta/mostra a linha real via source map. Só liga
+// em produção (enabled: PROD) pra não poluir com erros de desenvolvimento local.
+// O DSN é público por design (vai no bundle do client, igual à VAPID public key).
+Sentry.init({
+  dsn: import.meta.env.VITE_SENTRY_DSN ?? "https://53b51307be2e2b1b40df7440935a4198@o4511252656685056.ingest.us.sentry.io/4511816482160645",
+  enabled: import.meta.env.PROD,
+  environment: import.meta.env.MODE,
+  // Só monitoramento de erro (sem tracing/replay), pra manter o bundle enxuto e
+  // ficar folgado no tier grátis. Dá pra ligar tracing depois se precisar.
+  tracesSampleRate: 0,
+  sendDefaultPii: false,
+});
 
 installGlobalErrorLogging();
 
