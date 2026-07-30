@@ -121,11 +121,10 @@ function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
           <div className="absolute right-3 bottom-16 z-10 flex flex-col items-center gap-4 text-white pointer-events-none [filter:drop-shadow(0_1px_2px_rgba(0,0,0,.6))]">
             <Heart className="h-7 w-7" /><MessageCircle className="h-7 w-7" /><Send className="h-7 w-7" /><Bookmark className="h-7 w-7" />
           </div>
-          {legenda && (
-            <div className="absolute left-3.5 right-16 bottom-3.5 z-10 text-white text-[13px] leading-snug pointer-events-none line-clamp-3 [text-shadow:0_1px_3px_rgba(0,0,0,.6)]">
-              <span className="font-bold mr-1.5">{handle}</span>{legenda}
-            </div>
-          )}
+          {/* Legenda sobreposta REMOVIDA no vídeo/vertical: colidia com o botão "Assistir
+              no Drive" e com o texto queimado do próprio vídeo (aquele amontoado no rodapé).
+              A legenda completa já aparece no bloco "Legenda" (abaixo no mobile, ao lado no
+              desktop), então nada se perde. */}
         </div>
       ) : (
         <>
@@ -187,6 +186,9 @@ function PostApproval({ client, post, index, busy, onApproveFast, onAdjustFast, 
   // Atalho pra pasta do Drive com os materiais do post (só link http válido).
   const driveFolder = (post.drive_folder_url ?? "").trim();
   const hasDriveFolder = /^https?:\/\//i.test(driveFolder);
+  // Disclaimer de qualidade: só faz sentido pra vídeo (Reels/Story). O preview aqui
+  // pode vir comprimido/em baixa; o arquivo original mora no Drive.
+  const isVideoPost = ["reels", "video", "story"].includes((post.format || "").toLowerCase());
 
   const panel = (
     <>
@@ -199,6 +201,16 @@ function PostApproval({ client, post, index, busy, onApproveFast, onAdjustFast, 
             <span className="block text-[11px] font-body text-muted-foreground">Materiais deste post</span>
           </span>
         </button>
+      )}
+      {/* Disclaimer de qualidade do vídeo: o preview daqui pode vir comprimido. Pra ver
+          na qualidade real, abrir no Drive e baixar no computador ou celular. */}
+      {isVideoPost && (
+        <div className="flex items-start gap-2 mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-3.5 py-2.5">
+          <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+          <p className="text-[12px] font-body text-amber-900 leading-snug">
+            Se o vídeo aparecer em baixa qualidade aqui, é normal (o preview é comprimido). Abra no Drive e baixe no seu computador ou celular pra ver na qualidade original.
+          </p>
+        </div>
       )}
       {mode === "both" && (
         <div className="flex bg-muted rounded-2xl p-1.5 mb-5">
