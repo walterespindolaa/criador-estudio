@@ -602,7 +602,7 @@ export default function AgendaCriacao() {
                               <div className="flex items-center gap-1 text-orange-700 dark:text-orange-300">
                                 <DragGrip className="text-orange-700/40 dark:text-orange-300/40" handleProps={dragProvided.dragHandleProps ?? undefined} />
                                 <Send className="h-3 w-3 shrink-0" />
-                                <span className="text-[10px] font-body font-bold truncate flex-1">{cli?.name ?? "Post"}</span>
+                                <span className="text-[10px] font-body font-bold truncate flex-1 min-w-0">{cli?.name ?? "Post"}</span>
                                 {p.drive_folder_url && <FolderOpen className="h-3 w-3 shrink-0 text-primary opacity-80" aria-label="Tem pasta no Drive" />}
                                 {st && <span className={cn("shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}
                               </div>
@@ -673,13 +673,13 @@ export default function AgendaCriacao() {
                                   type="button" title={c.location ?? undefined}
                                   onClick={() => setEditCap(c)}
                                   style={{ ...dragProvided.draggableProps.style, ...dragCardStyle }}
-                                  className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors",
+                                  className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors overflow-hidden",
                                     done ? "border-teal-500/25 bg-teal-500/5 opacity-70" : "border-teal-500/40 bg-teal-500/10 hover:bg-teal-500/15",
                                     dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
-                                  <div className="flex items-center gap-1 text-teal-700 dark:text-teal-300">
+                                  <div className="flex items-center gap-1 min-w-0 text-teal-700 dark:text-teal-300">
                                     <DragGrip className="text-teal-700/40 dark:text-teal-300/40" handleProps={dragProvided.dragHandleProps ?? undefined} />
                                     <Video className="h-3 w-3 shrink-0" />
-                                    <span className="text-[10px] font-body font-bold flex-1">{c.capture_time ? c.capture_time.slice(0, 5) : ""}</span>
+                                    <span className="text-[10px] font-body font-bold flex-1 min-w-0 truncate">{c.capture_time ? c.capture_time.slice(0, 5) : ""}</span>
                                     {/* Etiqueta fixa "Captação": mesmo padrão de pill das etiquetas de status dos posts (posição à direita/estilo). */}
                                     <span className="shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full bg-teal-500/15 text-teal-700 dark:text-teal-300">Captação</span>
                                     {/* Check pra concluir a captação: mesmo padrão do check da tarefa (círculo/quadrado
@@ -687,7 +687,7 @@ export default function AgendaCriacao() {
                                         pra não abrir o editor. Alvo de toque ampliado no mobile (~40px) sem mexer no layout. */}
                                     <span role="button" tabIndex={0} aria-label={done ? "Reabrir captação" : "Concluir captação"}
                                       onClick={(e) => { e.stopPropagation(); updCapture.mutate({ id: c.id, patch: { status: done ? "agendada" : "concluida" } }); }}
-                                      className="grid shrink-0 place-items-center cursor-pointer p-2 -m-2 md:p-0 md:m-0">
+                                      className="grid shrink-0 place-items-center cursor-pointer p-2 -my-2 -ml-2 md:p-0 md:m-0">
                                       <span className={cn("grid h-6 w-6 md:h-4 md:w-4 place-items-center rounded border transition-colors",
                                         done ? "bg-emerald-500 border-emerald-500 text-white" : "border-current/50 hover:border-emerald-500 hover:text-emerald-600")}>
                                         {done && <Check className="h-3 w-3" strokeWidth={3} />}
@@ -716,19 +716,19 @@ export default function AgendaCriacao() {
                                   <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
                                     type="button" title={t.description ?? undefined}
                                     onClick={() => setEditTask(t)}
-                                    className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors",
+                                    className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors overflow-hidden",
                                       isLead ? "border-sky-500/45 bg-sky-500/10 hover:bg-sky-500/15" : "hover:brightness-95",
                                       done && "opacity-60",
                                       dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}
                                     // Cliente: acento na cor do cliente (borda esquerda + fundo bem suave). Texto fica no foreground pra não perder contraste.
                                     // Merge com draggableProps.style: sem isso o style explícito venceria o do spread e o transform do drag sumiria.
                                     style={{ ...dragProvided.draggableProps.style, ...(!isLead ? { borderColor: `${clientColor}59`, borderLeftColor: clientColor, borderLeftWidth: 3, background: `${clientColor}12` } : {}), ...dragCardStyle }}>
-                                    <div className={cn("flex items-center gap-1", isLead && "text-sky-700 dark:text-sky-300")}>
+                                    <div className={cn("flex items-center gap-1 min-w-0", isLead && "text-sky-700 dark:text-sky-300")}>
                                       <DragGrip handleProps={dragProvided.dragHandleProps ?? undefined} />
                                       {isLead
                                         ? <ListChecks className="h-3 w-3 shrink-0" />
                                         : <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: clientColor }} />}
-                                      <span className={cn("text-[10px] font-body font-bold truncate flex-1", !isLead && "text-foreground")}>
+                                      <span className={cn("text-[10px] font-body font-bold truncate flex-1 min-w-0", !isLead && "text-foreground")}>
                                         {item.time && <span className="tabular-nums">{item.time} · </span>}
                                         {isLead ? `Lead · ${who}` : who}
                                       </span>
@@ -737,7 +737,7 @@ export default function AgendaCriacao() {
                                           sem mudar o tamanho visível do box nem empurrar o layout do card. */}
                                       <span role="button" tabIndex={0} aria-label={done ? "Reabrir tarefa" : "Concluir tarefa"}
                                         onClick={(e) => { e.stopPropagation(); updTask.mutate({ id: t.id, status: done ? "pendente" : "concluida" }); }}
-                                        className="grid shrink-0 place-items-center cursor-pointer p-2 -m-2 md:p-0 md:m-0">
+                                        className="grid shrink-0 place-items-center cursor-pointer p-2 -my-2 -ml-2 md:p-0 md:m-0">
                                         <span className={cn("grid h-6 w-6 md:h-4 md:w-4 place-items-center rounded border transition-colors",
                                           done ? "bg-emerald-500 border-emerald-500 text-white" : "border-current/50 hover:border-emerald-500 hover:text-emerald-600")}>
                                           {done && <Check className="h-3 w-3" strokeWidth={3} />}
@@ -763,7 +763,7 @@ export default function AgendaCriacao() {
                                   style={{ ...dragProvided.draggableProps.style, ...dragCardStyle }}
                                   className={cn("group rounded-lg border border-border bg-card px-2 py-1.5 hover:bg-muted/40 transition-colors",
                                     dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
-                                  <div className="flex items-start gap-1">
+                                  <div className="flex items-start gap-1 min-w-0">
                                     <DragGrip className="mt-px" handleProps={dragProvided.dragHandleProps ?? undefined} />
                                     <p className="text-[12px] font-body font-semibold text-foreground leading-tight flex-1 min-w-0 truncate">{nameOf(c.crm_client_id, c.client_name)}</p>
                                     <button onClick={(e) => { e.stopPropagation(); delCreation.mutate(c.id); }} className="text-muted-foreground/50 hover:text-destructive shrink-0" aria-label="Remover"><X className="h-3 w-3" /></button>
@@ -789,10 +789,10 @@ export default function AgendaCriacao() {
                                 className={cn("rounded-lg border border-orange-500/40 bg-orange-500/10 hover:bg-orange-500/15 px-2 py-1.5 text-left transition-colors w-full overflow-hidden",
                                   posted && "opacity-60",
                                   dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
-                                <div className="flex items-center gap-1 text-orange-700 dark:text-orange-300">
+                                <div className="flex items-center gap-1 min-w-0 text-orange-700 dark:text-orange-300">
                                   <DragGrip className="text-orange-700/40 dark:text-orange-300/40" handleProps={dragProvided.dragHandleProps ?? undefined} />
                                   <Send className="h-3 w-3 shrink-0" />
-                                  <span className="text-[10px] font-body font-bold truncate flex-1">{item.time && <span className="tabular-nums">{item.time} · </span>}{cli?.name ?? "Post"}</span>
+                                  <span className="text-[10px] font-body font-bold truncate flex-1 min-w-0">{item.time && <span className="tabular-nums">{item.time} · </span>}{cli?.name ?? "Post"}</span>
                                   {/* Indicador discreto: post tem link do Drive no campo Ideia/Referência. */}
                                   {isDriveUrl(p.reference_url) && <HardDrive className="h-3 w-3 shrink-0 opacity-70" aria-label="Tem Drive" />}
                                   {/* E indicador da PASTA do Drive (campo distinto drive_folder_url). */}
