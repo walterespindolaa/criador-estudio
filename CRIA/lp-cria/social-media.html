@@ -99,17 +99,21 @@ h1 .hl{color:var(--amarelo)}
 .mod-visual{border-radius:38px 52px 40px 56px;min-height:320px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;transform:rotate(-1.2deg);transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
 .mod:nth-child(even) .mod-visual{transform:rotate(1.1deg)}
 .mod-visual:hover{transform:rotate(0deg) scale(1.015)}
-/* Janelinha de app: o bloco colorido vazio virava "cadê o produto?". Agora o
-   placeholder parece uma tela de verdade, até o print real chegar. */
+/* Janelinha de app: ilustração da interface em cima do bloco colorido, com uma
+   legenda no rodapé do cartão dizendo o que aquela tela entrega. */
 .mock{width:min(340px,82%);background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 18px 40px rgba(10,10,10,.28);transform:rotate(-1.5deg)}
 .mod:nth-child(even) .mock{transform:rotate(1.2deg)}
 .mock-bar{display:flex;gap:6px;padding:11px 14px;background:rgba(10,10,10,.06);border-bottom:1px solid rgba(10,10,10,.06)}
-.mock-bar i{width:9px;height:9px;border-radius:50%;background:rgba(10,10,10,.18)}
+.mock-bar i{width:9px;height:9px;border-radius:50%;background:var(--laranja);opacity:.85}
+.mock-bar i:nth-child(2){background:var(--amarelo)}
+.mock-bar i:nth-child(3){background:var(--verde)}
 .mock-body{padding:20px 18px 20px;display:flex;flex-direction:column;gap:10px}
 .mk-avatar{width:34px;height:34px;border-radius:50%;background:rgba(10,10,10,.12)}
 .mk-line{height:10px;border-radius:999px;background:rgba(10,10,10,.10)}
-.mk-card{height:64px;border-radius:12px;background:rgba(10,10,10,.07)}
-.mk-label{font-size:.72rem;opacity:.55;text-align:center;margin-top:4px;border:1.5px dashed rgba(10,10,10,.3);border-radius:10px;padding:6px 8px}
+.mk-card{height:64px;border-radius:12px;background:rgba(10,10,10,.07);border-left:4px solid var(--laranja)}
+/* Legenda do cartão: é copy de verdade, com cara de caption, não de espaço
+   tracejado esperando print. */
+.mk-label{display:block;font-size:.73rem;line-height:1.4;color:rgba(10,10,10,.62);text-align:left;margin-top:8px;padding-top:10px;border-top:1px solid rgba(10,10,10,.10)}
 .sm-blobs{position:absolute;inset:0;pointer-events:none;z-index:0}
 .sm-mark{display:block;opacity:.06}
 .selo-marks{position:absolute;inset:0;pointer-events:none;z-index:0}
@@ -273,7 +277,7 @@ html,body{overflow-x:clip}
     <div class="uau-visual reveal-scale">
       <div class="uau-phone">
         <span class="uau-ph-dot"></span>
-        <div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><span class="mk-label">[ print do portal do cliente no celular ]</span></div></div>
+        <div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/portal-cliente.png" alt="Portal do cliente aberto no celular" style="width:100%;display:block"> --><span class="mk-label">O cliente abre o link no celular, vê o post e aprova, sem criar conta.</span></div></div>
       </div>
     </div>
   </div>
@@ -328,7 +332,7 @@ html,body{overflow-x:clip}
           <li><b>✓</b> Agenda de criação: captações, tarefas e posts de todos os clientes num calendário só, com arrasta e solta</li>
         </ul>
       </div>
-      <div class="mod-visual" style="background:var(--azul)" ><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><span class="mk-label">[ print do pipeline do Cria Gestão ]</span></div></div></div>
+      <div class="mod-visual" style="background:var(--azul)" ><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/cria-gestao.png" alt="Pipeline de clientes do Cria Gestão" style="width:100%;display:block"> --><span class="mk-label">Pipeline de prospect a contrato assinado, com a ficha viva do cliente.</span></div></div></div>
     </div>
 
     <div class="mod reveal">
@@ -344,7 +348,7 @@ html,body{overflow-x:clip}
           <li><b>✓</b> Alerta de reajuste e cobrança esquecida</li>
         </ul>
       </div>
-      <div class="mod-visual" style="background:var(--verde)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><span class="mk-label">[ print do painel do Cria Caixa ]</span></div></div></div>
+      <div class="mod-visual" style="background:var(--verde)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/cria-caixa.png" alt="Painel financeiro do Cria Caixa" style="width:100%;display:block"> --><span class="mk-label">MRR, vencimentos, margem por cliente e quem está atrasado num painel.</span></div></div></div>
     </div>
 
     <div class="mod reveal">
@@ -361,7 +365,7 @@ html,body{overflow-x:clip}
           <li><b>✓</b> Relatório do mês em 1 clique, direto pro WhatsApp</li>
         </ul>
       </div>
-      <div class="mod-visual" style="background:var(--laranja)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><span class="mk-label">[ print da tela de aprovação do cliente ]</span></div></div></div>
+      <div class="mod-visual" style="background:var(--laranja)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/aprovacao.png" alt="Tela de aprovação de post pelo cliente" style="width:100%;display:block"> --><span class="mk-label">Aprovação por link com histórico: você vê a hora em que o cliente visualizou.</span></div></div></div>
     </div>
 
     <div class="mod reveal">
@@ -376,7 +380,7 @@ html,body{overflow-x:clip}
           <li><b>✓</b> Inspiração sem stalkear manualmente</li>
         </ul>
       </div>
-      <div class="mod-visual" style="background:var(--rosa)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><span class="mk-label">[ print do Cria Radar ]</span></div></div></div>
+      <div class="mod-visual" style="background:var(--rosa)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/cria-radar.png" alt="Análise de concorrentes no Cria Radar" style="width:100%;display:block"> --><span class="mk-label">Concorrentes do cliente acompanhados e ideias sugeridas em cima do nicho.</span></div></div></div>
     </div>
 
     <div class="mod reveal">
@@ -391,7 +395,7 @@ html,body{overflow-x:clip}
           <li><b>✓</b> 1 clique e vai pro WhatsApp, todo fim de mês</li>
         </ul>
       </div>
-      <div class="mod-visual" style="background:var(--verde)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><span class="mk-label">[ print do relatório white-label ]</span></div></div></div>
+      <div class="mod-visual" style="background:var(--verde)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/relatorio.png" alt="Relatório mensal com a identidade do cliente" style="width:100%;display:block"> --><span class="mk-label">Relatório do mês com dados reais do Instagram e a identidade de cada cliente.</span></div></div></div>
     </div>
 
     <div class="mod reveal">
@@ -406,7 +410,7 @@ html,body{overflow-x:clip}
           <li><b>✓</b> Visão geral: o que está travado em cada conta</li>
         </ul>
       </div>
-      <div class="mod-visual dark" style="background:var(--azul)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><span class="mk-label">[ print da visão multi-cliente ]</span></div></div></div>
+      <div class="mod-visual dark" style="background:var(--azul)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/modo-agencia.png" alt="Visão multi-cliente do Modo Agência" style="width:100%;display:block"> --><span class="mk-label">Troca de cliente em 1 clique e visão geral do que está travado em cada conta.</span></div></div></div>
     </div>
 
     <div class="mod reveal">
@@ -419,7 +423,7 @@ html,body{overflow-x:clip}
           <li><b>✓</b> Padrão profissional, sem montar PDF na mão</li>
         </ul>
       </div>
-      <div class="mod-visual" style="background:var(--rosa)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><span class="mk-label">[ print do envio de proposta ]</span></div></div></div>
+      <div class="mod-visual" style="background:var(--rosa)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/propostas.png" alt="Envio de proposta comercial pelo CRIA" style="width:100%;display:block"> --><span class="mk-label">Propostas montadas e enviadas do CRIA, ligadas à negociação no pipeline.</span></div></div></div>
     </div>
 
     <div class="mod reveal">
@@ -432,7 +436,7 @@ html,body{overflow-x:clip}
           <li><b>✓</b> Acompanhamento de uso</li>
         </ul>
       </div>
-      <div class="mod-visual" style="background:var(--amarelo)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><span class="mk-label">[ print da tela de cupons ]</span></div></div></div>
+      <div class="mod-visual" style="background:var(--amarelo)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/cupons.png" alt="Tela de cupons e condições especiais" style="width:100%;display:block"> --><span class="mk-label">Cupons com regra, validade e acompanhamento de quem usou.</span></div></div></div>
     </div>
   </div>
 </section>
@@ -574,10 +578,39 @@ html,body{overflow-x:clip}
   <small>Área do gestor gratuita · Módulos à parte</small>
 </div>
 
+<!-- ==================== RODAPÉ ==================== -->
+<style>
+/* Rodapé padronizado nas 3 páginas: links legais, exclusão de dados, contato e
+   identificação da empresa. */
+.footer-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 20px;margin-top:14px;font-size:.85rem}
+.footer-links a{text-decoration:underline;text-underline-offset:3px;opacity:.85;transition:opacity .2s}
+.footer-links a:hover{opacity:1}
+.footer-contato{margin-top:16px;font-size:.82rem;opacity:.75}
+.footer-contato a{text-decoration:underline}
+.footer-empresa{margin-top:18px;padding-top:16px;border-top:1px solid rgba(244,239,227,.18);font-size:.78rem;line-height:1.6;opacity:.7}
+</style>
 <footer>
   <div class="container">
     <span class="logo"><img src="/logo-cria-white.png" alt="Cria" style="height:30px;width:auto;display:block;margin:0 auto 10px"></span>
-    <p>© 2026 CRIA Social Club · Feito no Brasil · <a href="index.html" style="text-decoration:underline">Página inicial</a></p>
+    <p>© 2026 CRIA Social Club · Feito no Brasil</p>
+    <nav class="footer-links" aria-label="Links institucionais e legais">
+      <a href="index.html">Página inicial</a>
+      <a href="funcionalidades.html">Funcionalidades</a>
+      <a href="https://app.criasocialclub.com.br/termos">Termos de uso</a>
+      <a href="https://app.criasocialclub.com.br/privacidade">Política de privacidade</a>
+      <a href="https://app.criasocialclub.com.br/excluir-dados">Excluir meus dados</a>
+    </nav>
+    <!-- Confirmar se a caixa contato@criasocialclub.com.br realmente recebe e-mail.
+         Se não receber, trocar pelo endereço que recebe ou remover a linha abaixo. -->
+    <p class="footer-contato">Fale com a gente: <a href="mailto:contato@criasocialclub.com.br">contato@criasocialclub.com.br</a></p>
+    <!-- PREENCHER: razao social e CNPJ da empresa antes da analise da Meta.
+         Troque os textos em MAIUSCULO e DESCOMENTE o bloco abaixo. Enquanto
+         estiver comentado, nada disso aparece no site (pra nao publicar dado falso).
+    <p class="footer-empresa">
+      RAZAO SOCIAL COMPLETA LTDA · CNPJ XX.XXX.XXX/XXXX-XX<br>
+      RUA, NUMERO, BAIRRO, CIDADE/UF, CEP
+    </p>
+    -->
   </div>
 </footer>
 
