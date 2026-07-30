@@ -1,5 +1,15 @@
 # Mapa dos Tutoriais Guiados (Tours) — CRIA
 
+> **STATUS: EXECUTADO em 30/07/2026.** Todo o plano abaixo (blocos B, C-ALTA, C-MÉDIA e C-BAIXA) foi implementado. O documento fica como histórico do diagnóstico e como referência da arquitetura. Resumo do que ficou: 37 tours (13 gestor + 24 criador), zero alvo órfão (checagem cruzada alvo x `data-tour` no JSX), zero travessão.
+>
+> Mecanismos novos no `registry.ts` criados nessa rodada:
+> - `routePattern`: permite `route` com segmento `:id` (casa por segmento, e o curinga precisa parecer id). É como o tour do cockpit (`/socialmidia/clientes/:id`) e o da ficha do CRM (`/socialmidia/criacrm/:id`) são encontrados.
+> - `pareceId()` no match por `routePrefix`: impede que uma rota com id herde o tour do módulo pai (era o vazamento do item B.3).
+>
+> Tours sem rota própria (painel/modal) seguem o padrão do editor de post: a `route` é um marcador que nunca casa e o tour abre por um "?" na própria UI (`startTour(id)`). É o caso do `cria-ia`.
+>
+> Não foi criado tour pro widget de Feedback: é um Dialog global sem rota, e o botão de anexar já é autoexplicativo.
+
 Como funciona: tours são config-driven. Arquivos: `src/lib/tours/registry.ts` (tipos, lista `TOURS`, `findTourByRoute`, `TRAINING_SEQUENCES`), `src/lib/tours/criador.ts` (`/app/*`), `src/lib/tours/gestor.ts` (`/socialmidia/*`). O botão "?" é `src/components/tour/HelpButton.tsx`; o motor é `src/components/tour/TourProvider.tsx` (`useTour`). Cada passo aponta pra um `[data-tour="chave"]` na tela. Pra criar tour novo: adicionar um `TourConfig` (rota + steps) no arquivo da área, marcar os `data-tour` nos elementos, e (se quiser no tour completo) incluir o id em `TRAINING_SEQUENCES`.
 
 Saúde geral: boa. Zero passos quebrados (todos os alvos existem). Ajustes são de texto/fluxo + telas novas sem tour.

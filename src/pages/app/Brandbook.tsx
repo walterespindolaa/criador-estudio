@@ -616,6 +616,7 @@ const Brandbook = () => {
           </div>
           <div className="flex items-center gap-3 shrink-0">
             <Button
+              data-tour="brandbook-importar"
               variant="default"
               size="sm"
               onClick={() => {
@@ -651,17 +652,20 @@ const Brandbook = () => {
           </div>
         </div>
 
-        <BrandHubOverview
-          counts={{
-            identidade: countSectionAnswers("moodboard-identidade"),
-            visual: countSectionAnswers("moodboard-visual") + brandItems.length,
-            comunicacao: countSectionAnswers("linha-editorial"),
-            publico: personas.length,
-            valores: countSectionAnswers("moodboard-contexto"),
-            tom: countSectionAnswers("tom-de-voz"),
-          }}
-          onSelect={setActiveTab}
-        />
+        {/* Wrapper só pra ancorar o tour: o BrandHubOverview não repassa props. */}
+        <div data-tour="brandbook-hub">
+          <BrandHubOverview
+            counts={{
+              identidade: countSectionAnswers("moodboard-identidade"),
+              visual: countSectionAnswers("moodboard-visual") + brandItems.length,
+              comunicacao: countSectionAnswers("linha-editorial"),
+              publico: personas.length,
+              valores: countSectionAnswers("moodboard-contexto"),
+              tom: countSectionAnswers("tom-de-voz"),
+            }}
+            onSelect={setActiveTab}
+          />
+        </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div className="overflow-x-auto mb-6">

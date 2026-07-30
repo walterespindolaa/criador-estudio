@@ -129,7 +129,7 @@ export default function Contas() {
   return (
     <div>
       {/* Plano de agência / assentos */}
-      <div className="rounded-2xl border border-border bg-card p-5 mb-6">
+      <div data-tour="contas-assentos" className="rounded-2xl border border-border bg-card p-5 mb-6">
         {seatLimit > 0 ? (
           <>
             <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -166,7 +166,10 @@ export default function Contas() {
       </div>
 
       <ManagerSectionTitle t="Suas contas" s="As contas de clientes que você gerencia." />
-      <ClientsGrid defaultLimit={5} />
+      {/* Wrapper só pra ancorar o tour: o ClientsGrid não repassa props. */}
+      <div data-tour="contas-clientes">
+        <ClientsGrid defaultLimit={5} />
+      </div>
 
       <div className="rounded-2xl border border-border bg-card/50 px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-6">
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Sparkles className="h-4 w-4 text-primary" /></div>

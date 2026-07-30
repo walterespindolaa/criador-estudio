@@ -44,6 +44,13 @@ export type TourConfig = {
    * NÃO ligar em rotas com :id (ex.: /clientes/:id), que são OUTRA tela.
    */
   routePrefix?: boolean;
+  /**
+   * A `route` tem parâmetro no nome (ex.: `/socialmidia/clientes/:id`) e deve casar
+   * por SEGMENTO, não por texto igual. É o caso do cockpit do cliente: a rota nunca
+   * é literal e o routePrefix não serve (ele é pra sub-rota de módulo, e agora ignora
+   * de propósito segmentos que parecem id). Ver `casaPadrao`.
+   */
+  routePattern?: boolean;
   title: string;
   /** Por que a tela existe / que problema resolve, mostrado no card de abertura. */
   valueProp: string;
@@ -53,12 +60,58 @@ export type TourConfig = {
 
 export const TOURS: TourConfig[] = [...TOURS_CRIADOR, ...TOURS_GESTOR];
 
+/** Começo de UUID (o formato dos ids do banco). */
+const UUID_INICIO = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
+/**
+ * O segmento "parece um id"?
+ * Serve pra separar SUB-ROTA DO MÓDULO (/criacaixa/empresa/visao, /criacrm/tarefas,
+ * /criapost/aprovacoes) de FICHA DE UM REGISTRO (/criacrm/8f3a1c2e-…), que é OUTRA
+ * tela. Sem isso, o routePrefix vazava: a ficha do cliente herdava o tour do CRM e
+ * apontava passos pra elementos que não existem lá.
+ * Rótulo de sub-rota é sempre palavra (tem letra fora do hex ou é curto), então
+ * nunca cai aqui; id é UUID ou token longo só de hex/dígitos/traço.
+ */
+function pareceId(seg: string): boolean {
+  if (UUID_INICIO.test(seg)) return true;
+  return seg.length >= 12 && /^[0-9a-f-]+$/i.test(seg);
+}
+
+/**
+ * Rota com curinga casa por SEGMENTO: cada pedaço que começa com ":" aceita o
+ * valor do parâmetro. Segmentos sobrando no fim são aceitos DE PROPÓSITO, porque
+ * `/clientes/:id/relatorio` é a MESMA tela do `/clientes/:id` (o cockpit só troca
+ * de aba) e o "?" precisa achar o mesmo tour em qualquer sub-página.
+ *
+ * O curinga só aceita segmento que PAREÇA ID (mesmo `pareceId` do routePrefix).
+ * Sem isso, `/criacrm/:id` (a ficha do cliente) engoliria `/criacrm/tarefas` e
+ * `/criacrm/pipeline`, que são seções do módulo, e o tour da ficha apontaria
+ * passos pra elementos que não existem lá.
+ */
+function casaPadrao(pattern: string, pathname: string): boolean {
+  const alvo = pattern.split("/").filter(Boolean);
+  const atual = pathname.split("/").filter(Boolean);
+  if (atual.length < alvo.length) return false;
+  return alvo.every((seg, i) => (seg.startsWith(":") ? pareceId(atual[i]) : seg === atual[i]));
+}
+
 export function findTourByRoute(pathname: string): TourConfig | undefined {
   const exato = TOURS.find(t => t.route === pathname);
   if (exato) return exato;
+  // Rota com :id (cockpit do cliente). Vem ANTES do prefixo: é a tela mais
+  // específica, e a checagem de prefixo já descarta caminho com id.
+  const porPadrao = TOURS
+    .filter(t => t.routePattern && casaPadrao(t.route, pathname))
+    .sort((a, b) => b.route.length - a.route.length)[0];
+  if (porPadrao) return porPadrao;
   // Sub-rota do módulo: pega o tour de rota mais longa que seja prefixo.
+  // Se qualquer segmento do RESTO do caminho parecer id, não casa: é a ficha de
+  // um registro, não uma seção do módulo.
   return TOURS
-    .filter(t => t.routePrefix && pathname.startsWith(`${t.route}/`))
+    .filter(t => {
+      if (!t.routePrefix || !pathname.startsWith(`${t.route}/`)) return false;
+      const resto = pathname.slice(t.route.length + 1).split("/").filter(Boolean);
+      return !resto.some(pareceId);
+    })
     .sort((a, b) => b.route.length - a.route.length)[0];
 }
 
@@ -70,6 +123,8 @@ export function findTourById(id: string): TourConfig | undefined {
 export const TRAINING_SEQUENCES: Record<"criador" | "gestor", string[]> = {
   // "estudio" saiu da sequência: a rota /app/estudio não existe mais (virou a
   // aba Arte do editor de post) e o tour completo navegava pra um 404.
+  // "cria-ia" também fica fora: é um painel global, a `route` dele é um marcador
+  // que não existe como caminho, e o tour abre pelo "?" de dentro do painel.
   criador: [
     "dashboard",
     "ideias",
@@ -91,10 +146,20 @@ export const TRAINING_SEQUENCES: Record<"criador" | "gestor", string[]> = {
     "insights",
     "configuracoes",
   ],
+  // FICAM FORA DA SEQUÊNCIA DE PROPÓSITO:
+  // - "gestor-cliente-hub" e "gestor-crm-cliente": o modo treinamento navega pra
+  //   `tour.route`, e essas rotas são padrões com :id, não caminhos navegáveis.
+  //   Sem um id de cliente real cairiam em tela vazia e travariam a fila. Os dois
+  //   abrem pelo "?" dentro da ficha de um cliente.
+  // - "gestor-parceria" e "gestor-contas": são back-office (indicação e assentos),
+  //   não a operação do dia a dia. As rotas são navegáveis, então caberiam aqui,
+  //   mas esticariam o tour completo com assunto que ninguém está tentando
+  //   aprender quando pede "me mostra o sistema".
   gestor: [
     "gestor-dashboard",
     "gestor-clientes",
     "gestor-agenda",
+    "gestor-aprovacoes",
     "gestor-hubcria",
     "gestor-criapost",
     "gestor-criacrm",

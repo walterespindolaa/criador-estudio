@@ -504,7 +504,8 @@ export default function AgendaCriacao() {
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <div className="flex items-center gap-3 flex-wrap">
             <p className="text-sm font-display font-bold text-foreground">Agenda de criação</p>
-            <div className="flex items-center gap-1.5 flex-wrap">
+            {/* data-tour="ag-filtros": alvo do passo "Filtrar por tipo" do tour da Agenda. */}
+            <div data-tour="ag-filtros" className="flex items-center gap-1.5 flex-wrap">
               {([["criacao", "Criações", "#4B3FA8"], ["tarefa", "Tarefas", "#0061EE"], ["capta", "Captações", "#FF77B9"], ["post", "Posts", "#EA4918"], ["criapost", "Cria do cliente", CRIA_POST_COLOR]] as const).map(([k, label, color]) => (
                 <button key={k} type="button" onClick={() => toggleFilter(k)}
                   className={cn("flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-body font-semibold transition-colors",
@@ -571,7 +572,8 @@ export default function AgendaCriacao() {
               os posts em produção (com ou sem data) + posts sem data. Arrastar um post daqui
               pra um dia agenda; arrastar de volta pra cá tira a data. */}
           {filters.post && producaoPosts.length > 0 && (
-            <div className="mb-3 rounded-xl border border-dashed border-orange-500/40 bg-orange-500/[0.04] transition-colors">
+            // data-tour="ag-producao": alvo do passo "Em produção, sem data" do tour.
+            <div data-tour="ag-producao" className="mb-3 rounded-xl border border-dashed border-orange-500/40 bg-orange-500/[0.04] transition-colors">
               {/* Cabeçalho recolhível (Tarefa 1): recolhido mostra só título + contagem + setinha. */}
               <button type="button" onClick={toggleProducao} aria-expanded={producaoOpen}
                 className="flex items-center gap-1.5 w-full text-left px-2.5 py-2">

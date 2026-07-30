@@ -37,6 +37,12 @@ export const TOURS_CRIADOR: TourConfig[] = [
         placement: "bottom",
       },
       {
+        target: '[data-tour="dash-instagram"]',
+        title: "Seu conteúdo no Instagram",
+        body: "Conecte sua conta business ou de criador e essa faixa deixa de ser convite pra virar número real: seguidores, alcance, engajamento e visitas ao perfil dos últimos 30 dias, sem abrir o app. A tarja verde cruza os seus posts e diz qual formato mais rende e qual o melhor dia pra postar. É esse mesmo dado que deixa a sugestão de horário do editor mais precisa. Sem conectar, o CRIA só consegue estimar pelo seu nicho.",
+        placement: "bottom",
+      },
+      {
         target: '[data-tour="dash-posts"]',
         title: "Próximos posts",
         body: "O que vem pela frente, em ordem. Post atrasado ou sem data aparece aqui antes de virar problema.",
@@ -80,7 +86,7 @@ export const TOURS_CRIADOR: TourConfig[] = [
       {
         target: '[data-tour="ideias-salvos"]',
         title: "Aba Salvos",
-        body: "Viu um post inspirador no Instagram ou TikTok? Cole o link aqui e ele fica guardado como referência, junto das suas ideias. Seu \"salvos\" espalhado em 3 apps vira um lugar só.",
+        body: "Viu um post bom no Instagram ou TikTok? Cole o link aqui e o CRIA puxa a capa, a legenda e o @ sozinho. Você guarda em pastas (Ganchos, Edição, Referência de cliente), busca por autor ou palavra, e quando quiser usar, o salvo vira post no Criando em 1 clique, já com o link na anotação. Se alguma capa não veio, o botão \"Recuperar capas faltantes\" busca todas de uma vez.",
         placement: "bottom",
       },
       {
@@ -213,6 +219,17 @@ export const TOURS_CRIADOR: TourConfig[] = [
         target: '[data-tour="estudio-gerar"]',
         title: "Um prompt por página, todos no mesmo estilo",
         body: "Num carrossel, cada página vira um prompt, mas todos carregam o MESMO bloco de estilo, senão você recebe 5 imagens de 5 mundos diferentes. Sai em português pra você conferir, e o botão copia em inglês, que é o que os geradores entendem melhor. Custa 1 geração da sua cota de IA.",
+        placement: "top",
+      },
+      // A procedência só existe DEPOIS de gerar (é parte do resultado). Se o tour
+      // passar por aqui num post que ainda não gerou nada, o card aparece
+      // centralizado e o texto continua fazendo sentido.
+      {
+        target: '[data-tour="estudio-procedencia"]',
+        openFirst: '[data-tour="editor-tab-arte"]',
+        mobileOpenFirst: '[data-tour="editor-tab-arte"]',
+        title: "De onde esse prompt saiu",
+        body: "Assim que os prompts ficam prontos, essa faixa verde conta a procedência: se o texto veio das páginas que você escreveu ou só do título do post, e quais das suas cores e fontes entraram. Ela existe pra quando a arte sai com a cara errada: o conserto quase nunca é gerar de novo, é preencher o Brandbook, e o link dali te leva direto pra lá.",
         placement: "top",
       },
       {
@@ -400,6 +417,18 @@ export const TOURS_CRIADOR: TourConfig[] = [
       "Decisões de conteúdo mais rápidas e coerentes",
     ],
     steps: [
+      {
+        target: '[data-tour="brandbook-importar"]',
+        title: "Não digite, sobe o PDF",
+        body: "Preencher vinte campos na mão é o motivo de o brandbook viver vazio, e brandbook vazio faz TODA a IA do CRIA sair genérica. Se você já tem manual de marca, moodboard ou até um print da sua paleta, sobe aqui: o CRIA lê e espalha cada pedaço na seção certa, cores e fontes na Identidade, tom na aba Tom de Voz, temas na Linha Editorial e o público virando uma persona. Nada é salvo sem você olhar: a tela de revisão mostra o antes e o depois onde já havia texto seu, pra você não apagar sem querer o que ajustou na mão. Custa 1 geração da sua cota de IA.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="brandbook-hub"]',
+        title: "As seis áreas da sua marca",
+        body: "Identidade, Visual, Comunicação, Público-alvo, Valores e Tom de Voz. Cada card mostra quantos itens já estão preenchidos e leva direto pra aba correspondente. É o seu mapa do que ainda falta, sem precisar abrir aba por aba pra descobrir.",
+        placement: "bottom",
+      },
       {
         target: '[data-tour="brandbook-abas"]',
         title: "As áreas da sua marca",
@@ -607,6 +636,38 @@ export const TOURS_CRIADOR: TourConfig[] = [
         title: "Conta",
         body: "Senha, sair do app e exclusão de dados. O lado sério das configurações, num lugar só.",
         placement: "bottom",
+      },
+    ],
+  },
+  // CRIA IA (painel global).
+  // A Cria IA não tem rota: é um diálogo que abre por cima de qualquer tela do
+  // /app. Por isso a `route` aqui é um marcador que NUNCA casa com um pathname
+  // real (mesma solução do "post-editor"): o tour é acionado por id, pelo "?"
+  // dentro do próprio painel. Também fica FORA do TRAINING_SEQUENCES, senão o
+  // tour completo tentaria navegar pra uma rota que não existe.
+  {
+    id: "cria-ia",
+    route: "/app#cria-ia",
+    title: "Cria IA",
+    valueProp:
+      "A IA que já conhece a sua marca. Ela lê o seu brandbook antes de responder, então legenda, ideia e roteiro saem no SEU tom, não no tom de robô genérico.",
+    benefits: [
+      "Responde usando o tom do seu brandbook",
+      "Atalhos prontos pro que você mais pede",
+      "Cota mensal clara, sem susto no cartão",
+    ],
+    steps: [
+      {
+        target: '[data-tour="cria-ia-atalhos"]',
+        title: "Ela começa pelo seu brandbook",
+        body: "A linha de abertura te diz se ela já leu o seu brandbook. Se leu, tudo que sair daqui vem no seu tom, com as suas palavras e o seu público em mente. Se não leu, ela ainda ajuda, mas com ideia genérica de internet, e a diferença é gritante. Os botões coloridos são os pedidos do dia a dia já prontos: ideia de post, legenda, hashtags, análise da sua consistência, semana planejada e trends do momento.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="cria-ia-input"]',
+        title: "A cota, sem susto",
+        body: "Escreva à vontade aqui: Enter envia, Shift e Enter pulam linha. Cada resposta consome 1 geração da sua cota do mês, que é a MESMA cota do Cria Plano, dos prompts de arte e da leitura do brandbook em PDF. Quanto ainda resta aparece na barrinha de uso da IA, no menu lateral e no Dashboard, e a cota zera no dia 1º. É assinatura, não cartão aberto: quando acaba, acaba, e você decide entre subir de plano ou esperar virar o mês.",
+        placement: "top",
       },
     ],
   },

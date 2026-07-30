@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BarChart3, CalendarDays, Flame, Hash, Lightbulb, Loader2, Minus, PenLine, Send, X } from "lucide-react";
+import { BarChart3, CalendarDays, CircleHelp, Flame, Hash, Lightbulb, Loader2, Minus, PenLine, Send, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogPortal } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { useIdeas } from "@/hooks/useIdeas";
 import { useCriaAI } from "@/contexts/CriaAIContext";
 import { useBrandContext } from "@/hooks/useBrandContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useTour } from "@/components/tour/TourProvider";
 import DOMPurify from "dompurify";
 
 type Message = {
@@ -118,6 +119,9 @@ export function CriaAIPanel() {
   const { posts } = usePosts();
   const { ideas } = useIdeas();
   const { brandContext, hasBrandContext } = useBrandContext();
+  // A Cria IA é um painel global, não tem rota própria: o tour dela é acionado
+  // por id daqui de dentro, igual ao tour do editor de post.
+  const { startTour } = useTour();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -282,6 +286,14 @@ export function CriaAIPanel() {
             <div className="absolute top-3 right-3 z-10 flex items-center gap-1">
               <button
                 type="button"
+                onClick={() => startTour("cria-ia")}
+                className="w-7 h-7 rounded-lg bg-muted/60 hover:bg-muted flex items-center justify-center transition-colors"
+                aria-label="Ver tutorial da Cria IA"
+              >
+                <CircleHelp className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+              <button
+                type="button"
                 onClick={handleMinimize}
                 className="w-7 h-7 rounded-lg bg-muted/60 hover:bg-muted flex items-center justify-center transition-colors"
                 aria-label="Minimizar"
@@ -304,7 +316,7 @@ export function CriaAIPanel() {
               className="flex-1 overflow-y-auto px-5 pt-5 pb-2 space-y-4 bg-muted/15"
             >
               {!hasMessages && !loading ? (
-                <div className="relative flex flex-col items-start pt-4 pb-2">
+                <div data-tour="cria-ia-atalhos" className="relative flex flex-col items-start pt-4 pb-2">
                   {/* Formas orgânicas suaves da marca, no fundo. */}
                   <span aria-hidden className="pointer-events-none absolute -top-3 -right-4 h-32 w-32 rounded-[42%_58%_55%_45%/48%_42%_58%_52%] bg-[#EA4918] opacity-[0.10] blur-[2px]" />
                   <span aria-hidden className="pointer-events-none absolute top-40 -left-6 h-24 w-24 rounded-full bg-[#0061EE] opacity-[0.08] blur-[2px]" />
@@ -376,7 +388,7 @@ export function CriaAIPanel() {
             </div>
 
             {/* Input */}
-            <div className="border-t border-border bg-background px-4 py-3">
+            <div data-tour="cria-ia-input" className="border-t border-border bg-background px-4 py-3">
               <form onSubmit={handleSubmit} className="relative">
                 <Textarea
                   value={input}

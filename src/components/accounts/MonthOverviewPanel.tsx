@@ -147,7 +147,8 @@ export function MonthOverviewPanel() {
   });
 
   return (
-    <section className="rounded-3xl border border-border bg-card p-4 sm:p-5 mb-8">
+    // data-tour="gh-mes": alvo do passo "Visão geral do mês" no tour da home do gestor.
+    <section data-tour="gh-mes" className="rounded-3xl border border-border bg-card p-4 sm:p-5 mb-8">
       {/* Cabeçalho + seletor de mês */}
       <div className="flex items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-2 min-w-0">

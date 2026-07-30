@@ -173,7 +173,7 @@ export default function Aprovacoes() {
       <ManagerSectionTitle t="Aprovações" s="Tudo que está esperando aprovação, num lugar só." />
 
       {/* Cards de resumo: um por tipo. Clicar no card filtra a lista. */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
+      <div data-tour="aprov-cards" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
         {cards.map((c) => {
           const Icon = TYPE_META[c.type].icon;
           const active = filter === c.type;
@@ -210,7 +210,7 @@ export default function Aprovacoes() {
         <p className="text-sm font-display font-bold text-foreground">Pendentes</p>
         {total > 0 && <span className="text-xs text-muted-foreground font-body">({total})</span>}
       </div>
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
+      <div data-tour="aprov-filtros" className="flex items-center gap-2 mb-4 flex-wrap">
         {chips.map(([label, val]) => (
           <button
             key={label}
@@ -225,8 +225,10 @@ export default function Aprovacoes() {
         ))}
       </div>
 
+      {/* O alvo do tour (aprov-lista) fica nos DOIS ramos: só um deles existe no
+          DOM por vez, então o passo acha o alvo com a lista cheia ou vazia. */}
       {visible.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border bg-card/40 p-10 text-center">
+        <div data-tour="aprov-lista" className="rounded-2xl border border-dashed border-border bg-card/40 p-10 text-center">
           <Inbox className="h-8 w-8 text-muted-foreground/50 mx-auto mb-3" />
           <p className="text-sm font-body text-foreground font-medium">Nada esperando aprovação por aqui</p>
           <p className="text-xs text-muted-foreground font-body mt-1">
@@ -234,7 +236,7 @@ export default function Aprovacoes() {
           </p>
         </div>
       ) : (
-        <div className="rounded-2xl border border-border bg-card overflow-hidden">
+        <div data-tour="aprov-lista" className="rounded-2xl border border-border bg-card overflow-hidden">
           {visible.map((it) => {
             const meta = TYPE_META[it.type];
             const go = () => { if (it.onClick) it.onClick(); else if (it.to) navigate(it.to); };

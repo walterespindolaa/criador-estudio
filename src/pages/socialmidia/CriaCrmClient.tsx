@@ -244,7 +244,7 @@ function ClientWorkspace() {
           hierarquia nenhuma. Agora são três blocos empilhados e óbvios:
           1) quem é (foto + nome)  2) o que é (chips, numa tira que rola)
           3) o que fazer (ações, botões de verdade). No desktop volta pro lado. */}
-      <div className="rounded-3xl border border-border bg-card p-4 sm:p-7 shadow-sm mb-6">
+      <div data-tour="crm-cli-hero" className="rounded-3xl border border-border bg-card p-4 sm:p-7 shadow-sm mb-6">
         {/* 1. Quem é */}
         <div className="flex items-start gap-4 sm:gap-5">
           <button type="button" onClick={() => avatarInputRef.current?.click()}
@@ -283,7 +283,7 @@ function ClientWorkspace() {
 
         {/* 2. O que é: chips numa tira só, que rola no mobile em vez de empilhar. */}
         <div className="flex items-center gap-2 mt-3.5 overflow-x-auto scrollbar-none scroll-snap-x sm:flex-wrap sm:overflow-visible pb-0.5">
-          <select value={form.status ?? "ativo"} onChange={(e) => onStatusChange(e.target.value as ClientStatus)}
+          <select data-tour="crm-cli-status" value={form.status ?? "ativo"} onChange={(e) => onStatusChange(e.target.value as ClientStatus)}
             className={cn("shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full border cursor-pointer outline-none", CLIENT_STATUS_META[(form.status ?? "ativo") as ClientStatus].cls)}>
             {CLIENT_STATUSES.map((s) => <option key={s} value={s}>{CLIENT_STATUS_META[s].label}</option>)}
           </select>
@@ -330,9 +330,9 @@ function ClientWorkspace() {
 
       {/* TABS */}
       <Tabs defaultValue="resumo" className="w-full">
-        <TabsList className="bg-card border border-border rounded-2xl p-1.5 mb-6 flex-wrap h-auto shadow-sm">
+        <TabsList data-tour="crm-cli-abas" className="bg-card border border-border rounded-2xl p-1.5 mb-6 flex-wrap h-auto shadow-sm">
           {[["resumo", "Resumo"], ["tarefas", "Tarefas"], ["brand", "Brandbook"], ["persona", "Persona"], ["diag", "Diagnóstico"], ["conc", "Concorrência"]].map(([v, l]) => (
-            <TabsTrigger key={v} value={v} className="rounded-xl px-4 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none font-display">{l}</TabsTrigger>
+            <TabsTrigger key={v} value={v} data-tour={`crm-cli-tab-${v}`} className="rounded-xl px-4 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none font-display">{l}</TabsTrigger>
           ))}
         </TabsList>
 
@@ -402,7 +402,7 @@ function ClientWorkspace() {
         </TabsContent>
 
         {/* BRAND CORE */}
-        <TabsContent value="brand" className="mt-0 space-y-4">
+        <TabsContent value="brand" data-tour="crm-cli-brand" className="mt-0 space-y-4">
           {isCria && (
             <div className="flex items-center gap-2 rounded-2xl border border-primary/20 bg-primary/[0.05] px-4 py-3 flex-wrap">
               <Instagram className="h-4 w-4 text-primary shrink-0" />

@@ -307,7 +307,7 @@ export default function ClienteHub() {
       <button onClick={() => navigate("/socialmidia/clientes")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground font-body mb-4"><ArrowLeft className="h-4 w-4" /> Clientes</button>
 
       {/* Cabeçalho no padrão vitrine: logo grande, badges de status e ações sempre visíveis. */}
-      <div className="mb-4 rounded-3xl border border-border bg-card p-4 sm:p-5">
+      <div data-tour="cli-hero" className="mb-4 rounded-3xl border border-border bg-card p-4 sm:p-5">
         {/* Mobile-first: empilha em blocos limpos (avatar+nome, selos, ações).
             No desktop (md:) volta a ser uma linha só, como era antes. */}
         <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:gap-4">
@@ -363,6 +363,7 @@ export default function ClienteHub() {
             <LinksUteisHeaderButton links={(client as { useful_links?: { label: string; url: string }[] | null }).useful_links ?? null} />
             {/* STATUS — ativar/pausar/inativar sem sair da ficha. Mesmo campo da lista. */}
             <select
+              data-tour="cli-status"
               value={(client as { status?: ClientStatus }).status ?? "ativo"}
               onChange={(e) => setStatus(e.target.value as ClientStatus)}
               title="Situação do cliente"
@@ -427,6 +428,7 @@ export default function ClienteHub() {
           ensina a reconhecer o produto dentro da ficha do cliente. */}
       <div
         ref={nivel1Ref}
+        data-tour="cli-nav"
         className="flex gap-1 mb-4 overflow-x-auto rounded-2xl border border-border bg-muted/50 p-1.5 w-fit max-w-full"
         style={nivel1MaisAbas ? { WebkitMaskImage: "linear-gradient(to right, #000 calc(100% - 28px), transparent)", maskImage: "linear-gradient(to right, #000 calc(100% - 28px), transparent)" } : undefined}
       >
@@ -439,6 +441,9 @@ export default function ClienteHub() {
             <button
               key={g.key}
               onClick={() => openGroup(g)}
+              // Âncoras do tutorial: o tour precisa CLICAR nestas duas abas pra
+              // levar a pessoa até a Visão geral e até a landing do Cria Post.
+              data-tour={g.key === "visao-geral" ? "cli-nav-visao" : g.key === "cria-post" ? "cli-nav-post" : undefined}
               title={locked ? `${g.label} · não está no seu plano` : g.label}
               className={`group flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-body font-semibold whitespace-nowrap transition-colors ${
                 on ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"
@@ -458,8 +463,11 @@ export default function ClienteHub() {
 
       {/* NÍVEL 2 — as sub-abas do Cria ativo (só quando tem mais de um assunto e
           a pessoa já entrou num deles). Na landing, os cards fazem esse papel. */}
+      {/* data-tour="cli-subnav" fica na barra de sub-abas E na grade de cards da
+          landing: são a MESMA coisa (as sub-páginas do Cria ativo) e nunca
+          aparecem juntas na tela, então o tour sempre acha exatamente uma. */}
       {activeGroup.subs.length > 1 && !onLanding && (
-        <div className="mb-3 flex items-center gap-2 flex-wrap">
+        <div data-tour="cli-subnav" className="mb-3 flex items-center gap-2 flex-wrap">
           <button onClick={() => openGroup(activeGroup)} title={`Voltar pra ${activeGroup.label}`}
             className="flex items-center gap-1 text-[12px] font-body font-semibold text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-3.5 w-3.5" /> {activeGroup.label}
@@ -487,13 +495,16 @@ export default function ClienteHub() {
 
       {/* LANDING do Cria — cards dos assuntos daquele módulo. */}
       {onLanding && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
+        <div data-tour="cli-subnav" className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
           {activeGroup.subs.filter(subVisible).map((sub) => {
             const meta = SUB_META[sub];
             const Icon = meta.icon;
             const hex = activeGroup.modulo ? CRIA_HEX[activeGroup.modulo] : "hsl(var(--primary))";
             return (
               <button key={sub} onClick={() => goTab(sub)}
+                // O card do Kanban do cliente ganha âncora própria: é o passo do
+                // tour que explica a sincronia ao vivo com o Cria do cliente.
+                data-tour={sub === "kanban-cliente" ? "cli-kanban" : undefined}
                 className="group text-left bg-card border border-border rounded-2xl p-4 transition-all hover:border-primary/40 hover:-translate-y-0.5 hover:shadow-md">
                 <div className="flex items-center gap-3">
                   <span className="grid h-9 w-9 place-items-center rounded-xl text-white shrink-0" style={{ background: hex }}><Icon className="h-4 w-4" /></span>
@@ -713,7 +724,7 @@ function LinksUteisHeaderButton({ links }: { links: LinkUtil[] | null }) {
   const [open, setOpen] = useState(false);
   const items = (links ?? []).filter((l) => l?.url);
   return (
-    <div className="relative">
+    <div data-tour="cli-links" className="relative">
       <Button variant="outline" className="px-3" onClick={() => setOpen((v) => !v)} title="Links úteis" aria-label="Links úteis">
         <FolderOpen className="h-4 w-4 sm:mr-1.5" /><span className="hidden sm:inline">Links úteis</span>
       </Button>
@@ -1036,7 +1047,7 @@ function Destaques({ clientId, clientSegment, clientBirthday, renewalDate, extCl
   const laranja = CRIA_HEX.laranja; const azul = CRIA_HEX.azul;
 
   return (
-    <div>
+    <div data-tour="cli-destaques">
       <div className="flex items-center gap-2 mb-2 px-1">
         <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide">Destaques</p>
         <span className="text-[11px] font-body text-muted-foreground/70">o resumo, o detalhe fica em cada Cria acima</span>
