@@ -19,6 +19,16 @@ export type TourStep = {
   skipOnMobile?: boolean;
   skipOnDesktop?: boolean;
   /**
+   * PULAR QUANDO O ALVO NÃO EXISTE.
+   * Pra passo que fala de algo CONDICIONAL, que só aparece em certo estado da tela:
+   * os KPIs do Insights (só depois de conectar o Instagram), o card do Kanban no
+   * cockpit (só pra cliente com conta Cria), a faixa "Em produção" da agenda (só
+   * quando há post sem data). Sem isso o passo caía no card centrado explicando
+   * uma coisa que a pessoa não tem na tela, o que confunde mais do que ajuda.
+   * Com isso o passo simplesmente não entra no tour naquele estado.
+   */
+  skipIfMissing?: boolean;
+  /**
    * ABRIR ANTES DE PROCURAR.
    * Seletor de um controle (aba, acordeão, botão "mais") que precisa ser CLICADO
    * pra que o alvo exista no DOM. Sem isso, o tour não encontrava o elemento e

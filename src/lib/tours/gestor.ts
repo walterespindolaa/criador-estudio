@@ -143,6 +143,9 @@ export const TOURS_GESTOR: TourConfig[] = [
         // estava numa sub-página (Produção, Cronograma...), a grade não está montada
         // e o passo cairia no modo "sem alvo". Pra cliente sem conta Cria o card não
         // existe mesmo, e o texto abaixo continua fazendo sentido nesse caso.
+        // Card duplamente condicional: só na landing do Cria Post e só pra cliente
+        // com conta Cria. Sem o alvo, o passo sai do tour em vez de virar card solto.
+        skipIfMissing: true,
         target: '[data-tour="cli-kanban"]',
         openFirst: '[data-tour="cli-nav-post"]',
         title: "O quadro dele, ao vivo",
@@ -190,6 +193,8 @@ export const TOURS_GESTOR: TourConfig[] = [
         placement: "bottom",
       },
       {
+        // A faixa só existe quando há post sem data esperando pra ser agendado.
+        skipIfMissing: true,
         target: '[data-tour="ag-producao"]',
         title: "Em produção, sem data",
         body: "Post que ainda não tem dia fica nesta faixa em cima, em vez de sumir do calendário. Pegue pelo ⠿ e solte num dia pra agendar; arraste de volta pra cá e a data sai (o status continua o mesmo). A setinha recolhe a faixa quando ela estiver cheia demais.",

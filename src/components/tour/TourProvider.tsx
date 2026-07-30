@@ -70,6 +70,16 @@ export function TourProvider({ children }: { children: ReactNode }) {
     const isMobile = window.innerWidth < 768;
     const steps = tour.steps
       .filter(s => !(isMobile && s.skipOnMobile) && !(!isMobile && s.skipOnDesktop))
+      // Passo condicional (skipIfMissing): se o alvo não está na tela AGORA, ele sai
+      // do tour antes de começar, então a contagem "passo X de N" e a barra de
+      // progresso já saem certas. Exceção: passo com openFirst, cujo alvo mora atrás
+      // de uma aba fechada e por isso ainda não existe no DOM. Esse a gente deixa
+      // entrar e o overlay decide depois de clicar na aba (ver TourOverlay).
+      .filter(s => {
+        if (!s.skipIfMissing || s.openFirst || s.mobileOpenFirst) return true;
+        const alvo = isMobile && s.mobileTarget ? s.mobileTarget : s.target;
+        return !!document.querySelector(alvo);
+      })
       .map(s => ({
         ...s,
         target: isMobile && s.mobileTarget ? s.mobileTarget : s.target,

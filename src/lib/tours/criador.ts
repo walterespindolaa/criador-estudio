@@ -586,12 +586,16 @@ export const TOURS_CRIADOR: TourConfig[] = [
         placement: "bottom",
       },
       {
+        // Só existem depois de conectar o Instagram: antes disso a tela é só o convite
+        // pra conectar, e falar de "os 4 números" ali não ajuda ninguém.
+        skipIfMissing: true,
         target: '[data-tour="insights-kpis"]',
         title: "Os 4 números que importam",
         body: "Seguidores, alcance, interações e visitas ao perfil dos últimos 30 dias. Bateu o olho, entendeu a fase, sem abrir o app do Instagram.",
         placement: "bottom",
       },
       {
+        skipIfMissing: true,
         target: '[data-tour="insights-posts"]',
         title: "Post por post",
         body: "O desempenho de cada publicação: alcance, curtidas, salvos. Vincule cada mídia ao post correspondente no CRIA pra fechar o ciclo entre planejar, publicar e aprender.",

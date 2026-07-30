@@ -28,6 +28,12 @@ export function TourOverlay({
   const rafRef = useRef(0);
   const current = step >= 0 ? tour.steps[step] : null;
   const total = tour.steps.length;
+  // Direção da navegação: se a pessoa voltou pra um passo condicional que sumiu,
+  // pular pra FRENTE faria o botão Voltar parecer quebrado (o card ricocheteia).
+  // Guardando a direção, o passo ausente é pulado pro mesmo lado que ela ia.
+  const passoAnterior = useRef(step);
+  const indoPraFrente = step >= passoAnterior.current;
+  useEffect(() => { passoAnterior.current = step; }, [step]);
 
   const measure = useCallback(() => {
     const el = elRef.current;
@@ -73,8 +79,18 @@ export function TourOverlay({
         }
       }
 
-      if (tries++ < 80) window.setTimeout(find, 50); // até ~4s pra páginas lazy montarem
-      else { setRect(null); setMissing(true); }      // sem alvo: card centrado, NUNCA fica mudo
+      // Passo condicional que já teve a aba aberta pelo openFirst e mesmo assim não
+      // achou o alvo: ele não existe NESTE estado da tela (ex.: card do Kanban num
+      // cliente que não usa o Cria). Espera curta e pula, em vez de segurar 4s e
+      // mostrar um card explicando algo que não está na tela.
+      const limite = current.skipIfMissing ? 16 : 80; // ~0,8s contra ~4s
+      if (tries++ < limite) { window.setTimeout(find, 50); return; }
+      if (current.skipIfMissing) {
+        if (indoPraFrente) onNext();
+        else onPrev();
+        return;
+      }
+      setRect(null); setMissing(true);               // sem alvo: card centrado, NUNCA fica mudo
     };
     find();
     return () => { cancelled = true; };
