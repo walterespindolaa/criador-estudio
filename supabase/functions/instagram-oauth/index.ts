@@ -60,8 +60,13 @@ Deno.serve(async (req) => {
     );
     const longJson = await longRes.json();
     if (!longRes.ok || !longJson.access_token) {
-      console.error('[instagram-oauth] long-lived exchange failed', longRes.status, longJson?.error);
-      return redirect('error', 'token_exchange_long', toClient);
+      console.error('[instagram-oauth] long-lived exchange failed', longRes.status, JSON.stringify(longJson?.error ?? longJson));
+      // Devolve o motivo REAL da Meta junto do código. Antes só aparecia
+      // "token_exchange_long" na tela, que não dizia nada nem pra gente nem pro
+      // usuário, e obrigava a cavar o log da função pra descobrir o porquê.
+      const metaMsg = (longJson?.error?.message ?? longJson?.error_message ?? '') as string;
+      const detalhe = metaMsg ? `token_exchange_long: ${metaMsg.slice(0, 160)}` : 'token_exchange_long';
+      return redirect('error', detalhe, toClient);
     }
     const longToken = longJson.access_token as string;
     const expiresIn = Number(longJson.expires_in ?? 0);

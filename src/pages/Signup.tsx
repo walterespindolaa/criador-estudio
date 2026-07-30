@@ -81,7 +81,7 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
     setFormError(null);
     setLoading(true);
     const meta = accountType === "manager" ? { account_intent: "manager" } : undefined;
-    const { error } = await signUp(data.email, data.password, data.name, meta);
+    const { error, needsConfirmation } = await signUp(data.email, data.password, data.name, meta);
     setLoading(false);
     if (error) {
       console.warn("[signup] error:", error.message);
@@ -91,7 +91,17 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
       toast.error(mapped.text);
     } else {
       track("CompleteRegistration", { content_name: accountType === "manager" ? "signup_agency" : "signup_email" });
-      setEmailSent(true);
+      // Só mostra "confirme seu e-mail" quando o projeto REALMENTE exige confirmação.
+      // Com o auto-confirm ligado a sessão já veio: a pessoa entra direto e quem leva
+      // pro onboarding é o roteador, que reage à sessão nova.
+      if (needsConfirmation) {
+        setEmailSent(true);
+      } else {
+        toast.success("Conta criada! Bem-vinda ao CRIA.");
+        // Mesmo destino do emailRedirectTo: sem guarda de rota pública, sem esse
+        // navigate a pessoa ficava parada na tela de cadastro mesmo já logada.
+        navigate(accountType === "manager" ? "/comecar-agencia" : "/onboarding", { replace: true });
+      }
     }
   };
 

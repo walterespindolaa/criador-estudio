@@ -7,7 +7,13 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string, name: string, meta?: Record<string, unknown>) => Promise<{ error: any }>;
+  /**
+   * needsConfirmation: true quando o projeto EXIGE confirmação por e-mail (o signUp
+   * volta sem sessão). Com o auto-confirm ligado, a sessão já vem e a pessoa entra
+   * direto, então a tela de "confirme seu e-mail" não pode aparecer, senão promete
+   * um e-mail que nunca é enviado e trava o usuário numa tela morta.
+   */
+  signUp: (email: string, password: string, name: string, meta?: Record<string, unknown>) => Promise<{ error: any; needsConfirmation: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
@@ -38,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, name: string, meta?: Record<string, unknown>) => {
     const isManager = meta?.account_intent === "manager";
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -47,7 +53,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         emailRedirectTo: `${window.location.origin}${isManager ? "/comecar-agencia" : "/onboarding"}`,
       },
     });
-    return { error };
+    // Sem sessão de volta = o projeto exige confirmação por e-mail. Com sessão, a
+    // conta já está ativa e o fluxo segue direto pro app.
+    return { error, needsConfirmation: !error && !data?.session };
   };
 
   const signIn = async (email: string, password: string) => {

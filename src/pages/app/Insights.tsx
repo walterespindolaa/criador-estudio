@@ -74,8 +74,24 @@ export default function Insights() {
           .forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
       }).catch(() => { /* o sync tambem roda por cron; segue */ });
     } else if (ig === "error") {
-      const motivo = searchParams.get("m");
-      toast.error(`Nao consegui conectar o Instagram${motivo ? `: ${motivo}` : ""}. Tente de novo.`);
+      const motivo = searchParams.get("m") ?? "";
+      // Traduz o código técnico numa instrução que a pessoa consegue seguir. Antes
+      // aparecia "token_exchange_long" cru na tela, que não ajuda ninguém a resolver.
+      let msg = "Não consegui conectar o Instagram. Tente de novo.";
+      if (motivo.startsWith("token_exchange_long") || motivo === "token_exchange") {
+        msg = "Não consegui concluir a conexão. Isso costuma acontecer quando a conta do Instagram não é Profissional. No Instagram: Configurações, Tipo de conta e ferramentas, Mudar para conta profissional (Comercial ou Criador). Depois tente de novo.";
+      } else if (motivo === "account_fetch") {
+        msg = "Conectou, mas não consegui ler os dados da conta. Confirme que ela é Profissional (Comercial ou Criador) e tente de novo.";
+      } else if (motivo === "state_expired" || motivo === "invalid_state") {
+        msg = "A tentativa de conexão expirou. Volte aqui e clique em Conectar Instagram de novo.";
+      } else if (motivo === "missing_code" || motivo === "access_denied") {
+        msg = "A autorização foi cancelada no Instagram. Clique em Conectar Instagram e conclua os passos até o fim.";
+      } else if (motivo === "save_failed") {
+        msg = "Autorizei no Instagram, mas falhei ao salvar a conexão. Tente de novo em instantes.";
+      } else if (motivo) {
+        msg = `Não consegui conectar o Instagram: ${motivo}. Tente de novo.`;
+      }
+      toast.error(msg, { duration: 12000 });
     }
     const next = new URLSearchParams(searchParams);
     next.delete("ig"); next.delete("m");
