@@ -76,6 +76,7 @@ export function FirstStepsPanel() {
   return (
     <AnimatePresence>
       <motion.section
+        data-tour="dash-primeiros-passos"
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, height: 0 }}

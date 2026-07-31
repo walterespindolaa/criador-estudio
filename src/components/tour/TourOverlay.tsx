@@ -13,6 +13,83 @@ import type { TourConfig } from "@/lib/tours/registry";
 
 type Rect = { top: number; left: number; width: number; height: number };
 
+/** Folga do topo: cabe o header sticky do mobile. */
+const FOLGA_TOPO = 72;
+/** Folga de baixo: no mobile o card do tour é um bottom-sheet e come a tela. */
+const folgaBase = () => (window.innerWidth < 640 ? 240 : 160);
+/** Caixa menor que isso não é alvo: é wrapper vazio, aba fechada ou display:none. */
+const CAIXA_MINIMA = 8;
+
+function caixaValida(r: DOMRect): boolean {
+  return r.width >= CAIXA_MINIMA && r.height >= CAIXA_MINIMA;
+}
+
+/**
+ * ACHAR O ELEMENTO QUE REALMENTE DÁ PRA RECORTAR.
+ * O `data-tour` às vezes mora num wrapper que não desenha nada: um <div> em volta
+ * de um componente que retornou null (o checklist "Primeiros passos" some quando
+ * está completo) vira uma caixa de altura ZERO e largura cheia, e o spotlight
+ * saía como uma faixa fina no topo, sobre nada.
+ * Regra: caixa boa, usa. Caixa zerada, procura o primeiro filho que desenha algo.
+ * Não achou, sobe até 3 pais, aceitando só pai de tamanho razoável (não adianta
+ * recortar a página inteira). Nada disso? Devolve null e o card vai pro centro.
+ */
+function resolverAlvo(el: Element): Element | null {
+  if (caixaValida(el.getBoundingClientRect())) return el;
+  const filho = Array.from(el.querySelectorAll("*")).find(f => caixaValida(f.getBoundingClientRect()));
+  if (filho) return filho;
+  let pai = el.parentElement;
+  for (let i = 0; pai && i < 3; i++, pai = pai.parentElement) {
+    const pr = pai.getBoundingClientRect();
+    if (caixaValida(pr) && pr.height <= window.innerHeight * 0.8) return pai;
+  }
+  return null;
+}
+
+/**
+ * PRECISA ROLAR PRA ENXERGAR?
+ * Antes a checagem era só vertical, e por isso a pílula "Assinatura" das
+ * Configurações (que mora numa tira de abas com scroll HORIZONTAL) nunca era
+ * trazida pra tela: metade dela ficava fora da borda direita, e a pílula "Conta",
+ * mais pra direita ainda, não aparecia de jeito nenhum.
+ * Agora olha os dois eixos, tanto contra a janela quanto contra cada container
+ * rolável que esteja recortando o alvo.
+ */
+function precisaRolar(el: Element): boolean {
+  const r = el.getBoundingClientRect();
+  // Alvo maior que a tela (ex.: a tira inteira de abas) não cabe de jeito nenhum:
+  // rolar só empurraria o começo dele pra fora sem ganhar nada.
+  const cabeX = r.width <= window.innerWidth - 16;
+  const cabeY = r.height <= window.innerHeight - FOLGA_TOPO - folgaBase();
+  if (cabeY && (r.top < FOLGA_TOPO || r.bottom > window.innerHeight - folgaBase())) return true;
+  if (cabeX && (r.left < 8 || r.right > window.innerWidth - 8)) return true;
+  // Grande demais pra caber, mas TOTALMENTE fora da vista: rola mesmo assim,
+  // senão o spotlight fica desenhado num pedaço de tela que ninguém enxerga.
+  if (!cabeY && (r.bottom < FOLGA_TOPO || r.top > window.innerHeight - folgaBase())) return true;
+  if (!cabeX && (r.right < 8 || r.left > window.innerWidth - 8)) return true;
+  let pai = el.parentElement;
+  while (pai && pai !== document.body) {
+    const st = getComputedStyle(pai);
+    const rolaX = cabeX && /(auto|scroll)/.test(st.overflowX) && pai.scrollWidth > pai.clientWidth + 1;
+    const rolaY = cabeY && /(auto|scroll)/.test(st.overflowY) && pai.scrollHeight > pai.clientHeight + 1;
+    if (rolaX || rolaY) {
+      const pr = pai.getBoundingClientRect();
+      if (rolaX && (r.left < pr.left - 1 || r.right > pr.right + 1)) return true;
+      if (rolaY && (r.top < pr.top - 1 || r.bottom > pr.bottom + 1)) return true;
+    }
+    pai = pai.parentElement;
+  }
+  return false;
+}
+
+/** O alvo sobrou dentro da tela depois de rolar? (se não, não adianta recortar) */
+function estaNaTela(r: DOMRect): boolean {
+  const visivelX = Math.min(r.right, window.innerWidth) - Math.max(r.left, 0);
+  const visivelY = Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0);
+  if (visivelX <= 0 || visivelY <= 0) return false;
+  return visivelX * visivelY >= r.width * r.height * 0.25;
+}
+
 export function TourOverlay({
   tour, step, onNext, onPrev, onSkip,
 }: {
@@ -35,11 +112,20 @@ export function TourOverlay({
   const indoPraFrente = step >= passoAnterior.current;
   useEffect(() => { passoAnterior.current = step; }, [step]);
 
+  // Mede e GRUDA NA TELA: o recorte nunca sai pela borda, senão vira meia moldura
+  // cortada (era o que acontecia com a pílula "Assinatura" no celular).
   const measure = useCallback(() => {
     const el = elRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    setRect({ top: r.top - 6, left: r.left - 6, width: r.width + 12, height: r.height + 12 });
+    let top = r.top - 6, left = r.left - 6, width = r.width + 12, height = r.height + 12;
+    const limiteX = window.innerWidth - 4, limiteY = window.innerHeight - 4;
+    if (left < 4) { width += left - 4; left = 4; }
+    if (top < 4) { height += top - 4; top = 4; }
+    if (left + width > limiteX) width = limiteX - left;
+    if (top + height > limiteY) height = limiteY - top;
+    if (width <= 0 || height <= 0) return; // fora da tela agora: mantém o último recorte
+    setRect({ top, left, width, height });
   }, []);
 
   // Encontra o alvo do passo e mede IMEDIATAMENTE, o spotlight desliza da posição
@@ -49,13 +135,49 @@ export function TourOverlay({
     if (!current) { setRect(null); setMissing(false); elRef.current = null; return; }
     let tries = 0;
     let cancelled = false;
+    let rafSettle = 0;
     setMissing(false);
+
+    // Sem alvo utilizável: passo condicional sai do tour, o resto vira card centrado.
+    const semAlvo = () => {
+      elRef.current = null;
+      if (current.skipIfMissing) { if (indoPraFrente) onNext(); else onPrev(); return; }
+      setRect(null); setMissing(true);
+    };
+
+    /**
+     * ESPERAR O LAYOUT PARAR ANTES DE CONFIAR NA MEDIDA.
+     * Medir na hora e depender só do evento de scroll não bastava: banner que
+     * carrega depois, imagem que entra, aba que monta, tudo isso EMPURRA a página
+     * sem disparar scroll nenhum, e o recorte ficava parado num pedaço vazio acima
+     * do alvo de verdade (era o caso das abas do Cria Stories). Aqui a gente
+     * remede a cada frame até o retângulo repetir 5 vezes seguidas (ou estourar
+     * 1,2s) e só então decide se o alvo presta.
+     */
+    const estabilizar = (el: Element) => {
+      let ultimo = "";
+      let iguais = 0;
+      const inicio = performance.now();
+      const tick = () => {
+        if (cancelled || elRef.current !== el) return;
+        measure();
+        const r = el.getBoundingClientRect();
+        const chave = `${Math.round(r.top)}:${Math.round(r.left)}:${Math.round(r.width)}:${Math.round(r.height)}`;
+        iguais = chave === ultimo ? iguais + 1 : 0;
+        ultimo = chave;
+        if (iguais < 5 && performance.now() - inicio < 1200) { rafSettle = requestAnimationFrame(tick); return; }
+        // Veredito final: caixa zerada ou fora da tela não vira spotlight.
+        const fim = el.getBoundingClientRect();
+        if (!caixaValida(fim) || !estaNaTela(fim)) semAlvo();
+      };
+      rafSettle = requestAnimationFrame(tick);
+    };
+
     const attach = (el: Element) => {
       elRef.current = el;
       measure();
-      const r = el.getBoundingClientRect();
-      const foraDeVista = r.top < 72 || r.bottom > window.innerHeight - 140;
-      if (foraDeVista) el.scrollIntoView({ block: "center", behavior: "smooth" });
+      if (precisaRolar(el)) el.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
+      estabilizar(el);
     };
     // ABRIR O QUE ESCONDE O ALVO.
     // Muito passo apontava pra um elemento que vive atrás de uma aba fechada
@@ -66,7 +188,11 @@ export function TourOverlay({
     let abriu = false;
     const find = () => {
       if (cancelled) return;
-      const el = document.querySelector(current.target);
+      // "Existe no DOM" não basta: elemento dentro de aba fechada, ou wrapper de um
+      // componente que não renderizou nada, tem caixa ZERO e não dá pra recortar.
+      // Nesse caso a busca continua (e o openFirst ainda tem chance de abrir a aba).
+      const bruto = document.querySelector(current.target);
+      const el = bruto ? resolverAlvo(bruto) : null;
       if (el) { attach(el); return; }
 
       if (!abriu && current.openFirst) {
@@ -85,19 +211,16 @@ export function TourOverlay({
       // mostrar um card explicando algo que não está na tela.
       const limite = current.skipIfMissing ? 16 : 80; // ~0,8s contra ~4s
       if (tries++ < limite) { window.setTimeout(find, 50); return; }
-      if (current.skipIfMissing) {
-        if (indoPraFrente) onNext();
-        else onPrev();
-        return;
-      }
-      setRect(null); setMissing(true);               // sem alvo: card centrado, NUNCA fica mudo
+      semAlvo();                                     // sem alvo: card centrado, NUNCA fica mudo
     };
     find();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; cancelAnimationFrame(rafSettle); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, tour.id]);
 
-  // Reposiciona em resize/scroll enquanto o passo está ativo
+  // Reposiciona em resize/scroll enquanto o passo está ativo.
+  // O ResizeObserver no <body> é o que salva do conteúdo que chega atrasado
+  // (banner, imagem, lista) e empurra a página SEM disparar evento de scroll.
   useEffect(() => {
     if (!current) return;
     const onMove = () => {
@@ -106,9 +229,13 @@ export function TourOverlay({
     };
     window.addEventListener("resize", onMove);
     window.addEventListener("scroll", onMove, true);
+    const ro = new ResizeObserver(onMove);
+    ro.observe(document.body);
+    if (elRef.current) ro.observe(elRef.current);
     return () => {
       window.removeEventListener("resize", onMove);
       window.removeEventListener("scroll", onMove, true);
+      ro.disconnect();
       cancelAnimationFrame(rafRef.current);
     };
   }, [current, measure]);
@@ -195,7 +322,9 @@ export function TourOverlay({
               missing
                 ? "fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[380px] max-w-[92vw] rounded-2xl border-2 border-[#0A0A0A] bg-card p-5 shadow-[0_8px_0_rgba(21,20,18,0.9)] pointer-events-auto"
                 : isMobile
-                ? "fixed inset-x-0 bottom-0 rounded-t-3xl border-t-2 border-x-2 border-[#0A0A0A] bg-card p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pointer-events-auto"
+                // max-h + scroll: rede de segurança pra passo de texto longo no
+                // celular, que antes crescia até engolir a tela e tapar o spotlight.
+                ? "fixed inset-x-0 bottom-0 max-h-[55vh] overflow-y-auto overscroll-contain rounded-t-3xl border-t-2 border-x-2 border-[#0A0A0A] bg-card p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pointer-events-auto"
                 : "fixed w-[380px] rounded-2xl border-2 border-[#0A0A0A] bg-card p-5 shadow-[0_8px_0_rgba(21,20,18,0.9)] transition-[top,left,bottom] duration-200 ease-out pointer-events-auto"
             }
             style={missing || isMobile ? undefined : cardStyle}

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Link2, Loader2, Plus, Settings2, Trash2, Wallet, Send, Check, Pencil, LogIn, Home, Layers, CalendarDays, BarChart3, BookOpen, Lightbulb, Search, Compass, Instagram, ArrowRight, Lock, FolderOpen, Package, File as FileIcon, RefreshCw, Kanban } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Link2, Loader2, Plus, Settings2, Trash2, Wallet, Send, Check, Pencil, LogIn, Home, Layers, CalendarDays, BarChart3, BookOpen, Lightbulb, Search, Compass, Instagram, ArrowRight, Lock, FolderOpen, Package, File as FileIcon, RefreshCw, Kanban, StickyNote } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
-import { useCrmClient, useUpdateCrmClient, useUploadCrmAsset, CLIENT_STATUSES, CLIENT_STATUS_META, type ClientStatus } from "@/hooks/useCrm";
+import { useCrmClient, useUpdateCrmClient, useUploadCrmAsset, useClientNotes, CLIENT_STATUSES, CLIENT_STATUS_META, type ClientStatus } from "@/hooks/useCrm";
+import { ClientNotesDrawer, notePreview } from "@/components/accounts/ClientNotesDrawer";
 import { mensalidadeAtivaNoMes } from "@/lib/finance";
 import { InactivateClientDialog } from "@/components/accounts/crm/InactivateClientDialog";
 import { Camera } from "lucide-react";
@@ -36,7 +37,6 @@ import { ClienteKanbanCria } from "@/components/accounts/ClienteKanbanCria";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 
 // ── ABAS DO CLIENTE ──
 // A aba "Criativo" misturava três coisas diferentes: o Brandbook do cliente,
@@ -139,8 +139,18 @@ export default function ClienteHub() {
   const { allowed: hasHubCria } = useHasHubCria();
   const { allowed: hasCaixa } = useHasModule("financeiro");
   const { allowed: hasPost } = useHasModule("aprovapost_externo");
+  // Bloco de notas do cliente: é recurso do Cria Gestão (mesmo gate das outras
+  // áreas do CRM). Sem o módulo, o botão abre a vitrine em vez do bloco.
+  const { allowed: hasCrm } = useHasModule("crm");
+  const [notesOpen, setNotesOpen] = useState(false);
   const { data: client, isLoading } = useCrmClient(id);
   const { setActiveAccount } = useActiveAccount();
+  // Contador discreto no botão de notas (e já deixa a lista quente pro drawer).
+  const { data: clientNotes } = useClientNotes(
+    { crmClientId: id ?? null, accountOwnerId: client?.cria_owner_id ?? null },
+    !!id && hasCrm,
+  );
+  const notesCount = clientNotes?.length ?? 0;
   // A sub-página Pesquisa (Apify) só existe pra quem tem o HUB liberado. O Kanban do
   // cliente só aparece quando o cliente do CRM tem conta Cria vinculada (cria_owner_id).
   const subVisible = (sub: string) => {
@@ -361,6 +371,24 @@ export default function ClienteHub() {
             {/* LINKS ÚTEIS — atalho fixo pros links do cliente (Drive, Captação…).
                 Rótulo sempre "Links úteis"; aparece mesmo sem nenhum link. */}
             <LinksUteisHeaderButton links={(client as { useful_links?: { label: string; url: string }[] | null }).useful_links ?? null} />
+            {/* NOTAS — o bloco de notas deste cliente (várias notas, com data e
+                busca). É onde fica registrado o que foi conversado e alinhado
+                ao longo do tempo. Sem o Cria Gestão, abre a vitrine do módulo. */}
+            <Button
+              variant="outline"
+              className="px-3"
+              onClick={() => { if (!hasCrm) { setUpsell("crm"); return; } setNotesOpen(true); }}
+              title="Notas do cliente"
+              aria-label={notesCount > 0 ? `Notas do cliente (${notesCount})` : "Notas do cliente"}
+            >
+              <StickyNote className="h-4 w-4" />
+              <span className="hidden sm:inline ml-1.5">Notas</span>
+              {notesCount > 0 && (
+                <span className="ml-1.5 text-[10px] font-body font-bold rounded-full bg-primary/10 text-primary px-1.5 py-0.5 leading-none">
+                  {notesCount}
+                </span>
+              )}
+            </Button>
             {/* STATUS — ativar/pausar/inativar sem sair da ficha. Mesmo campo da lista. */}
             <select
               data-tour="cli-status"
@@ -422,6 +450,15 @@ export default function ClienteHub() {
         </div>
       </div>
       <ExternalClientDialog open={editOpen} onOpenChange={setEditOpen} client={extClient} />
+      {/* Bloco de notas do cliente. Grava as duas pontas (cliente do CRM e conta
+          CRIA vinculada), então é a MESMA caixa de notas da lista de contas. */}
+      <ClientNotesDrawer
+        open={notesOpen}
+        onOpenChange={setNotesOpen}
+        crmClientId={client.id}
+        ownerId={client.cria_owner_id}
+        clientName={displayName || client.name}
+      />
 
       {/* NÍVEL 1 — os Cria. Topo enxuto: a pessoa escolhe QUAL Cria; o que tem
           dentro aparece no nível 2. Cada botão na cor do módulo, que é o que
@@ -552,9 +589,41 @@ export default function ClienteHub() {
             <CampoCliente clientId={client.id} label="Plano" tipo="texto"
               valor={client.plan_name} placeholder="Ex.: Gestão completa" campo="plan_name" />
           </div>
-          {/* Anotações: saíram do "Personalizar" (onde ninguém achava) e viraram um campo
-              editável aqui, que é onde a pessoa procura por elas. */}
-          <NotasCliente clientId={client.id} notes={client.notes} />
+          {/* NOTAS — antes era um campo único de "Anotações" (tudo empilhado num
+              texto só). Virou o bloco de notas do cliente: várias notas, com
+              título, data e busca. Aqui fica o resumo das últimas; o bloco
+              inteiro abre no drawer (mesmo botão do cabeçalho). */}
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <StickyNote className="h-4 w-4 text-muted-foreground shrink-0" />
+                <p className="text-sm font-display font-bold text-foreground">Notas</p>
+                {notesCount > 0 && (
+                  <span className="text-[10px] font-body font-bold rounded-full bg-primary/10 text-primary px-1.5 py-0.5 leading-none">{notesCount}</span>
+                )}
+              </div>
+              <Button size="sm" variant="outline" onClick={() => { if (!hasCrm) { setUpsell("crm"); return; } setNotesOpen(true); }}>
+                {notesCount > 0 ? "Abrir" : "Nova nota"}
+              </Button>
+            </div>
+            {notesCount === 0 ? (
+              <p className="text-xs text-muted-foreground font-body mt-2">
+                O que foi conversado e alinhado com o cliente fica aqui, cada conversa numa nota com data.
+              </p>
+            ) : (
+              <div className="mt-2 divide-y divide-border">
+                {(clientNotes ?? []).slice(0, 3).map((n) => (
+                  <button key={n.id} type="button" onClick={() => setNotesOpen(true)}
+                    className="w-full text-left py-2 group">
+                    <p className="text-[13px] font-body font-semibold text-foreground truncate group-hover:text-primary transition-colors">{n.title?.trim() || "Sem título"}</p>
+                    <p className="text-[11.5px] text-muted-foreground font-body truncate">
+                      {new Date(n.updated_at).toLocaleDateString("pt-BR")} {notePreview(n.body)}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Os "Links úteis" (editor + pastas do Drive) migraram pra aba de topo
               própria "Links úteis". Aqui na Visão geral não fica mais duplicado. */}
@@ -667,47 +736,10 @@ export default function ClienteHub() {
   );
 }
 
-// Anotações do cliente, salva ~0,8s depois da última tecla (mesmo padrão da ficha do CRM).
-function NotasCliente({ clientId, notes }: { clientId: string; notes: string | null }) {
-  const update = useUpdateCrmClient();
-  const [txt, setTxt] = useState(notes ?? "");
-  const [state, setState] = useState<"idle" | "saving" | "saved">("idle");
-  const serverRef = useRef(notes ?? "");
-
-  // Adota o servidor só quando não há edição pendente (não atropela quem digita).
-  useEffect(() => {
-    const srv = notes ?? "";
-    setTxt((cur) => (cur === serverRef.current ? srv : cur));
-    serverRef.current = srv;
-  }, [notes]);
-
-  useEffect(() => {
-    if (txt === serverRef.current) return;
-    setState("saving");
-    const t = setTimeout(() => {
-      update.mutate({ id: clientId, notes: txt || null }, {
-        onSuccess: () => { setState("saved"); setTimeout(() => setState("idle"), 1500); },
-        onError: () => setState("idle"),
-      });
-    }, 800);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [txt, clientId]);
-
-  return (
-    <div className="bg-card border border-border rounded-2xl p-4">
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-xs font-body text-muted-foreground">Anotações</p>
-        <span className={`text-[11px] font-body ${state === "saved" ? "text-emerald-600" : "text-muted-foreground"}`}>
-          {state === "saving" ? "Salvando…" : state === "saved" ? "Salvo ✓" : "Salva automático"}
-        </span>
-      </div>
-      <Textarea rows={3} value={txt} onChange={(e) => setTxt(e.target.value)}
-        placeholder="Contexto, combinados, senhas de acesso, o que o cliente odeia…"
-        className="rounded-xl text-sm" />
-    </div>
-  );
-}
+// O antigo componente NotasCliente (campo único "Anotações", gravando em
+// crm_clients.notes) saiu daqui: virou o bloco de notas do cliente, com várias
+// notas. A coluna antiga continua no banco como backup e o conteúdo dela já foi
+// copiado pra crm_client_notes na migração.
 
 type LinkUtil = { label: string; url: string };
 

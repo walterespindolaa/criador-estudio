@@ -610,3 +610,145 @@ export function useDeleteCrmTask() {
     onError: () => toast.error("Erro ao excluir tarefa."),
   });
 }
+
+// ===================== BLOCO DE NOTAS DO CLIENTE (crm_client_notes) =====================
+// Várias notas por cliente (modelo Notas do iPhone), no lugar da nota única antiga.
+// A nota pode estar presa ao cliente do CRM (crm_client_id) e/ou à conta CRIA
+// gerenciada (account_owner_id). Quando o cliente do CRM tem conta CRIA vinculada,
+// grava as duas pontas: a mesma nota aparece na ficha e na lista de contas.
+export type CrmClientNote = {
+  id: string;
+  manager_id: string;
+  crm_client_id: string | null;
+  account_owner_id: string | null;
+  title: string;
+  body: string;
+  pinned: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+/** De quem são as notas: cliente do CRM, conta CRIA gerenciada, ou os dois. */
+export type ClientNotesScope = { crmClientId?: string | null; accountOwnerId?: string | null };
+
+/** Chave estável da query. Cliente do CRM manda; sem ele, cai na conta CRIA. */
+function notesScopeKey(scope: ClientNotesScope): string | null {
+  if (scope.crmClientId) return `crm:${scope.crmClientId}`;
+  if (scope.accountOwnerId) return `cria:${scope.accountOwnerId}`;
+  return null;
+}
+
+/** Descobre o cliente do CRM de uma conta CRIA gerenciada (pra unificar as notas). */
+export function useCrmClientIdByCriaOwner(criaOwnerId: string | null | undefined) {
+  const { agencyOwnerId } = useActiveAccount();
+  return useQuery<string | null>({
+    queryKey: ["crm-client-by-cria-owner", agencyOwnerId, criaOwnerId ?? null],
+    enabled: !!agencyOwnerId && !!criaOwnerId,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("crm_clients")
+        .select("id")
+        .eq("manager_id", agencyOwnerId!)
+        .eq("cria_owner_id", criaOwnerId!)
+        .is("deleted_at", null)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as { id: string } | null)?.id ?? null;
+    },
+  });
+}
+
+export function useClientNotes(scope: ClientNotesScope, enabled = true) {
+  const key = notesScopeKey(scope);
+  return useQuery<CrmClientNote[]>({
+    queryKey: ["crm-client-notes", key],
+    enabled: enabled && !!key,
+    queryFn: async () => {
+      const base = sbFrom("crm_client_notes").select("*");
+      const q = scope.crmClientId
+        ? base.eq("crm_client_id", scope.crmClientId)
+        : base.eq("account_owner_id", scope.accountOwnerId!);
+      const { data, error } = await q
+        .order("pinned", { ascending: false })
+        .order("updated_at", { ascending: false })
+        .limit(500);
+      if (error) throw error;
+      return (data ?? []) as unknown as CrmClientNote[];
+    },
+  });
+}
+
+export function useCreateClientNote(scope: ClientNotesScope) {
+  const { agencyOwnerId } = useActiveAccount();
+  const qc = useQueryClient();
+  const key = notesScopeKey(scope);
+  return useMutation({
+    mutationFn: async (input: { title?: string; body?: string } = {}): Promise<CrmClientNote> => {
+      if (!agencyOwnerId) throw new Error("Sem sessão");
+      if (!scope.crmClientId && !scope.accountOwnerId) throw new Error("Cliente não identificado");
+      const { data, error } = await sbFrom("crm_client_notes")
+        .insert({
+          manager_id: agencyOwnerId,
+          crm_client_id: scope.crmClientId ?? null,
+          account_owner_id: scope.accountOwnerId ?? null,
+          title: input.title ?? "",
+          body: input.body ?? "",
+        } as never)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as unknown as CrmClientNote;
+    },
+    // Coloca a nota nova no cache NA HORA: o editor abre em cima dela sem esperar
+    // o refetch (senão a tela volta pra lista por uma fração de segundo).
+    onSuccess: (nova) => {
+      qc.setQueryData<CrmClientNote[]>(["crm-client-notes", key], (old) =>
+        Array.isArray(old) ? [nova, ...old] : [nova]);
+      qc.invalidateQueries({ queryKey: ["crm-client-notes", key] });
+    },
+    onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao criar a nota."),
+  });
+}
+
+export function useUpdateClientNote(scope: ClientNotesScope) {
+  const qc = useQueryClient();
+  const key = notesScopeKey(scope);
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string; title?: string; body?: string; pinned?: boolean }) => {
+      const { error } = await sbFrom("crm_client_notes").update(updates as never).eq("id", id);
+      if (error) throw error;
+    },
+    // Update OTIMISTA: o autosave não pode fazer a lista piscar nem o texto voltar
+    // enquanto a resposta não chega (mesmo padrão de crm_tasks/crm_leads).
+    onMutate: async ({ id, ...updates }) => {
+      await qc.cancelQueries({ queryKey: ["crm-client-notes", key] });
+      const snapshot = qc.getQueriesData<CrmClientNote[]>({ queryKey: ["crm-client-notes", key] });
+      // updated_at só muda quando o CONTEÚDO muda (igual ao trigger no banco):
+      // fixar/desafixar não pode jogar a nota pro grupo "Hoje".
+      const patch: Partial<CrmClientNote> = { ...updates };
+      if (updates.title !== undefined || updates.body !== undefined) patch.updated_at = new Date().toISOString();
+      qc.setQueriesData<CrmClientNote[]>({ queryKey: ["crm-client-notes", key] }, (old) =>
+        Array.isArray(old) ? old.map((n) => (n.id === id ? ({ ...n, ...patch } as CrmClientNote) : n)) : old);
+      return { snapshot };
+    },
+    onError: (e: unknown, _v, ctx) => {
+      const c = ctx as { snapshot?: [readonly unknown[], CrmClientNote[] | undefined][] } | undefined;
+      c?.snapshot?.forEach(([k, data]) => qc.setQueryData(k, data)); // desfaz
+      toast.error((e as Error)?.message ?? "Erro ao salvar a nota.");
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["crm-client-notes", key], refetchType: "none" }),
+  });
+}
+
+export function useDeleteClientNote(scope: ClientNotesScope) {
+  const qc = useQueryClient();
+  const key = notesScopeKey(scope);
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await sbFrom("crm_client_notes").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-client-notes", key] }),
+    onError: () => toast.error("Erro ao excluir a nota."),
+  });
+}

@@ -328,9 +328,10 @@ const Dashboard = () => {
         </div>
         {heroSlot && createPortal(renderPeriodFilter(true), heroSlot)}
 
-        <div data-tour="dash-primeiros-passos">
-          <FirstStepsPanel />
-        </div>
+        {/* O data-tour do checklist mora DENTRO do FirstStepsPanel: este painel some
+            quando está completo ou dispensado, e o wrapper que existia aqui virava uma
+            caixa de altura zero, que o tour recortava como uma faixa fina sobre nada. */}
+        <FirstStepsPanel />
 
         <div className="mb-4" data-tour="dash-acao">
           <NextBestAction />
