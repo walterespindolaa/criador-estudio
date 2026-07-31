@@ -54,7 +54,7 @@ h3{font-size:1.2rem}
 .kicker{display:inline-block;font-family:var(--font-display);font-weight:700;font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;padding:8px 18px;border-radius:999px;margin-bottom:16px;color:#fff}
 
 /* ---------- navegação (some na impressão) ---------- */
-nav{position:fixed;top:18px;left:50%;transform:translateX(-50%);width:min(1120px,94%);z-index:100;background:rgba(253,251,245,.88);backdrop-filter:blur(14px);border-radius:999px;padding:10px 14px 10px 26px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 24px rgba(21,20,18,.10);border:1.5px solid rgba(21,20,18,.08)}
+nav:not(.footer-links){position:fixed;top:18px;left:50%;transform:translateX(-50%);width:min(1120px,94%);z-index:100;background:rgba(253,251,245,.88);backdrop-filter:blur(14px);border-radius:999px;padding:10px 14px 10px 26px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 24px rgba(21,20,18,.10);border:1.5px solid rgba(21,20,18,.08)}
 .logo{font-family:var(--font-display);font-weight:800;font-size:1.5rem}
 .nav-links{display:flex;gap:26px;font-weight:500;font-size:.95rem}
 .nav-links a{opacity:.8;transition:opacity .2s}
@@ -86,6 +86,14 @@ section{position:relative}
 .sec-creme2{background:var(--creme-2)}
 .sec-cor{color:#fff}
 .sec-cor h2,.sec-cor h3{color:#fff}
+/* O texto branco da seção colorida vale pro FUNDO dela, não pro que está DENTRO
+   dos cartões: o cartão é creme, e branco sobre creme some. Aqui o texto volta
+   pra cor de tinta assim que entra num cartão. */
+.sec-cor .card,.sec-cor .card-soft,.sec-cor .fer,.sec-cor .lado,.sec-cor .aviso,.sec-cor .passo{color:var(--ink)}
+.sec-cor .card h2,.sec-cor .card h3,.sec-cor .card h4,
+.sec-cor .card-soft h2,.sec-cor .card-soft h3,.sec-cor .card-soft h4,
+.sec-cor .fer h2,.sec-cor .fer h3,.sec-cor .fer h4,
+.sec-cor .aviso h3,.sec-cor .aviso h4,.sec-cor .passo h3,.sec-cor .passo h4{color:var(--ink)}
 .sec-azul{background:var(--azul)}
 .sec-amarelo{background:var(--amarelo);color:var(--ink)}
 .sec-amarelo h2,.sec-amarelo h3{color:var(--ink)}
