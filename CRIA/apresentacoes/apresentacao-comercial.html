@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRIA · Apresentação comercial</title>
+<meta name="description" content="Apresentação comercial do CRIA em 16:9: o problema, o Ciclo CRIA, os dois lados do produto (criador e social mídia), planos, diferencial, modelo de negócio e roadmap.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Roboto:wght@300;400;500;700&family=Grand+Hotel&display=swap" rel="stylesheet">
+<style>
+/* ============ CRIA · APRESENTAÇÃO COMERCIAL ============================
+   Este arquivo NÃO é uma página do site e NÃO é um documento de leitura.
+   É um DECK: 16:9 paisagem, feito pra projetar numa reunião, compartilhar
+   tela ou exportar em PDF paisagem com 1 slide por página.
+
+   Diferença pros outros dois arquivos desta pasta (manual.html e
+   para-social-midias.html): aqueles são A4 retrato, texto denso, feitos pra
+   ler sozinho. Aqui é o contrário. Uma ideia por slide, tipografia grande,
+   pouca palavra. O slide apoia a fala de quem está apresentando, não
+   substitui. Se algum slide virar parágrafo corrido, quebrar em dois.
+
+   Regras que valem pro arquivo inteiro:
+   1) Zero dependência de arquivo local. A logo está embutida em base64 aqui
+      no CSS (classe .logo-cria, copiada byte a byte de para-social-midias.html)
+      e os enfeites são forma em CSS. Só as fontes do Google vêm da internet,
+      e todas têm fallback local declarado.
+   2) Geometria: cada slide é um retângulo de 297mm x 167mm. 297 / 16 * 9 =
+      167,06mm, ou seja, é 16:9 com erro menor que um décimo de milímetro.
+      Trabalhar em mm (e não em px) faz a folha da tela ter exatamente a
+      mesma proporção e a mesma quebra do PDF.
+   3) Na tela os slides ficam empilhados na vertical, um por vez, com sombra,
+      como cartões. Na impressão a sombra some e cada slide vira uma página.
+   4) CONTRASTE: slide de fundo escuro ou colorido usa texto claro, MAS todo
+      cartão branco por dentro devolve a cor do texto pro preto. A regra
+      ".card, .card <descendentes>" abaixo existe só pra isso e não deve ser
+      removida: foi esse o bug dos outros arquivos.
+   5) Os marcadores amarelos .preencher são de propósito. Enquanto estiverem
+      lá, o deck não está pronto pra apresentar. Nada de número de usuário,
+      faturamento, tração ou resultado de cliente inventado aqui.
+   6) Honestidade vale também em peça comercial. O slide 13 diz em voz alta o
+      que o produto ainda não faz. Ele não sai do deck.
+
+   Pra exportar: Ctrl/Cmd + P, destino "Salvar como PDF", layout PAISAGEM,
+   margens "Nenhuma" e a opção de gráficos de fundo LIGADA.
+   ====================================================================== */
+
+:root{
+  --creme:#F5F3E7;--creme-2:#ECE8D5;--ink:#0A0A0A;
+  --laranja:#EA4918;--azul:#0061EE;--rosa:#FF77B9;--amarelo:#FFCF03;--verde:#01A652;
+  --papel:#FFFFFF;--linha:rgba(10,10,10,.26);--linha-fraca:rgba(10,10,10,.16);
+  --tinta-70:rgba(10,10,10,.72);--tinta-55:rgba(10,10,10,.55);
+  --claro-70:rgba(255,255,255,.78);--claro-55:rgba(255,255,255,.6);
+  /* fallback declarado de propósito: se o Google Fonts não carregar (deck
+     aberto offline, numa sala sem wifi), o texto continua de pé em vez de
+     virar Times New Roman */
+  --font-display:'Baloo 2','Trebuchet MS','Segoe UI',Verdana,sans-serif;
+  --font-body:'Roboto','Helvetica Neue',Arial,sans-serif;
+  --font-script:'Grand Hotel','Snell Roundhand','Brush Script MT',cursive;
+  /* geometria do slide 16:9 */
+  --slide-larg:297mm;--slide-alt:167mm;
+  --pad-v:13mm;--pad-h:17mm;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{
+  font-family:var(--font-body);font-size:12pt;line-height:1.45;color:var(--ink);
+  background:#C9C7BE;padding:9mm 4mm;counter-reset:slide;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:var(--font-display);font-weight:800;line-height:1.06;letter-spacing:-.015em}
+b,strong{font-weight:700}
+.script{font-family:var(--font-script);font-weight:400;letter-spacing:0}
+
+/* ---------- a logo, embutida uma única vez ---------- */
+.logo-cria{background-image:url("data:image/png;base64,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");background-repeat:no-repeat;background-position:center;background-size:contain;display:block}
+
+/* ---------- o slide ---------- */
+.slide{
+  position:relative;display:flex;flex-direction:column;overflow:hidden;
+  width:var(--slide-larg);height:var(--slide-alt);
+  margin:0 auto 8mm;background:var(--creme);
+  padding:var(--pad-v) var(--pad-h);
+  box-shadow:0 3mm 9mm rgba(10,10,10,.3);
+  border-radius:3mm;
+  counter-increment:slide;
+}
+.slide-corpo{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
+.slide-branco{background:var(--papel)}
+.slide-escuro{background:var(--ink);color:var(--creme)}
+.slide-laranja{background:var(--laranja);color:#fff}
+.slide-azul{background:var(--azul);color:#fff}
+
+/* ---------- rodapé de slide ---------- */
+.rodape{
+  flex:0 0 auto;margin-top:6mm;padding-top:2.4mm;
+  border-top:.6pt solid var(--linha-fraca);
+  display:flex;align-items:center;justify-content:space-between;gap:6mm;
+  font-size:8pt;letter-spacing:.03em;color:var(--tinta-55)
+}
+.rodape .marca{display:flex;align-items:center;gap:2.6mm;font-family:var(--font-display);font-weight:700}
+.rodape .logo-mini{width:14mm;height:4.6mm;background-position:left center}
+.rodape .num::after{content:counter(slide)}
+/* no slide escuro ou colorido o rodapé precisa clarear junto */
+.slide-escuro .rodape,.slide-laranja .rodape,.slide-azul .rodape{border-top-color:rgba(255,255,255,.28);color:var(--claro-55)}
+
+/* ---------- capa ---------- */
+.slide-capa{justify-content:center;text-align:center}
+.slide-capa .slide-corpo{flex:0 0 auto;position:relative;z-index:2;justify-content:center}
+.blob{position:absolute;z-index:0}
+.b-rosa{width:96mm;height:96mm;background:var(--rosa);top:-34mm;right:-30mm;border-radius:38% 62% 55% 45%/48% 42% 58% 52%}
+.b-amarelo{width:70mm;height:70mm;background:var(--amarelo);bottom:-26mm;left:-22mm;border-radius:55% 45% 40% 60%/50% 60% 40% 50%}
+.b-azul{width:20mm;height:20mm;background:var(--azul);top:30%;left:14mm;border-radius:50%}
+.b-verde{width:12mm;height:12mm;background:var(--verde);bottom:20%;right:22mm;border-radius:50%}
+.capa-logo{width:56mm;height:30mm;margin:0 auto 9mm}
+h1{font-size:40pt;max-width:22ch;margin:0 auto}
+h1 .hl{color:var(--laranja)}
+.capa-script{font-family:var(--font-script);font-size:26pt;color:var(--azul);display:block;margin-top:3mm;transform:rotate(-2deg)}
+.capa-sub{max-width:150mm;margin:9mm auto 0;font-size:12.5pt;font-weight:300;color:var(--tinta-70)}
+.capa-regua{width:34mm;height:1.6mm;background:var(--ink);border-radius:99mm;margin:9mm auto 0}
+.capa-micro{margin-top:5mm;font-size:9.4pt;color:var(--tinta-55);letter-spacing:.04em}
+
+/* ---------- etiqueta e cabeçalho de slide ---------- */
+.kicker{
+  display:inline-block;font-family:var(--font-display);font-weight:700;font-size:8.4pt;
+  letter-spacing:.11em;text-transform:uppercase;padding:1.9mm 5mm;border-radius:99mm;
+  color:#fff;background:var(--laranja)
+}
+.cab{flex:0 0 auto;margin-bottom:7mm}
+.cab .kicker{margin-bottom:4mm}
+.cab h2{font-size:27pt;max-width:28ch}
+.cab h2 .script{font-size:1.3em;color:var(--laranja)}
+.cab h2 .hl{color:var(--laranja)}
+.cab .sub{margin-top:3mm;font-size:11.5pt;font-weight:300;color:var(--tinta-70);max-width:105ch}
+/* em slide de fundo escuro, azul ou laranja o destaque laranja do título some
+   no fundo. Vira amarelo, que é a única cor da paleta que sobrevive nos três. */
+.slide-escuro .cab h2 .script,.slide-escuro .cab h2 .hl,
+.slide-azul .cab h2 .script,.slide-azul .cab h2 .hl,
+.slide-laranja .cab h2 .script,.slide-laranja .cab h2 .hl{color:var(--amarelo)}
+.slide-escuro .cab .sub{color:var(--claro-70)}
+.slide-laranja .cab .sub,.slide-azul .cab .sub{color:var(--claro-70)}
+.slide-laranja .kicker{background:#fff;color:var(--laranja)}
+.slide-azul .kicker{background:var(--amarelo);color:var(--ink)}
+.slide-escuro .kicker{background:var(--amarelo);color:var(--ink)}
+
+/* ---------- grades ---------- */
+.linha{flex:1 1 auto;display:grid;gap:5mm;align-content:center}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g5{grid-template-columns:repeat(5,1fr)}
+.g6{grid-template-columns:repeat(6,1fr)}
+
+/* ---------- CARTÃO BRANCO ----------
+   A regra de cor abaixo é o antídoto do bug de contraste: o cartão é sempre
+   fundo claro com texto preto, mesmo dentro de um slide de fundo escuro. Os
+   destaques coloridos (.hl, .preco, .tag) têm especificidade maior e por isso
+   continuam pintando por cima. */
+.card{
+  background:var(--papel);border:1pt solid var(--linha);border-radius:5mm;
+  padding:6mm 6.5mm;color:var(--ink);display:flex;flex-direction:column
+}
+.card h2,.card h3,.card h4,.card p,.card li,.card span,.card b,.card em,.card small{color:inherit}
+.card h3{font-size:14pt;margin-bottom:2.6mm}
+.card h4{font-size:11.6pt;margin-bottom:2mm}
+.card p{font-size:10.6pt;color:var(--tinta-70)}
+.card p + p{margin-top:2.4mm}
+.card .hl{color:var(--laranja);font-weight:700}
+.card-top{border-top:2.6mm solid var(--laranja);padding-top:5mm}
+.card-lado{border-left:2.6mm solid var(--laranja)}
+.card-fantasma{background:transparent;border-style:dashed}
+
+/* ---------- número grande ---------- */
+.numerao{font-family:var(--font-display);font-weight:800;font-size:38pt;line-height:1;color:var(--laranja);letter-spacing:-.03em}
+.numerao small{font-size:.42em;font-weight:700;letter-spacing:0}
+.numerao-xl{font-size:62pt}
+.rotulo{font-family:var(--font-display);font-weight:700;font-size:9.2pt;letter-spacing:.09em;text-transform:uppercase;color:var(--tinta-55);margin-bottom:2.4mm}
+.card .rotulo{color:var(--tinta-55)}
+
+/* ---------- passos do ciclo ---------- */
+.passo{background:var(--papel);border:1pt solid var(--linha);border-radius:5mm;padding:5mm 4.5mm;text-align:center;color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:flex-start}
+.passo .bolha{width:13mm;height:13mm;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:13pt;color:#fff;margin-bottom:3.4mm}
+.passo h4{font-size:13pt;margin-bottom:2mm;color:var(--ink)}
+.passo p{font-size:9.8pt;color:var(--tinta-70);line-height:1.4}
+
+/* ---------- frase de impacto (slide inteiro) ---------- */
+.manifesto{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;text-align:center}
+.manifesto h2{font-size:38pt;max-width:26ch;margin:0 auto;line-height:1.08}
+.manifesto h2 .script{font-size:1.15em;display:block;margin-top:4mm}
+.manifesto .apoio{margin-top:9mm;font-size:13pt;font-weight:300;max-width:88ch;margin-left:auto;margin-right:auto}
+.slide-laranja .manifesto h2 .script{color:var(--amarelo)}
+.slide-laranja .manifesto .apoio{color:var(--claro-70)}
+
+/* ---------- fecho de slide ---------- */
+.punch{flex:0 0 auto;margin-top:6mm;text-align:center;font-family:var(--font-display);font-weight:700;font-size:15pt;line-height:1.25}
+.punch em{font-family:var(--font-script);font-style:normal;font-size:1.4em;color:var(--laranja)}
+.slide-escuro .punch em,.slide-laranja .punch em,.slide-azul .punch em{color:var(--amarelo)}
+
+/* ---------- cartão de plano ---------- */
+.plano{background:var(--papel);border:1pt solid var(--linha);border-radius:5mm;padding:5.5mm 6mm;color:var(--ink);display:flex;flex-direction:column}
+.plano h3,.plano h4,.plano p,.plano li,.plano span,.plano b{color:inherit}
+.plano .nome{font-family:var(--font-script);font-size:19pt;line-height:1;color:var(--laranja)}
+.plano .preco{font-family:var(--font-display);font-weight:800;font-size:23pt;line-height:1.1;margin:2mm 0 1mm;color:var(--ink)}
+.plano .preco small{font-size:.4em;font-weight:700;color:var(--tinta-55)}
+.plano .quem{font-size:9.6pt;color:var(--tinta-55);padding-bottom:3mm;margin-bottom:3mm;border-bottom:.7pt solid var(--linha-fraca)}
+.plano ul{list-style:none;display:flex;flex-direction:column;gap:2mm}
+.plano li{font-size:10.2pt;display:flex;gap:2.4mm;align-items:flex-start;line-height:1.35}
+.plano li i{width:2.4mm;height:2.4mm;border-radius:50%;background:var(--verde);flex-shrink:0;margin-top:1.8mm;display:block}
+/* o plano do meio é o que a gente quer que a pessoa escolha. Realce feito com
+   BORDA e não com box-shadow: sombra é a primeira coisa que a impressora e o
+   "salvar como PDF" descartam, e aí o destaque sumiria justo no arquivo que
+   vai ser enviado. */
+.plano-destaque{border:1.6mm solid var(--amarelo);padding:4.5mm 5mm}
+
+/* ---------- cartão de módulo ---------- */
+.mod{background:var(--papel);border:1pt solid var(--linha);border-radius:5mm;padding:5mm 5.5mm;color:var(--ink);display:flex;flex-direction:column}
+.mod h4,.mod p,.mod span{color:inherit}
+.mod .tag{display:inline-block;align-self:flex-start;font-family:var(--font-display);font-weight:800;font-size:7.6pt;letter-spacing:.08em;text-transform:uppercase;padding:1.4mm 3.4mm;border-radius:99mm;background:var(--ink);color:#fff;margin-bottom:3mm}
+.mod .preco{font-family:var(--font-display);font-weight:800;font-size:16pt;line-height:1;color:var(--ink);margin-bottom:2.4mm}
+.mod .preco small{font-size:.44em;font-weight:700;color:var(--tinta-55)}
+.mod p{font-size:10pt;color:var(--tinta-70);line-height:1.4}
+.mod .obs{margin-top:auto;padding-top:3mm;font-size:8.6pt;color:var(--tinta-55)}
+
+/* ---------- faixa de apoio ---------- */
+.faixa{flex:0 0 auto;margin-top:5mm;display:flex;align-items:center;justify-content:center;gap:4mm;flex-wrap:wrap;font-size:10.6pt}
+.pill{display:inline-flex;align-items:center;gap:2.4mm;border:1pt solid var(--linha);border-radius:99mm;padding:2.2mm 5mm;font-weight:500;background:var(--papel);color:var(--ink)}
+.pill i{width:2.8mm;height:2.8mm;border-radius:50%;background:var(--laranja);display:block;flex-shrink:0}
+
+/* ---------- lista de itens curtos ---------- */
+.itens{list-style:none;display:flex;flex-direction:column;gap:2.6mm}
+.itens li{display:flex;gap:3.4mm;align-items:flex-start;font-size:10.6pt;line-height:1.38}
+.itens li b{font-family:var(--font-display);font-weight:800;color:var(--laranja);flex-shrink:0;min-width:34mm}
+.slide-escuro .itens li b{color:var(--amarelo)}
+
+/* ---------- caixa de honestidade ---------- */
+.aviso{background:var(--papel);border:1pt solid var(--linha);border-left:2.6mm solid var(--ink);border-radius:0 5mm 5mm 0;padding:5mm 6mm;color:var(--ink)}
+.aviso h4,.aviso p,.aviso li,.aviso span{color:inherit}
+.aviso h4{font-size:12pt;margin-bottom:2.4mm}
+.aviso p{font-size:10.4pt;color:var(--tinta-70)}
+
+/* ---------- marcador do que ainda precisa ser preenchido ---------- */
+.preencher{display:inline-block;background:var(--amarelo);color:var(--ink);border:.9pt dashed rgba(10,10,10,.55);border-radius:2mm;padding:.5mm 2.4mm;font-family:var(--font-display);font-weight:700;font-size:9.4pt;line-height:1.3}
+
+/* ---------- slide final ---------- */
+.final{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.final .marca-final{width:44mm;height:24mm;margin:0 auto 6mm}
+.final h2{font-size:33pt;max-width:24ch}
+.final h2 .script{display:block;color:var(--amarelo);font-size:1.1em;margin-top:2mm}
+.final .lead{margin-top:6mm;font-size:12.5pt;font-weight:300;max-width:82ch;color:var(--claro-70)}
+.contato{margin-top:8mm;display:flex;gap:5mm;flex-wrap:wrap;justify-content:center;font-size:11pt}
+.contato .box{border:1pt solid rgba(255,255,255,.4);border-radius:4mm;padding:3.4mm 6mm;display:flex;flex-direction:column;gap:1.2mm;align-items:center}
+.contato .box .rot{font-family:var(--font-display);font-weight:700;font-size:8.4pt;letter-spacing:.1em;text-transform:uppercase;color:var(--claro-55)}
+.empresa{margin-top:7mm;font-size:8.4pt;line-height:1.5;color:var(--claro-55)}
+
+/* ============ IMPRESSÃO / SALVAR COMO PDF EM PAISAGEM ==================
+   O @page tem exatamente a medida do slide e margem zero, então o slide
+   ocupa a página inteira, sangrando de borda a borda. A altura na impressão
+   é 166,4mm (e não 167mm) de propósito: alguns navegadores arredondam a
+   altura pra cima e, quando o conteúdo bate exatamente na medida da página,
+   isso gera uma página em branco depois de cada slide. Esse décimo a menos
+   é o seguro contra isso, e é invisível no PDF.
+   ====================================================================== */
+@page{size:297mm 167mm;margin:0}
+@media print{
+  body{background:#fff;padding:0}
+  .slide{
+    width:297mm;height:166.4mm;margin:0;
+    box-shadow:none;border-radius:0;
+    break-after:page;page-break-after:always;break-inside:avoid
+  }
+  .slide:last-of-type{break-after:auto;page-break-after:auto}
+  a{color:inherit;text-decoration:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ==================== SLIDE 1 · CAPA ==================== -->
+<section class="slide slide-capa">
+  <div class="blob b-rosa" aria-hidden="true"></div>
+  <div class="blob b-amarelo" aria-hidden="true"></div>
+  <div class="blob b-azul" aria-hidden="true"></div>
+  <div class="blob b-verde" aria-hidden="true"></div>
+  <div class="slide-corpo">
+    <i class="logo-cria capa-logo" role="img" aria-label="CRIA Social Club"></i>
+    <h1>O ciclo inteiro de conteúdo <span class="hl">num lugar só</span>
+      <span class="capa-script">e em português</span>
+    </h1>
+    <p class="capa-sub">Plataforma brasileira onde o criador e a social mídia tiram a ideia da cabeça, planejam o mês, escrevem, aprovam com o cliente e medem o resultado.</p>
+    <div class="capa-regua"></div>
+    <p class="capa-micro">criasocialclub.com.br</p>
+  </div>
+</section>
+
+<!-- ==================== SLIDE 2 · O PROBLEMA ====================
+     Cinco cartões, cinco frases. É o slide de reconhecimento: quem cria
+     conteúdo se vê aqui em dois segundos. Nada de parágrafo. -->
+<section class="slide">
+  <div class="slide-corpo">
+    <div class="cab">
+      <span class="kicker">O problema</span>
+      <h2>Cinco apps <span class="script">que não se falam</span></h2>
+    </div>
+    <div class="linha g5">
+      <div class="card card-top" style="border-top-color:var(--amarelo)">
+        <p class="rotulo">A ideia</p>
+        <h3>Vira print</h3>
+        <p>Nasce no ônibus, morre na galeria do celular.</p>
+      </div>
+      <div class="card card-top" style="border-top-color:var(--azul)">
+        <p class="rotulo">O planejamento</p>
+        <h3>Vira planilha</h3>
+        <p>Bonita na segunda, abandonada na quinta.</p>
+      </div>
+      <div class="card card-top" style="border-top-color:var(--laranja)">
+        <p class="rotulo">A escrita</p>
+        <h3>Trava</h3>
+        <p>Tela em branco na hora de postar.</p>
+      </div>
+      <div class="card card-top" style="border-top-color:var(--rosa)">
+        <p class="rotulo">A aprovação</p>
+        <h3>Some</h3>
+        <p>Áudio de 4 minutos e um "vi depois".</p>
+      </div>
+      <div class="card card-top" style="border-top-color:var(--verde)">
+        <p class="rotulo">O resultado</p>
+        <h3>Ninguém mede</h3>
+        <p>E o que não é medido não melhora.</p>
+      </div>
+    </div>
+    <p class="punch">A integração entre esses cinco apps <em>é você, de graça.</em></p>
+  </div>
+  <footer class="rodape"><span class="marca"><i class="logo-cria logo-mini" aria-hidden="true"></i> Apresentação comercial</span><span class="num">Slide </span></footer>
+</section>
+
+<!-- ==================== SLIDE 3 · QUANTO ISSO CUSTA ====================
+     O valor de ~R$ 205/mês é a mesma conta que já está na LP (lp-cria/index.html,
+     bloco "O que você paga hoje, separado"). É estimativa de mercado e está
+     rotulada como estimativa. As horas perdidas ficam como .preencher: não
+     existe pesquisa nossa pra sustentar um número aqui. -->
+<section class="slide slide-branco">
+  <div class="slide-corpo">
+    <div class="cab">
+      <span class="kicker">O custo de hoje</span>
+      <h2>Paga em quatro lugares <span class="script">e ainda faz na mão</span></h2>
+    </div>
+    <div class="linha g3">
+      <div class="card card-lado" style="border-left-color:var(--laranja)">
+        <p class="rotulo">Assinaturas soltas</p>
+        <p class="numerao numerao-xl">R$ 205<small>/mês</small></p>
+        <p style="margin-top:3mm">Banco de ideias, organização, app de escrita e link in bio, cada um na sua fatura. Estimativa de mercado, não é preço nosso.</p>
+      </div>
+      <div class="card card-lado" style="border-left-color:var(--azul)">
+        <p class="rotulo">Tempo perdido</p>
+        <p class="numerao"><span class="preencher">[PREENCHER: horas por semana]</span></p>
+        <p style="margin-top:3mm">Copiando de um app pro outro, refazendo relatório, procurando o arquivo que o cliente aprovou. Preencher com o número que a gente conseguir sustentar.</p>
+      </div>
+      <div class="card card-lado" style="border-left-color:var(--verde)">
+        <p class="rotulo">No CRIA</p>
+        <p class="numerao" style="color:var(--verde)">R$ 19,90<small>/mês</small></p>
+        <p style="margin-top:3mm">É o ponto de entrada do plano de criador. Sobe conforme a pessoa usa mais, nunca antes disso.</p>
+      </div>
+    </div>
+    <p class="punch">Não é só mais barato. <em>É um lugar só.</em></p>
+  </div>
+  <footer class="rodape"><span class="marca"><i class="logo-cria logo-mini" aria-hidden="true"></i> Apresentação comercial</span><span class="num">Slide </span></footer>
+</section>
+
+<!-- ==================== SLIDE 4 · A SOLUÇÃO EM UMA FRASE ====================
+     Slide de respiro. Uma frase, fundo laranja, nada mais. Serve pra quem
+     apresenta parar, olhar pra sala e falar. -->
+<section class="slide slide-laranja">
+  <div class="slide-corpo">
+    <div class="manifesto">
+      <h2>Da ideia ao resultado, sem trocar de app
+        <span class="script">do jeito que o brasileiro trabalha</span>
+      </h2>
+      <p class="apoio">Um lugar onde a ideia vira pauta, a pauta vira post, o post vira aprovação e a aprovação vira número. E o número volta pra virar a próxima ideia.</p>
+    </div>
+  </div>
+  <footer class="rodape"><span class="marca"><i class="logo-cria logo-mini" aria-hidden="true"></i> Apresentação comercial</span><span class="num">Slide </span></footer>
+</section>
+
+<!-- ==================== SLIDE 5 · O CICLO CRIA ====================
+     Seis passos numa linha só. Cada passo alimenta o próximo, por isso o
+     último fecha voltando pro primeiro. -->
+<section class="slide">
+  <div class="slide-corpo">
+    <div class="cab">
+      <span class="kicker">Como funciona</span>
+      <h2>O <span class="script">Ciclo CRIA</span></h2>
+      <p class="sub">Cada fase entrega pronta a matéria-prima da próxima. É isso que os apps soltos nunca fazem.</p>
+    </div>
+    <div class="linha g6">
+      <div class="passo"><span class="bolha" style="background:var(--amarelo);color:var(--ink)">1</span><h4>Ideia</h4><p>Banco de ideias no lugar do print perdido.</p></div>
+      <div class="passo"><span class="bolha" style="background:var(--azul)">2</span><h4>Planejar</h4><p>Calendário e pauta da semana ou do mês.</p></div>
+      <div class="passo"><span class="bolha" style="background:var(--rosa);color:var(--ink)">3</span><h4>Produzir</h4><p>Legenda e roteiro com estrutura pronta.</p></div>
+      <div class="passo"><span class="bolha" style="background:var(--laranja)">4</span><h4>Publicar</h4><p>Aprovação, checklist e hora certa de postar.</p></div>
+      <div class="passo"><span class="bolha" style="background:var(--verde)">5</span><h4>Analisar</h4><p>Insights reais do Instagram, sem print.</p></div>
+      <div class="passo"><span class="bolha" style="background:var(--ink)">6</span><h4>Evoluir</h4><p>O que funcionou volta pro banco de ideias.</p></div>
+    </div>
+    <p class="punch">O ciclo não termina. <em>Ele recomeça melhor.</em></p>
+  </div>
+  <footer class="rodape"><span class="marca"><i class="logo-cria logo-mini" aria-hidden="true"></i> Apresentação comercial</span><span class="num">Slide </span></footer>
+</section>
+
+<!-- ==================== SLIDE 6 · DOIS PRODUTOS ====================
+     O slide de tese comercial: a mesma base serve dois públicos que se
+     encontram, e o gestor traz clientes pra dentro. -->
+<section class="slide slide-escuro">
+  <div class="slide-corpo">
+    <div class="cab">
+      <span class="kicker">A tese</span>
+      <h2>Uma plataforma, <span class="script">dois produtos</span></h2>
+    </div>
+    <div class="linha g2">
+      <div class="card card-top" style="border-top-color:var(--laranja)">
+        <p class="rotulo">Lado criador</p>
+        <h3>Pra quem cuida do próprio perfil</h3>
+        <p>Assinatura mensal em três degraus. Ideia, planejamento, escrita guiada, stories, teleprompter e insights do próprio Instagram.</p>
+        <p><span class="hl">Receita:</span> assinatura recorrente por pessoa.</p>
+      </div>
+      <div class="card card-top" style="border-top-color:var(--azul)">
+        <p class="rotulo">Lado social mídia</p>
+        <h3>Pra quem cuida do perfil dos outros</h3>
+        <p>Conta gratuita com agenda multi-cliente e ficha do cliente. Os módulos de aprovação, gestão, financeiro e concorrência entram à parte.</p>
+        <p><span class="hl">Receita:</span> módulos por gestor mais assentos de equipe.</p>
+      </div>
+    </div>
+    <p class="punch">Dois públicos, uma base de produto. <em>E um puxa o outro.</em></p>
+  </div>
+  <footer class="rodape"><span class="marca"><i class="logo-cria logo-mini" aria-hidden="true"></i> Apresentação comercial</span><span class="num">Slide </span></footer>
+</section>
+
+<!-- ==================== SLIDE 7 · O LADO CRIADOR ====================
+     Preços e cotas espelham src/lib/plans.ts. Se o plans.ts mudar, este
+     slide muda junto. -->
+<section class="slide slide-branco">
+  <div class="slide-corpo">
+    <div class="cab">
+      <span class="kicker">Lado criador</span>
+      <h2>Três degraus, <span class="script">um preço de entrada baixo</span></h2>
+    </div>
+    <div class="linha g3">
+      <div class="plano">
+        <span class="nome">Essencial</span>
+        <p class="preco">R$ 19,90<small>/mês</small></p>
+        <p class="quem">Pra tirar a ideia de 4 apps diferentes</p>
+        <ul>
+          <li><i></i>Banco de ideias e kanban da produção</li>
+          <li><i></i>Calendário, tarefas e metas</li>
+          <li><i></i>Brandbook e link in bio</li>
+          <li><i></i>10 gerações de IA por mês</li>
+        </ul>
+      </div>
+      <div class="plano plano-destaque">
+        <span class="nome">Pro</span>
+        <p class="preco">R$ 32,90<small>/mês</small></p>
+        <p class="quem">Pra quem trava na hora de escrever</p>
+        <ul>
+          <li><i></i>Tudo do Essencial</li>
+          <li><i></i>150 gerações de IA por mês</li>
+          <li><i></i>Insights reais do Instagram</li>
+          <li><i></i>Melhor horário, tendências e media kit</li>
+        </ul>
+      </div>
+      <div class="plano">
+        <span class="nome">Studio</span>
+        <p class="preco">R$ 49,90<small>/mês</small></p>
+        <p class="quem">Pra quem vive de conteúdo</p>
+        <ul>
+          <li><i></i>Tudo do Pro</li>
+          <li><i></i>500 gerações de IA por mês</li>
+          <li><i></i>Cria Plano e Cria Stories</li>
+          <li><i></i>Cria Prompter e Collabs</li>
+        </ul>
+      </div>
+    </div>
+    <div class="faixa">
+      <span class="pill"><i></i>7 dias grátis com tudo liberado</span>
+      <span class="pill"><i style="background:var(--azul)"></i>Sem fidelidade</span>
+      <span class="pill"><i style="background:var(--verde)"></i>Sobe de plano dentro do app</span>
+    </div>
+  </div>
+  <footer class="rodape"><span class="marca"><i class="logo-cria logo-mini" aria-hidden="true"></i> Apresentação comercial</span><span class="num">Slide </span></footer>
+</section>
+
+<!-- ==================== SLIDE 8 · O LADO SOCIAL MÍDIA ====================
+     Preço do Cria Radar: a LP social-media.html diz R$ 49,90. Enquanto não
+     estiver confirmado no Stripe, fica marcado como a confirmar no próprio
+     cartão. Não tirar essa marcação sem checar. -->
+<section class="slide">
+  <div class="slide-corpo">
+    <div class="cab">
+      <span class="kicker">Lado social mídia</span>
+      <h2>Entra de graça, <span class="script">paga o que usar</span></h2>
+      <p class="sub">A conta de gestor é gratuita, com agenda multi-cliente e ficha do cliente. Cada módulo entra à parte, dentro do app, quando o gargalo aparece.</p>
+    </div>
+    <div class="linha g4">
+      <div class="mod">
+        <span class="tag" style="background:var(--laranja)">Cria Post</span>
+        <p class="preco">R$ 19,90<small>/mês</small></p>
+        <p>Portal de aprovação com a marca do cliente. Ele abre o link, aprova e você vê a hora exata.</p>
+      </div>
+      <div class="mod">
+        <span class="tag" style="background:var(--rosa);color:var(--ink)">Cria Gestão</span>
+        <p class="preco">R$ 29,90<small>/mês</small></p>
+        <p>Pipeline, proposta e contrato colados no cliente que já está lá dentro.</p>
+      </div>
+      <div class="mod">
+        <span class="tag" style="background:var(--verde)">Cria Caixa</span>
+        <p class="preco">R$ 24,90<small>/mês</small></p>
+        <p>Quem pagou, quanto sobrou e a margem por cliente, sem planilha.</p>
+      </div>
+      <div class="mod">
+        <span class="tag" style="background:var(--azul)">Cria Radar</span>
+        <p class="preco">R$ 49,90<small>/mês</small></p>
+        <p>Concorrentes do cliente acompanhados e ideias sugeridas em cima do nicho.</p>
+        <p class="obs"><span class="preencher">[CONFIRMAR: preço do Cria Radar]</span></p>
+      </div>
+    </div>
+    <div class="faixa">
+      <span class="pill"><i></i>Conta de gestor grátis</span>
+      <span class="pill"><i style="background:var(--azul)"></i>Primeiro colaborador grátis</span>
+      <span class="pill"><i style="background:var(--verde)"></i>R$ 29,90 por assento a partir do segundo</span>
+    </div>
+  </div>
+  <footer class="rodape"><span class="marca"><i class="logo-cria logo-mini" aria-hidden="true"></i> Apresentação comercial</span><span class="num">Slide </span></footer>
+</section>
+
+<!-- ==================== SLIDE 9 · O DIFERENCIAL ==================== -->
+<section class="slide slide-azul">
+  <div class="slide-corpo">
+    <div class="cab">
+      <span class="kicker">O diferencial</span>
+      <h2>Duas coisas que <span class="script">ninguém junta</span></h2>
+    </div>
+    <div class="linha g2">
+      <div class="card card-lado" style="border-left-color:var(--laranja)">
+        <p class="rotulo">Um</p>
+        <h3>O brandbook alimenta toda a IA</h3>
+        <p>Cores, pilares, tom de voz, persona, o que pode e o que não pode. Preencheu uma vez e a pauta, a legenda, o roteiro e o plano de stories já saem com a cara da marca.</p>
+        <p><span class="hl">Efeito prático:</span> não é texto genérico de IA com o nome trocado. É o tom da pessoa, e ela percebe isso no primeiro uso.</p>
+      </div>
+      <div class="card card-lado" style="border-left-color:var(--verde)">
+        <p class="rotulo">Dois</p>
+        <h3>Cada cliente do gestor ganha uma conta Studio</h3>
+        <p>A social mídia não entrega só serviço: entrega plataforma. O cliente dela entra no CRIA sem pagar nada e passa a viver dentro do sistema.</p>
+        <p><span class="hl">Efeito prático:</span> o serviço fica mais difícil de trocar, e cada gestor vira porta de entrada de novas contas.</p>
+      </div>
+    </div>
+  </div>
+  <footer class="rodape"><span class="marca"><i class="logo-cria logo-mini" aria-hidden="true"></i> Apresentação comercial</span><span class="num">Slide </span></footer>
+</section>
+
+<!-- ==================== SLIDE 10 · OS MOMENTOS UAU ====================
+     Cinco funções que fazem a pessoa parar na demo. Escritas do jeito que a
+     pessoa vê acontecer, não do jeito que a engenharia descreve. -->
+<section class="slide slide-branco">
+  <div class="slide-corpo">
+    <div class="cab">
+      <span class="kicker">Na demonstração</span>
+      <h2>Os cinco momentos <span class="script">em que a pessoa para</span></h2>
+    </div>
+    <div class="linha g5">
+      <div class="card card-top" style="border-top-color:var(--azul)">
+        <p class="rotulo">Cria Plano</p>
+        <h3>O mês montado</h3>
+        <p>Escolhe semana ou mês e a pauta volta pronta, post a post, com formato e gancho.</p>
+      </div>
+      <div class="card card-top" style="border-top-color:var(--rosa)">
+        <p class="rotulo">Cria Stories</p>
+        <h3>A semana de stories</h3>
+        <p>Plano diário no tom da marca, com tendência do nicho e lembrete na hora certa.</p>
+      </div>
+      <div class="card card-top" style="border-top-color:var(--laranja)">
+        <p class="rotulo">Cria Prompter</p>
+        <h3>O texto que segue a voz</h3>
+        <p>Teleprompter dentro do app. O roteiro rola acompanhando a fala enquanto a câmera grava.</p>
+      </div>
+      <div class="card card-top" style="border-top-color:var(--verde)">
+        <p class="rotulo">Aprovação</p>
+        <h3>Um link, sem conta</h3>
+        <p>O cliente abre no celular e aprova. Sem cadastro, sem senha, sem baixar app.</p>
+      </div>
+      <div class="card card-top" style="border-top-color:var(--amarelo)">
+        <p class="rotulo">Brandbook</p>
+        <h3>Sobe o PDF e pronto</h3>
+        <p>O brandbook que o cliente já tem em PDF vira brandbook preenchido dentro do CRIA.</p>
+      </div>
+    </div>
+    <p class="punch">Cada um desses fecha venda sozinho. <em>Juntos, fecham rápido.</em></p>
+  </div>
+  <footer class="rodape"><span class="marca"><i class="logo-cria logo-mini" aria-hidden="true"></i> Apresentação comercial</span><span class="num">Slide </span></footer>
+</section>
+
+<!-- ==================== SLIDE 11 · POR QUE AGORA E POR QUE BRASILEIRO ==================== -->
+<section class="slide">
+  <div class="slide-corpo">
+    <div class="cab">
+      <span class="kicker">Por que agora</span>
+      <h2>Ferramenta gringa <span class="script">não escreve como a gente fala</span></h2>
+    </div>
+    <div class="linha g3">
+      <div class="card card-top" style="border-top-color:var(--verde)">
+        <p class="rotulo">Idioma</p>
+        <h3>Português de verdade</h3>
+        <p>Não é tradução. A escrita nasce em português e no tom que a pessoa cadastrou no brandbook.</p>
+      </div>
+      <div class="card card-top" style="border-top-color:var(--amarelo)">
+        <p class="rotulo">Preço</p>
+        <h3>Em real, e cabe</h3>
+        <p>Entrada em R$ 19,90 por mês. Sem cobrança em dólar, sem IOF, sem susto na fatura.</p>
+      </div>
+      <div class="card card-top" style="border-top-color:var(--azul)">
+        <p class="rotulo">Fluxo</p>
+        <h3>Feito pra rotina daqui</h3>
+        <p>Aprovação que roda no WhatsApp, cobrança por cliente, agenda de quem atende cinco marcas ao mesmo tempo.</p>
+      </div>
+    </div>
+    <p class="punch">O mercado brasileiro de conteúdo é gigante <em>e está sendo atendido em inglês.</em></p>
+  </div>
+  <footer class="rodape"><span class="marca"><i class="logo-cria logo-mini" aria-hidden="true"></i> Apresentação comercial</span><span class="num">Slide </span></footer>
+</section>
+
+<!-- ==================== SLIDE 12 · MODELO DE NEGÓCIO ====================
+     Os R$ 74,70 são a soma real de Cria Post, Cria Gestão e Cria Caixa
+     (19,90 + 29,90 + 24,90), o mesmo número que já está na LP. Projeção de
+     receita, meta e base ficam como .preencher. -->
+<section class="slide slide-escuro">
+  <div class="slide-corpo">
+    <div class="cab">
+      <span class="kicker">Modelo de negócio</span>
+      <h2>Receita recorrente <span class="script">que cresce com o cliente</span></h2>
+    </div>
+    <div class="linha g3">
+      <div class="card card-lado" style="border-left-color:var(--laranja)">
+        <p class="rotulo">Base</p>
+        <h3>Assinatura mensal</h3>
+        <p class="numerao">R$ 19,90 a R$ 49,90</p>
+        <p style="margin-top:3mm">Plano de criador em três degraus. A pessoa sobe quando o uso pede, não quando a gente cobra.</p>
+      </div>
+      <div class="card card-lado" style="border-left-color:var(--azul)">
+        <p class="rotulo">Expansão</p>
+        <h3>Módulos do gestor</h3>
+        <p class="numerao">R$ 74,70<small>/mês</small></p>
+        <p style="margin-top:3mm">É o que o gestor paga com Cria Post, Cria Gestão e Cria Caixa ligados. Ele começa em zero e ativa conforme dói.</p>
+      </div>
+      <div class="card card-lado" style="border-left-color:var(--verde)">
+        <p class="rotulo">Time</p>
+        <h3>Assentos de colaborador</h3>
+        <p class="numerao">R$ 29,90<small>/assento</small></p>
+        <p style="margin-top:3mm">O primeiro colaborador é grátis. Do segundo em diante, cada pessoa da equipe é um assento.</p>
+      </div>
+    </div>
+    <p class="punch">Meta de assinantes e receita projetada: <span class="preencher">[PREENCHER: meta e projeção]</span></p>
+  </div>
+  <footer class="rodape"><span class="marca"><i class="logo-cria logo-mini" aria-hidden="true"></i> Apresentação comercial</span><span class="num">Slide </span></footer>
+</section>
+
+<!-- ==================== SLIDE 13 · ONDE ESTÁ E O QUE VEM ====================
+     A caixa da direita é a que dá credibilidade na sala. Ela NÃO sai do deck.
+     Publicação direta é roadmap, o Estúdio entrega prompt e não imagem: as
+     duas coisas estão escritas aqui de propósito. -->
+<section class="slide slide-branco">
+  <div class="slide-corpo">
+    <div class="cab">
+      <span class="kicker">Status</span>
+      <h2>Pré-lançamento, <span class="script">com o produto de pé</span></h2>
+    </div>
+    <div class="linha g2">
+      <div class="card card-top" style="border-top-color:var(--verde)">
+        <h3>O que já roda</h3>
+        <ul class="itens" style="margin-top:3mm">
+          <li><b>Produto</b><span>Os dois lados no ar, com trial de 7 dias aberto.</span></li>
+          <li><b>Instagram</b><span>Leitura de insights reais, com conta Profissional conectada.</span></li>
+          <li><b>Google Drive</b><span>Arquivos do cliente colados no post.</span></li>
+          <li><b>Pagamento</b><span>Assinaturas e módulos rodando no Stripe.</span></li>
+          <li><b>Agenda</b><span>Google Calendar integrado, em verificação junto ao Google.</span></li>
+        </ul>
+      </div>
+      <div class="card card-top" style="border-top-color:var(--laranja)">
+        <h3>O que vem, e o que ainda não faz</h3>
+        <ul class="itens" style="margin-top:3mm">
+          <li><b>Próximo passo</b><span>Publicação direta nas redes. Hoje o CRIA organiza, escreve e aprova, mas quem posta ainda é a pessoa.</span></li>
+          <li><b>Imagem</b><span>O Cria Estúdio entrega o prompt pronto pra você gerar a imagem fora. Ele não gera a imagem.</span></li>
+          <li><b>Instagram</b><span>A integração é somente leitura de insights. Não publica e não responde por lá.</span></li>
+        </ul>
+      </div>
+    </div>
+    <p class="punch">A gente prefere dizer isso agora <em>do que explicar depois.</em></p>
+  </div>
+  <footer class="rodape"><span class="marca"><i class="logo-cria logo-mini" aria-hidden="true"></i> Apresentação comercial</span><span class="num">Slide </span></footer>
+</section>
+
+<!-- ==================== SLIDE 14 · CHAMADA E CONTATO ==================== -->
+<section class="slide slide-escuro">
+  <div class="slide-corpo">
+    <div class="final">
+      <i class="logo-cria marca-final" role="img" aria-label="CRIA Social Club"></i>
+      <h2>Abre uma conta e testa por 7 dias
+        <span class="script">a gente conversa depois</span>
+      </h2>
+      <p class="lead">Dá pra entrar sozinho, montar o brandbook, gerar a pauta do mês e mandar um post pra aprovação antes da nossa próxima reunião. Se não sustentar o que está escrito aqui, a gente quer saber onde travou.</p>
+
+      <!-- PREENCHER: numero de WhatsApp comercial e @ do Instagram do CRIA. -->
+      <div class="contato">
+        <div class="box"><span class="rot">Produto</span><span>criasocialclub.com.br</span></div>
+        <div class="box"><span class="rot">E-mail</span><span>contato@criasocialclub.com.br</span></div>
+        <div class="box"><span class="rot">WhatsApp</span><span class="preencher">[PREENCHER: número com DDD]</span></div>
+        <div class="box"><span class="rot">Instagram</span><span class="preencher">[PREENCHER: @ do perfil]</span></div>
+      </div>
+
+      <!-- PREENCHER: razao social e CNPJ da empresa antes da analise da Meta.
+           Troque os textos em MAIUSCULO e DESCOMENTE o bloco abaixo. Enquanto
+           estiver comentado, nada disso aparece na apresentacao (pra nao
+           mostrar dado falso numa reuniao).
+      <p class="empresa">
+        RAZAO SOCIAL COMPLETA LTDA · CNPJ XX.XXX.XXX/XXXX-XX<br>
+        RUA, NUMERO, BAIRRO, CIDADE/UF, CEP
+      </p>
+      -->
+    </div>
+  </div>
+  <footer class="rodape"><span class="marca"><i class="logo-cria logo-mini" aria-hidden="true"></i> © 2026 CRIA Social Club · Feito no Brasil</span><span class="num">Slide </span></footer>
+</section>
+
+</body>
+</html>
