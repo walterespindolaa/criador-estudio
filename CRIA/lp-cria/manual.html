@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manual do CRIA | Tudo que tem dentro, tela por tela</title>
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<meta name="description" content="O manual completo do CRIA: os dois lados do sistema, cada ferramenta, o que já funciona, o que ainda não, e como testar antes do lançamento.">
+<meta name="robots" content="noindex, nofollow">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Manual do CRIA | Tudo que tem dentro, tela por tela">
+<meta property="og:description" content="Resumo de 30 segundos e depois o detalhe: cada ferramenta do lado criador e do lado social mídia, com o que existe e o que não existe.">
+<meta property="og:image" content="https://criasocialclub.com.br/og.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Roboto:wght@300;400;500;700&family=Grand+Hotel&display=swap" rel="stylesheet">
+<style>
+/* ============ MANUAL DO CRIA ============================================
+   Mesmo sistema visual da LP (index.html / funcionalidades.html):
+   as variáveis de cor, as fontes Baloo 2 + Roboto + Grand Hotel, as bolhas
+   orgânicas, os selos e os cartões com borda preta e sombra deslocada.
+   Sem build, sem framework, um arquivo só.
+   Este documento é feito pra ser lido na tela E impresso em PDF pelo
+   navegador: as regras de impressão ficam no fim do arquivo.
+   ======================================================================== */
+:root{
+  --creme:#F5F3E7;--creme-2:#ECE8D5;--ink:#0A0A0A;
+  --laranja:#EA4918;--laranja-2:#FF5A24;--azul:#0061EE;--rosa:#FF77B9;--amarelo:#FFCF03;--verde:#01A652;--branco:#FDFBF5;
+  --font-display:'Baloo 2', sans-serif;--font-body:'Roboto', sans-serif;--font-script:'Grand Hotel', cursive;
+  --radius-lg:32px;--radius-md:22px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+html,body{overflow-x:clip}
+body{font-family:var(--font-body);background:var(--creme);color:var(--ink);line-height:1.6}
+h1,h2,h3,h4{font-family:var(--font-display);font-weight:800;line-height:1.08;letter-spacing:-.01em}
+img{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+.container{width:min(1080px,92%);margin:0 auto}
+.script{font-family:var(--font-script);font-weight:400;letter-spacing:0}
+h2{font-size:clamp(1.8rem,4.2vw,2.9rem);margin-bottom:12px}
+h3{font-size:1.2rem}
+
+/* ---------- botões (iguais aos da LP) ---------- */
+.btn{display:inline-flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:700;font-size:1.02rem;padding:15px 30px;border-radius:999px;border:none;cursor:pointer;transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s}
+.btn-laranja{background:var(--laranja);color:#fff;box-shadow:0 6px 0 rgba(21,20,18,.9)}
+.btn-laranja:hover{transform:translateY(-4px);box-shadow:0 10px 0 rgba(21,20,18,.9)}
+.btn-ghost{background:transparent;color:var(--ink);border:2px solid var(--ink)}
+.btn-ghost:hover{background:var(--ink);color:var(--creme)}
+.micro{font-size:.82rem;opacity:.75;margin-top:12px}
+.kicker{display:inline-block;font-family:var(--font-display);font-weight:700;font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;padding:8px 18px;border-radius:999px;margin-bottom:16px;color:#fff}
+
+/* ---------- navegação (some na impressão) ---------- */
+nav{position:fixed;top:18px;left:50%;transform:translateX(-50%);width:min(1120px,94%);z-index:100;background:rgba(253,251,245,.88);backdrop-filter:blur(14px);border-radius:999px;padding:10px 14px 10px 26px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 24px rgba(21,20,18,.10);border:1.5px solid rgba(21,20,18,.08)}
+.logo{font-family:var(--font-display);font-weight:800;font-size:1.5rem}
+.nav-links{display:flex;gap:26px;font-weight:500;font-size:.95rem}
+.nav-links a{opacity:.8;transition:opacity .2s}
+.nav-links a:hover{opacity:1}
+.nav-links a.nav-atual{opacity:1;font-weight:700;text-decoration:underline;text-underline-offset:5px;text-decoration-thickness:2px;text-decoration-color:var(--azul)}
+.nav-cta{padding:11px 22px;font-size:.95rem}
+@media(max-width:900px){.nav-links{display:none}}
+
+/* ---------- capa ---------- */
+#capa{position:relative;overflow:hidden;padding:150px 0 70px;text-align:center}
+.blob{position:absolute;z-index:0;border-radius:50%}
+.b-rosa{width:400px;height:400px;background:var(--rosa);top:-150px;right:-130px;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;opacity:.9}
+.b-amarelo{width:300px;height:300px;background:var(--amarelo);bottom:-120px;left:-110px;border-radius:55% 45% 40% 60%/50% 60% 40% 50%;opacity:.9}
+.b-azul{width:110px;height:110px;background:var(--azul);top:26%;left:7%}
+.b-verde{width:64px;height:64px;background:var(--verde);bottom:20%;right:9%}
+#capa .container{position:relative;z-index:2}
+h1{font-size:clamp(2.4rem,6.4vw,4.6rem);max-width:16ch;margin:0 auto 6px}
+h1 .hl{color:var(--laranja)}
+.capa-script{font-family:var(--font-script);font-size:clamp(1.5rem,3.2vw,2.4rem);color:var(--azul);display:block;margin-top:8px;transform:rotate(-2deg)}
+.capa-sub{max-width:58ch;margin:20px auto 26px;font-size:clamp(1rem,1.4vw,1.15rem);font-weight:300;opacity:.85}
+.capa-selo{position:absolute;z-index:1;pointer-events:none;filter:drop-shadow(0 10px 22px rgba(21,20,18,.14))}
+.selo-e{top:70px;left:-30px;width:150px;transform:rotate(-13deg)}
+.selo-d{bottom:20px;right:-24px;width:130px;transform:rotate(11deg)}
+@media(max-width:860px){.selo-e{width:92px;left:-28px;top:96px}.selo-d{width:84px;right:-26px;bottom:6px}}
+
+/* ---------- blocos de seção ---------- */
+section{position:relative}
+.sec{padding:64px 0}
+.sec-creme2{background:var(--creme-2)}
+.sec-cor{color:#fff}
+.sec-cor h2,.sec-cor h3{color:#fff}
+.sec-azul{background:var(--azul)}
+.sec-amarelo{background:var(--amarelo);color:var(--ink)}
+.sec-amarelo h2,.sec-amarelo h3{color:var(--ink)}
+.sec-head{max-width:720px;margin:0 auto 34px;text-align:center}
+.sec-head p{opacity:.85;margin-top:8px}
+.sec-cor .sec-head p{opacity:.9}
+.numero-sec{font-family:var(--font-display);font-weight:800;font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;opacity:.55;display:block;margin-bottom:6px}
+
+/* ---------- cartões ---------- */
+.card{background:var(--branco);border:2px solid var(--ink);border-radius:var(--radius-md);padding:26px 28px;box-shadow:6px 6px 0 rgba(10,10,10,.9);break-inside:avoid}
+.card-soft{background:var(--branco);border-radius:var(--radius-md);padding:24px 26px;box-shadow:0 6px 0 rgba(21,20,18,.10);break-inside:avoid}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:900px){.grid-3,.grid-2{grid-template-columns:1fr}}
+
+/* ---------- resumo de 30 segundos ---------- */
+.resumo-card h3{font-size:1.05rem;margin-bottom:8px;display:flex;align-items:center;gap:9px}
+.resumo-card h3 i{width:12px;height:12px;border-radius:4px;display:block;flex-shrink:0}
+.resumo-card p{font-size:.95rem;opacity:.88}
+.frase-forte{max-width:820px;margin:34px auto 0;text-align:center;font-family:var(--font-display);font-weight:700;font-size:clamp(1.1rem,2.4vw,1.45rem);line-height:1.35}
+.frase-forte em{font-family:var(--font-script);font-style:normal;font-size:1.35em;color:var(--laranja)}
+
+/* ---------- dois lados ---------- */
+.lado{border-radius:28px 34px 28px 36px;padding:34px 32px;break-inside:avoid}
+.lado-criador{background:var(--branco);border:3px solid var(--ink);box-shadow:8px 8px 0 rgba(10,10,10,.85);transform:rotate(-.7deg)}
+.lado-gestor{background:var(--azul);color:var(--creme);border:3px solid var(--laranja);box-shadow:8px 8px 0 var(--laranja);transform:rotate(.7deg)}
+.lado h3{font-size:1.5rem;margin-bottom:4px}
+.lado .rota{font-family:var(--font-display);font-weight:700;font-size:.85rem;color:var(--laranja);margin-bottom:12px;display:block}
+.lado-gestor .rota{color:var(--amarelo)}
+.lado p{font-size:.95rem}
+.lado ul{list-style:none;margin-top:16px;display:flex;flex-direction:column;gap:9px;font-size:.93rem}
+.lado li{display:flex;gap:10px;align-items:flex-start}
+.lado li b{color:var(--verde);flex-shrink:0}
+.lado-gestor li b{color:var(--amarelo)}
+.precos{margin-top:18px;padding-top:16px;border-top:1.5px dashed rgba(10,10,10,.2);font-size:.9rem}
+.lado-gestor .precos{border-top-color:rgba(244,239,227,.3)}
+.precos b{font-family:var(--font-display)}
+.nota-lados{text-align:center;font-family:var(--font-script);font-size:1.5rem;color:var(--laranja);margin-top:30px;transform:rotate(-1.2deg)}
+
+/* ---------- honestidade ---------- */
+.aviso{background:var(--branco);border-radius:20px;padding:22px 24px;border-left:8px solid var(--laranja);box-shadow:0 6px 0 rgba(21,20,18,.14);break-inside:avoid}
+.aviso h3{font-size:1.02rem;margin-bottom:6px}
+.aviso p{font-size:.92rem;opacity:.88}
+.aviso-lista{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:900px){.aviso-lista{grid-template-columns:1fr}}
+
+/* ---------- sumário ---------- */
+.sumario{max-width:900px;margin:0 auto;background:var(--branco);border:2px solid var(--ink);border-radius:var(--radius-md);padding:28px 32px;box-shadow:6px 6px 0 rgba(10,10,10,.9)}
+.sumario ol{list-style:none;counter-reset:sm;display:grid;grid-template-columns:1fr 1fr;gap:6px 28px}
+.sumario li{counter-increment:sm;display:flex;gap:12px;align-items:baseline;padding:7px 0;border-bottom:1.5px dashed rgba(10,10,10,.13);font-size:.95rem}
+.sumario li::before{content:counter(sm,decimal-leading-zero);font-family:var(--font-display);font-weight:800;font-size:.8rem;color:var(--laranja)}
+.sumario a{font-weight:500}
+.sumario a:hover{text-decoration:underline}
+@media(max-width:760px){.sumario ol{grid-template-columns:1fr}}
+
+/* ---------- ferramentas (o miolo do manual) ---------- */
+.grupo{display:flex;align-items:center;gap:12px;margin:44px 0 18px;break-after:avoid}
+.grupo i{width:16px;height:16px;border-radius:5px;display:block;flex-shrink:0}
+.grupo h3{font-size:1.35rem}
+.grupo span{font-size:.86rem;opacity:.7;font-weight:400;font-family:var(--font-body)}
+.ferramentas{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:900px){.ferramentas{grid-template-columns:1fr}}
+.fer{background:var(--branco);border:2px solid var(--ink);border-radius:20px;padding:22px 24px;box-shadow:5px 5px 0 rgba(10,10,10,.9);break-inside:avoid;display:flex;flex-direction:column;gap:8px}
+.fer-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.fer h4{font-size:1.12rem;line-height:1.15}
+.fer .onde{font-family:var(--font-display);font-weight:600;font-size:.74rem;letter-spacing:.04em;text-transform:uppercase;opacity:.5}
+.fer p{font-size:.92rem;opacity:.9}
+.fer ul{list-style:none;display:flex;flex-direction:column;gap:6px;font-size:.88rem;margin-top:2px}
+.fer li{display:flex;gap:8px;align-items:flex-start}
+.fer li b{color:var(--verde);flex-shrink:0}
+.fer .atencao{font-size:.85rem;background:rgba(234,73,24,.08);border-left:4px solid var(--laranja);border-radius:0 10px 10px 0;padding:9px 12px;margin-top:4px}
+.tag{display:inline-block;font-family:var(--font-display);font-weight:700;font-size:.66rem;letter-spacing:.06em;text-transform:uppercase;padding:5px 11px;border-radius:999px;white-space:nowrap}
+.t-ess{background:var(--verde);color:#fff}
+.t-pro{background:var(--azul);color:#fff}
+.t-studio{background:var(--laranja);color:#fff}
+.t-incluso{background:rgba(10,10,10,.09);color:rgba(10,10,10,.65)}
+.t-modulo{background:var(--rosa);color:var(--ink)}
+.legenda-tags{display:flex;flex-wrap:wrap;gap:10px 16px;justify-content:center;align-items:center;margin:0 auto 8px;font-size:.85rem}
+.legenda-tags span{display:inline-flex;align-items:center;gap:7px}
+
+/* ---------- passos (como testar) ---------- */
+.passos{display:flex;flex-direction:column;gap:14px;max-width:880px;margin:0 auto}
+.passo{display:flex;gap:18px;align-items:flex-start;background:var(--branco);border-radius:18px;padding:20px 24px;box-shadow:0 5px 0 rgba(21,20,18,.14);break-inside:avoid}
+.passo .n{font-family:var(--font-display);font-weight:800;font-size:1rem;width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0;background:var(--laranja)}
+.passo h4{font-size:1.05rem;margin-bottom:4px}
+.passo p{font-size:.93rem;opacity:.88}
+
+/* ---------- tabela simples de planos ---------- */
+.tabela{width:100%;border-collapse:collapse;background:var(--branco);border:2px solid var(--ink);border-radius:16px;overflow:hidden;font-size:.93rem}
+.tabela th,.tabela td{padding:13px 16px;text-align:left;border-bottom:1.5px dashed rgba(10,10,10,.14)}
+.tabela th{font-family:var(--font-display);font-weight:700;font-size:.82rem;letter-spacing:.05em;text-transform:uppercase;background:var(--creme-2)}
+.tabela tr:last-child td{border-bottom:none}
+.tabela td b{font-family:var(--font-display)}
+.tabela-wrap{overflow-x:auto;break-inside:avoid}
+
+/* ---------- caixa de destaque final ---------- */
+.caixa-final{max-width:820px;margin:34px auto 0;background:rgba(21,20,18,.22);border-radius:var(--radius-md);padding:28px 32px;font-size:.95rem;line-height:1.7}
+.caixa-final b{color:var(--amarelo)}
+
+/* ---------- rodapé (igual ao das outras páginas) ---------- */
+footer{background:var(--azul);color:rgba(244,239,227,.7);padding:46px 0;text-align:center;font-size:.88rem}
+footer .logo{color:var(--creme);display:block;margin-bottom:10px}
+.footer-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 20px;margin-top:14px;font-size:.85rem}
+.footer-links a{text-decoration:underline;text-underline-offset:3px;opacity:.85;transition:opacity .2s}
+.footer-links a:hover{opacity:1}
+.footer-contato{margin-top:16px;font-size:.82rem;opacity:.75}
+.footer-contato a{text-decoration:underline}
+.footer-empresa{margin-top:18px;padding-top:16px;border-top:1px solid rgba(244,239,227,.18);font-size:.78rem;line-height:1.6;opacity:.7}
+
+/* ---------- selos de marca flutuando no fundo ---------- */
+.selo-marks{position:absolute;inset:0;pointer-events:none;z-index:0}
+.selo-w{display:block;opacity:.06}
+.selo-w.inv{opacity:.12;filter:brightness(0) invert(1)}
+.fblob{position:absolute;display:block;animation:fblob-float 15s ease-in-out infinite}
+@keyframes fblob-float{0%,100%{transform:translate(0,0) rotate(0deg)}50%{transform:translate(14px,-18px) rotate(6deg)}}
+@media(prefers-reduced-motion:reduce){.fblob{animation:none}}
+.sec > .container{position:relative;z-index:1}
+
+/* ---------- ajustes mobile ---------- */
+@media(max-width:820px){
+  nav{top:10px;padding:8px 10px 8px 20px}
+  .nav-cta{padding:9px 16px;font-size:.85rem}
+  #capa{padding:110px 0 50px}
+  h1{font-size:clamp(1.9rem,9vw,2.6rem);line-height:1.1}
+  .capa-script{font-size:1.4rem}
+  h2{font-size:clamp(1.5rem,6.6vw,2rem)}
+  .sec{padding:48px 0}
+  .card,.card-soft{padding:22px 20px}
+  .lado{padding:26px 22px;transform:none}
+  .fer{padding:18px 18px}
+  .fer h4{font-size:1.05rem}
+  .sumario{padding:22px 20px}
+  .passo{padding:16px 18px;gap:14px}
+  .caixa-final{padding:22px 20px;font-size:.9rem}
+  .b-azul,.b-verde{display:none}
+  .b-rosa{width:250px;height:250px;top:-110px;right:-110px}
+  .b-amarelo{width:190px;height:190px;bottom:-90px;left:-90px}
+}
+@media(pointer:coarse){.btn{min-height:52px}}
+
+/* ============ IMPRESSÃO / SALVAR COMO PDF ==============================
+   Objetivo: caber bem em A4, não quebrar cartão no meio e manter as cores
+   da marca sem torrar tinta em fundos chapados de página inteira.
+   ====================================================================== */
+@page{size:A4;margin:14mm 12mm}
+@media print{
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  html,body{background:#fff !important;font-size:10.5pt;line-height:1.45}
+  nav,.btn,.no-print{display:none !important}
+  a{text-decoration:none;color:inherit}
+  .container{width:100% !important}
+  /* fundos de página inteira viram branco: o colorido fica nos cartões */
+  .sec-cor,.sec-azul,.sec-amarelo,.sec-creme2{background:#fff !important;color:var(--ink) !important}
+  .sec-cor h2,.sec-cor h3,.sec-cor p,.sec-azul h2,.sec-azul h3{color:var(--ink) !important}
+  .sec{padding:16px 0 !important}
+  #capa{padding:0 0 14px !important}
+  .blob,.selo-marks,.capa-selo{display:none !important}
+  h1{font-size:26pt;max-width:100%}
+  h2{font-size:17pt;margin-bottom:6px}
+  .capa-script{font-size:15pt}
+  .capa-sub{font-size:10.5pt;margin:10px auto 8px}
+  /* cartões: borda fina, sem sombra sólida (a sombra imprime como mancha) */
+  .card,.card-soft,.fer,.sumario,.passo,.lado,.aviso,.tabela{box-shadow:none !important;border:1pt solid rgba(10,10,10,.35) !important;transform:none !important;background:#fff !important}
+  .lado-gestor{color:var(--ink) !important;border-color:var(--azul) !important}
+  .lado-gestor .rota{color:var(--azul) !important}
+  .lado-gestor li b{color:var(--verde) !important}
+  .aviso{border-left:4pt solid var(--laranja) !important}
+  .caixa-final{background:#fff !important;border:1pt solid rgba(10,10,10,.35) !important;color:var(--ink) !important}
+  .caixa-final b{color:var(--laranja) !important}
+  /* nada de cartão partido entre duas páginas */
+  .fer,.card,.card-soft,.passo,.lado,.aviso,.sumario,.tabela-wrap,.grupo,.frase-forte{break-inside:avoid;page-break-inside:avoid}
+  h2,h3,h4{break-after:avoid;page-break-after:avoid}
+  /* cada grande capítulo começa em página nova */
+  .quebra-pagina{break-before:page;page-break-before:always}
+  /* grades mais apertadas no papel */
+  .ferramentas,.grid-2,.aviso-lista{grid-template-columns:1fr 1fr;gap:8px}
+  .grid-3{grid-template-columns:repeat(3,1fr);gap:8px}
+  .sumario ol{gap:2px 20px}
+  .fer{padding:11px 13px;gap:5px}
+  .fer h4{font-size:11.5pt}
+  .fer p,.fer ul{font-size:9pt}
+  .fer .atencao{font-size:8.5pt;padding:6px 9px}
+  .passo{padding:11px 14px}
+  .grupo{margin:18px 0 9px}
+  /* rodapé em preto no branco */
+  footer{background:#fff !important;color:rgba(10,10,10,.75) !important;border-top:1pt solid rgba(10,10,10,.25);padding:16px 0 0 !important}
+  footer .logo img{filter:invert(1)}
+  .footer-empresa{border-top-color:rgba(10,10,10,.2)}
+  .so-impressao{display:block !important}
+}
+.so-impressao{display:none}
+</style>
+</head>
+<body>
+
+<!-- ==================== NAVEGAÇÃO (some no PDF) ==================== -->
+<nav class="no-print">
+  <a class="logo" href="index.html"><img src="/logo-cria.png" alt="Cria" style="height:30px;width:auto;display:block"></a>
+  <div class="nav-links">
+    <a href="index.html">Página inicial</a>
+    <a href="funcionalidades.html">Funcionalidades</a>
+    <a href="social-media.html" style="color:var(--laranja);opacity:1;font-weight:700">Pra social medias</a>
+    <a href="manual.html" class="nav-atual">Manual</a>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja nav-cta">Testar grátis</a>
+  </div>
+</nav>
+
+<!-- ==================== CAPA ==================== -->
+<section id="capa">
+  <div class="blob b-rosa"></div>
+  <div class="blob b-amarelo"></div>
+  <div class="blob b-azul"></div>
+  <div class="blob b-verde"></div>
+  <img class="capa-selo selo-e" src="stickers/selo-da-ideia-ao-post-rosa.png" alt="" aria-hidden="true">
+  <img class="capa-selo selo-d" src="stickers/selo-social-club-azul.png" alt="" aria-hidden="true">
+  <div class="container">
+    <span class="kicker" style="background:var(--laranja)">Manual de quem vai testar</span>
+    <h1>O CRIA inteiro, <span class="hl">tela por tela</span>
+      <span class="capa-script">sem enfeite e sem promessa torta</span>
+    </h1>
+    <p class="capa-sub">Este é o guia completo do sistema antes do lançamento. Começa com o resumo de 30 segundos e depois desce pro detalhe, ferramenta por ferramenta. Inclusive o que ainda não existe: isso está escrito com todas as letras.</p>
+    <div>
+      <a href="#resumo" class="btn btn-ghost no-print">Começar pelo resumo</a>
+    </div>
+    <p class="micro">Versão pré-lançamento · Documento feito pra quem foi convidado a testar</p>
+  </div>
+</section>
+
+<!-- ==================== 1. RESUMO DE 30 SEGUNDOS ==================== -->
+<section id="resumo" class="sec sec-creme2">
+  <div class="selo-marks" aria-hidden="true"><span class="fblob" style="top:12%;right:5%"><img class="selo-w" src="cria-icone.png" alt="" style="width:60px;transform:rotate(9deg)"></span></div>
+  <div class="container">
+    <div class="sec-head">
+      <span class="numero-sec">Parte 1</span>
+      <h2>O resumo de <span class="script" style="color:var(--laranja);font-size:1.2em">30 segundos</span></h2>
+      <p>Se você só ler esta parte, já entende o que o CRIA é.</p>
+    </div>
+    <div class="grid-3">
+      <div class="card resumo-card">
+        <h3><i style="background:var(--laranja)"></i> O que é</h3>
+        <p>Um estúdio de conteúdo completo, numa aba só. O CRIA junta ideias, planejamento, produção, aprovação, stories e resultados no mesmo lugar, com uma IA que aprende o tom da sua marca antes de escrever qualquer coisa.</p>
+      </div>
+      <div class="card resumo-card">
+        <h3><i style="background:var(--azul)"></i> Pra quem é</h3>
+        <p>Pra quem cria conteúdo pro próprio perfil e pra quem cria conteúdo pros clientes. São dois lados do mesmo sistema: o lado criador e o lado social mídia, cada um com a sua tela inicial e o seu jeito de cobrar.</p>
+      </div>
+      <div class="card resumo-card">
+        <h3><i style="background:var(--verde)"></i> O que resolve</h3>
+        <p>O conteúdo espalhado em seis lugares. Ideia no print, pauta na planilha, legenda no bloco de notas, arquivo no Drive, aprovação no WhatsApp e cachê na memória. Aqui tudo isso vira um fluxo só, do primeiro rabisco ao resultado do post.</p>
+      </div>
+    </div>
+    <p class="frase-forte">O CRIA planeja, organiza, escreve com você e mostra o que funcionou. <em>Você continua sendo quem publica.</em></p>
+  </div>
+</section>
+
+<!-- ==================== 2. OS DOIS LADOS ==================== -->
+<section id="dois-lados" class="sec">
+  <div class="container">
+    <div class="sec-head">
+      <span class="numero-sec">Parte 2</span>
+      <h2>O CRIA tem dois lados</h2>
+      <p>Essa é a primeira coisa que confunde quem chega, então vem antes de tudo. Você pode usar um, o outro, ou os dois (com e-mails diferentes).</p>
+    </div>
+    <div class="grid-2">
+      <div class="lado lado-criador">
+        <h3>Lado criador</h3>
+        <span class="rota">app.criasocialclub.com.br/app</span>
+        <p>Pra quem cria conteúdo pro próprio perfil. É o lado com banco de ideias, kanban de produção, brandbook, stories, teleprompter, insights do Instagram e collabs.</p>
+        <ul>
+          <li><b>✓</b> Uma assinatura só, tudo liberado dentro do plano</li>
+          <li><b>✓</b> Quanto mais alto o plano, mais ferramenta e mais cota de IA</li>
+          <li><b>✓</b> É aqui que mora o Cria Plano, o Cria Stories e o Cria Prompter</li>
+        </ul>
+        <div class="precos">
+          <b>cria Essencial</b> R$ 19,90/mês · <b>cria Pro</b> R$ 32,90/mês · <b>cria Studio</b> R$ 49,90/mês
+        </div>
+      </div>
+      <div class="lado lado-gestor">
+        <h3>Lado social mídia</h3>
+        <span class="rota">app.criasocialclub.com.br/socialmidia</span>
+        <p>Pra quem atende clientes. A conta em si é gratuita: você entra, cadastra seus clientes e contrata só os módulos que for usar, um a um.</p>
+        <ul>
+          <li><b>✓</b> Conta grátis com Início, Clientes, Cockpit, Agenda e Aprovações</li>
+          <li><b>✓</b> Módulos avulsos: contrata e cancela quando quiser</li>
+          <li><b>✓</b> Dá pra dar uma conta CRIA completa pro seu cliente, por assento</li>
+        </ul>
+        <div class="precos">
+          <b>Cria Post</b> R$ 19,90 · <b>Cria Gestão</b> R$ 29,90 · <b>Cria Caixa</b> R$ 24,90 · <b>Cria Radar</b> <span style="opacity:.8">(preço no app)</span><br>
+          Colaborador: o 1º é grátis, R$ 29,90 a partir do 2º. Assento de cliente cobrado por mês.
+        </div>
+      </div>
+    </div>
+    <p class="nota-lados">mesmo sistema, duas portas de entrada</p>
+  </div>
+</section>
+
+<!-- ==================== 3. HONESTIDADE ====================
+     Vem cedo de propósito: quem testa precisa saber o que NÃO procurar,
+     senão passa a tarde caçando um botão que não existe. -->
+<section id="verdades" class="sec sec-amarelo">
+  <div class="container">
+    <div class="sec-head">
+      <span class="numero-sec">Parte 3</span>
+      <h2>Antes de continuar: <span class="script" style="color:var(--laranja);font-size:1.2em">o que o CRIA não faz</span></h2>
+      <p>Prefiro que você saiba agora e não descubra sozinha no meio do teste.</p>
+    </div>
+    <div class="aviso-lista">
+      <div class="aviso">
+        <h3>Não existe publicação automática</h3>
+        <p>O CRIA não publica por você em rede nenhuma. Ele planeja, organiza, ajuda a escrever e analisa depois. O status "Agendado" é uma coluna do quadro mais um evento no seu Google Calendar, não um robô postando. Publicação direta está no roadmap, ainda não está no produto.</p>
+      </div>
+      <div class="aviso">
+        <h3>O Estúdio entrega o prompt, não a imagem</h3>
+        <p>Você não sai dali com a arte pronta. Você sai com o prompt da arte, um por página do carrossel, nas suas cores e nas suas fontes, pra colar no Canva, no Midjourney ou no gerador que você já usa.</p>
+      </div>
+      <div class="aviso">
+        <h3>A seção Aprender está vazia</h3>
+        <p>Os cursos aparecem marcados como "Em breve" e é isso mesmo: ainda não tem conteúdo lá dentro. Não conte com essa parte no seu teste.</p>
+      </div>
+      <div class="aviso">
+        <h3>Insights só com conta profissional</h3>
+        <p>Pra puxar os números do Instagram, a conta precisa ser Profissional, no modo Comercial ou Criador. Conta pessoal não conecta, e essa é a dúvida número 1 de quem testa. A conexão é somente leitura: o CRIA lê as métricas e não posta nada.</p>
+      </div>
+      <div class="aviso">
+        <h3>Tendências e Cria Stories dependem de curadoria</h3>
+        <p>As duas telas se alimentam de curadoria e podem chegar vazias ou magras no começo, principalmente em nicho muito específico. Se você abrir e não vier nada, não é bug do seu login.</p>
+      </div>
+      <div class="aviso">
+        <h3>Push no iPhone tem regra da Apple</h3>
+        <p>A notificação push no iPhone só funciona se você instalar o CRIA na tela de início pelo Safari (compartilhar, adicionar à Tela de Início). É regra da Apple, não escolha nossa. No Android e no computador funciona direto pelo navegador.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 4. SUMÁRIO ==================== -->
+<section id="sumario" class="sec">
+  <div class="container">
+    <div class="sec-head">
+      <span class="numero-sec">Parte 4</span>
+      <h2>O detalhamento, por partes</h2>
+      <p>Daqui pra baixo é o manual completo. Se quiser pular direto pra uma parte, use a lista.</p>
+    </div>
+    <div class="sumario">
+      <ol>
+        <li><a href="#criador">Lado criador, menu por menu</a></li>
+        <li><a href="#gestor">Lado social mídia, menu por menu</a></li>
+        <li><a href="#transversal">O que atravessa os dois lados</a></li>
+        <li><a href="#publicas">As páginas que o cliente vê sem ter conta</a></li>
+        <li><a href="#integracoes">Integrações</a></li>
+        <li><a href="#planos">Planos, cotas e o teste de 7 dias</a></li>
+        <li><a href="#testar">Como testar e o que eu preciso de você</a></li>
+      </ol>
+      <div class="legenda-tags" style="margin-top:20px;padding-top:16px;border-top:1.5px dashed rgba(10,10,10,.13)">
+        <span><b class="tag t-ess">Essencial</b> já vem no plano de entrada</span>
+        <span><b class="tag t-pro">Pro</b> do Pro pra cima</span>
+        <span><b class="tag t-studio">Studio</b> só no Studio</span>
+        <span><b class="tag t-incluso">Incluso</b> grátis no lado gestor</span>
+        <span><b class="tag t-modulo">Módulo</b> contratado à parte</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 5. LADO CRIADOR ==================== -->
+<section id="criador" class="sec sec-creme2 quebra-pagina">
+  <div class="selo-marks" aria-hidden="true"><span class="fblob" style="top:6%;left:4%;animation-duration:16s"><img class="selo-w" src="cria-icone.png" alt="" style="width:58px;transform:rotate(-8deg)"></span><span class="fblob" style="bottom:5%;right:5%;animation-duration:13s"><img class="selo-w" src="cria-icone.png" alt="" style="width:42px;transform:rotate(10deg)"></span></div>
+  <div class="container">
+    <div class="sec-head">
+      <span class="numero-sec">Parte 5</span>
+      <h2>Lado criador, <span class="script" style="color:var(--laranja);font-size:1.2em">menu por menu</span></h2>
+      <p>O menu lateral é dividido em seis grupos. A ordem aqui é a mesma ordem que você vê na tela.</p>
+    </div>
+
+    <!-- grupo: criar -->
+    <div class="grupo"><i style="background:var(--laranja)"></i><h3>Criar</h3><span>onde o conteúdo nasce e anda</span></div>
+    <div class="ferramentas">
+      <div class="fer">
+        <div class="fer-top"><div><h4>Dashboard</h4><span class="onde">Criar · tela inicial</span></div><span class="tag t-ess">Essencial</span></div>
+        <p>Seu quartel-general. Em dez segundos você sabe o que tem pra hoje, o que travou e qual o próximo passo, sem abrir seis abas.</p>
+        <ul>
+          <li><b>✓</b> Próxima melhor ação: o CRIA aponta o que fazer agora</li>
+          <li><b>✓</b> Checklist do dia e os próximos posts em fila</li>
+          <li><b>✓</b> Captura rápida pra jogar uma ideia em dois segundos, antes que ela fuja</li>
+        </ul>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Ideias</h4><span class="onde">Criar · banco de ideias</span></div><span class="tag t-ess">Essencial</span></div>
+        <p>Seu estoque criativo. Cada ideia guarda pilar, gancho e referência, então nenhum post começa do zero.</p>
+        <ul>
+          <li><b>✓</b> Aba Salvos: cola o link de um post do Instagram ou do TikTok e o CRIA puxa capa, legenda e o @ sozinho</li>
+          <li><b>✓</b> Pastas pra separar por tema, campanha ou cliente</li>
+          <li><b>✓</b> A faísca desdobra uma ideia solta em vários ganchos</li>
+          <li><b>✓</b> Ideia vira card no quadro de produção em um clique</li>
+        </ul>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Criando</h4><span class="onde">Criar · o quadro de produção</span></div><span class="tag t-ess">Essencial</span></div>
+        <p>O coração do CRIA. Cada post é um card que anda por seis etapas: Ideia, Planejamento, Produzindo, Pronto, Agendado e Publicado.</p>
+        <ul>
+          <li><b>✓</b> Três visões da mesma coisa: Board, Tabela e Calendário</li>
+          <li><b>✓</b> Arrasta e solta pra mudar etapa ou reagendar</li>
+          <li><b>✓</b> Busca e filtros por formato, pilar, status e data</li>
+        </ul>
+        <p class="atencao"><b>Atenção:</b> "Agendado" é etapa do quadro mais evento no Google Calendar. O CRIA não publica no Instagram por você.</p>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Editor de post</h4><span class="onde">Criar · dentro de cada card</span></div><span class="tag t-ess">Essencial</span></div>
+        <p>Tudo que um post precisa mora aqui dentro, em abas: Legenda, Roteiro, Arte, Tarefas, Notas e Refs.</p>
+        <ul>
+          <li><b>✓</b> Plataforma, formato e status no topo</li>
+          <li><b>✓</b> Sugestão de melhor horário pro seu público</li>
+          <li><b>✓</b> Legenda e roteiro com estrutura pronta, no tom do seu brandbook</li>
+          <li><b>✓</b> Refs e Notas ficam colados no post, não numa nota perdida</li>
+        </ul>
+        <p class="atencao"><b>Sobre a aba Arte:</b> ela devolve o prompt da imagem, um por página do carrossel, nas suas cores e fontes. A imagem você gera no Canva, no Midjourney ou onde preferir.</p>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Cria Stories</h4><span class="onde">Criar · plano semanal de stories</span></div><span class="tag t-studio">Studio</span></div>
+        <p>Pra nunca mais abrir o Instagram sem saber o que postar no story. O CRIA monta a pauta da semana inteira, dia a dia, misturando conexão, autoridade e venda.</p>
+        <ul>
+          <li><b>✓</b> Marca como feito e acompanha a constância</li>
+          <li><b>✓</b> Arrasta um story de um dia pro outro</li>
+          <li><b>✓</b> Aba de stories em alta pra pegar carona no que está rendendo</li>
+        </ul>
+        <p class="atencao"><b>Atenção:</b> a aba de stories em alta depende de curadoria e pode chegar vazia no começo.</p>
+      </div>
+    </div>
+
+    <!-- grupo: planejar -->
+    <div class="grupo"><i style="background:var(--azul)"></i><h3>Planejar</h3><span>a semana antes dela acontecer</span></div>
+    <div class="ferramentas">
+      <div class="fer">
+        <div class="fer-top"><div><h4>Meu Feed</h4><span class="onde">Planejar · prévia da grade</span></div><span class="tag t-pro">Pro</span></div>
+        <p>O post sozinho é bonito. No meio dos outros, às vezes não. Aqui você vê a grade do seu perfil com os posts agendados no lugar e arrasta pra reordenar antes de publicar.</p>
+        <ul><li><b>✓</b> Cores e ritmo do perfil num olhar só</li><li><b>✓</b> Testa combinações sem app de terceiro</li></ul>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Aprovações</h4><span class="onde">Planejar · quem precisa dar o OK</span></div><span class="tag t-ess">Essencial</span></div>
+        <p>Quando um post depende do OK de alguém (marca, sócio, agência), ele passa por aqui. Você manda por link, a pessoa aprova ou comenta, e tudo fica registrado.</p>
+        <ul><li><b>✓</b> Aprovação por link, sem print no WhatsApp</li><li><b>✓</b> Comentário no lugar certo, com histórico</li></ul>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Metas</h4><span class="onde">Planejar · objetivos do período</span></div><span class="tag t-ess">Essencial</span></div>
+        <p>Constância sem meta é sorte. Você define o objetivo (posts, seguidores, faturamento) e o CRIA acompanha o progresso.</p>
+        <ul><li><b>✓</b> Marcos quebram a meta grande em etapas</li><li><b>✓</b> Reflexão do mês pra aprender com o que passou</li></ul>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Tarefas</h4><span class="onde">Planejar · as micro-entregas</span></div><span class="tag t-ess">Essencial</span></div>
+        <p>Gravar, editar, responder comentário, entregar collab. As micro-tarefas ganham prazo e param de morar na sua cabeça.</p>
+        <ul><li><b>✓</b> Tarefas ligadas aos seus posts e collabs</li><li><b>✓</b> O resumo diário lembra do que vence hoje</li></ul>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Arquivos</h4><span class="onde">Planejar · seus arquivos no CRIA</span></div><span class="tag t-ess">Essencial</span></div>
+        <p>Onde ficam as mídias que você usa nos posts, com cota de espaço por plano.</p>
+        <ul><li><b>✓</b> Essencial 500 MB · Pro 5 GB · Studio 15 GB</li><li><b>✓</b> Conecta com o Google Drive pra arquivo pesado</li></ul>
+      </div>
+    </div>
+
+    <!-- grupo: resultados -->
+    <div class="grupo"><i style="background:var(--verde)"></i><h3>Resultados</h3><span>o que aconteceu depois de publicar</span></div>
+    <div class="ferramentas">
+      <div class="fer">
+        <div class="fer-top"><div><h4>Relatórios</h4><span class="onde">Resultados · sua evolução em número</span></div><span class="tag t-pro">Pro</span></div>
+        <p>Quanto você produziu, quão constante foi e o que mais rendeu. É a tela de olhar pra trás antes de decidir o próximo mês.</p>
+        <ul><li><b>✓</b> Consistência medida contra a sua meta</li><li><b>✓</b> Desempenho por formato: descubra o que rende mais</li></ul>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Histórico</h4><span class="onde">Resultados · tudo que já foi ao ar</span></div><span class="tag t-pro">Pro</span></div>
+        <p>A linha do tempo do seu publicado, com o resultado de cada post junto. É daqui que os relatórios se alimentam.</p>
+        <ul><li><b>✓</b> Acha qualquer post antigo pra reciclar</li><li><b>✓</b> Prova concreta da sua constância</li></ul>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Insights</h4><span class="onde">Resultados · números reais do Instagram</span></div><span class="tag t-pro">Pro</span></div>
+        <p>Seguidores, alcance, interações e visitas ao perfil, mais o desempenho post a post, dentro do CRIA.</p>
+        <ul><li><b>✓</b> Fecha o ciclo: analisa, aprende e começa a semana seguinte na frente</li><li><b>✓</b> Alimenta a sugestão de melhor horário</li></ul>
+        <p class="atencao"><b>Requisito:</b> conta do Instagram Profissional (Comercial ou Criador). Conta pessoal não conecta. A conexão é somente leitura.</p>
+      </div>
+    </div>
+
+    <!-- grupo: minha marca -->
+    <div class="grupo"><i style="background:var(--rosa)"></i><h3>Minha marca</h3><span>a base de onde tudo sai com a sua cara</span></div>
+    <div class="ferramentas">
+      <div class="fer">
+        <div class="fer-top"><div><h4>Brandbook</h4><span class="onde">Minha marca · a alma do sistema</span></div><span class="tag t-ess">Essencial</span></div>
+        <p>É daqui que a IA aprende a escrever como você. São seis áreas mais o moodboard: Identidade, Visual, Comunicação, Público-alvo, Valores e Tom de Voz.</p>
+        <ul>
+          <li><b>✓</b> Preencheu bem uma vez, toda legenda e roteiro saem com a sua cara</li>
+          <li><b>✓</b> Moodboard pra fixar a estética visual</li>
+          <li><b>✓</b> Import de PDF: sobe o seu manual de marca e a IA espalha cores, fontes, tom e público nas seções certas</li>
+          <li><b>✓</b> O import mostra uma tela de revisão com antes e depois: nada entra sem o seu OK</li>
+        </ul>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Link in Bio</h4><span class="onde">Minha marca · sua vitrine pública</span></div><span class="tag t-ess">Essencial</span></div>
+        <p>Uma página de links com a sua identidade, feita dentro do CRIA, sem pagar mais uma assinatura pra isso.</p>
+        <ul><li><b>✓</b> Dois estilos de layout e endereço próprio (o seu slug)</li><li><b>✓</b> Painel de visitas e cliques por link</li><li><b>✓</b> Atualiza na hora, sem depender de ninguém</li></ul>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Media Kit</h4><span class="onde">Minha marca · pra fechar publi</span></div><span class="tag t-pro">Pro</span></div>
+        <p>Seu cartão de visitas pra marca: números, nichos, formatos e cases numa página só, atualizada com dados reais.</p>
+        <ul><li><b>✓</b> Vira PDF ou link na hora</li><li><b>✓</b> Dá pra usar o seu próprio PDF, se você já tem um</li></ul>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Biblioteca</h4><span class="onde">Minha marca · seu acervo</span></div><span class="tag t-pro">Pro</span></div>
+        <p>Vídeos, fotos e artes que você reaproveita. Sobe uma vez, usa sempre, sem caçar arquivo na galeria.</p>
+        <ul><li><b>✓</b> Acervos organizados e fáceis de achar</li><li><b>✓</b> Reaproveita mídia entre posts</li></ul>
+      </div>
+    </div>
+
+    <!-- grupo: mundo cria -->
+    <div class="grupo"><i style="background:var(--amarelo)"></i><h3>Mundo CRIA</h3><span>o que vem de fora pra dentro</span></div>
+    <div class="ferramentas">
+      <div class="fer">
+        <div class="fer-top"><div><h4>Tendências</h4><span class="onde">Mundo CRIA · o que está em alta</span></div><span class="tag t-pro">Pro</span></div>
+        <p>Formatos, sons e assuntos em alta, filtrados pelo seu nicho, com o gancho já escrito pra você adaptar em vez de copiar.</p>
+        <ul><li><b>✓</b> Vira post no seu quadro em um clique</li><li><b>✓</b> Menos tempo rolando feed atrás de referência</li></ul>
+        <p class="atencao"><b>Atenção:</b> depende de curadoria e pode aparecer vazio ou magro no começo, principalmente em nicho muito específico.</p>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Cria Prompter</h4><span class="onde">Mundo CRIA · teleprompter</span></div><span class="tag t-studio">Studio</span></div>
+        <p>Grave olhando pra câmera. Você cria ou cola o roteiro, aperta gravar e o texto rola na tela enquanto você fala.</p>
+        <ul>
+          <li><b>✓</b> Dois modos: rolagem automática na sua velocidade ou modo por voz, em que o texto acompanha a sua fala</li>
+          <li><b>✓</b> Puxa roteiros que já existem no seu quadro</li>
+          <li><b>✓</b> O vídeo gravado vai direto pra galeria do celular</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- grupo: mais -->
+    <div class="grupo"><i style="background:var(--ink)"></i><h3>Mais</h3><span>publis, piloto do mês e ajustes</span></div>
+    <div class="ferramentas">
+      <div class="fer">
+        <div class="fer-top"><div><h4>Collabs</h4><span class="onde">Mais · suas publis</span></div><span class="tag t-studio">Studio</span></div>
+        <p>Publi combinada por áudio é cachê esquecido. Aqui cada parceria tem pipeline, briefing, prazo e cachê registrados.</p>
+        <ul><li><b>✓</b> Proposta enviada por link público pra marca ver</li><li><b>✓</b> Entregas conectadas ao seu quadro de produção</li><li><b>✓</b> Histórico pra renegociar com base em resultado</li></ul>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Cria Plano</h4><span class="onde">Mais · a semana ou o mês montado</span></div><span class="tag t-studio">Studio</span></div>
+        <p>A IA monta a sua semana ou o seu mês inteiro de uma vez, usando o brandbook, os pilares e o que já performou no seu perfil.</p>
+        <ul><li><b>✓</b> Cada post volta com formato, gancho e direção</li><li><b>✓</b> Você revisa card a card antes de mandar pro quadro</li><li><b>✓</b> Nada entra sem o seu OK</li></ul>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Configurações</h4><span class="onde">Mais · o CRIA do seu jeito</span></div><span class="tag t-ess">Essencial</span></div>
+        <p>Vale visitar cada aba uma vez: Perfil, Pilares &amp; Hábitos, Marca &amp; Visual, Assinatura, Conexões, Notificações, Equipe e Conta.</p>
+        <ul><li><b>✓</b> Pilares de conteúdo alimentam a sua linha editorial inteira</li><li><b>✓</b> Conexões é onde você liga o Instagram e o Google Drive</li><li><b>✓</b> Tema, cores e fonte ficam em Marca &amp; Visual</li></ul>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Lixeira</h4><span class="onde">Mais · sua rede de segurança</span></div><span class="tag t-ess">Essencial</span></div>
+        <p>Apagou sem querer? Respira. Tudo que você exclui fica guardado por 30 dias antes de sumir de vez.</p>
+        <ul><li><b>✓</b> Restaurar leva um clique</li><li><b>✓</b> Apagar de vez só com confirmação</li></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 6. LADO SOCIAL MÍDIA ==================== -->
+<section id="gestor" class="sec quebra-pagina">
+  <div class="container">
+    <div class="sec-head">
+      <span class="numero-sec">Parte 6</span>
+      <h2>Lado social mídia, <span class="script" style="color:var(--azul);font-size:1.2em">menu por menu</span></h2>
+      <p>A conta é gratuita. O Dia a dia já vem junto, e os módulos você contrata só se for usar.</p>
+    </div>
+
+    <!-- grupo: dia a dia -->
+    <div class="grupo"><i style="background:var(--verde)"></i><h3>Dia a dia</h3><span>vem incluso na conta grátis</span></div>
+    <div class="ferramentas">
+      <div class="fer">
+        <div class="fer-top"><div><h4>Início</h4><span class="onde">Dia a dia · o QG da operação</span></div><span class="tag t-incluso">Incluso</span></div>
+        <p>A visão de dona, não de operadora: clientes, dinheiro entrando, o que está travado e a sua semana.</p>
+        <ul>
+          <li><b>✓</b> Quatro painéis no topo, cada um na cor do módulo, levando direto pra ele</li>
+          <li><b>✓</b> O olhinho esconde todos os valores de uma vez, pra abrir o painel do lado do cliente</li>
+          <li><b>✓</b> Visão do mês com posts em produção, aguardando cliente, em ajuste, aprovados e postados</li>
+          <li><b>✓</b> Aprovações recentes com há quanto tempo cada uma espera</li>
+          <li><b>✓</b> Semáforo de saúde por cliente: verde em dia, amarelo pede atenção, vermelho é urgente, com o motivo escrito</li>
+        </ul>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Clientes</h4><span class="onde">Dia a dia · a carteira</span></div><span class="tag t-incluso">Incluso</span></div>
+        <p>A lista de quem você atende, com o card já entregando o recado: status, saúde e o que está pendente.</p>
+        <ul><li><b>✓</b> Cadastro rápido de cliente novo</li><li><b>✓</b> Troca de contexto entre clientes em um clique</li></ul>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Cockpit do cliente</h4><span class="onde">Dia a dia · a ficha única</span></div><span class="tag t-incluso">Incluso</span></div>
+        <p>Tudo daquele cliente numa tela só, com uma aba por módulo que você tem ativo.</p>
+        <ul>
+          <li><b>✓</b> Status Ativo, Pausado ou Inativo, com data de encerramento que corta a mensalidade na conta certa</li>
+          <li><b>✓</b> O kanban do cliente ao vivo, dentro da ficha</li>
+          <li><b>✓</b> Links úteis com listagem das pastas do Google Drive daquele cliente</li>
+          <li><b>✓</b> Brandbook do cliente: é ele que faz a IA acertar o tom</li>
+        </ul>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Agenda</h4><span class="onde">Dia a dia · calendário multi-cliente</span></div><span class="tag t-incluso">Incluso</span></div>
+        <p>O calendário de todos os clientes junto, sem sobreposição de gravação e sem dois clientes esperando no mesmo dia.</p>
+        <ul>
+          <li><b>✓</b> Junta criações, tarefas, captações, posts e o "Cria do cliente"</li>
+          <li><b>✓</b> Filtro por tipo e visão de semana ou de mês</li>
+          <li><b>✓</b> Mostra o que está em produção sem data marcada</li>
+        </ul>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Aprovações</h4><span class="onde">Dia a dia · fila única</span></div><span class="tag t-incluso">Incluso</span></div>
+        <p>Tudo que está parado na mão dos clientes, de todos eles, numa fila só. Você para de abrir cliente por cliente pra descobrir quem não respondeu.</p>
+        <ul><li><b>✓</b> Quatro tipos de pendência, uma fila de cada vez</li><li><b>✓</b> O que está parado há mais tempo aparece primeiro</li></ul>
+      </div>
+    </div>
+
+    <!-- grupo: módulos -->
+    <div class="grupo"><i style="background:var(--rosa)"></i><h3>Módulos</h3><span>assinaturas independentes, contrata e cancela quando quiser</span></div>
+    <div class="ferramentas">
+      <div class="fer">
+        <div class="fer-top"><div><h4>Cria Post</h4><span class="onde">Módulo · R$ 19,90/mês</span></div><span class="tag t-modulo">Módulo</span></div>
+        <p>A aprovação do cliente por link, sem login e sem print no WhatsApp. Ele abre no celular, vê a arte e a legenda, e aprova ou pede ajuste ali mesmo.</p>
+        <ul>
+          <li><b>✓</b> Página de aprovação com a logo e a cor do cliente</li>
+          <li><b>✓</b> Rastro de "visto há X", pra você saber se ele abriu</li>
+          <li><b>✓</b> Os posts moram dentro do cliente, não numa pasta solta</li>
+        </ul>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Cria Gestão</h4><span class="onde">Módulo · R$ 29,90/mês</span></div><span class="tag t-modulo">Módulo</span></div>
+        <p>Seu CRM. Pipeline de prospecção, contratos, tarefas e a ficha completa de cada cliente.</p>
+        <ul>
+          <li><b>✓</b> Ficha com brandbook, persona, diagnóstico e concorrência</li>
+          <li><b>✓</b> Contratos e combinados registrados, não no áudio</li>
+          <li><b>✓</b> Tudo pendura na ficha do cliente e volta pro cockpit</li>
+        </ul>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Cria Caixa</h4><span class="onde">Módulo · R$ 24,90/mês</span></div><span class="tag t-modulo">Módulo</span></div>
+        <p>O financeiro, com Empresa e Pessoal separados de verdade, que é o que quase ninguém faz e todo mundo devia.</p>
+        <ul>
+          <li><b>✓</b> Margem por cliente: quanto aquele contrato realmente sobra</li>
+          <li><b>✓</b> Imposto calculado por regime: MEI, Simples ou Presumido</li>
+          <li><b>✓</b> Calendário de recebimentos e controle de mensalidades</li>
+        </ul>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Cria Radar</h4><span class="onde">Módulo · preço no app</span></div><span class="tag t-modulo">Módulo</span></div>
+        <p>Análise de concorrentes no Instagram, por cliente. Você chega na reunião de pauta com inteligência em vez de achismo.</p>
+        <ul>
+          <li><b>✓</b> Posts, reels e transcrição dos reels dos concorrentes</li>
+          <li><b>✓</b> Mostra os anúncios que eles estão rodando</li>
+          <li><b>✓</b> As pautas viram ideias direto no cronograma daquele cliente</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- grupo: negócio -->
+    <div class="grupo"><i style="background:var(--azul)"></i><h3>Negócio</h3><span>time, indicação e contas de cliente</span></div>
+    <div class="ferramentas">
+      <div class="fer">
+        <div class="fer-top"><div><h4>Equipe</h4><span class="onde">Negócio · colaboradores</span></div><span class="tag t-modulo">Assento</span></div>
+        <p>Convida colaborador escolhendo exatamente quais módulos e quais clientes ele acessa. Cada um vê só o que precisa ver.</p>
+        <ul><li><b>✓</b> O primeiro colaborador é grátis</li><li><b>✓</b> A partir do segundo, R$ 29,90 por assento por mês</li><li><b>✓</b> A operação escala sem virar bagunça</li></ul>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Parceria e Comissões</h4><span class="onde">Negócio · programa de indicação</span></div><span class="tag t-incluso">Incluso</span></div>
+        <p>Você já recomenda o CRIA. Com o cupom de parceira, a indicação vira comissão recorrente em vez de favor.</p>
+        <ul>
+          <li><b>✓</b> Um cupom só seu, com botão de copiar</li>
+          <li><b>✓</b> Comissão todo mês, enquanto o indicado continuar assinante</li>
+          <li><b>✓</b> O cadastro passa por aprovação e a comissão libera quando o indicado paga a segunda fatura</li>
+        </ul>
+      </div>
+      <div class="fer">
+        <div class="fer-top"><div><h4>Suas contas</h4><span class="onde">Negócio · assentos de cliente</span></div><span class="tag t-modulo">Assento</span></div>
+        <p>Você paga o assento e o seu cliente ganha uma conta CRIA Studio completa, sem pagar nada e sem burocracia.</p>
+        <ul>
+          <li><b>✓</b> A conta é criada na hora e o cliente recebe e-mail pra escolher a senha</li>
+          <li><b>✓</b> Você entra na conta dele pra adiantar o trabalho, sem pedir login</li>
+          <li><b>✓</b> Cliente que saiu, você pausa, e o assento volta pra fila</li>
+        </ul>
+        <p class="atencao"><b>Dica:</b> se você também quer a sua conta de criadora, ela precisa ser num e-mail diferente do e-mail de gestora. Senão o CRIA não consegue separar as duas.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 7. O QUE ATRAVESSA OS DOIS LADOS ==================== -->
+<section id="transversal" class="sec sec-azul sec-cor">
+  <div class="selo-marks" aria-hidden="true"><span class="fblob" style="top:10%;right:6%;animation-duration:14s"><img class="selo-w inv" src="cria-icone.png" alt="" style="width:66px;transform:rotate(10deg)"></span><span class="fblob" style="bottom:8%;left:5%;animation-duration:17s"><img class="selo-w inv" src="cria-icone.png" alt="" style="width:44px;transform:rotate(-7deg)"></span></div>
+  <div class="container">
+    <div class="sec-head">
+      <span class="numero-sec" style="opacity:.7">Parte 7</span>
+      <h2>O que atravessa <span class="script" style="color:var(--amarelo);font-size:1.2em">os dois lados</span></h2>
+      <p>Existe nos dois, criador e social mídia, em qualquer tela.</p>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3 style="margin-bottom:8px">Cria IA</h3>
+        <p style="font-size:.94rem">O painel que abre por cima de qualquer tela. Ela lê o seu brandbook antes de responder, então legenda, ideia e roteiro saem no seu tom, não no tom de robô genérico. Tem atalhos prontos pro que você mais pede.</p>
+        <p style="font-size:.9rem;margin-top:10px"><b>Cota mensal por plano:</b> 10 gerações no Essencial, 150 no Pro e 500 no Studio. A cota fica visível o tempo todo, sem susto no cartão.</p>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:8px">Notificações e push</h3>
+        <p style="font-size:.94rem">Avisos dentro do app e notificação push no celular: post que vence hoje, aprovação parada, tarefa atrasada. Você escolhe o que quer receber em Configurações.</p>
+        <p style="font-size:.9rem;margin-top:10px"><b>No iPhone:</b> o push só chega se o CRIA estiver instalado na tela de início. É regra da Apple.</p>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:8px">PWA: instala no celular</h3>
+        <p style="font-size:.94rem">O CRIA instala na tela de início como se fosse app nativo, pelo próprio navegador. No iPhone é pelo Safari, no botão de compartilhar, "Adicionar à Tela de Início". No Android o navegador oferece sozinho.</p>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:8px">Rede de segurança e navegação</h3>
+        <p style="font-size:.94rem">Lixeira de 30 dias em tudo que você apaga. Busca global pra achar qualquer coisa. Tours guiados no botão "?" de cada tela, que apontam o caminho em vez de só descrever. E personalização visual: tema, cores e fonte do seu jeito.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 8. PÁGINAS PÚBLICAS ==================== -->
+<section id="publicas" class="sec sec-creme2">
+  <div class="container">
+    <div class="sec-head">
+      <span class="numero-sec">Parte 8</span>
+      <h2>O que o cliente vê sem ter conta</h2>
+      <p>Quatro páginas públicas, abertas por link, sem cadastro e sem senha. É por elas que o cliente do social mídia interage.</p>
+    </div>
+    <div class="grid-2">
+      <div class="card-soft"><h3 style="font-size:1.05rem;margin-bottom:6px">Portal de aprovação</h3><p style="font-size:.93rem">O link que o cliente abre pra ver arte e legenda e responder aprovando ou pedindo ajuste, direto do celular.</p></div>
+      <div class="card-soft"><h3 style="font-size:1.05rem;margin-bottom:6px">Cronograma público</h3><p style="font-size:.93rem">A pauta do mês daquele cliente, num link limpo, sem ele precisar entrar em lugar nenhum.</p></div>
+      <div class="card-soft"><h3 style="font-size:1.05rem;margin-bottom:6px">Proposta de collab</h3><p style="font-size:.93rem">A proposta da publi num link público pra marca abrir e responder, com entregas e cachê descritos.</p></div>
+      <div class="card-soft"><h3 style="font-size:1.05rem;margin-bottom:6px">Link in bio</h3><p style="font-size:.93rem">A página de links pública, com o endereço que você escolheu, contando visitas e cliques.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 9. INTEGRAÇÕES ==================== -->
+<section id="integracoes" class="sec">
+  <div class="container">
+    <div class="sec-head">
+      <span class="numero-sec">Parte 9</span>
+      <h2>Com o que o CRIA conversa</h2>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3 style="margin-bottom:6px">Instagram</h3>
+        <p style="font-size:.93rem">Somente leitura dos insights. O CRIA lê seguidores, alcance, interações, visitas e o desempenho de cada post. Ele não publica, não comenta e não responde direct. Exige conta Profissional, no modo Comercial ou Criador.</p>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:6px">Google Drive</h3>
+        <p style="font-size:.93rem">Pra arquivo pesado e pras pastas do cliente. No cockpit, os links úteis já listam as pastas do Drive daquele cliente.</p>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:6px">Google Calendar</h3>
+        <p style="font-size:.93rem">O post agendado vira evento no seu calendário, pra aparecer junto com o resto da sua vida. É lembrete, não publicação.</p>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:6px">Stripe</h3>
+        <p style="font-size:.93rem">Quem cuida da cobrança das assinaturas, dos módulos e dos assentos. Você gerencia ou cancela pelo portal, sem falar com ninguém.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 10. PLANOS E TRIAL ==================== -->
+<section id="planos" class="sec sec-creme2">
+  <div class="container">
+    <div class="sec-head">
+      <span class="numero-sec">Parte 10</span>
+      <h2>Planos, cotas e o teste de 7 dias</h2>
+    </div>
+    <div class="tabela-wrap">
+      <table class="tabela">
+        <thead>
+          <tr><th>Plano do lado criador</th><th>Preço</th><th>Cota de IA</th><th>Arquivos</th><th>Destaques</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><b>cria Essencial</b></td><td>R$ 19,90/mês</td><td>10 gerações/mês</td><td>500 MB</td><td>Ideias, quadro de produção, brandbook, metas, tarefas, link in bio</td></tr>
+          <tr><td><b>cria Pro</b></td><td>R$ 32,90/mês</td><td>150 gerações/mês</td><td>5 GB</td><td>Tudo do Essencial mais Meu Feed, Insights, Relatórios, Histórico, Tendências, Media Kit, Biblioteca</td></tr>
+          <tr><td><b>cria Studio</b></td><td>R$ 49,90/mês</td><td>500 gerações/mês</td><td>15 GB</td><td>Tudo do Pro mais Cria Plano, Cria Stories, Cria Prompter e Collabs</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card" style="margin-top:26px;border-left:10px solid var(--verde)">
+      <h3 style="margin-bottom:8px">Como funciona o teste de 7 dias</h3>
+      <p style="font-size:.95rem">O teste libera o <b>Studio inteiro por 7 dias</b>, com tudo aberto: Cria Plano, Cria Stories, Cria Prompter, Collabs, Insights, Relatórios, o pacote completo.</p>
+      <p style="font-size:.95rem;margin-top:10px"><b>Quando acaba:</b> o que você criou continua lá. Nada é apagado. O que muda é o acesso: se você escolher um plano menor, as ferramentas exclusivas do Studio ficam bloqueadas e a cota mensal de IA passa a ser a do plano escolhido. Os seus posts, ideias, brandbook e histórico continuam intactos, esperando você.</p>
+      <p style="font-size:.95rem;margin-top:10px">Do lado social mídia a lógica é outra: a conta é gratuita pra sempre, e cada módulo é uma assinatura independente que você liga e desliga quando quiser.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 11. COMO TESTAR ==================== -->
+<section id="testar" class="sec quebra-pagina">
+  <div class="container">
+    <div class="sec-head">
+      <span class="numero-sec">Parte 11</span>
+      <h2>Como testar e <span class="script" style="color:var(--laranja);font-size:1.2em">o que eu preciso de você</span></h2>
+      <p>Você está entrando antes do lançamento. Isso significa que o seu incômodo é informação, e informação é exatamente o que eu preciso agora.</p>
+    </div>
+
+    <h3 style="text-align:center;margin-bottom:18px">O roteiro sugerido de primeiro uso</h3>
+    <div class="passos">
+      <div class="passo">
+        <span class="n" style="background:var(--laranja)">1</span>
+        <div><h4>Preencha o Brandbook antes de qualquer outra coisa</h4><p>É o passo que muda tudo. A IA lê o brandbook antes de escrever, então se ele estiver vazio, tudo vai sair com cara de robô e você vai achar que o produto é ruim. Se você já tem um manual de marca em PDF, use o import: sobe o arquivo, a IA espalha cores, fontes, tom e público nas seções, e você revisa na tela de antes e depois.</p></div>
+      </div>
+      <div class="passo">
+        <span class="n" style="background:var(--azul)">2</span>
+        <div><h4>Defina seus pilares de conteúdo</h4><p>Em Configurações, na aba Pilares &amp; Hábitos. São eles que organizam as ideias e alimentam a linha editorial. Três a cinco pilares já bastam.</p></div>
+      </div>
+      <div class="passo">
+        <span class="n" style="background:var(--rosa)">3</span>
+        <div><h4>Conecte o Instagram</h4><p>Em Configurações, na aba Conexões. Lembrando: a conta precisa ser Profissional, Comercial ou Criador. Com ela conectada, os Insights e a sugestão de melhor horário começam a fazer sentido.</p></div>
+      </div>
+      <div class="passo">
+        <span class="n" style="background:var(--amarelo);color:var(--ink)">4</span>
+        <div><h4>Jogue cinco ideias no banco</h4><p>Sem caprichar, do jeito bruto mesmo. Inclusive testando a aba Salvos: cole o link de um post do Instagram ou do TikTok que você gostou e veja o CRIA puxar capa, legenda e @ sozinho.</p></div>
+      </div>
+      <div class="passo">
+        <span class="n" style="background:var(--verde)">5</span>
+        <div><h4>Rode o Cria Plano</h4><p>Peça uma semana. Depois abra o resultado card a card, veja se o tom está parecido com o seu, ajuste o que quiser e mande pro quadro. Se o tom estiver errado, quase sempre é o brandbook pedindo mais detalhe, e isso é uma informação ótima pra mim.</p></div>
+      </div>
+      <div class="passo">
+        <span class="n" style="background:var(--laranja)">6</span>
+        <div><h4>Leve um post do começo ao fim</h4><p>Pegue um card e ande com ele pelas etapas: escreva a legenda, gere o roteiro, peça o prompt da arte na aba Arte, marque o horário e mova até Publicado. É o percurso completo do produto num post só.</p></div>
+      </div>
+      <div class="passo">
+        <span class="n" style="background:var(--azul)">7</span>
+        <div><h4>Instale no celular e use dois dias no telefone</h4><p>Instale na tela de início e use o CRIA como você usaria de verdade: no ônibus, na fila, entre uma gravação e outra. É no celular que a maior parte dos problemas aparece, então esse teste vale por três.</p></div>
+      </div>
+      <div class="passo">
+        <span class="n" style="background:var(--ink)">8</span>
+        <div><h4>Se você atende clientes, dê uma volta no outro lado</h4><p>Entre em /socialmidia, cadastre um cliente de mentira, abra o cockpit dele e mande um post pra aprovação por link. Abra esse link no celular como se você fosse o cliente. É a experiência que mais impressiona e a que eu mais quero ver testada.</p></div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:34px">
+      <div class="card" style="border-left:10px solid var(--laranja)">
+        <h3 style="margin-bottom:8px">Como mandar feedback</h3>
+        <p style="font-size:.95rem">Tem um botão de <b>Feedback</b> dentro do app. É por ele que eu prefiro receber, porque chega com a tela e o contexto junto, e dá pra anexar print ou vídeo. Se for mais fácil, me manda no WhatsApp mesmo, mas o print ajuda demais.</p>
+        <p style="font-size:.95rem;margin-top:10px">O que me serve mais, em ordem: o que quebrou, o que confundiu, o que você procurou e não achou, e o que você achou bonito mas não usaria.</p>
+      </div>
+      <div class="card" style="border-left:10px solid var(--verde)">
+        <h3 style="margin-bottom:8px">Bug encontrado é ajuda, não incômodo</h3>
+        <p style="font-size:.95rem">Esta é uma versão pré-lançamento. Alguma coisa vai quebrar, alguma tela vai parecer estranha e algum texto vai estar errado. Você não está atrapalhando ao apontar: você está fazendo exatamente o que eu te convidei pra fazer.</p>
+        <p style="font-size:.95rem;margin-top:10px">E se algo funcionar muito bem, me fala também. Preciso saber o que manter do jeito que está.</p>
+      </div>
+    </div>
+
+    <p class="frase-forte" style="margin-top:36px">Obrigado por entrar antes de todo mundo. <em>Vai ficar bom, e vai ter a sua digital nisso.</em></p>
+  </div>
+</section>
+
+<!-- ==================== RODAPÉ ==================== -->
+<footer>
+  <div class="container">
+    <span class="logo"><img src="/logo-cria-white.png" alt="Cria" style="height:30px;width:auto;display:block;margin:0 auto 10px"></span>
+    <p>© 2026 CRIA Social Club · Feito no Brasil</p>
+    <nav class="footer-links" aria-label="Links institucionais e legais">
+      <a href="index.html">Página inicial</a>
+      <a href="funcionalidades.html">Funcionalidades</a>
+      <a href="social-media.html">Pra social medias</a>
+      <a href="https://app.criasocialclub.com.br/termos">Termos de uso</a>
+      <a href="https://app.criasocialclub.com.br/privacidade">Política de privacidade</a>
+      <a href="https://app.criasocialclub.com.br/excluir-dados">Excluir meus dados</a>
+    </nav>
+    <!-- Confirmar se a caixa contato@criasocialclub.com.br realmente recebe e-mail.
+         Se não receber, trocar pelo endereço que recebe ou remover a linha abaixo. -->
+    <p class="footer-contato">Fale com a gente: <a href="mailto:contato@criasocialclub.com.br">contato@criasocialclub.com.br</a></p>
+    <!-- PREENCHER: razao social e CNPJ da empresa antes da analise da Meta.
+         Troque os textos em MAIUSCULO e DESCOMENTE o bloco abaixo. Enquanto
+         estiver comentado, nada disso aparece no site (pra nao publicar dado falso).
+    <p class="footer-empresa">
+      RAZAO SOCIAL COMPLETA LTDA · CNPJ XX.XXX.XXX/XXXX-XX<br>
+      RUA, NUMERO, BAIRRO, CIDADE/UF, CEP
+    </p>
+    -->
+  </div>
+</footer>
+
+</body>
+</html>
