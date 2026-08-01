@@ -73,6 +73,17 @@ b,strong{font-weight:700}
   display:flex;align-items:center;justify-content:space-between;gap:6mm;
   font-size:7.2pt;letter-spacing:.02em;color:var(--tinta-55)
 }
+
+/* O rodape fica ANCORADO no pe da folha, nao empurrado pelo conteudo.
+   Como .pagina e position:relative, o absolute abaixo prende o rodape na base.
+   O .corpo reserva essa faixa, entao texto nenhum encosta nele. */
+.pagina > .rodape-pag{
+  position:absolute;
+  left:var(--marg-lado);right:var(--marg-lado);bottom:var(--marg-base);
+  margin-top:0;
+}
+.corpo{padding-bottom:9mm}
+
 .rodape-pag .marca{display:flex;align-items:center;gap:2.6mm;font-family:var(--font-display);font-weight:700}
 .rodape-pag .logo-mini{width:13mm;height:4.4mm;background-position:left center}
 .rodape-pag .num::after{content:counter(pag)}
@@ -221,6 +232,8 @@ h1 .hl{color:var(--laranja)}
 @page{size:A4 portrait;margin:0}
 @media print{
   html,body{background:#fff;margin:0;padding:0}
+  /* 3% menor: folga pra pagina cheia nao estourar e ser cortada. */
+  body{font-size:9.7pt}
   .pagina{
     width:210mm;height:296.8mm;
     margin:0;padding:var(--marg-topo) var(--marg-lado) var(--marg-base);box-sizing:border-box;

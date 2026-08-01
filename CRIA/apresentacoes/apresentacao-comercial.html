@@ -58,7 +58,7 @@
   --font-body:'Roboto','Helvetica Neue',Arial,sans-serif;
   --font-script:'Grand Hotel','Snell Roundhand','Brush Script MT',cursive;
   /* geometria do slide 16:9 */
-  --slide-larg:297mm;--slide-alt:167mm;
+  --slide-larg:297mm;--slide-alt:210mm;
   --pad-v:13mm;--pad-h:17mm;
 }
 
@@ -260,13 +260,20 @@ h1 .hl{color:var(--laranja)}
    isso gera uma página em branco depois de cada slide. Esse décimo a menos
    é o seguro contra isso, e é invisível no PDF.
    ====================================================================== */
-@page{size:297mm 167mm;margin:0}
+/* IMPRESSÃO: A4 PAISAGEM, não papel customizado.
+   Antes a @page pedia 297x167mm, uma medida que não existe na lista de papéis
+   do navegador. Ele ignorava e caía no A4, e aí os slides saíam fora de lugar,
+   às vezes mais de um por página. Agora o papel é A4 paisagem, que todo
+   navegador tem, e o slide ocupa a folha inteira: um slide, uma página, sempre.
+   Os 209.8mm em vez de 210mm evitam a página em branco depois de cada slide,
+   que aparece quando o navegador arredonda a altura pra cima. */
+@page{size:A4 landscape;margin:0}
 @media print{
-  body{background:#fff;padding:0}
+  html,body{background:#fff;margin:0;padding:0}
   .slide{
-    width:297mm;height:166.4mm;margin:0;
+    width:297mm;height:209.8mm;margin:0;
     box-shadow:none;border-radius:0;
-    break-after:page;page-break-after:always;break-inside:avoid
+    break-after:page;page-break-after:always
   }
   .slide:last-of-type{break-after:auto;page-break-after:auto}
   a{color:inherit;text-decoration:none}
