@@ -191,16 +191,28 @@ h1 .hl{color:var(--laranja)}
    o rodapé de página lá embaixo sem esbarrar na margem e sem gerar folha
    em branco por arredondamento.
    ====================================================================== */
-@page{size:A4 portrait;margin:15mm 14mm 17mm}
+/* IMPRESSÃO: a folha É a página, sem intermediário.
+   O jeito anterior deixava a margem na @page (32mm) e pedia altura mínima de
+   258mm na folha, com break-inside:avoid-page. Sempre que o navegador achava
+   que a folha não cabia no espaço restante, empurrava ela inteira pra próxima
+   página e deixava um vazio enorme, que foi o que estragou o PDF.
+   Agora: margem ZERO na @page e a folha com altura EXATA de A4, guardando as
+   margens dentro dela (padding). Assim uma folha é sempre uma página física,
+   sem conta pra dar errado.
+   Os 296.8mm em vez de 297mm são de propósito: alguns navegadores arredondam
+   pra cima e, batendo exato na medida, cospem uma página em branco depois de
+   cada folha. Esse décimo a menos é invisível no PDF. */
+@page{size:A4 portrait;margin:0}
 @media print{
-  body{background:#fff;padding:0}
+  html,body{background:#fff;margin:0;padding:0}
   .pagina{
-    width:auto;min-height:258mm;margin:0;padding:0;
+    width:210mm;height:296.8mm;
+    margin:0;padding:var(--marg-topo) var(--marg-lado) var(--marg-base);box-sizing:border-box;
+    overflow:hidden;
     box-shadow:none;border-radius:0;
-    break-after:page;page-break-after:always;break-inside:avoid-page
+    break-after:page;page-break-after:always
   }
   .pagina:last-of-type{break-after:auto;page-break-after:auto}
-  .pagina-capa{min-height:250mm}
   a{color:inherit;text-decoration:none}
 }
 </style>
