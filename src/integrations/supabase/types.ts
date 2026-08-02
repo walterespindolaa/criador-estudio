@@ -1019,6 +1019,53 @@ export type Database = {
           },
         ]
       }
+      crm_client_notes: {
+        Row: {
+          account_owner_id: string | null
+          body: string
+          created_at: string
+          crm_client_id: string | null
+          id: string
+          legacy_source: string | null
+          manager_id: string
+          pinned: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_owner_id?: string | null
+          body?: string
+          created_at?: string
+          crm_client_id?: string | null
+          id?: string
+          legacy_source?: string | null
+          manager_id: string
+          pinned?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          account_owner_id?: string | null
+          body?: string
+          created_at?: string
+          crm_client_id?: string | null
+          id?: string
+          legacy_source?: string | null
+          manager_id?: string
+          pinned?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_client_notes_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_client_refs: {
         Row: {
           created_at: string
@@ -3395,6 +3442,30 @@ export type Database = {
           },
         ]
       }
+      post_tags: {
+        Row: {
+          color: string
+          created_at: string | null
+          id: string
+          manager_id: string
+          name: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string | null
+          id?: string
+          manager_id: string
+          name: string
+        }
+        Update: {
+          color?: string
+          created_at?: string | null
+          id?: string
+          manager_id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       posts: {
         Row: {
           approval_mode: string
@@ -3417,6 +3488,7 @@ export type Database = {
           hook: string | null
           id: string
           idea_id: string | null
+          internal_tags: string[]
           is_draft: boolean
           learnings: string | null
           notes: string | null
@@ -3461,6 +3533,7 @@ export type Database = {
           hook?: string | null
           id?: string
           idea_id?: string | null
+          internal_tags?: string[]
           is_draft?: boolean
           learnings?: string | null
           notes?: string | null
@@ -3505,6 +3578,7 @@ export type Database = {
           hook?: string | null
           id?: string
           idea_id?: string | null
+          internal_tags?: string[]
           is_draft?: boolean
           learnings?: string | null
           notes?: string | null
