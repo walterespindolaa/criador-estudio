@@ -24,6 +24,8 @@ import { ReelsRanking } from "@/components/insights/ReelsRanking";
 import { ContentCrossAnalysis } from "@/components/insights/ContentCrossAnalysis";
 import { computeFollowersDelta, type CrossItem } from "@/components/insights/insightsUtils";
 import { STATUS_OPTIONS, FORMAT_LABELS } from "@/lib/constants";
+// Cor por formato (mesma fonte única do kanban/calendário do Cria Post).
+import { formatColorVars, FORMAT_TEXT_CLASS } from "@/lib/format-colors";
 import { getStatusClasses } from "@/lib/statusColors";
 
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
@@ -495,9 +497,6 @@ function Driver({ icon: Icon, t, big, s, permalink }: { icon: typeof Users; t: s
 // Post do CRIA no formato que o dialog de vínculo consome.
 type LinkPost = { id: string; title: string; format: string | null; status: string | null; published_at: string | null };
 
-// Cor por formato (mesma paleta do kanban do Cria Post, pra bater o olho e reconhecer).
-const FORMAT_COLOR: Record<string, string> = { reels: "#0061EE", carrossel: "#01A652", foto: "#EA4918", story: "#7C90F0", video: "#4B3FA8" };
-
 // Rótulo de status a partir das STATUS_OPTIONS do projeto (mesmos nomes do kanban).
 const STATUS_LABEL: Record<string, string> = Object.fromEntries(STATUS_OPTIONS.map((s) => [s.key, s.label]));
 
@@ -593,7 +592,7 @@ function LinkDialog({ insight, onClose, onPick }: { insight: MediaInsight | null
                       className="w-full text-left px-3 py-2.5 rounded-xl border border-border hover:border-primary/40 hover:bg-primary/5 transition-colors">
                       <span className="text-sm font-medium block truncate">{p.title || "(sem título)"}</span>
                       <span className="text-[11px] flex items-center gap-1.5 mt-0.5">
-                        {p.format && <span className="font-bold uppercase tracking-wide" style={{ color: FORMAT_COLOR[p.format] ?? "#6b6b66" }}>{FORMAT_LABELS[p.format] ?? p.format}</span>}
+                        {p.format && <span className={`font-bold uppercase tracking-wide ${FORMAT_TEXT_CLASS}`} style={formatColorVars(p.format)}>{FORMAT_LABELS[p.format] ?? p.format}</span>}
                         {p.published_at && <span className="text-muted-foreground">· {p.published_at.slice(0, 10)}</span>}
                       </span>
                     </button>

@@ -8,6 +8,7 @@ import { StoryPreview } from "@/components/accounts/StoryPreview";
 import { CriaPostPublishButton } from "@/components/accounts/CriaPostPublishButton";
 import { postAspect } from "@/lib/post-aspect";
 import { getDisplayImageUrl, getDriveImageFallbackUrl, getDriveViewPageUrl, isDriveMedia, isVideoMedia, downloadMediaFile, mediaDownloadName } from "@/lib/driveMedia";
+import { parseRefLinks, refLinkHref } from "@/lib/refLinks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ImagePlus, Video, FileImage, Link2, Loader2, Heart, MessageCircle, Send, Bookmark, GripVertical, X, Play, Download, ExternalLink, Paperclip, ChevronDown, Trash2 } from "lucide-react";
@@ -69,9 +70,11 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
   const count = media.length;
   const full = count >= MAX_MEDIA;
   const remaining = () => MAX_MEDIA - (list.data?.length ?? 0);
-  // Contador da seção "Anexos e links" (mídias + o link de referência, se houver).
-  const hasRef = !!(referenceUrl && referenceUrl.trim());
-  const attCount = count + (hasRef ? 1 : 0);
+  // Contador da seção "Anexos e links" (mídias + os links de referência, se houver).
+  // O campo Ideia/Referência aceita vários links (um por linha), então conta todos.
+  const refLinks = parseRefLinks(referenceUrl);
+  const hasRef = refLinks.length > 0;
+  const attCount = count + refLinks.length;
 
   useEffect(() => { if (!dirty.current) setOrder(media.map((m) => m.id)); }, [media]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -325,16 +328,18 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
                 );
               })}
 
-              {hasRef && (
-                <a href={referenceUrl!} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 group">
+              {refLinks.map((url, i) => (
+                <a key={`ref-${i}`} href={refLinkHref(url)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 group">
                   <span className="shrink-0 w-10 h-10 rounded-lg border border-border bg-muted flex items-center justify-center text-muted-foreground"><Link2 className="h-4 w-4" /></span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-xs font-body text-primary group-hover:underline truncate">Referência / ideia</span>
-                    <span className="block text-[10px] font-body text-muted-foreground truncate">{referenceUrl}</span>
+                    <span className="block text-xs font-body text-primary group-hover:underline truncate">
+                      {refLinks.length > 1 ? `Referência / ideia ${i + 1}` : "Referência / ideia"}
+                    </span>
+                    <span className="block text-[10px] font-body text-muted-foreground truncate">{url}</span>
                   </span>
                   <span className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border text-muted-foreground group-hover:text-primary transition-colors"><ExternalLink className="h-4 w-4" /></span>
                 </a>
-              )}
+              ))}
             </div>
           )}
         </div>

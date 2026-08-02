@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
+import { useDragScroll } from "@/hooks/useDragScroll";
 import { cn } from "@/lib/utils";
 
 import { formatBRL } from "@/lib/money";
@@ -44,6 +45,7 @@ export function PipelineBoard() {
   const updateTask = useUpdateCrmTask();
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const boardRef = useDragScroll<HTMLDivElement>();
   const [editLead, setEditLead] = useState<CrmLead | null>(null);
   const [panelEdit, setPanelEdit] = useState<CrmTask | null>(null);
 
@@ -128,7 +130,8 @@ export function PipelineBoard() {
       </div>
 
       <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="overflow-x-auto pb-4 -mx-1 px-1">
+      {/* Clicar no vazio e arrastar pro lado rola o pipeline (só mouse). */}
+      <div ref={boardRef} className="overflow-x-auto pb-4 -mx-1 px-1">
         <div className="flex gap-3 min-w-max">
           {CRM_STAGES.map((stage) => {
             const col = leads.filter((l) => l.stage === stage);

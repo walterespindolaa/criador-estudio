@@ -55,11 +55,21 @@ export const clientReportInsight = async (
   params: {
     cliente: string; mes: string; total: number;
     formatos: string; plataformas: string;
-    aprovados: number; aguardando: number; ajustes: number;
+    // Funil completo do kanban (as cinco colunas). `publicados` é o número que
+    // prova a entrega pro cliente, por isso vem separado.
+    publicados?: number;
+    aprovados: number; aguardando: number; ajustes: number; emProducao?: number;
     titulos: string;
     segmento?: string; servicos?: string; persona?: string;
     igPosts?: number; igReach?: number; igViews?: number; igLikes?: number;
     igComments?: number; igInteractions?: number; igDestaques?: string;
+    igSalvos?: number; taxaEngajamento?: number;
+    // Cruzamento com o período anterior, já calculado e em texto pronto.
+    periodoAnterior?: string; comparativo?: string;
+    // Leitura do período: o que se destacou e o que travou.
+    destaque?: string; piorDesempenho?: string; formatoCampeao?: string;
+    consistencia?: string; seguidores?: string; tempoAprovacao?: string;
+    pendencias?: string; stories?: string;
   },
   userId?: string
 ): Promise<ClientReportInsight> => {

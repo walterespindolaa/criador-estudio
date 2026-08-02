@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Check, X, Pencil, CheckCircle2, CalendarRange, PartyPopper, Link2 } from "lucide-react";
 import { useForceLightTheme } from "@/hooks/useForceLightTheme";
+import { parseRefLinks, refLinkHref, refLinkLabel, isRefLink } from "@/lib/refLinks";
 
 type AnyRpc = (fn: string, args?: Record<string, unknown>) => ReturnType<typeof supabase.rpc>;
 const sbRpc = supabase.rpc.bind(supabase) as unknown as AnyRpc;
@@ -193,7 +194,23 @@ export default function CronogramaPublica() {
               <div style={{ fontWeight: 800, fontSize: 15.5, color: "#2A2440", lineHeight: 1.3 }}>{it.title || it.copy || "(sem título)"}</div>
               {it.copy && <div style={{ fontSize: 13.5, color: "#2A2440", marginTop: 6, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{linkify(it.copy)}</div>}
               {it.description && <div style={{ fontSize: 12.5, color: "#6b647e", marginTop: 6, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{linkify(it.description)}</div>}
-              {it.ref_url && <a href={it.ref_url} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "#0061EE", marginTop: 9, textDecoration: "none", fontWeight: 500 }}><Link2 style={{ width: 13, height: 13 }} /> Ver referência</a>}
+              {/* Referências do post: o campo aceita vários links (um por linha).
+                  Valor antigo com 1 link só continua caindo aqui do mesmo jeito. */}
+              {parseRefLinks(it.ref_url).length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4, marginTop: 9 }}>
+                  {parseRefLinks(it.ref_url).map((url, n) => (
+                    isRefLink(url) ? (
+                      <a key={n} href={refLinkHref(url)} target="_blank" rel="noopener noreferrer" title={url}
+                        style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "#0061EE", textDecoration: "none", fontWeight: 500, maxWidth: "100%", wordBreak: "break-all" }}>
+                        <Link2 style={{ width: 13, height: 13, flexShrink: 0 }} /> {n === 0 ? "Ver referência" : refLinkLabel(url)}
+                      </a>
+                    ) : (
+                      // Não parece link: mostra como texto pra não virar um <a> quebrado.
+                      <span key={n} style={{ fontSize: 12, color: "#6b647e", wordBreak: "break-all" }}>{url}</span>
+                    )
+                  ))}
+                </div>
+              )}
               {it.client_comment && <div style={{ fontSize: 12, color: "#854F0B", background: "#FFFBEB", border: "1px solid #FAC775", borderRadius: 9, padding: "8px 10px", marginTop: 9 }}>"{it.client_comment}"</div>}
 
               {!isApproved && !isReason && (

@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Calendar as CalendarIcon, CalendarDays, AlertTriangle, Trash2, ListTodo, CheckCircle2, Circle, X } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, CalendarDays, AlertTriangle, Trash2, ListTodo, CheckCircle2, Circle, X, ChevronDown } from "lucide-react";
 import {
   useCrmTasks, useCreateCrmTask, useUpdateCrmTask, useDeleteCrmTask,
   useCrmClients, useCrmLeads, CRM_TASK_PRIORITY_LABELS,
   type CrmTask, type CrmTaskInput, type CrmTaskStatus, type CrmTaskPriority,
 } from "@/hooks/useCrm";
+import { ViewToggle, type BoardView } from "@/components/shared/ViewToggle";
+import { corDaTarefa } from "@/lib/cores-agenda";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -97,6 +99,22 @@ function isoFromDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+// ── Visão de CALENDÁRIO (mesmo padrão do Cria Post: navegação de mês, célula do
+// dia com "+" pra criar direto naquele dia, arrastar pra mudar o prazo).
+const VIEW_KEY = "criagestao_tarefas_view";
+const CAL_WD = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+// Semana começa no DOMINGO (padrão do iPhone/calendários BR).
+function calWeekStart(d: Date) { const x = new Date(d); x.setDate(x.getDate() - x.getDay()); x.setHours(0, 0, 0, 0); return x; }
+// Mês cheio estoura a célula no celular: só os primeiros aparecem, o resto vira "+N mais".
+const MAX_POR_DIA = 3;
+const PRIO_ORDER: Record<CrmTaskPriority, number> = { urgente: 0, alta: 1, media: 2, baixa: 3 };
+// Ordem dentro do dia: horário primeiro (tarefa com hora manda), depois prioridade.
+function ordenaDoDia(a: CrmTask, b: CrmTask): number {
+  const ta = a.due_time ?? "99:99", tb = b.due_time ?? "99:99";
+  if (ta !== tb) return ta.localeCompare(tb);
+  return (PRIO_ORDER[a.priority] ?? 9) - (PRIO_ORDER[b.priority] ?? 9);
+}
+
 // Campo de data visual: clica no campo -> abre o calendário shadcn num popover;
 // seleciona o dia -> fecha e guarda como string YYYY-MM-DD (fuso BR, dia de calendário).
 function DateField({ label, value, onChange }: { label: string; value: string; onChange: (iso: string) => void }) {
@@ -150,10 +168,20 @@ export function TasksTab() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<CrmTask | null>(null);
+  // Prazo já preenchido quando a tarefa nasce do "+" de um dia do calendário.
+  const [novaDue, setNovaDue] = useState<string>("");
   const [view, setView] = useState<ViewFilter>("todas");
   const [clientFilter, setClientFilter] = useState<string>("all");
   const [periodo, setPeriodo] = useState<PeriodoFilter>(() => loadPeriodo());
   const [dragId, setDragId] = useState<string | null>(null);
+  // Kanban (padrão) ou Calendário, igual ao Cria Post. Preferência salva por dispositivo.
+  const [board, setBoard] = useState<BoardView>(() => {
+    try { return (localStorage.getItem(VIEW_KEY) as BoardView) || "kanban"; } catch { return "kanban"; }
+  });
+  const setBoardPersist = (v: BoardView) => {
+    setBoard(v);
+    try { localStorage.setItem(VIEW_KEY, v); } catch { /* segue */ }
+  };
 
   // Reaplica o período salvo no F5 até a pessoa limpar.
   useEffect(() => {
@@ -172,8 +200,12 @@ export function TasksTab() {
   };
   const isLead = (t: CrmTask) => !t.crm_client_id && !!t.crm_lead_id;
 
-  const filtered = useMemo(() => {
-    return tasks.filter((t) => {
+  // Os chips (Todas/Atrasadas/Hoje/Esta semana/Concluídas) e o seletor de cliente valem
+  // nas DUAS visões: ficam visíveis o tempo todo, então o recorte nunca é silencioso.
+  // Já o PERÍODO é uma janela de datas, e no calendário quem manda nisso é a navegação
+  // de mês; ele fica escondido e sem efeito lá (com um aviso, pra ninguém achar que sumiu).
+  const { filtered, calendarTasks } = useMemo(() => {
+    const base = tasks.filter((t) => {
       switch (view) {
         case "atrasadas": if (t.status === "concluida" || !t.due_date || t.due_date >= today) return false; break;
         case "hoje": if (t.status === "concluida" || t.due_date !== today) return false; break;
@@ -181,14 +213,18 @@ export function TasksTab() {
         case "concluidas": if (t.status !== "concluida") return false; break;
       }
       if (clientFilter !== "all" && t.crm_client_id !== clientFilter) return false;
+      return true;
+    });
+    const comPeriodo = (range.from || range.to)
       // Período (due_date): tarefa sem prazo não entra numa janela de datas.
-      if (range.from || range.to) {
+      ? base.filter((t) => {
         if (!t.due_date) return false;
         if (range.from && t.due_date < range.from) return false;
         if (range.to && t.due_date > range.to) return false;
-      }
-      return true;
-    });
+        return true;
+      })
+      : base;
+    return { filtered: comPeriodo, calendarTasks: base };
   }, [tasks, view, today, weekEnd, clientFilter, range.from, range.to]);
 
   const counts = useMemo(() => ({
@@ -216,7 +252,11 @@ export function TasksTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <h3 className="text-sm font-display font-bold text-foreground flex items-center gap-2"><ListTodo className="h-4 w-4 text-primary" /> Tarefas dos clientes</h3>
-        <Button size="sm" onClick={() => { setEditing(null); setDialogOpen(true); }}><Plus className="h-3.5 w-3.5 mr-1.5" /> Nova tarefa</Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Kanban (padrão) / Calendário: as duas visões conversam, mudar o prazo reflete no card. */}
+          <ViewToggle value={board} onChange={setBoardPersist} />
+          <Button size="sm" onClick={() => { setEditing(null); setNovaDue(""); setDialogOpen(true); }}><Plus className="h-3.5 w-3.5 mr-1.5" /> Nova tarefa</Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
@@ -235,7 +275,9 @@ export function TasksTab() {
         </select>
 
         {/* Filtro por período do prazo (due_date). Fica num popover pra não estourar
-            a linha no mobile: presets "próximos N dias" + intervalo específico. */}
+            a linha no mobile: presets "próximos N dias" + intervalo específico.
+            No calendário some: lá a janela de datas é o mês que está aberto. */}
+        {board === "kanban" && (
         <Popover>
           <PopoverTrigger asChild>
             <button className={cn("inline-flex items-center gap-1 h-8 rounded-full border px-3 text-xs font-medium whitespace-nowrap transition-colors", periodoAtivo ? "bg-primary text-primary-foreground border-primary" : "border-input bg-card text-muted-foreground hover:text-foreground")}>
@@ -266,10 +308,26 @@ export function TasksTab() {
             )}
           </PopoverContent>
         </Popover>
+        )}
+        {/* O período continua salvo, só não vale aqui: melhor avisar do que a pessoa
+            achar que o filtro sumiu (ou que o calendário está mostrando demais). */}
+        {board === "calendario" && periodoAtivo && (
+          <span className="text-[11px] text-muted-foreground">O filtro de período vale no kanban; aqui o recorte é o mês.</span>
+        )}
       </div>
 
       {isLoading ? (
         <div className="grid md:grid-cols-3 gap-4">{[1, 2, 3].map((i) => <div key={i} className="h-40 rounded-2xl bg-muted animate-pulse" />)}</div>
+      ) : board === "calendario" ? (
+        <TasksCalendar
+          tasks={calendarTasks}
+          today={today}
+          corDe={(t) => corDaTarefa(t, clients, leads)}
+          nomeDe={nameFor}
+          onOpen={(t) => { setEditing(t); setDialogOpen(true); }}
+          onNewAt={(day) => { setEditing(null); setNovaDue(day); setDialogOpen(true); }}
+          onMove={(id, day) => { const t = tasks.find((x) => x.id === id); if (t && t.due_date !== day) updateTask.mutate({ id, due_date: day }); }}
+        />
       ) : (
         <div className="grid md:grid-cols-3 gap-4">
           {COLUMNS.map((col) => {
@@ -317,8 +375,9 @@ export function TasksTab() {
 
       {dialogOpen && (
         <TaskDialog
-          key={editing?.id ?? "new"}
+          key={editing?.id ?? `new:${novaDue}`}
           task={editing}
+          defaultDue={novaDue}
           clients={clients}
           saving={createTask.isPending || updateTask.isPending}
           onClose={() => { setDialogOpen(false); setEditing(null); }}
@@ -331,8 +390,10 @@ export function TasksTab() {
   );
 }
 
-function TaskDialog({ task, clients, saving, onClose, onCreate, onUpdate, onDelete }: {
+function TaskDialog({ task, defaultDue, clients, saving, onClose, onCreate, onUpdate, onDelete }: {
   task: CrmTask | null;
+  // Prazo já preenchido quando a tarefa nasce do "+" de um dia do calendário.
+  defaultDue?: string;
   clients: { id: string; name: string }[];
   saving: boolean;
   onClose: () => void;
@@ -344,7 +405,7 @@ function TaskDialog({ task, clients, saving, onClose, onCreate, onUpdate, onDele
   const [clientId, setClientId] = useState(task?.crm_client_id ?? "");
   const [priority, setPriority] = useState<CrmTaskPriority>(task?.priority ?? "media");
   const [status, setStatus] = useState<CrmTaskStatus>(task?.status ?? "pendente");
-  const [due, setDue] = useState(task?.due_date ?? "");
+  const [due, setDue] = useState(task?.due_date ?? defaultDue ?? "");
   // Horário existia na agenda mas não aqui, então tarefa criada ou editada
   // por esta aba nunca ganhava hora. Mesmo campo, mesma coluna (due_time).
   const [dueTime, setDueTime] = useState(task?.due_time ? task.due_time.slice(0, 5) : "");
@@ -401,5 +462,189 @@ function TaskDialog({ task, clients, saving, onClose, onCreate, onUpdate, onDele
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// Cartãozinho da tarefa dentro do calendário. Três estados bem diferentes entre si:
+//   atrasada (vencida e não concluída) = borda/fundo vermelhos, é o que mais importa ver;
+//   concluída = apagada e riscada;
+//   pendente/em andamento = cartão normal.
+// A faixa colorida da esquerda é a COR DA TAREFA (regra de @/lib/cores-agenda).
+function CalTaskChip({ t, cor, nome, today, dragging, onDragStart, onDragEnd, onClick }: {
+  t: CrmTask;
+  cor: string;
+  nome: string | null;
+  today: string;
+  dragging: boolean;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onClick: () => void;
+}) {
+  const done = t.status === "concluida";
+  const atrasada = !done && !!t.due_date && t.due_date < today;
+  return (
+    <button
+      type="button"
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onClick={onClick}
+      style={{ borderLeftColor: cor }}
+      className={cn(
+        "w-full min-w-0 rounded-lg border border-l-[3px] px-1.5 py-1 text-left transition-shadow cursor-grab active:cursor-grabbing",
+        atrasada ? "border-destructive/40 bg-destructive/5" : "border-border bg-card hover:bg-muted/40",
+        done && "opacity-60",
+        dragging && "opacity-50 shadow-lg",
+      )}
+    >
+      <p className={cn("text-[11px] font-body font-semibold leading-tight truncate", done ? "line-through text-muted-foreground" : "text-foreground")}>
+        {t.due_time ? `${t.due_time.slice(0, 5)} · ` : ""}{t.title}
+      </p>
+      <span className="mt-0.5 flex items-center gap-1 text-[9px] font-body text-muted-foreground">
+        {done && <CheckCircle2 className="h-2.5 w-2.5 shrink-0 text-primary" />}
+        {atrasada && <AlertTriangle className="h-2.5 w-2.5 shrink-0 text-destructive" />}
+        {atrasada && <span className="font-bold text-destructive shrink-0">Atrasada</span>}
+        {nome && <span className="truncate">{nome}</span>}
+      </span>
+    </button>
+  );
+}
+
+// Visão de CALENDÁRIO das tarefas, no mesmo padrão do Cria Post: navegação de mês
+// (‹ mês ano › Hoje), célula do dia com "+" pra criar direto naquele dia e arraste
+// pra mudar o prazo. A tarefa cai no dia do VENCIMENTO (due_date), o mesmo campo que
+// o card do kanban mostra com o ícone de calendário.
+function TasksCalendar({ tasks, today, corDe, nomeDe, onOpen, onNewAt, onMove }: {
+  tasks: CrmTask[];
+  today: string;
+  corDe: (t: CrmTask) => string;
+  nomeDe: (t: CrmTask) => string | null;
+  onOpen: (t: CrmTask) => void;
+  onNewAt: (day: string) => void;
+  onMove: (id: string, day: string) => void;
+}) {
+  const [anchor, setAnchor] = useState(() => new Date());
+  // Drag nativo (HTML5): mesma escolha do calendário do Cria Post.
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overDay, setOverDay] = useState<string | null>(null);
+  // Tarefas sem prazo: contador discreto, abre pra ver e arrastar pra um dia.
+  const [semDataOpen, setSemDataOpen] = useState(false);
+  // Dia aberto pelo "+N mais" (célula não estoura no celular).
+  const [dayModal, setDayModal] = useState<string | null>(null);
+
+  const days = (() => {
+    const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+    const start = calWeekStart(first);
+    const last = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
+    const end = calWeekStart(last); end.setDate(end.getDate() + 6);
+    const n = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+    return Array.from({ length: n }, (_, i) => { const d = new Date(start); d.setDate(d.getDate() + i); return d; });
+  })();
+
+  const byDay = new Map<string, CrmTask[]>();
+  const semData: CrmTask[] = [];
+  for (const t of tasks) {
+    if (!t.due_date) { semData.push(t); continue; }
+    const arr = byDay.get(t.due_date) ?? [];
+    arr.push(t); byDay.set(t.due_date, arr);
+  }
+  for (const arr of byDay.values()) arr.sort(ordenaDoDia);
+
+  const dropOn = (day: string) => { if (dragId) onMove(dragId, day); setDragId(null); setOverDay(null); };
+  const chipProps = (t: CrmTask) => ({
+    t, cor: corDe(t), nome: nomeDe(t), today,
+    dragging: dragId === t.id,
+    onDragStart: () => setDragId(t.id),
+    onDragEnd: () => { setDragId(null); setOverDay(null); },
+  });
+  const doDia = dayModal ? (byDay.get(dayModal) ?? []) : [];
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-1">
+          <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setAnchor((a) => { const n = new Date(a); n.setMonth(n.getMonth() - 1); return n; })} aria-label="Mês anterior">‹</Button>
+          <span className="text-sm font-display font-bold text-foreground px-2 capitalize">{anchor.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</span>
+          <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setAnchor((a) => { const n = new Date(a); n.setMonth(n.getMonth() + 1); return n; })} aria-label="Próximo mês">›</Button>
+          <Button variant="outline" size="sm" className="h-8 px-2 text-xs ml-1" onClick={() => setAnchor(new Date())}>Hoje</Button>
+        </div>
+      </div>
+
+      <div className="hidden lg:grid lg:grid-cols-7 gap-2 mb-1">
+        {CAL_WD.map((w) => <p key={w} className="text-[10px] uppercase tracking-wider font-body font-semibold text-muted-foreground text-center">{w}</p>)}
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+        {days.map((d) => {
+          const iso = isoFromDate(d);
+          const list = byDay.get(iso) ?? [];
+          const visiveis = list.slice(0, MAX_POR_DIA);
+          const resto = list.length - visiveis.length;
+          const isToday = iso === today;
+          const outMonth = d.getMonth() !== anchor.getMonth();
+          return (
+            <div key={iso}
+              onDragOver={(e) => { e.preventDefault(); if (overDay !== iso) setOverDay(iso); }}
+              onDragLeave={() => setOverDay((o) => (o === iso ? null : o))}
+              onDrop={() => dropOn(iso)}
+              className={cn(
+                "min-h-[104px] rounded-xl border p-2 flex flex-col gap-1.5 transition-colors",
+                isToday ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-background",
+                outMonth && "opacity-45",
+                overDay === iso && "ring-2 ring-primary/40 border-primary/60 bg-primary/5",
+              )}>
+              <div className="flex items-center justify-between">
+                <span className="flex items-baseline gap-1">
+                  <span className={cn("text-sm font-display font-bold", isToday ? "text-primary" : "text-foreground")}>{d.getDate()}</span>
+                  {/* No celular a grade tem 2 colunas, então o dia da semana ajuda a se localizar. */}
+                  <span className="lg:hidden text-[9px] uppercase font-body text-muted-foreground">{CAL_WD[d.getDay()]}</span>
+                </span>
+                <button type="button" onClick={() => onNewAt(iso)} className="-m-1 grid h-7 w-7 place-items-center rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors" aria-label="Nova tarefa neste dia"><Plus className="h-3.5 w-3.5" /></button>
+              </div>
+              {visiveis.map((t) => <CalTaskChip key={t.id} {...chipProps(t)} onClick={() => onOpen(t)} />)}
+              {resto > 0 && (
+                <button type="button" onClick={() => setDayModal(iso)} className="text-[10px] font-body font-semibold text-primary hover:underline text-left">
+                  +{resto} mais
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Tarefa sem prazo não tem dia onde aparecer. Em vez de sumir calada, fica aqui
+          o contador: abre a lista e dá pra arrastar pra um dia (ou clicar e editar). */}
+      {semData.length > 0 && (
+        <div className="mt-4 rounded-xl border border-dashed border-border p-3">
+          <button type="button" onClick={() => setSemDataOpen((o) => !o)} className="flex items-center gap-1.5 text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors">
+            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", !semDataOpen && "-rotate-90")} />
+            Sem data ({semData.length})
+            <span className="normal-case tracking-normal font-normal">· arraste pra um dia</span>
+          </button>
+          {semDataOpen && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mt-2">
+              {semData.map((t) => <CalTaskChip key={t.id} {...chipProps(t)} onClick={() => onOpen(t)} />)}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Dia cheio: a célula mostra os primeiros e o resto abre aqui. */}
+      <Dialog open={!!dayModal} onOpenChange={(o) => { if (!o) setDayModal(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display capitalize">
+              {dayModal ? parseDateOnly(dayModal).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" }) : ""}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-[12px] font-body text-muted-foreground -mt-2">{doDia.length} tarefa(s) · clique pra editar</p>
+          <div className="space-y-1.5 mt-1 max-h-[60vh] overflow-y-auto">
+            {doDia.map((t) => (
+              <CalTaskChip key={t.id} {...chipProps(t)} onClick={() => { setDayModal(null); onOpen(t); }} />
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

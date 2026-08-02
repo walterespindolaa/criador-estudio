@@ -84,12 +84,17 @@ export function useClientMaterials(crmClientId: string | undefined) {
     },
   });
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: key });
+  // Criar/editar material mexe no PRAZO, e prazo agora aparece na Agenda: invalida também
+  // a query dos materiais da agenda pra o card nascer/sumir de lá na hora.
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: key });
+    qc.invalidateQueries({ queryKey: ["manager-materials-agenda", agencyOwnerId] });
+  };
   // Alem do quadro do cliente, atuar num material (mudar status / excluir) precisa
   // baixar o contador da Central de Aprovacoes do gestor. Sem isto, aprovar/mexer num
   // material que o cliente pediu nao atualizava a fila ["manager-pending-materials"].
   const invalidateWithPending = () => {
-    qc.invalidateQueries({ queryKey: key });
+    invalidate();
     qc.invalidateQueries({ queryKey: ["manager-pending-materials", agencyOwnerId] });
   };
 
@@ -196,4 +201,63 @@ export function useManagerPendingMaterials() {
     },
   });
   return { pending: query.data ?? [], isLoading: query.isLoading };
+}
+
+// ── MATERIAIS NA AGENDA ──────────────────────────────────────────────────────
+// A Agenda precisa dos materiais COM PRAZO (due_date) de TODOS os clientes do gestor.
+// Nenhum dos hooks acima servia: useClientMaterials é de UM cliente só (e nem roda sem
+// crmClientId), e useManagerPendingMaterials só traz o que o CLIENTE pediu e ainda está
+// em "solicitado" (a fila de aprovação), sem due_date. Então aqui vai um terceiro,
+// no mesmo padrão: react-query, chave com agencyOwnerId, RLS cuidando do resto.
+export type AgendaMaterial = Pick<ClientMaterial, "id" | "crm_client_id" | "title" | "description" | "status" | "requested_by" | "due_date">;
+const AGENDA_MATERIALS_KEY = "manager-materials-agenda";
+
+export function useManagerMaterialsWithDue() {
+  const { agencyOwnerId } = useActiveAccount();
+  const query = useQuery<AgendaMaterial[]>({
+    queryKey: [AGENDA_MATERIALS_KEY, agencyOwnerId],
+    enabled: !!agencyOwnerId,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("client_materials")
+        .select("id, crm_client_id, title, description, status, requested_by, due_date")
+        .eq("manager_id", agencyOwnerId!)
+        .not("due_date", "is", null)
+        .order("due_date", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as AgendaMaterial[];
+    },
+  });
+  return { materials: query.data ?? [], isLoading: query.isLoading, isError: query.isError };
+}
+
+// Mexer num material DIRETO da agenda: arrastar pra outro dia (due_date) ou dar o check
+// (status finalizado / a fazer). Otimista no cache da agenda; ao final invalida também o
+// quadro do cliente e a fila de aprovações, que leem a mesma tabela.
+export function useUpdateAgendaMaterial() {
+  const { agencyOwnerId } = useActiveAccount();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<ClientMaterial, "due_date" | "status">> }) => {
+      const { error } = await sbFrom("client_materials").update(patch as never).eq("id", id);
+      if (error) throw error;
+    },
+    onMutate: async ({ id, patch }) => {
+      const key = [AGENDA_MATERIALS_KEY, agencyOwnerId];
+      await qc.cancelQueries({ queryKey: key });
+      const prev = qc.getQueryData<AgendaMaterial[]>(key);
+      qc.setQueryData<AgendaMaterial[]>(key, (old) =>
+        Array.isArray(old) ? old.map((m) => (m.id === id ? { ...m, ...patch } : m)) : old);
+      return { prev };
+    },
+    onError: (e: unknown, _v, ctx) => {
+      const c = ctx as { prev?: AgendaMaterial[] } | undefined;
+      if (c?.prev) qc.setQueryData([AGENDA_MATERIALS_KEY, agencyOwnerId], c.prev);
+      toast.error((e as Error)?.message ?? "Não consegui mover o material.");
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: [AGENDA_MATERIALS_KEY, agencyOwnerId] });
+      qc.invalidateQueries({ queryKey: ["client-materials"] });
+      qc.invalidateQueries({ queryKey: ["manager-pending-materials", agencyOwnerId] });
+    },
+  });
 }

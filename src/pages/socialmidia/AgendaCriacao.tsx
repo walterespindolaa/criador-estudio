@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, type DropResult, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
@@ -24,8 +24,13 @@ import {
 import { useAllExternalPosts, useExternalClients, useMoveExternalPostDate, useUpdateExternalPost, type ExternalPostWithClient, type ExternalClient } from "@/hooks/useCriaPost";
 import { useCriaPostMedia, type CriaMedia } from "@/hooks/useCriaPostMedia";
 import { useClientCriaAgendaPosts, useCriaClientProfiles, type ClientCriaAgendaPost, type ClientCriaLink } from "@/hooks/useManagerClientCria";
+import { useManagerMaterialsWithDue, useUpdateAgendaMaterial, type AgendaMaterial } from "@/hooks/useClientMaterials";
 import { isDriveMedia, isDriveUrl, isVideoMedia, getThumbnailUrl, getDriveImageFallbackUrl, downloadMediaFile, mediaDownloadName } from "@/lib/driveMedia";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
+import { useDragScroll } from "@/hooks/useDragScroll";
+import { parseRefLinks, refLinkHref } from "@/lib/refLinks";
+// Regra de cor compartilhada com a aba Tarefas do Cria Gestão (era daqui, virou util).
+import { corDoItem, corDaTarefa as corDaTarefaCompartilhada } from "@/lib/cores-agenda";
 
 // Status dos posts na agenda (mesmas cores do kanban de 5 status).
 const POST_STATUS: Record<string, { label: string; cls: string }> = {
@@ -62,24 +67,14 @@ const STATUS: Record<Capture["status"], { label: string; cls: string }> = {
 };
 
 // Cores padrão de cada tipo, usadas só quando nem o item nem o dono dele têm cor.
-const TASK_CLIENT_DEFAULT_COLOR = "#01A652"; // verde, tarefa de cliente
-const LEAD_DEFAULT_COLOR = "#0061EE";        // azul, tarefa de lead
+// As cores padrão de tarefa (cliente/lead) e a função corDoItem moravam aqui;
+// agora vêm de @/lib/cores-agenda, pra a aba Tarefas usar exatamente a mesma regra.
 const CAPTURE_DEFAULT_COLOR = "#14B8A6";     // teal, captação
+// Material (6º tipo): dourado/mostarda. Escolhido por não colidir com nenhuma das cores
+// já usadas nos chips (roxo #4B3FA8, azul #0061EE, rosa #FF77B9, laranja #EA4918, verde #059669).
+const MATERIAL_DEFAULT_COLOR = "#CA8A04";
 // Paleta de cores pra tarefa (útil pra tarefa sem cliente ganhar destaque próprio).
 const TASK_COLORS = ["#0061EE", "#01A652", "#EA4918", "#FF77B9", "#4B3FA8", "#F5A623", "#111827"];
-// Cor efetiva de um item da agenda, em ordem de prioridade:
-//   1) a cor escolhida no PRÓPRIO item (a tarefa, quando você define uma)
-//   2) a cor do DONO dele (o cliente cadastrado, ou o lead)
-//   3) a cor padrão do tipo
-// Antes a tarefa de lead era forçada em azul e a captação em teal, ignorando a
-// cor escolhida. Resultado: você pintava de roxo e o card continuava azul.
-function corDoItem(corPropria: string | null | undefined, corDono: string | null | undefined, padrao: string): string {
-  const propria = corPropria?.trim();
-  if (propria) return propria;
-  const dono = corDono?.trim();
-  if (dono) return dono;
-  return padrao;
-}
 // HH:MM a partir de "HH:MM:SS" (ou null).
 const hhmm = (s: string | null | undefined) => (s ? s.slice(0, 5) : null);
 
@@ -89,7 +84,10 @@ type DayItem =
   | { kind: "cap"; time: string | null; cap: Capture }
   | { kind: "task"; time: string | null; task: CrmTask }
   | { kind: "cria"; time: string | null; cria: Creation }
-  | { kind: "post"; time: string | null; post: ExternalPostWithClient };
+  | { kind: "post"; time: string | null; post: ExternalPostWithClient }
+  // 6º tipo: material com prazo (due_date). Não tem horário, então entra junto com as
+  // criações no topo do dia (ordenação por "" antes de qualquer HH:MM).
+  | { kind: "mat"; time: string | null; mat: AgendaMaterial };
 
 // Chave estável de um item do dia (mesma string do draggableId): "<kind>:<id>". É por ela
 // que a ordem manual do dia é persistida e reaplicada (ver buildDayItems + handleDragEnd).
@@ -99,6 +97,7 @@ function dayItemKey(item: DayItem): string {
     case "task": return `task:${item.task.id}`;
     case "cria": return `cria:${item.cria.id}`;
     case "post": return `post:${item.post.id}`;
+    case "mat": return `mat:${item.mat.id}`;
   }
 }
 
@@ -108,12 +107,13 @@ function dayItemKey(item: DayItem): string {
 // horário. Sem ordem manual, mantém o comportamento antigo: itens SEM horário primeiro
 // (topo), depois os COM horário em ordem crescente. Fontes de hora: captação=capture_time,
 // post=scheduled_time, tarefa=due_time, criação=sem horário.
-function buildDayItems(caps: Capture[], tasks: CrmTask[], cris: Creation[], posts: ExternalPostWithClient[], order?: string[]): DayItem[] {
+function buildDayItems(caps: Capture[], tasks: CrmTask[], cris: Creation[], posts: ExternalPostWithClient[], mats: AgendaMaterial[], order?: string[]): DayItem[] {
   const items: DayItem[] = [
     ...caps.map((c) => ({ kind: "cap" as const, time: hhmm(c.capture_time), cap: c })),
     ...tasks.map((t) => ({ kind: "task" as const, time: hhmm(t.due_time), task: t })),
     ...cris.map((c) => ({ kind: "cria" as const, time: null, cria: c })),
     ...posts.map((p) => ({ kind: "post" as const, time: hhmm((p as { scheduled_time?: string | null }).scheduled_time), post: p })),
+    ...mats.map((m) => ({ kind: "mat" as const, time: null, mat: m })),
   ];
   if (order && order.length) {
     const idx = new Map(order.map((k, i) => [k, i]));
@@ -202,14 +202,14 @@ export default function AgendaCriacao() {
     setView(v);
     try { localStorage.setItem("agenda_view", v); } catch { /* segue */ }
   };
-  // Filtros por tipo de item na grade (criação, tarefa, captação, post, cria do cliente), persistidos.
-  const [filters, setFilters] = useState<{ criacao: boolean; tarefa: boolean; capta: boolean; post: boolean; criapost: boolean }>(() => {
+  // Filtros por tipo de item na grade (criação, tarefa, captação, post, cria do cliente, material), persistidos.
+  const [filters, setFilters] = useState<{ criacao: boolean; tarefa: boolean; capta: boolean; post: boolean; criapost: boolean; material: boolean }>(() => {
     try {
       const s = JSON.parse(localStorage.getItem("agenda_filters") || "{}");
-      return { criacao: s.criacao ?? true, tarefa: s.tarefa ?? true, capta: s.capta ?? true, post: s.post ?? true, criapost: s.criapost ?? true };
-    } catch { return { criacao: true, tarefa: true, capta: true, post: true, criapost: true }; }
+      return { criacao: s.criacao ?? true, tarefa: s.tarefa ?? true, capta: s.capta ?? true, post: s.post ?? true, criapost: s.criapost ?? true, material: s.material ?? true };
+    } catch { return { criacao: true, tarefa: true, capta: true, post: true, criapost: true, material: true }; }
   });
-  const toggleFilter = (k: "criacao" | "tarefa" | "capta" | "post" | "criapost") =>
+  const toggleFilter = (k: "criacao" | "tarefa" | "capta" | "post" | "criapost" | "material") =>
     setFilters((f) => { const nf = { ...f, [k]: !f[k] }; try { localStorage.setItem("agenda_filters", JSON.stringify(nf)); } catch { /* segue */ } return nf; });
   // Multi-seleção de clientes para os posts (vazio = todos).
   const [postClients, setPostClients] = useState<Set<string>>(new Set());
@@ -267,6 +267,9 @@ export default function AgendaCriacao() {
   const { data: allPosts = [] } = useAllExternalPosts();
   const { clients: extClients } = useExternalClients();
   const movePost = useMoveExternalPostDate();
+  // Materiais COM PRAZO de todos os clientes do gestor (6º tipo da grade).
+  const { materials: allMaterials } = useManagerMaterialsWithDue();
+  const updMaterial = useUpdateAgendaMaterial();
   const qc = useQueryClient();
   // Ordem manual por dia (reordenar dentro do dia): mapa day -> array de chaves "<kind>:<id>".
   const { data: dayOrders = {} } = useDayOrders(from, to);
@@ -338,7 +341,7 @@ export default function AgendaCriacao() {
       // Recalcula a MESMA lista renderizada do dia (com a ordem atual aplicada) e move a chave.
       const keys = buildDayItems(
         capturesByDay.get(iso) ?? [], tasksByDay.get(iso) ?? [], byDay.get(iso) ?? [], postsByDay.get(iso) ?? [],
-        dayOrders[iso],
+        materialsByDay.get(iso) ?? [], dayOrders[iso],
       ).map(dayItemKey);
       if (source.index >= keys.length) return;
       const [moved] = keys.splice(source.index, 1);
@@ -377,6 +380,10 @@ export default function AgendaCriacao() {
       // Arrastar um post reprograma a data no Cria Post (reflete no kanban/calendário do cliente).
       qc.setQueriesData<ExternalPostWithClient[]>({ queryKey: ["external-posts-all"] }, (old) => old?.map((p) => (p.id === id ? { ...p, scheduled_date: day } : p)));
       movePost.mutate({ id, scheduled_date: day }, { onSuccess: ok, onError: fail });
+    } else if (kind === "mat") {
+      // Arrastar um material muda o PRAZO (due_date) dele, e isso reflete no kanban de
+      // Materiais do cliente. Mesma lógica de tarefa/captação; o hook já é otimista.
+      updMaterial.mutate({ id, patch: { due_date: day } }, { onSuccess: ok });
     }
   };
   // Clicar num post abre o popup editável AQUI na agenda (sem navegar pro cliente).
@@ -447,6 +454,15 @@ export default function AgendaCriacao() {
   // Rolagem horizontal da semana no mobile: abre ancorado na coluna de HOJE.
   const weekScrollRef = useRef<HTMLDivElement | null>(null);
   const todayColRef = useRef<HTMLDivElement | null>(null);
+  // Clicar no vazio da grade e arrastar pro lado rola a semana/o mês (só mouse;
+  // no toque nada muda, o dedo continua rolando nativo).
+  const arrastaGrade = useDragScroll<HTMLDivElement>();
+  // useCallback estável: sem isso o ref inline religaria os listeners a cada render.
+  const gradeRef = useCallback((el: HTMLDivElement | null) => {
+    weekScrollRef.current = el;
+    arrastaGrade(el);
+  }, [arrastaGrade]);
+  const producaoRef = useDragScroll<HTMLDivElement>();
   const todayVisible = days.some((d) => ymd(d) === today);
   useEffect(() => {
     if (view !== "semana") return;
@@ -479,15 +495,9 @@ export default function AgendaCriacao() {
   const nameOf = (crmId: string | null, fallback: string | null) =>
     (crmId ? clients.find((c) => c.id === crmId)?.name : null) || fallback || "Cliente";
   const leadName = (leadId: string | null) => (leadId ? leads.find((l) => l.id === leadId)?.name ?? null : null);
-  // Cor cadastrada no lead ("Cor do lead" na ficha dele), pra tarefa de lead
-  // sair na cor certa em vez do azul fixo.
-  const leadColor = (leadId: string | null) => (leadId ? leads.find((l) => l.id === leadId)?.color ?? null : null);
   // Cor de qualquer TAREFA: a dela, senão a do lead ou do cliente, senão o padrão.
-  const corDaTarefa = (t: CrmTask) => corDoItem(
-    t.color,
-    t.crm_lead_id ? leadColor(t.crm_lead_id) : (t.crm_client_id ? clients.find((c) => c.id === t.crm_client_id)?.color : null),
-    t.crm_lead_id ? LEAD_DEFAULT_COLOR : TASK_CLIENT_DEFAULT_COLOR,
-  );
+  // A regra em si vive em @/lib/cores-agenda (mesma usada na aba Tarefas do Cria Gestão).
+  const corDaTarefa = (t: CrmTask) => corDaTarefaCompartilhada(t, clients, leads);
 
   // Tarefas dos clientes (CRM) com vencimento na semana exibida, por dia.
   // Concluídas ficam de fora: a grade é sobre o que ainda precisa acontecer.
@@ -508,6 +518,38 @@ export default function AgendaCriacao() {
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [crmTasks, from, to, filters.tarefa, postClients, selectedCrmIds, selectedNames]);
+
+  // MATERIAIS com prazo no período, por dia (due_date). Material FINALIZADO continua
+  // aparecendo, RISCADO, exatamente como a agenda já trata tarefa concluída e captação
+  // concluída: quem olha o dia quer ver o que fechou naquele dia, não um buraco. Quem
+  // não quer ver nada de material desliga o chip "Materiais".
+  const materialsByDay = useMemo(() => {
+    const m = new Map<string, AgendaMaterial[]>();
+    if (!filters.material) return m;
+    for (const mat of allMaterials) {
+      if (!mat.due_date) continue;
+      if (mat.due_date < from || mat.due_date > to) continue;
+      if (!clientMatches(mat.crm_client_id, null)) continue;
+      (m.get(mat.due_date) ?? m.set(mat.due_date, []).get(mat.due_date)!).push(mat);
+    }
+    // Finalizados por último dentro do dia; o resto pela ordem que veio (due_date/created).
+    for (const arr of m.values()) arr.sort((a, b) => Number(a.status === "finalizado") - Number(b.status === "finalizado"));
+    return m;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allMaterials, from, to, filters.material, postClients, selectedCrmIds, selectedNames]);
+
+  // Cor do material: a do cliente dono; sem cor, o dourado padrão do tipo. Mesmo helper
+  // corDoItem da captação (material não tem cor própria).
+  const corDoMaterial = (mat: AgendaMaterial) => corDoItem(
+    null,
+    mat.crm_client_id ? clients.find((c) => c.id === mat.crm_client_id)?.color : null,
+    MATERIAL_DEFAULT_COLOR,
+  );
+  // Clicar no material leva pro cockpit do cliente na aba Materiais (rota real do ClienteHub).
+  const openMaterial = (mat: AgendaMaterial) => {
+    if (!mat.crm_client_id) { toast.error("Este material não está vinculado a um cliente do CRM."); return; }
+    navigate(`/socialmidia/clientes/${mat.crm_client_id}/materiais`);
+  };
 
   // Próximas captações: inclui as ATRASADAS (capture_date < hoje e ainda não concluídas),
   // que antes sumiam por causa do filtro capture_date >= hoje. Atrasadas vêm PRIMEIRO
@@ -550,7 +592,7 @@ export default function AgendaCriacao() {
             <p className="text-sm font-display font-bold text-foreground">Agenda de criação</p>
             {/* data-tour="ag-filtros": alvo do passo "Filtrar por tipo" do tour da Agenda. */}
             <div data-tour="ag-filtros" className="flex items-center gap-1.5 flex-wrap">
-              {([["criacao", "Criações", "#4B3FA8"], ["tarefa", "Tarefas", "#0061EE"], ["capta", "Captações", "#FF77B9"], ["post", "Posts", "#EA4918"], ["criapost", "Cria do cliente", CRIA_POST_COLOR]] as const).map(([k, label, color]) => (
+              {([["criacao", "Criações", "#4B3FA8"], ["tarefa", "Tarefas", "#0061EE"], ["capta", "Captações", "#FF77B9"], ["post", "Posts", "#EA4918"], ["criapost", "Cria do cliente", CRIA_POST_COLOR], ["material", "Materiais", MATERIAL_DEFAULT_COLOR]] as const).map(([k, label, color]) => (
                 <button key={k} type="button" onClick={() => toggleFilter(k)}
                   className={cn("flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-body font-semibold transition-colors",
                     filters[k] ? "text-white border-transparent" : "bg-card border-border text-muted-foreground hover:text-foreground")}
@@ -633,7 +675,7 @@ export default function AgendaCriacao() {
                   {(dp, ds) => (
                     <div ref={dp.innerRef} {...dp.droppableProps}
                       className={cn("px-2.5 pb-2.5 rounded-b-xl transition-colors", ds.isDraggingOver && "bg-primary/5 ring-2 ring-primary/40")}>
-                      <div className="flex gap-2 overflow-x-auto pb-1">
+                      <div ref={producaoRef} className="flex gap-2 overflow-x-auto pb-1">
                     {producaoPosts.map((p, idx) => {
                       const cli = extById.get(p.external_client_id);
                       const st = POST_STATUS[p.approval_status ?? "em_producao"];
@@ -671,7 +713,7 @@ export default function AgendaCriacao() {
               {WD.map((w) => <p key={w} className="text-[10px] uppercase tracking-wider font-body font-semibold text-muted-foreground text-center">{w}</p>)}
             </div>
           )}
-          <div ref={weekScrollRef} className={cn(
+          <div ref={gradeRef} className={cn(
             gridLayout
               ? "grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2"
               // Mobile: colunas espaçosas (~85vw, uma por vez com peek da próxima) e
@@ -679,10 +721,10 @@ export default function AgendaCriacao() {
               : "flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth lg:grid lg:grid-cols-7 lg:gap-2 lg:overflow-visible lg:pb-0",
           )}>
             {days.map((d, i) => {
-              const iso = ymd(d); const list = byDay.get(iso) ?? []; const caps = capturesByDay.get(iso) ?? []; const dayTasks = tasksByDay.get(iso) ?? []; const dayPosts = postsByDay.get(iso) ?? []; const criaDay = criaPostsByDay.get(iso) ?? []; const totalDay = caps.length + dayTasks.length + list.length + dayPosts.length + criaDay.length; const isToday = iso === today;
+              const iso = ymd(d); const list = byDay.get(iso) ?? []; const caps = capturesByDay.get(iso) ?? []; const dayTasks = tasksByDay.get(iso) ?? []; const dayPosts = postsByDay.get(iso) ?? []; const criaDay = criaPostsByDay.get(iso) ?? []; const dayMats = materialsByDay.get(iso) ?? []; const totalDay = caps.length + dayTasks.length + list.length + dayPosts.length + criaDay.length + dayMats.length; const isToday = iso === today;
               // Lista única do dia, ordenada por horário (sem hora primeiro). Os index dos
               // Draggable saem daqui (0..n-1 contíguos), casando com a ordem renderizada pro dnd.
-              const dayItems = buildDayItems(caps, dayTasks, list, dayPosts, dayOrders[iso]);
+              const dayItems = buildDayItems(caps, dayTasks, list, dayPosts, dayMats, dayOrders[iso]);
               const outOfMonth = view === "mes" && d.getMonth() !== curMonth;
               // No mês mostramos o dia da semana real do dia (WD[getDay]); na semana idem.
               const showWeekday = view === "semana";
@@ -828,6 +870,42 @@ export default function AgendaCriacao() {
                             </Draggable>
                           );
                         }
+                        if (item.kind === "mat") {
+                          const mat = item.mat;
+                          const matColor = corDoMaterial(mat);
+                          const done = mat.status === "finalizado";
+                          return (
+                            <Draggable key={`mat:${mat.id}`} draggableId={`mat:${mat.id}`} index={idx} disableInteractiveElementBlocking>
+                              {(dragProvided, dragSnapshot) => (
+                                <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
+                                  type="button" title={mat.description ?? undefined}
+                                  onClick={() => openMaterial(mat)}
+                                  style={{ ...dragProvided.draggableProps.style, borderColor: `${matColor}59`, borderLeftColor: matColor, borderLeftWidth: 3, background: `${matColor}${done ? "0A" : "12"}`, ...dragCardStyle }}
+                                  className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors overflow-hidden hover:brightness-95",
+                                    done && "opacity-70",
+                                    dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
+                                  <div className="flex items-center gap-1 min-w-0" style={{ color: matColor }}>
+                                    <DragGrip handleProps={dragProvided.dragHandleProps ?? undefined} />
+                                    <Paperclip className="h-3 w-3 shrink-0" />
+                                    <span className="text-[10px] font-body font-bold truncate flex-1 min-w-0 text-foreground">{nameOf(mat.crm_client_id, null)}</span>
+                                    {/* Etiqueta fixa "Material", mesmo padrão de pill dos outros tipos. */}
+                                    <span className="shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: `${matColor}26`, color: matColor }}>Material</span>
+                                    {/* Check pra finalizar o material sem sair da agenda (igual tarefa/captação). */}
+                                    <span role="button" tabIndex={0} aria-label={done ? "Reabrir material" : "Finalizar material"}
+                                      onClick={(e) => { e.stopPropagation(); updMaterial.mutate({ id: mat.id, patch: { status: done ? "a_fazer" : "finalizado" } }); }}
+                                      className="grid shrink-0 place-items-center cursor-pointer p-2 -my-2 -ml-2 md:p-0 md:m-0">
+                                      <span className={cn("grid h-6 w-6 md:h-4 md:w-4 place-items-center rounded border transition-colors",
+                                        done ? "bg-emerald-500 border-emerald-500 text-white" : "border-current/50 hover:border-emerald-500 hover:text-emerald-600")}>
+                                        {done && <Check className="h-3 w-3" strokeWidth={3} />}
+                                      </span>
+                                    </span>
+                                  </div>
+                                  <p className={cn("text-[12px] font-body font-semibold leading-tight truncate", done ? "line-through text-muted-foreground" : "text-foreground")}>{mat.title}</p>
+                                </button>
+                              )}
+                            </Draggable>
+                          );
+                        }
                         // post
                         const p = item.post;
                         const cli = extById.get(p.external_client_id);
@@ -847,8 +925,9 @@ export default function AgendaCriacao() {
                                   <DragGrip className="text-orange-700/40 dark:text-orange-300/40" handleProps={dragProvided.dragHandleProps ?? undefined} />
                                   <Send className="h-3 w-3 shrink-0" />
                                   <span className="text-[10px] font-body font-bold truncate flex-1 min-w-0">{item.time && <span className="tabular-nums">{item.time} · </span>}{cli?.name ?? "Post"}</span>
-                                  {/* Indicador discreto: post tem link do Drive no campo Ideia/Referência. */}
-                                  {isDriveUrl(p.reference_url) && <HardDrive className="h-3 w-3 shrink-0 opacity-70" aria-label="Tem Drive" />}
+                                  {/* Indicador discreto: post tem link do Drive no campo Ideia/Referência
+                                      (o campo aceita vários links, basta um ser do Drive). */}
+                                  {parseRefLinks(p.reference_url).some((u) => isDriveUrl(u)) && <HardDrive className="h-3 w-3 shrink-0 opacity-70" aria-label="Tem Drive" />}
                                   {/* E indicador da PASTA do Drive (campo distinto drive_folder_url). */}
                                   {p.drive_folder_url && <FolderOpen className="h-3 w-3 shrink-0 text-primary opacity-80" aria-label="Tem pasta no Drive" />}
                                   {st && <span className={cn("shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}
@@ -1057,8 +1136,10 @@ export default function AgendaCriacao() {
         const cri = byDay.get(iso) ?? []; const pts = postsByDay.get(iso) ?? [];
         // Posts do Cria do cliente (5o tipo): entram no modal e na contagem, iguais à célula.
         const criaCli = criaPostsByDay.get(iso) ?? [];
+        // Materiais com prazo no dia (6o tipo).
+        const mats = materialsByDay.get(iso) ?? [];
         // Mesma ordenação da grade (ordem manual do dia quando houver; senão por horário).
-        const items = buildDayItems(caps, tks, cri, pts, dayOrders[iso]);
+        const items = buildDayItems(caps, tks, cri, pts, mats, dayOrders[iso]);
         const d = parseDateOnly(iso);
         const rowCls = "w-full flex items-center gap-2.5 rounded-xl border border-border p-2.5 text-left hover:border-primary/50 hover:bg-primary/5 transition-colors";
         const dot = (c: string) => <span className="h-2 w-2 rounded-full shrink-0" style={{ background: c }} />;
@@ -1071,6 +1152,7 @@ export default function AgendaCriacao() {
                 {items.map((item) => {
                   if (item.kind === "cria") { const c = item.cria; return <button key={`c${c.id}`} onClick={() => { setDayModal(null); setEditCreation(c); }} className={rowCls}>{dot("#4B3FA8")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}</span><span className="ml-auto text-[10px] text-muted-foreground">Criação</span></button>; }
                   if (item.kind === "task") { const t = item.task; const isLead = !!t.crm_lead_id; const dotColor = corDaTarefa(t); return <button key={`t${t.id}`} onClick={() => { setDayModal(null); setEditTask(t); }} className={rowCls}>{dot(dotColor)}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{t.title}</span><span className="ml-auto text-[10px] text-muted-foreground">Tarefa</span></button>; }
+                  if (item.kind === "mat") { const mt = item.mat; const done = mt.status === "finalizado"; return <button key={`m${mt.id}`} onClick={() => { setDayModal(null); openMaterial(mt); }} className={rowCls}>{dot(corDoMaterial(mt))}<span className={cn("text-[13px] font-body font-semibold truncate", done ? "line-through text-muted-foreground" : "text-foreground")}>{mt.title}</span><span className="ml-auto text-[10px] text-muted-foreground shrink-0">Material</span></button>; }
                   if (item.kind === "cap") { const c = item.cap; return <button key={`p${c.id}`} onClick={() => { setDayModal(null); setEditCap(c); }} className={rowCls}>{dot("#FF77B9")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}{c.capture_time ? ` · ${c.capture_time.slice(0, 5)}` : ""}</span><span className="ml-auto text-[10px] text-muted-foreground">Captação</span></button>; }
                   const p = item.post; const st = POST_STATUS[p.approval_status ?? "em_producao"]; return <button key={`o${p.id}`} onClick={() => { setDayModal(null); openPost(p); }} className={rowCls}>{dot("#EA4918")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{p.title || "Post"}</span>{st && <span className={cn("ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}</button>;
                 })}
@@ -1533,14 +1615,16 @@ function PostEditDialog({ post, clientName, onClose, onSave, onOpenClient, savin
       setDlId(null);
     }
   };
+  // O campo Ideia/Referência aceita VÁRIOS links (um por linha).
+  const refLinks = parseRefLinks(post?.reference_url);
   // Link do Drive pra atalho "Abrir no Drive": prioriza o campo Ideia/Referência quando
-  // for link do Drive; senão pega a view_url do primeiro anexo do Drive do post.
+  // algum link for do Drive; senão pega a view_url do primeiro anexo do Drive do post.
+  const refDriveUrl = refLinks.find((u) => isDriveUrl(u)) ?? null;
   const driveUrl = (() => {
-    if (isDriveUrl(post?.reference_url)) return post!.reference_url;
+    if (refDriveUrl) return refDriveUrl;
     const att = attachments.find((m) => isDriveMedia(m) && !!m.view_url);
     return att?.view_url ?? null;
   })();
-  const refUrl = post?.reference_url?.trim() || null;
   if (open && post && seeded !== post.id) {
     setSeeded(post.id);
     setTitle(post.title ?? "");
@@ -1623,24 +1707,24 @@ function PostEditDialog({ post, clientName, onClose, onSave, onOpenClient, savin
                 </div>
               )}
 
-            {/* Link de referência / ideia (pode ser Drive ou qualquer link). */}
-            {refUrl && (
-              <a href={refUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 group pt-0.5">
+            {/* Links de referência / ideia (podem ser do Drive ou qualquer link). */}
+            {refLinks.map((url, i) => (
+              <a key={`ref-${i}`} href={refLinkHref(url)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 group pt-0.5">
                 <span className="shrink-0 grid h-9 w-9 place-items-center rounded-lg border border-border bg-card text-muted-foreground">
-                  {isDriveUrl(refUrl) ? <HardDrive className="h-4 w-4 text-primary" /> : <Link2 className="h-4 w-4" />}
+                  {isDriveUrl(url) ? <HardDrive className="h-4 w-4 text-primary" /> : <Link2 className="h-4 w-4" />}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-[12px] font-body font-semibold text-primary group-hover:underline truncate">
-                    {isDriveUrl(refUrl) ? "Abrir referência no Drive" : "Abrir referência"}
+                    {isDriveUrl(url) ? "Abrir referência no Drive" : "Abrir referência"}{refLinks.length > 1 ? ` ${i + 1}` : ""}
                   </span>
-                  <span className="block text-[10px] font-body text-muted-foreground truncate">{refUrl}</span>
+                  <span className="block text-[10px] font-body text-muted-foreground truncate">{url}</span>
                 </span>
                 <span className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border text-muted-foreground group-hover:text-primary transition-colors"><ExternalLink className="h-4 w-4" /></span>
               </a>
-            )}
+            ))}
 
             {/* Atalho direto pro Drive do post quando não há reference_url do Drive mas há anexo do Drive. */}
-            {driveUrl && !(refUrl && isDriveUrl(refUrl)) && (
+            {driveUrl && !refDriveUrl && (
               <button type="button" onClick={() => window.open(driveUrl, "_blank", "noopener,noreferrer")}
                 className="inline-flex items-center gap-1.5 self-start rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-body font-semibold text-foreground hover:border-primary/50 hover:bg-primary/[0.06] transition-colors">
                 <HardDrive className="h-3.5 w-3.5 text-primary" /> Abrir no Drive

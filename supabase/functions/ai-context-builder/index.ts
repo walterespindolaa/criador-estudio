@@ -1003,40 +1003,66 @@ NICHO: ${data.nicho || 'geral'}`
         maxTokens = 8192
         break
       case 'client-report-insight':
-        operationPrompt = `Você é um gestor de social media sênior escrevendo a análise de um relatório mensal pro cliente.
+        operationPrompt = `Você é um gestor de social media sênior escrevendo, PARA O CLIENTE, a leitura do período no relatório dele.
 
-REGRA DE OURO: os números (alcance, visualizações, curtidas, comentários, interações) JÁ aparecem em cards no relatório. NÃO os repita como lista nem reescreva "teve X de alcance e Y curtidas". Isso é repetição inútil. Seu trabalho é INTERPRETAR.
+REGRA DE OURO: todos os números já aparecem em cards e tabelas no relatório. NÃO os repita em lista, não reescreva "teve X de alcance e Y curtidas". Seu trabalho é INTERPRETAR e defender o trabalho com argumento, não descrever planilha.
 
-O QUE FAZER:
-- Calcule e comente a TAXA DE ENGAJAMENTO (interações ÷ alcance) e compare com referência saudável (~3% a 6%). Diga se está acima/abaixo.
-- Identifique o GARGALO: o problema é alcance (pouca gente vendo) ou conversão/engajamento (gente vê mas não interage)? Aponte qual.
-- Leia os DESTAQUES: qual formato puxou resultado e o que isso sugere.
-- Explique o PORQUÊ provável, não só o "o quê". Conecte ao segmento/persona quando houver.
-- Sem números reais de Instagram? Aí sim fale da produção/fluxo.
+ESTRUTURA DO RACIOCÍNIO (nessa ordem):
+1. ENTREGA: quantas peças foram publicadas e como isso se compara ao período anterior. Se caiu, não esconda: explique.
+2. RESULTADO: taxa de engajamento (interações ÷ alcance) contra a referência saudável (~3% a 6%). Diga se está acima ou abaixo.
+3. GARGALO: o problema é ALCANCE (pouca gente vendo) ou ENGAJAMENTO (gente vê e não interage)? Escolha um e justifique.
+4. O QUE FUNCIONOU: use o destaque do período e o formato campeão pra dizer o que repetir. Se houver pior desempenho, use como aprendizado, nunca como culpa.
+5. FLUXO: se houver peças paradas esperando aprovação ou tempo de aprovação alto, diga isso com educação e objetividade. É informação de gestão, não cobrança.
 
-TOM: profissional, direto, específico. Português BR. Nada de conselho genérico ("poste mais", "use CTA", "seja consistente").
+REGRAS DURAS:
+- Use SOMENTE os dados recebidos. Se um dado veio como "sem comparação" ou não veio, NÃO invente evolução, tendência nem número.
+- Onde vier "primeiro período", trate como primeira medição e não finja que houve crescimento.
+- Nada de conselho genérico ("poste mais", "use CTA", "seja consistente", "invista em vídeo").
+- Não use jargão interno de agência nem nome de ferramenta. O cliente lê isso.
+- Não use travessão (—) no texto.
+
+TOM: profissional, direto, específico, português BR. Como quem explica o mês numa reunião e sabe do que está falando.
 
 ENTREGUE:
-- resumo: 2 a 3 frases de DIAGNÓSTICO (pode citar no máximo 1 número-chave pra embasar, mas o foco é a leitura, não repetir os cards).
-- recomendacoes: 2 a 3 ações ESPECÍFICAS e acionáveis ligadas ao diagnóstico e ao nicho, algo que o cliente não saberia só olhando os cards.
+- resumo: 3 a 5 frases de DIAGNÓSTICO seguindo a estrutura acima (pode citar no máximo 2 números-chave pra embasar).
+- recomendacoes: 2 a 4 ações ESPECÍFICAS pro próximo período, cada uma amarrada a um dado recebido, algo que o cliente não concluiria só olhando os cards.
 
 RESPONDA APENAS com JSON válido, sem texto antes ou depois:
 {"resumo":"string","recomendacoes":["r1","r2"]}`
         userPrompt = `Cliente: ${data.cliente || 'cliente'}
-Mês: ${data.mes || ''}
+Período: ${data.mes || ''}${data.periodoAnterior ? ` | Período anterior de comparação: ${data.periodoAnterior}` : ''}
 
-DESEMPENHO REAL NO INSTAGRAM (mês):
-Posts publicados: ${data.igPosts ?? 0}
-Alcance: ${data.igReach ?? 0} | Visualizações: ${data.igViews ?? 0}
-Curtidas: ${data.igLikes ?? 0} | Comentários: ${data.igComments ?? 0} | Interações: ${data.igInteractions ?? 0}
-Destaques: ${data.igDestaques || '-'}
-
-PRODUÇÃO NO FLUXO (Cria Post):
-Total de posts: ${data.total ?? 0} | Aprovados: ${data.aprovados ?? 0} | Aguardando: ${data.aguardando ?? 0} | Ajustes: ${data.ajustes ?? 0}
+ENTREGA (fluxo de produção e aprovação):
+Publicados no período: ${data.publicados ?? 0}
+Total de peças que passaram pelo período: ${data.total ?? 0}
+Aprovadas: ${data.aprovados ?? 0} | Aguardando o cliente: ${data.aguardando ?? 0} | Em ajuste: ${data.ajustes ?? 0} | Em produção: ${data.emProducao ?? 0}
 Por formato: ${data.formatos || '-'}
-${data.segmento ? `Segmento do cliente: ${data.segmento}` : ''}
+${data.tempoAprovacao ? `Tempo de aprovação: ${data.tempoAprovacao}` : ''}
+${data.pendencias ? `Pendências: ${data.pendencias}` : ''}
+
+DESEMPENHO REAL NO INSTAGRAM:
+${data.igPosts ? `Publicações medidas: ${data.igPosts}
+Alcance: ${data.igReach ?? 0} | Visualizações: ${data.igViews ?? 0}
+Curtidas: ${data.igLikes ?? 0} | Comentários: ${data.igComments ?? 0} | Salvamentos: ${data.igSalvos ?? 0} | Interações: ${data.igInteractions ?? 0}
+${data.taxaEngajamento != null ? `Taxa de engajamento: ${data.taxaEngajamento}%` : ''}
+Top publicações: ${data.igDestaques || '-'}` : 'O cliente não tem Instagram conectado, então NÃO existem métricas de alcance/engajamento. Fale só de entrega, fluxo e formatos, e não especule desempenho.'}
+
+CRUZAMENTO COM O PERÍODO ANTERIOR:
+${data.comparativo || 'Sem período anterior para comparar.'}
+
+LEITURA DO PERÍODO:
+${data.destaque ? `Destaque: ${data.destaque}` : ''}
+${data.piorDesempenho ? `Menor desempenho: ${data.piorDesempenho}` : ''}
+${data.formatoCampeao ? `Formato campeão: ${data.formatoCampeao}` : ''}
+${data.consistencia ? `Consistência: ${data.consistencia}` : ''}
+${data.seguidores ? `Seguidores: ${data.seguidores}` : ''}
+${data.stories ? `Stories: ${data.stories}` : ''}
+
+CONTEXTO DO CLIENTE:
+${data.segmento ? `Segmento: ${data.segmento}` : ''}
 ${data.servicos ? `Serviços contratados: ${data.servicos}` : ''}
-${data.persona ? `Persona/público-alvo: ${data.persona}` : ''}`
+${data.persona ? `Persona/público-alvo: ${data.persona}` : ''}
+${data.titulos ? `Pautas do período: ${data.titulos}` : ''}`
         maxTokens = 8192
         break
       case 'insights-reading':

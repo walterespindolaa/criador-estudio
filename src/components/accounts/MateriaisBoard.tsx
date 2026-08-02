@@ -1,4 +1,8 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type CSSProperties } from "react";
+import {
+  DragDropContext, Droppable, Draggable,
+  type DropResult, type DraggableProvidedDragHandleProps, type DraggableProvidedDraggableProps,
+} from "@hello-pangea/dnd";
 import {
   useClientMaterials, type ClientMaterial, type MaterialAttachment, type MaterialStatus,
 } from "@/hooks/useClientMaterials";
@@ -12,7 +16,9 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { confirmar } from "@/components/shared/Confirm";
-import { Plus, MoreVertical, Loader2, User, CalendarDays, Paperclip, Upload, Link2, X, FileText, ExternalLink } from "lucide-react";
+import { Plus, MoreVertical, Loader2, User, CalendarDays, Paperclip, Upload, Link2, X, FileText, ExternalLink, GripVertical, Pencil } from "lucide-react";
+import { useDragScroll } from "@/hooks/useDragScroll";
+import { cn } from "@/lib/utils";
 import { parseDateOnly } from "@/lib/date-br";
 import { toast } from "sonner";
 
@@ -34,6 +40,27 @@ function fmtDate(d: string | null): string | null {
 type FormState = { title: string; description: string; due_date: string; attachments: MaterialAttachment[] };
 const EMPTY: FormState = { title: "", description: "", due_date: "", attachments: [] };
 
+// ARRASTE NO KANBAN DE MATERIAIS (mesmo padrão da Agenda, e pelos mesmos motivos):
+//  1) disableInteractiveElementBlocking em cada <Draggable>: sem isso o dnd cancela o
+//     arraste quando o toque começa em cima de qualquer coisa interativa dentro do card
+//     (aqui tem link de anexo, lápis e o menu de 3 pontos).
+//  2) A ALÇA é só o GRIP (⠿), nunca o card inteiro. Quando o card todo vira alça ele
+//     ganha touch-action:none (regra global do index.css que casa
+//     [data-rfd-drag-handle-draggable-id]) e a página para de rolar no celular em cima
+//     dos cards. Com a alça no grip, o corpo do card rola nativo e o toque simples edita.
+//  3) Alvo de toque do grip ampliado no mobile (p-2 -m-2 ≈ 40px) sem inflar o visual.
+const dragCardStyle: CSSProperties = { WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" };
+
+function DragGrip({ handleProps }: { handleProps?: DraggableProvidedDragHandleProps }) {
+  return (
+    <span {...(handleProps ?? {})} aria-label="Arrastar para outra coluna"
+      onClick={(e) => e.stopPropagation()}
+      className="shrink-0 grid place-items-center rounded text-muted-foreground/50 hover:text-muted-foreground cursor-grab active:cursor-grabbing touch-none p-2 -m-2 md:p-1 md:-m-1">
+      <GripVertical className="h-4 w-4" />
+    </span>
+  );
+}
+
 export function MateriaisBoard({ clientId, clientName }: { clientId: string; clientName: string }) {
   const { materials, isLoading, isError, createMaterial, updateMaterial, deleteMaterial, uploadAttachment } = useClientMaterials(clientId);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -42,6 +69,7 @@ export function MateriaisBoard({ clientId, clientName }: { clientId: string; cli
   const [driveUrl, setDriveUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const boardRef = useDragScroll<HTMLDivElement>();
 
   const openNew = () => { setEditing(null); setForm(EMPTY); setDriveUrl(""); setDialogOpen(true); };
   const openEdit = (m: ClientMaterial) => {
@@ -105,6 +133,19 @@ export function MateriaisBoard({ clientId, clientName }: { clientId: string; cli
     deleteMaterial.mutate(m.id);
   };
 
+  // Soltar o card numa coluna = mudar o status (mesma mutation do menu de 3 pontos, que
+  // já é otimista). Reordenar DENTRO da mesma coluna não é persistido: a lista é ordenada
+  // por created_at e a coluna `position` da tabela nunca foi usada, então gravar ordem aqui
+  // exigiria migração. Soltar na mesma coluna simplesmente não faz nada.
+  const onDragEnd = (result: DropResult) => {
+    const { source, destination, draggableId } = result;
+    if (!destination) return;
+    if (destination.droppableId === source.droppableId) return;
+    const m = materials.find((x) => x.id === draggableId);
+    if (!m) return;
+    move(m, destination.droppableId as MaterialStatus);
+  };
+
   const saving = createMaterial.isPending || updateMaterial.isPending;
   const byStatus = (s: MaterialStatus) => materials.filter((m) => m.status === s);
   const pedidosCliente = materials.filter((m) => m.requested_by === "cliente" && m.status === "solicitado").length;
@@ -133,31 +174,50 @@ export function MateriaisBoard({ clientId, clientName }: { clientId: string; cli
         <p className="text-sm text-muted-foreground font-body py-10 text-center">Não consegui carregar os materiais.</p>
       ) : (
         // Mobile-first: colunas empilham; a partir de md vira kanban horizontal com scroll.
-        <div className="flex flex-col gap-4 md:flex-row md:gap-3 md:overflow-x-auto md:pb-2 md:-mx-1 md:px-1">
-          {COLUMNS.map((col) => {
-            const items = byStatus(col.key);
-            return (
-              <section key={col.key} className="md:w-[260px] md:shrink-0">
-                <div className="flex items-center gap-2 mb-2.5 px-1">
-                  <span className={`w-2 h-2 rounded-full ${col.dot}`} />
-                  <h3 className="text-sm font-display font-bold text-foreground">{col.label}</h3>
-                  <span className="text-[11px] font-body text-muted-foreground">{items.length}</span>
-                </div>
-                <div className="space-y-2.5 md:min-h-[60px]">
-                  {items.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-border/70 py-6 text-center text-[12px] text-muted-foreground font-body">
-                      Vazio
-                    </div>
-                  ) : (
-                    items.map((m) => (
-                      <MaterialCard key={m.id} m={m} onEdit={() => openEdit(m)} onRemove={() => remove(m)} onMove={(s) => move(m, s)} />
-                    ))
-                  )}
-                </div>
-              </section>
-            );
-          })}
-        </div>
+        <DragDropContext onDragEnd={onDragEnd}>
+          {/* Clicar no vazio e arrastar pro lado rola o board (só mouse, e só no
+              md+ onde ele vira kanban horizontal: no mobile não há o que rolar). */}
+          <div ref={boardRef} className="flex flex-col gap-4 md:flex-row md:gap-3 md:overflow-x-auto md:pb-2 md:-mx-1 md:px-1">
+            {COLUMNS.map((col) => {
+              const items = byStatus(col.key);
+              return (
+                <section key={col.key} className="md:w-[260px] md:shrink-0">
+                  <div className="flex items-center gap-2 mb-2.5 px-1">
+                    <span className={`w-2 h-2 rounded-full ${col.dot}`} />
+                    <h3 className="text-sm font-display font-bold text-foreground">{col.label}</h3>
+                    <span className="text-[11px] font-body text-muted-foreground">{items.length}</span>
+                  </div>
+                  <Droppable droppableId={col.key}>
+                    {(dropProvided, dropSnapshot) => (
+                      <div ref={dropProvided.innerRef} {...dropProvided.droppableProps}
+                        className={cn("space-y-2.5 min-h-[64px] rounded-2xl transition-colors p-0.5 -m-0.5",
+                          dropSnapshot.isDraggingOver && "bg-primary/5 ring-2 ring-primary/30")}>
+                        {items.length === 0 && !dropSnapshot.isDraggingOver && (
+                          <div className="rounded-2xl border border-dashed border-border/70 py-6 text-center text-[12px] text-muted-foreground font-body">
+                            Vazio
+                          </div>
+                        )}
+                        {items.map((m, idx) => (
+                          <Draggable key={m.id} draggableId={m.id} index={idx} disableInteractiveElementBlocking>
+                            {(dragProvided, dragSnapshot) => (
+                              <MaterialCard m={m}
+                                innerRef={dragProvided.innerRef}
+                                draggableProps={dragProvided.draggableProps}
+                                handleProps={dragProvided.dragHandleProps ?? undefined}
+                                dragging={dragSnapshot.isDragging}
+                                onEdit={() => openEdit(m)} onRemove={() => remove(m)} onMove={(s) => move(m, s)} />
+                            )}
+                          </Draggable>
+                        ))}
+                        {dropProvided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </section>
+              );
+            })}
+          </div>
+        </DragDropContext>
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -227,46 +287,69 @@ export function MateriaisBoard({ clientId, clientName }: { clientId: string; cli
   );
 }
 
-function MaterialCard({ m, onEdit, onRemove, onMove }: {
+function MaterialCard({ m, onEdit, onRemove, onMove, innerRef, draggableProps, handleProps, dragging }: {
   m: ClientMaterial; onEdit: () => void; onRemove: () => void; onMove: (s: MaterialStatus) => void;
+  innerRef?: (el: HTMLElement | null) => void;
+  draggableProps?: DraggableProvidedDraggableProps;
+  handleProps?: DraggableProvidedDragHandleProps;
+  dragging?: boolean;
 }) {
   const due = fmtDate(m.due_date);
   const fromClient = m.requested_by === "cliente";
   const atts = m.attachments ?? [];
   return (
-    <article className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+    // O CORPO do card abre a edição num toque só (era o que faltava: antes só pelo menu).
+    // role="button" em vez de <button> pra não aninhar botão dentro de botão (lápis, menu,
+    // links de anexo moram aqui dentro). Cada um deles dá stopPropagation pra não editar.
+    <article ref={innerRef} {...(draggableProps ?? {})}
+      role="button" tabIndex={0}
+      onClick={onEdit}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onEdit(); } }}
+      style={{ ...(draggableProps?.style ?? {}), ...dragCardStyle }}
+      className={cn("rounded-2xl border border-border bg-card p-3 shadow-sm text-left w-full cursor-pointer hover:border-primary/50 hover:shadow-md transition-all",
+        dragging && "shadow-lg ring-2 ring-primary/40")}>
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
+        <div className="min-w-0 flex items-center gap-1.5">
+          <DragGrip handleProps={handleProps} />
           {atts.length > 0 && (
             <span className="inline-flex items-center gap-1 text-[10px] font-body font-bold uppercase tracking-wide text-primary bg-primary/10 rounded-md px-1.5 py-0.5">
               <Paperclip className="h-3 w-3" /> {atts.length} {atts.length > 1 ? "anexos" : "anexo"}
             </span>
           )}
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="text-muted-foreground hover:text-foreground p-1 -mr-1 -mt-1 rounded-lg" aria-label="Ações do material">
-              <MoreVertical className="h-4 w-4" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44">
-            {COLUMNS.filter((c) => c.key !== m.status).map((c) => (
-              <DropdownMenuItem key={c.key} onClick={() => onMove(c.key)}>
-                <span className={`w-2 h-2 rounded-full mr-2 ${c.dot}`} /> Mover p/ {c.label}
-              </DropdownMenuItem>
-            ))}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onEdit}>Editar</DropdownMenuItem>
-            <DropdownMenuItem onClick={onRemove} className="text-red-600 focus:text-red-600">Excluir</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-0.5 shrink-0 -mr-1 -mt-1">
+          {/* Lápis: mesmo atalho visível do kanban de produção (Cria Post). */}
+          <button type="button" onClick={(e) => { e.stopPropagation(); onEdit(); }}
+            className="text-muted-foreground hover:text-primary p-1.5 md:p-1 rounded-lg" aria-label="Editar material">
+            <Pencil className="h-4 w-4 md:h-3.5 md:w-3.5" />
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button onClick={(e) => e.stopPropagation()}
+                className="text-muted-foreground hover:text-foreground p-1.5 md:p-1 rounded-lg" aria-label="Ações do material">
+                <MoreVertical className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44" onClick={(e) => e.stopPropagation()}>
+              {COLUMNS.filter((c) => c.key !== m.status).map((c) => (
+                <DropdownMenuItem key={c.key} onClick={() => onMove(c.key)}>
+                  <span className={`w-2 h-2 rounded-full mr-2 ${c.dot}`} /> Mover p/ {c.label}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onEdit}>Editar</DropdownMenuItem>
+              <DropdownMenuItem onClick={onRemove} className="text-red-600 focus:text-red-600">Excluir</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
       <h4 className="text-sm font-display font-bold text-foreground mt-1.5 leading-snug">{m.title}</h4>
       {m.description && <p className="text-[12px] font-body text-muted-foreground mt-1 line-clamp-2">{m.description}</p>}
       {atts.length > 0 && (
         <div className="mt-2 space-y-1">
           {atts.slice(0, 3).map((a, i) => (
-            <a key={i} href={a.url} target="_blank" rel="noopener noreferrer"
+            // stopPropagation: abrir o anexo NÃO pode abrir o editor do material.
+            <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
               className="flex items-center gap-1.5 text-[11px] font-body text-muted-foreground hover:text-primary hover:underline">
               {a.kind === "drive" ? <Link2 className="h-3 w-3 shrink-0" /> : <FileText className="h-3 w-3 shrink-0" />}
               <span className="truncate">{a.name}</span>

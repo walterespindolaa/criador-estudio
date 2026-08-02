@@ -9,7 +9,7 @@ import { usePdfExport } from "@/hooks/usePdfExport";
 import { useAuth } from "@/contexts/AuthContext";
 import { clientReportInsight } from "@/lib/ai/claude";
 import { useCrmClients } from "@/hooks/useCrm";
-import { parseDateOnly } from "@/lib/date-br";
+import { parseDateOnly, toISODateBR } from "@/lib/date-br";
 import { FORMAT_LABELS } from "@/lib/constants";
 import type { ExternalClient, ExternalPost } from "@/hooks/useCriaPost";
 import {
@@ -25,8 +25,11 @@ type IgMediaRow = {
   post_id?: string | null;
   linked_title?: string | null; linked_format?: string | null; linked_hook?: string | null;
 };
+// Série diária da conta (seguidores/alcance). A RPC só devolve `daily` depois da
+// migration nova (ver entrega); antes disso vem undefined e a seção some sozinha.
+type IgDailyRow = { date: string; followers: number | null; reach: number | null };
 // Retorno da RPC get_client_ig_report (mídias + demografia + stories do cliente).
-type IgReport = { media: IgMediaRow[]; audience: AudienceLike[]; stories: StoryLike[] };
+type IgReport = { media: IgMediaRow[]; audience: AudienceLike[]; stories: StoryLike[]; daily: IgDailyRow[] };
 const MEDIA_PT: Record<string, string> = { IMAGE: "Imagem", VIDEO: "Vídeo", REELS: "Reels", CAROUSEL_ALBUM: "Carrossel" };
 const engOf = (m: Record<string, number> | null) =>
   m ? (Number(m.likes) || 0) + (Number(m.comments) || 0) + (Number(m.saved) || 0) + (Number(m.shares) || 0) : 0;
@@ -37,7 +40,151 @@ const MONTHS = [
 ];
 const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
+// ── Status do fluxo (as MESMAS cinco colunas do kanban do Cria Post) ──
+// O relatório antigo só contava aprovado/pendente/ajuste_solicitado, então post
+// "postado" e "em produção" sumiam da conta e o cliente via 14 posts com tudo
+// zerado. A lista abaixo é a fonte única e tem que espelhar APPROVAL_COLS.
+const STATUS_KEYS = ["postado", "aprovado", "pendente", "ajuste_solicitado", "em_producao"] as const;
+type StatusKey = (typeof STATUS_KEYS)[number];
+const STATUS_LABEL: Record<StatusKey, string> = {
+  postado: "Publicados",
+  aprovado: "Aprovados",
+  pendente: "Aguardando você",
+  ajuste_solicitado: "Em ajuste",
+  em_producao: "Em produção",
+};
+const statusOf = (p: ExternalPost): StatusKey =>
+  (STATUS_KEYS as readonly string[]).includes(p.approval_status ?? "")
+    ? (p.approval_status as StatusKey)
+    : "pendente";
+
+const DAY_MS = 86400000;
+
+// Dia (YYYY-MM-DD, fuso BR) em que o post foi publicado. Só existe pra quem já
+// está em "postado": a data planejada é o dia que foi ao ar; sem ela, caímos no
+// instante em que a peça foi movida pra postado.
+function publishedDayOf(p: ExternalPost): string | null {
+  if (statusOf(p) !== "postado") return null;
+  if (p.scheduled_date) return p.scheduled_date;
+  if (p.approval_updated_at) return toISODateBR(new Date(p.approval_updated_at));
+  return p.created_at ? toISODateBR(new Date(p.created_at)) : null;
+}
+
+type PeriodStats = {
+  posts: ExternalPost[];
+  publishedPosts: ExternalPost[];
+  total: number;
+  published: number;
+  byStatus: Record<StatusKey, number>;
+  byFormat: Record<string, number>;
+  byPlatform: Record<string, number>;
+  publishedDays: Set<string>;
+  // Média de dias entre criar a peça e o cliente aprovar. Só dá pra medir o
+  // ciclo inteiro: não existe histórico de transições no banco (ver entrega).
+  cycleDays: number | null;
+  cycleSample: number;
+};
+
+// Um post "pertence" ao período se foi criado, agendado OU publicado nele.
+// Antes olhávamos só created_at, então post feito em junho e publicado em julho
+// não aparecia no relatório de julho, que é justamente o que o cliente recebeu.
+function buildStats(all: ExternalPost[], since: Date, until: Date): PeriodStats {
+  const sinceDay = toISODateBR(since);
+  // `until` é exclusivo; comparação de string precisa do último dia incluído.
+  const untilDay = toISODateBR(new Date(until.getTime() - 1));
+  const inRange = (d: Date | null) => !!d && d >= since && d < until;
+  const dayIn = (s: string | null) => !!s && s >= sinceDay && s <= untilDay;
+
+  const posts = all.filter((p) => {
+    const created = p.created_at ? new Date(p.created_at) : null;
+    return inRange(created) || dayIn(p.scheduled_date) || dayIn(publishedDayOf(p));
+  });
+
+  const byStatus = Object.fromEntries(STATUS_KEYS.map((k) => [k, 0])) as Record<StatusKey, number>;
+  const byFormat: Record<string, number> = {};
+  const byPlatform: Record<string, number> = {};
+  const publishedDays = new Set<string>();
+  const publishedPosts: ExternalPost[] = [];
+  let cycleSum = 0;
+  let cycleSample = 0;
+
+  for (const p of posts) {
+    byStatus[statusOf(p)] += 1;
+    byFormat[p.format] = (byFormat[p.format] ?? 0) + 1;
+    byPlatform[p.platform] = (byPlatform[p.platform] ?? 0) + 1;
+    const day = publishedDayOf(p);
+    if (dayIn(day)) { publishedDays.add(day!); publishedPosts.push(p); }
+    if (statusOf(p) === "aprovado" && p.approval_updated_at && p.created_at) {
+      const d = (new Date(p.approval_updated_at).getTime() - new Date(p.created_at).getTime()) / DAY_MS;
+      if (d >= 0 && d < 180) { cycleSum += d; cycleSample += 1; }
+    }
+  }
+
+  return {
+    posts, publishedPosts,
+    total: posts.length,
+    published: publishedPosts.length,
+    byStatus, byFormat, byPlatform, publishedDays,
+    cycleDays: cycleSample > 0 ? cycleSum / cycleSample : null,
+    cycleSample,
+  };
+}
+
+// Título legível de uma mídia do IG: prefere o nome da peça que a agência
+// produziu; sem vínculo, usa o começo da legenda.
+const mediaTitle = (r: IgMediaRow) =>
+  r.linked_title
+  || (r.caption ? r.caption.replace(/\s+/g, " ").trim().slice(0, 70) : "")
+  || MEDIA_PT[r.media_type ?? ""]
+  || "Publicação";
+
+// Somatório de desempenho de um conjunto de mídias do IG. Extraído pra fora do
+// componente porque agora roda duas vezes: período atual e período anterior.
+function perfOf(rows: IgMediaRow[]) {
+  const sum = (k: string) => rows.reduce((a, r) => a + (Number(r.metrics?.[k]) || 0), 0);
+  const views = rows.reduce((a, r) => a + (Number(r.metrics?.views ?? r.metrics?.plays) || 0), 0);
+  const reach = sum("reach");
+  const interactions = sum("total_interactions") || (sum("likes") + sum("comments") + sum("saved") + sum("shares"));
+  return {
+    has: rows.length > 0,
+    posts: rows.length,
+    reach, likes: sum("likes"), comments: sum("comments"), saved: sum("saved"), views, interactions,
+    // Taxa de engajamento sobre alcance. Sem alcance não inventamos nada.
+    engRate: reach > 0 ? (interactions / reach) * 100 : null,
+    days: new Set(rows.filter((r) => r.posted_at).map((r) => toISODateBR(new Date(r.posted_at!)))).size,
+  };
+}
+
+// ── Comparação com o período anterior ──
+// `prev = null` significa "não dá pra comparar" e vira "primeiro período" na tela.
+type Delta = { dir: "up" | "down" | "flat"; pct: number | null; prev: number; diff: number } | null;
+function deltaOf(cur: number, prev: number | null): Delta {
+  if (prev === null) return null;
+  const diff = Math.round((cur - prev) * 10) / 10;
+  const dir = diff > 0 ? "up" : diff < 0 ? "down" : "flat";
+  // Divisão por zero: sair de 0 pra qualquer coisa não tem percentual honesto.
+  const pct = prev === 0 ? null : Math.round((diff / prev) * 100);
+  return { dir, pct, prev, diff };
+}
+
 export type ReportPeriod = { key: string; label: string; since: Date; until: Date };
+
+// Período equivalente imediatamente anterior. Mês fechado vira o mês anterior
+// inteiro (julho contra junho); janela solta ("últimos 30 dias") vira a janela
+// de mesma duração logo antes.
+function previousOf(p: ReportPeriod): { since: Date; until: Date; label: string } {
+  const s = p.since, u = p.until;
+  const isFullMonth =
+    s.getDate() === 1 && u.getDate() === 1 &&
+    (u.getFullYear() * 12 + u.getMonth()) - (s.getFullYear() * 12 + s.getMonth()) === 1;
+  if (isFullMonth) {
+    const prev = new Date(s.getFullYear(), s.getMonth() - 1, 1);
+    return { since: prev, until: s, label: `${MONTHS[prev.getMonth()]} de ${prev.getFullYear()}` };
+  }
+  const span = u.getTime() - s.getTime();
+  const days = Math.max(1, Math.round(span / DAY_MS));
+  return { since: new Date(s.getTime() - span), until: s, label: `os ${days} dias anteriores` };
+}
 
 function startOfDay(d: Date): Date {
   const out = new Date(d);
@@ -161,27 +308,42 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     updateActive();
   };
 
-  const monthPosts = useMemo(
-    () => posts.filter((p) => {
-      if (!p.created_at) return false;
-      const t = new Date(p.created_at);
-      return t >= period.since && t < period.until;
-    }),
-    [posts, period],
+  const prevPeriod = useMemo(() => previousOf(period), [period]);
+  const stats = useMemo(() => buildStats(posts, period.since, period.until), [posts, period]);
+  const prevStats = useMemo(() => buildStats(posts, prevPeriod.since, prevPeriod.until), [posts, prevPeriod]);
+
+  // Só faz sentido comparar se existia operação antes do período. Sem isso, o
+  // relatório mostraria "-100%" de um mês que nem existiu.
+  const hasPriorHistory = useMemo(
+    () => posts.some((p) => p.created_at && new Date(p.created_at) < period.since),
+    [posts, period.since],
   );
 
-  const stats = useMemo(() => {
-    const byFormat: Record<string, number> = {};
-    const byPlatform: Record<string, number> = {};
-    const byStatus: Record<string, number> = { aprovado: 0, pendente: 0, ajuste_solicitado: 0 };
-    for (const p of monthPosts) {
-      byFormat[p.format] = (byFormat[p.format] ?? 0) + 1;
-      byPlatform[p.platform] = (byPlatform[p.platform] ?? 0) + 1;
-      const s = p.approval_status ?? "pendente";
-      byStatus[s] = (byStatus[s] ?? 0) + 1;
-    }
-    return { total: monthPosts.length, byFormat, byPlatform, byStatus };
-  }, [monthPosts]);
+  // Posts do período em ordem de acontecimento (publicado > agendado > criado).
+  const monthPosts = useMemo(() => {
+    const keyOf = (p: ExternalPost) => publishedDayOf(p) ?? p.scheduled_date ?? (p.created_at ? toISODateBR(new Date(p.created_at)) : "");
+    return [...stats.posts].sort((a, b) => keyOf(a).localeCompare(keyOf(b)));
+  }, [stats.posts]);
+
+  // O que ficou parado esperando o cliente. É a foto de AGORA, então só entra em
+  // relatório de período corrente: num relatório de junho não faz sentido cobrar
+  // uma peça que travou em agosto.
+  const periodIsCurrent = period.until.getTime() > Date.now();
+  const stuck = useMemo(() => {
+    if (!periodIsCurrent) return [];
+    const now = Date.now();
+    return posts
+      .filter((p) => {
+        const s = statusOf(p);
+        return s === "pendente" || s === "ajuste_solicitado";
+      })
+      .map((p) => {
+        const ref = p.approval_updated_at ?? p.created_at;
+        return { p, days: ref ? Math.floor((now - new Date(ref).getTime()) / DAY_MS) : 0 };
+      })
+      .filter((x) => x.days >= 7)
+      .sort((a, b) => b.days - a.days);
+  }, [posts, periodIsCurrent]);
 
   const monthLabel = period.label;
 
@@ -205,22 +367,30 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       });
       if (error) throw error;
       const d = (data as Partial<IgReport> | null) ?? {};
-      return { media: d.media ?? [], audience: d.audience ?? [], stories: d.stories ?? [] };
+      return { media: d.media ?? [], audience: d.audience ?? [], stories: d.stories ?? [], daily: d.daily ?? [] };
+    },
+  });
+  // Mesma RPC no período ANTERIOR, só pra comparar. É a mesma checagem de
+  // segurança, então não abre nada novo.
+  const { data: prevIgReport } = useQuery<IgMediaRow[]>({
+    queryKey: ["report-ig-prev", client.crm_client_id, prevPeriod.since.toISOString(), prevPeriod.until.toISOString()],
+    enabled: open && !!client.crm_client_id,
+    queryFn: async () => {
+      const { data, error } = await sbRpcR("get_client_ig_report", {
+        _crm_client_id: client.crm_client_id,
+        _since: prevPeriod.since.toISOString(),
+        _until: prevPeriod.until.toISOString(),
+      });
+      if (error) throw error;
+      return ((data as Partial<IgReport> | null)?.media) ?? [];
     },
   });
   const igMedia = useMemo<IgMediaRow[]>(() => igReport?.media ?? [], [igReport]);
+  const prevIgMedia = useMemo<IgMediaRow[]>(() => prevIgReport ?? [], [prevIgReport]);
   const audience = useMemo(() => computeAudienceBreakdown(igReport?.audience), [igReport]);
   const stories = useMemo(() => computeStoriesSummary(igReport?.stories), [igReport]);
-  const perf = useMemo(() => {
-    const sum = (k: string) => igMedia.reduce((a, r) => a + (Number(r.metrics?.[k]) || 0), 0);
-    const views = igMedia.reduce((a, r) => a + (Number(r.metrics?.views ?? r.metrics?.plays) || 0), 0);
-    return {
-      has: igMedia.length > 0,
-      posts: igMedia.length,
-      reach: sum("reach"), likes: sum("likes"), comments: sum("comments"), saved: sum("saved"), views,
-      interactions: sum("total_interactions") || (sum("likes") + sum("comments") + sum("saved") + sum("shares")),
-    };
-  }, [igMedia]);
+  const perf = useMemo(() => perfOf(igMedia), [igMedia]);
+  const prevPerf = useMemo(() => perfOf(prevIgMedia), [prevIgMedia]);
 
   // Ranking por engajamento (desempate por alcance) + melhor horário (hora do top post).
   const ranking = useMemo(
@@ -312,6 +482,108 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       .map(([h, v]) => ({ h, avg: Math.round(v.soma / v.n), n: v.n }))
       .sort((a, b) => b.avg - a.avg);
   }, [pieces]);
+
+  // ── Camada de leitura: destaque, formato campeão, consistência, seguidores ──
+
+  // Melhor e pior do período por alcance. O "pior" só entra com amostra que
+  // justifique a comparação, senão vira julgamento de um post solto.
+  const highlight = useMemo(() => {
+    const withReach = igMedia.filter((r) => (Number(r.metrics?.reach) || 0) > 0);
+    if (withReach.length === 0) return null;
+    const sorted = [...withReach].sort((a, b) => (Number(b.metrics?.reach) || 0) - (Number(a.metrics?.reach) || 0));
+    const best = sorted[0];
+    const worst = sorted.length >= 4 ? sorted[sorted.length - 1] : null;
+    const avg = Math.round(withReach.reduce((a, r) => a + (Number(r.metrics?.reach) || 0), 0) / withReach.length);
+    return {
+      best: {
+        title: mediaTitle(best), reach: Number(best.metrics?.reach) || 0,
+        saved: Number(best.metrics?.saved) || 0, interactions: engOf(best.metrics),
+        type: MEDIA_PT[best.media_type ?? ""] ?? best.media_type ?? "Publicação",
+        posted_at: best.posted_at, thumbnail_url: best.thumbnail_url,
+        // Quanto o campeão rendeu acima da média do período.
+        vsAvg: avg > 0 ? Math.round((((Number(best.metrics?.reach) || 0) / avg) - 1) * 100) : null,
+      },
+      worst: worst ? {
+        title: mediaTitle(worst), reach: Number(worst.metrics?.reach) || 0,
+        type: MEDIA_PT[worst.media_type ?? ""] ?? worst.media_type ?? "Publicação",
+      } : null,
+      avg,
+    };
+  }, [igMedia]);
+
+  // Formato campeão por alcance médio. Exige 2+ publicações no formato pra não
+  // eleger um vencedor por acaso.
+  const bestFormat = useMemo(() => {
+    const list = cross.byFormat.filter((r) => r.count >= 2);
+    const pool = list.length >= 2 ? list : cross.byFormat;
+    if (pool.length < 2) return null;
+    const ord = [...pool].sort((a, b) => b.avgReach - a.avgReach);
+    const top = ord[0], bottom = ord[ord.length - 1];
+    if (top.avgReach <= 0) return null;
+    return {
+      label: top.label, avg: top.avgReach, count: top.count,
+      vs: bottom.label, vsAvg: bottom.avgReach,
+      lift: bottom.avgReach > 0 ? Math.round(((top.avgReach / bottom.avgReach) - 1) * 100) : null,
+    };
+  }, [cross.byFormat]);
+
+  // Consistência: dias distintos com publicação. Usa o dado real do IG quando a
+  // conta está conectada e completa com o que foi marcado como postado no fluxo.
+  const consistency = useMemo(() => {
+    const days = new Set<string>(stats.publishedDays);
+    igMedia.forEach((r) => { if (r.posted_at) days.add(toISODateBR(new Date(r.posted_at))); });
+    const prevDays = new Set<string>(prevStats.publishedDays);
+    prevIgMedia.forEach((r) => { if (r.posted_at) prevDays.add(toISODateBR(new Date(r.posted_at))); });
+    const spanDays = Math.max(1, Math.round((period.until.getTime() - period.since.getTime()) / DAY_MS));
+    const canCompare = hasPriorHistory || prevDays.size > 0;
+    return {
+      days: days.size,
+      spanDays,
+      prevDays: canCompare ? prevDays.size : null,
+      delta: deltaOf(days.size, canCompare ? prevDays.size : null),
+    };
+  }, [stats.publishedDays, prevStats.publishedDays, igMedia, prevIgMedia, period, hasPriorHistory]);
+
+  // Seguidores no período: primeiro e último ponto da série diária dentro do
+  // recorte. Só aparece quando a RPC devolve `daily` e há pontos suficientes.
+  const followers = useMemo(() => {
+    const rows = (igReport?.daily ?? []).filter((d) => d.date && d.followers != null);
+    if (rows.length < 2) return null;
+    const sorted = [...rows].sort((a, b) => a.date.localeCompare(b.date));
+    const first = sorted[0], last = sorted[sorted.length - 1];
+    const spanDays = Math.round((parseDateOnly(last.date).getTime() - parseDateOnly(first.date).getTime()) / DAY_MS);
+    if (spanDays < 5) return null;
+    return { start: first.followers ?? 0, end: last.followers ?? 0, delta: (last.followers ?? 0) - (first.followers ?? 0), spanDays };
+  }, [igReport?.daily]);
+
+  // Comparações da produção (só existem quando havia operação antes do período).
+  const prodDelta = useMemo(() => {
+    const prevOr = (n: number) => (hasPriorHistory ? n : null);
+    return {
+      published: deltaOf(stats.published, prevOr(prevStats.published)),
+      total: deltaOf(stats.total, prevOr(prevStats.total)),
+      approved: deltaOf(stats.byStatus.aprovado, prevOr(prevStats.byStatus.aprovado)),
+      adjustments: deltaOf(stats.byStatus.ajuste_solicitado, prevOr(prevStats.byStatus.ajuste_solicitado)),
+      cycle: stats.cycleDays !== null && prevStats.cycleDays !== null && hasPriorHistory
+        ? deltaOf(Math.round(stats.cycleDays * 10) / 10, Math.round(prevStats.cycleDays * 10) / 10)
+        : null,
+    };
+  }, [stats, prevStats, hasPriorHistory]);
+
+  // Comparações do Instagram (só quando o período anterior tem mídia coletada).
+  const igDelta = useMemo(() => {
+    const p = prevPerf.has ? prevPerf : null;
+    return {
+      has: !!p,
+      reach: deltaOf(perf.reach, p ? p.reach : null),
+      views: deltaOf(perf.views, p ? p.views : null),
+      interactions: deltaOf(perf.interactions, p ? p.interactions : null),
+      posts: deltaOf(perf.posts, p ? p.posts : null),
+      engRate: perf.engRate !== null && p?.engRate != null
+        ? deltaOf(Math.round(perf.engRate * 10) / 10, Math.round(p.engRate * 10) / 10)
+        : null,
+    };
+  }, [perf, prevPerf]);
 
   const download = async () => {
     setDownloading(true);
@@ -408,16 +680,64 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         .slice(0, 3)
         .map((r) => `${MEDIA_PT[r.media_type ?? ""] ?? r.media_type ?? "post"} (${dtFmt(r.posted_at)}): ${Number(r.metrics?.reach) || 0} alcance, ${engOf(r.metrics)} interações`)
         .join("; ");
+      // Comparação em texto: só mandamos o que dá pra afirmar. Sem período
+      // anterior, dizemos isso em vez de deixar a IA supor evolução.
+      const cmp = (nome: string, cur: number, d: Delta, suf = "") => {
+        if (!d) return `${nome}: ${cur}${suf} (primeiro período com dado, sem comparação)`;
+        const sinal = d.dir === "up" ? "+" : d.dir === "down" ? "-" : "=";
+        const abs = Math.abs(cur - d.prev);
+        return `${nome}: ${cur}${suf} contra ${d.prev}${suf} (${sinal}${abs}${suf}${d.pct !== null ? `, ${d.pct > 0 ? "+" : ""}${d.pct}%` : ""})`;
+      };
+      const comparativo = [
+        cmp("Publicados", stats.published, prodDelta.published),
+        cmp("Total no fluxo", stats.total, prodDelta.total),
+        cmp("Ajustes pedidos", stats.byStatus.ajuste_solicitado, prodDelta.adjustments),
+        cmp("Dias com publicação", consistency.days, consistency.delta),
+        igDelta.has ? cmp("Alcance", perf.reach, igDelta.reach) : null,
+        igDelta.has ? cmp("Interações", perf.interactions, igDelta.interactions) : null,
+        perf.engRate !== null
+          ? cmp("Taxa de engajamento", Math.round(perf.engRate * 10) / 10, igDelta.engRate, "%")
+          : null,
+      ].filter(Boolean).join(" | ");
+
       const res = await clientReportInsight({
         cliente: client.name, mes: monthLabel, total: stats.total,
         formatos: fmt, plataformas: plat,
-        aprovados: stats.byStatus.aprovado ?? 0, aguardando: stats.byStatus.pendente ?? 0, ajustes: stats.byStatus.ajuste_solicitado ?? 0,
+        publicados: stats.published,
+        aprovados: stats.byStatus.aprovado, aguardando: stats.byStatus.pendente,
+        ajustes: stats.byStatus.ajuste_solicitado, emProducao: stats.byStatus.em_producao,
         titulos: monthPosts.map((p) => p.title).slice(0, 20).join("; "),
         segmento: linked?.segment ?? undefined,
         servicos: linked?.services?.length ? linked.services.join(", ") : undefined,
         persona,
         igPosts: perf.posts, igReach: perf.reach, igViews: perf.views, igLikes: perf.likes,
         igComments: perf.comments, igInteractions: perf.interactions, igDestaques: igDestaques || undefined,
+        igSalvos: perf.saved,
+        taxaEngajamento: perf.engRate !== null ? Math.round(perf.engRate * 100) / 100 : undefined,
+        periodoAnterior: prevPeriod.label,
+        comparativo: comparativo || undefined,
+        destaque: highlight
+          ? `"${highlight.best.title}" (${highlight.best.type}): ${highlight.best.reach} de alcance, ${highlight.best.interactions} interações, ${highlight.best.saved} salvamentos${highlight.best.vsAvg !== null ? `, ${highlight.best.vsAvg > 0 ? "+" : ""}${highlight.best.vsAvg}% contra a média do período (${highlight.avg})` : ""}`
+          : undefined,
+        piorDesempenho: highlight?.worst
+          ? `"${highlight.worst.title}" (${highlight.worst.type}): ${highlight.worst.reach} de alcance`
+          : undefined,
+        formatoCampeao: bestFormat
+          ? `${bestFormat.label}, ${bestFormat.avg} de alcance médio em ${bestFormat.count} publicação(ões)${bestFormat.lift !== null ? `, ${bestFormat.lift > 0 ? "+" : ""}${bestFormat.lift}% acima de ${bestFormat.vs}` : ""}`
+          : undefined,
+        consistencia: `publicamos em ${consistency.days} de ${consistency.spanDays} dias do período${consistency.prevDays !== null ? ` (período anterior: ${consistency.prevDays} dias)` : " (primeiro período, sem comparação)"}`,
+        seguidores: followers
+          ? `${followers.delta > 0 ? "+" : ""}${followers.delta} seguidores em ${followers.spanDays} dias (de ${followers.start} para ${followers.end})`
+          : undefined,
+        tempoAprovacao: stats.cycleDays !== null
+          ? `${stats.cycleDays.toFixed(1).replace(".", ",")} dias em média da criação da peça até a aprovação do cliente (${stats.cycleSample} peça(s) aprovada(s) no período)`
+          : undefined,
+        pendencias: stuck.length
+          ? `${stuck.length} peça(s) parada(s) há 7 dias ou mais esperando o cliente. A mais antiga: "${stuck[0].p.title}", ${stuck[0].days} dias.`
+          : undefined,
+        stories: stories.hasData
+          ? `${stories.count} stories, ${stories.reach} de alcance, ${stories.replies} respostas`
+          : undefined,
       }, user?.id);
       if (!res || typeof res.resumo !== "string") throw new Error("formato inesperado");
       const recs = (res.recomendacoes ?? []).map((r) => `<li>${escapeHtml(r)}</li>`).join("");
@@ -428,15 +748,25 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     } catch (e) {
       console.error("Report AI failed", e);
       const msg = e instanceof Error ? e.message : "";
-      // Fallback: gera um resumo automático com os números pra não travar o relatório.
+      // Fallback: resumo automático com os números reais, pra não travar o
+      // relatório. Segue a mesma hierarquia da tela: publicado vem primeiro.
       const fmtList = Object.entries(stats.byFormat).map(([f, v]) => `${FORMAT_LABELS[f] ?? f} (${v})`).join(", ");
-      const aprov = stats.byStatus.aprovado ?? 0;
-      const fallback =
-        `<p><strong>Resumo.</strong> No período (${escapeHtml(monthLabel)}), foram produzidos ${stats.total} post(s) para ${escapeHtml(client.name)}` +
-        (fmtList ? `, ${escapeHtml(fmtList)}` : "") +
-        `. ${aprov} aprovado(s) pelo cliente.</p>` +
-        `<p><strong>Recomendações</strong></p><ul><li>Manter a constância de publicações no próximo mês.</li><li>Priorizar os formatos com melhor desempenho.</li></ul>`;
-      if (editorRef.current) editorRef.current.innerHTML = fallback;
+      const cmpTxt = prodDelta.published
+        ? `, contra ${prodDelta.published.prev} no período anterior`
+        : " (primeiro período com dado)";
+      const linhas = [
+        `<p><strong>Resumo.</strong> Foram publicados ${stats.published} post(s) em ${escapeHtml(monthLabel)}${escapeHtml(cmpTxt)}. ` +
+        `No total, ${stats.total} peça(s) passaram pelo fluxo${fmtList ? `: ${escapeHtml(fmtList)}` : ""}.</p>`,
+      ];
+      if (highlight) {
+        linhas.push(`<p>Destaque do período: “${escapeHtml(highlight.best.title)}”, com ${highlight.best.reach.toLocaleString("pt-BR")} de alcance.</p>`);
+      }
+      const recs: string[] = [];
+      if (bestFormat) recs.push(`Ampliar ${bestFormat.label}, que teve o melhor alcance médio do período.`);
+      if (stuck.length) recs.push(`Destravar as ${stuck.length} peça(s) paradas há mais de 7 dias aguardando aprovação.`);
+      if (recs.length === 0) recs.push("Manter a constância de publicações no próximo período.");
+      linhas.push(`<p><strong>Recomendações</strong></p><ul>${recs.map((r) => `<li>${escapeHtml(r)}</li>`).join("")}</ul>`);
+      if (editorRef.current) editorRef.current.innerHTML = linhas.join("");
       toast.message(
         msg && !/non-2xx/i.test(msg) ? `IA indisponível (${msg}). Gerei um resumo automático, você pode editar.` : "IA indisponível agora. Gerei um resumo automático, você pode editar.",
       );
@@ -445,11 +775,40 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     }
   };
 
-  const statCard = (label: string, value: string | number, color = C.ink) => (
-    <div style={{ flex: 1, border: `1px solid ${C.line}`, borderRadius: 12, padding: "14px 16px" }}>
+  const nb = (n: number) => n.toLocaleString("pt-BR");
+
+  // Linha de variação embaixo do número: seta + percentual + valor anterior.
+  // `invert` serve pros indicadores em que subir é ruim (ajustes, dias parados).
+  const deltaLine = (d: Delta, unit = "", invert = false) => {
+    if (!d) return <div style={{ fontSize: 10.5, color: C.sub, marginTop: 5 }}>primeiro período</div>;
+    if (d.dir === "flat") {
+      return <div style={{ fontSize: 10.5, color: C.sub, marginTop: 5 }}>igual ao período anterior ({nb(d.prev)}{unit})</div>;
+    }
+    const up = d.dir === "up";
+    const good = invert ? !up : up;
+    const abs = Math.abs(d.diff);
+    const absTxt = Number.isInteger(abs) ? nb(abs) : abs.toFixed(1).replace(".", ",");
+    return (
+      <div style={{ fontSize: 10.5, marginTop: 5, color: good ? C.green : C.orange, fontWeight: 600 }}>
+        {up ? "▲" : "▼"} {d.pct !== null ? `${Math.abs(d.pct)}%` : `${absTxt}${unit}`}
+        <span style={{ color: C.sub, fontWeight: 400 }}>
+          {d.pct !== null ? ` (${up ? "+" : "-"}${absTxt}${unit})` : ""} vs {nb(d.prev)}{unit}
+        </span>
+      </div>
+    );
+  };
+
+  const statCard = (label: string, value: string | number, color = C.ink, d?: Delta, unit = "", invert = false) => (
+    <div key={label} style={{ flex: 1, minWidth: 118, border: `1px solid ${C.line}`, borderRadius: 12, padding: "14px 16px" }}>
       <div style={{ fontSize: 26, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
       <div style={{ fontSize: 11, color: C.sub, marginTop: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
+      {d !== undefined && deltaLine(d, unit, invert)}
     </div>
+  );
+
+  // Título de seção, sempre igual. `block` marca o bloco pro PDF não cortar no meio.
+  const sectionTitle = (t: string) => (
+    <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: C.sub, marginBottom: 10 }}>{t}</div>
   );
 
   // Barra de alcance médio (cruzamentos) com o valor absoluto e a contagem.
@@ -557,7 +916,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         <div className="mt-3 border border-border rounded-xl overflow-hidden bg-white">
           <div ref={reportRef} style={{ width: "100%", background: "#ffffff", padding: 32, fontFamily: "Inter, system-ui, sans-serif", color: C.ink }}>
             {/* Cabeçalho branded */}
-            <div style={{ display: "flex", alignItems: "center", gap: 14, paddingBottom: 18, borderBottom: `2px solid ${C.brand}` }}>
+            <div data-pdf-block style={{ display: "flex", alignItems: "center", gap: 14, paddingBottom: 18, borderBottom: `2px solid ${C.brand}` }}>
               <div style={{ width: 52, height: 52, borderRadius: 14, background: C.soft, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
                 {client.logo_url
                   ? <img src={client.logo_url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -575,58 +934,175 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
               </div>
             </div>
 
-            {/* Resumo */}
-            <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
-              {statCard("Posts no mês", stats.total)}
-              {statCard("Aprovados", stats.byStatus.aprovado ?? 0, C.green)}
-              {statCard("Aguardando", stats.byStatus.pendente ?? 0, C.amber)}
-              {statCard("Ajustes", stats.byStatus.ajuste_solicitado ?? 0, C.orange)}
+            {/* Período totalmente vazio: estado honesto em vez de uma parede de zeros */}
+            {stats.total === 0 && !perf.has ? (
+              <div data-pdf-block style={{ marginTop: 20, padding: "22px 20px", border: `1px dashed ${C.line}`, borderRadius: 12, background: C.soft, textAlign: "center" }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.ink }}>Nenhuma atividade registrada em {monthLabel}</div>
+                <div style={{ fontSize: 12, color: C.sub, marginTop: 6, lineHeight: 1.5 }}>
+                  Não houve peça produzida, aprovada ou publicada neste período.
+                  {hasPriorHistory ? ` No período anterior (${prevPeriod.label}) foram ${prevStats.published} publicação(ões) e ${prevStats.total} peça(s) no fluxo.` : " Este é o primeiro período acompanhado."}
+                </div>
+              </div>
+            ) : (
+            <>
+            {/* Entrega: o número que prova o trabalho vem primeiro e grande */}
+            <div data-pdf-block style={{ marginTop: 20 }}>
+              <div style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
+                <div style={{ flex: 1.4, border: `1px solid ${C.green}`, borderRadius: 12, padding: "16px 18px", background: "#f0fdf4" }}>
+                  <div style={{ fontSize: 38, fontWeight: 800, color: C.green, lineHeight: 1 }}>{nb(stats.published)}</div>
+                  <div style={{ fontSize: 11, color: C.sub, marginTop: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                    {stats.published === 1 ? "Post publicado no período" : "Posts publicados no período"}
+                  </div>
+                  {deltaLine(prodDelta.published)}
+                </div>
+                {statCard("Peças no fluxo", nb(stats.total), C.ink, prodDelta.total)}
+                {statCard("Dias com publicação", `${consistency.days}/${consistency.spanDays}`, C.ink, consistency.delta)}
+              </div>
+
+              {/* Funil completo: as cinco etapas do fluxo, nenhuma escondida */}
+              <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+                {STATUS_KEYS.map((k) => {
+                  const color = k === "postado" ? C.green : k === "aprovado" ? C.green
+                    : k === "pendente" ? C.amber : k === "ajuste_solicitado" ? C.orange : C.sub;
+                  return (
+                    <div key={k} style={{ flex: 1, minWidth: 96, border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px" }}>
+                      <div style={{ fontSize: 19, fontWeight: 800, color, lineHeight: 1 }}>{stats.byStatus[k]}</div>
+                      <div style={{ fontSize: 10, color: C.sub, marginTop: 5, textTransform: "uppercase", letterSpacing: 0.4 }}>{STATUS_LABEL[k]}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ fontSize: 10.5, color: C.sub, marginTop: 8, lineHeight: 1.5 }}>
+                O funil mostra em que etapa cada peça do período está hoje. As comparações são contra {prevPeriod.label}.
+              </div>
             </div>
 
             {/* Breakdown */}
-            <div style={{ display: "flex", gap: 24, marginTop: 24 }}>
+            <div data-pdf-block style={{ display: "flex", gap: 24, marginTop: 24 }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: C.sub, marginBottom: 10 }}>Por formato</div>
+                {sectionTitle("Por formato")}
                 {Object.keys(stats.byFormat).length === 0
                   ? <div style={{ fontSize: 12, color: C.sub }}>Sem posts no período.</div>
                   : Object.entries(stats.byFormat).sort((a, b) => b[1] - a[1]).map(([f, v]) => breakdownRow(FORMAT_LABELS[f] ?? cap(f), v, stats.total))}
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: C.sub, marginBottom: 10 }}>Por plataforma</div>
+                {sectionTitle("Por plataforma")}
                 {Object.keys(stats.byPlatform).length === 0
                   ? <div style={{ fontSize: 12, color: C.sub }}>Sem posts no período.</div>
                   : Object.entries(stats.byPlatform).sort((a, b) => b[1] - a[1]).map(([p, v]) => breakdownRow(cap(p), v, stats.total))}
               </div>
             </div>
 
-            {/* Lista de posts */}
-            <div style={{ marginTop: 24 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: C.sub, marginBottom: 10 }}>Posts entregues</div>
-              {monthPosts.length === 0 ? (
-                <div style={{ fontSize: 12, color: C.sub }}>Nenhum post nesse período.</div>
-              ) : (
+            {/* Leitura do período: destaque, formato campeão e fluxo de aprovação */}
+            {(highlight || bestFormat || stats.cycleDays !== null || stuck.length > 0) && (
+              <div data-pdf-block style={{ marginTop: 24 }}>
+                {sectionTitle("O que o período mostrou")}
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  {highlight && (
+                    <div style={{ flex: 2, minWidth: 260, border: `1px solid ${C.line}`, borderRadius: 12, padding: "14px 16px", display: "flex", gap: 12, alignItems: "center" }}>
+                      <div style={{ width: 52, height: 52, borderRadius: 10, background: C.soft, overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {highlight.best.thumbnail_url
+                          ? <img src={highlight.best.thumbnail_url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          : <span style={{ fontSize: 9, color: C.sub }}>{highlight.best.type}</span>}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 10.5, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Destaque do período</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: C.ink, marginTop: 3 }}>{highlight.best.title}</div>
+                        <div style={{ fontSize: 11.5, color: C.sub, marginTop: 3 }}>
+                          {nb(highlight.best.reach)} de alcance · {nb(highlight.best.saved)} salvamentos
+                          {highlight.best.vsAvg !== null && highlight.best.vsAvg > 0
+                            ? <span style={{ color: C.green, fontWeight: 600 }}> · {highlight.best.vsAvg}% acima da média</span>
+                            : null}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {bestFormat && (
+                    <div style={{ flex: 1, minWidth: 200, border: `1px solid ${C.line}`, borderRadius: 12, padding: "14px 16px" }}>
+                      <div style={{ fontSize: 10.5, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Formato que mais rendeu</div>
+                      <div style={{ fontSize: 17, fontWeight: 800, color: C.ink, marginTop: 4 }}>{bestFormat.label}</div>
+                      <div style={{ fontSize: 11.5, color: C.sub, marginTop: 3 }}>
+                        {nb(bestFormat.avg)} de alcance médio em {bestFormat.count} publicação{bestFormat.count === 1 ? "" : "ões"}
+                        {bestFormat.lift !== null && bestFormat.lift > 0 ? `, ${bestFormat.lift}% acima de ${bestFormat.vs}` : ""}.
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {(stats.cycleDays !== null || stuck.length > 0 || highlight?.worst) && (
+                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
+                    {stats.cycleDays !== null && (
+                      <div style={{ flex: 1, minWidth: 200, border: `1px solid ${C.line}`, borderRadius: 12, padding: "14px 16px" }}>
+                        <div style={{ fontSize: 10.5, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Tempo até a aprovação</div>
+                        <div style={{ fontSize: 22, fontWeight: 800, color: C.ink, marginTop: 4 }}>
+                          {stats.cycleDays.toFixed(1).replace(".", ",")} <span style={{ fontSize: 13, fontWeight: 600 }}>dias</span>
+                        </div>
+                        <div style={{ fontSize: 11, color: C.sub, marginTop: 3 }}>
+                          Média da criação da peça até a aprovação, em {stats.cycleSample} peça{stats.cycleSample === 1 ? "" : "s"} aprovada{stats.cycleSample === 1 ? "" : "s"} no período.
+                        </div>
+                        {prodDelta.cycle && deltaLine(prodDelta.cycle, " dias", true)}
+                      </div>
+                    )}
+                    {stuck.length > 0 && (
+                      <div style={{ flex: 1, minWidth: 220, border: `1px solid ${C.amber}`, borderRadius: 12, padding: "14px 16px", background: "#fffbeb" }}>
+                        <div style={{ fontSize: 10.5, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Aguardando sua resposta</div>
+                        <div style={{ fontSize: 22, fontWeight: 800, color: C.amber, marginTop: 4 }}>
+                          {stuck.length} <span style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>peça{stuck.length === 1 ? "" : "s"} há 7 dias ou mais</span>
+                        </div>
+                        <div style={{ fontSize: 11, color: C.sub, marginTop: 5, lineHeight: 1.5 }}>
+                          {stuck.slice(0, 3).map((s) => `${s.p.title} (${s.days} dias)`).join(" · ")}
+                          {stuck.length > 3 ? ` e mais ${stuck.length - 3}.` : "."}
+                        </div>
+                      </div>
+                    )}
+                    {highlight?.worst && (
+                      <div style={{ flex: 1, minWidth: 200, border: `1px solid ${C.line}`, borderRadius: 12, padding: "14px 16px" }}>
+                        <div style={{ fontSize: 10.5, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Menor alcance do período</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: C.ink, marginTop: 4 }}>{highlight.worst.title}</div>
+                        <div style={{ fontSize: 11.5, color: C.sub, marginTop: 3 }}>
+                          {nb(highlight.worst.reach)} de alcance, contra {nb(highlight.avg)} de média. Serve de referência do que evitar repetir.
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+            </>
+            )}
+
+            {/* Lista de posts do período (produzidos, agendados ou publicados) */}
+            {monthPosts.length > 0 && (
+              <div data-pdf-block style={{ marginTop: 24 }}>
+                {sectionTitle(`Peças do período (${monthPosts.length})`)}
                 <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden" }}>
                   {monthPosts.map((p, i) => {
-                    const st = p.approval_status === "aprovado" ? { t: "Aprovado", c: C.green }
-                      : p.approval_status === "ajuste_solicitado" ? { t: "Ajuste", c: C.orange }
-                      : { t: "Aguardando", c: C.amber };
+                    const k = statusOf(p);
+                    const color = k === "postado" ? C.green : k === "aprovado" ? C.green
+                      : k === "pendente" ? C.amber : k === "ajuste_solicitado" ? C.orange : C.sub;
+                    const label = k === "postado" ? "Publicado" : k === "aprovado" ? "Aprovado"
+                      : k === "pendente" ? "Aguardando" : k === "ajuste_solicitado" ? "Em ajuste" : "Em produção";
+                    const dia = publishedDayOf(p) ?? p.scheduled_date;
                     return (
                       <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>{p.title}</div>
-                          <div style={{ fontSize: 11, color: C.sub }}>{FORMAT_LABELS[p.format] ?? cap(p.format)} · {cap(p.platform)}</div>
+                          <div style={{ fontSize: 11, color: C.sub }}>
+                            {FORMAT_LABELS[p.format] ?? cap(p.format)} · {cap(p.platform)}
+                            {dia ? ` · ${parseDateOnly(dia).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}` : ""}
+                          </div>
                         </div>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: st.c, whiteSpace: "nowrap" }}>{st.t}</div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color, whiteSpace: "nowrap" }}>{label}</div>
                       </div>
                     );
                   })}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Análise do mês, editável (Word-like) */}
-            <div style={{ marginTop: 24 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: C.sub, marginBottom: 10 }}>Análise do mês</div>
+            <div data-pdf-block style={{ marginTop: 24 }}>
+              {sectionTitle("Análise do período")}
               <div
                 ref={editorRef}
                 contentEditable
@@ -643,19 +1119,43 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
             {/* Desempenho, números reais do Instagram quando os posts estão vinculados */}
             {perf.has ? (
               <div style={{ marginTop: 24 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: C.sub, marginBottom: 10 }}>
-                  Desempenho no Instagram ({perf.posts} post{perf.posts === 1 ? "" : "s"})
-                </div>
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  {statCard("Alcance", perf.reach.toLocaleString("pt-BR"))}
-                  {statCard("Visualizações", perf.views.toLocaleString("pt-BR"))}
-                  {statCard("Curtidas", perf.likes.toLocaleString("pt-BR"))}
-                  {statCard("Comentários", perf.comments.toLocaleString("pt-BR"))}
-                  {statCard("Interações", perf.interactions.toLocaleString("pt-BR"))}
+                <div data-pdf-block>
+                  {sectionTitle(`Desempenho no Instagram (${perf.posts} post${perf.posts === 1 ? "" : "s"})`)}
+                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                    {statCard("Alcance", nb(perf.reach), C.ink, igDelta.has ? igDelta.reach : undefined)}
+                    {statCard("Visualizações", nb(perf.views), C.ink, igDelta.has ? igDelta.views : undefined)}
+                    {statCard("Interações", nb(perf.interactions), C.ink, igDelta.has ? igDelta.interactions : undefined)}
+                    {statCard("Salvamentos", nb(perf.saved))}
+                    {perf.engRate !== null && statCard(
+                      "Taxa de engajamento",
+                      `${perf.engRate.toFixed(1).replace(".", ",")}%`,
+                      perf.engRate >= 3 ? C.green : C.ink,
+                      igDelta.engRate ?? undefined,
+                      "%",
+                    )}
+                  </div>
+                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
+                    {statCard("Curtidas", nb(perf.likes))}
+                    {statCard("Comentários", nb(perf.comments))}
+                    {followers && (
+                      <div key="seguidores" style={{ flex: 1, minWidth: 118, border: `1px solid ${C.line}`, borderRadius: 12, padding: "14px 16px" }}>
+                        <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1, color: followers.delta >= 0 ? C.green : C.orange }}>
+                          {followers.delta >= 0 ? "+" : ""}{nb(followers.delta)}
+                        </div>
+                        <div style={{ fontSize: 11, color: C.sub, marginTop: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Seguidores no período</div>
+                        <div style={{ fontSize: 10.5, color: C.sub, marginTop: 5 }}>de {nb(followers.start)} para {nb(followers.end)}</div>
+                      </div>
+                    )}
+                  </div>
+                  {!igDelta.has && (
+                    <div style={{ fontSize: 10.5, color: C.sub, marginTop: 8 }}>
+                      Não há medição do Instagram em {prevPeriod.label}, então este é o primeiro período com comparação possível.
+                    </div>
+                  )}
                 </div>
 
                 {ranking.length > 0 && (
-                  <div style={{ marginTop: 18 }}>
+                  <div data-pdf-block style={{ marginTop: 18 }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>
                       Ranking de posts{bestHour ? ` · top post publicado às ${bestHour}` : ""}
                     </div>
@@ -688,7 +1188,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
 
                 {/* As peças que produzimos e o que renderam: mídia do IG × external_post vinculado */}
                 {pieces.length > 0 && (
-                  <div style={{ marginTop: 18 }}>
+                  <div data-pdf-block style={{ marginTop: 18 }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>
                       As peças que produzimos e o que renderam ({pieces.length})
                     </div>
@@ -735,7 +1235,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
 
                 {/* Direcionamento: conclusões pro cliente entender o que rende mais */}
                 {crossHl.length > 0 && (
-                  <div style={{ marginTop: 18, padding: "14px 16px", border: `1px solid ${C.line}`, borderRadius: 12, background: C.soft }}>
+                  <div data-pdf-block style={{ marginTop: 18, padding: "14px 16px", border: `1px solid ${C.line}`, borderRadius: 12, background: C.soft }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Direcionamento do período</div>
                     <ul style={{ margin: 0, paddingLeft: 18 }}>
                       {crossHl.map((h, i) => (
@@ -747,7 +1247,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
 
                 {/* Cruzamentos: alcance médio por formato, dia e horário */}
                 {cross.hasData && (
-                  <div style={{ display: "flex", gap: 24, marginTop: 18, flexWrap: "wrap" }}>
+                  <div data-pdf-block style={{ display: "flex", gap: 24, marginTop: 18, flexWrap: "wrap" }}>
                     {cross.byFormat.length > 0 && (
                       <div style={{ flex: 1, minWidth: 220 }}>
                         <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Alcance médio por formato</div>
@@ -771,7 +1271,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
 
                 {/* Destaque de Reels por tempo médio assistido (retenção) */}
                 {topReels.length > 0 && (
-                  <div style={{ marginTop: 18 }}>
+                  <div data-pdf-block style={{ marginTop: 18 }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Reels com mais retenção (tempo médio assistido)</div>
                     <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden" }}>
                       {topReels.map(({ r, watch, views }, i) => (
@@ -793,18 +1293,20 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
                 )}
               </div>
             ) : (
-              <div style={{ marginTop: 20, padding: "14px 16px", border: `1px dashed ${C.line}`, borderRadius: 12, background: C.soft }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: C.ink }}>Desempenho (alcance, visualizações, engajamento)</div>
-                <div style={{ fontSize: 11, color: C.sub, marginTop: 4 }}>Aparece automaticamente quando o cliente conectar o Instagram na conta CRIA dele e tiver posts no período.</div>
+              <div data-pdf-block style={{ marginTop: 20, padding: "14px 16px", border: `1px dashed ${C.line}`, borderRadius: 12, background: C.soft }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.ink }}>Métricas de alcance e engajamento</div>
+                <div style={{ fontSize: 11, color: C.sub, marginTop: 4, lineHeight: 1.55 }}>
+                  Este relatório cobre a produção e a entrega das peças. Alcance, visualizações, salvamentos e evolução de seguidores
+                  vêm direto do Instagram e só podem ser lidos com o perfil conectado, o que ainda não foi feito. Assim que a conexão
+                  for autorizada, esta seção passa a sair preenchida nos próximos relatórios.
+                </div>
               </div>
             )}
 
             {/* Perfil de audiência: faixa etária, gênero, top cidades, top países */}
             {audience.hasData && (
-              <div style={{ marginTop: 24 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: C.sub, marginBottom: 10 }}>
-                  Perfil de audiência{audience.source === "engaged" ? " (com base nos engajados)" : ""}
-                </div>
+              <div data-pdf-block style={{ marginTop: 24 }}>
+                {sectionTitle(`Perfil de audiência${audience.source === "engaged" ? " (com base nos engajados)" : ""}`)}
                 {(audience.age.length > 0 || audience.gender.length > 0) && (
                   <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
                     {audience.age.length > 0 && audienceCol("Faixa etária", audience.age)}
@@ -822,22 +1324,20 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
 
             {/* Stories: alcance, alcance médio, respostas, taxa de resposta, navegação */}
             {stories.hasData && (
-              <div style={{ marginTop: 24 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: C.sub, marginBottom: 10 }}>
-                  Stories ({stories.count} no período)
-                </div>
+              <div data-pdf-block style={{ marginTop: 24 }}>
+                {sectionTitle(`Stories (${stories.count} no período)`)}
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  {statCard("Alcance", stories.reach.toLocaleString("pt-BR"))}
-                  {statCard("Alcance médio", stories.avgReach.toLocaleString("pt-BR"))}
-                  {statCard("Respostas", stories.replies.toLocaleString("pt-BR"))}
+                  {statCard("Alcance", nb(stories.reach))}
+                  {statCard("Alcance médio", nb(stories.avgReach))}
+                  {statCard("Respostas", nb(stories.replies))}
                   {statCard("Taxa de resposta", `${stories.replyRate.toFixed(1).replace(".", ",")}%`)}
-                  {stories.navigation > 0 && statCard("Navegação", stories.navigation.toLocaleString("pt-BR"))}
+                  {stories.navigation > 0 && statCard("Navegação", nb(stories.navigation))}
                 </div>
               </div>
             )}
 
             {/* Rodapé branded (white-label) */}
-            <div style={{ marginTop: 22, paddingTop: 14, borderTop: `1px solid ${C.line}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div data-pdf-block style={{ marginTop: 22, paddingTop: 14, borderTop: `1px solid ${C.line}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ fontSize: 11, color: C.sub }}>
                 {managerName ? `Preparado por ${managerName}` : "Relatório de gestão de conteúdo"}
               </div>

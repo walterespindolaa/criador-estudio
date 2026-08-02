@@ -22,6 +22,8 @@ import { useExternalClients, invalidatePostsEverywhere } from "@/hooks/useCriaPo
 import { SEGMENTOS, datasPara, segmentoDoTexto, type SegmentKey } from "@/lib/datasComemorativas";
 import { useCrmClients } from "@/hooks/useCrm";
 import { confirmar } from "@/components/shared/Confirm";
+import { MultiLinkInput } from "@/components/shared/MultiLinkInput";
+import { parseRefLinks, serializeRefLinks, refLinkHref, refLinkLabel, isRefLink } from "@/lib/refLinks";
 
 const TYPE_COLOR: Record<string, string> = {
   "Reels": "bg-red-600", "Carrossel": "bg-green-700", "Feed": "bg-blue-700",
@@ -211,6 +213,12 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
     setConverting(true);
     try {
       for (const it of approvedToConvert) {
+        // O item pode ter VÁRIOS links de referência, mas o post só tem um campo.
+        // O primeiro vai pro reference_url e os demais entram no roteiro pra não sumirem.
+        const refs = parseRefLinks(it.ref_url);
+        const extrasRef = refs.slice(1);
+        const roteiro = [it.description || "", extrasRef.length ? `Referências extras:\n${extrasRef.join("\n")}` : ""]
+          .filter(Boolean).join("\n\n") || null;
         // Nasce EM PRODUCAO (mesma coluna/estado de um post novo do board). "pendente"
         // mandaria pro cliente um post ainda sem midia; a social midia libera pro cliente
         // quando estiver pronto. So marcamos o selo "no Cria Post" DEPOIS do insert dar certo.
@@ -225,8 +233,8 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
           // No cronograma "copy" e a LEGENDA e "description" e o ROTEIRO/ideia. Cada um vai
           // pro campo certo do post (antes a legenda ia pro caption errado e a copy sumia).
           caption: it.copy || null,
-          script: it.description || null,
-          reference_url: it.ref_url || null,
+          script: roteiro,
+          reference_url: refs[0] ?? null,
           status: "editando",
           approval_status: "em_producao",
           approval_mode: "fast",
@@ -263,8 +271,11 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
     }
   };
 
-  const openNew = () => { setEditing(null); setF({ type: "Reels" }); setFormOpen(true); };
-  const openEdit = (it: CronogramaItem) => { setEditing(it); setF(it); setFormOpen(true); };
+  // Links de referência do item ficam em estado próprio (lista), porque o campo
+  // aceita vários. Só na hora de salvar viram o texto da coluna ref_url.
+  const [refLinks, setRefLinks] = useState<string[]>([]);
+  const openNew = () => { setEditing(null); setF({ type: "Reels" }); setRefLinks([]); setFormOpen(true); };
+  const openEdit = (it: CronogramaItem) => { setEditing(it); setF(it); setRefLinks(parseRefLinks(it.ref_url)); setFormOpen(true); };
   // Trava de reentrada: duplo clique/tap disparava dois inserts idênticos (o item duplicava).
   // O ref é síncrono, então bloqueia o 2º clique antes do React re-renderizar o botão.
   const savingRef = useRef(false);
@@ -272,8 +283,9 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
     if (savingRef.current) return;
     savingRef.current = true;
     try {
-      if (editing) await updateItem.mutateAsync({ id: editing.id, title: f.title ?? null, copy: f.copy ?? null, description: f.description ?? null, date: f.date ?? null, type: f.type ?? null, ref_url: f.ref_url ?? null });
-      else await addItem.mutateAsync({ title: f.title ?? null, copy: f.copy ?? null, description: f.description ?? null, date: f.date ?? null, type: f.type ?? null, ref_url: f.ref_url ?? null });
+      const ref = serializeRefLinks(refLinks);
+      if (editing) await updateItem.mutateAsync({ id: editing.id, title: f.title ?? null, copy: f.copy ?? null, description: f.description ?? null, date: f.date ?? null, type: f.type ?? null, ref_url: ref });
+      else await addItem.mutateAsync({ title: f.title ?? null, copy: f.copy ?? null, description: f.description ?? null, date: f.date ?? null, type: f.type ?? null, ref_url: ref });
       setFormOpen(false);
     } finally {
       savingRef.current = false;
@@ -392,11 +404,22 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
                               </div>
                             )}
 
-                            {/* Referência: link clicável (a melhoria que se mantém) */}
-                            {it.ref_url && (
-                              <a href={it.ref_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-body font-semibold text-primary hover:underline">
-                                <Link2 className="h-3.5 w-3.5" /> Ver referência
-                              </a>
+                            {/* Referências: um link clicável por linha (o item pode ter vários) */}
+                            {parseRefLinks(it.ref_url).length > 0 && (
+                              <div className="mt-2 flex flex-col gap-1 items-start">
+                                {parseRefLinks(it.ref_url).map((url, n) => (
+                                  isRefLink(url) ? (
+                                    <a key={n} href={refLinkHref(url)} target="_blank" rel="noopener noreferrer" title={url}
+                                      className="inline-flex max-w-full items-center gap-1.5 text-[12px] font-body font-semibold text-primary hover:underline">
+                                      <Link2 className="h-3.5 w-3.5 shrink-0" />
+                                      <span className="truncate">{n === 0 ? "Ver referência" : refLinkLabel(url)}</span>
+                                    </a>
+                                  ) : (
+                                    // Não parece link: mostra como texto pra não virar um <a> quebrado.
+                                    <span key={n} className="text-[12px] font-body text-muted-foreground break-all">{url}</span>
+                                  )
+                                ))}
+                              </div>
                             )}
 
                             {it.client_comment && (
@@ -449,7 +472,13 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
                 </Select>
               </div>
             </div>
-            <div><Label className="text-xs">Referência (link de inspiração)</Label><Input value={f.ref_url ?? ""} onChange={(e) => setF((p) => ({ ...p, ref_url: e.target.value }))} placeholder="Cole um link de referência (Drive, post, Pinterest...)" className="rounded-xl" /></div>
+            {/* Referência: aceita mais de um link. O "+" ao lado abre outra linha. */}
+            <div>
+              <Label className="text-xs">Referência (link de inspiração)</Label>
+              <MultiLinkInput value={refLinks} onChange={setRefLinks} className="mt-1"
+                placeholder="Cole um link de referência (Drive, post, Pinterest...)" />
+              <p className="text-[11px] font-body text-muted-foreground mt-1">Toque no + pra adicionar mais de uma referência.</p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFormOpen(false)} className="rounded-xl">Cancelar</Button>

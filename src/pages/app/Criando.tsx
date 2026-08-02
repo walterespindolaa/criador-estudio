@@ -7,6 +7,7 @@ import { tocar } from "@/lib/pwa";
 import { cn } from "@/lib/utils";
 import { CoverHeader } from "@/components/shared/CoverHeader";
 import { useStatusCovers } from "@/hooks/useStatusCovers";
+import { useDragScroll } from "@/hooks/useDragScroll";
 import { FormatPicker } from "@/components/kanban/FormatPicker";
 import { useTour } from "@/components/tour/TourProvider";
 import { statusRamp } from "@/lib/statusRamp";
@@ -106,6 +107,9 @@ const Criando = () => {
 
 
   const { byStatus, saveCover, resetCover, isSaving } = useStatusCovers();
+  // Clicar no vazio e arrastar pro lado rola o board (só mouse; no toque nada muda).
+  const boardRef = useDragScroll<HTMLDivElement>();
+  const boardMobileRef = useDragScroll<HTMLDivElement>();
   const ramp = statusRamp();
   const [editing, setEditing] = useState<string | null>(null);
   const [editType, setEditType] = useState<"gradient" | "solid">("gradient");
@@ -618,7 +622,8 @@ const Criando = () => {
         {posts.length > 0 && view === "board" && (
         /* onDragStart com vibração: o dedo SENTE que pegou o card. iOS ignora, Android responde. */
         <DragDropContext onDragStart={() => tocar(12)} onDragEnd={(r) => { tocar(8); void handleDragEnd(r); }}>
-        <div data-tour="criando-board" className="hidden md:flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-proximity kanban-scroll">
+        {/* Clicar no vazio e arrastar pro lado rola o board (só mouse). */}
+        <div ref={boardRef} data-tour="criando-board" className="hidden md:flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-proximity kanban-scroll">
           {COLUMNS.map(col => {
             const colPosts = filteredPosts.filter(p => p.status === col.key);
             const isPublished = col.key === "publicado";
@@ -959,7 +964,7 @@ const Criando = () => {
             {/* onDragStart com vibração: o dedo SENTE que pegou o card. É o detalhe
             que separa "site num celular" de "app". iOS ignora, Android responde. */}
         <DragDropContext onDragStart={() => tocar(12)} onDragEnd={(r) => { tocar(8); void handleDragEnd(r); }}>
-            <div className="flex gap-2.5 overflow-x-auto -mx-4 px-4 kanban-scroll h-[calc(100svh-230px)] min-h-[340px]">
+            <div ref={boardMobileRef} className="flex gap-2.5 overflow-x-auto -mx-4 px-4 kanban-scroll h-[calc(100svh-230px)] min-h-[340px]">
               {COLUMNS.map((col, i) => {
                 const colPosts = filteredPosts.filter(p => (p.status ?? "ideia") === col.key);
                 const step = ramp[col.key];

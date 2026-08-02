@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { Plus, Pencil, Trash2, Check, Bell, Clock, AlertTriangle, Archive, ArchiveRestore, Handshake, FileText } from "lucide-react";
 import { useTier } from "@/hooks/useTier";
+import { useDragScroll } from "@/hooks/useDragScroll";
 import {
   useCollabs, collabReminders, COLLAB_STATUSES, COLLAB_STATUS_LABEL,
   type CollabStatus, type CollabWithDeliverables, type CollabReminder,
@@ -153,10 +154,12 @@ function ReminderRow({ r, onOpen }: { r: CollabReminder; onOpen: () => void }) {
 function Pipeline({ active, isLoading, onOpen, onNew }: {
   active: CollabWithDeliverables[]; isLoading: boolean; onOpen: (c: CollabWithDeliverables) => void; onNew: () => void;
 }) {
+  const boardRef = useDragScroll<HTMLDivElement>();
   if (isLoading) return <div className="text-sm text-muted-foreground py-8 text-center">Carregando…</div>;
   if (active.length === 0) return <EmptyState onNew={onNew} />;
   return (
-    <div className="flex gap-3 overflow-x-auto pb-2">
+    // Clicar no vazio e arrastar pro lado rola o pipeline (só mouse).
+    <div ref={boardRef} className="flex gap-3 overflow-x-auto pb-2">
       {COLLAB_STATUSES.map((s) => {
         const items = active.filter((c) => c.status === s);
         return (

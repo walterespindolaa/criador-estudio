@@ -15,6 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CronogramaBoard } from "@/components/accounts/CronogramaBoard";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
+import { useDragScroll } from "@/hooks/useDragScroll";
 import { Plus, Link2, Pencil, Loader2, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare, Eye, Clock, Settings2, Palette, Copy, CalendarDays, X, ChevronDown, History } from "lucide-react";
 import { usePostApprovalComments } from "@/hooks/useApprovals";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
@@ -28,6 +29,17 @@ import { useCrmClients } from "@/hooks/useCrm";
 import { useClientSocialConnection, connectInstagram } from "@/hooks/useSocialInsights";
 import { ClienteInstagramCria } from "@/components/accounts/ClienteInstagramCria";
 import { FORMATS_BY_PLATFORM, FORMAT_LABELS } from "@/lib/constants";
+// Cor por formato (fonte única): a pessoa bate o olho e sabe o que é.
+import { formatColorVars, FORMAT_TEXT_CLASS, FORMAT_BORDER_CLASS, FORMAT_DOT_CLASS } from "@/lib/format-colors";
+// Toggle Kanban/Calendário compartilhado com as outras telas de board.
+import { ViewToggle } from "@/components/shared/ViewToggle";
+// Ideia / Referência aceita VÁRIOS links (um por linha na mesma coluna).
+import { MultiLinkInput } from "@/components/shared/MultiLinkInput";
+import { parseRefLinks, serializeRefLinks, refLinkHref, refLinkLabel, isRefLink } from "@/lib/refLinks";
+// Etiquetas INTERNAS do post: só a agência vê, o cliente nunca recebe.
+import { InternalTagPicker } from "@/components/shared/InternalTagPicker";
+import { usePostTags, usePostInternalTags, useSetPostInternalTags, POST_TAG_DOT_CLS, type PostTag } from "@/hooks/usePostTags";
+import { TAG_COLOR_CLS } from "@/hooks/useCrm";
 
 const PLATFORMS = ["instagram", "tiktok", "youtube"];
 const FORMATS = ["reels", "carrossel", "foto", "story", "video"];
@@ -54,8 +66,6 @@ async function copiarLegenda(texto: string) {
     toast.error("Não consegui copiar a legenda. Copie manualmente.");
   }
 }
-// Cor por formato: a pessoa bate o olho e sabe o que é (reels azul, carrossel verde...).
-const FORMAT_COLOR: Record<string, string> = { reels: "#0061EE", carrossel: "#01A652", foto: "#EA4918", story: "#7C90F0", video: "#4B3FA8" };
 function relTimeBR(iso: string): string {
   const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
   if (min < 1) return "agora mesmo";
@@ -133,8 +143,9 @@ type PostFilter = {
   from: string; // YYYY-MM-DD (só quando preset = custom)
   to: string;   // YYYY-MM-DD (só quando preset = custom)
   fmt: string;  // "all" | formato
+  tag: string;  // "all" | id da etiqueta interna
 };
-const FILTER_DEFAULT: PostFilter = { preset: "all", from: "", to: "", fmt: "all" };
+const FILTER_DEFAULT: PostFilter = { preset: "all", from: "", to: "", fmt: "all", tag: "all" };
 
 // Carrega o filtro salvo. Se um dia existir o esquema antigo (mês/formato solto),
 // migramos: o mês YYYY-MM vira um intervalo custom daquele mês.
@@ -149,6 +160,8 @@ function loadPostFilter(): PostFilter {
         from: typeof p.from === "string" ? p.from : "",
         to: typeof p.to === "string" ? p.to : "",
         fmt: typeof p.fmt === "string" ? p.fmt : "all",
+        // Filtro por etiqueta é novo: quem tem filtro salvo de antes cai em "all".
+        tag: typeof p.tag === "string" ? p.tag : "all",
       };
     }
     // Migração best-effort do esquema antigo (nunca chegou a persistir, mas fica o gancho).
@@ -226,9 +239,61 @@ function DateField({ label, value, onChange }: { label: string; value: string; o
   );
 }
 
+// ── Exibição das etiquetas INTERNAS (nunca vai pro cliente) ──
+// Resolve id -> etiqueta do catálogo. Id que não existe mais (etiqueta
+// excluída) some da tela em vez de virar chip quebrado.
+function resolveTags(ids: string[] | undefined, catalog: PostTag[]): PostTag[] {
+  if (!ids?.length || !catalog.length) return [];
+  return ids.map((id) => catalog.find((t) => t.id === id)).filter(Boolean) as PostTag[];
+}
+
+// Card do KANBAN: chip pequeno com o nome. Mostra até 2 e resume o resto em "+N"
+// (o card já carrega formato, título, data, referência e avisos).
+function TagChips({ ids, catalog }: { ids: string[] | undefined; catalog: PostTag[] }) {
+  const tags = resolveTags(ids, catalog);
+  if (!tags.length) return null;
+  const visiveis = tags.slice(0, 2);
+  const resto = tags.length - visiveis.length;
+  return (
+    <div className="flex flex-wrap items-center gap-1 mt-1.5" title={`Etiquetas internas: ${tags.map((t) => t.name).join(", ")}`}>
+      {visiveis.map((t) => (
+        <span key={t.id} className={`text-[9.5px] font-body font-bold px-1.5 py-0.5 rounded-full border max-w-[110px] truncate ${TAG_COLOR_CLS[t.color] ?? TAG_COLOR_CLS.slate}`}>{t.name}</span>
+      ))}
+      {resto > 0 && <span className="text-[9.5px] font-body font-bold px-1.5 py-0.5 rounded-full border border-border text-muted-foreground">+{resto}</span>}
+    </div>
+  );
+}
+
+// Célula do CALENDÁRIO: é apertada e já tem tarja de status, título, formato e a
+// barra lateral colorida do formato. Aqui NÃO cabe mais um bloco: viram bolinhas
+// na cor da etiqueta, com os nomes no title (tooltip) e "+N" a partir da quarta.
+function TagDots({ ids, catalog }: { ids: string[] | undefined; catalog: PostTag[] }) {
+  const tags = resolveTags(ids, catalog);
+  if (!tags.length) return null;
+  const visiveis = tags.slice(0, 3);
+  const resto = tags.length - visiveis.length;
+  const nomes = tags.map((t) => t.name).join(", ");
+  return (
+    <span className="flex items-center gap-0.5 mt-0.5" title={`Etiquetas internas: ${nomes}`} aria-label={`Etiquetas internas: ${nomes}`}>
+      {visiveis.map((t) => (
+        <span key={t.id} aria-hidden className={`h-1.5 w-1.5 rounded-full shrink-0 ${POST_TAG_DOT_CLS[t.color] ?? POST_TAG_DOT_CLS.slate}`} />
+      ))}
+      {resto > 0 && <span className="text-[8px] font-body font-bold text-muted-foreground leading-none">+{resto}</span>}
+    </span>
+  );
+}
+
 export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange }: { client: ExternalClient; onBack?: () => void; embedded?: boolean; activeTab?: string; onTabChange?: (t: string) => void }) {
   const { posts, isLoading, create, createDraft, update, remove, moveStatus, setDate, reorderExternalPosts } = useExternalPosts(client.id);
   const qc = useQueryClient();
+  // Etiquetas INTERNAS: catálogo da agência + o que cada post tem marcado.
+  // Query própria (não entra no select do board) pra que, sem a migration, o
+  // board continue abrindo normalmente e só as etiquetas fiquem vazias.
+  const { data: tagCatalog = [] } = usePostTags();
+  const { data: tagsByPost = {} } = usePostInternalTags(client.id);
+  const setPostTags = useSetPostInternalTags(client.id);
+  // Clicar no vazio e arrastar pro lado rola o board (só mouse; no toque nada muda).
+  const boardRef = useDragScroll<HTMLDivElement>();
   // Filtro de data/formato pra revisar/enviar só o que interessa. Persistido em
   // localStorage (criapost_filter_v1) e reaplicado no F5 até a pessoa limpar.
   const [filter, setFilter] = useState<PostFilter>(() => loadPostFilter());
@@ -236,10 +301,14 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
     try { localStorage.setItem(FILTER_KEY, JSON.stringify(filter)); } catch { /* segue */ }
   }, [filter]);
   const range = filterRange(filter);
-  const filterActive = filter.preset !== "all" || filter.fmt !== "all";
+  const filterActive = filter.preset !== "all" || filter.fmt !== "all" || filter.tag !== "all";
   const formatosPost = Array.from(new Set(posts.map((p) => p.format).filter(Boolean) as string[]));
+  // Só as etiquetas que estão REALMENTE em uso viram filtro (o catálogo inteiro
+  // encheria a tela de chip que não filtra nada).
+  const tagsEmUso = tagCatalog.filter((t) => posts.some((p) => (tagsByPost[p.id] ?? []).includes(t.id)));
   const viewPosts = posts.filter((p) => {
     if (filter.fmt !== "all" && p.format !== filter.fmt) return false;
+    if (filter.tag !== "all" && !(tagsByPost[p.id] ?? []).includes(filter.tag)) return false;
     // Post sem data (tipicamente "Em produção") SEMPRE aparece: só o formato o filtra.
     if (!p.scheduled_date) return true;
     if (range.from && p.scheduled_date < range.from) return false;
@@ -296,6 +365,11 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<ExternalPost | null>(null);
   const [f, setF] = useState<ExternalPostInput>({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", scheduled_date: null, scheduled_time: null, reference_url: null, drive_folder_url: null });
+  // Ideia / Referência aceita VÁRIOS links. Na coluna continua um texto só, com
+  // um link por linha (parseRefLinks/serializeRefLinks cuidam da conversão).
+  const [refLinks, setRefLinks] = useState<string[]>([]);
+  // Etiquetas internas do post aberto no editor (ids de post_tags).
+  const [internalTags, setInternalTags] = useState<string[]>([]);
   const [copying, setCopying] = useState(false);
   const [briefOpen, setBriefOpen] = useState(false);
 
@@ -303,6 +377,8 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   // anexada de cara (o storage precisa do id). O rascunho não aparece pro cliente.
   const openNew = async (day?: string) => {
     setF({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", scheduled_date: day ?? null, scheduled_time: null, reference_url: null, drive_folder_url: null });
+    setRefLinks([]);
+    setInternalTags([]);
     setFormOpen(true);
     try {
       const draft = await createDraft.mutateAsync({ scheduled_date: day ?? null });
@@ -310,7 +386,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
       setEditing(draft);
     } catch { setFormOpen(false); }
   };
-  const openEdit = (p: ExternalPost) => { setDraftId(null); setEditing(p); setF({ title: p.title, platform: p.platform, format: p.format, caption: p.caption ?? "", hook: p.hook ?? "", approval_mode: (p.approval_mode as "fast"|"flow"|"both") ?? "fast", script: p.script ?? "", scheduled_date: p.scheduled_date ?? null, scheduled_time: (p as { scheduled_time?: string | null }).scheduled_time ?? null, reference_url: p.reference_url ?? null, drive_folder_url: (p as { drive_folder_url?: string | null }).drive_folder_url ?? null }); setFormOpen(true); };
+  const openEdit = (p: ExternalPost) => { setDraftId(null); setEditing(p); setRefLinks(parseRefLinks(p.reference_url)); setInternalTags(tagsByPost[p.id] ?? []); setF({ title: p.title, platform: p.platform, format: p.format, caption: p.caption ?? "", hook: p.hook ?? "", approval_mode: (p.approval_mode as "fast"|"flow"|"both") ?? "fast", script: p.script ?? "", scheduled_date: p.scheduled_date ?? null, scheduled_time: (p as { scheduled_time?: string | null }).scheduled_time ?? null, reference_url: p.reference_url ?? null, drive_folder_url: (p as { drive_folder_url?: string | null }).drive_folder_url ?? null }); setFormOpen(true); };
 
   // Cancelar um post novo apaga o rascunho (com a mídia que já subiu).
   const closeForm = async () => {
@@ -324,6 +400,8 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   // confirma antes de descartar. Sem nada preenchido, fecha direto.
   const draftHasContent = () => {
     if ((f.title ?? "").trim() || (f.caption ?? "").trim() || (f.hook ?? "").trim() || (f.script ?? "").trim()) return true;
+    if (refLinks.some((l) => l.trim())) return true;
+    if (internalTags.length > 0) return true;
     if (f.scheduled_date || f.scheduled_time) return true;
     if (f.platform !== "instagram" || f.format !== "reels") return true;
     const media = draftId ? qc.getQueryData(["criapost-media", draftId]) : null;
@@ -345,9 +423,12 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
 
   const submit = async () => {
     if (!f.title.trim()) return;
-    // Ideia / Referência: aceita só link http(s). Vazio = ok (campo opcional).
-    if ((f.reference_url ?? "").trim() && !/^https?:\/\//i.test((f.reference_url ?? "").trim())) {
-      toast.error("A referência precisa ser um link começando com http.");
+    // Ideia / Referência: agora são VÁRIOS links, então a validação vale LINK A
+    // LINK. Não exigimos mais "http" no começo porque refLinkHref normaliza quem
+    // colou "site.com/x"; isRefLink só barra o que claramente não é endereço.
+    const linkRuim = refLinks.map((l) => l.trim()).filter(Boolean).find((l) => !isRefLink(l));
+    if (linkRuim) {
+      toast.error(`"${refLinkLabel(linkRuim, 30)}" não parece um link. Confira a Ideia / Referência.`);
       return;
     }
     // Pasta do Drive: mesma validação simples (link http). Vazio = ok.
@@ -355,16 +436,30 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
       toast.error("A pasta do Drive precisa ser um link começando com http.");
       return;
     }
+    // A coluna reference_url continua a mesma: um link por linha.
+    const payload: ExternalPostInput = { ...f, reference_url: serializeRefLinks(refLinks) };
+    let postId: string | null = null;
     if (draftId) {
       // Rascunho → cria o post em PRODUÇÃO (ainda não vai pro cliente).
-      await update.mutateAsync({ id: draftId, publish: true, ...f });
+      await update.mutateAsync({ id: draftId, publish: true, ...payload });
       toast.success("Post criado! Está em produção. Libere pro cliente quando quiser.");
+      postId = draftId;
       setDraftId(null);
     } else if (editing) {
-      await update.mutateAsync({ id: editing.id, resend: editing.approval_status === "ajuste_solicitado", ...f });
+      await update.mutateAsync({ id: editing.id, resend: editing.approval_status === "ajuste_solicitado", ...payload });
+      postId = editing.id;
     } else {
-      await create.mutateAsync(f);
+      const criado = await create.mutateAsync(payload);
+      postId = criado?.id ?? null;
       toast.success("Post criado! Está em produção.");
+    }
+    // Etiquetas internas gravam SEPARADO do post (ver usePostTags): assim, se a
+    // migration ainda não rodou, o post salva normalmente e só a etiqueta avisa.
+    // Só chama quando mudou de verdade, pra não avisar nada em save comum.
+    if (postId) {
+      const antes = [...(tagsByPost[postId] ?? [])].sort().join("|");
+      const agora = [...internalTags].sort().join("|");
+      if (antes !== agora) setPostTags.mutate({ id: postId, tags: internalTags });
     }
     setFormOpen(false);
     setEditing(null);
@@ -424,14 +519,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
         <TabsContent value="posts">
           <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
             {/* Kanban (padrão) / Calendário, as duas visões conversam: mudar a data reflete no card. */}
-            <div className="inline-flex rounded-lg border border-border overflow-hidden">
-              {(["kanban", "calendario"] as const).map((v) => (
-                <button key={v} onClick={() => setViewPersist(v)}
-                  className={`px-3 py-1.5 text-xs font-body font-semibold transition-colors ${view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-                  {v === "kanban" ? "Kanban" : "Calendário"}
-                </button>
-              ))}
-            </div>
+            <ViewToggle value={view} onChange={setViewPersist} />
             <div className="flex gap-2 flex-wrap">
               {embedded && (
                 <>
@@ -478,14 +566,42 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
       {formatosPost.length > 1 && (
         <div className="flex gap-1.5 flex-wrap mb-3">
           <button onClick={() => setFilter((prev) => ({ ...prev, fmt: "all" }))} className={`text-xs font-body font-semibold px-3 py-1.5 rounded-full border transition-colors ${filter.fmt === "all" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>Todos os formatos</button>
-          {formatosPost.map((fmt) => (
-            <button key={fmt} onClick={() => setFilter((prev) => ({ ...prev, fmt }))} className={`text-xs font-body font-semibold px-3 py-1.5 rounded-full border transition-colors ${filter.fmt === fmt ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>{FORMAT_LABELS[fmt] ?? fmt}</button>
-          ))}
+          {/* Cada formato carrega a própria cor (bolinha + rótulo) pra o filtro
+              falar a mesma língua do card do kanban e do calendário. */}
+          {formatosPost.map((fmt) => {
+            const ativo = filter.fmt === fmt;
+            return (
+              <button key={fmt} onClick={() => setFilter((prev) => ({ ...prev, fmt }))} style={formatColorVars(fmt)}
+                className={`inline-flex items-center gap-1.5 text-xs font-body font-semibold px-3 py-1.5 rounded-full border transition-colors ${ativo ? "bg-primary text-primary-foreground border-primary" : `border-border hover:bg-muted/40 ${FORMAT_TEXT_CLASS}`}`}>
+                <span aria-hidden className={`h-1.5 w-1.5 rounded-full shrink-0 ${ativo ? "bg-primary-foreground" : FORMAT_DOT_CLASS}`} />
+                {FORMAT_LABELS[fmt] ?? fmt}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {/* Filtro por ETIQUETA INTERNA: só aparece quando alguma está em uso, pra
+          não poluir quem ainda não usa. Filtra kanban e calendário juntos. */}
+      {tagsEmUso.length > 0 && (
+        <div className="flex gap-1.5 flex-wrap mb-3">
+          <button onClick={() => setFilter((prev) => ({ ...prev, tag: "all" }))}
+            className={`text-xs font-body font-semibold px-3 py-1.5 rounded-full border transition-colors ${filter.tag === "all" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>Todas as etiquetas</button>
+          {tagsEmUso.map((t) => {
+            const ativo = filter.tag === t.id;
+            return (
+              <button key={t.id} onClick={() => setFilter((prev) => ({ ...prev, tag: ativo ? "all" : t.id }))}
+                className={`inline-flex items-center gap-1.5 text-xs font-body font-semibold px-3 py-1.5 rounded-full border transition-colors ${ativo ? "bg-primary text-primary-foreground border-primary" : `${TAG_COLOR_CLS[t.color] ?? TAG_COLOR_CLS.slate} hover:opacity-80`}`}>
+                <span aria-hidden className={`h-1.5 w-1.5 rounded-full shrink-0 ${ativo ? "bg-primary-foreground" : (POST_TAG_DOT_CLS[t.color] ?? POST_TAG_DOT_CLS.slate)}`} />
+                {t.name}
+              </button>
+            );
+          })}
         </div>
       )}
       {view === "calendario" ? (
         <PostsCalendar posts={viewPosts} onOpen={openEdit} onNewAt={(d) => openNew(d)}
-          onMove={(id, d) => setDate.mutate({ id, scheduled_date: d })} />
+          onMove={(id, d) => setDate.mutate({ id, scheduled_date: d })}
+          tagsByPost={tagsByPost} tagCatalog={tagCatalog} />
       ) : isLoading ? (
         <div className="space-y-3">{[0, 1].map((i) => <div key={i} className="h-20 rounded-2xl bg-muted animate-pulse" />)}</div>
       ) : viewPosts.length === 0 ? (
@@ -495,7 +611,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
         </div>
       ) : (
         <DragDropContext onDragEnd={handleApprovalDragEnd}>
-          <div className="flex gap-3 overflow-x-auto pb-4 -mx-1 px-1 kanban-scroll">
+          <div ref={boardRef} className="flex gap-3 overflow-x-auto pb-4 -mx-1 px-1 kanban-scroll">
             {APPROVAL_COLS.map((colKey) => {
               const st = STATUS[colKey];
               const colPosts = viewPosts.filter((p) => (p.approval_status ?? "pendente") === colKey);
@@ -516,19 +632,34 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                         className={`bg-card border border-border rounded-xl p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all ${dragS.isDragging ? "shadow-warm-lg ring-2 ring-primary/40" : ""}`}>
                         <div className="flex items-start gap-2">
                           <div className="flex-1 min-w-0">
-                            <span className="text-[10px] font-body font-bold uppercase tracking-wide"><span style={{ color: FORMAT_COLOR[p.format] ?? "#6b6b66" }}>{cap(p.format)}</span> <span className="text-muted-foreground">· {cap(p.platform)}</span></span>
+                            <span className="text-[10px] font-body font-bold uppercase tracking-wide"><span style={formatColorVars(p.format)} className={FORMAT_TEXT_CLASS}>{cap(p.format)}</span> <span className="text-muted-foreground">· {cap(p.platform)}</span></span>
                             <p className="font-display font-bold text-sm text-foreground truncate mt-1">{p.title}</p>
                             {/* Data direto no card, sem abrir o post. Reflete no calendário na hora. */}
                             <input type="date" value={p.scheduled_date ?? ""}
                               onClick={(e) => e.stopPropagation()}
                               onChange={(e) => { e.stopPropagation(); setDate.mutate({ id: p.id, scheduled_date: e.target.value || null }); }}
                               className="mt-1 h-9 md:h-6 w-full rounded-md border border-border bg-card px-1.5 text-[11px] font-body text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
-                            {p.reference_url && (
-                              <a href={p.reference_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
-                                className="mt-1 inline-flex items-center gap-1 text-[11px] font-body font-semibold text-primary hover:underline">
-                                <Link2 className="h-3 w-3 shrink-0" /> Ideia / Referência
-                              </a>
-                            )}
+                            {/* Ideia / Referência: pode ter VÁRIOS links (backlog #142).
+                                Um link só mantém o rótulo antigo; vários viram lista
+                                numerada com o endereço curto, cada um clicável. */}
+                            {(() => {
+                              const links = parseRefLinks(p.reference_url);
+                              if (!links.length) return null;
+                              return (
+                                <div className="mt-1 flex flex-col gap-0.5">
+                                  {links.map((l, i) => (
+                                    <a key={`${l}-${i}`} href={refLinkHref(l)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+                                      title={l}
+                                      className="inline-flex items-center gap-1 text-[11px] font-body font-semibold text-primary hover:underline min-w-0">
+                                      <Link2 className="h-3 w-3 shrink-0" />
+                                      <span className="truncate">{links.length === 1 ? "Ideia / Referência" : `${i + 1}. ${refLinkLabel(l, 28)}`}</span>
+                                    </a>
+                                  ))}
+                                </div>
+                              );
+                            })()}
+                            {/* Etiquetas internas: só a agência vê (nunca vão pro portal do cliente). */}
+                            <TagChips ids={tagsByPost[p.id]} catalog={tagCatalog} />
                             {p.approval_status === "ajuste_solicitado" && p.last_comment && p.last_comment_role === "cliente_externo" && (
                               <div className="mt-2 text-xs font-body text-orange-700 bg-orange-50 border border-orange-100 rounded-lg px-2.5 py-1.5" title={p.last_comment}>
                                 <span className="font-bold">Cliente pediu um ajuste</span>
@@ -764,12 +895,23 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                 </div>
               </div>
 
-              {/* Ideia / Referência: cola um link (Drive, post, Pinterest...) que fica
-                  clicável no card. Mesmo padrão do "Referência" do Cronograma. */}
+              {/* Ideia / Referência: cola um ou VÁRIOS links (Drive, post, Pinterest...)
+                  que ficam clicáveis no card. O "+" abre mais uma linha; a coluna
+                  continua sendo um texto só, com um link por linha. */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-body">Ideia / Referência (link)</Label>
-                <Input value={f.reference_url ?? ""} onChange={(e) => setF((p) => ({ ...p, reference_url: e.target.value || null }))}
-                  placeholder="Cole um link de inspiração (Drive, post, Pinterest...)" className="rounded-xl" />
+                <Label className="text-xs font-body">Ideia / Referência (links)</Label>
+                <MultiLinkInput value={refLinks} onChange={setRefLinks}
+                  placeholder="Cole um link de inspiração (Drive, post, Pinterest...)" />
+              </div>
+
+              {/* Etiquetas INTERNAS: organização da equipe. O rótulo e a linha de
+                  apoio deixam explícito que o cliente não vê isso em lugar nenhum. */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-body">Etiquetas internas</Label>
+                <p className="text-[11px] font-body text-muted-foreground leading-tight">
+                  Só a sua equipe vê. Não aparece no link de aprovação, no cronograma público nem no relatório do cliente.
+                </p>
+                <InternalTagPicker selected={internalTags} onChange={setInternalTags} />
               </div>
 
               {/* Pasta do Drive: link da PASTA com os materiais deste post (distinto da
@@ -826,7 +968,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                 <CriaPostMedia postId={editing.id} platform={f.platform} format={f.format}
                   caption={f.caption ?? undefined} handle={client.instagram_handle || undefined}
                   approved={editing.approval_status === "aprovado"}
-                  title={f.title || undefined} referenceUrl={f.reference_url ?? null} />
+                  title={f.title || undefined} referenceUrl={serializeRefLinks(refLinks)} />
               ) : (
                 <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Preparando o post pra você anexar a mídia…</p>
               )}
@@ -857,11 +999,14 @@ function calYmd(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1)
 // Semana começa no DOMINGO (padrão do iPhone/calendários BR).
 function calWeekStart(d: Date) { const x = new Date(d); x.setDate(x.getDate() - x.getDay()); x.setHours(0, 0, 0, 0); return x; }
 
-function PostsCalendar({ posts, onOpen, onNewAt, onMove }: {
+function PostsCalendar({ posts, onOpen, onNewAt, onMove, tagsByPost, tagCatalog }: {
   posts: ExternalPost[];
   onOpen: (p: ExternalPost) => void;
   onNewAt: (day: string) => void;
   onMove: (id: string, day: string) => void;
+  // Etiquetas internas: entram como bolinha compacta, nunca como bloco novo.
+  tagsByPost: Record<string, string[]>;
+  tagCatalog: PostTag[];
 }) {
   const [anchor, setAnchor] = useState(() => new Date());
   // Drag nativo (HTML5): o @hello-pangea/dnd não funciona em grid de calendário.
@@ -928,10 +1073,16 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove }: {
                   <button key={p.id} draggable
                     onDragStart={() => setDragId(p.id)} onDragEnd={() => { setDragId(null); setOverDay(null); }}
                     type="button" onClick={() => onOpen(p)}
-                    className={`rounded-lg border border-border bg-card px-1.5 py-1 text-left hover:bg-muted/40 transition-shadow cursor-grab active:cursor-grabbing ${dragId === p.id ? "opacity-50 shadow-lg" : ""}`}>
+                    style={{ ...formatColorVars(p.format), borderLeftWidth: 3 }}
+                    className={`rounded-lg border border-border ${FORMAT_BORDER_CLASS} bg-card px-1.5 py-1 text-left hover:bg-muted/40 transition-shadow cursor-grab active:cursor-grabbing ${dragId === p.id ? "opacity-50 shadow-lg" : ""}`}>
                     <span className={`text-[9px] font-body font-bold px-1.5 py-0.5 rounded-full ${st?.cls ?? ""}`}>{st?.label ?? "Pendente"}</span>
                     <p className="text-[11px] font-body font-semibold text-foreground leading-tight truncate mt-0.5">{p.title}</p>
-                    <p className="text-[9px] font-body text-muted-foreground uppercase">{cap(p.format)}</p>
+                    {/* Formato e etiquetas na MESMA linha: a célula é apertada, então
+                        a etiqueta entra como bolinha colorida (nome no tooltip). */}
+                    <span className="flex items-center gap-1 min-w-0">
+                      <span className={`text-[9px] font-body font-bold uppercase truncate ${FORMAT_TEXT_CLASS}`}>{cap(p.format)}</span>
+                      <TagDots ids={tagsByPost[p.id]} catalog={tagCatalog} />
+                    </span>
                   </button>
                 );
               })}
@@ -949,9 +1100,13 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove }: {
               <button key={p.id} draggable
                 onDragStart={() => setDragId(p.id)} onDragEnd={() => { setDragId(null); setOverDay(null); }}
                 type="button" onClick={() => onOpen(p)}
-                className={`rounded-lg border border-border bg-card px-2 py-1.5 text-left hover:bg-muted/40 transition-shadow cursor-grab active:cursor-grabbing ${dragId === p.id ? "opacity-50 shadow-lg" : ""}`}>
+                style={{ ...formatColorVars(p.format), borderLeftWidth: 3 }}
+                className={`rounded-lg border border-border ${FORMAT_BORDER_CLASS} bg-card px-2 py-1.5 text-left hover:bg-muted/40 transition-shadow cursor-grab active:cursor-grabbing ${dragId === p.id ? "opacity-50 shadow-lg" : ""}`}>
                 <p className="text-[11px] font-body font-semibold text-foreground truncate max-w-[160px]">{p.title}</p>
-                <p className="text-[9px] font-body text-muted-foreground uppercase">{cap(p.format)}</p>
+                <span className="flex items-center gap-1 min-w-0">
+                  <span className={`text-[9px] font-body font-bold uppercase ${FORMAT_TEXT_CLASS}`}>{cap(p.format)}</span>
+                  <TagDots ids={tagsByPost[p.id]} catalog={tagCatalog} />
+                </span>
               </button>
             ))}
           </div>

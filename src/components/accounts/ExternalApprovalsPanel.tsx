@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useExternalClients, useAllExternalPosts, type ExternalClient, type ExternalPostWithClient } from "@/hooks/useCriaPost";
 import { ExternalClientDialog } from "@/components/accounts/ExternalClientDialog";
+import { useDragScroll } from "@/hooks/useDragScroll";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -52,6 +53,7 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
   const [fixing, setFixing] = useState<ExternalClient | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [busca, setBusca] = useState("");
+  const boardRef = useDragScroll<HTMLDivElement>();
 
   const byId = useMemo(() => {
     const m: Record<string, ExternalClient> = {};
@@ -332,7 +334,8 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
           o `truncate` no texto. É o bug do print. */}
       {/* 5 colunas (espelha o kanban do cliente). Scroll horizontal no mobile,
           igual ao kanban do Cria Post: cada coluna encolhe até um mínimo. */}
-      <div className={sections.length > 1 ? "flex gap-3 overflow-x-auto pb-4 -mx-1 px-1 kanban-scroll items-start" : "space-y-2 min-w-0"}>
+      {/* Clicar no vazio e arrastar pro lado rola o board (só mouse). */}
+      <div ref={boardRef} className={sections.length > 1 ? "flex gap-3 overflow-x-auto pb-4 -mx-1 px-1 kanban-scroll items-start" : "space-y-2 min-w-0"}>
         {sections.map((s) => {
           const all = shown.filter((p) => (p.approval_status ?? "pendente") === s.key);
           const limited = HISTORY_KEYS.includes(s.key);
