@@ -191,7 +191,7 @@ export const pt = {
     faqQ1: "Preciso saber mexer com tecnologia?",
     faqA1: "Não. O cria foi feito para criadores, não para especialistas em marketing. A interface é guiada e intuitiva do zero.",
     faqQ2: "Funciona com qual plataforma?",
-    faqA2: "Instagram, TikTok e YouTube. Você conecta suas contas e o sistema publica, coleta métricas e gera insights automaticamente.",
+    faqA2: "Você planeja e organiza o conteúdo de qualquer rede aqui dentro. No Instagram, conectando sua conta profissional, o cria ainda puxa as métricas reais e monta os insights. A publicação continua sendo sua: o cria não posta no seu lugar.",
     faqQ3: "A IA é genérica ou personalizada?",
     faqA3: "Personalizada. Ela aprende seu nicho, tom de voz e pilares de conteúdo para gerar sugestões que parecem escritas por você.",
     faqQ4: "Posso cancelar quando quiser?",
