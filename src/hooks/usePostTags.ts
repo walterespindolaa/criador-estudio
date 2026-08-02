@@ -115,14 +115,17 @@ export function useDeletePostTag() {
 // ── Etiquetas padrão ──
 // Ponto de partida pra não encarar tela em branco. São de PRODUÇÃO de post,
 // diferentes das de cliente (VIP, Inadimplente...), que vivem em crm_tags.
+// A ordem segue o caminho real da peça: entra pra fazer, grava, edita, volta
+// pra alteração/ajuste, vai pra aprovação e sai pronta. A cor acompanha esse
+// caminho (neutro no começo, quente no meio, verde no fim).
 export const DEFAULT_POST_TAGS: { name: string; color: TagColor }[] = [
-  { name: "Prioridade", color: "rose" },
-  { name: "Gravar externa", color: "sky" },
-  { name: "Aguardando material do cliente", color: "amber" },
-  { name: "Patrocinado", color: "violet" },
-  { name: "Regravar", color: "orange" },
-  { name: "Pronto pra editar", color: "emerald" },
-  { name: "Depende de aprovação jurídica", color: "slate" },
+  { name: "A fazer", color: "slate" },
+  { name: "Gravar", color: "violet" },
+  { name: "Editar", color: "sky" },
+  { name: "Em alteração", color: "orange" },
+  { name: "Ajustar", color: "rose" },
+  { name: "Aguardando aprovação", color: "amber" },
+  { name: "Pronto", color: "emerald" },
 ];
 
 export function useSeedDefaultPostTags() {

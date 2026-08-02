@@ -699,8 +699,6 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                                 </div>
                               );
                             })()}
-                            {/* Etiquetas internas: só a agência vê (nunca vão pro portal do cliente). */}
-                            <TagChips ids={tagsByPost[p.id]} catalog={tagCatalog} />
                             {p.approval_status === "ajuste_solicitado" && p.last_comment && p.last_comment_role === "cliente_externo" && (
                               <div className="mt-2 text-xs font-body text-orange-700 bg-orange-50 border border-orange-100 rounded-lg px-2.5 py-1.5" title={p.last_comment}>
                                 <span className="font-bold">Cliente pediu um ajuste</span>
@@ -724,7 +722,11 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                                 </div>
                               );
                             })()}
-                            <span className="inline-block mt-2 text-[9px] font-body font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">{p.approval_mode === "flow" ? "Detalhada" : p.approval_mode === "both" ? "Ambas" : "Simplificada"}</span>
+                            {/* Rodapé do card: as etiquetas internas ocupam o lugar que era do
+                                tipo de aprovação. O tipo continua editável dentro do post, mas
+                                repetido em todo card não dizia nada sobre o que fazer com a peça.
+                                Só a agência vê isto: nunca vai pro portal do cliente. */}
+                            <TagChips ids={tagsByPost[p.id]} catalog={tagCatalog} />
                           </div>
                           <div className="flex flex-col gap-1.5 md:gap-1 shrink-0">
                             <Button variant="ghost" size="sm" className="h-9 w-9 md:h-7 md:w-7 p-0" onClick={() => openEdit(p)} aria-label="Editar"><Pencil className="h-4 w-4 md:h-3.5 md:w-3.5" /></Button>

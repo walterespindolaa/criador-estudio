@@ -70,6 +70,8 @@ const STATUS: Record<Capture["status"], { label: string; cls: string }> = {
 // As cores padrão de tarefa (cliente/lead) e a função corDoItem moravam aqui;
 // agora vêm de @/lib/cores-agenda, pra a aba Tarefas usar exatamente a mesma regra.
 const CAPTURE_DEFAULT_COLOR = "#14B8A6";     // teal, captação
+// Post: laranja. Só entra quando o cliente dono não tem cor cadastrada.
+const POST_DEFAULT_COLOR = "#EA4918";
 // Material (6º tipo): dourado/mostarda. Escolhido por não colidir com nenhuma das cores
 // já usadas nos chips (roxo #4B3FA8, azul #0061EE, rosa #FF77B9, laranja #EA4918, verde #059669).
 const MATERIAL_DEFAULT_COLOR = "#CA8A04";
@@ -545,6 +547,11 @@ export default function AgendaCriacao() {
     mat.crm_client_id ? clients.find((c) => c.id === mat.crm_client_id)?.color : null,
     MATERIAL_DEFAULT_COLOR,
   );
+  // Cor do POST: a do cliente dono (external_clients.color, a mesma escolhida no
+  // cadastro); sem cor, o laranja padrão do tipo. Mesma regra da captação e do
+  // material, pra o dia inteiro ficar legível pela cor do cliente.
+  const corDoPost = (p: ExternalPostWithClient) =>
+    corDoItem(null, extById.get(p.external_client_id)?.color, POST_DEFAULT_COLOR);
   // Clicar no material leva pro cockpit do cliente na aba Materiais (rota real do ClienteHub).
   const openMaterial = (mat: AgendaMaterial) => {
     if (!mat.crm_client_id) { toast.error("Este material não está vinculado a um cliente do CRM."); return; }
@@ -679,16 +686,17 @@ export default function AgendaCriacao() {
                     {producaoPosts.map((p, idx) => {
                       const cli = extById.get(p.external_client_id);
                       const st = POST_STATUS[p.approval_status ?? "em_producao"];
+                      const cor = corDoPost(p);
                       return (
                         <Draggable key={`post:${p.id}`} draggableId={`post:${p.id}`} index={idx} disableInteractiveElementBlocking>
                           {(dragProvided, dragSnapshot) => (
                             <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
                               type="button" title={p.title ?? undefined} onClick={() => openPost(p)}
-                              style={{ ...dragProvided.draggableProps.style, ...dragCardStyle }}
-                              className={cn("rounded-lg border border-orange-500/40 bg-card hover:bg-orange-500/10 px-2 py-1.5 text-left transition-colors w-[180px] shrink-0 overflow-hidden",
+                              style={{ ...dragProvided.draggableProps.style, ...dragCardStyle, borderColor: `${cor}66` }}
+                              className={cn("rounded-lg border bg-card px-2 py-1.5 text-left transition-colors w-[180px] shrink-0 overflow-hidden hover:brightness-95",
                                 dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
-                              <div className="flex items-center gap-1 text-orange-700 dark:text-orange-300">
-                                <DragGrip className="text-orange-700/40 dark:text-orange-300/40" handleProps={dragProvided.dragHandleProps ?? undefined} />
+                              <div className="flex items-center gap-1" style={{ color: cor }}>
+                                <DragGrip className="opacity-40" handleProps={dragProvided.dragHandleProps ?? undefined} />
                                 <Send className="h-3 w-3 shrink-0" />
                                 <span className="text-[10px] font-body font-bold truncate flex-1 min-w-0">{cli?.name ?? "Post"}</span>
                                 {p.drive_folder_url && <FolderOpen className="h-3 w-3 shrink-0 text-primary opacity-80" aria-label="Tem pasta no Drive" />}
@@ -911,18 +919,19 @@ export default function AgendaCriacao() {
                         const cli = extById.get(p.external_client_id);
                         const posted = p.approval_status === "postado";
                         const st = POST_STATUS[p.approval_status ?? "em_producao"];
+                        const cor = corDoPost(p);
                         return (
                           <Draggable key={`post:${p.id}`} draggableId={`post:${p.id}`} index={idx} disableInteractiveElementBlocking>
                             {(dragProvided, dragSnapshot) => {
                               return (
                               <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
                                 type="button" title={p.title ?? undefined} onClick={() => openPost(p)}
-                                style={{ ...dragProvided.draggableProps.style, ...dragCardStyle }}
-                                className={cn("rounded-lg border border-orange-500/40 bg-orange-500/10 hover:bg-orange-500/15 px-2 py-1.5 text-left transition-colors w-full overflow-hidden",
+                                style={{ ...dragProvided.draggableProps.style, ...dragCardStyle, borderColor: `${cor}66`, background: `${cor}14` }}
+                                className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors w-full overflow-hidden hover:brightness-95",
                                   posted && "opacity-60",
                                   dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
-                                <div className="flex items-center gap-1 min-w-0 text-orange-700 dark:text-orange-300">
-                                  <DragGrip className="text-orange-700/40 dark:text-orange-300/40" handleProps={dragProvided.dragHandleProps ?? undefined} />
+                                <div className="flex items-center gap-1 min-w-0" style={{ color: cor }}>
+                                  <DragGrip className="opacity-40" handleProps={dragProvided.dragHandleProps ?? undefined} />
                                   <Send className="h-3 w-3 shrink-0" />
                                   <span className="text-[10px] font-body font-bold truncate flex-1 min-w-0">{item.time && <span className="tabular-nums">{item.time} · </span>}{cli?.name ?? "Post"}</span>
                                   {/* Indicador discreto: post tem link do Drive no campo Ideia/Referência
@@ -934,8 +943,9 @@ export default function AgendaCriacao() {
                                   {/* Check: marca o post como POSTADO (vai pra coluna Postado do kanban). */}
                                   <span role="button" tabIndex={0} aria-label={posted ? "Reabrir post" : "Marcar como postado"}
                                     onClick={(e) => { e.stopPropagation(); updateExtPost.mutate({ id: p.id, patch: { approval_status: posted ? "aprovado" : "postado", approval_updated_at: new Date().toISOString() } }); }}
+                                    style={posted ? undefined : { borderColor: `${cor}80` }}
                                     className={cn("grid h-6 w-6 md:h-4 md:w-4 shrink-0 place-items-center rounded border cursor-pointer transition-colors",
-                                      posted ? "bg-emerald-500 border-emerald-500 text-white" : "border-orange-500/50 hover:border-emerald-500 hover:text-emerald-600")}>
+                                      posted ? "bg-emerald-500 border-emerald-500 text-white" : "hover:border-emerald-500 hover:text-emerald-600")}>
                                     {posted && <Check className="h-3 w-3" strokeWidth={3} />}
                                   </span>
                                 </div>
@@ -1154,7 +1164,7 @@ export default function AgendaCriacao() {
                   if (item.kind === "task") { const t = item.task; const isLead = !!t.crm_lead_id; const dotColor = corDaTarefa(t); return <button key={`t${t.id}`} onClick={() => { setDayModal(null); setEditTask(t); }} className={rowCls}>{dot(dotColor)}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{t.title}</span><span className="ml-auto text-[10px] text-muted-foreground">Tarefa</span></button>; }
                   if (item.kind === "mat") { const mt = item.mat; const done = mt.status === "finalizado"; return <button key={`m${mt.id}`} onClick={() => { setDayModal(null); openMaterial(mt); }} className={rowCls}>{dot(corDoMaterial(mt))}<span className={cn("text-[13px] font-body font-semibold truncate", done ? "line-through text-muted-foreground" : "text-foreground")}>{mt.title}</span><span className="ml-auto text-[10px] text-muted-foreground shrink-0">Material</span></button>; }
                   if (item.kind === "cap") { const c = item.cap; return <button key={`p${c.id}`} onClick={() => { setDayModal(null); setEditCap(c); }} className={rowCls}>{dot("#FF77B9")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}{c.capture_time ? ` · ${c.capture_time.slice(0, 5)}` : ""}</span><span className="ml-auto text-[10px] text-muted-foreground">Captação</span></button>; }
-                  const p = item.post; const st = POST_STATUS[p.approval_status ?? "em_producao"]; return <button key={`o${p.id}`} onClick={() => { setDayModal(null); openPost(p); }} className={rowCls}>{dot("#EA4918")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{p.title || "Post"}</span>{st && <span className={cn("ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}</button>;
+                  const p = item.post; const st = POST_STATUS[p.approval_status ?? "em_producao"]; return <button key={`o${p.id}`} onClick={() => { setDayModal(null); openPost(p); }} className={rowCls}>{dot(corDoPost(p))}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{p.title || "Post"}</span>{st && <span className={cn("ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}</button>;
                 })}
                 {/* Cria do cliente: 5o tipo, só leitura. Clicar abre o kanban do cliente. */}
                 {criaCli.map((p) => (
