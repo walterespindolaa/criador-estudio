@@ -354,9 +354,21 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
                             {/* Cabeçalho: tipo · data · status */}
                             <div className="flex items-center gap-1.5 flex-wrap mb-1">
                               {it.type && <span className={cn("text-[10px] font-bold text-white px-2 py-0.5 rounded-full", TYPE_COLOR[it.type] ?? "bg-gray-500")}>{it.type}</span>}
-                              <span className="text-[11px] font-body text-muted-foreground">
-                                {it.date ? it.date.split("-").reverse().slice(0, 2).join("/") : "sem data"}
-                              </span>
+                              {/* Data editável no próprio card: antes só dava pra
+                                  mudar abrindo o editor do item, o que é lento quando
+                                  você está distribuindo o mês inteiro. */}
+                              <input
+                                type="date"
+                                value={it.date ?? ""}
+                                onChange={(e) => updateItem.mutate({ id: it.id, date: e.target.value || null })}
+                                onClick={(e) => e.stopPropagation()}
+                                aria-label="Data do post"
+                                className={cn(
+                                  "h-6 rounded-md border border-transparent bg-transparent px-1 text-[11px] font-body",
+                                  "hover:border-border hover:bg-muted/50 focus:border-primary/50 focus:bg-card focus:outline-none transition-colors",
+                                  it.date ? "text-foreground" : "text-muted-foreground",
+                                )}
+                              />
                               <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full ml-auto", ST_CLASS[it.approval_status])}>{ST_LABEL[it.approval_status]}</span>
                               {it.converted_post_id && <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full"><Check className="h-2.5 w-2.5" /> no Cria Post</span>}
                             </div>

@@ -111,10 +111,12 @@ function ClientTaskDialog({ task, saving, onClose, onSave }: {
   const [priority, setPriority] = useState<CrmTaskPriority>(task.priority);
   const [status, setStatus] = useState<CrmTaskStatus>(task.status);
   const [due, setDue] = useState(task.due_date ?? "");
+  // Horário da tarefa (due_time), que faltava neste modal.
+  const [dueTime, setDueTime] = useState(task.due_time ? task.due_time.slice(0, 5) : "");
   const [desc, setDesc] = useState(task.description ?? "");
   const submit = () => {
     if (!title.trim()) { toast.error("Título é obrigatório."); return; }
-    onSave(task.id, { title: title.trim(), priority, status, due_date: due || null, description: desc.trim() || null });
+    onSave(task.id, { title: title.trim(), priority, status, due_date: due || null, due_time: dueTime || null, description: desc.trim() || null });
   };
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -134,7 +136,17 @@ function ClientTaskDialog({ task, saving, onClose, onSave }: {
               </select>
             </div>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs">Prazo</Label><Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="rounded-xl" /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5"><Label className="text-xs">Prazo</Label><Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="rounded-xl" /></div>
+            <div className="space-y-1.5">
+              <div className="flex items-baseline justify-between gap-2">
+                <Label className="text-xs">Horário</Label>
+                {/* O input de hora do navegador não tem como esvaziar. */}
+                {dueTime && <button type="button" onClick={() => setDueTime("")} className="text-[11px] font-body text-muted-foreground hover:text-destructive transition-colors">Limpar</button>}
+              </div>
+              <Input type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)} className="rounded-xl" />
+            </div>
+          </div>
           <div className="space-y-1.5"><Label className="text-xs">Descrição</Label><Textarea rows={2} value={desc} onChange={(e) => setDesc(e.target.value)} className="rounded-xl text-sm" /></div>
         </div>
         <div className="flex justify-end gap-2 mt-5"><Button variant="outline" onClick={onClose}>Cancelar</Button><Button onClick={submit} disabled={!title.trim() || saving}>Salvar</Button></div>
