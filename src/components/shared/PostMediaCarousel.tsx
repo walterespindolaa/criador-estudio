@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ImageOff, ChevronLeft, ChevronRight, X, Play, ExternalLink } from "lucide-react";
-import { getDisplayImageUrl, getDriveImageFallbackUrl, getDriveViewPageUrl, getThumbnailUrl, getVideoEmbedUrl, getVideoFileUrl, getVideoKind, isVideoMedia } from "@/lib/driveMedia";
+import { getDisplayImageUrl, getDriveImageFallbackUrl, getDriveViewPageUrl, getThumbnailUrl, getVideoEmbedUrl, getVideoFileUrl, getVideoKind, isUnknownDriveMedia, isVideoMedia } from "@/lib/driveMedia";
 import { ProgressiveImage } from "@/components/shared/ProgressiveImage";
 
 export type CarouselMedia = {
@@ -91,17 +91,30 @@ function Slide({ item, onReady, eager }: { item: CarouselMedia; onReady?: () => 
   const full = getDisplayImageUrl(item) || "";
   // Miniatura leve pro placeholder; a cheia (full) entra por cima ao carregar.
   const thumb = getThumbnailUrl(item);
+  // ESTADO NEUTRO do Drive: tipo desconhecido (arquivo não público). Mostra a
+  // miniatura, que existe pros dois casos, SEM play gigante e SEM prometer
+  // "Assistir". O atalho discreto "Abrir no Drive" serve tanto pra ver a arte
+  // quanto pra assistir o vídeo, então nada fica inacessível.
+  const unknownDriveUrl = isUnknownDriveMedia(item) ? getDriveViewPageUrl(item) : null;
   const onImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
     const fb = getDriveImageFallbackUrl(item);
     if (fb && !img.dataset.fb) { img.dataset.fb = "1"; img.src = fb; }
   };
   if (full) return (
-    <ProgressiveImage
-      thumbSrc={thumb} fullSrc={full} alt={item.file_name || ""} eager={eager}
-      className="w-full h-full object-cover bg-muted"
-      onFullError={onImgError} onThumbError={onImgError}
-    />
+    <div className="relative w-full h-full">
+      <ProgressiveImage
+        thumbSrc={thumb} fullSrc={full} alt={item.file_name || ""} eager={eager}
+        className="w-full h-full object-cover bg-muted"
+        onFullError={onImgError} onThumbError={onImgError}
+      />
+      {unknownDriveUrl && (
+        <button type="button" onClick={(e) => { e.stopPropagation(); window.open(unknownDriveUrl, "_blank", "noopener,noreferrer"); }}
+          className="absolute bottom-2 right-2 z-10 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-black/80">
+          <ExternalLink className="h-3 w-3" /> Abrir no Drive
+        </button>
+      )}
+    </div>
   );
   return <div className="w-full h-full bg-muted flex items-center justify-center text-muted-foreground"><ImageOff className="h-8 w-8" /></div>;
 }

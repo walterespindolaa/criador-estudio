@@ -45,11 +45,11 @@ insert into storage.buckets (id, name, public) values ('saved-covers','saved-cov
 ## 4) Edge functions a (re)implantar
 
 Deploy junto ao push do Lovable. Se o código local for mais novo que o publicado, reimplantar:
-`drive-list`, `criapost-download-file`, `criapost-download-zip`, `saved-fetch`, `ai-context-builder`, `get-instagram-config`, `bio-track`, `instagram-sync`, `daily-notifications`.
+`drive-list`, `drive-file-meta` (NOVA), `criapost-download-file`, `criapost-download-zip`, `saved-fetch`, `ai-context-builder`, `get-instagram-config`, `bio-track`, `instagram-sync`, `daily-notifications`.
 
 ## 5) Segredos (secrets do projeto)
 
-- `GOOGLE_API_KEY` (só a aba Drive usa; sem ele `drive-list` responde 500 e a lista de pasta não carrega).
+- `GOOGLE_API_KEY` (aba Drive + `drive-file-meta`; sem ele `drive-list` responde 500 e a lista de pasta não carrega, e o link do Drive colado no Cria Post fica sem saber se é imagem ou vídeo).
 - Confirmar que já existem: `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET`, token do Apify (saved-fetch/hub), credenciais do Bunny (download de midia).
 
 ## 6) Config de auth (reset de senha)

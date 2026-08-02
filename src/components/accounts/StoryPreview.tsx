@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Heart, Send, ImageOff, Play, X, ExternalLink } from "lucide-react";
 import type { CarouselMedia } from "@/components/shared/PostMediaCarousel";
-import { getDisplayImageUrl, getDriveImageFallbackUrl, getDriveViewPageUrl, getThumbnailUrl, getVideoEmbedUrl, getVideoFileUrl, getVideoKind, isVideoMedia } from "@/lib/driveMedia";
+import { getDisplayImageUrl, getDriveImageFallbackUrl, getDriveViewPageUrl, getThumbnailUrl, getVideoEmbedUrl, getVideoFileUrl, getVideoKind, isUnknownDriveMedia, isVideoMedia } from "@/lib/driveMedia";
 import { ProgressiveImage } from "@/components/shared/ProgressiveImage";
 
 /**
@@ -32,6 +32,12 @@ export function StoryPreview({ media, handle, avatarUrl, onRemove }: {
   const hasInlinePlayer = video && (kind === "file" ? !!fileUrl : !!embedUrl);
   // Fallback só pro Drive: se o embed /preview for bloqueado, abre a página do Drive.
   const driveViewUrl = item && kind === "drive" ? getDriveViewPageUrl(item) : null;
+  // ESTADO NEUTRO: mídia do Drive de tipo desconhecido (arquivo não público). Mostra
+  // a miniatura sem play gigante e oferece "Abrir no Drive", que resolve os dois
+  // casos (ver a arte ou assistir o vídeo) sem prometer o que não sabemos.
+  const unknownDriveUrl = item && isUnknownDriveMedia(item) ? getDriveViewPageUrl(item) : null;
+  const driveShortcutUrl = driveViewUrl ?? unknownDriveUrl;
+  const driveShortcutLabel = driveViewUrl ? "Assistir no Drive" : "Abrir no Drive";
 
   // Play robusto: monta o player embutido ou abre a fonte em nova aba.
   const onPlay = () => {
@@ -104,11 +110,12 @@ export function StoryPreview({ media, handle, avatarUrl, onRemove }: {
         </button>
       )}
 
-      {/* Só pro Drive: atalho caso o embed /preview seja bloqueado pela conta do cliente. */}
-      {driveViewUrl && (
-        <button type="button" onClick={() => window.open(driveViewUrl, "_blank", "noopener,noreferrer")}
+      {/* Só pro Drive: atalho caso o embed /preview seja bloqueado pela conta do cliente,
+          ou quando o tipo do arquivo é desconhecido (aí o rótulo é neutro: "Abrir"). */}
+      {driveShortcutUrl && (
+        <button type="button" onClick={() => window.open(driveShortcutUrl, "_blank", "noopener,noreferrer")}
           className="absolute bottom-16 right-2 z-30 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-black/80">
-          <ExternalLink className="h-3 w-3" /> Assistir no Drive
+          <ExternalLink className="h-3 w-3" /> {driveShortcutLabel}
         </button>
       )}
 

@@ -42,14 +42,30 @@ export function isVideoMedia(m: MediaLike): boolean {
   if (m.file_type?.startsWith("video")) return true;
   // Bunny Stream (upload de vídeo do app / ingestão do Drive) é sempre vídeo.
   if (!!m.bunny_video_id || m.provider === "bunny_stream") return true;
-  // Link do Drive colado NÃO traz mime (file_type null). No fluxo real as imagens
-  // entram por upload ou pelo seletor do Drive (viram arquivo 'device'), então um
-  // link avulso do Drive é tratado como vídeo: o slide oferece play + "Assistir no
-  // Drive", e o /preview também abre imagem caso raro. Assim o vídeo do Drive nunca
-  // cai no caminho de imagem (frame borrado sem play).
-  if (isDriveMedia(m) && !m.file_type) return true;
+  // ATENÇÃO: aqui NÃO se chuta que link do Drive sem mime é vídeo. Quem descobre o
+  // tipo de verdade é o addDriveLink (edge drive-file-meta) na hora de colar o link,
+  // e o backfill preguiçoso do useCriaPostMedia pros links antigos. Quando mesmo
+  // assim o tipo continua desconhecido (arquivo não público), a mídia entra no
+  // ESTADO NEUTRO: ver isUnknownDriveMedia.
   // Fallback por extensão do nome/URL pra refs sem mime.
   return hasVideoExt(m.file_name) || hasVideoExt(m.view_url) || hasVideoExt(m.download_url);
+}
+
+/**
+ * Mídia do Google Drive cujo tipo REAL não foi possível descobrir (file_type nulo
+ * e sem extensão no nome/URL). Acontece quando o arquivo não está como "qualquer
+ * pessoa com o link" ou está em outra conta, e a Drive API não responde.
+ *
+ * Nesses casos NÃO se chuta nada: a interface mostra a miniatura do Drive (que
+ * existe tanto pra imagem quanto pra vídeo) SEM o play gigante, e oferece um
+ * atalho discreto "Abrir no Drive", que serve tanto pra assistir vídeo quanto pra
+ * ver a arte. Assim ninguém vê "Assistir" numa arte estática e o vídeo continua
+ * acessível em um clique (não volta o bug do frame borrado sem ação nenhuma).
+ */
+export function isUnknownDriveMedia(m: MediaLike): boolean {
+  if (!isDriveMedia(m)) return false;
+  if (m.file_type) return false;
+  return !hasVideoExt(m.file_name) && !hasVideoExt(m.view_url) && !hasVideoExt(m.download_url);
 }
 
 export function isDriveVideo(m: MediaLike): boolean {
@@ -205,7 +221,10 @@ function openForSave(url: string, fileName: string) {
 // Download INDIVIDUAL de uma mídia, na melhor qualidade disponível:
 //  - Storage (device): tenta baixar o arquivo como blob e força o download nomeado.
 //    Se o fetch-blob falhar (mobile: "Load failed"), abre a imagem pra segurar e salvar.
-//  - Drive: manda pro link de download do Drive (uc?export=download).
+//  - Drive: manda pro link de download do Drive (uc?export=download). Isso vale pra
+//    imagem do Drive E pro link do Drive de tipo desconhecido (arte estática precisa
+//    BAIXAR de verdade; antes todo link do Drive caía no caminho "vídeo: só abre o
+//    player" por causa do chute do isVideoMedia).
 //  - Vídeo (Bunny/Drive): não dá pra forçar o MP4, abre o player em nova aba.
 // Devolve "video" quando só abriu o player e "opened" quando caiu no fallback do
 // mobile (abriu a imagem pra salvar), pra quem chama avisar por toast.

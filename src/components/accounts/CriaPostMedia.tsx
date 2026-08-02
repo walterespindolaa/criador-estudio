@@ -112,7 +112,14 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
   const onDrive = async () => {
     if (!driveUrl.trim()) return;
     if (remaining() <= 0) { toast.error(`Máximo de ${MAX_MEDIA} mídias por post.`); return; }
-    try { await addDriveLink.mutateAsync(driveUrl.trim()); setDriveUrl(""); setShowDrive(false); toast.success("Link adicionado"); }
+    try {
+      const r = await addDriveLink.mutateAsync(driveUrl.trim());
+      setDriveUrl(""); setShowDrive(false);
+      // Quando não deu pra descobrir se é imagem ou vídeo, avisa o motivo real em vez
+      // de deixar a prévia mostrar um play em cima de uma arte estática.
+      if (r?.resolved) toast.success("Link adicionado");
+      else toast.warning("Link adicionado, mas não consegui identificar o arquivo. Deixe como \"Qualquer pessoa com o link\" no Drive pra prévia ficar certinha.");
+    }
     catch (err) { toast.error(err instanceof Error ? err.message : "Falha ao adicionar"); }
   };
 
@@ -298,7 +305,12 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
               {ordered.map((m, i) => {
                 const drive = isDriveMedia(m);
                 const video = isVideoMedia(m);
-                const tipo = drive ? "Drive" : video ? "Vídeo" : "Imagem";
+                // No Drive a gente já descobre o tipo real do arquivo, então mostra
+                // "Drive · imagem" / "Drive · vídeo". Só fica "Drive" quando o arquivo
+                // não é público e o tipo continua desconhecido.
+                const tipo = drive
+                  ? (video ? "Drive · vídeo" : m.file_type ? "Drive · imagem" : "Drive")
+                  : video ? "Vídeo" : "Imagem";
                 return (
                   <div key={m.id} className="flex items-center gap-2.5">
                     {/* Linha clicável: abre/prevê o arquivo (imagem cheia/Drive/vídeo). */}

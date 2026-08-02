@@ -98,6 +98,10 @@ project_id = "exuxlwdnkgmhtnwoyvwo"
   # Valida Authorization + getUser() internamente.
   [functions.drive-list]
     verify_jwt = true
+  # Descobre o mimeType real de um ARQUIVO do Drive (API key, sem OAuth), pra o
+  # link colado no Cria Post saber se é imagem ou vídeo em vez de chutar.
+  [functions.drive-file-meta]
+    verify_jwt = true
   [functions.crm-sync-from-cria]
     verify_jwt = true
   [functions.story-notifications]

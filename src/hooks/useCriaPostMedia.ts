@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { isUnknownDriveMedia } from "@/lib/driveMedia";
 import { capFullImage, makeThumbnail } from "@/lib/image-compress";
 import { uploadVideoFileToBunny } from "@/lib/bunny-upload";
 import { useAuth } from "@/contexts/AuthContext";
@@ -54,6 +56,31 @@ async function edgeErrText(err: unknown, fallback: string): Promise<string> {
   return (err as { message?: string })?.message || fallback;
 }
 
+// Resultado da consulta do tipo real de um arquivo do Drive (edge drive-file-meta).
+type DriveMeta = { mime: string | null; name: string | null };
+
+// Pergunta pro Google qual é o mimeType do arquivo. Devolve { mime: null } quando
+// não dá pra saber (arquivo não público / de outra conta / chave ausente): nesse
+// caso a gente NÃO chuta nada e a mídia fica no estado neutro da interface.
+async function fetchDriveMeta(fileIdOrUrl: string): Promise<DriveMeta> {
+  try {
+    const { data, error } = await supabase.functions.invoke("drive-file-meta", {
+      body: { file_url: fileIdOrUrl },
+    });
+    if (error) return { mime: null, name: null };
+    const d = data as { ok?: boolean; mime_type?: string | null; name?: string | null } | null;
+    if (!d?.ok) return { mime: null, name: null };
+    return { mime: d.mime_type ?? null, name: d.name ?? null };
+  } catch {
+    return { mime: null, name: null };
+  }
+}
+
+// Mídias do Drive que o backfill já tentou resolver nesta sessão (deu certo ou não).
+// Evita bater na edge a cada render e, principalmente, evita laço: se por qualquer
+// motivo o UPDATE não pegar, a gente não fica tentando de novo pra sempre.
+const driveMetaTried = new Set<string>();
+
 export function useCriaPostMedia(postId: string | null) {
   const qc = useQueryClient();
   const { user } = useAuth();
@@ -74,6 +101,35 @@ export function useCriaPostMedia(postId: string | null) {
       return (data ?? []) as CriaMedia[];
     },
   });
+
+  // BACKFILL PREGUIÇOSO dos links do Drive antigos (gravados antes desta correção,
+  // com file_type nulo). Quando a lista carrega e existe mídia do Drive sem tipo, a
+  // gente pergunta o mimeType pro próprio Drive e grava na linha. Assim o vídeo do
+  // Drive antigo volta a ter player e a arte estática antiga vira imagem de verdade,
+  // sem SQL e sem a pessoa precisar recolar o link.
+  // Roda no máximo uma vez por mídia por sessão: se o arquivo não for público, marca
+  // como falha e não insiste (a mídia segue no estado neutro da interface).
+  useEffect(() => {
+    const pendentes = (list.data ?? []).filter((m) => isUnknownDriveMedia(m) && !driveMetaTried.has(m.id));
+    if (!pendentes.length) return;
+    let vivo = true;
+    (async () => {
+      let mudou = false;
+      for (const m of pendentes) {
+        driveMetaTried.add(m.id);
+        const meta = await fetchDriveMeta(m.external_file_id || m.view_url || "");
+        if (!meta.mime) continue;
+        const patch: { file_type: string; file_name?: string } = { file_type: meta.mime };
+        // O link colado salvava o nome literal "Google Drive"; agora usa o nome real.
+        if (meta.name && (!m.file_name || m.file_name === "Google Drive")) patch.file_name = meta.name;
+        const { error } = await supabase.from("external_media_refs").update(patch).eq("id", m.id);
+        if (error) continue;
+        mudou = true;
+      }
+      if (mudou && vivo) invalidate();
+    })();
+    return () => { vivo = false; };
+  }, [list.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const uploadImage = useMutation({
     // Prévia OTIMISTA: assim que a pessoa escolhe a foto, coloca uma miniatura
@@ -207,9 +263,18 @@ export function useCriaPostMedia(postId: string | null) {
         throw new Error("Não reconheci esse link. Use o link de um arquivo do Drive (…/file/d/…).");
       }
 
+      // DESCOBRE O TIPO DE VERDADE antes de gravar. O link colado não diz se é
+      // imagem ou vídeo; sem isso o app tinha que chutar, e arte estática aparecia
+      // com play gigante e "Assistir no Drive". Aqui a edge pergunta o mimeType pro
+      // próprio Drive e a gente grava em file_type: resolve na origem, uma vez só,
+      // e prévia/download/portal/relatório passam a acertar de graça.
+      // Se o arquivo não for público, meta.mime volta null e a mídia entra no estado
+      // neutro (miniatura sem play + "Abrir no Drive"). Ninguém chuta nada.
+      const meta = await fetchDriveMeta(raw);
+
       const { error } = await sbRpc("criapost_add_media", {
         p_post_id: postId, p_provider: "gdrive", p_external_file_id: fileId,
-        p_file_name: "Google Drive", p_file_type: null, p_file_size: null,
+        p_file_name: meta.name || "Google Drive", p_file_type: meta.mime, p_file_size: null,
         p_view_url: `https://drive.google.com/file/d/${fileId}/preview`,
         p_thumbnail_url: `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`,
         p_download_url: raw, p_bunny_video_id: null,
@@ -222,6 +287,8 @@ export function useCriaPostMedia(postId: string | null) {
         if (m.includes("sem_permissao")) throw new Error("Você não tem permissão pra editar este post.");
         throw new Error(m);
       }
+      // Quem chama usa isso pra avisar quando não deu pra saber o tipo do arquivo.
+      return { resolved: !!meta.mime };
     },
     onSuccess: invalidate,
   });
