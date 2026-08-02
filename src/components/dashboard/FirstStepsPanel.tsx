@@ -8,10 +8,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { useProfile } from "@/hooks/useProfile";
 import { useIdeas } from "@/hooks/useIdeas";
 import { usePosts } from "@/hooks/usePosts";
 import { useMoodboard } from "@/hooks/useMoodboard";
+import { useSocialConnection } from "@/hooks/useSocialInsights";
 
 type Step = {
   id: string;
@@ -27,10 +27,13 @@ type Step = {
 export function FirstStepsPanel() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { profile } = useProfile();
   const { ideas } = useIdeas({ limit: 5 });
   const { posts } = usePosts({ limit: 30 });
   const { entries } = useMoodboard();
+  // Conexão REAL do Instagram (OAuth), não o @ digitado no perfil. Antes o passo
+  // riscava só por ter texto no campo do @, então a pessoa achava que já estava
+  // conectada e ficava sem entender por que os insights não vinham.
+  const { data: conexaoInstagram } = useSocialConnection();
 
   const dismissKey = user ? `cria-firststeps-dismissed-${user.id}` : "cria-firststeps-dismissed";
   const clickedKey = user ? `cria-firststeps-clicked-${user.id}` : "cria-firststeps-clicked";
@@ -46,7 +49,7 @@ export function FirstStepsPanel() {
 
   const steps: Step[] = [
     { id: "ideas", label: "Montar minha primeira semana", icon: Lightbulb, to: "/app/ideias", done: ideas.length > 0 },
-    { id: "instagram", label: "Conectar meu Instagram", icon: Instagram, to: "/app/configuracoes", done: !!profile?.instagram_handle },
+    { id: "instagram", label: "Conectar meu Instagram", note: "conta profissional, pra ver seus números", icon: Instagram, to: "/app/insights", done: !!conexaoInstagram },
     { id: "moodboard", label: "Preencher meu moodboard", note: "a Cria IA aprende seu estilo", icon: Palette, to: "/app/brandbook", done: (entries?.length ?? 0) > 0 },
     { id: "post", label: "Publicar meu 1º post", icon: Send, to: "/app/criando", done: hasPublished },
     { id: "bio", label: "Montar meu link in bio", icon: LinkIcon, to: "/app/linkinbio", done: clicked.includes("bio"), markOnClick: true },

@@ -23,6 +23,8 @@ import {
   Target,
   Clapperboard,
   Video,
+  Wand2,
+  Instagram,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
@@ -58,6 +60,10 @@ const groups = [
       // Dashboard/Início continua sendo a porta de entrada, no topo do primeiro grupo.
       { title: "Dashboard", url: "/app", icon: LayoutDashboard, end: true },
       { title: "Ideias", url: "/app/ideias", icon: Lightbulb },
+      // Cria Plano existia só no menu do celular e na URL: no desktop a pessoa
+      // não achava a ferramenta que mais impressiona. Entra aqui, antes do
+      // kanban, porque é ele que ENCHE o kanban.
+      { title: "Cria Plano", url: "/app/autopilot", icon: Wand2, feature: "cria-plano" },
       { title: "Criando", url: "/app/criando", icon: Kanban },
       { title: "Cria Stories", url: "/app/stories", icon: Clapperboard, feature: "stories" },
     ],
@@ -75,6 +81,9 @@ const groups = [
   {
     label: "Resultados",
     items: [
+      // Insights também estava fora do menu do desktop, existindo só no celular.
+      // Vem primeiro do grupo: é a tela com os números reais do Instagram.
+      { title: "Insights", url: "/app/insights", icon: Instagram, feature: "insights" },
       { title: "Relatórios", url: "/app/relatorios", icon: BarChart3, feature: "relatorios" },
       { title: "Histórico", url: "/app/historico", icon: Archive, feature: "historico" },
     ],
