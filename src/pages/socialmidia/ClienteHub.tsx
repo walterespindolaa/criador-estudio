@@ -6,11 +6,12 @@ import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useCrmClient, useUpdateCrmClient, useUploadCrmAsset, useClientNotes, CLIENT_STATUSES, CLIENT_STATUS_META, type ClientStatus } from "@/hooks/useCrm";
 import { ClientNotesDrawer, notePreview } from "@/components/accounts/ClientNotesDrawer";
+import { ClientHashtags } from "@/components/accounts/crm/ClientHashtags";
 import { mensalidadeAtivaNoMes } from "@/lib/finance";
 import { InactivateClientDialog } from "@/components/accounts/crm/InactivateClientDialog";
 import { Camera } from "lucide-react";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
-import { BrandColorPicker } from "@/components/accounts/BrandColorPicker";
+import { ClientColorPicker } from "@/components/shared/ClientColorPicker";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useExternalClients, useExternalPosts } from "@/hooks/useCriaPost";
 import { datasPara, segmentoDoTexto, DATAS_COMEMORATIVAS } from "@/lib/datasComemorativas";
@@ -120,9 +121,10 @@ const GROUPS: Grp[] = [
 ];
 import { CRIA_HEX, type CriaColor } from "@/lib/moduleTheme";
 type CriaColor2 = CriaColor;
-// Paleta de cor do cliente (as 6 da marca + roxo e grafite). Pinta o card na
-// lista, a logo e o link público do cronograma.
-// Paleta ampliada (12 famílias x 5 tons) vem do BrandColorPicker.
+// Cor do cliente: paleta ÚNICA do app (12 famílias x 5 tons), no componente
+// compartilhado ClientColorPicker. Pinta o card na lista, a logo, a agenda, o
+// calendário e o link público do cronograma. Grava em crm_clients.color, que é a
+// fonte de verdade (o banco espelha em external_clients.color por gatilho).
 import { formatBRL } from "@/lib/money";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { confirmar } from "@/components/shared/Confirm";
@@ -415,8 +417,11 @@ export default function ClienteHub() {
             {colorOpen && (
               <div className="absolute left-0 md:left-auto md:right-0 top-12 z-30 w-[280px] max-w-[calc(100vw-3rem)] max-h-[60vh] overflow-y-auto rounded-2xl border border-border bg-card p-3 shadow-xl">
                 <p className="text-[11px] font-body text-muted-foreground mb-2">Cor do cliente</p>
-                <BrandColorPicker value={(client as { color?: string | null }).color ?? null} onChange={(hex) => setColor(hex)} />
-                <button type="button" onClick={() => setColor(null)} className="mt-2.5 text-[11px] font-body text-muted-foreground hover:text-foreground">Remover cor</button>
+                <ClientColorPicker
+                  value={(client as { color?: string | null }).color ?? null}
+                  onChange={(hex) => setColor(hex)}
+                  onClear={() => setColor(null)}
+                />
               </div>
             )}
             {/* ENTRAR NO CRIA DO CLIENTE.
@@ -624,6 +629,11 @@ export default function ClienteHub() {
               </div>
             )}
           </div>
+
+          {/* Hashtags: o bloco que a social mídia cola na legenda deste cliente.
+              Fica junto das Notas de propósito, porque é ativo do cliente igual
+              nota, e é por aqui que a pessoa passa antes de ir montar o post. */}
+          <ClientHashtags clientId={client.id} />
 
           {/* Os "Links úteis" (editor + pastas do Drive) migraram pra aba de topo
               própria "Links úteis". Aqui na Visão geral não fica mais duplicado. */}

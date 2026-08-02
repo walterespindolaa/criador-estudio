@@ -12,8 +12,11 @@ export const CLIENT_STATUS_META: Record<ClientStatus, { label: string; cls: stri
   inativo: { label: "Inativo", cls: "bg-muted text-muted-foreground border-border" },
 };
 
-// Cores de destaque do cliente (hex, cores da marca) — borda do card na lista.
-export const CLIENT_COLORS = ["#EA4918", "#FFCF03", "#0061EE", "#FF77B9", "#01A652", "#7C90F0", "#0A0A0A"] as const;
+// A paleta de cor do cliente saiu daqui: era uma de TRÊS listas diferentes pro mesmo
+// campo (7 cores aqui, 16 no Cria Post, a por família no cockpit), e por isso a cor
+// escolhida num lugar não aparecia no outro. Agora existe uma só:
+// BRAND_COLOR_FAMILIES (src/lib/brand-palette.ts), pelo componente compartilhado
+// ClientColorPicker (src/components/shared/ClientColorPicker.tsx).
 
 export const TAG_COLORS = ["slate", "emerald", "amber", "rose", "violet", "sky", "orange", "green"] as const;
 export type TagColor = (typeof TAG_COLORS)[number];

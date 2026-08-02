@@ -144,9 +144,14 @@ export function useExternalClients() {
       const { error } = await sbFrom("external_clients").update({ ...input, crm_client_id: linkId ?? null }).eq("id", id);
       if (error) throw error;
       // Mantém o cadastro central em sincronia com o básico.
+      // COR: crm_clients.color é a FONTE DE VERDADE (a agenda, a lista, o kanban e o
+      // cockpit leem de lá). Editar a cor por aqui grava lá também, senão o cliente
+      // ficaria com duas cores diferentes ao mesmo tempo. O caminho de volta (mudou na
+      // ficha, espelha no external) é um gatilho no banco, que não depende de tela aberta.
       if (linkId) {
         await sbFrom("crm_clients").update({
           name: input.name, instagram: input.instagram_handle ?? null, notes: input.notes ?? null,
+          color: input.color ?? null,
         }).eq("id", linkId);
       }
     },

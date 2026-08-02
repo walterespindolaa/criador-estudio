@@ -10,8 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { CLIENT_COLORS } from "@/components/accounts/ExternalClientDialog";
 import { BrandColorPicker } from "@/components/accounts/BrandColorPicker";
+import { ClientColorPicker } from "@/components/shared/ClientColorPicker";
 import { confirmar } from "@/components/shared/Confirm";
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -34,21 +34,24 @@ export function ClientePortalTab({ client, onCopyLink, onOpenPortal, copying }: 
   const logoRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
-  const [f, setF] = useState<ExternalClientInput>({
-    name: client.name, instagram_handle: client.instagram_handle ?? "", notes: client.notes ?? "",
-    color: client.color ?? CLIENT_COLORS[0], crm_client_id: client.crm_client_id ?? null,
-    logo_url: client.logo_url ?? null, brand_color: client.brand_color ?? null,
-    portal_settings: client.portal_settings ?? {},
+  // Estado inicial do formulário a partir do cliente. Ficava copiado em três lugares
+  // (montagem, refetch e "Descartar"), e a cor divergia entre eles.
+  // COR: nunca "chuta" uma cor padrão aqui. Antes o formulário abria com #EA4918 quando o
+  // campo estava vazio e, ao salvar QUALQUER coisa do portal, gravava essa cor por cima.
+  // Foi assim que o cliente ficou laranja na agenda mesmo depois de a pessoa escolher
+  // outra cor na ficha.
+  const formDoCliente = (c: ExternalClient): ExternalClientInput => ({
+    name: c.name, instagram_handle: c.instagram_handle ?? "", notes: c.notes ?? "",
+    color: c.color ?? null, crm_client_id: c.crm_client_id ?? null,
+    logo_url: c.logo_url ?? null, brand_color: c.brand_color ?? null,
+    portal_settings: c.portal_settings ?? {},
   });
+
+  const [f, setF] = useState<ExternalClientInput>(() => formDoCliente(client));
   const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
-    setF({
-      name: client.name, instagram_handle: client.instagram_handle ?? "", notes: client.notes ?? "",
-      color: client.color ?? CLIENT_COLORS[0], crm_client_id: client.crm_client_id ?? null,
-      logo_url: client.logo_url ?? null, brand_color: client.brand_color ?? null,
-      portal_settings: client.portal_settings ?? {},
-    });
+    setF(formDoCliente(client));
     setDirty(false);
   }, [client]);
 
@@ -182,15 +185,15 @@ export function ClientePortalTab({ client, onCopyLink, onOpenPortal, copying }: 
             <p className="text-[12px] font-body text-muted-foreground mt-0.5">Organização interna. O cliente nunca enxerga nada disto.</p>
           </header>
 
+          {/* COR DO CLIENTE: é a MESMA cor da ficha, não uma segunda cor "só do
+              calendário". Salvar aqui grava nas duas pontas (o hook propaga pro
+              cadastro central, e o banco espelha de volta), então a agenda, o kanban,
+              a lista e o calendário mostram sempre a mesma cor. */}
           <div className="space-y-1.5">
-            <Label className="text-xs">Cor no seu calendário</Label>
-            <p className="text-[11px] font-body text-muted-foreground -mt-1">Pra você bater o olho no calendário geral e saber de quem é o post.</p>
-            <div className="flex flex-wrap gap-2">
-              {CLIENT_COLORS.map((c) => (
-                <button key={c} type="button" onClick={() => set({ color: c })}
-                  className={cn("h-7 w-7 rounded-full transition-transform", f.color === c ? "ring-2 ring-offset-2 ring-foreground scale-110" : "hover:scale-105")}
-                  style={{ backgroundColor: c }} aria-label={`Cor ${c}`} />
-              ))}
+            <Label className="text-xs">Cor do cliente</Label>
+            <p className="text-[11px] font-body text-muted-foreground -mt-1">A mesma cor da ficha. Pinta o card na agenda, no calendário e na lista.</p>
+            <div className="rounded-xl border border-border p-2.5">
+              <ClientColorPicker value={f.color ?? null} onChange={(c) => set({ color: c })} onClear={() => set({ color: null })} />
             </div>
           </div>
 
@@ -223,12 +226,7 @@ export function ClientePortalTab({ client, onCopyLink, onOpenPortal, copying }: 
       {dirty && (
         <div className="sticky bottom-4 z-10 rounded-2xl border border-primary/30 bg-card shadow-lg px-4 py-3 flex items-center gap-3">
           <p className="text-[13px] font-body text-foreground flex-1">Você tem alterações não salvas.</p>
-          <Button variant="outline" size="sm" onClick={() => { setF({
-            name: client.name, instagram_handle: client.instagram_handle ?? "", notes: client.notes ?? "",
-            color: client.color ?? CLIENT_COLORS[0], crm_client_id: client.crm_client_id ?? null,
-            logo_url: client.logo_url ?? null, brand_color: client.brand_color ?? null,
-            portal_settings: client.portal_settings ?? {},
-          }); setDirty(false); }}>Descartar</Button>
+          <Button variant="outline" size="sm" onClick={() => { setF(formDoCliente(client)); setDirty(false); }}>Descartar</Button>
           <Button size="sm" onClick={salvar} disabled={update.isPending}>
             {update.isPending && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />} Salvar
           </Button>

@@ -11,9 +11,11 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Loader2, Image as ImageIcon, Eye, EyeOff, Check } from "lucide-react";
 import { BrandColorPicker } from "@/components/accounts/BrandColorPicker";
+import { ClientColorPicker } from "@/components/shared/ClientColorPicker";
 
-// Cores dos clientes no calendário geral (também usadas pelo ManagerCalendar).
-// Pool ampliado: com muitos clientes, o índice modular repete menos.
+// Cores de RESERVA do calendário geral: usadas só pra dar um tom a quem ainda não tem
+// cor escolhida (índice modular no ManagerCalendar). NÃO é mais uma paleta de escolha,
+// a escolha vive no ClientColorPicker (paleta única, src/lib/brand-palette.ts).
 export const CLIENT_COLORS = ["#EA4918", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#EF4444", "#14B8A6", "#A855F7", "#6366F1", "#F97316", "#0EA5E9", "#84CC16", "#D946EF", "#8B5E34", "#0061EE", "#DC2626"];
 
 // Edição do cliente de aprovação por link: logo e cor do portal, vínculo com o
@@ -47,11 +49,14 @@ export function ExternalClientDialog({ open, onOpenChange, client }: {
   const { user } = useAuth();
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [f, setF] = useState<ExternalClientInput>({ name: "", instagram_handle: "", notes: "", color: CLIENT_COLORS[0], crm_client_id: null, logo_url: null, brand_color: null, portal_settings: {} });
+  // Cor: abre com o que está gravado, SEM chutar um padrão. Antes abria em #EA4918
+  // quando o campo estava vazio e qualquer salvamento gravava esse laranja por cima
+  // da cor escolhida na ficha.
+  const [f, setF] = useState<ExternalClientInput>({ name: "", instagram_handle: "", notes: "", color: null, crm_client_id: null, logo_url: null, brand_color: null, portal_settings: {} });
 
   useEffect(() => {
     if (open && client) {
-      setF({ name: client.name, instagram_handle: client.instagram_handle ?? "", notes: client.notes ?? "", color: client.color ?? CLIENT_COLORS[0], crm_client_id: client.crm_client_id ?? null, logo_url: client.logo_url ?? null, brand_color: client.brand_color ?? null, portal_settings: client.portal_settings ?? {} });
+      setF({ name: client.name, instagram_handle: client.instagram_handle ?? "", notes: client.notes ?? "", color: client.color ?? null, crm_client_id: client.crm_client_id ?? null, logo_url: client.logo_url ?? null, brand_color: client.brand_color ?? null, portal_settings: client.portal_settings ?? {} });
     }
   }, [open, client]);
 
@@ -180,15 +185,16 @@ export function ExternalClientDialog({ open, onOpenChange, client }: {
               <p className="text-[12px] font-body font-bold uppercase tracking-wider text-muted-foreground">Só você vê</p>
             </div>
 
+            {/* COR DO CLIENTE: é a MESMA cor da ficha. Era uma segunda paleta (16 cores)
+                pra um segundo campo, e por isso o post na agenda ficava com uma cor e o
+                resto do app com outra. Salvar aqui grava também no cadastro central. */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-body">Cor no seu calendário</Label>
-              <p className="text-[11px] font-body text-muted-foreground -mt-1">Só pra você bater o olho e saber de quem é o post. O cliente nunca vê esta cor.</p>
-              <div className="flex flex-wrap gap-2">
-                {CLIENT_COLORS.map((c) => (
-                  <button key={c} type="button" onClick={() => setF((p) => ({ ...p, color: c }))}
-                    className={`h-7 w-7 rounded-full transition-transform ${f.color === c ? "ring-2 ring-offset-2 ring-foreground scale-110" : "hover:scale-105"}`}
-                    style={{ backgroundColor: c }} aria-label={`Cor ${c}`} />
-                ))}
+              <Label className="text-xs font-body">Cor do cliente</Label>
+              <p className="text-[11px] font-body text-muted-foreground -mt-1">A mesma cor da ficha. Pinta o card na agenda, no calendário e na lista. O cliente nunca vê esta cor.</p>
+              <div className="rounded-xl border border-border p-2.5">
+                <ClientColorPicker value={f.color ?? null}
+                  onChange={(c) => setF((p) => ({ ...p, color: c }))}
+                  onClear={() => setF((p) => ({ ...p, color: null }))} />
               </div>
             </div>
 

@@ -7,7 +7,7 @@ import { useCrmClients, useCreateCrmClient, useUploadCrmAsset, useImportCriaClie
 import { useExternalClients, type ExternalClient } from "@/hooks/useCriaPost";
 import { useCriaClientProfiles } from "@/hooks/useManagerClientCria";
 import { useActiveAccount } from "@/contexts/AccountContext";
-import { BrandColorPicker } from "@/components/accounts/BrandColorPicker";
+import { ClientColorPicker } from "@/components/shared/ClientColorPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -271,10 +271,7 @@ export default function Clientes() {
             <div className="space-y-1.5">
               <Label className="font-body text-xs">Cor do cliente (opcional)</Label>
               <div className="rounded-xl border border-border p-2.5">
-                <BrandColorPicker value={nColor} onChange={(hex) => setNColor(hex)} />
-                {nColor && (
-                  <button type="button" onClick={() => setNColor(null)} className="mt-2 text-[11px] font-body text-muted-foreground hover:text-foreground">Remover cor</button>
-                )}
+                <ClientColorPicker value={nColor} onChange={(hex) => setNColor(hex)} onClear={() => setNColor(null)} />
               </div>
             </div>
           </div>

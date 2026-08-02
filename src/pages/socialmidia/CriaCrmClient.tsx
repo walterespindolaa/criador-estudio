@@ -11,9 +11,10 @@ import {
   useCrmClient, useUpdateCrmClient, useDeleteCrmClient, useCrmClientRefs, useAddCrmRef, useDeleteCrmRef,
   useUploadCrmAsset, useSyncCrmFromCria, useCrmTags, useCreateCrmTag, useDeleteCrmTag,
   useUpdateCrmTag, useSeedDefaultCrmTags, DEFAULT_CRM_TAGS,
-  CLIENT_STATUSES, CLIENT_STATUS_META, TAG_COLORS, TAG_COLOR_CLS, CLIENT_COLORS,
+  CLIENT_STATUSES, CLIENT_STATUS_META, TAG_COLORS, TAG_COLOR_CLS,
   type CrmClient, type ClientStatus, type CrmTag,
 } from "@/hooks/useCrm";
+import { ClientColorPicker } from "@/components/shared/ClientColorPicker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { useScrapes, useHasHubCria, useDeleteScrape } from "@/hooks/useHubCria";
@@ -350,14 +351,16 @@ function ClientWorkspace() {
               <F label="WhatsApp"><Input value={form.whatsapp ?? ""} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} placeholder="(DDD) 90000-0000" className="rounded-xl" /></F>
               <F label="Endereço" className="sm:col-span-2"><Input value={form.address ?? ""} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Rua, nº, sala, bairro / cidade" className="rounded-xl" /></F>
               <F label="Aniversário (lembrete)"><BirthdayPicker value={form.birthday ?? null} onChange={(v) => setForm({ ...form, birthday: v })} /></F>
-              <F label="Cor do cliente (destaque no card)" className="sm:col-span-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  {CLIENT_COLORS.map((c) => (
-                    <button key={c} type="button" onClick={() => setForm({ ...form, color: form.color === c ? null : c })}
-                      className={cn("h-7 w-7 rounded-full border-2 transition-transform hover:scale-110", form.color === c ? "border-foreground ring-2 ring-offset-2 ring-foreground/30" : "border-white shadow-sm")}
-                      style={{ background: c }} aria-label={`Cor ${c}`} />
-                  ))}
-                  {form.color && <button type="button" onClick={() => setForm({ ...form, color: null })} className="text-xs text-muted-foreground underline">limpar</button>}
+              {/* COR DO CLIENTE: mesma paleta (e mesmo componente) do cockpit e do
+                  cadastro. Antes eram 7 bolinhas aqui e uma paleta grande lá, então a
+                  cor escolhida no cockpit simplesmente não existia nesta lista. */}
+              <F label="Cor do cliente (destaque no card e na agenda)" className="sm:col-span-2">
+                <div className="rounded-xl border border-border p-2.5">
+                  <ClientColorPicker
+                    value={form.color}
+                    onChange={(hex) => setForm({ ...form, color: hex })}
+                    onClear={() => setForm({ ...form, color: null })}
+                  />
                 </div>
               </F>
             </div>

@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, type DropResult, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive, Download, Play, FileImage, Link2, Paperclip, GripVertical, FolderOpen, ChevronDown, Trash2 } from "lucide-react";
+import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive, Download, Play, FileImage, Link2, Paperclip, GripVertical, FolderOpen, ChevronDown, Trash2, Cake } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -75,6 +75,10 @@ const POST_DEFAULT_COLOR = "#EA4918";
 // Material (6º tipo): dourado/mostarda. Escolhido por não colidir com nenhuma das cores
 // já usadas nos chips (roxo #4B3FA8, azul #0061EE, rosa #FF77B9, laranja #EA4918, verde #059669).
 const MATERIAL_DEFAULT_COLOR = "#CA8A04";
+// Aniversário (7º tipo, só LEMBRETE): magenta escuro. Distinto do rosa claro da captação
+// (#FF77B9) e das outras cinco cores de chip. O card usa a cor do CLIENTE quando ela existe;
+// esta aqui é só o padrão de quem não tem cor cadastrada.
+const BIRTHDAY_DEFAULT_COLOR = "#BE185D";
 // Paleta de cores pra tarefa (útil pra tarefa sem cliente ganhar destaque próprio).
 const TASK_COLORS = ["#0061EE", "#01A652", "#EA4918", "#FF77B9", "#4B3FA8", "#F5A623", "#111827"];
 // HH:MM a partir de "HH:MM:SS" (ou null).
@@ -204,14 +208,15 @@ export default function AgendaCriacao() {
     setView(v);
     try { localStorage.setItem("agenda_view", v); } catch { /* segue */ }
   };
-  // Filtros por tipo de item na grade (criação, tarefa, captação, post, cria do cliente, material), persistidos.
-  const [filters, setFilters] = useState<{ criacao: boolean; tarefa: boolean; capta: boolean; post: boolean; criapost: boolean; material: boolean }>(() => {
+  // Filtros por tipo de item na grade (criação, tarefa, captação, post, cria do cliente,
+  // material, aniversário), persistidos.
+  const [filters, setFilters] = useState<{ criacao: boolean; tarefa: boolean; capta: boolean; post: boolean; criapost: boolean; material: boolean; aniversario: boolean }>(() => {
     try {
       const s = JSON.parse(localStorage.getItem("agenda_filters") || "{}");
-      return { criacao: s.criacao ?? true, tarefa: s.tarefa ?? true, capta: s.capta ?? true, post: s.post ?? true, criapost: s.criapost ?? true, material: s.material ?? true };
-    } catch { return { criacao: true, tarefa: true, capta: true, post: true, criapost: true, material: true }; }
+      return { criacao: s.criacao ?? true, tarefa: s.tarefa ?? true, capta: s.capta ?? true, post: s.post ?? true, criapost: s.criapost ?? true, material: s.material ?? true, aniversario: s.aniversario ?? true };
+    } catch { return { criacao: true, tarefa: true, capta: true, post: true, criapost: true, material: true, aniversario: true }; }
   });
-  const toggleFilter = (k: "criacao" | "tarefa" | "capta" | "post" | "criapost" | "material") =>
+  const toggleFilter = (k: "criacao" | "tarefa" | "capta" | "post" | "criapost" | "material" | "aniversario") =>
     setFilters((f) => { const nf = { ...f, [k]: !f[k] }; try { localStorage.setItem("agenda_filters", JSON.stringify(nf)); } catch { /* segue */ } return nf; });
   // Multi-seleção de clientes para os posts (vazio = todos).
   const [postClients, setPostClients] = useState<Set<string>>(new Set());
@@ -277,19 +282,29 @@ export default function AgendaCriacao() {
   const { data: dayOrders = {} } = useDayOrders(from, to);
   const saveDayOrder = useSaveDayOrder();
 
-  // external_client_id -> dados do cliente (nome, cor, crm_client_id pra abrir a ficha).
-  const extById = useMemo(() => {
-    const m = new Map<string, { name: string; color: string | null; crm_client_id: string | null }>();
-    extClients.forEach((e) => m.set(e.id, { name: e.name, color: e.color ?? null, crm_client_id: e.crm_client_id ?? null }));
-    return m;
-  }, [extClients]);
-
   // Nome AO VIVO da conta Cria (mesmo padrao da lista de Clientes e do cockpit): quando o
   // external esta vinculado a um cliente do CRM que usa o Cria (cria_owner_id), pega o nome
   // atual do profile via manager_clients_cria_profiles, em vez da copia estagnada em
   // external_clients.name. Cliente sem Cria mantem o nome normal do external.
   const { data: criaProfiles } = useCriaClientProfiles();
   const crmById = useMemo(() => new Map(clients.map((c) => [c.id, c])), [clients]);
+
+  // external_client_id -> dados do cliente (nome, cor, crm_client_id pra abrir a ficha).
+  //
+  // COR: vem SEMPRE do cadastro central (crm_clients.color) quando existe vínculo. Era
+  // aqui a divergência que a pessoa via na agenda: tarefa, captação e material pegavam a
+  // cor do CRM e o card do POST pegava external_clients.color, uma coluna diferente. Ela
+  // escolhia a cor na ficha e o post continuava com a cor antiga. Agora o banco espelha
+  // uma coluna na outra (gatilho) e a leitura ainda prefere o CRM, então mesmo vínculo
+  // antigo que não tenha propagado aparece certo.
+  const extById = useMemo(() => {
+    const m = new Map<string, { name: string; color: string | null; crm_client_id: string | null }>();
+    extClients.forEach((e) => {
+      const corCentral = e.crm_client_id ? (crmById.get(e.crm_client_id)?.color ?? null) : null;
+      m.set(e.id, { name: e.name, color: corCentral ?? e.color ?? null, crm_client_id: e.crm_client_id ?? null });
+    });
+    return m;
+  }, [extClients, crmById]);
   const extLiveName = (e: ExternalClient) => {
     const crm = e.crm_client_id ? crmById.get(e.crm_client_id) : null;
     const live = crm?.cria_owner_id ? criaProfiles?.[crm.cria_owner_id]?.name?.trim() : null;
@@ -540,6 +555,39 @@ export default function AgendaCriacao() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allMaterials, from, to, filters.material, postClients, selectedCrmIds, selectedNames]);
 
+  // ── ANIVERSÁRIO DO CLIENTE (7º tipo: LEMBRETE, não trabalho) ──────────────────
+  // O cadastro guarda dia e mês (crm_clients.birthday grava o ano 2000 só pra caber
+  // numa coluna date). O lembrete portanto RECORRE todo ano.
+  //
+  // Como resolvemos a recorrência: em vez de projetar "aniversário deste ano" e depois
+  // tratar virada de ano, varremos os DIAS QUE A GRADE JÁ ESTÁ MOSTRANDO e comparamos
+  // só "MM-DD". Cada dia da grade já carrega o ano dele, então a semana que atravessa
+  // 31/12 e 01/01 funciona sozinha, sem caso especial.
+  //
+  // 29 DE FEVEREIRO: em ano não bissexto o lembrete cai em 28/02, senão o aniversário
+  // sumiria três anos seguidos. Em ano bissexto cai no 29 mesmo, e o 28 não repete.
+  const birthdaysByDay = useMemo(() => {
+    const m = new Map<string, { clientId: string; nome: string; cor: string | null }[]>();
+    if (!filters.aniversario) return m;
+    const comAniversario = clients.filter((c) => !!c.birthday && c.status !== "inativo");
+    if (comAniversario.length === 0) return m;
+    for (const d of days) {
+      const iso = ymd(d);
+      const mmdd = iso.slice(5);                                   // "MM-DD" do dia da grade
+      // Ano bissexto: 29/02 existe de verdade (senão o Date rola pra 01/03).
+      const bissexto = new Date(d.getFullYear(), 1, 29).getDate() === 29;
+      for (const c of comAniversario) {
+        const alvo = (c.birthday ?? "").slice(5);
+        const casa = alvo === mmdd || (alvo === "02-29" && mmdd === "02-28" && !bissexto);
+        if (!casa) continue;
+        if (!clientMatches(c.id, c.name)) continue;
+        (m.get(iso) ?? m.set(iso, []).get(iso)!).push({ clientId: c.id, nome: c.name, cor: c.color });
+      }
+    }
+    return m;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clients, days, filters.aniversario, postClients, selectedCrmIds, selectedNames]);
+
   // Cor do material: a do cliente dono; sem cor, o dourado padrão do tipo. Mesmo helper
   // corDoItem da captação (material não tem cor própria).
   const corDoMaterial = (mat: AgendaMaterial) => corDoItem(
@@ -547,9 +595,9 @@ export default function AgendaCriacao() {
     mat.crm_client_id ? clients.find((c) => c.id === mat.crm_client_id)?.color : null,
     MATERIAL_DEFAULT_COLOR,
   );
-  // Cor do POST: a do cliente dono (external_clients.color, a mesma escolhida no
-  // cadastro); sem cor, o laranja padrão do tipo. Mesma regra da captação e do
-  // material, pra o dia inteiro ficar legível pela cor do cliente.
+  // Cor do POST: a do cliente dono (a MESMA escolhida na ficha, ver extById); sem cor,
+  // o laranja padrão do tipo. Mesma regra da captação e do material, pra o dia inteiro
+  // ficar legível pela cor do cliente.
   const corDoPost = (p: ExternalPostWithClient) =>
     corDoItem(null, extById.get(p.external_client_id)?.color, POST_DEFAULT_COLOR);
   // Clicar no material leva pro cockpit do cliente na aba Materiais (rota real do ClienteHub).
@@ -599,7 +647,7 @@ export default function AgendaCriacao() {
             <p className="text-sm font-display font-bold text-foreground">Agenda de criação</p>
             {/* data-tour="ag-filtros": alvo do passo "Filtrar por tipo" do tour da Agenda. */}
             <div data-tour="ag-filtros" className="flex items-center gap-1.5 flex-wrap">
-              {([["criacao", "Criações", "#4B3FA8"], ["tarefa", "Tarefas", "#0061EE"], ["capta", "Captações", "#FF77B9"], ["post", "Posts", "#EA4918"], ["criapost", "Cria do cliente", CRIA_POST_COLOR], ["material", "Materiais", MATERIAL_DEFAULT_COLOR]] as const).map(([k, label, color]) => (
+              {([["criacao", "Criações", "#4B3FA8"], ["tarefa", "Tarefas", "#0061EE"], ["capta", "Captações", "#FF77B9"], ["post", "Posts", "#EA4918"], ["criapost", "Cria do cliente", CRIA_POST_COLOR], ["material", "Materiais", MATERIAL_DEFAULT_COLOR], ["aniversario", "Aniversários", BIRTHDAY_DEFAULT_COLOR]] as const).map(([k, label, color]) => (
                 <button key={k} type="button" onClick={() => toggleFilter(k)}
                   className={cn("flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-body font-semibold transition-colors",
                     filters[k] ? "text-white border-transparent" : "bg-card border-border text-muted-foreground hover:text-foreground")}
@@ -652,7 +700,7 @@ export default function AgendaCriacao() {
                   const nm = extLiveName(e);
                   return (
                   <button key={e.id} type="button" onClick={() => togglePostClient(e.id)} className={cn("flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-body font-semibold transition-colors", postClients.has(e.id) ? "border-foreground text-foreground bg-muted/40" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
-                    <span className="grid h-3.5 w-3.5 place-items-center rounded-full text-white text-[7px] font-bold" style={{ background: e.color || "#EA4918" }}>{nm.trim().charAt(0).toUpperCase()}</span>{nm}
+                    <span className="grid h-3.5 w-3.5 place-items-center rounded-full text-white text-[7px] font-bold" style={{ background: extById.get(e.id)?.color || POST_DEFAULT_COLOR }}>{nm.trim().charAt(0).toUpperCase()}</span>{nm}
                   </button>
                   );
                 })}
@@ -729,7 +777,11 @@ export default function AgendaCriacao() {
               : "flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth lg:grid lg:grid-cols-7 lg:gap-2 lg:overflow-visible lg:pb-0",
           )}>
             {days.map((d, i) => {
-              const iso = ymd(d); const list = byDay.get(iso) ?? []; const caps = capturesByDay.get(iso) ?? []; const dayTasks = tasksByDay.get(iso) ?? []; const dayPosts = postsByDay.get(iso) ?? []; const criaDay = criaPostsByDay.get(iso) ?? []; const dayMats = materialsByDay.get(iso) ?? []; const totalDay = caps.length + dayTasks.length + list.length + dayPosts.length + criaDay.length + dayMats.length; const isToday = iso === today;
+              const iso = ymd(d); const list = byDay.get(iso) ?? []; const caps = capturesByDay.get(iso) ?? []; const dayTasks = tasksByDay.get(iso) ?? []; const dayPosts = postsByDay.get(iso) ?? []; const criaDay = criaPostsByDay.get(iso) ?? []; const dayMats = materialsByDay.get(iso) ?? [];
+              // Aniversário NÃO entra no totalDay: é lembrete, não trabalho do dia. Se
+              // entrasse, um dia com dois aniversários e nada pra fazer diria "Ver todos (2)".
+              const dayBirthdays = birthdaysByDay.get(iso) ?? [];
+              const totalDay = caps.length + dayTasks.length + list.length + dayPosts.length + criaDay.length + dayMats.length; const isToday = iso === today;
               // Lista única do dia, ordenada por horário (sem hora primeiro). Os index dos
               // Draggable saem daqui (0..n-1 contíguos), casando com a ordem renderizada pro dnd.
               const dayItems = buildDayItems(caps, dayTasks, list, dayPosts, dayMats, dayOrders[iso]);
@@ -978,7 +1030,28 @@ export default function AgendaCriacao() {
                           <p className="text-[12px] font-body font-semibold leading-tight truncate text-foreground">{p.title || "Post"}</p>
                         </button>
                       ))}
-                      {totalDay === 0 && criaDay.length === 0 && <button onClick={() => { setAddKind("criacao"); setAddDay(iso); }} className="text-[11px] font-body text-muted-foreground/60 hover:text-primary py-1">+ cliente</button>}
+                      {/* ANIVERSARIO: 7o tipo, LEMBRETE puro. Não é arrastável (fica fora do
+                          índice do dnd, como os posts do Cria do cliente), não tem check de
+                          concluído e não conta como trabalho do dia. Visual próprio: borda
+                          pontilhada, bolo e a etiqueta "Lembrete", na COR DO CLIENTE.
+                          Clicar abre a ficha dele. */}
+                      {dayBirthdays.map((b) => {
+                        const cor = b.cor || BIRTHDAY_DEFAULT_COLOR;
+                        return (
+                          <button key={`aniv:${b.clientId}`} type="button" title={`Aniversário de ${b.nome}`}
+                            onClick={() => navigate(`/socialmidia/clientes/${b.clientId}/visao-geral`)}
+                            className="rounded-lg border border-dashed px-2 py-1.5 text-left w-full overflow-hidden transition-colors hover:brightness-95"
+                            style={{ borderColor: `${cor}80`, background: `${cor}0F` }}>
+                            <div className="flex items-center gap-1 min-w-0" style={{ color: cor }}>
+                              <Cake className="h-3 w-3 shrink-0" />
+                              <span className="text-[10px] font-body font-bold truncate flex-1 min-w-0 text-foreground/80">Aniversário</span>
+                              <span className="shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: `${cor}26`, color: cor }}>Lembrete</span>
+                            </div>
+                            <p className="text-[12px] font-body font-semibold leading-tight truncate text-foreground">{b.nome}</p>
+                          </button>
+                        );
+                      })}
+                      {totalDay === 0 && criaDay.length === 0 && dayBirthdays.length === 0 && <button onClick={() => { setAddKind("criacao"); setAddDay(iso); }} className="text-[11px] font-body text-muted-foreground/60 hover:text-primary py-1">+ cliente</button>}
                     </div>
                   )}
                 </Droppable>
@@ -1148,6 +1221,8 @@ export default function AgendaCriacao() {
         const criaCli = criaPostsByDay.get(iso) ?? [];
         // Materiais com prazo no dia (6o tipo).
         const mats = materialsByDay.get(iso) ?? [];
+        // Aniversários do dia (7o tipo, so leitura).
+        const anivs = birthdaysByDay.get(iso) ?? [];
         // Mesma ordenação da grade (ordem manual do dia quando houver; senão por horário).
         const items = buildDayItems(caps, tks, cri, pts, mats, dayOrders[iso]);
         const d = parseDateOnly(iso);
@@ -1157,7 +1232,7 @@ export default function AgendaCriacao() {
           <Dialog open onOpenChange={(o) => { if (!o) setDayModal(null); }}>
             <DialogContent className="sm:max-w-md rounded-2xl max-h-[80vh] overflow-y-auto">
               <DialogHeader><DialogTitle className="font-display capitalize">{d.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}</DialogTitle></DialogHeader>
-              <p className="text-[12px] font-body text-muted-foreground -mt-2">{items.length + criaCli.length} item(ns) · clique pra editar</p>
+              <p className="text-[12px] font-body text-muted-foreground -mt-2">{items.length + criaCli.length + anivs.length} item(ns) · clique pra editar</p>
               <div className="space-y-1.5 mt-1">
                 {items.map((item) => {
                   if (item.kind === "cria") { const c = item.cria; return <button key={`c${c.id}`} onClick={() => { setDayModal(null); setEditCreation(c); }} className={rowCls}>{dot("#4B3FA8")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}</span><span className="ml-auto text-[10px] text-muted-foreground">Criação</span></button>; }
@@ -1172,6 +1247,14 @@ export default function AgendaCriacao() {
                     {dot(CRIA_POST_COLOR)}
                     <span className="text-[13px] font-body font-semibold text-foreground truncate">{p.scheduled_time ? `${p.scheduled_time.slice(0, 5)} · ` : ""}{p.title || "Post"}</span>
                     <span className="ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: CRIA_POST_COLOR }}>{CRIA_POST_STATUS[p.status ?? ""] ?? "Cria"}</span>
+                  </button>
+                ))}
+                {/* Aniversário: 7o tipo, lembrete. Clicar abre a ficha do cliente. */}
+                {anivs.map((b) => (
+                  <button key={`an${b.clientId}`} onClick={() => { setDayModal(null); navigate(`/socialmidia/clientes/${b.clientId}/visao-geral`); }} className={rowCls}>
+                    {dot(b.cor || BIRTHDAY_DEFAULT_COLOR)}
+                    <span className="text-[13px] font-body font-semibold text-foreground truncate">Aniversário de {b.nome}</span>
+                    <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">Lembrete</span>
                   </button>
                 ))}
               </div>
