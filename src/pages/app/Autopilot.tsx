@@ -145,7 +145,12 @@ export default function Autopilot() {
           platform: it.plataforma || "instagram",
           format: (it.formato || "reels").toLowerCase(),
           pillar_id: pillar?.id ?? null,
-          status: "ideia",
+          // Vai pra PLANEJAMENTO, não pra Ideia. O que o Cria Plano devolve já
+          // tem tema, formato, legenda e data: é pauta planejada esperando
+          // produção, não rabisco. Além de ser mais fiel, evita que uma geração
+          // de 12 posts enterre o banco de ideias, que é onde moram as capturas
+          // cruas que a pessoa jogou ali no susto.
+          status: "roteiro",
           scheduled_date: it.date || null,
           scheduled_time: it.time || null,
           notes: review ? "⚠️ Revisar, gerado pelo Autopilot" : null,
@@ -154,7 +159,7 @@ export default function Autopilot() {
       await sbFrom("autopilot_runs").insert({ user_id: user!.id, periodo, foco: foco || null, qtd, posts: items });
       qc.invalidateQueries({ queryKey: ["autopilot-runs", user?.id] });
       qc.invalidateQueries({ queryKey: ["posts"] });
-      toast.success(`${sel.length} post(s) enviados pro Criando${review ? ", marcados pra revisar" : ""}! 🎬`);
+      toast.success(`${sel.length} post(s) no Criando, na coluna Planejamento${review ? ", marcados pra revisar" : ""}! 🎬`);
       setItems([]);
     } catch (e) {
       console.error("autopilot send failed", e);

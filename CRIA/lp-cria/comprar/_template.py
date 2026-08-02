@@ -96,6 +96,24 @@ input.erro{{border-color:var(--laranja)}}
   </div>
 </div>
 
+
+<!-- Rodape legal: formulario coleta dado pessoal, entao privacidade e termos
+     precisam estar visiveis. Nao remover. -->
+<footer style="max-width:960px;margin:0 auto;padding:26px 20px 40px;text-align:center;
+               font-family:var(--font-body);font-size:.82rem;color:rgba(21,20,18,.6)">
+  <p style="margin-bottom:6px">
+    Ao continuar, você concorda com os
+    <a href="https://app.criasocialclub.com.br/termos" style="text-decoration:underline;color:inherit">Termos de uso</a>
+    e com a
+    <a href="https://app.criasocialclub.com.br/privacidade" style="text-decoration:underline;color:inherit">Política de privacidade</a>.
+  </p>
+  <p>
+    © 2026 CRIA Social Club ·
+    <a href="/" style="text-decoration:underline;color:inherit">Página inicial</a> ·
+    <a href="https://app.criasocialclub.com.br/excluir-dados" style="text-decoration:underline;color:inherit">Excluir meus dados</a>
+  </p>
+</footer>
+
 <script>
 /* ============================================================
    CONFIG STRIPE — cole aqui o Payment Link do plano {NOME}
