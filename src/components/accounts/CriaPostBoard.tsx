@@ -16,7 +16,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CronogramaBoard } from "@/components/accounts/CronogramaBoard";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { useDragScroll } from "@/hooks/useDragScroll";
-import { Plus, Link2, Pencil, Loader2, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare, Eye, Clock, Settings2, Palette, Copy, CalendarDays, X, ChevronDown, History } from "lucide-react";
+import { Plus, Link2, Pencil, Loader2, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare, Eye, Clock, Settings2, Palette, Copy, CalendarDays, X, ChevronDown, History, Hash } from "lucide-react";
 import { usePostApprovalComments } from "@/hooks/useApprovals";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { Calendar } from "@/components/ui/calendar";
@@ -42,6 +42,7 @@ import { MultiLinkInput } from "@/components/shared/MultiLinkInput";
 import { parseRefLinks, serializeRefLinks, refLinkHref, refLinkLabel, isRefLink } from "@/lib/refLinks";
 // Etiquetas INTERNAS do post: só a agência vê, o cliente nunca recebe.
 import { InternalTagPicker } from "@/components/shared/InternalTagPicker";
+import { useClientHashtags, blocoParaColar, LIMITE_HASHTAGS_POST } from "@/hooks/useClientHashtags";
 import { usePostTags, usePostInternalTags, useSetPostInternalTags, POST_TAG_DOT_CLS, type PostTag } from "@/hooks/usePostTags";
 import { TAG_COLOR_CLS } from "@/hooks/useCrm";
 
@@ -383,6 +384,9 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
     reorderExternalPosts(changes);
   };
   const { data: crmClients = [] } = useCrmClients();
+  // Hashtags do cliente (banco montado na Visão geral dele): entram na legenda
+  // com um clique. Cliente sem vínculo no CRM não dispara query nenhuma.
+  const { data: hashtagsCliente = [] } = useClientHashtags(client.crm_client_id);
   const criaOwnerId = crmClients.find((c) => c.id === client.crm_client_id)?.cria_owner_id ?? null;
   const hasCriaAccount = !!criaOwnerId;
   const { data: igConn } = useClientSocialConnection(client.crm_client_id);
@@ -966,10 +970,32 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
                   <Label className="text-xs font-body">Legenda</Label>
-                  <button type="button" onClick={() => copiarLegenda(f.caption ?? "")} disabled={!(f.caption ?? "").trim()}
-                    className="inline-flex items-center gap-1 h-9 px-2.5 rounded-lg text-[11px] font-body font-semibold text-muted-foreground hover:text-primary hover:bg-primary/[0.06] disabled:opacity-40 disabled:pointer-events-none transition-colors">
-                    <Copy className="h-3.5 w-3.5" /> Copiar legenda
-                  </button>
+                  <div className="flex items-center gap-1">
+                    {/* Só aparece pra cliente que já montou o banco de hashtags dele.
+                        Acrescenta no fim da legenda, nunca sobrescreve o que foi escrito,
+                        e não repete o bloco se já estiver lá. */}
+                    {hashtagsCliente.length > 0 && (
+                      <button type="button" onClick={() => {
+                        const bloco = blocoParaColar(hashtagsCliente);
+                        setF((p) => {
+                          const atual = (p.caption ?? "").trimEnd();
+                          if (atual.includes(bloco)) { toast.info("As hashtags já estão nesta legenda."); return p; }
+                          return { ...p, caption: atual ? `${atual}\n\n${bloco}` : bloco };
+                        });
+                        toast.success(hashtagsCliente.length > LIMITE_HASHTAGS_POST
+                          ? `${hashtagsCliente.length} hashtags coladas. O Instagram só considera as ${LIMITE_HASHTAGS_POST} primeiras.`
+                          : `${hashtagsCliente.length} hashtag(s) colada(s) na legenda.`);
+                      }}
+                        title="Colar o bloco de hashtags deste cliente no fim da legenda"
+                        className="inline-flex items-center gap-1 h-9 px-2.5 rounded-lg text-[11px] font-body font-semibold text-muted-foreground hover:text-primary hover:bg-primary/[0.06] transition-colors">
+                        <Hash className="h-3.5 w-3.5" /> Colar hashtags
+                      </button>
+                    )}
+                    <button type="button" onClick={() => copiarLegenda(f.caption ?? "")} disabled={!(f.caption ?? "").trim()}
+                      className="inline-flex items-center gap-1 h-9 px-2.5 rounded-lg text-[11px] font-body font-semibold text-muted-foreground hover:text-primary hover:bg-primary/[0.06] disabled:opacity-40 disabled:pointer-events-none transition-colors">
+                      <Copy className="h-3.5 w-3.5" /> Copiar legenda
+                    </button>
+                  </div>
                 </div>
                 <Textarea value={f.caption ?? ""} onChange={(e) => setF((p) => ({ ...p, caption: e.target.value }))} rows={8} className="rounded-xl min-h-[180px]" />
                 {f.format === "story" && (f.caption ?? "").trim() !== "" && (
