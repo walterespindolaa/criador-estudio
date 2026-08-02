@@ -9,6 +9,8 @@ import { Check, RotateCcw, X, Loader2, Lock, Download } from "lucide-react";
 import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 import { applyAccent } from "@/lib/applyTheme";
 import { cn } from "@/lib/utils";
+import { LogoMarca } from "@/components/publico/CabecalhoPublico";
+import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
 
 const DECLINE_REASONS = ["Preço", "Quantidade de posts", "Prazo", "Não tem fit", "Outro"] as const;
 
@@ -78,15 +80,18 @@ export default function PropostaPublica() {
   const busy = accept.isPending || reject.isPending || change.isPending;
   const decided = p.status === "aceita" || p.status === "recusada";
   const creatorName = p.creator?.name ?? "Criador";
-  const initials = creatorName.charAt(0).toUpperCase();
   const copyPix = () => { if (p?.creator?.pix_key) navigator.clipboard?.writeText(p.creator.pix_key).then(() => toast.success("Chave Pix copiada.")).catch(() => {}); };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#F6F4FC] to-background flex flex-col items-center px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-b from-[#F6F4FC] to-background flex flex-col items-center px-4 pt-2 pb-8">
+      {/* Faixa do Cria fora do card da proposta, sem competir com quem enviou. */}
+      <AssinaturaCria variante="topo" tom="claro" style={{ maxWidth: 448 }} />
+
       <div className="w-full max-w-md bg-card border border-border rounded-3xl overflow-hidden shadow-[0_8px_30px_rgba(27,26,24,0.08)]">
         <div className="bg-gradient-to-br from-primary to-primary/70 text-white px-6 pt-6 pb-5 text-center">
-          <div className="w-12 h-12 rounded-2xl mx-auto mb-3 bg-white/20 grid place-items-center overflow-hidden">
-            {p.creator?.avatar ? <img src={p.creator.avatar} alt="" className="w-full h-full object-cover" /> : <span className="text-lg font-extrabold">{initials}</span>}
+          <div className="flex justify-center mb-3">
+            <LogoMarca src={p.creator?.avatar} nome={creatorName} tamanho="md" formato="avatar"
+              comFallback cor="#ffffff" fundo="rgba(255,255,255,.22)" />
           </div>
           <p className="text-[11px] uppercase tracking-wider opacity-85 font-semibold">Você recebeu uma proposta</p>
           <h1 className="text-xl font-display font-extrabold mt-1">{creatorName}</h1>
@@ -198,7 +203,7 @@ export default function PropostaPublica() {
         )}
       </div>
       <p className="text-[11px] text-muted-foreground mt-5 flex items-center gap-1.5"><Lock className="h-3 w-3" /> Sua decisão fica registrada com data e hora.</p>
-      <p className="text-[11px] text-muted-foreground/70 mt-1.5">Feito com CRIA</p>
+      <AssinaturaCria variante="rodape" tom="claro" style={{ marginTop: 14 }} />
     </div>
   );
 }

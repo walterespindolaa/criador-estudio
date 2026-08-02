@@ -4,6 +4,10 @@ import { toast } from "sonner";
 import { useExternalClients, useAllExternalPosts, type ExternalClient, type ExternalPostWithClient } from "@/hooks/useCriaPost";
 import { ExternalClientDialog } from "@/components/accounts/ExternalClientDialog";
 import { useDragScroll } from "@/hooks/useDragScroll";
+// Ordem padrão (mais recentes) x ordem por data de publicação. Só exibição.
+import { OrdemDataToggle } from "@/components/shared/OrdemDataToggle";
+import { useOrdemPorData } from "@/hooks/useOrdemPorData";
+import { ordenarPorData } from "@/lib/ordenar-por-data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -67,6 +71,15 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
     [posts, clientId],
   );
   const sections = statusFilter ? SECTIONS.filter((s) => s.key === statusFilter) : SECTIONS;
+
+  // Ordem das colunas: como vem do banco (mais recentes) ou pela data de
+  // PUBLICAÇÃO do post. Este painel é só leitura (não tem arraste), então o
+  // alternador não conflita com nada: é exibição pura.
+  const [porData, setPorData] = useOrdemPorData("aprovacoes_ordem_data_v1");
+  const ordenarColuna = (lista: ExternalPostWithClient[]) =>
+    porData
+      ? ordenarPorData(lista, (p) => p.scheduled_date, (p) => (p as { scheduled_time?: string | null }).scheduled_time)
+      : lista;
 
   // Sumário por cliente: contagem de cada status pros chips do topo (clicáveis = filtro).
   const summary = useMemo(() => {
@@ -335,9 +348,16 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
       {/* 5 colunas (espelha o kanban do cliente). Scroll horizontal no mobile,
           igual ao kanban do Cria Post: cada coluna encolhe até um mínimo. */}
       {/* Clicar no vazio e arrastar pro lado rola o board (só mouse). */}
+      {/* Ordem dos cards: como veio ou pela data de publicação (sem data no fim). */}
+      {shown.length > 1 && (
+        <div className="flex flex-wrap items-center gap-1.5 mb-3">
+          <OrdemDataToggle valor={porData} onChange={setPorData} rotuloPadrao="Mais recentes" />
+          {porData && <span className="text-[11px] font-body text-muted-foreground">Post sem data fica no fim.</span>}
+        </div>
+      )}
       <div ref={boardRef} className={sections.length > 1 ? "flex gap-3 overflow-x-auto pb-4 -mx-1 px-1 kanban-scroll items-start" : "space-y-2 min-w-0"}>
         {sections.map((s) => {
-          const all = shown.filter((p) => (p.approval_status ?? "pendente") === s.key);
+          const all = ordenarColuna(shown.filter((p) => (p.approval_status ?? "pendente") === s.key));
           const limited = HISTORY_KEYS.includes(s.key);
           const list = limited ? all.slice(0, HISTORY_LIMIT) : all;
           const Icon = s.icon;

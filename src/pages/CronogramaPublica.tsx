@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Check, X, Pencil, CheckCircle2, CalendarRange, PartyPopper, Link2 } from "lucide-react";
 import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 import { parseRefLinks, refLinkHref, refLinkLabel, isRefLink } from "@/lib/refLinks";
+import { LogosCabecalho } from "@/components/publico/CabecalhoPublico";
+import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
 
 type AnyRpc = (fn: string, args?: Record<string, unknown>) => ReturnType<typeof supabase.rpc>;
 const sbRpc = supabase.rpc.bind(supabase) as unknown as AnyRpc;
@@ -128,13 +130,16 @@ export default function CronogramaPublica() {
 
       <div style={{ position: "relative", maxWidth: 480, margin: "0 auto" }}>
 
+        {/* Faixa do Cria fora do card colorido: reforça a marca sem disputar o
+            topo com o logo do cliente e da agência. */}
+        <AssinaturaCria variante="topo" tom="claro" style={{ padding: "0 0 10px" }} />
+
         <div style={{ background: accent, borderRadius: 22, padding: "24px 20px 20px", textAlign: "center", color: onAccent, boxShadow: "0 16px 36px -18px rgba(234,73,24,.55)" }}>
-          {(cron.logo || cron.client_logo) && (
-            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginBottom: 10 }}>
-              {cron.logo?.trim() && <img src={cron.logo} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: 54, height: 54, borderRadius: "50%", objectFit: "cover", background: "#fff", padding: 3, boxSizing: "border-box" }} />}
-              {cron.client_logo?.trim() && <img src={cron.client_logo} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: 54, height: 54, borderRadius: "50%", objectFit: "cover", background: "#fff", padding: 3, boxSizing: "border-box" }} />}
-            </div>
-          )}
+          <LogosCabecalho
+            agencia={{ src: cron.logo, nome: cron.by }}
+            cliente={{ src: cron.client_logo, nome: cron.client_label || handle }}
+            style={{ marginBottom: 12 }}
+          />
           <p style={{ fontSize: 11.5, letterSpacing: ".14em", color: onAccentSoft, margin: 0, textTransform: "uppercase" }}>Cronograma de conteúdo</p>
           <h1 style={{ fontFamily: "'Grand Hotel', cursive", fontSize: 38, fontWeight: 400, lineHeight: 1.05, margin: "2px 0 0" }}>{handle}</h1>
           <p style={{ fontSize: 13, color: onAccentSoft, marginTop: 4 }}>{period_ ? period_ : cron.title}{cron.by ? ` · por ${cron.by}` : ""}</p>
@@ -241,8 +246,9 @@ export default function CronogramaPublica() {
 
         {visible.length === 0 && <div style={{ textAlign: "center", color: "#A79F8C", fontSize: 13, padding: "20px 0" }}>Nenhum post neste período.</div>}
 
-        <div style={{ textAlign: "center", fontFamily: "'Grand Hotel', cursive", fontSize: 24, color: accent, marginTop: 18 }}>cria</div>
-        <div style={{ textAlign: "center", fontSize: 11, color: "#A79F8C", marginTop: -2, marginBottom: 4 }}>criasocialclub.com.br</div>
+        {/* Crédito do rodapé: mesma assinatura das outras páginas públicas,
+            agora com o logo de verdade e clicável. */}
+        <AssinaturaCria variante="rodape" tom="claro" style={{ marginTop: 20, marginBottom: 6 }} />
       </div>
     </div>
   );

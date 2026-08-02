@@ -36,6 +36,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, parseISO, isWithinInterval } from "date-fns";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { usePosts, type Post } from "@/hooks/usePosts";
+// Ordem manual (arrastada) x ordem por data de publicação. Só exibição.
+import { OrdemDataToggle } from "@/components/shared/OrdemDataToggle";
+import { useOrdemPorData } from "@/hooks/useOrdemPorData";
+import { ordenarPorData } from "@/lib/ordenar-por-data";
 import { toast } from "sonner";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
 import { usePillars } from "@/hooks/usePillars";
@@ -238,6 +242,15 @@ const Criando = () => {
     });
   }, [posts, filterPlatform, filterPillar, filterWeek, filterFormat, search, dateRange, period, customRange]);
 
+  // Ordem das colunas do board: manual (arrastada, board_order) ou por data de
+  // publicação. É EXIBIÇÃO: nada é regravado, então desligar devolve a ordem manual.
+  // Vale pros três boards da tela (desktop, mobile overview e mobile em colunas).
+  const [porData, setPorData] = useOrdemPorData("criando_ordem_data_v1");
+  // Data do card aqui = scheduled_date, desempatada por scheduled_time.
+  // Post sem data agendada vai pro fim da coluna.
+  const ordenarColuna = (lista: Post[]) =>
+    porData ? ordenarPorData(lista, (p) => p.scheduled_date, (p) => p.scheduled_time) : lista;
+
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pendingFormat, setPendingFormat] = useState<string | null>(null);
 
@@ -287,6 +300,21 @@ const Criando = () => {
     const moved = posts.find((p) => p.id === draggableId);
     if (!moved) return;
     const changedStatus = (moved.status ?? "ideia") !== destStatus;
+
+    // Com "Por data" ligado, a posição dentro da coluna vem da data, então gravar
+    // board_order não teria efeito (o card voltaria pro lugar). Avisamos e damos o
+    // atalho de volta. Mudar de COLUNA continua valendo: isso muda o status.
+    if (porData) {
+      if (!changedStatus) {
+        toast.info("Esta coluna está ordenada por data.", {
+          description: "Volte pra Ordem manual pra reposicionar os cards arrastando.",
+          action: { label: "Ordem manual", onClick: () => setPorData(false) },
+        });
+        return;
+      }
+      await movePostStatus(draggableId, destStatus);
+      return;
+    }
 
     // Coluna de destino na ordem atual, sem o card arrastado; insere na posição solta.
     const col = filteredPosts.filter((p) => (p.status ?? "ideia") === destStatus && p.id !== draggableId);
@@ -371,6 +399,13 @@ const Criando = () => {
               {activeFilterCount > 0 && <span className="ml-0.5 text-[10px] font-bold bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">{activeFilterCount}</span>}
             </Button>
           </div>
+          {/* Ordem das colunas: manual (o que você arrastou) ou por data. */}
+          <div className="flex items-center gap-1.5 mt-2 overflow-x-auto scrollbar-none">
+            <OrdemDataToggle valor={porData} onChange={setPorData} className="shrink-0" />
+          </div>
+          {porData && (
+            <p className="text-[11px] font-body text-muted-foreground mt-1.5">Post sem data fica no fim da coluna.</p>
+          )}
           {activeFilterCount > 0 && (
             <div className="flex items-center gap-1.5 mt-2 overflow-x-auto scrollbar-none">
               {period !== "tudo" && activeChip("p", PERIOD_OPTIONS.find(o => o.key === period)?.label ?? "Período", () => handlePeriodChange("tudo"))}
@@ -582,20 +617,32 @@ const Criando = () => {
           )}
         </div>
 
-        <div data-tour="criando-views" className="hidden md:flex items-center gap-1 bg-card rounded-xl border border-border p-1 w-max mb-4">
-          {([
-            { key: "board", label: "Board", icon: Kanban },
-            { key: "tabela", label: "Tabela", icon: Table },
-            { key: "calendario", label: "Calendário", icon: Calendar },
-          ] as const).map(t => (
-            <button key={t.key} onClick={() => changeView(t.key)}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-body transition-colors flex items-center gap-1.5",
-                view === t.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-              )}>
-              <t.icon className="h-3.5 w-3.5" /> {t.label}
-            </button>
-          ))}
+        <div className="hidden md:flex items-center gap-3 flex-wrap mb-4">
+          <div data-tour="criando-views" className="flex items-center gap-1 bg-card rounded-xl border border-border p-1 w-max">
+            {([
+              { key: "board", label: "Board", icon: Kanban },
+              { key: "tabela", label: "Tabela", icon: Table },
+              { key: "calendario", label: "Calendário", icon: Calendar },
+            ] as const).map(t => (
+              <button key={t.key} onClick={() => changeView(t.key)}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-body transition-colors flex items-center gap-1.5",
+                  view === t.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                )}>
+                <t.icon className="h-3.5 w-3.5" /> {t.label}
+              </button>
+            ))}
+          </div>
+          {/* Ordem das colunas. Só no board: a tabela já tem o próprio sort no
+              cabeçalho e o calendário é organizado pelo dia. */}
+          {view === "board" && (
+            <>
+              <OrdemDataToggle valor={porData} onChange={setPorData} />
+              {porData && (
+                <span className="text-[11px] font-body text-muted-foreground">Post sem data fica no fim da coluna.</span>
+              )}
+            </>
+          )}
         </div>
 
         {/* O QUADRO VAZIO. Antes ele mostrava seis colunas vazias e nada mais — o
@@ -625,7 +672,7 @@ const Criando = () => {
         {/* Clicar no vazio e arrastar pro lado rola o board (só mouse). */}
         <div ref={boardRef} data-tour="criando-board" className="hidden md:flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-proximity kanban-scroll">
           {COLUMNS.map(col => {
-            const colPosts = filteredPosts.filter(p => p.status === col.key);
+            const colPosts = ordenarColuna(filteredPosts.filter(p => p.status === col.key));
             const isPublished = col.key === "publicado";
             const isAfterIdeia = col.key === "roteiro";
             const showDividerBefore = isPublished || isAfterIdeia;
@@ -966,7 +1013,7 @@ const Criando = () => {
         <DragDropContext onDragStart={() => tocar(12)} onDragEnd={(r) => { tocar(8); void handleDragEnd(r); }}>
             <div ref={boardMobileRef} className="flex gap-2.5 overflow-x-auto -mx-4 px-4 kanban-scroll h-[calc(100svh-230px)] min-h-[340px]">
               {COLUMNS.map((col, i) => {
-                const colPosts = filteredPosts.filter(p => (p.status ?? "ideia") === col.key);
+                const colPosts = ordenarColuna(filteredPosts.filter(p => (p.status ?? "ideia") === col.key));
                 const step = ramp[col.key];
                 return (
                   <div key={col.key} className="min-w-[172px] w-[172px] flex-none flex flex-col gap-2 h-full">
@@ -1018,7 +1065,7 @@ const Criando = () => {
                  style={{ transform: `translateX(-${activeCol * 100}%)`, transitionTimingFunction: 'cubic-bezier(.22,.61,.36,1)' }}
                  onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
               {COLUMNS.map(col => {
-                const colPosts = filteredPosts.filter(p => p.status === col.key);
+                const colPosts = ordenarColuna(filteredPosts.filter(p => p.status === col.key));
                 const isPublished = col.key === "publicado";
                 const saved = byStatus[col.key];
                 const step = ramp[col.key];

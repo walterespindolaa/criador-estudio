@@ -3,6 +3,10 @@ import { Navigate } from "react-router-dom";
 import { Plus, Pencil, Trash2, Check, Bell, Clock, AlertTriangle, Archive, ArchiveRestore, Handshake, FileText } from "lucide-react";
 import { useTier } from "@/hooks/useTier";
 import { useDragScroll } from "@/hooks/useDragScroll";
+// Ordem padrão (mais recentes) x ordem por prazo da collab. Só exibição.
+import { OrdemDataToggle } from "@/components/shared/OrdemDataToggle";
+import { useOrdemPorData } from "@/hooks/useOrdemPorData";
+import { ordenarPorData } from "@/lib/ordenar-por-data";
 import {
   useCollabs, collabReminders, COLLAB_STATUSES, COLLAB_STATUS_LABEL,
   type CollabStatus, type CollabWithDeliverables, type CollabReminder,
@@ -155,13 +159,25 @@ function Pipeline({ active, isLoading, onOpen, onNew }: {
   active: CollabWithDeliverables[]; isLoading: boolean; onOpen: (c: CollabWithDeliverables) => void; onNew: () => void;
 }) {
   const boardRef = useDragScroll<HTMLDivElement>();
+  // Ordem das colunas: como vem do banco (mais recentes) ou pelo PRAZO da collab
+  // (deadline), com quem não tem prazo no fim. O pipeline não tem arraste, então
+  // é exibição pura, sem conflito nenhum.
+  const [porData, setPorData] = useOrdemPorData("collabs_ordem_data_v1");
   if (isLoading) return <div className="text-sm text-muted-foreground py-8 text-center">Carregando…</div>;
   if (active.length === 0) return <EmptyState onNew={onNew} />;
   return (
-    // Clicar no vazio e arrastar pro lado rola o pipeline (só mouse).
+    <>
+    {active.length > 1 && (
+      <div className="flex flex-wrap items-center gap-1.5 mb-3">
+        <OrdemDataToggle valor={porData} onChange={setPorData} rotuloPadrao="Mais recentes" />
+        {porData && <span className="text-[11px] font-body text-muted-foreground">Collab sem prazo fica no fim.</span>}
+      </div>
+    )}
+    {/* Clicar no vazio e arrastar pro lado rola o pipeline (só mouse). */}
     <div ref={boardRef} className="flex gap-3 overflow-x-auto pb-2">
       {COLLAB_STATUSES.map((s) => {
-        const items = active.filter((c) => c.status === s);
+        const lista = active.filter((c) => c.status === s);
+        const items = porData ? ordenarPorData(lista, (c) => c.deadline) : lista;
         return (
           <div key={s} className="min-w-[190px] flex-1">
             <div className="flex items-center gap-2 mb-2.5 px-0.5">
@@ -176,6 +192,7 @@ function Pipeline({ active, isLoading, onOpen, onNew }: {
         );
       })}
     </div>
+    </>
   );
 }
 

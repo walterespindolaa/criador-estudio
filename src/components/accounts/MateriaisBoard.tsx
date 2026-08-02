@@ -21,6 +21,10 @@ import { useDragScroll } from "@/hooks/useDragScroll";
 import { cn } from "@/lib/utils";
 import { parseDateOnly } from "@/lib/date-br";
 import { toast } from "sonner";
+// Ordem padrão (mais recentes) x ordem por prazo. Só exibição.
+import { OrdemDataToggle } from "@/components/shared/OrdemDataToggle";
+import { useOrdemPorData } from "@/hooks/useOrdemPorData";
+import { ordenarPorData } from "@/lib/ordenar-por-data";
 
 const COLUMNS: { key: MaterialStatus; label: string; dot: string }[] = [
   { key: "solicitado", label: "Solicitado", dot: "bg-amber-500" },
@@ -147,7 +151,14 @@ export function MateriaisBoard({ clientId, clientName }: { clientId: string; cli
   };
 
   const saving = createMaterial.isPending || updateMaterial.isPending;
-  const byStatus = (s: MaterialStatus) => materials.filter((m) => m.status === s);
+  // Data do card neste board = PRAZO pra ficar pronto (due_date). Material sem
+  // prazo vai pro fim da coluna. Não há ordem manual persistida aqui (ver o
+  // comentário do onDragEnd), então o alternador não briga com arraste nenhum.
+  const [porData, setPorData] = useOrdemPorData("materiais_ordem_data_v1");
+  const byStatus = (s: MaterialStatus) => {
+    const lista = materials.filter((m) => m.status === s);
+    return porData ? ordenarPorData(lista, (m) => m.due_date) : lista;
+  };
   const pedidosCliente = materials.filter((m) => m.requested_by === "cliente" && m.status === "solicitado").length;
 
   return (
@@ -167,6 +178,16 @@ export function MateriaisBoard({ clientId, clientName }: { clientId: string; cli
           <Plus className="h-4 w-4 mr-1.5" /> Novo material
         </Button>
       </div>
+
+      {/* Ordem das colunas: como veio (mais recentes) ou pelo prazo. */}
+      {materials.length > 1 && (
+        <div className="flex flex-wrap items-center gap-1.5 mb-3">
+          <OrdemDataToggle valor={porData} onChange={setPorData} rotuloPadrao="Mais recentes" />
+          {porData && (
+            <span className="text-[11px] font-body text-muted-foreground">Sem prazo fica no fim.</span>
+          )}
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>

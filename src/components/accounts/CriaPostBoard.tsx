@@ -33,6 +33,10 @@ import { FORMATS_BY_PLATFORM, FORMAT_LABELS } from "@/lib/constants";
 import { formatColorVars, FORMAT_TEXT_CLASS, FORMAT_BORDER_CLASS, FORMAT_DOT_CLASS } from "@/lib/format-colors";
 // Toggle Kanban/Calendário compartilhado com as outras telas de board.
 import { ViewToggle } from "@/components/shared/ViewToggle";
+// Ordem manual (arrastada) x ordem por data. Só exibição, nada vai pro banco.
+import { OrdemDataToggle } from "@/components/shared/OrdemDataToggle";
+import { useOrdemPorData } from "@/hooks/useOrdemPorData";
+import { ordenarPorData } from "@/lib/ordenar-por-data";
 // Ideia / Referência aceita VÁRIOS links (um por linha na mesma coluna).
 import { MultiLinkInput } from "@/components/shared/MultiLinkInput";
 import { parseRefLinks, serializeRefLinks, refLinkHref, refLinkLabel, isRefLink } from "@/lib/refLinks";
@@ -315,6 +319,16 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
     if (range.to && p.scheduled_date > range.to) return false;
     return true;
   });
+  // Ordem das colunas: manual (arrastada, board_order) ou por data de publicação.
+  // Preferência de EXIBIÇÃO, salva por dispositivo. Desligar devolve a ordem manual
+  // inteira, porque nada foi regravado no banco enquanto estava ligada.
+  const [porData, setPorData] = useOrdemPorData("criapost_ordem_data_v1");
+  // Data do card neste board = data de PUBLICAÇÃO (scheduled_date), desempatada
+  // pelo horário. Post sem data agendada cai no fim da coluna.
+  const ordenarColuna = (lista: ExternalPost[]) =>
+    porData
+      ? ordenarPorData(lista, (p) => p.scheduled_date, (p) => (p as { scheduled_time?: string | null }).scheduled_time)
+      : lista;
   // Guarda o id do rascunho aberto: se o usuário cancelar, apagamos (não vira lixo).
   const [draftId, setDraftId] = useState<string | null>(null);
   // Kanban (padrão) ou Calendário. Preferência salva por dispositivo.
@@ -339,6 +353,21 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
     const from = (post.approval_status ?? "pendente");
     // Avançar manualmente pra "Aprovado" sem o cliente: pede confirmação (só na mudança de coluna).
     if (from !== dest && dest === "aprovado") { setConfirmMove({ id: r.draggableId, status: dest }); return; }
+    // Com "Por data" ligado, a posição dentro da coluna é calculada pela data.
+    // Gravar board_order aqui não teria efeito nenhum (o card voltaria pro lugar),
+    // então avisamos e oferecemos a volta pra ordem manual. Arrastar ENTRE colunas
+    // continua valendo normalmente: isso muda o STATUS, não a ordem.
+    if (porData) {
+      if (from === dest) {
+        toast.info("Esta coluna está ordenada por data.", {
+          description: "Volte pra Ordem manual pra reposicionar os cards arrastando.",
+          action: { label: "Ordem manual", onClick: () => setPorData(false) },
+        });
+        return;
+      }
+      moveStatus.mutate({ id: r.draggableId, approval_status: dest });
+      return;
+    }
     // Reordena a coluna de destino (mesma coluna OU mudança de status), gravando board_order.
     const col = viewPosts.filter((p) => (p.approval_status ?? "pendente") === dest && p.id !== r.draggableId);
     col.splice(r.destination.index, 0, post);
@@ -561,7 +590,19 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
             <X className="h-3.5 w-3.5" /> Limpar
           </button>
         )}
+        {/* Ordem das colunas. Só no kanban: no calendário quem manda é o dia. */}
+        {view === "kanban" && (
+          <>
+            <span aria-hidden className="h-4 w-px bg-border mx-0.5 hidden sm:block" />
+            <OrdemDataToggle valor={porData} onChange={setPorData} />
+          </>
+        )}
       </div>
+      {porData && view === "kanban" && (
+        <p className="text-[11px] font-body text-muted-foreground -mt-1.5 mb-3">
+          Cada coluna está da data mais próxima pra mais distante, e post sem data fica no fim. Pra reposicionar arrastando, volte pra Ordem manual.
+        </p>
+      )}
       {/* Filtro por formato: aparece quando há mais de um formato na fila. */}
       {formatosPost.length > 1 && (
         <div className="flex gap-1.5 flex-wrap mb-3">
@@ -614,7 +655,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
           <div ref={boardRef} className="flex gap-3 overflow-x-auto pb-4 -mx-1 px-1 kanban-scroll">
             {APPROVAL_COLS.map((colKey) => {
               const st = STATUS[colKey];
-              const colPosts = viewPosts.filter((p) => (p.approval_status ?? "pendente") === colKey);
+              const colPosts = ordenarColuna(viewPosts.filter((p) => (p.approval_status ?? "pendente") === colKey));
               return (
                 <div key={colKey} className="w-[80vw] max-w-[300px] sm:w-72 shrink-0">
                   <div className="flex items-center justify-between px-2 py-2">

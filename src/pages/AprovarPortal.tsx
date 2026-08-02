@@ -1,4 +1,3 @@
-import { Logo } from "@/components/shared/Logo";
 import { useEffect, useState, type CSSProperties } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -16,6 +15,8 @@ import { EtapasChecklist, type Stage } from "@/components/aprovar/EtapasChecklis
 import { PortalCalendario } from "@/components/aprovar/PortalCalendario";
 import { PortalRelatorio } from "@/components/aprovar/PortalRelatorio";
 import { useForceLightTheme } from "@/hooks/useForceLightTheme";
+import { LogoMarca } from "@/components/publico/CabecalhoPublico";
+import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
 
 type AnyRpc = (fn: string, args?: Record<string, unknown>) => ReturnType<typeof supabase.rpc>;
 const sbRpc = supabase.rpc.bind(supabase) as unknown as AnyRpc;
@@ -443,13 +444,14 @@ export default function AprovarPortal() {
 
   return (
     <div className="min-h-screen bg-background" style={brandVars}>
+      {/* Faixa do Cria acima de tudo, fora da área de marca do cliente. */}
+      <AssinaturaCria variante="topo" tom="claro" />
+
       {/* ── Header mobile: barra compacta e fixa (como sempre foi) ── */}
       <header className="lg:hidden border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-20">
         <div className="max-w-md mx-auto px-4 py-3 flex items-center gap-3">
-          <div className="relative w-10 h-10 rounded-full bg-primary/10 ring-2 ring-primary/25 overflow-hidden flex items-center justify-center shrink-0">
-            <span className="font-display font-extrabold text-primary">{(c.client_name || "?").charAt(0).toUpperCase()}</span>
-            {c.client_logo?.trim() && <img src={c.client_logo} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 w-full h-full object-cover" />}
-          </div>
+          <LogoMarca src={c.client_logo} nome={c.client_name} tamanho="sm" comFallback
+            cor={brand ?? "#CE4A1D"} fundo="#ffffff" />
           <div className="min-w-0 flex-1">
             <p className="font-display font-bold text-foreground truncate leading-tight">{c.client_name}</p>
             {c.manager_name && <p className="text-[11px] text-muted-foreground font-body truncate">conteúdo por {c.manager_name}</p>}
@@ -471,10 +473,8 @@ export default function AprovarPortal() {
       <div className="hidden lg:block" style={{ background: heroBg }}>
         <div className="max-w-5xl mx-auto px-8 pt-12 pb-10">
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: "easeOut" }} className="flex items-center gap-6">
-            <div className="relative w-20 h-20 rounded-3xl bg-white shadow-lg overflow-hidden flex items-center justify-center shrink-0">
-              <span className="font-display font-extrabold text-3xl" style={{ color: brand ?? "hsl(var(--primary))" }}>{(c.client_name || "?").charAt(0).toUpperCase()}</span>
-              {c.client_logo?.trim() && <img src={c.client_logo} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 w-full h-full object-cover" />}
-            </div>
+            <LogoMarca src={c.client_logo} nome={c.client_name} tamanho="lg" comFallback
+              cor={brand ?? "#CE4A1D"} fundo="#ffffff" style={{ borderRadius: 24 }} />
             <div className="min-w-0 flex-1">
               <h1 className="font-display font-extrabold text-white text-3xl tracking-tight truncate">{c.client_name}</h1>
               {c.manager_name && <p className="text-sm text-white/80 font-body mt-0.5">conteúdo por {c.manager_name}</p>}
@@ -562,11 +562,9 @@ export default function AprovarPortal() {
             )}
           </motion.div>
         </AnimatePresence>
-        {/* Crédito de rodapé com a logo de verdade (esta página o CLIENTE vê). */}
-        <div className="flex items-center justify-center gap-1.5 pt-8 pb-10">
-          <span className="text-[11px] text-muted-foreground font-body">Feito com</span>
-          <Logo className="h-3.5 w-auto opacity-80" />
-        </div>
+        {/* Crédito de rodapé (esta página o CLIENTE vê): mesma assinatura das
+            outras páginas públicas, agora clicável. */}
+        <AssinaturaCria variante="rodape" tom="claro" style={{ paddingTop: 32, paddingBottom: 40 }} />
       </main>
     </div>
   );

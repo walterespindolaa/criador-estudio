@@ -7,6 +7,7 @@ import { sanitizeUrl } from "@/lib/sanitize";
 import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 import { renderRichText } from "@/lib/richText";
 import { cn } from "@/lib/utils";
+import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
 
 type BgType = "color" | "gradient" | "image";
 type BgImageSize = "cover" | "contain";
@@ -637,18 +638,12 @@ const BioPage = () => {
   );
 };
 
+// Assinatura do Cria na bio. Usa a pastilha branca porque o fundo aqui é
+// escolhido pela pessoa (cor, gradiente ou foto), então logo solto pode sumir.
 function BioFooter({ className }: { className?: string }) {
   return (
     <div className={cn("w-full flex justify-center", className)}>
-      <a
-        href="https://criasocialclub.com.br"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 text-[11px] text-gray-500 hover:opacity-80 transition-opacity"
-      >
-        <span>feito com</span>
-        <img src="/logo-cria.png" alt="Cria" style={{ height: 18 }} />
-      </a>
+      <AssinaturaCria variante="rodape" tom="pastilha" />
     </div>
   );
 }
