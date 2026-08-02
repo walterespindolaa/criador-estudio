@@ -853,7 +853,13 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
       <Dialog open={formOpen} onOpenChange={(o) => { if (!o) void requestCloseForm(); }}>
         <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="max-w-md md:max-w-5xl bg-white rounded-2xl">
           <DialogHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pr-8">
-            <DialogTitle className="font-display">{draftId || !editing ? "Novo post" : "Editar post"}</DialogTitle>
+            {/* Etiquetas INTERNAS logo abaixo do título: entrada rápida, sem
+                rótulo nem texto de apoio ocupando o formulário. A explicação de
+                que o cliente não vê fica dentro do popover, na hora de usar. */}
+            <div className="min-w-0 space-y-2">
+              <DialogTitle className="font-display">{draftId || !editing ? "Novo post" : "Editar post"}</DialogTitle>
+              <InternalTagPicker selected={internalTags} onChange={setInternalTags} />
+            </div>
             <div className="flex items-center gap-2 shrink-0 flex-wrap">
               <Button variant="outline" size="sm" onClick={() => void requestCloseForm()}>Cancelar</Button>
               <Button size="sm" onClick={submit} disabled={create.isPending || update.isPending || !f.title.trim()}>{(create.isPending || update.isPending) ? <Loader2 className="h-4 w-4 animate-spin" /> : draftId ? "Criar post" : editing ? (editing.approval_status === "ajuste_solicitado" ? <><RotateCcw className="h-4 w-4 mr-1.5" /> Salvar e reenviar</> : "Salvar") : "Criar post"}</Button>
@@ -943,16 +949,6 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                 <Label className="text-xs font-body">Ideia / Referência (links)</Label>
                 <MultiLinkInput value={refLinks} onChange={setRefLinks}
                   placeholder="Cole um link de inspiração (Drive, post, Pinterest...)" />
-              </div>
-
-              {/* Etiquetas INTERNAS: organização da equipe. O rótulo e a linha de
-                  apoio deixam explícito que o cliente não vê isso em lugar nenhum. */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-body">Etiquetas internas</Label>
-                <p className="text-[11px] font-body text-muted-foreground leading-tight">
-                  Só a sua equipe vê. Não aparece no link de aprovação, no cronograma público nem no relatório do cliente.
-                </p>
-                <InternalTagPicker selected={internalTags} onChange={setInternalTags} />
               </div>
 
               {/* Pasta do Drive: link da PASTA com os materiais deste post (distinto da

@@ -16,6 +16,11 @@ async function ensureUnsubscribeToken(svc: SupabaseClient, email: string): Promi
 }
 
 function emailHtml(opts: { title: string; paragraph: string; buttonLabel: string; actionLink: string; secondary: string }): string {
+  // Rodapé com o logo (e não com a palavra "cria" escrita).
+  // Cuidados de e-mail: Gmail e Outlook bloqueiam imagem por padrão, então a URL
+  // é absoluta e pública, width/height vão como ATRIBUTO (o Outlook ignora só o
+  // CSS) e o alt="cria" segura a assinatura quando a imagem não carrega. O
+  // endereço embaixo é texto de verdade, nunca some.
   return `<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f5f5f5;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#1f2937">
@@ -28,7 +33,7 @@ function emailHtml(opts: { title: string; paragraph: string; buttonLabel: string
       </td></tr></table>
       <p style="margin:0;font-size:13px;line-height:1.5;color:#9ca3af">${opts.secondary}</p>
     </td></tr></table>
-    <p style="margin:24px 0 0 0;font-size:12px;color:#9ca3af">cria · criasocialclub.com.br</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:24px auto 0"><tr><td align="center" style="font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif"><a href="https://criasocialclub.com.br" target="_blank" style="text-decoration:none"><img src="https://app.criasocialclub.com.br/logo-cria.png" width="104" height="57" alt="cria" style="display:block;border:0;outline:none;text-decoration:none;width:104px;height:57px;font-size:12px;color:#9ca3af" /></a><div style="margin:6px 0 0 0;font-size:12px;color:#9ca3af">criasocialclub.com.br</div></td></tr></table>
   </td></tr></table>
 </body></html>`;
 }

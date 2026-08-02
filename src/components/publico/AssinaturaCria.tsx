@@ -25,16 +25,25 @@ type Props = {
   tom?: TomAssinatura;
   className?: string;
   style?: CSSProperties;
+  // Altura do logo em px. O padrão é calibrado pra tela, onde a assinatura fica
+  // ao lado de texto de interface. Em arquivo que vai pro cliente (PDF, media
+  // kit) ela é o único lugar onde a marca aparece, então pede mais corpo.
+  altura?: number;
 };
 
-export function AssinaturaCria({ variante = "rodape", tom = "claro", className, style }: Props) {
+export function AssinaturaCria({ variante = "rodape", tom = "claro", className, style, altura }: Props) {
   const noTopo = variante === "topo";
   const logoSrc = tom === "escuro" ? "/logo-cria-white.png" : "/logo-cria.png";
   // Cinza escolhido pra passar em contraste AA sobre o creme e sobre o branco,
   // sem virar preto e roubar atenção do conteúdo.
   const corTexto = tom === "escuro" ? "rgba(255,255,255,.8)" : tom === "pastilha" ? "#5B5470" : "#6E675A";
 
-  const alturaLogo = noTopo ? 14 : 17;
+  const alturaPadrao = noTopo ? 14 : 17;
+  const alturaLogo = altura ?? alturaPadrao;
+  // O texto acompanha o logo, senão em tamanho maior a palavra fica raquítica
+  // do lado da marca. Só que ele acompanha com o pé no freio: numa assinatura
+  // quem cresce é a marca, o "Feito com" continua sendo legenda.
+  const escala = Math.min(alturaLogo / alturaPadrao, 1.15);
 
   const linha: CSSProperties = {
     display: "inline-flex",
@@ -43,7 +52,7 @@ export function AssinaturaCria({ variante = "rodape", tom = "claro", className, 
     textDecoration: "none",
     color: corTexto,
     fontFamily: "'Nunito Sans', system-ui, sans-serif",
-    fontSize: noTopo ? 10.5 : 11.5,
+    fontSize: (noTopo ? 10.5 : 11.5) * escala,
     lineHeight: 1.2,
     letterSpacing: ".02em",
     // Alvo de toque confortável no celular sem ocupar espaço visual.
@@ -85,7 +94,7 @@ export function AssinaturaCria({ variante = "rodape", tom = "claro", className, 
       {/* Na pastilha o endereço ficaria solto sobre um fundo imprevisível, então
           só aparece quando o fundo é conhecido. */}
       {!noTopo && tom !== "pastilha" && (
-        <span style={{ fontSize: 10, color: corTexto, opacity: 0.85, fontFamily: "'Nunito Sans', system-ui, sans-serif" }}>
+        <span style={{ fontSize: 10 * escala, color: corTexto, opacity: 0.85, fontFamily: "'Nunito Sans', system-ui, sans-serif" }}>
           criasocialclub.com.br
         </span>
       )}

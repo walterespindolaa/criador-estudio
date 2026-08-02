@@ -75,7 +75,11 @@ export function InternalTagPicker({ selected, onChange }: {
         </PopoverTrigger>
         <PopoverContent className="w-72 p-3" align="start">
           <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1">Etiquetas internas de post</p>
-          <p className="text-[10.5px] font-body text-muted-foreground mb-2 leading-tight">Valem pra todos os clientes e só a sua equipe vê. Renomeie, troque a cor ou exclua à vontade.</p>
+          {/* A explicação de privacidade vive aqui, no momento de usar, e não
+              como bloco de texto fixo dentro do formulário. */}
+          <p className="text-[10.5px] font-body text-muted-foreground mb-2 leading-tight">
+            Valem pra todos os clientes e só a sua equipe vê. Não aparecem no link de aprovação, no cronograma público nem no relatório do cliente. Renomeie, troque a cor ou exclua à vontade.
+          </p>
 
           <div className="max-h-52 overflow-y-auto space-y-1 mb-2">
             {tags.length === 0 && <p className="text-[11px] text-muted-foreground py-1">Nenhuma ainda.</p>}

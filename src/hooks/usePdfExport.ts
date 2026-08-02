@@ -38,12 +38,35 @@ function pageCuts(boundaries: number[], totalPx: number, pagePx: number): number
   return cuts;
 }
 
+// O html2canvas fotografa o que já está pintado: imagem que ainda não terminou
+// de carregar vira buraco branco no PDF. Antes de capturar, esperamos todas as
+// <img> do bloco (logo do Cria, logo do cliente, thumbs do Instagram). O tempo
+// limite existe pra uma imagem quebrada não travar o download pra sempre: nesse
+// caso o PDF sai sem ela, que é melhor do que não sair.
+async function waitForImages(element: HTMLElement, timeoutMs = 6000) {
+  const imgs = Array.from(element.querySelectorAll("img"));
+  if (imgs.length === 0) return;
+  const pendentes = imgs.map((img) => {
+    if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+    return new Promise<void>((resolve) => {
+      img.addEventListener("load", () => resolve(), { once: true });
+      img.addEventListener("error", () => resolve(), { once: true });
+    });
+  });
+  await Promise.race([
+    Promise.all(pendentes),
+    new Promise<void>((resolve) => setTimeout(resolve, timeoutMs)),
+  ]);
+}
+
 // Renderiza o elemento num jsPDF (html2canvas + paginação A4, agora fatiando o
 // canvas por página em vez de deslocar a imagem inteira: assim cada página é só
 // o pedaço dela e o corte cai entre blocos).
 async function buildPdf(element: HTMLDivElement) {
   const { default: html2canvas } = await import("html2canvas");
   const { default: jsPDF } = await import("jspdf");
+
+  await waitForImages(element);
 
   const fullHeight = Math.max(
     element.scrollHeight,

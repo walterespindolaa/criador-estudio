@@ -1,4 +1,5 @@
 import { forwardRef } from "react";
+import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
 
 interface Section {
   text: string;
@@ -158,7 +159,12 @@ export const RoteiroPdfTemplate = forwardRef<HTMLDivElement, RoteiroPdfProps>(
                 <p style={{ fontSize: 10, color: "#3B82F6", margin: 0, wordBreak: "break-all" }}>{referenceLink}</p>
               </div>
             ) : <div />}
-            <p style={{ fontSize: 9, color: "#ccc", margin: 0 }}>cria · {new Date().toLocaleDateString("pt-BR")}</p>
+            {/* Assinatura com o logo, não com a palavra escrita: é um arquivo
+                que vai pra mão do cliente. */}
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <span style={{ fontSize: 10, color: "#bbb" }}>{new Date().toLocaleDateString("pt-BR")}</span>
+              <AssinaturaCria variante="rodape" tom="claro" altura={24} style={{ width: "auto" }} />
+            </div>
           </div>
         </div>
       </div>

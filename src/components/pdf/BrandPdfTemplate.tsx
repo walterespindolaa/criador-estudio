@@ -1,4 +1,5 @@
 import { forwardRef } from "react";
+import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
 
 interface MoodboardEntryLike {
   section: string;
@@ -309,8 +310,10 @@ export const BrandPdfTemplate = forwardRef<HTMLDivElement, BrandPdfProps>(
           )}
 
           {/* Footer */}
-          <div style={{ marginTop: 48, borderTop: "1px solid #eee", paddingTop: 16, display: "flex", justifyContent: "space-between" }}>
-            <p style={{ fontSize: 10, color: "#bbb", margin: 0 }}>Criado com cria</p>
+          <div style={{ marginTop: 48, borderTop: "1px solid #eee", paddingTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            {/* Assinatura com o logo, não com a palavra escrita: é um arquivo
+                que vai pra mão do cliente. */}
+            <AssinaturaCria variante="rodape" tom="claro" altura={24} style={{ width: "auto", alignItems: "flex-start" }} />
             <p style={{ fontSize: 10, color: "#bbb", margin: 0 }}>{new Date().toLocaleDateString("pt-BR")}</p>
           </div>
         </div>

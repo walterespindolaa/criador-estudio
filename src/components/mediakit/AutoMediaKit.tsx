@@ -1,5 +1,6 @@
 import { forwardRef, type ReactNode, type SyntheticEvent } from "react";
 import type { MediaKitProfile } from "@/hooks/useMediaKit";
+import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
 
 export type KitStats = {
   followers: number;
@@ -210,7 +211,9 @@ export const AutoMediaKit = forwardRef<HTMLDivElement, Props>(function AutoMedia
 
         <div style={{ padding: "20px 32px 26px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11.5, color: "#6b7670", flexWrap: "wrap", gap: 8 }}>
           <span>Dados do Instagram · atualizados automaticamente.</span>
-          <span style={{ fontFamily: "Sora, Inter, sans-serif", fontWeight: 800, color: accent, letterSpacing: ".04em" }}>feito com CRIA</span>
+          {/* Assinatura com o logo, não com a palavra escrita: o media kit vai
+              em PDF pra mão da marca. */}
+          <AssinaturaCria variante="rodape" tom="claro" altura={24} style={{ width: "auto", alignItems: "flex-end" }} />
         </div>
       </div>
     </>
