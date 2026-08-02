@@ -61,14 +61,24 @@ const STATUS: Record<Capture["status"], { label: string; cls: string }> = {
   cancelada: { label: "Cancelada", cls: "bg-destructive/10 text-destructive" },
 };
 
-// Cor padrão da tarefa de cliente quando o cliente não tem cor definida no cadastro.
-const TASK_CLIENT_DEFAULT_COLOR = "#01A652"; // verde
+// Cores padrão de cada tipo, usadas só quando nem o item nem o dono dele têm cor.
+const TASK_CLIENT_DEFAULT_COLOR = "#01A652"; // verde, tarefa de cliente
+const LEAD_DEFAULT_COLOR = "#0061EE";        // azul, tarefa de lead
+const CAPTURE_DEFAULT_COLOR = "#14B8A6";     // teal, captação
 // Paleta de cores pra tarefa (útil pra tarefa sem cliente ganhar destaque próprio).
 const TASK_COLORS = ["#0061EE", "#01A652", "#EA4918", "#FF77B9", "#4B3FA8", "#F5A623", "#111827"];
-// Cor efetiva da tarefa na agenda: a cor escolhida na tarefa vence; senão a do
-// cliente; senão a padrão. Lead segue com o azul dele (tratado à parte).
-function taskColor(t: { color?: string | null; crm_client_id: string | null }, clientColor: string | null): string {
-  return (t.color && t.color.trim()) || clientColor || TASK_CLIENT_DEFAULT_COLOR;
+// Cor efetiva de um item da agenda, em ordem de prioridade:
+//   1) a cor escolhida no PRÓPRIO item (a tarefa, quando você define uma)
+//   2) a cor do DONO dele (o cliente cadastrado, ou o lead)
+//   3) a cor padrão do tipo
+// Antes a tarefa de lead era forçada em azul e a captação em teal, ignorando a
+// cor escolhida. Resultado: você pintava de roxo e o card continuava azul.
+function corDoItem(corPropria: string | null | undefined, corDono: string | null | undefined, padrao: string): string {
+  const propria = corPropria?.trim();
+  if (propria) return propria;
+  const dono = corDono?.trim();
+  if (dono) return dono;
+  return padrao;
 }
 // HH:MM a partir de "HH:MM:SS" (ou null).
 const hhmm = (s: string | null | undefined) => (s ? s.slice(0, 5) : null);
@@ -145,6 +155,31 @@ function buildDayItems(caps: Capture[], tasks: CrmTask[], cris: Creation[], post
 // volta a rolar nativo (sem touch-action), o tap edita, e o arraste começa pegando o grip.
 // disableInteractiveElementBlocking segue ligado, então o grip dentro do <button> funciona.
 const dragCardStyle: CSSProperties = { WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" };
+/**
+ * Campo de HORA com botão de limpar.
+ * O input de hora do navegador não tem "Limpar" (o de data tem), então quem
+ * colocava um horário sem querer ficava preso com ele: dava pra trocar, não
+ * dava pra deixar em branco. O botão só aparece quando há valor.
+ */
+function HoraInput({ label, value, onChange, className }: {
+  label: string; value: string; onChange: (v: string) => void; className?: string;
+}) {
+  return (
+    <div className={cn("min-w-0", className)}>
+      <div className="flex items-baseline justify-between gap-2 mb-1">
+        <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase">{label}</p>
+        {value && (
+          <button type="button" onClick={() => onChange("")}
+            className="text-[11px] font-body text-muted-foreground hover:text-destructive transition-colors">
+            Limpar
+          </button>
+        )}
+      </div>
+      <Input type="time" value={value} onChange={(e) => onChange(e.target.value)} className="w-full h-10" />
+    </div>
+  );
+}
+
 function DragGrip({ className, handleProps }: { className?: string; handleProps?: DraggableProvidedDragHandleProps }) {
   // Alvo de toque generoso no mobile (p-2 -m-2 ~ 40px) sem inflar o visual do grip.
   return (
@@ -444,6 +479,15 @@ export default function AgendaCriacao() {
   const nameOf = (crmId: string | null, fallback: string | null) =>
     (crmId ? clients.find((c) => c.id === crmId)?.name : null) || fallback || "Cliente";
   const leadName = (leadId: string | null) => (leadId ? leads.find((l) => l.id === leadId)?.name ?? null : null);
+  // Cor cadastrada no lead ("Cor do lead" na ficha dele), pra tarefa de lead
+  // sair na cor certa em vez do azul fixo.
+  const leadColor = (leadId: string | null) => (leadId ? leads.find((l) => l.id === leadId)?.color ?? null : null);
+  // Cor de qualquer TAREFA: a dela, senão a do lead ou do cliente, senão o padrão.
+  const corDaTarefa = (t: CrmTask) => corDoItem(
+    t.color,
+    t.crm_lead_id ? leadColor(t.crm_lead_id) : (t.crm_client_id ? clients.find((c) => c.id === t.crm_client_id)?.color : null),
+    t.crm_lead_id ? LEAD_DEFAULT_COLOR : TASK_CLIENT_DEFAULT_COLOR,
+  );
 
   // Tarefas dos clientes (CRM) com vencimento na semana exibida, por dia.
   // Concluídas ficam de fora: a grade é sobre o que ainda precisa acontecer.
@@ -666,6 +710,13 @@ export default function AgendaCriacao() {
                       {dayItems.map((item, idx) => {
                         if (item.kind === "cap") {
                           const c = item.cap;
+                          // Captação também herda a cor do cliente cadastrado; o teal
+                          // vira só o padrão de quem não tem cor definida.
+                          const capColor = corDoItem(
+                            null,
+                            c.crm_client_id ? clients.find((x) => x.id === c.crm_client_id)?.color : null,
+                            CAPTURE_DEFAULT_COLOR,
+                          );
                           return (
                             <Draggable key={`cap:${c.id}`} draggableId={`cap:${c.id}`} index={idx} disableInteractiveElementBlocking>
                               {(dragProvided, dragSnapshot) => {
@@ -674,16 +725,16 @@ export default function AgendaCriacao() {
                                 <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
                                   type="button" title={c.location ?? undefined}
                                   onClick={() => setEditCap(c)}
-                                  style={{ ...dragProvided.draggableProps.style, ...dragCardStyle }}
-                                  className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors overflow-hidden",
-                                    done ? "border-teal-500/25 bg-teal-500/5 opacity-70" : "border-teal-500/40 bg-teal-500/10 hover:bg-teal-500/15",
+                                  style={{ ...dragProvided.draggableProps.style, borderColor: `${capColor}59`, borderLeftColor: capColor, borderLeftWidth: 3, background: `${capColor}${done ? "0A" : "12"}`, ...dragCardStyle }}
+                                  className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors overflow-hidden hover:brightness-95",
+                                    done && "opacity-70",
                                     dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
-                                  <div className="flex items-center gap-1 min-w-0 text-teal-700 dark:text-teal-300">
+                                  <div className="flex items-center gap-1 min-w-0" style={{ color: capColor }}>
                                     <DragGrip className="text-teal-700/40 dark:text-teal-300/40" handleProps={dragProvided.dragHandleProps ?? undefined} />
                                     <Video className="h-3 w-3 shrink-0" />
                                     <span className="text-[10px] font-body font-bold flex-1 min-w-0 truncate">{c.capture_time ? c.capture_time.slice(0, 5) : ""}</span>
                                     {/* Etiqueta fixa "Captação": mesmo padrão de pill das etiquetas de status dos posts (posição à direita/estilo). */}
-                                    <span className="shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full bg-teal-500/15 text-teal-700 dark:text-teal-300">Captação</span>
+                                    <span className="shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: `${capColor}26`, color: capColor }}>Captação</span>
                                     {/* Check pra concluir a captação: mesmo padrão do check da tarefa (círculo/quadrado
                                         que alterna concluída <-> agendada). Span pra não aninhar button; stopPropagation
                                         pra não abrir o editor. Alvo de toque ampliado no mobile (~40px) sem mexer no layout. */}
@@ -705,10 +756,11 @@ export default function AgendaCriacao() {
                         }
                         if (item.kind === "task") {
                           const t = item.task;
-                          // Tarefa de LEAD é azul. Tarefa de CLIENTE usa a COR DO CLIENTE (cadastro); sem cor -> verde.
+                          // Cor vem do helper corDaTarefa: a da própria tarefa, senão a do lead
+                          // ou do cliente, senão o padrão do tipo. Lead se distingue pelo ícone.
                           const isLead = !!t.crm_lead_id;
                           const client = t.crm_client_id ? clients.find((c) => c.id === t.crm_client_id) : null;
-                          const clientColor = taskColor(t, client?.color ?? null);
+                          const clientColor = corDaTarefa(t);
                           const who = isLead ? (leadName(t.crm_lead_id) ?? "Lead") : nameOf(t.crm_client_id, null);
                           return (
                             <Draggable key={`task:${t.id}`} draggableId={`task:${t.id}`} index={idx} disableInteractiveElementBlocking>
@@ -719,18 +771,18 @@ export default function AgendaCriacao() {
                                     type="button" title={t.description ?? undefined}
                                     onClick={() => setEditTask(t)}
                                     className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors overflow-hidden",
-                                      isLead ? "border-sky-500/45 bg-sky-500/10 hover:bg-sky-500/15" : "hover:brightness-95",
+                                      "hover:brightness-95",
                                       done && "opacity-60",
                                       dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}
                                     // Cliente: acento na cor do cliente (borda esquerda + fundo bem suave). Texto fica no foreground pra não perder contraste.
                                     // Merge com draggableProps.style: sem isso o style explícito venceria o do spread e o transform do drag sumiria.
-                                    style={{ ...dragProvided.draggableProps.style, ...(!isLead ? { borderColor: `${clientColor}59`, borderLeftColor: clientColor, borderLeftWidth: 3, background: `${clientColor}12` } : {}), ...dragCardStyle }}>
-                                    <div className={cn("flex items-center gap-1 min-w-0", isLead && "text-sky-700 dark:text-sky-300")}>
+                                    style={{ ...dragProvided.draggableProps.style, borderColor: `${clientColor}59`, borderLeftColor: clientColor, borderLeftWidth: 3, background: `${clientColor}12`, ...dragCardStyle }}>
+                                    <div className="flex items-center gap-1 min-w-0">
                                       <DragGrip handleProps={dragProvided.dragHandleProps ?? undefined} />
                                       {isLead
-                                        ? <ListChecks className="h-3 w-3 shrink-0" />
+                                        ? <ListChecks className="h-3 w-3 shrink-0" style={{ color: clientColor }} />
                                         : <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: clientColor }} />}
-                                      <span className={cn("text-[10px] font-body font-bold truncate flex-1 min-w-0", !isLead && "text-foreground")}>
+                                      <span className="text-[10px] font-body font-bold truncate flex-1 min-w-0 text-foreground">
                                         {item.time && <span className="tabular-nums">{item.time} · </span>}
                                         {isLead ? `Lead · ${who}` : who}
                                       </span>
@@ -918,7 +970,7 @@ export default function AgendaCriacao() {
             {upcomingTasks.map((t) => {
               const d = parseDateOnly(t.due_date!);
               const isLead = !!t.crm_lead_id;
-              const clientColor = isLead ? "#0061EE" : taskColor(t, (t.crm_client_id ? clients.find((c) => c.id === t.crm_client_id)?.color ?? null : null));
+              const clientColor = corDaTarefa(t);
               const who = isLead ? (leadName(t.crm_lead_id) ?? "Lead") : nameOf(t.crm_client_id, null);
               // Atrasada: venceu antes de hoje e não está concluída. Destaque vermelho.
               const overdue = t.due_date! < today;
@@ -1018,7 +1070,7 @@ export default function AgendaCriacao() {
               <div className="space-y-1.5 mt-1">
                 {items.map((item) => {
                   if (item.kind === "cria") { const c = item.cria; return <button key={`c${c.id}`} onClick={() => { setDayModal(null); setEditCreation(c); }} className={rowCls}>{dot("#4B3FA8")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}</span><span className="ml-auto text-[10px] text-muted-foreground">Criação</span></button>; }
-                  if (item.kind === "task") { const t = item.task; const isLead = !!t.crm_lead_id; const dotColor = isLead ? "#0061EE" : taskColor(t, (t.crm_client_id ? clients.find((x) => x.id === t.crm_client_id)?.color ?? null : null)); return <button key={`t${t.id}`} onClick={() => { setDayModal(null); setEditTask(t); }} className={rowCls}>{dot(dotColor)}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{t.title}</span><span className="ml-auto text-[10px] text-muted-foreground">Tarefa</span></button>; }
+                  if (item.kind === "task") { const t = item.task; const isLead = !!t.crm_lead_id; const dotColor = corDaTarefa(t); return <button key={`t${t.id}`} onClick={() => { setDayModal(null); setEditTask(t); }} className={rowCls}>{dot(dotColor)}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{t.title}</span><span className="ml-auto text-[10px] text-muted-foreground">Tarefa</span></button>; }
                   if (item.kind === "cap") { const c = item.cap; return <button key={`p${c.id}`} onClick={() => { setDayModal(null); setEditCap(c); }} className={rowCls}>{dot("#FF77B9")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}{c.capture_time ? ` · ${c.capture_time.slice(0, 5)}` : ""}</span><span className="ml-auto text-[10px] text-muted-foreground">Captação</span></button>; }
                   const p = item.post; const st = POST_STATUS[p.approval_status ?? "em_producao"]; return <button key={`o${p.id}`} onClick={() => { setDayModal(null); openPost(p); }} className={rowCls}>{dot("#EA4918")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{p.title || "Post"}</span>{st && <span className={cn("ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}</button>;
                 })}
@@ -1187,7 +1239,7 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
             // Hora e Local lado a lado; abaixo de ~390px empilha pra nenhum espremer o outro.
             // O valor da hora alinha à esquerda / não corta pela regra global do index.css.
             <div className="flex gap-2 max-[390px]:flex-col">
-              <div className="w-[120px] shrink-0 min-w-0 max-[390px]:w-full"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Hora</p><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full h-10" /></div>
+              <HoraInput label="Hora" value={time} onChange={setTime} className="w-[120px] shrink-0 max-[390px]:w-full" />
               <div className="flex-1 min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Local (opcional)</p><Input value={loc} onChange={(e) => setLoc(e.target.value)} placeholder="Ex.: Estúdio" className="h-10" /></div>
             </div>
           )}
@@ -1202,7 +1254,7 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
               </div>
               <div className="min-w-0">
                 <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Horário</p>
-                <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full h-10" />
+                <HoraInput label="Hora" value={time} onChange={setTime} />
               </div>
             </div>
           )}
@@ -1257,7 +1309,7 @@ function CaptureDialog({ open, initial, clients, teamNames, onClose, onSave, pen
           {/* Data/Hora: lado a lado; abaixo de ~390px empilham pra o valor nunca espremer. */}
           <div className="grid grid-cols-2 gap-2 max-[390px]:grid-cols-1">
             <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Data</p><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full h-10" /></div>
-            <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Hora</p><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full h-10" /></div>
+            <HoraInput label="Hora" value={time} onChange={setTime} />
           </div>
           <div><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Local (opcional)</p><Input value={loc} onChange={(e) => setLoc(e.target.value)} placeholder="Ex.: Estúdio, coworking, local externo" /></div>
           <div><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Equipe (opcional)</p><Input value={team} onChange={(e) => setTeam(e.target.value)} placeholder="Ex.: Ana, Bruno" list="agenda-team-names" /><TeamDatalist names={teamNames} /></div>
@@ -1357,7 +1409,7 @@ function TaskDialog({ task, clients, onClose, onOpenCrm, onSave, onDelete }: {
           {/* Vencimento/Horário: empilham abaixo de ~390px pra não cortar o valor. */}
           <div className="grid grid-cols-2 gap-2 max-[390px]:grid-cols-1">
             <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Vencimento</p><Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="w-full h-10" /></div>
-            <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Horário</p><Input type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)} className="w-full h-10" /></div>
+            <HoraInput label="Horário" value={dueTime} onChange={setDueTime} />
           </div>
           {/* Cor da tarefa: destaque próprio na agenda. Vence sobre a cor do cliente
               quando escolhida; principalmente útil pra tarefa sem cliente. */}
@@ -1511,7 +1563,7 @@ function PostEditDialog({ post, clientName, onClose, onSave, onOpenClient, savin
               demais campos, largura total; abaixo de ~390px o grid empilha sozinho. */}
           <div className="grid grid-cols-2 gap-2 max-[390px]:grid-cols-1">
             <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Data</p><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full h-10 rounded-lg px-3" /></div>
-            <div className="min-w-0"><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Horário</p><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full h-10 rounded-lg px-3" /></div>
+            <HoraInput label="Horário" value={time} onChange={setTime} />
           </div>
           <div>
             <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Status</p>
