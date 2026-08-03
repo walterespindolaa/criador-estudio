@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { ImageOff, ChevronLeft, ChevronRight, X, Play, ExternalLink } from "lucide-react";
 import { getDisplayImageUrl, getDriveImageFallbackUrl, getDriveViewPageUrl, getThumbnailUrl, getVideoEmbedUrl, getVideoFileUrl, getVideoKind, isUnknownDriveMedia, isVideoMedia } from "@/lib/driveMedia";
 import { ProgressiveImage } from "@/components/shared/ProgressiveImage";
+import { VideoPoster } from "@/components/shared/VideoPoster";
 
 export type CarouselMedia = {
   id?: string; provider?: string | null; external_file_id?: string | null; view_url?: string | null;
@@ -13,7 +14,6 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
   const [playing, setPlaying] = useState(false);
   const thumb = getDisplayImageUrl(item);
   const [thumbOk, setThumbOk] = useState<boolean | null>(thumb ? null : false);
-  const [bust, setBust] = useState(0);
   // Player por tipo: Bunny/Drive são iframe (embedUrl); storage/device é arquivo (<video>).
   const kind = getVideoKind(item);
   const embedUrl = getVideoEmbedUrl(item);
@@ -24,10 +24,6 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
   // Fallback só pro Drive: se o embed /preview for bloqueado pela conta do cliente,
   // ele ainda assiste abrindo a página do Drive em nova aba.
   const driveViewUrl = kind === "drive" ? getDriveViewPageUrl(item) : null;
-
-  useEffect(() => {
-    if (thumbOk === false && thumb) { const t = setTimeout(() => setBust((b) => b + 1), 5000); return () => clearTimeout(t); }
-  }, [thumbOk, bust, thumb]);
 
   // Play robusto: monta o player embutido; sem player embutido (ex.: só a página do
   // Drive), abre a fonte em nova aba. O usuário SEMPRE consegue assistir.
@@ -57,17 +53,9 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
 
   return (
     <div className="relative w-full h-full bg-black">
-      {thumb && (
-        <img src={`${thumb}${bust ? `?r=${bust}` : ""}`} alt={item.file_name || ""}
-          className={`w-full h-full object-cover ${thumbOk ? "" : "opacity-0"}`}
-          onLoad={() => { if (thumbOk === false) onReady?.(); setThumbOk(true); }}
-          onError={(e) => {
-            const img = e.currentTarget;
-            const fb = getDriveImageFallbackUrl(item);
-            if (fb && !img.dataset.fb) { img.dataset.fb = "1"; img.src = fb; return; }
-            setThumbOk(false);
-          }} />
-      )}
+      {/* O poster mora no VideoPoster: ele cuida do fallback do Drive, da
+          retentativa e da TARJA PRETA queimada na miniatura (ver poster-letterbox). */}
+      <VideoPoster item={item} onStatus={(good) => { if (good && thumbOk === false) onReady?.(); setThumbOk(good); }} />
       {/* Play SEMPRE visível sobre fundo escuro: NUNCA um frame borrado sem controle.
           Se o poster não carregou (Bunny codificando / Drive bloqueado), mostra o
           rótulo "Assistir" pra deixar claro que dá pra tocar. */}

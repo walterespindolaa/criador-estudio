@@ -50,13 +50,15 @@ export function LogoMarca({
   const avatar = formato === "avatar";
 
   const caixa: CSSProperties = {
+    // Círculo nos dois formatos: é o padrão da marca nas páginas públicas.
+    // A diferença é o encaixe, não a forma: avatar é foto de pessoa e preenche
+    // (cover), logo de marca cabe inteiro dentro do círculo (contain), então
+    // logo largo aparece menor, mas nunca cortado no meio nem deformado.
     height: size,
-    width: avatar ? size : "auto",
+    width: size,
     minWidth: size,
-    // Logo muito largo vira uma pastilha mais larga em vez de ser cortado no
-    // meio. O teto evita que um logo 5:1 empurre o resto do cabeçalho.
-    maxWidth: avatar ? size : `calc(${size} * 1.75)`,
-    padding: avatar ? 0 : 7,
+    maxWidth: size,
+    padding: avatar ? 0 : 9,
     boxSizing: "border-box",
     display: "inline-flex",
     alignItems: "center",
@@ -64,7 +66,7 @@ export function LogoMarca({
     flexShrink: 0,
     overflow: "hidden",
     background: fundo,
-    borderRadius: avatar ? "50%" : 18,
+    borderRadius: "50%",
     boxShadow: "0 4px 14px -8px rgba(20,16,40,.45)",
     ...style,
   };
@@ -87,10 +89,7 @@ export function LogoMarca({
         onError={() => setFalhou(true)}
         style={{
           height: "100%",
-          width: avatar ? "100%" : "auto",
-          // Teto em px (e não em %) porque a pastilha se ajusta ao conteúdo:
-          // com % o navegador pode ignorar o limite e cortar o logo largo.
-          maxWidth: avatar ? "100%" : `calc(${size} * 1.75 - 14px)`,
+          width: "100%",
           objectFit: avatar ? "cover" : "contain",
           display: "block",
         }}

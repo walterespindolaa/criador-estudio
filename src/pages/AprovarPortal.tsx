@@ -118,7 +118,13 @@ function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
       ) : vertical ? (
         <div className="relative">
           <PostMediaCarousel media={media} aspect={aspect} />
-          <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
+          {/* Véu de rodapé CURTO. Antes eram 2/5 da altura em black/70: aquilo existia
+              pra dar contraste na legenda sobreposta, que foi removida daqui (ver o
+              comentário logo abaixo) e o véu ficou órfão, escurecendo 40% do vídeo à
+              toa. Era a "margem preta" que o cliente viu no celular. Agora é só o
+              assento dos ícones e do botão do Drive, como no Instagram, e os ícones
+              seguem com drop-shadow próprio pra legibilidade. */}
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
           <div className="absolute right-3 bottom-16 z-10 flex flex-col items-center gap-4 text-white pointer-events-none [filter:drop-shadow(0_1px_2px_rgba(0,0,0,.6))]">
             <Heart className="h-7 w-7" /><MessageCircle className="h-7 w-7" /><Send className="h-7 w-7" /><Bookmark className="h-7 w-7" />
           </div>

@@ -3,6 +3,7 @@ import { Heart, Send, ImageOff, Play, X, ExternalLink } from "lucide-react";
 import type { CarouselMedia } from "@/components/shared/PostMediaCarousel";
 import { getDisplayImageUrl, getDriveImageFallbackUrl, getDriveViewPageUrl, getThumbnailUrl, getVideoEmbedUrl, getVideoFileUrl, getVideoKind, isUnknownDriveMedia, isVideoMedia } from "@/lib/driveMedia";
 import { ProgressiveImage } from "@/components/shared/ProgressiveImage";
+import { VideoPoster } from "@/components/shared/VideoPoster";
 
 /**
  * Preview de Story (9:16, tela cheia): sem legenda e sem barra de ações de feed.
@@ -61,6 +62,10 @@ export function StoryPreview({ media, handle, avatarUrl, onRemove }: {
           <video src={fileUrl} controls playsInline autoPlay className="w-full h-full bg-black object-cover" />
         ) : playing && hasInlinePlayer && embedUrl ? (
           <iframe src={embedUrl} className="w-full h-full bg-black" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={item.file_name || "vídeo"} />
+        ) : video ? (
+          // Vídeo parado: mesmo poster do carrossel, que já trata a TARJA PRETA
+          // queimada na miniatura do Drive (ver src/lib/poster-letterbox.ts).
+          <VideoPoster key={item.id ?? safeIdx} item={item} />
         ) : src ? (
           <ProgressiveImage key={item.id ?? safeIdx} thumbSrc={thumb} fullSrc={src} alt={item.file_name || ""}
             className="w-full h-full object-cover" onFullError={onImgError} onThumbError={onImgError} />
