@@ -19,7 +19,8 @@ import {
 import {
   useCreations, useAddCreation, useUpdateCreation, useDeleteCreation,
   useCaptures, useAddCapture, useUpdateCapture, useDeleteCapture, useCollaboratorNames,
-  useDayOrders, useSaveDayOrder, type Capture, type Creation,
+  useDayOrders, useSaveDayOrder, useItemPeriods, useSaveItemPeriod,
+  type Capture, type Creation, type ItemPeriods,
 } from "@/hooks/useAgenda";
 import { useAllExternalPosts, useExternalClients, useMoveExternalPostDate, useUpdateExternalPost, type ExternalPostWithClient, type ExternalClient } from "@/hooks/useCriaPost";
 import { useCriaPostMedia, type CriaMedia } from "@/hooks/useCriaPostMedia";
@@ -29,6 +30,8 @@ import { isDriveMedia, isDriveUrl, isVideoMedia, getThumbnailUrl, getDriveImageF
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { parseRefLinks, refLinkHref } from "@/lib/refLinks";
+// Faixas do dia (manhã/tarde/noite). AS JANELAS DE HORÁRIO MORAM SÓ LÁ.
+import { FAIXAS, FAIXA_LABEL, FAIXA_HINT, faixaDoItem, type Faixa } from "@/lib/periodos-agenda";
 // Regra de cor compartilhada com a aba Tarefas do Cria Gestão (era daqui, virou util).
 import { corDoItem, corDaTarefa as corDaTarefaCompartilhada } from "@/lib/cores-agenda";
 
@@ -137,6 +140,32 @@ function buildDayItems(caps: Capture[], tasks: CrmTask[], cris: Creation[], post
   return items;
 }
 
+// Distribui os itens JÁ ORDENADOS do dia nas quatro faixas da coluna (sem período,
+// manhã, tarde, noite). Precedência da faixa: período gravado > derivado do horário >
+// "sem" (ver faixaDoItem). Dentro da faixa:
+//  - com ORDEM MANUAL do dia, ela manda (o Array.prototype.sort é estável, então a
+//    ordem que veio do buildDayItems é preservada);
+//  - sem ordem manual, quem tem horário vem primeiro em ordem crescente e quem não
+//    tem hora vai depois (é o inverso do topo do dia da versão sem faixas, e é o
+//    que o pedido descreve: dentro do período, o horário só desempata).
+function splitFaixas(items: DayItem[], periods: ItemPeriods, ordemManual: boolean): Record<Faixa, DayItem[]> {
+  const out: Record<Faixa, DayItem[]> = { sem: [], manha: [], tarde: [], noite: [] };
+  for (const it of items) out[faixaDoItem(periods[dayItemKey(it)], it.time)].push(it);
+  if (!ordemManual) {
+    for (const f of FAIXAS) out[f].sort((a, b) => (a.time ?? "99:99").localeCompare(b.time ?? "99:99"));
+  }
+  return out;
+}
+
+// droppableId da grade: "YYYY-MM-DD|faixa" na semana (um Droppable por faixa),
+// "YYYY-MM-DD" no mês (um Droppable por dia, sem faixas) e NO_DATE na faixa fixa
+// "Em produção". Decodifica os três casos.
+function parseDrop(id: string): { iso: string; faixa: Faixa | null } {
+  const i = id.indexOf("|");
+  if (i < 0) return { iso: id, faixa: null };
+  return { iso: id.slice(0, i), faixa: id.slice(i + 1) as Faixa };
+}
+
 // CAUSA RAIZ do "não arrasta no celular" (e o punho tampouco resolvia):
 // o @hello-pangea/dnd ABORTA o início do drag quando o elemento DRAGGABLE (o nó com
 // draggableProps) é interativo. A checagem interna isEventInInteractiveElement caminha
@@ -238,6 +267,17 @@ export default function AgendaCriacao() {
   const toggleProducao = () => setProducaoOpen((v) => { const n = !v; try { localStorage.setItem("agenda_producao_open", n ? "1" : "0"); } catch { /* segue */ } return n; });
   // Painel "ver todos" de um dia cheio.
   const [dayModal, setDayModal] = useState<string | null>(null);
+  // "Mostrar horários": o organizador do dia passou a ser o PERÍODO (manhã/tarde/noite),
+  // e o HH:MM virou detalhe opcional. Desligado por padrão; preferência do APARELHO
+  // (localStorage), não do usuário no banco: é jeito de ler a grade, muda por tela.
+  // O horário continua existindo e editável nos modais, só não domina a leitura.
+  const [showTimes, setShowTimes] = useState<boolean>(() => {
+    try { return localStorage.getItem("agenda_show_times") === "1"; } catch { return false; }
+  });
+  const toggleShowTimes = (v: boolean) => {
+    setShowTimes(v);
+    try { localStorage.setItem("agenda_show_times", v ? "1" : "0"); } catch { /* segue */ }
+  };
   // Semana = 7 dias a partir da segunda. Mês = grade completa (segunda a domingo) cobrindo o mês do anchor.
   const days = useMemo(() => {
     if (view === "semana") {
@@ -281,6 +321,10 @@ export default function AgendaCriacao() {
   // Ordem manual por dia (reordenar dentro do dia): mapa day -> array de chaves "<kind>:<id>".
   const { data: dayOrders = {} } = useDayOrders(from, to);
   const saveDayOrder = useSaveDayOrder();
+  // Período (manhã/tarde/noite) gravado por item, chave "<kind>:<id>". Sem a migration
+  // rodada o hook devolve {} e tudo cai no período derivado do horário.
+  const { data: itemPeriods = {} } = useItemPeriods();
+  const saveItemPeriod = useSaveItemPeriod();
 
   // Nome AO VIVO da conta Cria (mesmo padrao da lista de Clientes e do cockpit): quando o
   // external esta vinculado a um cliente do CRM que usa o Cria (cria_owner_id), pega o nome
@@ -343,32 +387,77 @@ export default function AgendaCriacao() {
   const [editPost, setEditPost] = useState<ExternalPostWithClient | null>(null);
   const updateExtPost = useUpdateExternalPost();
 
+  // Itens do dia já ordenados (mesma lista que a grade renderiza).
+  const itensDoDia = (iso: string) => buildDayItems(
+    capturesByDay.get(iso) ?? [], tasksByDay.get(iso) ?? [], byDay.get(iso) ?? [], postsByDay.get(iso) ?? [],
+    materialsByDay.get(iso) ?? [], dayOrders[iso],
+  );
+  // Grava (ou limpa) o PERÍODO de um item, de forma otimista. Soltar na faixa "sem
+  // período" limpa: o item volta a ser posicionado pelo horário (ou pro topo do dia).
+  const aplicaPeriodo = (key: string, faixa: Faixa) => {
+    const novo = faixa === "sem" ? null : faixa;
+    if ((itemPeriods[key] ?? null) === novo) return;
+    qc.setQueriesData<ItemPeriods>({ queryKey: ["agenda-item-period"] }, (old) => {
+      const n = { ...(old ?? {}) };
+      if (novo) n[key] = novo; else delete n[key];
+      return n;
+    });
+    saveItemPeriod.mutate({ itemKey: key, period: novo });
+  };
+  // Persiste a ordem manual do dia a partir das chaves já distribuídas nas faixas.
+  const gravaOrdem = (iso: string, keys: string[]) => {
+    qc.setQueriesData<Record<string, string[]>>({ queryKey: ["agenda-day-order"] }, (old) => ({ ...(old ?? {}), [iso]: keys }));
+    saveDayOrder.mutate({ day: iso, order: keys });
+  };
+
   // Arrastar item pra outro dia: atualização otimista no cache + persistência conforme o tipo.
   const handleDragEnd = (result: DropResult) => {
     const { source, destination, draggableId } = result;
     if (!destination) return;
-    // REORDENAR dentro do MESMO dia: antes o drop caía aqui e retornava sem fazer nada, e
-    // como a lista é ordenada por horário o card "voltava" pro lugar. Agora gravamos uma
-    // ORDEM MANUAL persistida por dia (agenda_day_order) que sobrepõe a ordem por horário.
-    if (destination.droppableId === source.droppableId) {
-      // A faixa "Sem data (em produção)" só agrupa; não tem ordenação manual.
-      if (source.droppableId === NO_DATE) return;
-      if (destination.index === source.index) return;
-      const iso = source.droppableId;
-      // Recalcula a MESMA lista renderizada do dia (com a ordem atual aplicada) e move a chave.
-      const keys = buildDayItems(
-        capturesByDay.get(iso) ?? [], tasksByDay.get(iso) ?? [], byDay.get(iso) ?? [], postsByDay.get(iso) ?? [],
-        materialsByDay.get(iso) ?? [], dayOrders[iso],
-      ).map(dayItemKey);
-      if (source.index >= keys.length) return;
-      const [moved] = keys.splice(source.index, 1);
-      keys.splice(destination.index, 0, moved);
-      // Otimista: grava a nova ordem no cache já pra o card ficar onde foi solto.
-      qc.setQueriesData<Record<string, string[]>>({ queryKey: ["agenda-day-order"] }, (old) => ({ ...(old ?? {}), [iso]: keys }));
-      saveDayOrder.mutate({ day: iso, order: keys });
+    const src = parseDrop(source.droppableId);
+    const dst = parseDrop(destination.droppableId);
+    // MESMO DIA: pode ser reordenar dentro da faixa OU trocar de faixa (define o período).
+    // Antes o drop no mesmo dia caía aqui e retornava sem fazer nada, e como a lista era
+    // ordenada por horário o card "voltava" pro lugar. Desde então gravamos uma ORDEM
+    // MANUAL persistida por dia (agenda_day_order) que sobrepõe a ordem por horário.
+    if (src.iso === dst.iso) {
+      // A faixa "Sem data (em produção)" só agrupa; não tem ordenação manual nem período.
+      if (src.iso === NO_DATE) return;
+      const iso = src.iso;
+      // Mês: um Droppable por dia (sem faixas). Lista plana, comportamento de sempre.
+      if (src.faixa === null || dst.faixa === null) {
+        if (destination.index === source.index) return;
+        const keys = itensDoDia(iso).map(dayItemKey);
+        if (source.index >= keys.length) return;
+        const [moved] = keys.splice(source.index, 1);
+        keys.splice(destination.index, 0, moved);
+        gravaOrdem(iso, keys);
+        return;
+      }
+      if (src.faixa === dst.faixa && destination.index === source.index) return;
+      // Semana com faixas: recalcula as chaves faixa a faixa, tira a chave da faixa de
+      // origem e insere na de destino na posição solta. O array salvo é a concatenação
+      // na ORDEM DE RENDERIZAÇÃO (sem período, manhã, tarde, noite), então os índices do
+      // dnd continuam contíguos com o que aparece na tela e a ordem manual não quebra.
+      const bandas = splitFaixas(itensDoDia(iso), itemPeriods, !!dayOrders[iso]);
+      const keys: Record<Faixa, string[]> = {
+        sem: bandas.sem.map(dayItemKey), manha: bandas.manha.map(dayItemKey),
+        tarde: bandas.tarde.map(dayItemKey), noite: bandas.noite.map(dayItemKey),
+      };
+      const at = keys[src.faixa].indexOf(draggableId);
+      if (at >= 0) keys[src.faixa].splice(at, 1);
+      keys[dst.faixa].splice(Math.min(destination.index, keys[dst.faixa].length), 0, draggableId);
+      gravaOrdem(iso, FAIXAS.flatMap((f) => keys[f]));
+      if (src.faixa !== dst.faixa) {
+        aplicaPeriodo(draggableId, dst.faixa);
+        toast.success(dst.faixa === "sem" ? "Período removido" : `Movido para ${FAIXA_LABEL[dst.faixa].toLowerCase()}`);
+      }
       return;
     }
-    const day = destination.droppableId; // droppableId = YYYY-MM-DD do dia (ou NO_DATE)
+    const day = dst.iso; // dia de destino (ou NO_DATE)
+    // Arrastar entre DIAS continua mudando a data. Se a faixa de destino for explícita,
+    // o período vai junto (soltei na noite de quinta = quinta à noite).
+    if (day !== NO_DATE && dst.faixa) aplicaPeriodo(draggableId, dst.faixa);
     const sep = draggableId.indexOf(":");
     const kind = draggableId.slice(0, sep);
     const id = draggableId.slice(sep + 1);
@@ -658,6 +747,14 @@ export default function AgendaCriacao() {
             </div>
           </div>
           <div data-tour="ag-navegacao" className="flex items-center gap-2 flex-wrap">
+            {/* Horário é OPCIONAL e secundário: desligado, o HH:MM some dos cards e quem
+                organiza o dia é a faixa (manhã/tarde/noite). O horário segue gravado e
+                editável nos modais. Preferência por aparelho (localStorage). */}
+            <div data-tour="ag-horarios" className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2 py-1">
+              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-[11px] font-body font-semibold text-muted-foreground">Horários</span>
+              <Switch checked={showTimes} onCheckedChange={toggleShowTimes} aria-label="Mostrar horários nos cards" className="scale-[0.8] origin-right" />
+            </div>
             {/* Semana (padrão) / Mês */}
             <div className="inline-flex rounded-lg border border-border overflow-hidden">
               {(["semana", "mes"] as const).map((v) => (
@@ -788,273 +885,347 @@ export default function AgendaCriacao() {
               const outOfMonth = view === "mes" && d.getMonth() !== curMonth;
               // No mês mostramos o dia da semana real do dia (WD[getDay]); na semana idem.
               const showWeekday = view === "semana";
-              return (
-                <Droppable droppableId={iso} key={iso}>
-                  {(dropProvided, dropSnapshot) => (
-                    <div ref={(el) => { dropProvided.innerRef(el); if (view === "semana" && isToday) todayColRef.current = el; }} {...dropProvided.droppableProps}
-                      className={cn("rounded-xl border p-2.5 flex flex-col gap-1.5 transition-shadow",
-                        gridLayout ? "min-h-[110px]" : "w-[85vw] max-w-[380px] shrink-0 snap-start lg:w-auto lg:max-w-none lg:snap-align-none min-h-[240px] lg:min-h-[280px]",
-                        isToday ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-background",
-                        outOfMonth && "opacity-45",
-                        dropSnapshot.isDraggingOver && "ring-2 ring-primary/40 border-primary/60 bg-primary/5")}>
-                      <div className="flex items-center justify-between px-0.5">
-                        <div>
-                          {showWeekday && <span className={cn("text-[11px] uppercase tracking-wider font-body font-semibold", isToday ? "text-primary" : "text-muted-foreground")}>{WD[d.getDay()]}</span>}{" "}
-                          <span className={cn("text-base font-display font-bold", isToday ? "text-primary" : "text-foreground")}>{d.getDate()}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {totalDay > 4 && <button onClick={() => setDayModal(iso)} className="text-[10px] font-body font-bold text-primary hover:underline" aria-label="Ver todos do dia">Ver todos ({totalDay})</button>}
-                          <button onClick={() => { setAddKind("tarefa"); setAddDay(iso); }} className="text-muted-foreground hover:text-primary" aria-label="Adicionar"><Plus className="h-3.5 w-3.5" /></button>
-                        </div>
-                      </div>
-                      {/* Um único map na ordem já ordenada por horário: os index viram 0..n-1
-                          contíguos (bate com a ordem renderizada, o dnd não quebra). */}
-                      {dayItems.map((item, idx) => {
-                        if (item.kind === "cap") {
-                          const c = item.cap;
-                          // Captação também herda a cor do cliente cadastrado; o teal
-                          // vira só o padrão de quem não tem cor definida.
-                          const capColor = corDoItem(
-                            null,
-                            c.crm_client_id ? clients.find((x) => x.id === c.crm_client_id)?.color : null,
-                            CAPTURE_DEFAULT_COLOR,
-                          );
-                          return (
-                            <Draggable key={`cap:${c.id}`} draggableId={`cap:${c.id}`} index={idx} disableInteractiveElementBlocking>
-                              {(dragProvided, dragSnapshot) => {
-                                const done = c.status === "concluida";
-                                return (
-                                <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
-                                  type="button" title={c.location ?? undefined}
-                                  onClick={() => setEditCap(c)}
-                                  style={{ ...dragProvided.draggableProps.style, borderColor: `${capColor}59`, borderLeftColor: capColor, borderLeftWidth: 3, background: `${capColor}${done ? "0A" : "12"}`, ...dragCardStyle }}
-                                  className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors overflow-hidden hover:brightness-95",
-                                    done && "opacity-70",
-                                    dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
-                                  <div className="flex items-center gap-1 min-w-0" style={{ color: capColor }}>
-                                    <DragGrip className="text-teal-700/40 dark:text-teal-300/40" handleProps={dragProvided.dragHandleProps ?? undefined} />
-                                    <Video className="h-3 w-3 shrink-0" />
-                                    <span className="text-[10px] font-body font-bold flex-1 min-w-0 truncate">{c.capture_time ? c.capture_time.slice(0, 5) : ""}</span>
-                                    {/* Etiqueta fixa "Captação": mesmo padrão de pill das etiquetas de status dos posts (posição à direita/estilo). */}
-                                    <span className="shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: `${capColor}26`, color: capColor }}>Captação</span>
-                                    {/* Check pra concluir a captação: mesmo padrão do check da tarefa (círculo/quadrado
-                                        que alterna concluída <-> agendada). Span pra não aninhar button; stopPropagation
-                                        pra não abrir o editor. Alvo de toque ampliado no mobile (~40px) sem mexer no layout. */}
-                                    <span role="button" tabIndex={0} aria-label={done ? "Reabrir captação" : "Concluir captação"}
-                                      onClick={(e) => { e.stopPropagation(); updCapture.mutate({ id: c.id, patch: { status: done ? "agendada" : "concluida" } }); }}
-                                      className="grid shrink-0 place-items-center cursor-pointer p-2 -my-2 -ml-2 md:p-0 md:m-0">
-                                      <span className={cn("grid h-6 w-6 md:h-4 md:w-4 place-items-center rounded border transition-colors",
-                                        done ? "bg-emerald-500 border-emerald-500 text-white" : "border-current/50 hover:border-emerald-500 hover:text-emerald-600")}>
-                                        {done && <Check className="h-3 w-3" strokeWidth={3} />}
-                                      </span>
-                                    </span>
-                                  </div>
-                                  <p className={cn("text-[12px] font-body font-semibold leading-tight truncate", done ? "line-through text-muted-foreground" : "text-foreground")}>{nameOf(c.crm_client_id, c.client_name)}</p>
-                                </button>
-                                );
-                              }}
-                            </Draggable>
-                          );
-                        }
-                        if (item.kind === "task") {
-                          const t = item.task;
-                          // Cor vem do helper corDaTarefa: a da própria tarefa, senão a do lead
-                          // ou do cliente, senão o padrão do tipo. Lead se distingue pelo ícone.
-                          const isLead = !!t.crm_lead_id;
-                          const client = t.crm_client_id ? clients.find((c) => c.id === t.crm_client_id) : null;
-                          const clientColor = corDaTarefa(t);
-                          const who = isLead ? (leadName(t.crm_lead_id) ?? "Lead") : nameOf(t.crm_client_id, null);
-                          return (
-                            <Draggable key={`task:${t.id}`} draggableId={`task:${t.id}`} index={idx} disableInteractiveElementBlocking>
-                              {(dragProvided, dragSnapshot) => {
-                                const done = t.status === "concluida";
-                                return (
-                                  <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
-                                    type="button" title={t.description ?? undefined}
-                                    onClick={() => setEditTask(t)}
-                                    className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors overflow-hidden",
-                                      "hover:brightness-95",
-                                      done && "opacity-60",
-                                      dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}
-                                    // Cliente: acento na cor do cliente (borda esquerda + fundo bem suave). Texto fica no foreground pra não perder contraste.
-                                    // Merge com draggableProps.style: sem isso o style explícito venceria o do spread e o transform do drag sumiria.
-                                    style={{ ...dragProvided.draggableProps.style, borderColor: `${clientColor}59`, borderLeftColor: clientColor, borderLeftWidth: 3, background: `${clientColor}12`, ...dragCardStyle }}>
-                                    <div className="flex items-center gap-1 min-w-0">
-                                      <DragGrip handleProps={dragProvided.dragHandleProps ?? undefined} />
-                                      {isLead
-                                        ? <ListChecks className="h-3 w-3 shrink-0" style={{ color: clientColor }} />
-                                        : <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: clientColor }} />}
-                                      <span className="text-[10px] font-body font-bold truncate flex-1 min-w-0 text-foreground">
-                                        {item.time && <span className="tabular-nums">{item.time} · </span>}
-                                        {isLead ? `Lead · ${who}` : who}
-                                      </span>
-                                      {/* Check pra marcar concluída (risca a tarefa). Span pra não aninhar button.
-                                          No mobile o alvo de toque é ampliado com padding + margem negativa (~40px),
-                                          sem mudar o tamanho visível do box nem empurrar o layout do card. */}
-                                      <span role="button" tabIndex={0} aria-label={done ? "Reabrir tarefa" : "Concluir tarefa"}
-                                        onClick={(e) => { e.stopPropagation(); updTask.mutate({ id: t.id, status: done ? "pendente" : "concluida" }); }}
-                                        className="grid shrink-0 place-items-center cursor-pointer p-2 -my-2 -ml-2 md:p-0 md:m-0">
-                                        <span className={cn("grid h-6 w-6 md:h-4 md:w-4 place-items-center rounded border transition-colors",
-                                          done ? "bg-emerald-500 border-emerald-500 text-white" : "border-current/50 hover:border-emerald-500 hover:text-emerald-600")}>
-                                          {done && <Check className="h-3 w-3" strokeWidth={3} />}
-                                        </span>
-                                      </span>
-                                    </div>
-                                    <p className={cn("text-[12px] font-body font-semibold leading-tight truncate", done ? "line-through text-muted-foreground" : "text-foreground")}>{t.title}</p>
-                                  </button>
-                                );
-                              }}
-                            </Draggable>
-                          );
-                        }
-                        if (item.kind === "cria") {
-                          const c = item.cria;
-                          return (
-                            <Draggable key={`cria:${c.id}`} draggableId={`cria:${c.id}`} index={idx} disableInteractiveElementBlocking>
-                              {(dragProvided, dragSnapshot) => (
-                                <div ref={dragProvided.innerRef} {...dragProvided.draggableProps}
-                                  role="button" tabIndex={0}
-                                  onClick={() => setEditCreation(c)}
-                                  onKeyDown={(e) => { if (e.key === "Enter") setEditCreation(c); }}
-                                  style={{ ...dragProvided.draggableProps.style, ...dragCardStyle }}
-                                  className={cn("group rounded-lg border border-border bg-card px-2 py-1.5 hover:bg-muted/40 transition-colors",
-                                    dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
-                                  <div className="flex items-start gap-1 min-w-0">
-                                    <DragGrip className="mt-px" handleProps={dragProvided.dragHandleProps ?? undefined} />
-                                    <p className="text-[12px] font-body font-semibold text-foreground leading-tight flex-1 min-w-0 truncate">{nameOf(c.crm_client_id, c.client_name)}</p>
-                                    <button onClick={(e) => { e.stopPropagation(); delCreation.mutate(c.id); }} className="text-muted-foreground/50 hover:text-destructive shrink-0" aria-label="Remover"><X className="h-3 w-3" /></button>
-                                  </div>
-                                  {c.team && <p className="text-[10px] font-body text-muted-foreground truncate">{c.team}</p>}
-                                </div>
-                              )}
-                            </Draggable>
-                          );
-                        }
-                        if (item.kind === "mat") {
-                          const mat = item.mat;
-                          const matColor = corDoMaterial(mat);
-                          const done = mat.status === "finalizado";
-                          return (
-                            <Draggable key={`mat:${mat.id}`} draggableId={`mat:${mat.id}`} index={idx} disableInteractiveElementBlocking>
-                              {(dragProvided, dragSnapshot) => (
-                                <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
-                                  type="button" title={mat.description ?? undefined}
-                                  onClick={() => openMaterial(mat)}
-                                  style={{ ...dragProvided.draggableProps.style, borderColor: `${matColor}59`, borderLeftColor: matColor, borderLeftWidth: 3, background: `${matColor}${done ? "0A" : "12"}`, ...dragCardStyle }}
-                                  className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors overflow-hidden hover:brightness-95",
-                                    done && "opacity-70",
-                                    dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
-                                  <div className="flex items-center gap-1 min-w-0" style={{ color: matColor }}>
-                                    <DragGrip handleProps={dragProvided.dragHandleProps ?? undefined} />
-                                    <Paperclip className="h-3 w-3 shrink-0" />
-                                    <span className="text-[10px] font-body font-bold truncate flex-1 min-w-0 text-foreground">{nameOf(mat.crm_client_id, null)}</span>
-                                    {/* Etiqueta fixa "Material", mesmo padrão de pill dos outros tipos. */}
-                                    <span className="shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: `${matColor}26`, color: matColor }}>Material</span>
-                                    {/* Check pra finalizar o material sem sair da agenda (igual tarefa/captação). */}
-                                    <span role="button" tabIndex={0} aria-label={done ? "Reabrir material" : "Finalizar material"}
-                                      onClick={(e) => { e.stopPropagation(); updMaterial.mutate({ id: mat.id, patch: { status: done ? "a_fazer" : "finalizado" } }); }}
-                                      className="grid shrink-0 place-items-center cursor-pointer p-2 -my-2 -ml-2 md:p-0 md:m-0">
-                                      <span className={cn("grid h-6 w-6 md:h-4 md:w-4 place-items-center rounded border transition-colors",
-                                        done ? "bg-emerald-500 border-emerald-500 text-white" : "border-current/50 hover:border-emerald-500 hover:text-emerald-600")}>
-                                        {done && <Check className="h-3 w-3" strokeWidth={3} />}
-                                      </span>
-                                    </span>
-                                  </div>
-                                  <p className={cn("text-[12px] font-body font-semibold leading-tight truncate", done ? "line-through text-muted-foreground" : "text-foreground")}>{mat.title}</p>
-                                </button>
-                              )}
-                            </Draggable>
-                          );
-                        }
-                        // post
-                        const p = item.post;
-                        const cli = extById.get(p.external_client_id);
-                        const posted = p.approval_status === "postado";
-                        const st = POST_STATUS[p.approval_status ?? "em_producao"];
-                        const cor = corDoPost(p);
+              // Classe da coluna do dia (a mesma na semana e no mês; só o tamanho muda).
+              const colCls = cn("rounded-xl border p-2.5 flex flex-col gap-1.5 transition-shadow",
+                gridLayout ? "min-h-[110px]" : "w-[85vw] max-w-[380px] shrink-0 snap-start lg:w-auto lg:max-w-none lg:snap-align-none min-h-[240px] lg:min-h-[280px]",
+                isToday ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-background",
+                outOfMonth && "opacity-45");
+              // Cabeçalho do dia (número, "Ver todos", "+"), igual nas duas visões.
+              const cabecalho = (
+                <div className="flex items-center justify-between px-0.5">
+                  <div>
+                    {showWeekday && <span className={cn("text-[11px] uppercase tracking-wider font-body font-semibold", isToday ? "text-primary" : "text-muted-foreground")}>{WD[d.getDay()]}</span>}{" "}
+                    <span className={cn("text-base font-display font-bold", isToday ? "text-primary" : "text-foreground")}>{d.getDate()}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {totalDay > 4 && <button onClick={() => setDayModal(iso)} className="text-[10px] font-body font-bold text-primary hover:underline" aria-label="Ver todos do dia">Ver todos ({totalDay})</button>}
+                    <button onClick={() => { setAddKind("tarefa"); setAddDay(iso); }} className="text-muted-foreground hover:text-primary" aria-label="Adicionar"><Plus className="h-3.5 w-3.5" /></button>
+                  </div>
+                </div>
+              );
+              const vazio = totalDay === 0 && criaDay.length === 0 && dayBirthdays.length === 0
+                ? <button onClick={() => { setAddKind("criacao"); setAddDay(iso); }} className="text-[11px] font-body text-muted-foreground/60 hover:text-primary py-1">+ cliente</button>
+                : null;
+              // Renderiza UM card arrastável. O índice é a posição DENTRO do Droppable em
+              // que o card está (na semana, dentro da faixa; no mês, dentro do dia): sempre
+              // 0..n-1 contíguos com a ordem renderizada, que é o que o dnd exige.
+              const renderItem = (item: DayItem, idx: number) => {
+                if (item.kind === "cap") {
+                  const c = item.cap;
+                  // Captação também herda a cor do cliente cadastrado; o teal
+                  // vira só o padrão de quem não tem cor definida.
+                  const capColor = corDoItem(
+                    null,
+                    c.crm_client_id ? clients.find((x) => x.id === c.crm_client_id)?.color : null,
+                    CAPTURE_DEFAULT_COLOR,
+                  );
+                  return (
+                    <Draggable key={`cap:${c.id}`} draggableId={`cap:${c.id}`} index={idx} disableInteractiveElementBlocking>
+                      {(dragProvided, dragSnapshot) => {
+                        const done = c.status === "concluida";
                         return (
-                          <Draggable key={`post:${p.id}`} draggableId={`post:${p.id}`} index={idx} disableInteractiveElementBlocking>
-                            {(dragProvided, dragSnapshot) => {
-                              return (
-                              <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
-                                type="button" title={p.title ?? undefined} onClick={() => openPost(p)}
-                                style={{ ...dragProvided.draggableProps.style, ...dragCardStyle, borderColor: `${cor}66`, background: `${cor}14` }}
-                                className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors w-full overflow-hidden hover:brightness-95",
-                                  posted && "opacity-60",
-                                  dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
-                                <div className="flex items-center gap-1 min-w-0" style={{ color: cor }}>
-                                  <DragGrip className="opacity-40" handleProps={dragProvided.dragHandleProps ?? undefined} />
-                                  <Send className="h-3 w-3 shrink-0" />
-                                  <span className="text-[10px] font-body font-bold truncate flex-1 min-w-0">{item.time && <span className="tabular-nums">{item.time} · </span>}{cli?.name ?? "Post"}</span>
-                                  {/* Indicador discreto: post tem link do Drive no campo Ideia/Referência
-                                      (o campo aceita vários links, basta um ser do Drive). */}
-                                  {parseRefLinks(p.reference_url).some((u) => isDriveUrl(u)) && <HardDrive className="h-3 w-3 shrink-0 opacity-70" aria-label="Tem Drive" />}
-                                  {/* E indicador da PASTA do Drive (campo distinto drive_folder_url). */}
-                                  {p.drive_folder_url && <FolderOpen className="h-3 w-3 shrink-0 text-primary opacity-80" aria-label="Tem pasta no Drive" />}
-                                  {st && <span className={cn("shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}
-                                  {/* Check: marca o post como POSTADO (vai pra coluna Postado do kanban). */}
-                                  <span role="button" tabIndex={0} aria-label={posted ? "Reabrir post" : "Marcar como postado"}
-                                    onClick={(e) => { e.stopPropagation(); updateExtPost.mutate({ id: p.id, patch: { approval_status: posted ? "aprovado" : "postado", approval_updated_at: new Date().toISOString() } }); }}
-                                    style={posted ? undefined : { borderColor: `${cor}80` }}
-                                    className={cn("grid h-6 w-6 md:h-4 md:w-4 shrink-0 place-items-center rounded border cursor-pointer transition-colors",
-                                      posted ? "bg-emerald-500 border-emerald-500 text-white" : "hover:border-emerald-500 hover:text-emerald-600")}>
-                                    {posted && <Check className="h-3 w-3" strokeWidth={3} />}
-                                  </span>
-                                </div>
-                                <p className={cn("text-[12px] font-body font-semibold leading-tight truncate", posted ? "line-through text-muted-foreground" : "text-foreground")}>{p.title || "Post"}</p>
-                              </button>
-                              );
-                            }}
-                          </Draggable>
-                        );
-                      })}
-                      {dropProvided.placeholder}
-                      {/* TAREFA B — posts do Cria do cliente (prontos+data). Só LEITURA aqui
-                          (não arrastáveis, ficam FORA do índice do dnd pra não quebrar o
-                          arrastar). Visualmente distintos: verde tracejado + ícone. Clicar
-                          abre o Kanban do cliente na ficha dele. */}
-                      {criaDay.map((p) => (
-                        <button key={`cria:${p.id}`} type="button" title={p.title ?? undefined}
-                          onClick={() => { if (p.crm_client_id) navigate(`/socialmidia/clientes/${p.crm_client_id}/kanban-cliente`); }}
-                          className="rounded-lg border border-dashed px-2 py-1.5 text-left w-full overflow-hidden transition-colors hover:brightness-95"
-                          style={{ borderColor: `${(p.client_color || CRIA_POST_COLOR)}80`, background: `${(p.client_color || CRIA_POST_COLOR)}0F` }}>
-                          <div className="flex items-center gap-1" style={{ color: CRIA_POST_COLOR }}>
-                            <Layers className="h-3 w-3 shrink-0" />
-                            <span className="text-[10px] font-body font-bold truncate flex-1 text-foreground/80">
-                              {p.scheduled_time && <span className="tabular-nums">{p.scheduled_time.slice(0, 5)} · </span>}{p.client_name ?? "Cliente"}
-                            </span>
-                            <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: CRIA_POST_COLOR }}>
-                              {CRIA_POST_STATUS[p.status ?? ""] ?? "Cria"}
+                        <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
+                          type="button" title={c.location ?? undefined}
+                          onClick={() => setEditCap(c)}
+                          style={{ ...dragProvided.draggableProps.style, borderColor: `${capColor}59`, borderLeftColor: capColor, borderLeftWidth: 3, background: `${capColor}${done ? "0A" : "12"}`, ...dragCardStyle }}
+                          className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors overflow-hidden hover:brightness-95",
+                            done && "opacity-70",
+                            dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
+                          <div className="flex items-center gap-1 min-w-0" style={{ color: capColor }}>
+                            <DragGrip className="text-teal-700/40 dark:text-teal-300/40" handleProps={dragProvided.dragHandleProps ?? undefined} />
+                            <Video className="h-3 w-3 shrink-0" />
+                            {/* Horário só quando o alternador "Horários" está ligado; desligado,
+                                o span vira espaçador e quem organiza é a faixa do dia. */}
+                            <span className="text-[10px] font-body font-bold flex-1 min-w-0 truncate">{showTimes && item.time ? item.time : ""}</span>
+                            {/* Etiqueta fixa "Captação": mesmo padrão de pill das etiquetas de status dos posts (posição à direita/estilo). */}
+                            <span className="shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: `${capColor}26`, color: capColor }}>Captação</span>
+                            {/* Check pra concluir a captação: mesmo padrão do check da tarefa (círculo/quadrado
+                                que alterna concluída <-> agendada). Span pra não aninhar button; stopPropagation
+                                pra não abrir o editor. Alvo de toque ampliado no mobile (~40px) sem mexer no layout. */}
+                            <span role="button" tabIndex={0} aria-label={done ? "Reabrir captação" : "Concluir captação"}
+                              onClick={(e) => { e.stopPropagation(); updCapture.mutate({ id: c.id, patch: { status: done ? "agendada" : "concluida" } }); }}
+                              className="grid shrink-0 place-items-center cursor-pointer p-2 -my-2 -ml-2 md:p-0 md:m-0">
+                              <span className={cn("grid h-6 w-6 md:h-4 md:w-4 place-items-center rounded border transition-colors",
+                                done ? "bg-emerald-500 border-emerald-500 text-white" : "border-current/50 hover:border-emerald-500 hover:text-emerald-600")}>
+                                {done && <Check className="h-3 w-3" strokeWidth={3} />}
+                              </span>
                             </span>
                           </div>
-                          <p className="text-[12px] font-body font-semibold leading-tight truncate text-foreground">{p.title || "Post"}</p>
+                          <p className={cn("text-[12px] font-body font-semibold leading-tight truncate", done ? "line-through text-muted-foreground" : "text-foreground")}>{nameOf(c.crm_client_id, c.client_name)}</p>
                         </button>
-                      ))}
-                      {/* ANIVERSARIO: 7o tipo, LEMBRETE puro. Não é arrastável (fica fora do
-                          índice do dnd, como os posts do Cria do cliente), não tem check de
-                          concluído e não conta como trabalho do dia. Visual próprio: borda
-                          pontilhada, bolo e a etiqueta "Lembrete", na COR DO CLIENTE.
-                          Clicar abre a ficha dele. */}
-                      {dayBirthdays.map((b) => {
-                        const cor = b.cor || BIRTHDAY_DEFAULT_COLOR;
+                        );
+                      }}
+                    </Draggable>
+                  );
+                }
+                if (item.kind === "task") {
+                  const t = item.task;
+                  // Cor vem do helper corDaTarefa: a da própria tarefa, senão a do lead
+                  // ou do cliente, senão o padrão do tipo. Lead se distingue pelo ícone.
+                  const isLead = !!t.crm_lead_id;
+                  const client = t.crm_client_id ? clients.find((c) => c.id === t.crm_client_id) : null;
+                  const clientColor = corDaTarefa(t);
+                  const who = isLead ? (leadName(t.crm_lead_id) ?? "Lead") : nameOf(t.crm_client_id, null);
+                  return (
+                    <Draggable key={`task:${t.id}`} draggableId={`task:${t.id}`} index={idx} disableInteractiveElementBlocking>
+                      {(dragProvided, dragSnapshot) => {
+                        const done = t.status === "concluida";
                         return (
-                          <button key={`aniv:${b.clientId}`} type="button" title={`Aniversário de ${b.nome}`}
-                            onClick={() => navigate(`/socialmidia/clientes/${b.clientId}/visao-geral`)}
-                            className="rounded-lg border border-dashed px-2 py-1.5 text-left w-full overflow-hidden transition-colors hover:brightness-95"
-                            style={{ borderColor: `${cor}80`, background: `${cor}0F` }}>
-                            <div className="flex items-center gap-1 min-w-0" style={{ color: cor }}>
-                              <Cake className="h-3 w-3 shrink-0" />
-                              <span className="text-[10px] font-body font-bold truncate flex-1 min-w-0 text-foreground/80">Aniversário</span>
-                              <span className="shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: `${cor}26`, color: cor }}>Lembrete</span>
+                          <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
+                            type="button" title={t.description ?? undefined}
+                            onClick={() => setEditTask(t)}
+                            className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors overflow-hidden",
+                              "hover:brightness-95",
+                              done && "opacity-60",
+                              dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}
+                            // Cliente: acento na cor do cliente (borda esquerda + fundo bem suave). Texto fica no foreground pra não perder contraste.
+                            // Merge com draggableProps.style: sem isso o style explícito venceria o do spread e o transform do drag sumiria.
+                            style={{ ...dragProvided.draggableProps.style, borderColor: `${clientColor}59`, borderLeftColor: clientColor, borderLeftWidth: 3, background: `${clientColor}12`, ...dragCardStyle }}>
+                            <div className="flex items-center gap-1 min-w-0">
+                              <DragGrip handleProps={dragProvided.dragHandleProps ?? undefined} />
+                              {isLead
+                                ? <ListChecks className="h-3 w-3 shrink-0" style={{ color: clientColor }} />
+                                : <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: clientColor }} />}
+                              <span className="text-[10px] font-body font-bold truncate flex-1 min-w-0 text-foreground">
+                                {showTimes && item.time && <span className="tabular-nums">{item.time} · </span>}
+                                {isLead ? `Lead · ${who}` : who}
+                              </span>
+                              {/* Check pra marcar concluída (risca a tarefa). Span pra não aninhar button.
+                                  No mobile o alvo de toque é ampliado com padding + margem negativa (~40px),
+                                  sem mudar o tamanho visível do box nem empurrar o layout do card. */}
+                              <span role="button" tabIndex={0} aria-label={done ? "Reabrir tarefa" : "Concluir tarefa"}
+                                onClick={(e) => { e.stopPropagation(); updTask.mutate({ id: t.id, status: done ? "pendente" : "concluida" }); }}
+                                className="grid shrink-0 place-items-center cursor-pointer p-2 -my-2 -ml-2 md:p-0 md:m-0">
+                                <span className={cn("grid h-6 w-6 md:h-4 md:w-4 place-items-center rounded border transition-colors",
+                                  done ? "bg-emerald-500 border-emerald-500 text-white" : "border-current/50 hover:border-emerald-500 hover:text-emerald-600")}>
+                                  {done && <Check className="h-3 w-3" strokeWidth={3} />}
+                                </span>
+                              </span>
                             </div>
-                            <p className="text-[12px] font-body font-semibold leading-tight truncate text-foreground">{b.nome}</p>
+                            <p className={cn("text-[12px] font-body font-semibold leading-tight truncate", done ? "line-through text-muted-foreground" : "text-foreground")}>{t.title}</p>
                           </button>
                         );
-                      })}
-                      {totalDay === 0 && criaDay.length === 0 && dayBirthdays.length === 0 && <button onClick={() => { setAddKind("criacao"); setAddDay(iso); }} className="text-[11px] font-body text-muted-foreground/60 hover:text-primary py-1">+ cliente</button>}
+                      }}
+                    </Draggable>
+                  );
+                }
+                if (item.kind === "cria") {
+                  const c = item.cria;
+                  return (
+                    <Draggable key={`cria:${c.id}`} draggableId={`cria:${c.id}`} index={idx} disableInteractiveElementBlocking>
+                      {(dragProvided, dragSnapshot) => (
+                        <div ref={dragProvided.innerRef} {...dragProvided.draggableProps}
+                          role="button" tabIndex={0}
+                          onClick={() => setEditCreation(c)}
+                          onKeyDown={(e) => { if (e.key === "Enter") setEditCreation(c); }}
+                          style={{ ...dragProvided.draggableProps.style, ...dragCardStyle }}
+                          className={cn("group rounded-lg border border-border bg-card px-2 py-1.5 hover:bg-muted/40 transition-colors",
+                            dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
+                          <div className="flex items-start gap-1 min-w-0">
+                            <DragGrip className="mt-px" handleProps={dragProvided.dragHandleProps ?? undefined} />
+                            <p className="text-[12px] font-body font-semibold text-foreground leading-tight flex-1 min-w-0 truncate">{nameOf(c.crm_client_id, c.client_name)}</p>
+                            <button onClick={(e) => { e.stopPropagation(); delCreation.mutate(c.id); }} className="text-muted-foreground/50 hover:text-destructive shrink-0" aria-label="Remover"><X className="h-3 w-3" /></button>
+                          </div>
+                          {c.team && <p className="text-[10px] font-body text-muted-foreground truncate">{c.team}</p>}
+                        </div>
+                      )}
+                    </Draggable>
+                  );
+                }
+                if (item.kind === "mat") {
+                  const mat = item.mat;
+                  const matColor = corDoMaterial(mat);
+                  const done = mat.status === "finalizado";
+                  return (
+                    <Draggable key={`mat:${mat.id}`} draggableId={`mat:${mat.id}`} index={idx} disableInteractiveElementBlocking>
+                      {(dragProvided, dragSnapshot) => (
+                        <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
+                          type="button" title={mat.description ?? undefined}
+                          onClick={() => openMaterial(mat)}
+                          style={{ ...dragProvided.draggableProps.style, borderColor: `${matColor}59`, borderLeftColor: matColor, borderLeftWidth: 3, background: `${matColor}${done ? "0A" : "12"}`, ...dragCardStyle }}
+                          className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors overflow-hidden hover:brightness-95",
+                            done && "opacity-70",
+                            dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
+                          <div className="flex items-center gap-1 min-w-0" style={{ color: matColor }}>
+                            <DragGrip handleProps={dragProvided.dragHandleProps ?? undefined} />
+                            <Paperclip className="h-3 w-3 shrink-0" />
+                            <span className="text-[10px] font-body font-bold truncate flex-1 min-w-0 text-foreground">{nameOf(mat.crm_client_id, null)}</span>
+                            {/* Etiqueta fixa "Material", mesmo padrão de pill dos outros tipos. */}
+                            <span className="shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: `${matColor}26`, color: matColor }}>Material</span>
+                            {/* Check pra finalizar o material sem sair da agenda (igual tarefa/captação). */}
+                            <span role="button" tabIndex={0} aria-label={done ? "Reabrir material" : "Finalizar material"}
+                              onClick={(e) => { e.stopPropagation(); updMaterial.mutate({ id: mat.id, patch: { status: done ? "a_fazer" : "finalizado" } }); }}
+                              className="grid shrink-0 place-items-center cursor-pointer p-2 -my-2 -ml-2 md:p-0 md:m-0">
+                              <span className={cn("grid h-6 w-6 md:h-4 md:w-4 place-items-center rounded border transition-colors",
+                                done ? "bg-emerald-500 border-emerald-500 text-white" : "border-current/50 hover:border-emerald-500 hover:text-emerald-600")}>
+                                {done && <Check className="h-3 w-3" strokeWidth={3} />}
+                              </span>
+                            </span>
+                          </div>
+                          <p className={cn("text-[12px] font-body font-semibold leading-tight truncate", done ? "line-through text-muted-foreground" : "text-foreground")}>{mat.title}</p>
+                        </button>
+                      )}
+                    </Draggable>
+                  );
+                }
+                // post
+                const p = item.post;
+                const cli = extById.get(p.external_client_id);
+                const posted = p.approval_status === "postado";
+                const st = POST_STATUS[p.approval_status ?? "em_producao"];
+                const cor = corDoPost(p);
+                return (
+                  <Draggable key={`post:${p.id}`} draggableId={`post:${p.id}`} index={idx} disableInteractiveElementBlocking>
+                    {(dragProvided, dragSnapshot) => {
+                      return (
+                      <button ref={dragProvided.innerRef} {...dragProvided.draggableProps}
+                        type="button" title={p.title ?? undefined} onClick={() => openPost(p)}
+                        style={{ ...dragProvided.draggableProps.style, ...dragCardStyle, borderColor: `${cor}66`, background: `${cor}14` }}
+                        className={cn("rounded-lg border px-2 py-1.5 text-left transition-colors w-full overflow-hidden hover:brightness-95",
+                          posted && "opacity-60",
+                          dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
+                        <div className="flex items-center gap-1 min-w-0" style={{ color: cor }}>
+                          <DragGrip className="opacity-40" handleProps={dragProvided.dragHandleProps ?? undefined} />
+                          <Send className="h-3 w-3 shrink-0" />
+                          <span className="text-[10px] font-body font-bold truncate flex-1 min-w-0">{showTimes && item.time && <span className="tabular-nums">{item.time} · </span>}{cli?.name ?? "Post"}</span>
+                          {/* Indicador discreto: post tem link do Drive no campo Ideia/Referência
+                              (o campo aceita vários links, basta um ser do Drive). */}
+                          {parseRefLinks(p.reference_url).some((u) => isDriveUrl(u)) && <HardDrive className="h-3 w-3 shrink-0 opacity-70" aria-label="Tem Drive" />}
+                          {/* E indicador da PASTA do Drive (campo distinto drive_folder_url). */}
+                          {p.drive_folder_url && <FolderOpen className="h-3 w-3 shrink-0 text-primary opacity-80" aria-label="Tem pasta no Drive" />}
+                          {st && <span className={cn("shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}
+                          {/* Check: marca o post como POSTADO (vai pra coluna Postado do kanban). */}
+                          <span role="button" tabIndex={0} aria-label={posted ? "Reabrir post" : "Marcar como postado"}
+                            onClick={(e) => { e.stopPropagation(); updateExtPost.mutate({ id: p.id, patch: { approval_status: posted ? "aprovado" : "postado", approval_updated_at: new Date().toISOString() } }); }}
+                            style={posted ? undefined : { borderColor: `${cor}80` }}
+                            className={cn("grid h-6 w-6 md:h-4 md:w-4 shrink-0 place-items-center rounded border cursor-pointer transition-colors",
+                              posted ? "bg-emerald-500 border-emerald-500 text-white" : "hover:border-emerald-500 hover:text-emerald-600")}>
+                            {posted && <Check className="h-3 w-3" strokeWidth={3} />}
+                          </span>
+                        </div>
+                        <p className={cn("text-[12px] font-body font-semibold leading-tight truncate", posted ? "line-through text-muted-foreground" : "text-foreground")}>{p.title || "Post"}</p>
+                      </button>
+                      );
+                    }}
+                  </Draggable>
+                );
+              };
+              // TAREFA B: posts do Cria do cliente (prontos+data). Só LEITURA aqui (não
+              // arrastáveis, ficam FORA do índice do dnd pra não quebrar o arrastar).
+              // Visualmente distintos: verde tracejado + ícone. Clicar abre o Kanban do
+              // cliente na ficha dele. Como não são arrastáveis, não têm período próprio:
+              // entram na faixa DERIVADA do horário deles.
+              const renderCriaCard = (p: ClientCriaAgendaPost) => (
+                <button key={`cria:${p.id}`} type="button" title={p.title ?? undefined}
+                  onClick={() => { if (p.crm_client_id) navigate(`/socialmidia/clientes/${p.crm_client_id}/kanban-cliente`); }}
+                  className="rounded-lg border border-dashed px-2 py-1.5 text-left w-full overflow-hidden transition-colors hover:brightness-95"
+                  style={{ borderColor: `${(p.client_color || CRIA_POST_COLOR)}80`, background: `${(p.client_color || CRIA_POST_COLOR)}0F` }}>
+                  <div className="flex items-center gap-1" style={{ color: CRIA_POST_COLOR }}>
+                    <Layers className="h-3 w-3 shrink-0" />
+                    <span className="text-[10px] font-body font-bold truncate flex-1 text-foreground/80">
+                      {showTimes && p.scheduled_time && <span className="tabular-nums">{p.scheduled_time.slice(0, 5)} · </span>}{p.client_name ?? "Cliente"}
+                    </span>
+                    <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: CRIA_POST_COLOR }}>
+                      {CRIA_POST_STATUS[p.status ?? ""] ?? "Cria"}
+                    </span>
+                  </div>
+                  <p className="text-[12px] font-body font-semibold leading-tight truncate text-foreground">{p.title || "Post"}</p>
+                </button>
+              );
+              // ANIVERSARIO: 7o tipo, LEMBRETE puro. Não é arrastável (fica fora do índice
+              // do dnd, como os posts do Cria do cliente), não tem check de concluído e não
+              // conta como trabalho do dia. Como é lembrete e não trabalho, não pertence a
+              // período nenhum: fica sempre no topo do dia. Visual próprio: borda pontilhada,
+              // bolo e a etiqueta "Lembrete", na COR DO CLIENTE. Clicar abre a ficha dele.
+              const renderAniv = (b: { clientId: string; nome: string; cor: string | null }) => {
+                const cor = b.cor || BIRTHDAY_DEFAULT_COLOR;
+                return (
+                  <button key={`aniv:${b.clientId}`} type="button" title={`Aniversário de ${b.nome}`}
+                    onClick={() => navigate(`/socialmidia/clientes/${b.clientId}/visao-geral`)}
+                    className="rounded-lg border border-dashed px-2 py-1.5 text-left w-full overflow-hidden transition-colors hover:brightness-95"
+                    style={{ borderColor: `${cor}80`, background: `${cor}0F` }}>
+                    <div className="flex items-center gap-1 min-w-0" style={{ color: cor }}>
+                      <Cake className="h-3 w-3 shrink-0" />
+                      <span className="text-[10px] font-body font-bold truncate flex-1 min-w-0 text-foreground/80">Aniversário</span>
+                      <span className="shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: `${cor}26`, color: cor }}>Lembrete</span>
                     </div>
-                  )}
-                </Droppable>
+                    <p className="text-[12px] font-body font-semibold leading-tight truncate text-foreground">{b.nome}</p>
+                  </button>
+                );
+              };
+              // MÊS: um Droppable por dia, lista plana, exatamente como antes. A célula do
+              // mês tem ~110px de altura: três separadores ali comeriam a célula inteira, e
+              // o mês serve pra saber ONDE as coisas estão, não pra desenhar o fluxo do dia.
+              // As faixas ficam na SEMANA, que é onde a pessoa opera.
+              if (gridLayout) {
+                return (
+                  <Droppable droppableId={iso} key={iso}>
+                    {(dropProvided, dropSnapshot) => (
+                      <div ref={dropProvided.innerRef} {...dropProvided.droppableProps}
+                        className={cn(colCls, dropSnapshot.isDraggingOver && "ring-2 ring-primary/40 border-primary/60 bg-primary/5")}>
+                        {cabecalho}
+                        {dayItems.map(renderItem)}
+                        {dropProvided.placeholder}
+                        {criaDay.map(renderCriaCard)}
+                        {dayBirthdays.map(renderAniv)}
+                        {vazio}
+                      </div>
+                    )}
+                  </Droppable>
+                );
+              }
+              // SEMANA: três faixas (manhã / tarde / noite) + o topo "sem período", cada uma
+              // com seu próprio Droppable. Índices continuam contíguos DENTRO de cada faixa.
+              const bandas = splitFaixas(dayItems, itemPeriods, !!dayOrders[iso]);
+              const criaPorFaixa: Record<Faixa, ClientCriaAgendaPost[]> = { sem: [], manha: [], tarde: [], noite: [] };
+              for (const p of criaDay) criaPorFaixa[faixaDoItem(null, p.scheduled_time)].push(p);
+              return (
+                <div key={iso} ref={(el) => { if (isToday) todayColRef.current = el; }} className={colCls}>
+                  {cabecalho}
+                  {/* MOBILE / faixa vazia: a faixa NÃO some quando está vazia, ela COLAPSA
+                      pro rótulo (uma linha de ~14px) com uma área de solta curta embaixo.
+                      Não é preciosismo visual: o @hello-pangea/dnd mede TODOS os Droppable
+                      no início do arraste (getInitialPublish), então faixa que só aparecesse
+                      durante o arraste não seria alvo válido e o card não teria onde cair.
+                      Colapsada, a faixa custa pouco (é exatamente a "linha separando manhã,
+                      tarde e noite" que o pedido descreve) e continua recebendo o card. */}
+                  {FAIXAS.map((f) => {
+                    const its = bandas[f];
+                    const cris = criaPorFaixa[f];
+                    // Aniversário é lembrete: mora no topo, junto do "sem período".
+                    const anivs = f === "sem" ? dayBirthdays : [];
+                    const vaziaFaixa = its.length === 0 && cris.length === 0 && anivs.length === 0;
+                    return (
+                      <Droppable droppableId={`${iso}|${f}`} key={f}>
+                        {(dp, ds) => (
+                          <div ref={dp.innerRef} {...dp.droppableProps}
+                            className={cn("flex flex-col gap-1.5 rounded-lg transition-colors",
+                              // O topo "sem período" não tem rótulo (é só o começo da coluna):
+                              // vazio, fica um respiro curto que ainda aceita o card de volta.
+                              vaziaFaixa && (f === "sem" ? "min-h-[20px]" : "min-h-[30px]"),
+                              // Realce por ring/fundo (não por borda): borda mudaria o tamanho
+                              // da caixa no meio do arraste, e o dnd já mediu essa caixa.
+                              ds.isDraggingOver && "ring-2 ring-primary/40 bg-primary/5")}>
+                            {f !== "sem" && (
+                              <div className="flex items-center gap-1.5 pt-0.5">
+                                <span className={cn("text-[9px] font-body font-bold uppercase tracking-wider shrink-0", vaziaFaixa ? "text-muted-foreground/40" : "text-muted-foreground/80")}>{FAIXA_LABEL[f]}</span>
+                                <span className="h-px flex-1 bg-border" />
+                                {/* A janela de horário da faixa só aparece com "Horários" ligado,
+                                    e só no desktop: na coluna estreita ela vira ruído. */}
+                                {showTimes && <span className="hidden lg:inline text-[8px] font-body text-muted-foreground/50 shrink-0">{FAIXA_HINT[f]}</span>}
+                              </div>
+                            )}
+                            {its.map(renderItem)}
+                            {dp.placeholder}
+                            {cris.map(renderCriaCard)}
+                            {anivs.map(renderAniv)}
+                          </div>
+                        )}
+                      </Droppable>
+                    );
+                  })}
+                  {vazio}
+                </div>
               );
             })}
           </div>
@@ -1228,35 +1399,59 @@ export default function AgendaCriacao() {
         const d = parseDateOnly(iso);
         const rowCls = "w-full flex items-center gap-2.5 rounded-xl border border-border p-2.5 text-left hover:border-primary/50 hover:bg-primary/5 transition-colors";
         const dot = (c: string) => <span className="h-2 w-2 rounded-full shrink-0" style={{ background: c }} />;
+        // O modal segue a MESMA divisão em faixas da grade (aqui sobra altura, então ele
+        // pode mostrar as três com folga). Só leitura: reordenar/definir período continua
+        // sendo na grade, arrastando.
+        const bandasModal = splitFaixas(items, itemPeriods, !!dayOrders[iso]);
+        const criaModal: Record<Faixa, ClientCriaAgendaPost[]> = { sem: [], manha: [], tarde: [], noite: [] };
+        for (const p of criaCli) criaModal[faixaDoItem(null, p.scheduled_time)].push(p);
+        const linhaItem = (item: DayItem) => {
+          if (item.kind === "cria") { const c = item.cria; return <button key={`c${c.id}`} onClick={() => { setDayModal(null); setEditCreation(c); }} className={rowCls}>{dot("#4B3FA8")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}</span><span className="ml-auto text-[10px] text-muted-foreground">Criação</span></button>; }
+          if (item.kind === "task") { const t = item.task; const dotColor = corDaTarefa(t); return <button key={`t${t.id}`} onClick={() => { setDayModal(null); setEditTask(t); }} className={rowCls}>{dot(dotColor)}<span className="text-[13px] font-body font-semibold text-foreground truncate">{showTimes && item.time ? `${item.time} · ` : ""}{t.title}</span><span className="ml-auto text-[10px] text-muted-foreground">Tarefa</span></button>; }
+          if (item.kind === "mat") { const mt = item.mat; const done = mt.status === "finalizado"; return <button key={`m${mt.id}`} onClick={() => { setDayModal(null); openMaterial(mt); }} className={rowCls}>{dot(corDoMaterial(mt))}<span className={cn("text-[13px] font-body font-semibold truncate", done ? "line-through text-muted-foreground" : "text-foreground")}>{mt.title}</span><span className="ml-auto text-[10px] text-muted-foreground shrink-0">Material</span></button>; }
+          if (item.kind === "cap") { const c = item.cap; return <button key={`p${c.id}`} onClick={() => { setDayModal(null); setEditCap(c); }} className={rowCls}>{dot("#FF77B9")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}{showTimes && item.time ? ` · ${item.time}` : ""}</span><span className="ml-auto text-[10px] text-muted-foreground">Captação</span></button>; }
+          const p = item.post; const st = POST_STATUS[p.approval_status ?? "em_producao"]; return <button key={`o${p.id}`} onClick={() => { setDayModal(null); openPost(p); }} className={rowCls}>{dot(corDoPost(p))}<span className="text-[13px] font-body font-semibold text-foreground truncate">{showTimes && item.time ? `${item.time} · ` : ""}{p.title || "Post"}</span>{st && <span className={cn("ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}</button>;
+        };
         return (
           <Dialog open onOpenChange={(o) => { if (!o) setDayModal(null); }}>
             <DialogContent className="sm:max-w-md rounded-2xl max-h-[80vh] overflow-y-auto">
               <DialogHeader><DialogTitle className="font-display capitalize">{d.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}</DialogTitle></DialogHeader>
               <p className="text-[12px] font-body text-muted-foreground -mt-2">{items.length + criaCli.length + anivs.length} item(ns) · clique pra editar</p>
               <div className="space-y-1.5 mt-1">
-                {items.map((item) => {
-                  if (item.kind === "cria") { const c = item.cria; return <button key={`c${c.id}`} onClick={() => { setDayModal(null); setEditCreation(c); }} className={rowCls}>{dot("#4B3FA8")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}</span><span className="ml-auto text-[10px] text-muted-foreground">Criação</span></button>; }
-                  if (item.kind === "task") { const t = item.task; const isLead = !!t.crm_lead_id; const dotColor = corDaTarefa(t); return <button key={`t${t.id}`} onClick={() => { setDayModal(null); setEditTask(t); }} className={rowCls}>{dot(dotColor)}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{t.title}</span><span className="ml-auto text-[10px] text-muted-foreground">Tarefa</span></button>; }
-                  if (item.kind === "mat") { const mt = item.mat; const done = mt.status === "finalizado"; return <button key={`m${mt.id}`} onClick={() => { setDayModal(null); openMaterial(mt); }} className={rowCls}>{dot(corDoMaterial(mt))}<span className={cn("text-[13px] font-body font-semibold truncate", done ? "line-through text-muted-foreground" : "text-foreground")}>{mt.title}</span><span className="ml-auto text-[10px] text-muted-foreground shrink-0">Material</span></button>; }
-                  if (item.kind === "cap") { const c = item.cap; return <button key={`p${c.id}`} onClick={() => { setDayModal(null); setEditCap(c); }} className={rowCls}>{dot("#FF77B9")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}{c.capture_time ? ` · ${c.capture_time.slice(0, 5)}` : ""}</span><span className="ml-auto text-[10px] text-muted-foreground">Captação</span></button>; }
-                  const p = item.post; const st = POST_STATUS[p.approval_status ?? "em_producao"]; return <button key={`o${p.id}`} onClick={() => { setDayModal(null); openPost(p); }} className={rowCls}>{dot(corDoPost(p))}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{p.title || "Post"}</span>{st && <span className={cn("ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}</button>;
+                {FAIXAS.map((f) => {
+                  const its = bandasModal[f];
+                  const cris = criaModal[f];
+                  // Aniversário é lembrete: entra no topo, junto do "sem período".
+                  const ans = f === "sem" ? anivs : [];
+                  if (its.length === 0 && cris.length === 0 && ans.length === 0) return null;
+                  return (
+                    <div key={f} className="space-y-1.5">
+                      {f !== "sem" && (
+                        <div className="flex items-center gap-2 pt-1.5">
+                          <span className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground shrink-0">{FAIXA_LABEL[f]}</span>
+                          <span className="h-px flex-1 bg-border" />
+                        </div>
+                      )}
+                      {its.map(linhaItem)}
+                      {/* Cria do cliente: 5o tipo, só leitura. Clicar abre o kanban do cliente. */}
+                      {cris.map((p) => (
+                        <button key={`cc${p.id}`} onClick={() => { setDayModal(null); if (p.crm_client_id) navigate(`/socialmidia/clientes/${p.crm_client_id}/kanban-cliente`); }} className={rowCls}>
+                          {dot(CRIA_POST_COLOR)}
+                          <span className="text-[13px] font-body font-semibold text-foreground truncate">{showTimes && p.scheduled_time ? `${p.scheduled_time.slice(0, 5)} · ` : ""}{p.title || "Post"}</span>
+                          <span className="ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: CRIA_POST_COLOR }}>{CRIA_POST_STATUS[p.status ?? ""] ?? "Cria"}</span>
+                        </button>
+                      ))}
+                      {/* Aniversário: 7o tipo, lembrete. Clicar abre a ficha do cliente. */}
+                      {ans.map((b) => (
+                        <button key={`an${b.clientId}`} onClick={() => { setDayModal(null); navigate(`/socialmidia/clientes/${b.clientId}/visao-geral`); }} className={rowCls}>
+                          {dot(b.cor || BIRTHDAY_DEFAULT_COLOR)}
+                          <span className="text-[13px] font-body font-semibold text-foreground truncate">Aniversário de {b.nome}</span>
+                          <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">Lembrete</span>
+                        </button>
+                      ))}
+                    </div>
+                  );
                 })}
-                {/* Cria do cliente: 5o tipo, só leitura. Clicar abre o kanban do cliente. */}
-                {criaCli.map((p) => (
-                  <button key={`cc${p.id}`} onClick={() => { setDayModal(null); if (p.crm_client_id) navigate(`/socialmidia/clientes/${p.crm_client_id}/kanban-cliente`); }} className={rowCls}>
-                    {dot(CRIA_POST_COLOR)}
-                    <span className="text-[13px] font-body font-semibold text-foreground truncate">{p.scheduled_time ? `${p.scheduled_time.slice(0, 5)} · ` : ""}{p.title || "Post"}</span>
-                    <span className="ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: CRIA_POST_COLOR }}>{CRIA_POST_STATUS[p.status ?? ""] ?? "Cria"}</span>
-                  </button>
-                ))}
-                {/* Aniversário: 7o tipo, lembrete. Clicar abre a ficha do cliente. */}
-                {anivs.map((b) => (
-                  <button key={`an${b.clientId}`} onClick={() => { setDayModal(null); navigate(`/socialmidia/clientes/${b.clientId}/visao-geral`); }} className={rowCls}>
-                    {dot(b.cor || BIRTHDAY_DEFAULT_COLOR)}
-                    <span className="text-[13px] font-body font-semibold text-foreground truncate">Aniversário de {b.nome}</span>
-                    <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">Lembrete</span>
-                  </button>
-                ))}
               </div>
             </DialogContent>
           </Dialog>

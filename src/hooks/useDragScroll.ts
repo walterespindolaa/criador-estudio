@@ -35,6 +35,14 @@ import { useCallback, useEffect, useRef } from "react";
  *
  * `[data-no-drag-scroll]` é a válvula de escape: marque qualquer elemento com
  * esse atributo pra ele ficar imune ao arrasto de rolagem.
+ *
+ * `[data-drag-scroll-through]` é a válvula INVERSA: marque o card quando o punho
+ * de arraste for só um pedacinho dele (é o caso da tira de mídias do Cria Post,
+ * onde a alça é a barrinha embaixo da miniatura). Aí o corpo do card volta a
+ * rolar a tira no mouse, e o punho continua bloqueado sozinho, porque ele é um
+ * `[data-rfd-drag-handle-draggable-id]` mais interno e `closest` para nele
+ * primeiro. Em card cuja alça é o card inteiro NÃO use isso: ia roubar o
+ * arraste do dnd.
  */
 const SELETORES_IGNORADOS = [
   "[data-rfd-drag-handle-draggable-id]",
@@ -200,7 +208,9 @@ export function useDragScroll<T extends HTMLElement = HTMLDivElement>(): DragScr
       const bloqueio = alvo.closest(SELETORES_IGNORADOS);
       // `closest` sobe até a raiz: só vale o que está DENTRO do board (o próprio
       // container não conta, senão um board dentro de um `<a>` nunca rolaria).
-      if (bloqueio && bloqueio !== no && no.contains(bloqueio)) return;
+      // O `data-drag-scroll-through` libera o corpo do card (veja o comentário
+      // dos seletores): o punho, mais interno, continua sendo pego antes dele.
+      if (bloqueio && bloqueio !== no && no.contains(bloqueio) && !bloqueio.hasAttribute("data-drag-scroll-through")) return;
 
       arrastando = true;
       venceuLimiar = false;

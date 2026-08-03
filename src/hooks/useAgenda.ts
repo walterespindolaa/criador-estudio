@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { toast } from "sonner";
+import { isPeriodo, type Periodo } from "@/lib/periodos-agenda";
 
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
@@ -138,6 +139,71 @@ export function useSaveDayOrder() {
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ["agenda-day-order"] }),
     onError: () => toast.error("Não consegui salvar a ordem."),
+  });
+}
+
+// ── PERÍODO (manhã/tarde/noite) DE CADA ITEM DA AGENDA ────────────────────────
+// O período é CAMPO PRÓPRIO, independente do horário: dá pra dizer "essa tarefa é
+// de tarde" sem inventar 14:37. Como os itens da grade moram em cinco tabelas de
+// donos diferentes (crm_tasks, external_posts, client_materials, agenda_captures,
+// agenda_creations), guardamos numa tabela LATERAL chaveada pela mesma chave
+// "<kind>:<id>" que a ordem manual do dia já usa (agenda_day_order). Uma migration
+// só, nenhuma tabela de outra feature tocada, e o período segue o item quando ele
+// muda de dia.
+//
+// LEITURA DEFENSIVA: se a migration ainda não rodou, a tabela não existe, o erro é
+// engolido e a função devolve {}, a grade cai no período derivado do horário e
+// nada quebra.
+export type ItemPeriods = Record<string, Periodo>;
+
+export function useItemPeriods() {
+  const { agencyOwnerId } = useActiveAccount();
+  return useQuery<ItemPeriods>({
+    queryKey: ["agenda-item-period", agencyOwnerId],
+    enabled: !!agencyOwnerId,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("agenda_item_period")
+        .select("item_key, period").eq("manager_id", agencyOwnerId!);
+      // Tabela ainda inexistente (migration não rodada) ou qualquer outra falha:
+      // devolve vazio em vez de derrubar a agenda inteira.
+      if (error) return {};
+      const m: ItemPeriods = {};
+      for (const row of (data ?? []) as unknown as { item_key: string; period: string | null }[]) {
+        if (isPeriodo(row.period)) m[row.item_key] = row.period;
+      }
+      return m;
+    },
+  });
+}
+
+// Grava (ou limpa) o período de um item. period null = apaga a linha, o item volta
+// a ser posicionado pelo horário (ou pro topo "sem período", se não tiver horário).
+// Quem chama já atualizou o cache de forma otimista; por isso o invalidate acontece
+// SÓ no sucesso: se a migration ainda não rodou, o valor otimista permanece e a
+// distribuição continua funcionando na sessão, só não persiste.
+export function useSaveItemPeriod() {
+  const { agencyOwnerId } = useActiveAccount();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ itemKey, period }: { itemKey: string; period: Periodo | null }) => {
+      if (!agencyOwnerId) throw new Error("Not authenticated");
+      if (period === null) {
+        const { error } = await sbFrom("agenda_item_period")
+          .delete().eq("manager_id", agencyOwnerId).eq("item_key", itemKey);
+        if (error) throw error;
+        return;
+      }
+      const { error } = await sbFrom("agenda_item_period").upsert({
+        manager_id: agencyOwnerId, item_key: itemKey, period, updated_at: new Date().toISOString(),
+      } as never, { onConflict: "manager_id,item_key" });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["agenda-item-period"] }),
+    onError: (err) => {
+      // Sem a tabela (migration pendente) não vale gritar com quem está usando: o
+      // período fica valendo na sessão. Fica o registro no console pra quem depura.
+      console.warn("[agenda] não consegui salvar o período do item", err);
+    },
   });
 }
 

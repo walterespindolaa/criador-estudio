@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { Reorder } from "framer-motion";
+import { DragDropContext, Droppable, Draggable, type DropResult, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
+import { useDragScroll } from "@/hooks/useDragScroll";
 import { useCriaPostMedia, type CriaMedia } from "@/hooks/useCriaPostMedia";
 import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 import { PostMediaCarousel } from "@/components/shared/PostMediaCarousel";
@@ -48,6 +50,33 @@ function Thumb({ m }: { m: CriaMedia }) {
   );
 }
 
+// Evita o menu de "salvar imagem" do iOS e a seleção de texto enquanto a pessoa
+// segura o punho pra reordenar.
+const dragThumbStyle: CSSProperties = { WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" };
+
+/**
+ * PUNHO DEDICADO da tira de mídias (mesmo padrão do kanban da Agenda e do Materiais).
+ *
+ * A miniatura INTEIRA como alça era a raiz do bug: a alça do @hello-pangea/dnd
+ * ganha `data-rfd-drag-handle-draggable-id`, e a regra global do index.css crava
+ * `touch-action: none !important` nela. Com a miniatura toda virando alça, e as
+ * miniaturas cobrindo a tira inteira, NÃO SOBRAVA UM PIXEL onde o dedo pudesse
+ * rolar: no celular a tira simplesmente não andava.
+ *
+ * Agora a alça é só esta barrinha embaixo da miniatura (64x20px, alvo de toque
+ * folgado). Os outros ~44px de altura ficam sem `touch-action`, então o dedo
+ * rola nativo por cima da miniatura e o arraste começa pegando o punho.
+ */
+function MediaGrip({ handleProps }: { handleProps?: DraggableProvidedDragHandleProps }) {
+  return (
+    <span {...(handleProps ?? {})} aria-label="Arrastar para reordenar"
+      onClick={(e) => e.stopPropagation()}
+      className="absolute inset-x-0 bottom-0 z-10 h-5 grid place-items-center bg-black/60 text-white/95 cursor-grab active:cursor-grabbing touch-none">
+      <GripVertical className="h-3.5 w-3.5 rotate-90" />
+    </span>
+  );
+}
+
 export function CriaPostMedia({ postId, platform, format, caption, handle, approved, title, referenceUrl }: {
   postId: string; platform: string; format: string; caption?: string; handle?: string; approved?: boolean;
   title?: string; referenceUrl?: string | null;
@@ -88,6 +117,51 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
   const ordered: CriaMedia[] = order.length
     ? (order.map((id) => media.find((m) => m.id === id)).filter(Boolean) as CriaMedia[])
     : media;
+
+  // ===== TIRA DE MINIATURAS: rolagem + reordenação =====
+  // Três formas de rolar a tira, todas vivas ao mesmo tempo:
+  //  1) roda do mouse / trackpad e a barra de rolagem (overflow-x-auto + kanban-scroll);
+  //  2) clicar no vazio (ou em cima da miniatura) e arrastar, via useDragScroll;
+  //  3) dedo no celular, rolagem nativa, porque só o punho tem touch-action:none.
+  // A rolagem AUTOMÁTICA durante o arraste vem de graça do @hello-pangea/dnd:
+  // ele acha o container de rolagem mais próximo ACIMA do Droppable, que é
+  // exatamente esta div. Por isso o overflow fica aqui e não no Droppable.
+  const dragScrollRef = useDragScroll<HTMLDivElement>();
+  const tiraEl = useRef<HTMLDivElement | null>(null);
+  // Sombras nas bordas: numa tira que corta exatamente na miniatura, ninguém
+  // percebe que tem mais coisa pro lado. A sombra só aparece do lado que tem.
+  const [maisEsq, setMaisEsq] = useState(false);
+  const [maisDir, setMaisDir] = useState(false);
+  const medirTira = useCallback(() => {
+    const el = tiraEl.current;
+    if (!el) { setMaisEsq(false); setMaisDir(false); return; }
+    const sobra = el.scrollWidth - el.clientWidth;
+    setMaisEsq(el.scrollLeft > 4);
+    setMaisDir(sobra - el.scrollLeft > 4);
+  }, []);
+  const tiraRef = useCallback((el: HTMLDivElement | null) => {
+    tiraEl.current = el;
+    dragScrollRef(el);
+    medirTira();
+  }, [dragScrollRef, medirTira]);
+  useEffect(() => {
+    medirTira();
+    window.addEventListener("resize", medirTira);
+    return () => window.removeEventListener("resize", medirTira);
+  }, [medirTira, ordered.length]);
+
+  // Reordena no drop e deixa o debounce de 600ms lá em cima salvar no banco.
+  const onMediaDragEnd = (r: DropResult) => {
+    if (!r.destination) return;
+    const de = r.source.index;
+    const para = r.destination.index;
+    if (de === para) return;
+    const ids = ordered.map((m) => m.id);
+    const [movido] = ids.splice(de, 1);
+    ids.splice(para, 0, movido);
+    dirty.current = true;
+    setOrder(ids);
+  };
 
   const onPick = async (e: React.ChangeEvent<HTMLInputElement>, kind: "image" | "video") => {
     const files = Array.from(e.target.files ?? []); e.target.value = "";
@@ -263,18 +337,59 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
 
       {ordered.length > 1 && (
         <div>
-          <p className="text-[11px] text-muted-foreground font-body mb-1.5">Arraste para reordenar</p>
-          <Reorder.Group axis="x" values={ordered} onReorder={(v) => { dirty.current = true; setOrder(v.map((m) => m.id)); }}
-            className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
-            {ordered.map((m, i) => (
-              <Reorder.Item key={m.id} value={m} style={{ touchAction: "none" }} className="relative shrink-0 w-16 h-16 rounded-xl overflow-hidden border border-border cursor-grab active:cursor-grabbing bg-muted select-none">
-                <Thumb m={m} />
-                <span className="absolute top-0.5 left-0.5 z-10 bg-black/65 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{i + 1}</span>
-                <button type="button" onClick={() => onRemoveMedia(m.id)} className="absolute top-0.5 right-0.5 z-10 bg-black/65 text-white rounded-full p-0.5"><X className="h-3 w-3" /></button>
-                <span className="absolute bottom-0.5 right-0.5 z-10 text-white/90 pointer-events-none"><GripVertical className="h-3.5 w-3.5 [filter:drop-shadow(0_1px_2px_rgba(0,0,0,.7))]" /></span>
-              </Reorder.Item>
-            ))}
-          </Reorder.Group>
+          <div className="flex items-center gap-2 mb-1.5">
+            <p className="text-[11px] text-muted-foreground font-body">
+              Arraste pela barrinha <GripVertical className="inline-block h-3 w-3 rotate-90 align-text-bottom" /> pra reordenar
+            </p>
+            {/* Total à direita: junto com a sombra da borda, é o que avisa que
+                existem mais mídias fora da área visível. */}
+            <span className="ml-auto shrink-0 text-[11px] font-body text-muted-foreground/80 tabular-nums">{ordered.length} mídias</span>
+          </div>
+          <div className="relative">
+            <DragDropContext onDragEnd={onMediaDragEnd}>
+              {/* O container de rolagem é ESTE (pai do Droppable): é assim que o
+                  dnd descobre quem rolar sozinho quando o arraste encosta na borda. */}
+              {/* pb-2.5 reserva a altura da barrinha (10px do .kanban-scroll) pra ela
+                  não encostar nas miniaturas em Windows/Linux, onde a barra ocupa espaço. */}
+              <div ref={tiraRef} onScroll={medirTira} className="overflow-x-auto overflow-y-hidden pb-2.5 kanban-scroll">
+                {/* O respiro entre miniaturas é MARGEM (mr-2), não `gap`: o dnd mede a
+                    margin-box de cada item pra calcular o quanto empurrar os vizinhos,
+                    e `gap` ele não enxerga (os itens ficariam desalinhados no arraste). */}
+                <Droppable droppableId="criapost-media" direction="horizontal">
+                  {(dropP) => (
+                    <div ref={dropP.innerRef} {...dropP.droppableProps} className="flex w-max">
+                      {ordered.map((m, i) => (
+                        <Draggable key={m.id} draggableId={m.id} index={i} disableInteractiveElementBlocking>
+                          {(dragP, dragS) => {
+                            const item = (
+                              // data-drag-scroll-through: o corpo da miniatura não é punho,
+                              // então ele pode rolar a tira no mouse (veja useDragScroll).
+                              <div ref={dragP.innerRef} {...dragP.draggableProps} data-drag-scroll-through=""
+                                style={{ ...dragP.draggableProps.style, ...dragThumbStyle }}
+                                className={`relative shrink-0 w-16 h-16 mr-2 rounded-xl overflow-hidden border border-border bg-muted select-none ${dragS.isDragging ? "ring-2 ring-primary/50 shadow-lg" : ""}`}>
+                                <Thumb m={m} />
+                                <span className="absolute top-0.5 left-0.5 z-10 bg-black/65 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{i + 1}</span>
+                                <button type="button" onClick={() => onRemoveMedia(m.id)} aria-label="Remover mídia" className="absolute top-0.5 right-0.5 z-20 bg-black/65 text-white rounded-full p-0.5"><X className="h-3 w-3" /></button>
+                                <MediaGrip handleProps={dragP.dragHandleProps ?? undefined} />
+                              </div>
+                            );
+                            // Enquanto arrasta, o dnd usa position:fixed. Como o editor é um
+                            // Dialog com translate (o transform vira bloco de contenção do
+                            // fixed), a miniatura sairia deslocada do cursor. Mandar o item
+                            // que está sendo arrastado pro <body> resolve.
+                            return dragS.isDragging ? createPortal(item, document.body) : item;
+                          }}
+                        </Draggable>
+                      ))}
+                      {dropP.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </div>
+            </DragDropContext>
+            {maisEsq && <span aria-hidden className="pointer-events-none absolute left-0 top-0 bottom-2.5 w-6 rounded-l-xl bg-gradient-to-r from-black/15 to-transparent" />}
+            {maisDir && <span aria-hidden className="pointer-events-none absolute right-0 top-0 bottom-2.5 w-6 rounded-r-xl bg-gradient-to-l from-black/15 to-transparent" />}
+          </div>
         </div>
       )}
 
