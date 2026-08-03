@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, type DropResult, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive, Download, Play, FileImage, Link2, Paperclip, GripVertical, FolderOpen, ChevronDown, Trash2, Cake } from "lucide-react";
+import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive, Download, Play, FileImage, Link2, Paperclip, GripVertical, FolderOpen, ChevronDown, Trash2, Cake, Rows3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -267,17 +267,37 @@ export default function AgendaCriacao() {
   const toggleProducao = () => setProducaoOpen((v) => { const n = !v; try { localStorage.setItem("agenda_producao_open", n ? "1" : "0"); } catch { /* segue */ } return n; });
   // Painel "ver todos" de um dia cheio.
   const [dayModal, setDayModal] = useState<string | null>(null);
-  // "Mostrar horários": o organizador do dia passou a ser o PERÍODO (manhã/tarde/noite),
-  // e o HH:MM virou detalhe opcional. Desligado por padrão; preferência do APARELHO
-  // (localStorage), não do usuário no banco: é jeito de ler a grade, muda por tela.
-  // O horário continua existindo e editável nos modais, só não domina a leitura.
-  const [showTimes, setShowTimes] = useState<boolean>(() => {
-    try { return localStorage.getItem("agenda_show_times") === "1"; } catch { return false; }
+  // "Períodos": ALTERNADOR ÚNICO da divisão do dia em faixas (manhã / tarde / noite).
+  //
+  //  DESLIGADO (padrão) = a agenda de sempre: a coluna do dia é uma LISTA PLANA, sem
+  //  nenhum cabeçalho de faixa, com UM Droppable por dia e a ordem de sempre (a ordem
+  //  manual do dia quando existe, senão por horário).
+  //  LIGADO = o dia vira as três faixas + o topo "sem período" (um Droppable cada), e
+  //  arrastar um card entre faixas GRAVA o período dele.
+  //
+  // O período já gravado NÃO se perde com o alternador desligado: ele continua em
+  // agenda_item_period e volta a valer assim que a pessoa liga de novo. Desligado, a
+  // grade simplesmente não lê esse campo.
+  //
+  // Preferência do APARELHO (localStorage), não do usuário no banco: é jeito de ler a
+  // grade, muda por tela. A chave é NOVA porque o significado mudou; a antiga
+  // (agenda_show_times, que só escondia o HH:MM) é apagada na primeira carga, senão
+  // quem a tinha salva abriria num estado que não pediu.
+  const [porPeriodo, setPorPeriodo] = useState<boolean>(() => {
+    try {
+      localStorage.removeItem("agenda_show_times");
+      return localStorage.getItem("agenda_periodos") === "1";
+    } catch { return false; }
   });
-  const toggleShowTimes = (v: boolean) => {
-    setShowTimes(v);
-    try { localStorage.setItem("agenda_show_times", v ? "1" : "0"); } catch { /* segue */ }
+  const togglePorPeriodo = (v: boolean) => {
+    setPorPeriodo(v);
+    try { localStorage.setItem("agenda_periodos", v ? "1" : "0"); } catch { /* segue */ }
   };
+  // Trava o alternador ENQUANTO um card está sendo arrastado. Alternar troca a
+  // QUANTIDADE de Droppable de cada dia (1 contra 4), e o @hello-pangea/dnd mede todos
+  // os Droppable no início do gesto (getInitialPublish): mudar isso no meio do arraste
+  // derrubaria o arraste. Fora do arraste a troca é livre.
+  const [arrastando, setArrastando] = useState(false);
   // Semana = 7 dias a partir da segunda. Mês = grade completa (segunda a domingo) cobrindo o mês do anchor.
   const days = useMemo(() => {
     if (view === "semana") {
@@ -412,6 +432,8 @@ export default function AgendaCriacao() {
 
   // Arrastar item pra outro dia: atualização otimista no cache + persistência conforme o tipo.
   const handleDragEnd = (result: DropResult) => {
+    // Libera o alternador de períodos assim que o gesto acaba (inclusive drop cancelado).
+    setArrastando(false);
     const { source, destination, draggableId } = result;
     if (!destination) return;
     const src = parseDrop(source.droppableId);
@@ -558,8 +580,10 @@ export default function AgendaCriacao() {
   }, [allPosts, filters.post, postClients]);
 
   // Rolagem horizontal da semana no mobile: abre ancorado na coluna de HOJE.
+  // A coluna é achada por data-dia (não por ref) de propósito: com "Períodos" ligado a
+  // coluna é uma <div> comum e desligado ela é o nó do Droppable, cujo innerRef não pode
+  // ser embrulhado num ref inline sem religar a cada render. O atributo vale nos dois.
   const weekScrollRef = useRef<HTMLDivElement | null>(null);
-  const todayColRef = useRef<HTMLDivElement | null>(null);
   // Clicar no vazio da grade e arrastar pro lado rola a semana/o mês (só mouse;
   // no toque nada muda, o dedo continua rolando nativo).
   const arrastaGrade = useDragScroll<HTMLDivElement>();
@@ -575,13 +599,13 @@ export default function AgendaCriacao() {
     const cont = weekScrollRef.current;
     if (!cont) return;
     // No desktop a grade não rola (lg:grid), então mexer no scrollLeft é inócuo lá.
-    const col = todayColRef.current;
-    // Só ancora em HOJE quando a semana exibida realmente contém hoje (senão o ref
+    const col = cont.querySelector<HTMLElement>(`[data-dia="${today}"]`);
+    // Só ancora em HOJE quando a semana exibida realmente contém hoje (senão o nó
     // pode estar defasado); do contrário, volta pro começo da semana.
     if (col && todayVisible) cont.scrollTo({ left: Math.max(0, col.offsetLeft - cont.offsetLeft - 8), behavior: "auto" });
     else cont.scrollTo({ left: 0, behavior: "auto" });
     // Reexecuta ao trocar de semana/visão (ex.: botão "Hoje").
-  }, [view, weekStart, todayVisible]);
+  }, [view, weekStart, todayVisible, today]);
 
   // Captações da semana exibida, indexadas por dia (YYYY-MM-DD), para aparecerem na grade.
   const capturesByDay = useMemo(() => {
@@ -747,13 +771,18 @@ export default function AgendaCriacao() {
             </div>
           </div>
           <div data-tour="ag-navegacao" className="flex items-center gap-2 flex-wrap">
-            {/* Horário é OPCIONAL e secundário: desligado, o HH:MM some dos cards e quem
-                organiza o dia é a faixa (manhã/tarde/noite). O horário segue gravado e
-                editável nos modais. Preferência por aparelho (localStorage). */}
-            <div data-tour="ag-horarios" className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2 py-1">
-              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-[11px] font-body font-semibold text-muted-foreground">Horários</span>
-              <Switch checked={showTimes} onCheckedChange={toggleShowTimes} aria-label="Mostrar horários nos cards" className="scale-[0.8] origin-right" />
+            {/* Alternador ÚNICO da divisão do dia em faixas. Desligado (padrão), o dia é
+                a lista plana de sempre. Ligado, vira manhã / tarde / noite e arrastar
+                entre faixas grava o período. Fica travado durante um arraste (ver
+                "arrastando"). Só faz sentido na SEMANA: o mês nunca tem faixas. */}
+            <div data-tour="ag-periodos"
+              className={cn("inline-flex items-center gap-1.5 rounded-lg border border-border px-2 py-1 transition-opacity",
+                view === "mes" && "opacity-50")}
+              title={view === "mes" ? "A visão Mês não usa faixas de período" : "Divide o dia em manhã, tarde e noite"}>
+              <Rows3 className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-[11px] font-body font-semibold text-muted-foreground">Períodos</span>
+              <Switch checked={porPeriodo} onCheckedChange={togglePorPeriodo} disabled={arrastando || view === "mes"}
+                aria-label="Dividir o dia em manhã, tarde e noite" className="scale-[0.8] origin-right" />
             </div>
             {/* Semana (padrão) / Mês */}
             <div className="inline-flex rounded-lg border border-border overflow-hidden">
@@ -805,7 +834,7 @@ export default function AgendaCriacao() {
             )}
           </div>
         )}
-        <DragDropContext onDragEnd={handleDragEnd}>
+        <DragDropContext onDragStart={() => setArrastando(true)} onDragEnd={handleDragEnd}>
           {/* Faixa fixa "Em produção": sempre visível, independente do período. Reúne todos
               os posts em produção (com ou sem data) + posts sem data. Arrastar um post daqui
               pra um dia agenda; arrastar de volta pra cá tira a data. */}
@@ -934,9 +963,10 @@ export default function AgendaCriacao() {
                           <div className="flex items-center gap-1 min-w-0" style={{ color: capColor }}>
                             <DragGrip className="text-teal-700/40 dark:text-teal-300/40" handleProps={dragProvided.dragHandleProps ?? undefined} />
                             <Video className="h-3 w-3 shrink-0" />
-                            {/* Horário só quando o alternador "Horários" está ligado; desligado,
-                                o span vira espaçador e quem organiza é a faixa do dia. */}
-                            <span className="text-[10px] font-body font-bold flex-1 min-w-0 truncate">{showTimes && item.time ? item.time : ""}</span>
+                            {/* O HH:MM aparece SEMPRE (nos dois modos do alternador). A faixa
+                                agrupa; o horário é o detalhe em que a pessoa age. Sem horário,
+                                o span vira espaçador. */}
+                            <span className="text-[10px] font-body font-bold flex-1 min-w-0 truncate">{item.time ?? ""}</span>
                             {/* Etiqueta fixa "Captação": mesmo padrão de pill das etiquetas de status dos posts (posição à direita/estilo). */}
                             <span className="shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: `${capColor}26`, color: capColor }}>Captação</span>
                             {/* Check pra concluir a captação: mesmo padrão do check da tarefa (círculo/quadrado
@@ -987,7 +1017,7 @@ export default function AgendaCriacao() {
                                 ? <ListChecks className="h-3 w-3 shrink-0" style={{ color: clientColor }} />
                                 : <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: clientColor }} />}
                               <span className="text-[10px] font-body font-bold truncate flex-1 min-w-0 text-foreground">
-                                {showTimes && item.time && <span className="tabular-nums">{item.time} · </span>}
+                                {item.time && <span className="tabular-nums">{item.time} · </span>}
                                 {isLead ? `Lead · ${who}` : who}
                               </span>
                               {/* Check pra marcar concluída (risca a tarefa). Span pra não aninhar button.
@@ -1087,7 +1117,7 @@ export default function AgendaCriacao() {
                         <div className="flex items-center gap-1 min-w-0" style={{ color: cor }}>
                           <DragGrip className="opacity-40" handleProps={dragProvided.dragHandleProps ?? undefined} />
                           <Send className="h-3 w-3 shrink-0" />
-                          <span className="text-[10px] font-body font-bold truncate flex-1 min-w-0">{showTimes && item.time && <span className="tabular-nums">{item.time} · </span>}{cli?.name ?? "Post"}</span>
+                          <span className="text-[10px] font-body font-bold truncate flex-1 min-w-0">{item.time && <span className="tabular-nums">{item.time} · </span>}{cli?.name ?? "Post"}</span>
                           {/* Indicador discreto: post tem link do Drive no campo Ideia/Referência
                               (o campo aceita vários links, basta um ser do Drive). */}
                           {parseRefLinks(p.reference_url).some((u) => isDriveUrl(u)) && <HardDrive className="h-3 w-3 shrink-0 opacity-70" aria-label="Tem Drive" />}
@@ -1123,7 +1153,7 @@ export default function AgendaCriacao() {
                   <div className="flex items-center gap-1" style={{ color: CRIA_POST_COLOR }}>
                     <Layers className="h-3 w-3 shrink-0" />
                     <span className="text-[10px] font-body font-bold truncate flex-1 text-foreground/80">
-                      {showTimes && p.scheduled_time && <span className="tabular-nums">{p.scheduled_time.slice(0, 5)} · </span>}{p.client_name ?? "Cliente"}
+                      {p.scheduled_time && <span className="tabular-nums">{p.scheduled_time.slice(0, 5)} · </span>}{p.client_name ?? "Cliente"}
                     </span>
                     <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: CRIA_POST_COLOR }}>
                       {CRIA_POST_STATUS[p.status ?? ""] ?? "Cria"}
@@ -1153,15 +1183,21 @@ export default function AgendaCriacao() {
                   </button>
                 );
               };
-              // MÊS: um Droppable por dia, lista plana, exatamente como antes. A célula do
-              // mês tem ~110px de altura: três separadores ali comeriam a célula inteira, e
-              // o mês serve pra saber ONDE as coisas estão, não pra desenhar o fluxo do dia.
-              // As faixas ficam na SEMANA, que é onde a pessoa opera.
-              if (gridLayout) {
+              // LISTA PLANA: UM Droppable por dia (droppableId = "YYYY-MM-DD", sem "|"), com
+              // os índices 0..n-1 saindo direto do dayItems, contíguos com a ordem renderizada.
+              // É o caminho usado:
+              //  - SEMPRE no MÊS: a célula tem ~110px de altura, três cabeçalhos de faixa
+              //    comeriam a célula inteira, e o mês serve pra saber ONDE as coisas estão,
+              //    não pra desenhar o fluxo do dia;
+              //  - e na SEMANA com o alternador "Períodos" DESLIGADO (o padrão), que é
+              //    exatamente a agenda de antes das faixas.
+              if (gridLayout || !porPeriodo) {
                 return (
                   <Droppable droppableId={iso} key={iso}>
                     {(dropProvided, dropSnapshot) => (
-                      <div ref={dropProvided.innerRef} {...dropProvided.droppableProps}
+                      // data-dia: âncora da rolagem "abrir em HOJE" (ver o useEffect). O ref
+                      // fica só com o Droppable, sem wrapper inline, pra não religar a cada render.
+                      <div ref={dropProvided.innerRef} data-dia={iso} {...dropProvided.droppableProps}
                         className={cn(colCls, dropSnapshot.isDraggingOver && "ring-2 ring-primary/40 border-primary/60 bg-primary/5")}>
                         {cabecalho}
                         {dayItems.map(renderItem)}
@@ -1174,13 +1210,14 @@ export default function AgendaCriacao() {
                   </Droppable>
                 );
               }
-              // SEMANA: três faixas (manhã / tarde / noite) + o topo "sem período", cada uma
-              // com seu próprio Droppable. Índices continuam contíguos DENTRO de cada faixa.
+              // SEMANA COM "PERÍODOS" LIGADO: três faixas (manhã / tarde / noite) + o topo
+              // "sem período", cada uma com seu próprio Droppable ("YYYY-MM-DD|faixa").
+              // Índices continuam contíguos DENTRO de cada faixa.
               const bandas = splitFaixas(dayItems, itemPeriods, !!dayOrders[iso]);
               const criaPorFaixa: Record<Faixa, ClientCriaAgendaPost[]> = { sem: [], manha: [], tarde: [], noite: [] };
               for (const p of criaDay) criaPorFaixa[faixaDoItem(null, p.scheduled_time)].push(p);
               return (
-                <div key={iso} ref={(el) => { if (isToday) todayColRef.current = el; }} className={colCls}>
+                <div key={iso} data-dia={iso} className={colCls}>
                   {cabecalho}
                   {/* MOBILE / faixa vazia: a faixa NÃO some quando está vazia, ela COLAPSA
                       pro rótulo (uma linha de ~14px) com uma área de solta curta embaixo.
@@ -1210,9 +1247,9 @@ export default function AgendaCriacao() {
                               <div className="flex items-center gap-1.5 pt-0.5">
                                 <span className={cn("text-[9px] font-body font-bold uppercase tracking-wider shrink-0", vaziaFaixa ? "text-muted-foreground/40" : "text-muted-foreground/80")}>{FAIXA_LABEL[f]}</span>
                                 <span className="h-px flex-1 bg-border" />
-                                {/* A janela de horário da faixa só aparece com "Horários" ligado,
-                                    e só no desktop: na coluna estreita ela vira ruído. */}
-                                {showTimes && <span className="hidden lg:inline text-[8px] font-body text-muted-foreground/50 shrink-0">{FAIXA_HINT[f]}</span>}
+                                {/* A janela de horário da faixa ("até 12:00") só no desktop:
+                                    na coluna estreita do mobile ela vira ruído. */}
+                                <span className="hidden lg:inline text-[8px] font-body text-muted-foreground/50 shrink-0">{FAIXA_HINT[f]}</span>
                               </div>
                             )}
                             {its.map(renderItem)}
@@ -1399,26 +1436,42 @@ export default function AgendaCriacao() {
         const d = parseDateOnly(iso);
         const rowCls = "w-full flex items-center gap-2.5 rounded-xl border border-border p-2.5 text-left hover:border-primary/50 hover:bg-primary/5 transition-colors";
         const dot = (c: string) => <span className="h-2 w-2 rounded-full shrink-0" style={{ background: c }} />;
-        // O modal segue a MESMA divisão em faixas da grade (aqui sobra altura, então ele
-        // pode mostrar as três com folga). Só leitura: reordenar/definir período continua
-        // sendo na grade, arrastando.
+        // O modal segue o MESMO alternador da grade: com "Períodos" ligado ele agrupa em
+        // faixas (aqui sobra altura, então mostra as três com folga); desligado é a lista
+        // plana de sempre. Só leitura: reordenar/definir período continua sendo na grade,
+        // arrastando.
         const bandasModal = splitFaixas(items, itemPeriods, !!dayOrders[iso]);
         const criaModal: Record<Faixa, ClientCriaAgendaPost[]> = { sem: [], manha: [], tarde: [], noite: [] };
         for (const p of criaCli) criaModal[faixaDoItem(null, p.scheduled_time)].push(p);
         const linhaItem = (item: DayItem) => {
           if (item.kind === "cria") { const c = item.cria; return <button key={`c${c.id}`} onClick={() => { setDayModal(null); setEditCreation(c); }} className={rowCls}>{dot("#4B3FA8")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}</span><span className="ml-auto text-[10px] text-muted-foreground">Criação</span></button>; }
-          if (item.kind === "task") { const t = item.task; const dotColor = corDaTarefa(t); return <button key={`t${t.id}`} onClick={() => { setDayModal(null); setEditTask(t); }} className={rowCls}>{dot(dotColor)}<span className="text-[13px] font-body font-semibold text-foreground truncate">{showTimes && item.time ? `${item.time} · ` : ""}{t.title}</span><span className="ml-auto text-[10px] text-muted-foreground">Tarefa</span></button>; }
+          if (item.kind === "task") { const t = item.task; const dotColor = corDaTarefa(t); return <button key={`t${t.id}`} onClick={() => { setDayModal(null); setEditTask(t); }} className={rowCls}>{dot(dotColor)}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{t.title}</span><span className="ml-auto text-[10px] text-muted-foreground">Tarefa</span></button>; }
           if (item.kind === "mat") { const mt = item.mat; const done = mt.status === "finalizado"; return <button key={`m${mt.id}`} onClick={() => { setDayModal(null); openMaterial(mt); }} className={rowCls}>{dot(corDoMaterial(mt))}<span className={cn("text-[13px] font-body font-semibold truncate", done ? "line-through text-muted-foreground" : "text-foreground")}>{mt.title}</span><span className="ml-auto text-[10px] text-muted-foreground shrink-0">Material</span></button>; }
-          if (item.kind === "cap") { const c = item.cap; return <button key={`p${c.id}`} onClick={() => { setDayModal(null); setEditCap(c); }} className={rowCls}>{dot("#FF77B9")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}{showTimes && item.time ? ` · ${item.time}` : ""}</span><span className="ml-auto text-[10px] text-muted-foreground">Captação</span></button>; }
-          const p = item.post; const st = POST_STATUS[p.approval_status ?? "em_producao"]; return <button key={`o${p.id}`} onClick={() => { setDayModal(null); openPost(p); }} className={rowCls}>{dot(corDoPost(p))}<span className="text-[13px] font-body font-semibold text-foreground truncate">{showTimes && item.time ? `${item.time} · ` : ""}{p.title || "Post"}</span>{st && <span className={cn("ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}</button>;
+          if (item.kind === "cap") { const c = item.cap; return <button key={`p${c.id}`} onClick={() => { setDayModal(null); setEditCap(c); }} className={rowCls}>{dot("#FF77B9")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}{item.time ? ` · ${item.time}` : ""}</span><span className="ml-auto text-[10px] text-muted-foreground">Captação</span></button>; }
+          const p = item.post; const st = POST_STATUS[p.approval_status ?? "em_producao"]; return <button key={`o${p.id}`} onClick={() => { setDayModal(null); openPost(p); }} className={rowCls}>{dot(corDoPost(p))}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{p.title || "Post"}</span>{st && <span className={cn("ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}</button>;
         };
+        // Linhas só leitura (Cria do cliente e aniversário), usadas nos dois modos do modal.
+        const linhaCria = (p: ClientCriaAgendaPost) => (
+          <button key={`cc${p.id}`} onClick={() => { setDayModal(null); if (p.crm_client_id) navigate(`/socialmidia/clientes/${p.crm_client_id}/kanban-cliente`); }} className={rowCls}>
+            {dot(CRIA_POST_COLOR)}
+            <span className="text-[13px] font-body font-semibold text-foreground truncate">{p.scheduled_time ? `${p.scheduled_time.slice(0, 5)} · ` : ""}{p.title || "Post"}</span>
+            <span className="ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: CRIA_POST_COLOR }}>{CRIA_POST_STATUS[p.status ?? ""] ?? "Cria"}</span>
+          </button>
+        );
+        const linhaAniv = (b: { clientId: string; nome: string; cor: string | null }) => (
+          <button key={`an${b.clientId}`} onClick={() => { setDayModal(null); navigate(`/socialmidia/clientes/${b.clientId}/visao-geral`); }} className={rowCls}>
+            {dot(b.cor || BIRTHDAY_DEFAULT_COLOR)}
+            <span className="text-[13px] font-body font-semibold text-foreground truncate">Aniversário de {b.nome}</span>
+            <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">Lembrete</span>
+          </button>
+        );
         return (
           <Dialog open onOpenChange={(o) => { if (!o) setDayModal(null); }}>
             <DialogContent className="sm:max-w-md rounded-2xl max-h-[80vh] overflow-y-auto">
               <DialogHeader><DialogTitle className="font-display capitalize">{d.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}</DialogTitle></DialogHeader>
               <p className="text-[12px] font-body text-muted-foreground -mt-2">{items.length + criaCli.length + anivs.length} item(ns) · clique pra editar</p>
               <div className="space-y-1.5 mt-1">
-                {FAIXAS.map((f) => {
+                {porPeriodo ? FAIXAS.map((f) => {
                   const its = bandasModal[f];
                   const cris = criaModal[f];
                   // Aniversário é lembrete: entra no topo, junto do "sem período".
@@ -1434,24 +1487,19 @@ export default function AgendaCriacao() {
                       )}
                       {its.map(linhaItem)}
                       {/* Cria do cliente: 5o tipo, só leitura. Clicar abre o kanban do cliente. */}
-                      {cris.map((p) => (
-                        <button key={`cc${p.id}`} onClick={() => { setDayModal(null); if (p.crm_client_id) navigate(`/socialmidia/clientes/${p.crm_client_id}/kanban-cliente`); }} className={rowCls}>
-                          {dot(CRIA_POST_COLOR)}
-                          <span className="text-[13px] font-body font-semibold text-foreground truncate">{showTimes && p.scheduled_time ? `${p.scheduled_time.slice(0, 5)} · ` : ""}{p.title || "Post"}</span>
-                          <span className="ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: CRIA_POST_COLOR }}>{CRIA_POST_STATUS[p.status ?? ""] ?? "Cria"}</span>
-                        </button>
-                      ))}
+                      {cris.map(linhaCria)}
                       {/* Aniversário: 7o tipo, lembrete. Clicar abre a ficha do cliente. */}
-                      {ans.map((b) => (
-                        <button key={`an${b.clientId}`} onClick={() => { setDayModal(null); navigate(`/socialmidia/clientes/${b.clientId}/visao-geral`); }} className={rowCls}>
-                          {dot(b.cor || BIRTHDAY_DEFAULT_COLOR)}
-                          <span className="text-[13px] font-body font-semibold text-foreground truncate">Aniversário de {b.nome}</span>
-                          <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">Lembrete</span>
-                        </button>
-                      ))}
+                      {ans.map(linhaAniv)}
                     </div>
                   );
-                })}
+                }) : (
+                  // "Períodos" desligado: lista plana, na mesma ordem da coluna do dia.
+                  <>
+                    {items.map(linhaItem)}
+                    {criaCli.map(linhaCria)}
+                    {anivs.map(linhaAniv)}
+                  </>
+                )}
               </div>
             </DialogContent>
           </Dialog>
