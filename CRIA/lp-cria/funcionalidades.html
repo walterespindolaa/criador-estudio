@@ -11,7 +11,7 @@
 <meta name="description" content="Cria Plano, Cria Stories, escrita guiada, Prompter, insights e mais: como cada ferramenta do CRIA funciona e o que ela muda na sua rotina de criador. 7 dias grátis.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Funcionalidades do CRIA | Cada ferramenta, a fundo">
-<meta property="og:description" content="CRM, contratos, aprovação por link, financeiro e relatórios white-label. 7 dias grátis.">
+<meta property="og:description" content="Cria Plano, Cria Stories, escrita guiada, Prompter, insights reais do Instagram e mais. Cada ferramenta do CRIA, a fundo. 7 dias grátis.">
 <meta property="og:url" content="https://criasocialclub.com.br/funcionalidades">
 <meta property="og:image" content="https://criasocialclub.com.br/og.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -410,6 +410,12 @@ html,body{overflow-x:clip}
   </div>
 </section>
 
+<!-- ==================== STICKY CTA (mobile) ==================== -->
+<div id="sticky-cta">
+  <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja">Testar tudo por 7 dias</a>
+  <small>Sem compromisso · Cancela em 2 cliques</small>
+</div>
+
 <!-- ==================== RODAPÉ ==================== -->
 <style>
 /* Rodapé padronizado nas 3 páginas: links legais, exclusão de dados, contato e
@@ -447,10 +453,38 @@ html,body{overflow-x:clip}
 </footer>
 
 <script>
-gsap.registerPlugin(ScrollTrigger);
-document.querySelectorAll('.reveal').forEach(el=>{
-  gsap.fromTo(el,{opacity:0,y:24},{opacity:1,y:0,duration:.7,ease:'power3.out',scrollTrigger:{trigger:el,start:'top 86%'}});
-});
+/* UTM passthrough: repassa utm_* e fbclid/gclid pros links de cadastro */
+(function(){
+  const qs = window.location.search;
+  if(!qs) return;
+  const keep = new URLSearchParams();
+  new URLSearchParams(qs).forEach((v,k)=>{ if(/^utm_|^fbclid$|^gclid$/i.test(k)) keep.append(k,v); });
+  const extra = keep.toString();
+  if(!extra) return;
+  document.querySelectorAll('a[href*="app.criasocialclub.com.br/signup"]').forEach(a=>{
+    a.href += (a.href.includes('?')?'&':'?') + extra;
+  });
+})();
+
+/* Guard: se o GSAP não carregar (adblock em tráfego pago), mostra tudo estático.
+   Sem esse guard a página ficava com as seções .reveal invisíveis. */
+if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') {
+  document.body.classList.add('no-anim');
+  const sc=document.getElementById('sticky-cta');
+  window.addEventListener('scroll',()=>{ sc.classList.toggle('show', window.scrollY>500); },{passive:true});
+} else {
+  gsap.registerPlugin(ScrollTrigger);
+  document.querySelectorAll('.reveal').forEach(el=>{
+    gsap.fromTo(el,{opacity:0,y:24},{opacity:1,y:0,duration:.7,ease:'power3.out',scrollTrigger:{trigger:el,start:'top 86%'}});
+  });
+  const stickyCta=document.getElementById('sticky-cta');
+  ScrollTrigger.create({trigger:'#modulos',start:'top 70%',
+    onEnter:()=>stickyCta.classList.add('show'),
+    onLeaveBack:()=>stickyCta.classList.remove('show')});
+  ScrollTrigger.create({trigger:'#final',start:'top 75%',
+    onEnter:()=>stickyCta.classList.remove('show'),
+    onLeaveBack:()=>stickyCta.classList.add('show')});
+}
 </script>
 </body>
 </html>

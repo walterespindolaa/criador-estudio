@@ -435,7 +435,7 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
 .faq-q .plus{font-size:1.4rem;transition:transform .3s;color:var(--laranja)}
 .faq-item.open .plus{transform:rotate(45deg)}
 .faq-a{max-height:0;overflow:hidden;transition:max-height .4s ease;padding:0 24px}
-.faq-item.open .faq-a{max-height:220px;padding-bottom:22px}
+.faq-item.open .faq-a{max-height:460px;padding-bottom:22px} /* 460px: a resposta mais longa (social media) passa de 220px no celular e cortava */
 .faq-a p{font-size:.95rem;opacity:.85}
 
 /* ---------- CTA final ---------- */
@@ -992,9 +992,12 @@ html,body{overflow-x:clip}
 <section id="stats">
   <div class="container">
     <div class="stats-strip reveal">
-      <div class="stat"><div class="n"><span class="counter" data-target="200">0</span>+</div><div class="l">reais/mês economizados vs. o combo de ferramentas*</div></div>
-      <div class="stat"><div class="n"><span class="counter" data-target="6">0</span> em 1</div><div class="l">ideias, plano, escrita, stories, publicação e insights</div></div>
-      <div class="stat"><div class="n"><span class="counter" data-target="7">0</span> dias</div><div class="l">grátis pra testar no seu fluxo real</div></div>
+      <!-- Os números finais ficam no HTML de propósito: se o GSAP não carregar
+           (adblock) ou a animação não disparar, o visitante vê "200+", nunca "0+".
+           O JS só zera e conta até o alvo QUANDO a animação de fato roda. -->
+      <div class="stat"><div class="n"><span class="counter" data-target="200">200</span>+</div><div class="l">reais/mês economizados vs. o combo de ferramentas*</div></div>
+      <div class="stat"><div class="n"><span class="counter" data-target="6">6</span> em 1</div><div class="l">ideias, plano, escrita, stories, publicação e insights</div></div>
+      <div class="stat"><div class="n"><span class="counter" data-target="7">7</span> dias</div><div class="l">grátis pra testar no seu fluxo real</div></div>
     </div>
     <p style="text-align:center;color:rgba(255,255,255,.55);font-size:.8rem;margin-top:18px">*Comparado a planner + organização + app de escrita + link in bio contratados separadamente.</p>
   </div>
@@ -1275,11 +1278,17 @@ ScrollTrigger.matchMedia({
   }
 });
 
-/* ---------- counters ---------- */
+/* ---------- counters ----------
+   O HTML já traz o valor final; aqui a gente só zera e conta quando a animação
+   dispara. Rede de segurança: 2,5s depois do disparo, o valor final é cravado
+   aconteça o que acontecer. Contador parado em zero é anti-venda. */
 gsap.utils.toArray('.counter').forEach(c=>{
   const target=+c.dataset.target;
   ScrollTrigger.create({trigger:c,start:'top 85%',once:true,onEnter:()=>{
-    gsap.fromTo(c,{innerText:0},{innerText:target,duration:1.6,ease:'power1.out',snap:{innerText:1},onUpdate:function(){c.innerText=Math.round(+c.innerText)}});
+    gsap.fromTo(c,{innerText:0},{innerText:target,duration:1.6,ease:'power1.out',snap:{innerText:1},
+      onUpdate:function(){c.innerText=Math.round(+c.innerText)},
+      onComplete:function(){c.innerText=target}});
+    setTimeout(function(){ if(+c.innerText!==target) c.innerText=target; },2500);
   }});
 });
 
