@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Plus, Users, Loader2, Link2, Search, Send, Upload, FolderOpen, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useCrmClients, useCreateCrmClient, useUploadCrmAsset, useImportCriaClients, type CrmClient } from "@/hooks/useCrm";
+import { clienteInativo } from "@/lib/cliente-status";
 import { useExternalClients, type ExternalClient } from "@/hooks/useCriaPost";
 import { useCriaClientProfiles } from "@/hooks/useManagerClientCria";
 import { useActiveAccount } from "@/contexts/AccountContext";
@@ -14,8 +15,10 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const initial = (n?: string | null) => (n ? n.trim().charAt(0).toUpperCase() : "?");
-// "Inativo" cobre tanto o status do CRM quanto a flag antiga.
-const isInactive = (c: CrmClient) => c.status === "inativo" || c.active === false;
+// Situação derivada: encerramento em data FUTURA ainda conta como ativo
+// (o cliente é ativo até o dia do encerramento, inclusive). Regra única
+// em src/lib/cliente-status.ts.
+const isInactive = (c: CrmClient) => clienteInativo(c);
 // Texto legível sobre a cor do cliente (amarelo pede texto escuro).
 const textOn = (hex: string) => {
   const h = hex.replace("#", "");

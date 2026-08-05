@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, CalendarDays, X } from "lucide-react";
 import { useCrmTasks, useCrmLeads, useCrmClients } from "@/hooks/useCrm";
+import { clienteInativo } from "@/lib/cliente-status";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -33,8 +34,9 @@ export function CrmCalendarTab() {
     leads.forEach((l) => { if (l.next_interaction_date && l.stage !== "fechado" && l.stage !== "perdido") out.push({ id: "l-" + l.id, date: l.next_interaction_date, kind: "lead", title: l.name, meta: "Próxima ação" }); });
     clients.forEach((c) => { if (c.renewal_date && c.active) out.push({ id: "r-" + c.id, date: c.renewal_date, kind: "renewal", title: c.name, meta: "Renovação de contrato" }); });
     // Aniversário do cliente: repete todo ano, projeta no ano que o calendário está mostrando.
+    // clienteInativo: encerramento agendado pro futuro ainda conta como ativo.
     clients.forEach((c) => {
-      if (!c.birthday || c.status === "inativo") return;
+      if (!c.birthday || clienteInativo(c)) return;
       const [, mm, dd] = c.birthday.split("-");
       if (!mm || !dd) return;
       out.push({ id: "b-" + c.id, date: `${cursor.y}-${mm}-${dd}`, kind: "birthday", title: c.name, meta: "Aniversário 🎂" });

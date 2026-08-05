@@ -19,6 +19,7 @@ import { useDragScroll } from "@/hooks/useDragScroll";
 import { cn } from "@/lib/utils";
 
 import { formatBRL } from "@/lib/money";
+import { mensalidadeAtivaNoMes } from "@/lib/finance";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 import { confirmar } from "@/components/shared/Confirm";
 import { hojeBR, toISODateBR } from "@/lib/date-br";
@@ -52,11 +53,15 @@ export function PipelineBoard() {
   const metrics = useMemo(() => {
     const open = leads.filter((l) => l.stage !== "fechado" && l.stage !== "perdido");
     const nego = leads.filter((l) => l.stage === "proposta" || l.stage === "negociacao");
+    // Receita mensal: MESMA regra do Caixa (mensalidadeAtivaNoMes) — cliente com
+    // encerramento agendado conta até o mês do encerramento, inclusive. Antes
+    // olhava só a flag `active`, que divergia do MRR do Caixa.
+    const mesAtual = hojeBR().slice(0, 7);
     return {
       pipeline: open.reduce((s, l) => s + Number(l.monthly_value ?? 0), 0),
       negoVal: nego.reduce((s, l) => s + Number(l.monthly_value ?? 0), 0),
       fechados: leads.filter((l) => l.stage === "fechado").length,
-      mrr: clients.filter((c) => c.active).reduce((s, c) => s + Number(c.monthly_value ?? 0), 0),
+      mrr: clients.filter((c) => mensalidadeAtivaNoMes(c, mesAtual)).reduce((s, c) => s + Number(c.monthly_value ?? 0), 0),
     };
   }, [leads, clients]);
 
@@ -130,8 +135,10 @@ export function PipelineBoard() {
       </div>
 
       <DragDropContext onDragEnd={handleDragEnd}>
-      {/* Clicar no vazio e arrastar pro lado rola o pipeline (só mouse). */}
-      <div ref={boardRef} className="overflow-x-auto pb-4 -mx-1 px-1">
+      {/* Clicar no vazio e arrastar pro lado rola o pipeline (só mouse).
+          kanban-scroll: barrinha fina SEMPRE visível no desktop (mesma pista dos
+          outros kanbans), pra quem não descobre o arrasto ter como rolar. */}
+      <div ref={boardRef} className="overflow-x-auto pb-4 -mx-1 px-1 kanban-scroll">
         <div className="flex gap-3 min-w-max">
           {CRM_STAGES.map((stage) => {
             const col = leads.filter((l) => l.stage === stage);

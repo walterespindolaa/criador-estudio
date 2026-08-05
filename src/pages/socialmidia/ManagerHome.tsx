@@ -19,6 +19,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useManagerOutlet, MODULE_ICON } from "@/components/accounts/ManagerLayout";
 import { readLastClient } from "@/components/accounts/ClientSwitcher";
 import { useCrmClients } from "@/hooks/useCrm";
+import { clienteInativo } from "@/lib/cliente-status";
 import { useMonthMoneyPJ } from "@/hooks/useFinance";
 import { useAllExternalPosts, useExternalClients } from "@/hooks/useCriaPost";
 import { MonthOverviewPanel } from "@/components/accounts/MonthOverviewPanel";
@@ -103,7 +104,9 @@ export default function ManagerHome() {
   const lastClient = last ? crmClients.find((c) => c.id === last.id) ?? null : null;
 
   // O resumo do dia. Antes a frase prometia um resumo e nada aparecia.
-  const ativos = crmClients.filter((c) => (c.status ?? "ativo") === "ativo").length;
+  // Ativo DE VERDADE: encerramento agendado pro futuro ainda conta como ativo
+  // (a data manda, ver src/lib/cliente-status.ts); pausado segue fora da conta.
+  const ativos = crmClients.filter((c) => !clienteInativo(c) && (c.status ?? "ativo") !== "pausado").length;
   // Dinheiro do mês: MESMA conta da Visão geral do Cria Caixa (receitaDoMesPJ).
   // Antes o card somava só o MRR puro (monthly_value da carteira) e ignorava a
   // receita AVULSA (freelance/lançamento sem cliente), então não batia com o

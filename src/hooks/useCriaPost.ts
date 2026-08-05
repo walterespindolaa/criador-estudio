@@ -170,6 +170,31 @@ export function useExternalClients() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["external-clients", agencyOwnerId] }),
   });
 
+  // EXCLUI o cliente do Cria Post (portal/link de aprovação) MANTENDO a ficha
+  // no Cria Gestão. A função no banco (excluir_cliente_do_portal, ver migration)
+  // apaga numa transação só: posts do portal (com comentários e mídias), links
+  // de aprovação e cronogramas; os materiais só perdem o vínculo. Devolve a
+  // contagem do que saiu. Não tem lixeira: as queries/RPCs públicas do portal
+  // não filtram deleted_at, então soft delete deixaria o portal meio vivo.
+  const removeFromPost = useMutation({
+    mutationFn: async (id: string) => {
+      // types.ts é travado (não regenerar): cast do rpc, mesmo padrão do sbFrom.
+      const rpc = supabase.rpc.bind(supabase) as unknown as (
+        fn: string, args: Record<string, unknown>,
+      ) => Promise<{ data: unknown; error: { message: string } | null }>;
+      const { data, error } = await rpc("excluir_cliente_do_portal", { _external_client_id: id });
+      if (error) throw error;
+      return data as { posts: number; links_de_aprovacao: number; cronogramas: number; materiais_desvinculados: number };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["external-clients", agencyOwnerId] });
+      qc.invalidateQueries({ queryKey: ["crm-clients", agencyOwnerId] });
+      // Tira os posts do portal de TODAS as telas que os mostram (agenda, home...).
+      invalidatePostsEverywhere(qc, agencyOwnerId);
+    },
+    onError: () => toast.error("Não consegui excluir o cliente do Cria Post."),
+  });
+
   // Link de aprovação. Sem período = manda TUDO (comportamento padrão).
   // Com período = gera um link novo que só mostra os posts daquele intervalo.
   // Retorna a URL pra quem quiser abrir o portal em nova aba além de copiar.
@@ -199,7 +224,7 @@ export function useExternalClients() {
     return url;
   };
 
-  return { clients: clientsQ.data ?? [], isLoading: clientsQ.isLoading, pending: pendingQ.data ?? {}, create, update, setActive, copyLink };
+  return { clients: clientsQ.data ?? [], isLoading: clientsQ.isLoading, pending: pendingQ.data ?? {}, create, update, setActive, removeFromPost, copyLink };
 }
 
 export function useExternalPosts(clientId: string | null) {

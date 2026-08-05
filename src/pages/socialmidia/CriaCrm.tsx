@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { clienteInativo } from "@/lib/cliente-status";
 import { PipelineBoard } from "@/components/accounts/crm/PipelineBoard";
 import { ContractsTab } from "@/components/accounts/crm/ContractsTab";
 import { TasksTab } from "@/components/accounts/crm/TasksTab";
@@ -27,8 +28,10 @@ import { MoneyInput } from "@/components/shared/MoneyInput";
 const brl = (v?: number | null) => formatBRL(v, { zeroAsDash: false });
 function initial(name?: string | null) { return name ? name.trim().charAt(0).toUpperCase() : "?"; }
 const splitSeg = (s?: string | null) => (s ?? "").split(/[,;]+/).map((x) => x.trim()).filter(Boolean);
-// "Inativo" cobre o status novo do CRM e a flag booleana antiga.
-const isInactive = (c: CrmClient) => c.status === "inativo" || c.active === false;
+// Situação derivada: encerramento em data FUTURA ainda conta como ativo
+// (o cliente é ativo até o dia do encerramento, inclusive). Regra única
+// em src/lib/cliente-status.ts.
+const isInactive = (c: CrmClient) => clienteInativo(c);
 // Filtro de situação da lista: por padrão só ativos. Persistido por gestora.
 type StatusFilter = "ativos" | "todos" | "inativos";
 const STATUS_FILTER_KEY = "criacrm:clientes:statusFilter";

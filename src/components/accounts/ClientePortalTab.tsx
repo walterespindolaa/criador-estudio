@@ -22,17 +22,53 @@ import { confirmar } from "@/components/shared/Confirm";
 // o que era o quê. Virou aba, com espaço, dividida em duas metades óbvias:
 // o que o CLIENTE vê × o que só VOCÊ vê.
 // ═══════════════════════════════════════════════════════════════════════
+// Cast pra tabelas fora do types.ts travado (mesmo padrão dos hooks).
+type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
+const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
+
 export function ClientePortalTab({ client, onCopyLink, onOpenPortal, copying }: {
   client: ExternalClient;
   onCopyLink: () => void;
   onOpenPortal: () => void;
   copying: boolean;
 }) {
-  const { update, setActive } = useExternalClients();
+  const { update, setActive, removeFromPost } = useExternalClients();
   const { data: crmClients = [] } = useCrmClients();
   const { user } = useAuth();
   const logoRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [excluindo, setExcluindo] = useState(false);
+
+  // ── EXCLUIR DO CRIA POST (a ficha no CRM fica) ──
+  // Antes de perguntar, CONTA o que vai sumir, pra confirmação ser honesta:
+  // posts do portal (com histórico de aprovação), o link e os cronogramas.
+  const excluirDoPortal = async () => {
+    if (excluindo || removeFromPost.isPending) return;
+    setExcluindo(true);
+    try {
+      const [posts, cronos] = await Promise.all([
+        sbFrom("posts").select("id", { count: "exact", head: true }).eq("external_client_id", client.id),
+        sbFrom("cronogramas").select("id", { count: "exact", head: true }).eq("external_client_id", client.id),
+      ]);
+      const nPosts = posts.count ?? 0;
+      const nCronos = cronos.count ?? 0;
+      const ok = await confirmar({
+        titulo: "Excluir este cliente do Cria Post?",
+        descricao:
+          `Apaga DE VEZ o portal de ${client.name}: ` +
+          `${nPosts} ${nPosts === 1 ? "post" : "posts"} de aprovação (com todo o histórico e as mídias), ` +
+          `o link de aprovação (para de abrir na hora) e ` +
+          `${nCronos} ${nCronos === 1 ? "cronograma" : "cronogramas"}. ` +
+          `O que FICA: a ficha no Cria Gestão (financeiro, tarefas, contratos, notas) e os materiais. ` +
+          `Não dá pra desfazer.`,
+        acao: "Excluir do Cria Post",
+      });
+      if (!ok) return;
+      await removeFromPost.mutateAsync(client.id);
+      toast.success("Cliente excluído do Cria Post. A ficha no Cria Gestão ficou intacta.");
+    } catch { /* o hook já avisa */ }
+    finally { setExcluindo(false); }
+  };
 
   // Estado inicial do formulário a partir do cliente. Ficava copiado em três lugares
   // (montagem, refetch e "Descartar"), e a cor divergia entre eles.
@@ -209,7 +245,7 @@ export function ClientePortalTab({ client, onCopyLink, onOpenPortal, copying }: 
             </p>
           </div>
 
-          <div className="pt-2 border-t border-border/60">
+          <div className="pt-2 border-t border-border/60 space-y-0.5">
             <Button variant="ghost" className="text-destructive hover:text-destructive px-0"
               onClick={async () => {
                 if (!(await confirmar({ titulo: "Desativar este cliente no Cria Post?", descricao: "O link de aprovação dele para de funcionar na hora.", acao: "Desativar" }))) return;
@@ -218,6 +254,19 @@ export function ClientePortalTab({ client, onCopyLink, onOpenPortal, copying }: 
               }}>
               Desativar no Cria Post
             </Button>
+            {/* EXCLUIR de vez: some o portal (posts, link, cronogramas), fica o CRM. */}
+            <div>
+              <Button variant="ghost" className="text-destructive hover:text-destructive px-0"
+                disabled={excluindo || removeFromPost.isPending}
+                onClick={() => void excluirDoPortal()}>
+                {(excluindo || removeFromPost.isPending) && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+                Excluir do Cria Post (mantém o CRM)
+              </Button>
+              <p className="text-[11px] font-body text-muted-foreground leading-snug">
+                Apaga os posts do portal, o link de aprovação e os cronogramas. A ficha
+                no Cria Gestão (financeiro, tarefas, notas) e os materiais ficam.
+              </p>
+            </div>
           </div>
         </section>
       </div>

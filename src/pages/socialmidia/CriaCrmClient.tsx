@@ -32,6 +32,8 @@ import { formatBRL } from "@/lib/money";
 import { PAYMENT_METHODS } from "@/lib/finance";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 import { confirmar } from "@/components/shared/Confirm";
+import { hojeBR } from "@/lib/date-br";
+import { clienteInativo } from "@/lib/cliente-status";
 import { InactivateClientDialog } from "@/components/accounts/crm/InactivateClientDialog";
 
 const CONSCIOUSNESS = ["Inconsciente do problema", "Consciente do problema", "Consciente da solução", "Consciente do produto", "Totalmente consciente"];
@@ -173,6 +175,12 @@ function ClientWorkspace() {
     if (s === "inativo") { setInativarOpen(true); return; }
     setForm({ ...form, status: s, contract_end_date: null });
   };
+  // Situação EXIBIDA: deriva do encerramento (regra em cliente-status.ts).
+  // Encerramento futuro = ainda ativo; passado = inativo, sempre.
+  const statusBruto = (form.status ?? "ativo") as ClientStatus;
+  const statusExibido: ClientStatus = clienteInativo(form)
+    ? "inativo"
+    : (statusBruto === "inativo" ? "ativo" : statusBruto);
   const setBc = (k: string, v: string) => setForm({ ...form, brand_core: { ...bc, [k]: v } });
   const setPe = (k: string, v: string) => {
     const arr = personas.slice(); arr[idx] = { ...(arr[idx] ?? {}), [k]: v };
@@ -284,20 +292,31 @@ function ClientWorkspace() {
 
         {/* 2. O que é: chips numa tira só, que rola no mobile em vez de empilhar. */}
         <div className="flex items-center gap-2 mt-3.5 overflow-x-auto scrollbar-none scroll-snap-x sm:flex-wrap sm:overflow-visible pb-0.5">
-          <select data-tour="crm-cli-status" value={form.status ?? "ativo"} onChange={(e) => onStatusChange(e.target.value as ClientStatus)}
-            className={cn("shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full border cursor-pointer outline-none", CLIENT_STATUS_META[(form.status ?? "ativo") as ClientStatus].cls)}>
+          {/* Valor EXIBIDO derivado: encerramento futuro = ainda ativo (ver cliente-status.ts). */}
+          <select data-tour="crm-cli-status" value={statusExibido} onChange={(e) => onStatusChange(e.target.value as ClientStatus)}
+            className={cn("shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full border cursor-pointer outline-none", CLIENT_STATUS_META[statusExibido].cls)}>
             {CLIENT_STATUSES.map((s) => <option key={s} value={s}>{CLIENT_STATUS_META[s].label}</option>)}
           </select>
           <InactivateClientDialog
             open={inativarOpen}
             defaultDate={form.contract_end_date}
-            onConfirm={(endDate) => { setInativarOpen(false); setForm({ ...form, status: "inativo", contract_end_date: endDate }); }}
+            // Data de hoje pra frente = encerramento AGENDADO: o status fica "ativo"
+            // até o dia passar (a leitura vira sozinha). Data passada = inativo já.
+            onConfirm={(endDate) => { setInativarOpen(false); setForm({ ...form, status: endDate >= hojeBR() ? "ativo" : "inativo", contract_end_date: endDate }); }}
             onCancel={() => setInativarOpen(false)}
           />
-          {form.status === "inativo" && form.contract_end_date && (
-            <span className="shrink-0 whitespace-nowrap text-xs font-semibold px-3 py-1.5 rounded-full bg-muted text-muted-foreground border border-border">
-              Encerrado em {new Date(form.contract_end_date + "T00:00:00").toLocaleDateString("pt-BR")}
-            </span>
+          {form.contract_end_date && (
+            clienteInativo(form) ? (
+              <span className="shrink-0 whitespace-nowrap text-xs font-semibold px-3 py-1.5 rounded-full bg-muted text-muted-foreground border border-border">
+                Encerrado em {new Date(form.contract_end_date + "T00:00:00").toLocaleDateString("pt-BR")}
+              </span>
+            ) : (
+              <button type="button" onClick={() => setForm({ ...form, status: "ativo", contract_end_date: null })}
+                title="Cancelar o encerramento agendado (o cliente segue ativo)"
+                className="shrink-0 whitespace-nowrap text-xs font-semibold px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 hover:bg-amber-200 transition-colors cursor-pointer">
+                Encerra em {new Date(form.contract_end_date + "T00:00:00").toLocaleDateString("pt-BR")} · cancelar
+              </button>
+            )
           )}
           {form.segment && <span className="shrink-0 whitespace-nowrap text-xs font-semibold px-3 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/15">{form.segment}</span>}
           {isCria && <span className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full bg-muted text-foreground/70 border border-border">cria</span>}

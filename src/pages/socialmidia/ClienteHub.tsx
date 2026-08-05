@@ -127,6 +127,7 @@ type CriaColor2 = CriaColor;
 // fonte de verdade (o banco espelha em external_clients.color por gatilho).
 import { formatBRL } from "@/lib/money";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
+import { clienteInativo } from "@/lib/cliente-status";
 import { confirmar } from "@/components/shared/Confirm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { MoneyInput } from "@/components/shared/MoneyInput";
@@ -229,15 +230,28 @@ export default function ClienteHub() {
     // Inativar pede a DATA DE ENCERRAMENTO (dialog). Só grava depois de confirmar.
     if (s === "inativo") { setInativarOpen(true); return; }
     // Reativar / pausar: limpa a data de encerramento (o contrato voltou a valer).
+    const tinhaEncerramentoAgendado = !!(client as { contract_end_date?: string | null }).contract_end_date && !clienteInativo(client);
     await updateClient.mutateAsync({ id: client.id, status: s, contract_end_date: null } as never);
-    toast.success(s === "pausado" ? "Cliente pausado." : "Cliente reativado.");
+    toast.success(
+      s === "pausado" ? "Cliente pausado."
+      : tinhaEncerramentoAgendado ? "Encerramento cancelado. O cliente segue ativo."
+      : "Cliente reativado.",
+    );
   };
-  // Confirmou o encerramento no dialog: grava status inativo + a data escolhida.
+  // Confirmou o encerramento no dialog. A REGRA: o cliente é ativo até o DIA do
+  // encerramento, inclusive. Data de hoje pra frente = encerramento AGENDADO
+  // (status continua "ativo"; a leitura vira "inativo" sozinha quando a data
+  // passar, via clienteInativo). Data já passada = inativo agora.
   const confirmInativar = async (endDate: string) => {
     if (!client) return;
     setInativarOpen(false);
-    await updateClient.mutateAsync({ id: client.id, status: "inativo", contract_end_date: endDate } as never);
-    toast.success("Cliente inativado. A mensalidade conta até o mês do encerramento.");
+    const aindaVigente = endDate >= hojeBR();
+    await updateClient.mutateAsync({ id: client.id, status: aindaVigente ? "ativo" : "inativo", contract_end_date: endDate } as never);
+    toast.success(
+      aindaVigente
+        ? `Encerramento marcado pra ${parseDateOnly(endDate).toLocaleDateString("pt-BR")}. Até lá o cliente segue ativo.`
+        : "Cliente inativado. A mensalidade conta até o mês do encerramento.",
+    );
   };
   const doCopyLink = async () => {
     if (!extClient) return;
@@ -314,6 +328,14 @@ export default function ClienteHub() {
     </div>
   );
 
+  // Situação EXIBIDA no seletor: deriva do encerramento (regra em cliente-status.ts).
+  // Encerramento futuro = mostra "ativo" mesmo que o banco ainda tenha "inativo"
+  // de um agendamento antigo; encerramento passado = mostra "inativo" sempre.
+  const statusBruto = (client as { status?: ClientStatus }).status ?? "ativo";
+  const statusExibido: ClientStatus = clienteInativo(client)
+    ? "inativo"
+    : (statusBruto === "inativo" ? "ativo" : statusBruto);
+
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="pb-24 md:pb-0">
       <button onClick={() => navigate("/socialmidia/clientes")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground font-body mb-4"><ArrowLeft className="h-4 w-4" /> Clientes</button>
@@ -358,11 +380,24 @@ export default function ClienteHub() {
                     {pendCount} pendente{pendCount > 1 ? "s" : ""}
                   </button>
                 )}
-                {/* Cliente encerrado: mostra QUANDO o contrato encerrou. */}
-                {(client as { status?: ClientStatus }).status === "inativo" && (client as { contract_end_date?: string | null }).contract_end_date && (
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-body font-semibold">
-                    Encerrado em {parseDateOnly((client as { contract_end_date?: string | null }).contract_end_date!).toLocaleDateString("pt-BR")}
-                  </span>
+                {/* Encerramento: com data FUTURA (ou hoje) o contrato ainda vale e o
+                    selo avisa QUANDO acaba (clicável pra cancelar o agendamento);
+                    com data passada, mostra quando encerrou. */}
+                {(client as { contract_end_date?: string | null }).contract_end_date && (
+                  clienteInativo(client) ? (
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-body font-semibold">
+                      Encerrado em {parseDateOnly((client as { contract_end_date?: string | null }).contract_end_date!).toLocaleDateString("pt-BR")}
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => void setStatus("ativo")}
+                      title="Cancelar o encerramento agendado (o cliente segue ativo)"
+                      className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-body font-semibold hover:bg-amber-200 transition-colors cursor-pointer"
+                    >
+                      Encerra em {parseDateOnly((client as { contract_end_date?: string | null }).contract_end_date!).toLocaleDateString("pt-BR")} · cancelar
+                    </button>
+                  )
                 )}
               </div>
             </div>
@@ -391,14 +426,16 @@ export default function ClienteHub() {
                 </span>
               )}
             </Button>
-            {/* STATUS — ativar/pausar/inativar sem sair da ficha. Mesmo campo da lista. */}
+            {/* STATUS — ativar/pausar/inativar sem sair da ficha. Mesmo campo da lista.
+                O valor EXIBIDO é derivado: encerramento em data futura = ainda ativo;
+                data passada = inativo (mesmo que ninguém tenha virado o status). */}
             <select
               data-tour="cli-status"
-              value={(client as { status?: ClientStatus }).status ?? "ativo"}
+              value={statusExibido}
               onChange={(e) => setStatus(e.target.value as ClientStatus)}
               title="Situação do cliente"
               aria-label="Situação do cliente"
-              className={`h-10 rounded-xl border px-3 text-xs font-body font-semibold cursor-pointer outline-none ${CLIENT_STATUS_META[((client as { status?: ClientStatus }).status ?? "ativo") as ClientStatus].cls}`}
+              className={`h-10 rounded-xl border px-3 text-xs font-body font-semibold cursor-pointer outline-none ${CLIENT_STATUS_META[statusExibido].cls}`}
             >
               {CLIENT_STATUSES.map((s) => <option key={s} value={s}>{CLIENT_STATUS_META[s].label}</option>)}
             </select>

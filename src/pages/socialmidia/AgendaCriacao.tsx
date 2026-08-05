@@ -28,6 +28,7 @@ import { useClientCriaAgendaPosts, useCriaClientProfiles, type ClientCriaAgendaP
 import { useManagerMaterialsWithDue, useUpdateAgendaMaterial, type AgendaMaterial } from "@/hooks/useClientMaterials";
 import { isDriveMedia, isDriveUrl, isVideoMedia, getThumbnailUrl, getDriveImageFallbackUrl, downloadMediaFile, mediaDownloadName } from "@/lib/driveMedia";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
+import { clienteInativo } from "@/lib/cliente-status";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { parseRefLinks, refLinkHref } from "@/lib/refLinks";
 // Faixas do dia (manhã/tarde/noite). AS JANELAS DE HORÁRIO MORAM SÓ LÁ.
@@ -682,7 +683,8 @@ export default function AgendaCriacao() {
   const birthdaysByDay = useMemo(() => {
     const m = new Map<string, { clientId: string; nome: string; cor: string | null }[]>();
     if (!filters.aniversario) return m;
-    const comAniversario = clients.filter((c) => !!c.birthday && c.status !== "inativo");
+    // clienteInativo: encerramento agendado pro futuro ainda conta como ativo.
+    const comAniversario = clients.filter((c) => !!c.birthday && !clienteInativo(c));
     if (comAniversario.length === 0) return m;
     for (const d of days) {
       const iso = ymd(d);
