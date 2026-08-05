@@ -246,6 +246,27 @@ export type Database = {
         }
         Relationships: []
       }
+      agenda_item_period: {
+        Row: {
+          item_key: string
+          manager_id: string
+          period: string
+          updated_at: string
+        }
+        Insert: {
+          item_key: string
+          manager_id: string
+          period: string
+          updated_at?: string
+        }
+        Update: {
+          item_key?: string
+          manager_id?: string
+          period?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ai_rate_limit: {
         Row: {
           call_count: number
@@ -1122,6 +1143,7 @@ export type Database = {
           deleted_at: string | null
           diagnosis: Json
           email: string | null
+          hashtags: string[]
           id: string
           instagram: string | null
           logo: string | null
@@ -1161,6 +1183,7 @@ export type Database = {
           deleted_at?: string | null
           diagnosis?: Json
           email?: string | null
+          hashtags?: string[]
           id?: string
           instagram?: string | null
           logo?: string | null
@@ -1200,6 +1223,7 @@ export type Database = {
           deleted_at?: string | null
           diagnosis?: Json
           email?: string | null
+          hashtags?: string[]
           id?: string
           instagram?: string | null
           logo?: string | null
