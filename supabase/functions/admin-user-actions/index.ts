@@ -263,7 +263,10 @@ serve(async (req) => {
           message_id: messageId, queued_at: new Date().toISOString(),
         },
       });
-      return json({ ok: true, email });
+      // Devolve o link pro admin colar no WhatsApp na hora, sem depender do e-mail
+      // chegar (o link vence em ~1h e so funciona uma vez, entao o caminho rapido
+      // importa).
+      return json({ ok: true, email, actionLink });
     }
 
     return json({ error: "unknown_action" }, 400);

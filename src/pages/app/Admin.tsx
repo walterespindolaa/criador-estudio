@@ -152,7 +152,7 @@ const AdminInner = () => {
   const [form, setForm] = useState({ name: "", email: "", phone: "", plan: "trial" });
   const [validity, setValidity] = useState("lifetime");
   const [creating, setCreating] = useState(false);
-  const [result, setResult] = useState<null | { email: string; inviteLink: string; creator?: { email: string; inviteLink: string } | null }>(null);
+  const [result, setResult] = useState<null | { email: string; inviteLink: string; creator?: { email: string; inviteLink: string } | null; resend?: boolean }>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
@@ -292,7 +292,14 @@ const AdminInner = () => {
     const labels: Record<string, string> = { delete: "excluído", suspend: "suspenso", reactivate: "reativado", resend_access: "email de acesso enviado" };
     if (action === "delete" && !(await confirmar({ titulo: "Excluir permanentemente este usuário?", descricao: "Tudo dele vai junto: posts, ideias, arquivos, histórico. Não dá pra desfazer." }))) return;
     try {
-      await runAction.mutateAsync({ user_id: userId, action });
+      const data = await runAction.mutateAsync({ user_id: userId, action });
+      // Reenvio de acesso: alem do e-mail, abre o modal com o link novo e a
+      // mensagem pronta pro WhatsApp. O link vence em ~1h e so funciona uma vez,
+      // entao o caminho rapido (colar no WhatsApp agora) importa mais que o e-mail.
+      const d = data as { email?: string; actionLink?: string };
+      if (action === "resend_access" && d?.actionLink && d?.email) {
+        setResult({ email: d.email, inviteLink: d.actionLink, resend: true });
+      }
       toast.success(`Usuário ${labels[action] ?? "atualizado"}.`);
     } catch (e) {
       toast.error((e as Error)?.message ?? "Erro na ação.");
@@ -756,7 +763,9 @@ const AdminInner = () => {
                 )}
 
                 {(() => {
-                  const msg = result.creator
+                  const msg = result.resend
+                    ? `Oi! Gerei um link novo de acesso ao CRIA pra você. 🎉\n\nE-mail: ${result.email}\nAcesso: ${result.inviteLink}\n\nImportante: o link vale por 1 hora e funciona uma vez só. Se abrir pelo WhatsApp, toque nos 3 pontinhos e escolha "Abrir no navegador". Qualquer dúvida, me chama!`
+                    : result.creator
                     ? `Oi! Criei seus acessos no CRIA. 🎉\n\n🔧 Painel de gestão (social mídia)\nE-mail: ${result.email}\n1º acesso: ${result.inviteLink}\n\n✨ Conta de criadora (${result.creator.email})\n1º acesso: ${result.creator.inviteLink}\n\nÉ só abrir cada link, criar sua senha e começar, cada um leva pra uma área. Qualquer dúvida, me chama!`
                     : `Oi! Criei seu acesso no CRIA. 🎉\n\nE-mail: ${result.email}\n1º acesso: ${result.inviteLink}\n\nÉ só abrir o link, criar sua senha e pronto. Qualquer dúvida, me chama!`;
                   return (
