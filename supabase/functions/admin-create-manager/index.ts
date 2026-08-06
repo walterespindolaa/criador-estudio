@@ -39,38 +39,59 @@ function emailHtml(opts: { title: string; paragraph: string; buttonLabel: string
 }
 
 async function inviteUser(svc: SupabaseClient, email: string, origin: string, redirectPath: string) {
-  const { data: list } = await svc.auth.admin.listUsers();
-  const existing = list?.users?.find((u) => u.email?.toLowerCase() === email);
-  const type: "magiclink" | "invite" = existing ? "magiclink" : "invite";
-  const { data: linkData, error } = await svc.auth.admin.generateLink({
-    type, email, options: { redirectTo: origin + redirectPath },
+  // Idempotente: tenta criar (invite) e, se o usuário JÁ existe (ex.: tentativa
+  // anterior que ficou pela metade, ou conta que a pessoa mesma abriu), cai pro
+  // magiclink e reaproveita a conta em vez de explodir.
+  // Antes a detecção usava listUsers(), que é PAGINADO (50 por página): conta
+  // existente fora da primeira página não era achada, o invite batia em
+  // "already been registered" e a criação inteira morria com erro genérico.
+  let existed = false;
+  let attempt = await svc.auth.admin.generateLink({
+    type: "invite", email, options: { redirectTo: origin + redirectPath },
   });
+  if (attempt.error && /already|exists|registered/i.test(attempt.error.message ?? "")) {
+    existed = true;
+    attempt = await svc.auth.admin.generateLink({
+      type: "magiclink", email, options: { redirectTo: origin + redirectPath },
+    });
+  }
+  const { data: linkData, error } = attempt;
   if (error || !linkData?.properties?.action_link || !linkData.user) {
     return { error: (error?.message ?? "link_failed") };
   }
   // Link branded do CRIA (não expõe supabase.co): /ativar autentica via token_hash e redireciona.
+  const type: "magiclink" | "invite" = existed ? "magiclink" : "invite";
   const hashed = linkData.properties.hashed_token;
   const branded = hashed
     ? `${origin}/ativar?th=${hashed}&type=${type}&to=${encodeURIComponent(redirectPath)}`
     : linkData.properties.action_link;
-  return { actionLink: branded, userId: linkData.user.id, existed: !!existing };
+  return { actionLink: branded, userId: linkData.user.id, existed };
 }
 
-async function sendInvite(svc: SupabaseClient, email: string, title: string, paragraph: string, actionLink: string) {
-  const html = emailHtml({ title, paragraph, buttonLabel: "Acessar minha conta", actionLink,
-    secondary: `Se o botão não funcionar, copie e cole este link no navegador:<br/><span style="word-break:break-all;color:#6b7280">${actionLink}</span>` });
-  const messageId = crypto.randomUUID();
-  const unsubscribeToken = await ensureUnsubscribeToken(svc, email);
-  await svc.rpc("enqueue_email", {
-    queue_name: "transactional_emails",
-    payload: {
-      to: email, subject: "Seu acesso ao cria", from: "cria <noreply@criasocialclub.com.br>",
-      sender_domain: "notify.criasocialclub.com.br", purpose: "transactional",
-      html, text: `Sua conta no cria está pronta. Acesse: ${actionLink}`,
-      label: "admin_create_manager", idempotency_key: messageId, unsubscribe_token: unsubscribeToken,
-      message_id: messageId, queued_at: new Date().toISOString(),
-    },
-  });
+// E-mail de boas-vindas NUNCA pode derrubar a criação da conta: se falhar,
+// devolve false e o chamador avisa o admin pra reenviar por "Ações".
+async function sendInvite(svc: SupabaseClient, email: string, title: string, paragraph: string, actionLink: string): Promise<boolean> {
+  try {
+    const html = emailHtml({ title, paragraph, buttonLabel: "Acessar minha conta", actionLink,
+      secondary: `Se o botão não funcionar, copie e cole este link no navegador:<br/><span style="word-break:break-all;color:#6b7280">${actionLink}</span>` });
+    const messageId = crypto.randomUUID();
+    const unsubscribeToken = await ensureUnsubscribeToken(svc, email);
+    const { error } = await svc.rpc("enqueue_email", {
+      queue_name: "transactional_emails",
+      payload: {
+        to: email, subject: "Seu acesso ao cria", from: "cria <noreply@criasocialclub.com.br>",
+        sender_domain: "notify.criasocialclub.com.br", purpose: "transactional",
+        html, text: `Sua conta no cria está pronta. Acesse: ${actionLink}`,
+        label: "admin_create_manager", idempotency_key: messageId, unsubscribe_token: unsubscribeToken,
+        message_id: messageId, queued_at: new Date().toISOString(),
+      },
+    });
+    if (error) { console.error("[admin-create-manager] enqueue_email falhou:", error); return false; }
+    return true;
+  } catch (e) {
+    console.error("[admin-create-manager] envio do convite falhou:", e);
+    return false;
+  }
 }
 
 serve(async (req) => {
@@ -94,60 +115,97 @@ serve(async (req) => {
       name?: string; email?: string; phone?: string; modules?: string[];
       creator?: { email?: string; plan?: string } | null;
     };
-    if (!email || !name) return json({ error: "missing_fields" }, 400);
+    if (!email || !name) {
+      return json({ error: "missing_fields", message: "Nome e e-mail são obrigatórios." }, 400);
+    }
 
     const origin = req.headers.get("origin") ?? "https://app.criasocialclub.com.br";
+    // Normaliza ANTES de qualquer uso: o auth do Supabase guarda minúsculo, e
+    // e-mail digitado com maiúscula ("Beatriz...") não pode divergir em nada.
     const managerEmail = String(email).trim().toLowerCase();
+    const creatorEmail = creator?.email?.trim().toLowerCase() || null;
+    if (creatorEmail && creatorEmail === managerEmail) {
+      // Validado antes de criar qualquer coisa (antes rodava depois da conta
+      // de gestão já criada, deixando meio-criação pra trás).
+      return json({ error: "use_different_email", message: "O e-mail de criadora precisa ser diferente do e-mail de gestão." }, 400);
+    }
+
+    // Avisos não-fatais: a conta foi criada, mas algo acessório falhou.
+    const warnings: string[] = [];
 
     // 1) Cria a social media (manager)
     const mgr = await inviteUser(svc, managerEmail, origin, "/socialmidia/dashboard");
     if ("error" in mgr) {
-      if (/already|exists/i.test(mgr.error)) return json({ error: "user_exists" }, 409);
-      return json({ error: "link_failed" }, 400);
+      console.error("[admin-create-manager] inviteUser (gestão) falhou:", mgr.error);
+      return json({ error: "link_failed", message: `Não consegui gerar o acesso de ${managerEmail}: ${mgr.error.slice(0, 200)}` }, 400);
     }
-    await svc.from("profiles").update({
-      name, phone: phone ?? null, account_type: "manager", must_change_password: true,
-    }).eq("id", mgr.userId);
+    // Upsert (não update): se a tentativa anterior criou o auth user mas o
+    // perfil ficou pra trás, o update em cima de 0 linhas "passava" sem criar
+    // nada e a conta nascia quebrada. O upsert cura a meia-criação.
+    const { error: profErr } = await svc.from("profiles").upsert({
+      id: mgr.userId, name, phone: phone ?? null, account_type: "manager", must_change_password: true,
+    }, { onConflict: "id" });
+    if (profErr) {
+      console.error("[admin-create-manager] perfil (gestão) falhou:", profErr);
+      return json({ error: "profile_failed", message: `O acesso foi criado, mas o perfil de gestão falhou: ${profErr.message.slice(0, 200)}. Tente de novo (a segunda tentativa reaproveita a conta).` }, 400);
+    }
 
     // 2) Pacotes (module_entitlements)
     const codes = Array.isArray(modules) ? modules.filter((c) => typeof c === "string" && c.trim()) : [];
     if (codes.length > 0) {
-      await svc.from("module_entitlements").upsert(
+      const { error: entErr } = await svc.from("module_entitlements").upsert(
         codes.map((code) => ({ manager_id: mgr.userId, module_code: code, status: "active" })),
         { onConflict: "manager_id,module_code" },
       );
+      if (entErr) {
+        console.error("[admin-create-manager] entitlements falharam:", entErr);
+        warnings.push(`Conta criada, mas os pacotes não foram liberados (${entErr.message.slice(0, 120)}). Libere manualmente.`);
+      }
     }
-    await sendInvite(svc, managerEmail, "Sua conta de social media está pronta",
+    const mailOk = await sendInvite(svc, managerEmail, "Sua conta de social media está pronta",
       "Criamos sua conta de gestão no cria. Clique no botão para acessar e definir sua senha.", mgr.actionLink);
+    if (!mailOk) warnings.push("Conta criada, mas o e-mail de boas-vindas falhou: reenvie por Ações.");
 
     // 3) Conta de criadora (Cria normal) com outro e-mail (opcional)
     let creatorOut: { email: string; inviteLink: string } | null = null;
-    if (creator?.email && creator.email.trim()) {
-      const creatorEmail = creator.email.trim().toLowerCase();
-      if (creatorEmail === managerEmail) return json({ error: "use_different_email" }, 400);
+    if (creatorEmail) {
       const validPlans = ["free", "pro", "studio", "trial"];
-      const plan = validPlans.includes(creator.plan ?? "") ? creator.plan! : "studio";
+      const plan = validPlans.includes(creator?.plan ?? "") ? creator!.plan! : "studio";
 
       const cr = await inviteUser(svc, creatorEmail, origin, "/app");
-      if (!("error" in cr)) {
-        await svc.from("profiles").update({
-          name, plan, must_change_password: true,
+      if ("error" in cr) {
+        // Falha na criadora não desfaz a gestão já criada: vira aviso.
+        console.error("[admin-create-manager] inviteUser (criadora) falhou:", cr.error);
+        warnings.push(`Conta de gestão criada, mas a conta de criadora falhou: ${cr.error.slice(0, 120)}`);
+      } else {
+        const { error: crProfErr } = await svc.from("profiles").upsert({
+          id: cr.userId, name, plan, must_change_password: true,
           subscription_status: ["pro", "studio"].includes(plan) ? "active" : null,
-        }).eq("id", cr.userId);
+        }, { onConflict: "id" });
+        if (crProfErr) {
+          console.error("[admin-create-manager] perfil (criadora) falhou:", crProfErr);
+          warnings.push(`Conta de criadora criada, mas o perfil dela falhou: ${crProfErr.message.slice(0, 120)}`);
+        }
         // vincula a social media como gestora da conta de criadora
-        await svc.from("account_members").upsert({
+        const { error: linkErr } = await svc.from("account_members").upsert({
           owner_id: cr.userId, member_email: managerEmail, member_id: mgr.userId,
           role: "manager", status: "active",
         }, { onConflict: "owner_id,member_email" });
-        await sendInvite(svc, creatorEmail, "Seu acesso de criadora no cria",
+        if (linkErr) {
+          console.error("[admin-create-manager] vínculo gestora-criadora falhou:", linkErr);
+          warnings.push(`Contas criadas, mas o vínculo gestora-criadora falhou: ${linkErr.message.slice(0, 120)}`);
+        }
+        const crMailOk = await sendInvite(svc, creatorEmail, "Seu acesso de criadora no cria",
           "Criamos sua conta de criadora no cria. Clique no botão para acessar e definir sua senha.", cr.actionLink);
+        if (!crMailOk) warnings.push("Conta de criadora criada, mas o e-mail dela falhou: reenvie por Ações.");
         creatorOut = { email: creatorEmail, inviteLink: cr.actionLink };
       }
     }
 
-    return json({ ok: true, email: managerEmail, inviteLink: mgr.actionLink, creator: creatorOut });
+    return json({ ok: true, email: managerEmail, inviteLink: mgr.actionLink, existed: mgr.existed, warnings, creator: creatorOut });
   } catch (e) {
     console.error("[admin-create-manager] unhandled error:", e);
-    return json({ error: "internal_error" }, 500);
+    const msg = e instanceof Error ? e.message : String(e);
+    return json({ error: "internal_error", message: `Erro inesperado no servidor: ${msg.slice(0, 200)}` }, 500);
   }
 });

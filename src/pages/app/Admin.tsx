@@ -98,6 +98,39 @@ const PLAN_OPTIONS = [
   { value: "studio", label: "Studio" },
 ];
 
+// Códigos de erro das edges de criação traduzidos pro admin. Qualquer outro
+// motivo vem cru (encurtado) pra ninguém ficar cego com toast genérico.
+const CREATE_ERR_PT: Record<string, string> = {
+  unauthorized: "Sessão expirada. Entre de novo.",
+  forbidden: "Só admin pode fazer isso.",
+  missing_fields: "Nome e e-mail são obrigatórios.",
+  user_exists: "Já existe uma conta com esse e-mail.",
+  use_different_email: "O e-mail de criadora precisa ser diferente do de gestão.",
+  link_failed: "Não consegui gerar o link de acesso.",
+  internal_error: "Erro inesperado no servidor.",
+};
+
+// O invoke devolve só "Edge Function returned a non-2xx status code" e esconde
+// a causa. Lemos o corpo da resposta (error.context) pra mostrar o motivo real,
+// mesmo padrão do instagram-oauth / useCriaPostMedia.
+async function motivoEdge(error: unknown, data: unknown, fallback: string): Promise<string> {
+  const parse = (b: { message?: string; error?: string } | null | undefined) => {
+    if (b?.message) return String(b.message);
+    if (b?.error) return CREATE_ERR_PT[String(b.error)] ?? String(b.error).slice(0, 200);
+    return null;
+  };
+  const fromData = parse(data as { message?: string; error?: string } | null);
+  if (fromData) return fromData;
+  const ctx = (error as { context?: Response })?.context;
+  try {
+    const body = await ctx?.clone().json();
+    const fromBody = parse(body);
+    if (fromBody) return fromBody;
+  } catch { /* corpo não era JSON */ }
+  const msg = (error as { message?: string })?.message;
+  return msg ? `${fallback} (${msg.slice(0, 200)})` : fallback;
+}
+
 function initials(name: string | null | undefined) {
   if (!name) return "?";
   return name
@@ -137,7 +170,13 @@ const AdminInner = () => {
     queryFn: async () => {
       const { data, error } = await supabase.from("modules").select("code, name").eq("active", true).eq("coming_soon", false).order("sort_order");
       if (error) throw error;
-      return (data ?? []) as { code: string; name: string }[];
+      // Add-ons (ex.: "Cria Radar · Pacote Extra", code hub_extra) não são
+      // módulo próprio, são compra de crédito a mais: aqui eles apareciam como
+      // um SEGUNDO "Cria Radar" na lista de pacotes. Mesmo filtro da home do
+      // gestor (ManagerHome.isAddon).
+      const isAddon = (m: { code: string; name: string }) =>
+        m.code === "hub_extra" || m.code.endsWith("_extra") || /pacote\s+extra/i.test(m.name);
+      return ((data ?? []) as { code: string; name: string }[]).filter((m) => !isAddon(m));
     },
   });
 
@@ -145,28 +184,39 @@ const AdminInner = () => {
     setMgrModules((prev) => prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]);
 
   const handleCreateManager = async () => {
-    if (!mgrForm.name.trim() || !mgrForm.email.trim()) { toast.error("Nome e e-mail são obrigatórios"); return; }
-    if (giveCreator && !creatorEmail.trim()) { toast.error("Informe o e-mail da conta de criadora"); return; }
-    if (giveCreator && creatorEmail.trim().toLowerCase() === mgrForm.email.trim().toLowerCase()) {
+    // Normaliza já aqui: o auth guarda o e-mail em minúsculo, então maiúscula
+    // digitada ("Beatriz...") não pode chegar crua em lugar nenhum.
+    const emailNorm = mgrForm.email.trim().toLowerCase();
+    const creatorNorm = creatorEmail.trim().toLowerCase();
+    if (!mgrForm.name.trim() || !emailNorm) { toast.error("Nome e e-mail são obrigatórios"); return; }
+    if (giveCreator && !creatorNorm) { toast.error("Informe o e-mail da conta de criadora"); return; }
+    if (giveCreator && creatorNorm === emailNorm) {
       toast.error("O e-mail de criadora precisa ser diferente do de gestão"); return;
     }
     setCreatingMgr(true);
     try {
       const { data, error } = await supabase.functions.invoke("admin-create-manager", {
         body: {
-          name: mgrForm.name, email: mgrForm.email, phone: mgrForm.phone, modules: mgrModules,
-          creator: giveCreator ? { email: creatorEmail, plan: creatorPlan } : null,
+          name: mgrForm.name.trim(), email: emailNorm, phone: mgrForm.phone.trim() || null, modules: mgrModules,
+          creator: giveCreator ? { email: creatorNorm, plan: creatorPlan } : null,
         },
       });
-      if (error || (data as { error?: string })?.error) throw new Error((data as { error?: string })?.error ?? "create_failed");
+      if (error || (data as { error?: string })?.error) {
+        // Motivo REAL no toast, não "Erro ao criar social mídia." seco.
+        toast.error(await motivoEdge(error, data, "Erro ao criar social mídia."));
+        return;
+      }
       setResult({ email: data.email, inviteLink: data.inviteLink, creator: data.creator ?? null });
       setOpenCreateMgr(false);
       setMgrForm({ name: "", email: "", phone: "" }); setMgrModules([]); setGiveCreator(false); setCreatorEmail(""); setCreatorPlan("studio");
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
-      toast.success("Social mídia criada!");
-    } catch {
-      toast.error("Erro ao criar social mídia.");
+      // Conta criada mesmo com aviso (ex.: e-mail de boas-vindas falhou):
+      // sucesso primeiro, avisos em seguida, sem desfazer nada.
+      toast.success(data.existed ? "Social mídia criada (a conta já existia e foi reaproveitada)." : "Social mídia criada!");
+      for (const w of (data.warnings as string[] | undefined) ?? []) toast.warning(w, { duration: 9000 });
+    } catch (e) {
+      toast.error(await motivoEdge(e, null, "Erro ao criar social mídia."));
     } finally {
       setCreatingMgr(false);
     }
@@ -179,9 +229,13 @@ const AdminInner = () => {
     }
     setCreating(true);
     try {
-      const { data, error } = await supabase.functions.invoke("admin-create-user", { body: { ...form, validity } });
+      // Mesma normalização de e-mail do fluxo de social mídia.
+      const { data, error } = await supabase.functions.invoke("admin-create-user", {
+        body: { ...form, name: form.name.trim(), email: form.email.trim().toLowerCase(), validity },
+      });
       if (error || (data as { error?: string })?.error) {
-        throw new Error((data as { error?: string })?.error ?? "create_failed");
+        toast.error(await motivoEdge(error, data, "Erro ao criar usuário."));
+        return;
       }
       setResult({ email: data.email, inviteLink: data.inviteLink });
       setOpenCreate(false);
@@ -190,8 +244,8 @@ const AdminInner = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
       toast.success("Usuário criado e e-mail enviado!");
-    } catch {
-      toast.error("Erro ao criar usuário.");
+    } catch (e) {
+      toast.error(await motivoEdge(e, null, "Erro ao criar usuário."));
     } finally {
       setCreating(false);
     }
