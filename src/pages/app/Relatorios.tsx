@@ -40,6 +40,7 @@ import { useIdeas } from "@/hooks/useIdeas";
 import {
   useSocialConnection,
   useMediaInsights,
+  useSocialAccountOwner,
   connectInstagram,
   type MediaInsight,
 } from "@/hooks/useSocialInsights";
@@ -164,6 +165,8 @@ const Relatorios = () => {
   const { ideas } = useIdeas();
   const { data: conn, isLoading: connLoading } = useSocialConnection();
   const { data: media = [] } = useMediaInsights();
+  // Conectar o Instagram é ação do DONO da conta ativa (gestora conectaria o dela).
+  const { isOwnAccount } = useSocialAccountOwner();
   const navigate = useNavigate();
 
   const [period, setPeriod] = useState<PeriodKey>("30");
@@ -791,19 +794,22 @@ const Relatorios = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="text-base font-display font-semibold text-foreground">
-                    Conecte seu Instagram pra ver seu desempenho real
+                    {isOwnAccount ? "Conecte seu Instagram pra ver seu desempenho real" : "Instagram ainda não conectado"}
                   </h3>
                   <p className="text-sm font-body text-muted-foreground leading-relaxed mt-0.5">
-                    Alcance, engajamento, melhores posts e o que dá pra melhorar, direto da sua conta,
-                    sem precisar preencher nada à mão.
+                    {isOwnAccount
+                      ? "Alcance, engajamento, melhores posts e o que dá pra melhorar, direto da sua conta, sem precisar preencher nada à mão."
+                      : "Peça pro dono da conta conectar o Instagram dele em Insights. Assim que ele conectar, o desempenho real aparece aqui."}
                   </p>
                 </div>
-                <Button
-                  onClick={() => connectInstagram()}
-                  className="gap-2 shrink-0 bg-gradient-to-r from-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90 w-full sm:w-auto"
-                >
-                  <Instagram className="h-4 w-4" /> Conectar Instagram
-                </Button>
+                {isOwnAccount && (
+                  <Button
+                    onClick={() => connectInstagram()}
+                    className="gap-2 shrink-0 bg-gradient-to-r from-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90 w-full sm:w-auto"
+                  >
+                    <Instagram className="h-4 w-4" /> Conectar Instagram
+                  </Button>
+                )}
               </div>
               <div className="mt-4 pt-4 border-t border-border">
                 <button

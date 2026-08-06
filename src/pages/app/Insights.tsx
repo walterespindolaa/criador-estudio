@@ -15,8 +15,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   useSocialConnection, useDailyMetrics, useMediaInsights, useSyncInstagram, useDisconnectInstagram, useLinkMediaToPost,
-  useAudienceDemographics, useStories, connectInstagram, type MediaInsight,
+  useAudienceDemographics, useStories, useSocialAccountOwner, connectInstagram, type MediaInsight,
 } from "@/hooks/useSocialInsights";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { usePillars } from "@/hooks/usePillars";
 import { AudienceBreakdown } from "@/components/insights/AudienceBreakdown";
 import { StoriesSummary } from "@/components/insights/StoriesSummary";
@@ -52,6 +53,10 @@ export default function Insights() {
   const disconnect = useDisconnectInstagram();
   const link = useLinkMediaToPost();
   const { user } = useAuth();
+  // Conectar/atualizar/desconectar são ações do DONO da conta ativa. Uma gestora
+  // dentro da conta de um criador só visualiza (e vincula posts): se ela clicasse
+  // em "Conectar", o OAuth gravaria o Instagram DELA nesta tela.
+  const { isOwnAccount } = useSocialAccountOwner();
   const [linkFor, setLinkFor] = useState<MediaInsight | null>(null);
   const [aiRead, setAiRead] = useState<InsightsReading | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -189,12 +194,16 @@ export default function Insights() {
           <div className="flex-1">
             <h3 className="font-display font-bold text-foreground">{t("insights.connectTitle")}</h3>
             <p className="text-sm text-muted-foreground font-body mt-1">
-              {t("insights.connectDesc", { business: t("insights.business"), creator: t("insights.creator") })}
+              {isOwnAccount
+                ? t("insights.connectDesc", { business: t("insights.business"), creator: t("insights.creator") })
+                : "Esta conta ainda não tem Instagram conectado. Por segurança, a conexão só pode ser feita pelo dono da conta: peça pra ele conectar o Instagram em Insights. Assim que ele conectar, os números aparecem aqui pra você."}
             </p>
           </div>
-          <Button onClick={() => connectInstagram()} className="gap-2 shrink-0 bg-gradient-to-r from-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90">
-            <Instagram className="h-4 w-4" /> {t("insights.connectCta")}
-          </Button>
+          {isOwnAccount && (
+            <Button onClick={() => connectInstagram()} className="gap-2 shrink-0 bg-gradient-to-r from-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90">
+              <Instagram className="h-4 w-4" /> {t("insights.connectCta")}
+            </Button>
+          )}
         </div>
       </div>
     );
@@ -241,12 +250,20 @@ export default function Insights() {
         </div>
         <div className="ml-auto flex items-center gap-2">
           <span className="text-xs text-muted-foreground hidden sm:inline">{t("insights.lastUpdate", { when: lastSync })}</span>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => sync.mutate()} disabled={sync.isPending}>
-            <RefreshCw className={`h-3.5 w-3.5 ${sync.isPending ? "animate-spin" : ""}`} /> {t("insights.refresh")}
-          </Button>
-          <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={() => disconnect.mutate()}>
-            <Unplug className="h-3.5 w-3.5" /> {t("insights.disconnect")}
-          </Button>
+          {/* Atualizar/Desconectar mexem na conexão: só o dono. A edge de sync roda
+              com o JWT de quem clica (sincronizaria a conta da gestora, não a do
+              dono) e desconectar apagaria a conexão errada. A gestora vê os dados
+              coletados; quem atualiza a coleta é o dono. */}
+          {isOwnAccount && (
+            <>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => sync.mutate()} disabled={sync.isPending}>
+                <RefreshCw className={`h-3.5 w-3.5 ${sync.isPending ? "animate-spin" : ""}`} /> {t("insights.refresh")}
+              </Button>
+              <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={() => disconnect.mutate()}>
+                <Unplug className="h-3.5 w-3.5" /> {t("insights.disconnect")}
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -510,16 +527,18 @@ const GROUP_LIMIT = 8;
 // Dialog de vínculo manual: lista posts do CRIA pra ligar à mídia, agrupados por
 // status (tipo kanban empilhado), com busca por título e limite por grupo.
 function LinkDialog({ insight, onClose, onPick }: { insight: MediaInsight | null; onClose: () => void; onPick: (postId: string | null) => void }) {
-  const { user } = useAuth();
+  // Posts da CONTA ATIVA: a mídia do IG é do dono da conta, então o vínculo é com
+  // os posts DELE. Antes filtrava pelo user logado e a gestora via os posts dela.
+  const { activeAccountId } = useActiveAccount();
   const [q, setQ] = useState("");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const { data: posts = [] } = useQuery<LinkPost[]>({
-    queryKey: ["link-posts", user?.id],
-    enabled: !!user?.id && !!insight,
+    queryKey: ["link-posts", activeAccountId],
+    enabled: !!activeAccountId && !!insight,
     queryFn: async () => {
       const { data, error } = await sbFrom("posts")
         .select("id,title,format,status,published_at")
-        .eq("user_id", user!.id)
+        .eq("user_id", activeAccountId!)
         .order("published_at", { ascending: false })
         .limit(200);
       if (error) throw error;

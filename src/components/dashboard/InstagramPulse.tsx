@@ -7,6 +7,7 @@ import {
   useSocialConnection,
   useDailyMetrics,
   useMediaInsights,
+  useSocialAccountOwner,
   connectInstagram,
   type MediaInsight,
 } from "@/hooks/useSocialInsights";
@@ -85,6 +86,9 @@ function StatBox({
 export function InstagramPulse() {
   const navigate = useNavigate();
   const { data: conn, isLoading } = useSocialConnection();
+  // Conectar é ação do DONO da conta ativa: gestora clicando aqui gravaria o
+  // Instagram DELA na tela do criador. Pra ela, mostramos um aviso no lugar.
+  const { isOwnAccount } = useSocialAccountOwner();
   const { data: daily = [] } = useDailyMetrics(30);
   const { data: media = [] } = useMediaInsights();
 
@@ -136,15 +140,19 @@ export function InstagramPulse() {
         <div className="flex-1 min-w-0">
           <h3 className="font-display font-bold text-foreground">Seu conteúdo no Instagram</h3>
           <p className="text-sm text-muted-foreground font-body mt-0.5">
-            Conecte seu Instagram pra ver seus números aqui.
+            {isOwnAccount
+              ? "Conecte seu Instagram pra ver seus números aqui."
+              : "Instagram ainda não conectado. Peça pro dono da conta conectar o Instagram dele em Insights."}
           </p>
         </div>
-        <Button
-          onClick={() => connectInstagram()}
-          className="gap-2 shrink-0 bg-gradient-to-r from-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90 w-full sm:w-auto"
-        >
-          <Instagram className="h-4 w-4" /> Conectar Instagram
-        </Button>
+        {isOwnAccount && (
+          <Button
+            onClick={() => connectInstagram()}
+            className="gap-2 shrink-0 bg-gradient-to-r from-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90 w-full sm:w-auto"
+          >
+            <Instagram className="h-4 w-4" /> Conectar Instagram
+          </Button>
+        )}
       </PulseCard>
     );
   }

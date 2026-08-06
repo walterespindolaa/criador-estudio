@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { toast } from "sonner";
 
 // types.ts é travado, essas tabelas ainda não estão tipadas. Padrão de cast (igual useModules/useFinance).
@@ -77,12 +78,27 @@ export type StoryInsight = {
   metrics: Record<string, number> | null;
 };
 
-// Conexão Instagram do usuário (uma por provider). Não selecionamos access_token no client.
-export function useSocialConnection() {
+// Dono da conta ATIVA (quem manda nos dados de Instagram exibidos). Quando uma
+// gestora/colaboradora abre a conta de um criador (account switcher / cockpit),
+// os insights e a conexão são os do DONO, não os de quem está logado. Antes os
+// hooks consultavam por auth.uid(): pra gestora a query voltava vazia e a tela
+// pedia pra "conectar" um Instagram que o dono já tinha conectado.
+// isOwnAccount gateia as ações que só o dono pode fazer (conectar, desconectar,
+// atualizar via edge function, que roda com o JWT de quem clica).
+export function useSocialAccountOwner() {
   const { user } = useAuth();
+  const { activeAccountId } = useActiveAccount();
+  const ownerId = activeAccountId ?? user?.id ?? null;
+  return { ownerId, isOwnAccount: !!ownerId && ownerId === user?.id };
+}
+
+// Conexão Instagram da conta ativa (uma por provider). Não selecionamos access_token
+// no client (e o banco nem deixa: grant de coluna sem access_token).
+export function useSocialConnection() {
+  const { ownerId } = useSocialAccountOwner();
   return useQuery<SocialConnection | null>({
-    queryKey: ["social-connection", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["social-connection", ownerId],
+    enabled: !!ownerId,
     // A conexao vive no banco (por user_id), entao vale pra qualquer aparelho. Se a
     // pessoa conecta o Instagram no celular, o PC precisa buscar de novo: por isso
     // refazemos ao montar e ao focar a janela (o padrao global nao refaz no foco),
@@ -93,7 +109,7 @@ export function useSocialConnection() {
     queryFn: async () => {
       const { data, error } = await sbFrom("social_connections")
         .select("id,user_id,provider,external_account_id,username,account_type,profile_picture_url,token_expires_at,connected_at,updated_at")
-        .eq("user_id", user!.id)
+        .eq("user_id", ownerId!)
         .eq("provider", "instagram")
         .is("crm_client_id", null)
         .maybeSingle();
@@ -103,17 +119,17 @@ export function useSocialConnection() {
   });
 }
 
-// Série diária da conta (para gráficos de evolução).
+// Série diária da conta ativa (para gráficos de evolução).
 export function useDailyMetrics(days = 30) {
-  const { user } = useAuth();
+  const { ownerId } = useSocialAccountOwner();
   return useQuery<DailyMetric[]>({
-    queryKey: ["social-daily", user?.id, days],
-    enabled: !!user?.id,
+    queryKey: ["social-daily", ownerId, days],
+    enabled: !!ownerId,
     queryFn: async () => {
       const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
       const { data, error } = await sbFrom("social_metrics_daily")
         .select("date,followers,reach,impressions,profile_views,website_clicks,accounts_engaged,total_interactions")
-        .eq("user_id", user!.id)
+        .eq("user_id", ownerId!)
         .eq("provider", "instagram")
         .is("crm_client_id", null) // conta própria (contas por-cliente ficam separadas)
         .gte("date", since)
@@ -126,14 +142,14 @@ export function useDailyMetrics(days = 30) {
 
 // Insights por mídia, já com o post do CRIA vinculado (quando houver).
 export function useMediaInsights() {
-  const { user } = useAuth();
+  const { ownerId } = useSocialAccountOwner();
   return useQuery<MediaInsight[]>({
-    queryKey: ["social-media-insights", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["social-media-insights", ownerId],
+    enabled: !!ownerId,
     queryFn: async () => {
       const { data, error } = await sbFrom("social_insights")
         .select("id,object_id,media_type,caption,permalink,thumbnail_url,posted_at,metrics,post_id,posts(title,format,hook,pillar_id)")
-        .eq("user_id", user!.id)
+        .eq("user_id", ownerId!)
         .eq("provider", "instagram")
         .eq("object_type", "media")
         .is("crm_client_id", null) // conta própria
@@ -147,16 +163,16 @@ export function useMediaInsights() {
   });
 }
 
-// Demografia de audiência da conta própria (age/gender/city/country x followers/engaged).
+// Demografia de audiência da conta ativa (age/gender/city/country x followers/engaged).
 export function useAudienceDemographics() {
-  const { user } = useAuth();
+  const { ownerId } = useSocialAccountOwner();
   return useQuery<AudienceRow[]>({
-    queryKey: ["social-audience", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["social-audience", ownerId],
+    enabled: !!ownerId,
     queryFn: async () => {
       const { data, error } = await sbFrom("social_audience")
         .select("metric,dimension,breakdown_value,value")
-        .eq("user_id", user!.id)
+        .eq("user_id", ownerId!)
         .eq("provider", "instagram")
         .is("crm_client_id", null)
         .order("value", { ascending: false })
@@ -169,16 +185,16 @@ export function useAudienceDemographics() {
   });
 }
 
-// Stories capturados da conta própria (mais recentes primeiro).
+// Stories capturados da conta ativa (mais recentes primeiro).
 export function useStories() {
-  const { user } = useAuth();
+  const { ownerId } = useSocialAccountOwner();
   return useQuery<StoryInsight[]>({
-    queryKey: ["social-stories", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["social-stories", ownerId],
+    enabled: !!ownerId,
     queryFn: async () => {
       const { data, error } = await sbFrom("social_stories")
         .select("id,external_story_id,media_type,permalink,thumbnail_url,media_url,posted_at,metrics")
-        .eq("user_id", user!.id)
+        .eq("user_id", ownerId!)
         .eq("provider", "instagram")
         .is("crm_client_id", null)
         .order("posted_at", { ascending: false })
@@ -210,10 +226,15 @@ export function useLinkMediaToPost() {
 
 export function useDisconnectInstagram() {
   const { user } = useAuth();
+  const { isOwnAccount } = useSocialAccountOwner();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
       if (!user?.id) throw new Error("Sem sessão");
+      // Só o DONO desconecta. Gerenciando a conta de outra pessoa, o delete abaixo
+      // (por user_id do logado) apagaria a conexão da conta ERRADA (a da gestora).
+      // A UI esconde o botão; isto é o cinto de segurança.
+      if (!isOwnAccount) throw new Error("Só o dono da conta pode desconectar o Instagram.");
       const { error } = await sbFrom("social_connections")
         .delete()
         .eq("user_id", user.id)
@@ -231,9 +252,14 @@ export function useDisconnectInstagram() {
 
 // Dispara o refresh server-side (edge function) e recarrega os dados locais.
 export function useSyncInstagram() {
+  const { isOwnAccount } = useSocialAccountOwner();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
+      // A edge roda com o JWT de quem clica e sincroniza as conexões DELE. Uma
+      // gestora na conta de um criador sincronizaria a conta errada (ou daria
+      // not_connected). A UI esconde o botão; isto é o cinto de segurança.
+      if (!isOwnAccount) throw new Error("Só o dono da conta pode atualizar os insights.");
       const { data, error } = await supabase.functions.invoke("instagram-sync");
       if (error) throw error;
       return data as { demographics_rows?: number; demographics_error?: string | null; reconnect?: boolean } | null;
