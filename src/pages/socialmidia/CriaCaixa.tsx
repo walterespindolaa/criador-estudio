@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Plus, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, Pencil, Building2, User, Check, Repeat, ArrowLeftRight, RotateCcw, SkipForward, ExternalLink, Receipt, AlertTriangle } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownRight, Trash2, Pencil, Building2, User, Check, Repeat, ArrowLeftRight, RotateCcw, SkipForward, ExternalLink, Receipt, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import {
   useFinRecords, useCreateFinRecord, useUpdateFinRecord, useDeleteFinRecord, useFinRecurring, useCreateFinRecurring, useGenerateRecurring, useDeleteFinByGroup,
@@ -25,11 +25,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 
 const pad0 = (n: number) => String(n).padStart(2, "0");
 import { cn } from "@/lib/utils";
+import { mascarar, useValoresOcultos } from "@/hooks/useValoresOcultos";
 import { hojeBR, toISODateBR, parseDateOnly } from "@/lib/date-br";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { confirmar } from "@/components/shared/Confirm";
 
-const brl = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+// FONTE ÚNICA de exibição de dinheiro no Caixa. Passa pelo olhinho (mascarar):
+// com valores ocultos TUDO que renderiza por aqui vira "••••". Não usar
+// toLocaleString direto pra dinheiro nesta página, senão o valor novo vaza.
+const brl = (v: number) => mascarar(`R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const STATUS_STYLE: Record<FinStatus, string> = {
   pago: "bg-green-100 text-green-700", pendente: "bg-amber-100 text-amber-700", atrasado: "bg-destructive/10 text-destructive",
@@ -119,6 +123,11 @@ function CaixaInner() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, actingAsTeam]);
+
+  // Olhinho: oculta todos os valores da página (todas as abas, Empresa e Pessoal).
+  // O hook assina o store, então o toggle re-renderiza a página inteira e cada
+  // brl() re-avalia a máscara. sessionStorage: fechar e reabrir volta mostrando.
+  const [valoresEscondidos, setValoresEscondidos] = useValoresOcultos();
 
   const [ym, setYm] = useState({ y: now.getFullYear(), m: now.getMonth() });
   const [typeF, setTypeF] = useState<FinType | "todos">("todos");
@@ -408,6 +417,18 @@ function CaixaInner() {
         subtitle="O financeiro da sua operação, empresa e pessoal, separados."
         color="azul"
         tabs={tabs}
+        titleExtra={
+          <button
+            type="button"
+            onClick={() => setValoresEscondidos(!valoresEscondidos)}
+            aria-label={valoresEscondidos ? "Mostrar valores" : "Ocultar valores"}
+            title={valoresEscondidos ? "Mostrar valores" : "Ocultar valores"}
+            aria-pressed={valoresEscondidos}
+            className="shrink-0 p-2.5 -my-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-background/60 transition-colors"
+          >
+            {valoresEscondidos ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+          </button>
+        }
         actions={
           <>
             <Button size="sm" onClick={() => { setEditing(null); setDialog(true); }}>
@@ -1022,6 +1043,9 @@ function Alloc({ label, value }: { label: string; value: string }) {
 }
 
 function CashflowChart({ records, ctx, ym }: { records: FinRecord[]; ctx: FinContext; ym: { y: number; m: number } }) {
+  // Olhinho: com valores ocultos o eixo Y não pode entregar a escala em R$.
+  // (As barras continuam mostrando a PROPORÇÃO entre meses, sem número.)
+  const [valoresEscondidos] = useValoresOcultos();
   const data = useMemo(() => {
     const arr: { label: string; receitas: number; despesas: number }[] = [];
     for (let i = 5; i >= 0; i--) {
@@ -1050,7 +1074,7 @@ function CashflowChart({ records, ctx, ym }: { records: FinRecord[]; ctx: FinCon
           <BarChart data={data} margin={{ top: 4, right: 8, left: -10, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
             <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="#9ca3af" />
-            <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" tickFormatter={(v: number) => (v >= 1000 ? `${Math.round(v / 1000)}k` : `${v}`)} />
+            <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" tickFormatter={(v: number) => (valoresEscondidos ? "•" : v >= 1000 ? `${Math.round(v / 1000)}k` : `${v}`)} />
             <Tooltip formatter={(v: number) => brl(Number(v))} contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 12 }} />
             <Legend wrapperStyle={{ fontSize: 12 }} />
             <Bar dataKey="receitas" name="Receitas" fill="#16a34a" radius={[6, 6, 0, 0]} />

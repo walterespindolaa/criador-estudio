@@ -7,6 +7,7 @@ import { Plus, Trash2, Pencil, Repeat, ArrowUpRight, ArrowDownRight, Pause, Play
 import { cn } from "@/lib/utils";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 import { PAYMENT_METHODS } from "@/lib/finance";
+import { mascarar } from "@/hooks/useValoresOcultos";
 import { useCrmClients } from "@/hooks/useCrm";
 import { confirmar } from "@/components/shared/Confirm";
 import {
@@ -14,7 +15,9 @@ import {
   type FinRecurring, type FinRecurringInput, type FinContext, type FinType,
 } from "@/hooks/useFinance";
 
-const brl = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+// Exibição passa pelo olhinho do Caixa (mascarar): valores ocultos viram "••••".
+// O MoneyInput de digitação continua legível, só a EXIBIÇÃO é mascarada.
+const brl = (v: number) => mascarar(`R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`);
 
 type Props = {
   open: boolean; onOpenChange: (o: boolean) => void; ctx: FinContext;

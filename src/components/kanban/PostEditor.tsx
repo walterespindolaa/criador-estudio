@@ -94,6 +94,7 @@ import { BestTimesHint } from "@/components/shared/BestTimesHint";
 import { PostPreviewModal } from "./PostPreviewModal";
 import { PublishButton } from "./PublishButton";
 import { useProfile } from "@/hooks/useProfile";
+import { usePostPreviewIdentity } from "@/hooks/usePostPreviewIdentity";
 import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 import { useUploadProgress } from "@/contexts/UploadProgressContext";
 import { compressImage } from "@/lib/image-compress";
@@ -134,6 +135,8 @@ interface Post {
   archive_summary: string | null;
   content_blocks: unknown | null;
   user_id: string;
+  // Post de cliente do Cria Post: a PRÉVIA mostra o perfil do cliente, não o do gestor.
+  external_client_id?: string | null;
 }
 
 interface Pillar {
@@ -298,6 +301,13 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   const initialLoadCompleteRef = useRef(false);
 
   const { profile } = useProfile();
+  // Identidade da PRÉVIA: dono do post (cliente do Cria Post → conta ativa → neutro),
+  // nunca automaticamente o usuário logado. No criador (conta própria) o tiktok_handle
+  // dele ainda serve de fallback quando não há handle do Instagram.
+  const previewIdentity = usePostPreviewIdentity(
+    post?.external_client_id ?? null,
+    profile?.id === userId ? profile?.tiktok_handle : null,
+  );
   const { brandContext } = useBrandContext();
   const pdfRef = useRef<HTMLDivElement>(null);
   const { exportPdf } = usePdfExport();
@@ -2516,9 +2526,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
         caption={caption}
         platform={platform}
         format={format}
-        userName={profile?.name || "Criador"}
-        userHandle={profile?.instagram_handle || profile?.tiktok_handle || "usuario"}
-        avatarUrl={profile?.avatar_url || null}
+        userName={previewIdentity.name}
+        userHandle={previewIdentity.handle}
+        avatarUrl={previewIdentity.avatarUrl}
         mediaUrl={
           mediaList.length > 0
             ? (() => {

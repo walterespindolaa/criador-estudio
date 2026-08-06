@@ -15,8 +15,7 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { hojeBR, toISODateBR } from "@/lib/date-br";
 import { PostPreviewModal } from "@/components/kanban/PostPreviewModal";
-import { useProfile } from "@/hooks/useProfile";
-import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { usePostPreviewIdentity } from "@/hooks/usePostPreviewIdentity";
 import { useTasks, type Task } from "@/hooks/useTasks";
 import { usePosts, type Post } from "@/hooks/usePosts";
 import { cn } from "@/lib/utils";
@@ -53,15 +52,15 @@ const FILTERS = [
 
 const Tarefas = () => {
   const { user } = useAuth();
-  const { profile } = useProfile();
-  // Preview (nome/handle/avatar) reflete a CONTA ATIVA, não a manager.
-  const { profile: activeProfile } = useActiveProfile();
   const { tasks, createTask, updateTaskStatus, deleteTask } = useTasks();
   const { posts } = usePosts();
   const [filter, setFilter] = useState("todas");
   const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  // Prévia mostra o DONO do post: cliente do Cria Post (external_client_id) →
+  // conta ativa → neutro. Nunca automaticamente o usuário logado.
+  const previewIdentity = usePostPreviewIdentity(selectedPost?.external_client_id ?? null);
 
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<TaskFormData>({
     resolver: zodResolver(taskSchema),
@@ -364,9 +363,9 @@ const Tarefas = () => {
           caption={selectedPost.caption || ""}
           platform={selectedPost.platform}
           format={selectedPost.format}
-          userName={activeProfile?.name || "Criador"}
-          userHandle={activeProfile?.instagram_handle || "criador"}
-          avatarUrl={activeProfile?.avatar_url || null}
+          userName={previewIdentity.name}
+          userHandle={previewIdentity.handle}
+          avatarUrl={previewIdentity.avatarUrl}
         />
       )}
     </div>
