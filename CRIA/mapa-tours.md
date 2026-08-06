@@ -1,5 +1,25 @@
 # Mapa dos Tutoriais Guiados (Tours) — CRIA
 
+> **RODADA GESTOR: EXECUTADA em 06/08/2026.** Todos os tours do lado gestor (/socialmidia/*) foram revisados contra a tela real de hoje. Estado atual, tour a tour:
+>
+> | Tour | Rota | Status 06/08 | O que cobre agora |
+> |---|---|---|---|
+> | `gestor-dashboard` | /dashboard | revisado (ok) | 4 números + olhinho, módulos, Visão geral do mês (gh-mes), aprovações, clientes + bolinha de saúde + Continuar de onde parou |
+> | `gestor-clientes` | /clientes | revisado (ok) | criar cliente, filtros usa o Cria/aprova por link, card com pendências e link |
+> | `gestor-cliente-hub` | /clientes/:id | **REESCRITO (13 passos)** | hero (selos, cor única do cliente, Entrar no Cria dele), status + encerramento agendado ("Encerra em DD/MM · cancelar"), destaques, **banco de hashtags (Copiar todas + Colar hashtags no editor)**, nav por cor, subnav, kanban do cliente (cond.), **Produção: visões Kanban/Calendário + Ordem manual\|Por data (cond.)**, **quadro de 5 status + etiquetas internas + vários links de Ideia/Referência (cond.)**, **Materiais (⠿, prazo na Agenda) (cond.)**, **Relatório (funil com Publicados como número principal, comparação, destaque) (cond.)**, **Portal (personalização + Excluir do Cria Post mantém o CRM) (cond.)**, Links úteis + Drive. Navega pelas âncoras `cli-sub-*` (landing + subnav) |
+> | `gestor-agenda` | /agenda | **REESCRITO (8 passos)** | quadro (⠿ + arrastar o vazio pro lado), **7 tipos de card** (criações, tarefas, captações, posts, Cria do cliente, materiais, aniversários), **filtro por cliente (cond.)**, semana/mês, **alternador Períodos (manhã/tarde/noite)**, **botão Relatório de produtividade (comparação + ranking)**, faixa Em produção recolhível (cond.), captações |
+> | `gestor-aprovacoes` | /aprovacoes | revisado (ok) | 4 filas, pílulas de filtro, lista do mais novo pro mais velho |
+> | `gestor-hubcria` | /hubcria | revisado (ok) | priorização de clientes, análise avulsa |
+> | `gestor-criapost` | /criapost/* | ajustado | abas (Calendário geral agora cita as cores por formato), posts moram no cliente |
+> | `gestor-criacrm` | /criacrm/* | ajustado | abas: **Tarefas com Kanban\|Calendário**, **Pipeline arrastando o card + rolagem lateral**, contratos; ficha pendura tudo |
+> | `gestor-crm-cliente` | /criacrm/:id | revisado (ok) | hero autosave, status com data, 6 seções, brandbook com PDF |
+> | `gestor-criacaixa` | /criacaixa/* | revisado (ok) | Empresa x Pessoal, abas (Visão geral, Clientes, Calendário, Mensalidades > Lançamentos, Relatórios), inativar com data |
+> | `gestor-equipe` | /equipe | revisado (ok) | assentos, convite com módulos/clientes |
+> | `gestor-parceria` / `gestor-contas` | back-office | revisados (ok) | fora do tour completo, como antes |
+> | `gestor-lixeira` | /lixeira | **NOVO** | mesma tela do criador, rota própria do gestor (o "?" dizia "em breve"); passo da lista é condicional |
+>
+> Âncoras `data-tour` novas desta rodada: `ag-relatorio` e `ag-cliente-filtro` (AgendaCriacao), `cli-sub-<sub>` nas pílulas do subnav e nos cards da landing do ClienteHub (posts, cronograma, relatorio, materiais, portal…), `prod-ferramentas` + `prod-quadro` + `rel-card` (CriaPostBoard), `mat-quadro` (MateriaisBoard), `cli-hashtags` (ClientHashtags), `portal-config` (ClientePortalTab). `ag-periodos` (já existia) agora tem passo. Zero alvo órfão nos tours do gestor (checagem cruzada alvo x JSX), zero travessão. `gestor-lixeira` fica fora do TRAINING_SEQUENCES (back-office, igual parceria/contas).
+
 > **STATUS: EXECUTADO em 30/07/2026.** Todo o plano abaixo (blocos B, C-ALTA, C-MÉDIA e C-BAIXA) foi implementado. O documento fica como histórico do diagnóstico e como referência da arquitetura. Resumo do que ficou: 37 tours (13 gestor + 24 criador), zero alvo órfão (checagem cruzada alvo x `data-tour` no JSX), zero travessão.
 >
 > Mecanismos novos no `registry.ts` criados nessa rodada:

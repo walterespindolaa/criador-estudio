@@ -109,14 +109,14 @@ export const TOURS_GESTOR: TourConfig[] = [
       {
         target: '[data-tour="cli-hero"]',
         title: "Quem é este cliente",
-        body: "Foto, @ e os selos que contam o estado da relação: se o link de aprovação está ativo e quantos posts estão parados esperando ele. Clicar no selo amarelo te joga direto na Produção. Se o cliente usa o Cria, o botão “Entrar no Cria dele” abre a conta dele sem passar pelo seletor lá em cima.",
-        mobileBody: "Foto, @ e os selos do estado da relação: link de aprovação ativo e posts parados esperando ele. Tocar no selo amarelo leva pra Produção. Entrar no Cria dele abre a conta dele direto.",
+        body: "Foto, @ e os selos que contam o estado da relação: se o link de aprovação está ativo e quantos posts estão parados esperando ele. Clicar no selo amarelo te joga direto na Produção. O botão Cor define a cor única deste cliente, a mesma que pinta os cards dele na lista, na agenda e no calendário. E se ele usa o Cria, “Entrar no Cria dele” abre a conta dele sem passar pelo seletor lá em cima.",
+        mobileBody: "Foto, @ e os selos do estado da relação: link de aprovação ativo e posts parados esperando ele. Tocar no selo amarelo leva pra Produção. O botão Cor define a cor única do cliente (a mesma da agenda e do calendário), e Entrar no Cria dele abre a conta dele direto.",
         placement: "bottom",
       },
       {
         target: '[data-tour="cli-status"]',
         title: "Ativo, pausado ou encerrado",
-        body: "Mudou aqui, muda na lista de clientes e no Caixa na hora. Ao escolher Inativo, o sistema pede a DATA do encerramento: a mensalidade conta até o mês dessa data e para de contar dali pra frente. É o que evita cliente que já saiu continuar inflando o seu faturamento.",
+        body: "Mudou aqui, muda na lista de clientes e no Caixa na hora. Ao escolher Inativo, o sistema pede a DATA do encerramento: a mensalidade conta até o mês dessa data e para de contar dali pra frente. Encerramento com data futura vira o selo “Encerra em DD/MM · cancelar” no topo, e cancelar o agendamento é um clique nele.",
         placement: "bottom",
       },
       {
@@ -125,6 +125,14 @@ export const TOURS_GESTOR: TourConfig[] = [
         title: "O bate-olho do cliente",
         body: "Os Destaques resumem cada Cria com número de verdade: o que está esperando você no Post, a saúde do mês no Caixa (a receber, custo, rentabilidade) e as próximas datas do nicho dele. Os campos acima são editáveis no lugar: toca, digita, salva sozinho. O dia de pagamento é o que faz a mensalidade nascer no Caixa.",
         mobileBody: "Os Destaques resumem cada Cria com número: o que espera no Post, a saúde do mês no Caixa e as próximas datas do nicho. Os campos acima salvam sozinho, e o dia de pagamento cria a mensalidade.",
+        placement: "top",
+      },
+      {
+        target: '[data-tour="cli-hashtags"]',
+        openFirst: '[data-tour="cli-nav-visao"]',
+        title: "O banco de hashtags dele",
+        body: "As hashtags deste cliente moram aqui: cole o bloco inteiro uma vez e nunca mais cace hashtag em post antigo. O “Copiar todas” copia o bloco pronto, e dentro do editor de post o botão “Colar hashtags” cola tudo no fim da legenda.",
+        mobileBody: "As hashtags deste cliente moram aqui: cole o bloco uma vez e pronto. O Copiar todas copia tudo, e no editor de post o botão Colar hashtags cola o bloco no fim da legenda.",
         placement: "top",
       },
       {
@@ -160,6 +168,55 @@ export const TOURS_GESTOR: TourConfig[] = [
         placement: "bottom",
       },
       {
+        // Os passos da PRODUÇÃO só existem com Cria Post ativo pro cliente: o
+        // openFirst clica no card/pílula "Produção" e, sem o quadro montado
+        // (módulo travado ou Cria Post desativado), o passo sai do tour.
+        skipIfMissing: true,
+        target: '[data-tour="prod-ferramentas"]',
+        openFirst: '[data-tour="cli-sub-posts"]',
+        title: "Kanban ou Calendário",
+        body: "A Produção tem duas visões que conversam: o kanban por status e o Calendário do mês, com cada formato na própria cor. Logo abaixo, o alternador “Ordem manual | Por data” reordena cada coluna pela data agendada. E o Novo post nasce aqui, já em Produção, sem ir pro cliente antes da hora.",
+        mobileBody: "A Produção tem duas visões que conversam: o kanban por status e o Calendário do mês, com cada formato na própria cor. O alternador Ordem manual | Por data reordena as colunas pela data agendada.",
+        placement: "bottom",
+      },
+      {
+        // Quadro só existe com posts na fila (fila vazia mostra o convite de criar).
+        skipIfMissing: true,
+        target: '[data-tour="prod-quadro"]',
+        openFirst: '[data-tour="cli-sub-posts"]',
+        title: "Da produção à publicação",
+        body: "Cinco colunas contam a vida do post: Em produção, Aguardando cliente, Ajuste, Aprovado e Postado. Arraste o card pra mudar o status e troque a data direto no card, sem abrir. Dentro do post cabem vários links de Ideia/Referência, e as etiquetas internas do topo são só suas: o cliente nunca vê, e elas viram filtro aqui na fila.",
+        mobileBody: "Cinco colunas contam a vida do post: Em produção, Aguardando cliente, Ajuste, Aprovado e Postado. Arraste o card pra mudar o status e troque a data direto no card. As etiquetas internas são só suas: o cliente nunca vê.",
+        placement: "top",
+      },
+      {
+        skipIfMissing: true,
+        target: '[data-tour="mat-quadro"]',
+        openFirst: '[data-tour="cli-sub-materiais"]',
+        title: "Materiais: a demanda que não é post",
+        body: "Flyer, apresentação, arte avulsa: o que o cliente pede pelo portal cai em Solicitado, e você arrasta pelo ⠿ até Finalizado. Material com prazo aparece na Agenda junto com o resto da semana, então nada fica esquecido no caminho.",
+        mobileBody: "Flyer, apresentação, arte avulsa: o que o cliente pede pelo portal cai em Solicitado, e você arrasta pelo ⠿ até Finalizado. Material com prazo aparece na Agenda junto com o resto da semana.",
+        placement: "top",
+      },
+      {
+        skipIfMissing: true,
+        target: '[data-tour="rel-card"]',
+        openFirst: '[data-tour="cli-sub-relatorio"]',
+        title: "O relatório que fecha o mês",
+        body: "Daqui sai o relatório do cliente: o funil completo da produção com os Publicados como número principal, a comparação contra o período anterior e o destaque do período. Vira um PDF com análise da IA, pronto pra enviar e provar o seu trabalho.",
+        mobileBody: "Daqui sai o relatório do cliente: o funil da produção com os Publicados como número principal, comparação contra o período anterior e o destaque do período. Vira um PDF pronto pra enviar.",
+        placement: "bottom",
+      },
+      {
+        skipIfMissing: true,
+        target: '[data-tour="portal-config"]',
+        openFirst: '[data-tour="cli-sub-portal"]',
+        title: "O que o cliente enxerga",
+        body: "O Portal é a página que o cliente abre pelo link: logo, cor e quais abas ele vê, tudo se ajusta aqui. E se a parceria acabar de vez, o “Excluir do Cria Post (mantém o CRM)” apaga o portal e os posts, mas a ficha e o histórico do cliente continuam com você.",
+        mobileBody: "O Portal é a página que o cliente abre pelo link: logo, cor e quais abas ele vê. O Excluir do Cria Post apaga o portal, mas mantém a ficha e o histórico no CRM.",
+        placement: "top",
+      },
+      {
         target: '[data-tour="cli-links"]',
         title: "Links úteis e as pastas do Drive",
         body: "Este botão abre os links salvos do cliente de qualquer aba: Drive, captação, materiais. Na aba Links úteis lá em cima você cadastra rótulo e URL, e o conteúdo de cada pasta do Google Drive aparece listado logo abaixo. Pra listar, a pasta precisa estar compartilhada como “qualquer pessoa com o link pode ver”.",
@@ -183,21 +240,42 @@ export const TOURS_GESTOR: TourConfig[] = [
       {
         target: '[data-tour="ag-quadro"]',
         title: "A semana inteira, todos os clientes",
-        body: "Cada coluna é um dia. Os posts de todos os clientes aparecem juntos, com a cor do cliente. Pra mover, pegue o card pelo ⠿ (o punho no canto esquerdo) e solte no outro dia: a data muda de verdade, no post. Clicar no card abre, arrastar é só pelo ⠿.",
+        body: "Cada coluna é um dia. Os posts de todos os clientes aparecem juntos, com a cor do cliente. Pra mover, pegue o card pelo ⠿ (o punho no canto esquerdo) e solte no outro dia: a data muda de verdade, no post. Clicar no card abre, arrastar é só pelo ⠿. E clicar num espaço vazio e puxar pro lado rola a semana inteira.",
         mobileBody: "Cada coluna é um dia e você arrasta a tira pro lado pra ver a semana. Os posts de todos os clientes aparecem juntos, com a cor de cada um. Pra mover, segure o ⠿ do card (não o card inteiro) e solte no outro dia: a data muda de verdade.",
         placement: "bottom",
       },
       {
         target: '[data-tour="ag-filtros"]',
-        title: "Filtrar por tipo",
-        body: "A agenda junta cinco coisas: Criações (o cronograma), Tarefas, Captações, Posts (o Cria Post, que você edita aqui) e Cria do cliente, que são os posts que o próprio cliente montou na conta dele. Desligue o que não interessa e o quadro limpa na hora. O card verde de Cria do cliente é só leitura: clicar leva pro kanban dele.",
-        mobileBody: "A agenda junta cinco coisas: Criações, Tarefas, Captações, Posts e Cria do cliente (o que o próprio cliente montou na conta dele). Desligue o que não interessa e o quadro limpa na hora. O card verde de Cria do cliente é só leitura: tocar leva pro kanban dele.",
+        title: "Sete tipos, um quadro só",
+        body: "A agenda junta tudo que tem data: Criações (o cronograma), Tarefas, Captações, Posts (o Cria Post, que você edita aqui), Cria do cliente (o que ele montou na conta dele, só leitura), Materiais com prazo e Aniversários. Cada tipo tem a própria cor, e desligar um chip limpa o quadro na hora.",
+        mobileBody: "A agenda junta tudo que tem data: Criações, Tarefas, Captações, Posts, Cria do cliente (só leitura), Materiais com prazo e Aniversários. Cada tipo tem a própria cor, e desligar um chip limpa o quadro na hora.",
+        placement: "bottom",
+      },
+      {
+        // A faixa só existe quando há cliente com Cria Post ativo.
+        skipIfMissing: true,
+        target: '[data-tour="ag-cliente-filtro"]',
+        title: "Só um cliente na tela",
+        body: "Semana cheia demais? Abra esta faixa e escolha um ou mais clientes: a agenda esconde o resto. É o jeito de revisar a semana de UM cliente antes da reunião com ele.",
         placement: "bottom",
       },
       {
         target: '[data-tour="ag-navegacao"]',
         title: "Semana ou mês",
         body: "Semana é pra executar (o que grava, o que sai). Mês é pra planejar (a distribuição do conteúdo). O botão Hoje traz você de volta pro presente.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="ag-periodos"]',
+        title: "Manhã, tarde e noite",
+        body: "Ligue o alternador Períodos e cada dia se divide em três faixas: manhã, tarde e noite. Arrastar um card de uma faixa pra outra muda o período dele de verdade. Só existe na visão Semana; o Mês não tem faixas.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="ag-relatorio"]',
+        title: "Quanto você produziu",
+        body: "O Relatório fecha a conta da semana ou do mês: posts, criações, tarefas, captações e materiais, com comparação contra o período anterior e o ranking de qual cliente consumiu mais produção. É o número que diz se a operação está entregando ou só empilhando.",
+        mobileBody: "O Relatório fecha a conta da semana ou do mês, com comparação contra o período anterior e o ranking de qual cliente consumiu mais produção. É o número que diz se a operação está entregando.",
         placement: "bottom",
       },
       {
@@ -292,8 +370,8 @@ export const TOURS_GESTOR: TourConfig[] = [
       {
         target: '[data-tour="hero-tabs"]',
         title: "As duas seções do Cria Post",
-        body: "Aprovações mostra tudo que está na mão dos clientes: o que está esperando, o que voltou com ajuste, o que já foi aprovado. Calendário geral junta os posts de todos os clientes num mês só.",
-        mobileBody: "Aprovações mostra tudo que está na mão dos clientes: o que espera, o que voltou com ajuste, o que foi aprovado. Calendário geral junta os posts de todos os clientes num mês só.",
+        body: "Aprovações mostra tudo que está na mão dos clientes: o que está esperando, o que voltou com ajuste, o que já foi aprovado. Calendário geral junta os posts de todos os clientes num mês só, cada formato com a própria cor.",
+        mobileBody: "Aprovações mostra tudo que está na mão dos clientes: o que espera, o que voltou com ajuste, o que foi aprovado. Calendário geral junta os posts de todos os clientes num mês só, cada formato com a própria cor.",
         placement: "bottom",
       },
       {
@@ -320,8 +398,8 @@ export const TOURS_GESTOR: TourConfig[] = [
       {
         target: '[data-tour="hero-tabs"]',
         title: "As seções do Cria Gestão",
-        body: "Clientes é a carteira. Pipeline é a venda (do lead ao fechado, arrastando o card). Tarefas é o que fazer por cliente. Calendário junta tudo na semana. Contratos guarda o que foi assinado, com vencimento.",
-        mobileBody: "Arraste essa tira pro lado pra ver todas as seções. Clientes é a carteira. Pipeline é a venda. Tarefas é o que fazer por cliente. Calendário junta tudo na semana. Contratos guarda o assinado, com vencimento.",
+        body: "Clientes é a carteira. Pipeline é a venda: o lead avança arrastando o card de coluna em coluna, e o quadro rola pro lado. Tarefas é o que fazer por cliente, em Kanban ou Calendário (o alternador fica no topo da aba). Calendário junta tudo na semana, e Contratos guarda o que foi assinado, com vencimento.",
+        mobileBody: "Arraste essa tira pro lado pra ver todas as seções. Clientes é a carteira. Pipeline é a venda, arrastando o card. Tarefas é o que fazer por cliente, em Kanban ou Calendário. Contratos guarda o assinado, com vencimento.",
         placement: "bottom",
       },
       {
@@ -495,6 +573,39 @@ export const TOURS_GESTOR: TourConfig[] = [
         body: "Cada cliente aqui é uma conta de verdade, com kanban, brandbook e calendário próprios, e você entra nela pra adiantar o trabalho sem pedir login. Logo abaixo, o bloco Assinar pra mim é pra você ter a SUA conta de criadora: tem que ser num e-mail diferente do de gestora, senão o Cria não consegue separar as duas.",
         mobileBody: "Cada cliente aqui é uma conta de verdade, com kanban e brandbook próprios, e você entra nela sem pedir login. O bloco Assinar pra mim exige um e-mail diferente do de gestora.",
         placement: "top",
+      },
+    ],
+  },
+  {
+    // LIXEIRA DO GESTOR (/socialmidia/lixeira). Mesma tela do criador (o
+    // componente é compartilhado, com os mesmos data-tour), mas a rota é outra
+    // e o findTourByRoute não cruza as áreas: sem este config, o "?" da lixeira
+    // do gestor dizia "tutorial em breve". Fica fora do TRAINING_SEQUENCES,
+    // igual à do criador: é rede de segurança, não operação do dia a dia.
+    id: "gestor-lixeira",
+    route: "/socialmidia/lixeira",
+    title: "Lixeira",
+    valueProp:
+      "Excluiu um post ou um cliente sem querer? Respira. Tudo que você apaga fica aqui por 30 dias antes de sumir de vez.",
+    benefits: [
+      "30 dias pra se arrepender",
+      "Restaurar leva um clique",
+      "Apagar de vez só com confirmação",
+    ],
+    steps: [
+      {
+        target: '[data-tour="lixeira-header"]',
+        title: "Sua rede de segurança",
+        body: "Posts e clientes excluídos ficam aqui por 30 dias. Depois disso, somem de verdade.",
+        placement: "bottom",
+      },
+      {
+        // A lista só existe quando há item excluído; lixeira vazia pula o passo.
+        skipIfMissing: true,
+        target: '[data-tour="lixeira-itens"]',
+        title: "Restaurar ou apagar",
+        body: "Cada item mostra quantos dias faltam. Restaurar devolve pro lugar de origem. O X apaga de vez, e só depois de você confirmar.",
+        placement: "bottom",
       },
     ],
   },

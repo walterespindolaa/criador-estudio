@@ -557,6 +557,10 @@ export default function ClienteHub() {
               const hex = activeGroup.modulo ? CRIA_HEX[activeGroup.modulo] : "hsl(var(--primary))";
               return (
                 <button key={sub} onClick={() => goTab(sub)}
+                  // Âncora por sub-página: o tour usa como openFirst pra levar a
+                  // pessoa até Produção, Materiais, Relatório e Portal. O mesmo
+                  // nome existe no card da landing (nunca aparecem juntos).
+                  data-tour={sub === "kanban-cliente" ? undefined : `cli-sub-${sub}`}
                   className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-body font-semibold whitespace-nowrap transition-colors ${
                     on ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
                   style={on ? { color: hex } : undefined}>
@@ -582,8 +586,10 @@ export default function ClienteHub() {
             return (
               <button key={sub} onClick={() => goTab(sub)}
                 // O card do Kanban do cliente ganha âncora própria: é o passo do
-                // tour que explica a sincronia ao vivo com o Cria do cliente.
-                data-tour={sub === "kanban-cliente" ? "cli-kanban" : undefined}
+                // tour que explica a sincronia ao vivo com o Cria do cliente. Os
+                // demais cards ganham cli-sub-* (mesmo nome da pílula do subnav),
+                // que o tour clica pra entrar em Produção, Materiais, Relatório…
+                data-tour={sub === "kanban-cliente" ? "cli-kanban" : `cli-sub-${sub}`}
                 className="group text-left bg-card border border-border rounded-2xl p-4 transition-all hover:border-primary/40 hover:-translate-y-0.5 hover:shadow-md">
                 <div className="flex items-center gap-3">
                   <span className="grid h-9 w-9 place-items-center rounded-xl text-white shrink-0" style={{ background: hex }}><Icon className="h-4 w-4" /></span>

@@ -121,7 +121,8 @@ export function ClientHashtags({ clientId, className }: { clientId: string; clas
   };
 
   return (
-    <div className={cn("rounded-2xl border border-border bg-card p-4", className)}>
+    // data-tour="cli-hashtags": alvo do passo "O banco de hashtags dele" no tour do cockpit.
+    <div data-tour="cli-hashtags" className={cn("rounded-2xl border border-border bg-card p-4", className)}>
       {/* CABEÇALHO: título + o botão que é o motivo desta tela existir */}
       <div className="flex items-start justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2 min-w-0">

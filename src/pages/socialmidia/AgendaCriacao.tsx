@@ -778,8 +778,9 @@ export default function AgendaCriacao() {
             </div>
           </div>
           <div data-tour="ag-navegacao" className="flex items-center gap-2 flex-wrap">
-            {/* Relatório de produtividade: quanto a operação produziu na semana/no mês. */}
-            <Button variant="outline" size="sm" className="h-8 px-2.5 text-xs gap-1.5" onClick={() => setRelatorioOpen(true)}>
+            {/* Relatório de produtividade: quanto a operação produziu na semana/no mês.
+                data-tour="ag-relatorio": alvo do passo "Quanto você produziu" do tour. */}
+            <Button data-tour="ag-relatorio" variant="outline" size="sm" className="h-8 px-2.5 text-xs gap-1.5" onClick={() => setRelatorioOpen(true)}>
               <BarChart3 className="h-3.5 w-3.5" /> Relatório
             </Button>
             {/* Alternador ÚNICO da divisão do dia em faixas. Desligado (padrão), o dia é
@@ -820,7 +821,9 @@ export default function AgendaCriacao() {
           </div>
         </div>
         {extClients.length > 0 && (
-          <div className="mb-3 rounded-xl border border-dashed border-border bg-background/60 px-3 py-2">
+          // data-tour="ag-cliente-filtro": alvo do passo "Só um cliente na tela" do
+          // tour (condicional: a faixa só existe quando há cliente com Cria Post).
+          <div data-tour="ag-cliente-filtro" className="mb-3 rounded-xl border border-dashed border-border bg-background/60 px-3 py-2">
             <button type="button" onClick={togglePostChips} className="flex items-center gap-2 w-full text-left">
               <span className="inline-flex items-center gap-1 text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground"><Users className="h-3.5 w-3.5" /> Filtrar por cliente</span>
               <span className="text-[10px] font-body font-semibold text-muted-foreground">

@@ -123,7 +123,8 @@ export function ClientePortalTab({ client, onCopyLink, onOpenPortal, copying }: 
   const brand = f.brand_color ?? "#EA4918";
 
   return (
-    <div className="space-y-5 pb-24">
+    // data-tour="portal-config": alvo do passo "O que o cliente enxerga" no tour do cockpit.
+    <div data-tour="portal-config" className="space-y-5 pb-24">
       {/* Ações do link */}
       <div className="rounded-2xl border border-border bg-card p-4 flex items-center gap-3 flex-wrap">
         <div className="min-w-0 flex-1">

@@ -162,7 +162,8 @@ export function MateriaisBoard({ clientId, clientName }: { clientId: string; cli
   const pedidosCliente = materials.filter((m) => m.requested_by === "cliente" && m.status === "solicitado").length;
 
   return (
-    <div>
+    // data-tour="mat-quadro": alvo do passo de Materiais no tour do cockpit.
+    <div data-tour="mat-quadro">
       <div className="flex items-start justify-between gap-3 mb-4">
         <div className="min-w-0">
           <p className="text-[12px] font-body text-muted-foreground leading-relaxed">

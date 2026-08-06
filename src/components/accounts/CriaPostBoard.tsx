@@ -550,7 +550,9 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
         )}
 
         <TabsContent value="posts">
-          <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+          {/* data-tour="prod-ferramentas": alvo do passo do tour do cockpit que
+              explica as visões (Kanban/Calendário) e as ferramentas da Produção. */}
+          <div data-tour="prod-ferramentas" className="flex items-center justify-between gap-2 mb-3 flex-wrap">
             {/* Kanban (padrão) / Calendário, as duas visões conversam: mudar a data reflete no card. */}
             <ViewToggle value={view} onChange={setViewPersist} />
             <div className="flex gap-2 flex-wrap">
@@ -656,7 +658,8 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
         </div>
       ) : (
         <DragDropContext onDragEnd={handleApprovalDragEnd}>
-          <div ref={boardRef} className="flex gap-3 overflow-x-auto pb-4 -mx-1 px-1 kanban-scroll">
+          {/* data-tour="prod-quadro": alvo do passo "Da produção à publicação". */}
+          <div ref={boardRef} data-tour="prod-quadro" className="flex gap-3 overflow-x-auto pb-4 -mx-1 px-1 kanban-scroll">
             {APPROVAL_COLS.map((colKey) => {
               const st = STATUS[colKey];
               const colPosts = ordenarColuna(viewPosts.filter((p) => (p.approval_status ?? "pendente") === colKey));
@@ -759,7 +762,8 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
         </TabsContent>
 
         <TabsContent value="relatorio">
-          <div className="rounded-2xl border border-border bg-card p-6 text-center">
+          {/* data-tour="rel-card": alvo do passo do relatório no tour do cockpit. */}
+          <div data-tour="rel-card" className="rounded-2xl border border-border bg-card p-6 text-center">
             <p className="text-sm font-body text-foreground font-medium mb-1">Relatório mensal do cliente</p>
             <p className="text-xs text-muted-foreground font-body mb-4">Produção, desempenho do Instagram e análise da IA, pronto pra enviar em PDF.</p>
             <Button onClick={() => setReportOpen(true)}><FileText className="h-4 w-4 mr-1.5" /> Abrir relatório</Button>
