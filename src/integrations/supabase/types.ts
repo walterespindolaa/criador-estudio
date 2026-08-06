@@ -5075,6 +5075,10 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      excluir_cliente_do_portal: {
+        Args: { _external_client_id: string }
+        Returns: Json
+      }
       first_handle: { Args: { _vals: string[] }; Returns: string }
       get_admin_stats: {
         Args: never
