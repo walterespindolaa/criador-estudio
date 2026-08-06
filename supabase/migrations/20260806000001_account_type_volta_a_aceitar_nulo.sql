@@ -1,0 +1,15 @@
+-- ============================================================
+-- profiles.account_type VOLTA A ACEITAR NULO.
+--
+-- Apareceu no banco uma trava NOT NULL em account_type que NAO existe em
+-- nenhuma migration deste repositorio (provavelmente criada direto no banco
+-- por uma mexida automatica). Ela quebrava TODA criacao de usuario:
+-- o gatilho handle_new_user grava account_type = null pra quem nao e gestor
+-- (nulo significa criadora, esse e o contrato que o app inteiro usa), entao
+-- o insert do perfil falhava com 23502 e o auth devolvia
+-- "Database error saving new user", tanto no cadastro do site quanto no
+-- modal de criar social midia do admin.
+--
+-- Aqui devolvemos o contrato original. Idempotente.
+-- ============================================================
+alter table public.profiles alter column account_type drop not null;
