@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, type DropResult, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive, Download, Play, FileImage, Link2, Paperclip, GripVertical, FolderOpen, ChevronDown, Trash2, Cake, Rows3 } from "lucide-react";
+import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive, Download, Play, FileImage, Link2, Paperclip, GripVertical, FolderOpen, ChevronDown, Trash2, Cake, Rows3, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,6 +26,9 @@ import { useAllExternalPosts, useExternalClients, useMoveExternalPostDate, useUp
 import { useCriaPostMedia, type CriaMedia } from "@/hooks/useCriaPostMedia";
 import { useClientCriaAgendaPosts, useCriaClientProfiles, type ClientCriaAgendaPost, type ClientCriaLink } from "@/hooks/useManagerClientCria";
 import { useManagerMaterialsWithDue, useUpdateAgendaMaterial, type AgendaMaterial } from "@/hooks/useClientMaterials";
+// Relatório de produtividade da OPERAÇÃO (semana/mês): quantos posts, captações,
+// tarefas... É daqui da Agenda que a produção é tocada, então o botão mora aqui.
+import { RelatorioProdutividadeDialog } from "@/components/accounts/RelatorioProdutividadeDialog";
 import { isDriveMedia, isDriveUrl, isVideoMedia, getThumbnailUrl, getDriveImageFallbackUrl, downloadMediaFile, mediaDownloadName } from "@/lib/driveMedia";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { clienteInativo } from "@/lib/cliente-status";
@@ -268,6 +271,8 @@ export default function AgendaCriacao() {
   const toggleProducao = () => setProducaoOpen((v) => { const n = !v; try { localStorage.setItem("agenda_producao_open", n ? "1" : "0"); } catch { /* segue */ } return n; });
   // Painel "ver todos" de um dia cheio.
   const [dayModal, setDayModal] = useState<string | null>(null);
+  // Relatório de produtividade (semana/mês) da operação.
+  const [relatorioOpen, setRelatorioOpen] = useState(false);
   // "Períodos": ALTERNADOR ÚNICO da divisão do dia em faixas (manhã / tarde / noite).
   //
   //  DESLIGADO (padrão) = a agenda de sempre: a coluna do dia é uma LISTA PLANA, sem
@@ -773,6 +778,10 @@ export default function AgendaCriacao() {
             </div>
           </div>
           <div data-tour="ag-navegacao" className="flex items-center gap-2 flex-wrap">
+            {/* Relatório de produtividade: quanto a operação produziu na semana/no mês. */}
+            <Button variant="outline" size="sm" className="h-8 px-2.5 text-xs gap-1.5" onClick={() => setRelatorioOpen(true)}>
+              <BarChart3 className="h-3.5 w-3.5" /> Relatório
+            </Button>
             {/* Alternador ÚNICO da divisão do dia em faixas. Desligado (padrão), o dia é
                 a lista plana de sempre. Ligado, vira manhã / tarde / noite e arrastar
                 entre faixas grava o período. Fica travado durante um arraste (ver
@@ -1507,6 +1516,9 @@ export default function AgendaCriacao() {
           </Dialog>
         );
       })()}
+
+      {/* Relatório de produtividade da operação (semana/mês). */}
+      <RelatorioProdutividadeDialog open={relatorioOpen} onOpenChange={setRelatorioOpen} />
     </motion.div>
   );
 }
