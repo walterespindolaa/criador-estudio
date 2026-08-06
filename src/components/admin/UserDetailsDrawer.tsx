@@ -126,9 +126,22 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
     return data;
   };
 
+  // Reenvio de acesso: alem do e-mail, guarda o link novo pra mostrar na tela
+  // com a mensagem pronta pro WhatsApp. O link vence em ~1h e funciona uma vez,
+  // entao entregar ele na mao do admin importa mais que o e-mail chegar.
+  const [resent, setResent] = useState<{ email: string; link: string } | null>(null);
   const resendMutation = useMutation({
     mutationFn: () => invokeAction({ user_id: userId, action: "resend_access" }),
-    onSuccess: () => toast.success("E-mail de redefinição enviado."),
+    onSuccess: (d) => {
+      const r = d as { email?: string; actionLink?: string };
+      if (r?.actionLink && r?.email) {
+        setResent({ email: r.email, link: r.actionLink });
+        toast.success("Link novo gerado. Copie a mensagem abaixo do botão.");
+      } else {
+        // Edge antiga (sem o link na resposta): pelo menos o e-mail foi.
+        toast.success("E-mail de redefinição enviado.");
+      }
+    },
     onError: (e: Error) => toast.error(`Falha ao enviar: ${e.message}`),
   });
 
@@ -379,6 +392,31 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
                       <p className="text-[11px] font-body text-muted-foreground mt-1">Esta é uma conta <strong>pessoa física</strong> (criador). Os add-ons são só pra contas de social mídia, aqui, pra liberar recursos, use o <strong>Plano</strong> (ex.: Studio) acima.</p>
                     )}
                   </FieldBox>
+                )}
+
+                {/* Link novo em maos: aparece logo apos reenviar, com a mensagem
+                    pronta pro WhatsApp (o e-mail tambem foi, mas o link na mao
+                    nao depende de caixa de entrada). */}
+                {resent && (
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 px-3 py-2.5 min-w-0 space-y-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <p className="text-[10px] uppercase tracking-wider text-emerald-700 font-semibold flex-1">Link novo (vale 1 hora, uso único)</p>
+                      <CopyButton text={resent.link} />
+                    </div>
+                    <code className="block truncate text-xs font-mono bg-white/70 rounded-lg px-2 py-1.5">{resent.link}</code>
+                    {(() => {
+                      const msg = `Oi! Gerei um link novo de acesso ao CRIA pra você. 🎉\n\nE-mail: ${resent.email}\nAcesso: ${resent.link}\n\nImportante: o link vale por 1 hora e funciona uma vez só. Se abrir pelo WhatsApp, toque nos 3 pontinhos e escolha "Abrir no navegador". Qualquer dúvida, me chama!`;
+                      return (
+                        <div className="min-w-0">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Mensagem pronta pro WhatsApp</p>
+                            <CopyButton text={msg} />
+                          </div>
+                          <pre className="text-xs font-body text-foreground whitespace-pre-wrap leading-relaxed [overflow-wrap:anywhere] max-h-40 overflow-y-auto">{msg}</pre>
+                        </div>
+                      );
+                    })()}
+                  </div>
                 )}
 
                 <div className="flex flex-wrap gap-2 min-w-0">
