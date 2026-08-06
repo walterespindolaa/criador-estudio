@@ -3660,7 +3660,7 @@ export type Database = {
       profiles: {
         Row: {
           access_expires_at: string | null
-          account_type: string
+          account_type: string | null
           agency_owner_id: string | null
           ai_ideas_reset_at: string | null
           ai_ideas_used_month: number | null
@@ -3715,7 +3715,7 @@ export type Database = {
         }
         Insert: {
           access_expires_at?: string | null
-          account_type?: string
+          account_type?: string | null
           agency_owner_id?: string | null
           ai_ideas_reset_at?: string | null
           ai_ideas_used_month?: number | null
@@ -3770,7 +3770,7 @@ export type Database = {
         }
         Update: {
           access_expires_at?: string | null
-          account_type?: string
+          account_type?: string | null
           agency_owner_id?: string | null
           ai_ideas_reset_at?: string | null
           ai_ideas_used_month?: number | null
