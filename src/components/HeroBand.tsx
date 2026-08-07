@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
 import { statusRamp } from "@/lib/statusRamp";
+import { cn } from "@/lib/utils";
 
 export function HeroBand({
   eyebrow,
@@ -8,6 +9,7 @@ export function HeroBand({
   avatar,
   actions,
   children,
+  wideInset = false,
 }: {
   eyebrow?: string;
   title: ReactNode;
@@ -15,12 +17,18 @@ export function HeroBand({
   avatar?: ReactNode;
   actions?: ReactNode;
   children?: ReactNode;
+  // Recuo maior à esquerda quando o menu lateral está fixado aberto (248px de
+  // rail + folgas); o padrão continua sendo o rail de ícones (104px).
+  wideInset?: boolean;
 }) {
   const ramp = statusRamp();
   const grad = `linear-gradient(115deg, ${ramp["publicado"].from} 0%, ${ramp["gravando"].from} 100%)`;
   return (
     <header
-      className="relative overflow-hidden rounded-b-[26px] px-5 pt-3 pb-4 text-white shadow-[0_18px_50px_-24px_rgba(35,25,70,0.5)] md:px-8 md:pl-[104px]"
+      className={cn(
+        "relative overflow-hidden rounded-b-[26px] px-5 pt-3 pb-4 text-white shadow-[0_18px_50px_-24px_rgba(35,25,70,0.5)] md:px-8 md:transition-[padding-left] md:duration-200",
+        wideInset ? "md:pl-[288px]" : "md:pl-[104px]",
+      )}
       style={{ background: grad }}
     >
       <div

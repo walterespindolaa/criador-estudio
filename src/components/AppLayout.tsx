@@ -41,6 +41,11 @@ import { UploadProgressIndicator } from "@/components/UploadProgressIndicator";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+
+// Menu fixado aberto (por aparelho). O estado mora aqui, e não no AppRail,
+// porque a margem do conteúdo e o recuo da HeroBand dependem dele.
+const RAIL_PIN_KEY = "cria_rail_fixado";
 
 // Emoji da saudação, clicável e personalizável (fica salvo por dispositivo).
 const GREET_EMOJIS = [
@@ -76,6 +81,17 @@ const AppLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  const [railPinned, setRailPinned] = useState<boolean>(() => {
+    try { return localStorage.getItem(RAIL_PIN_KEY) === "1"; } catch { return false; }
+  });
+  const toggleRailPin = () => {
+    setRailPinned((v) => {
+      const next = !v;
+      try { localStorage.setItem(RAIL_PIN_KEY, next ? "1" : "0"); } catch { /* noop */ }
+      return next;
+    });
+  };
 
   useLastSeen();
 
@@ -233,9 +249,16 @@ const AppLayout = () => {
           <div className="hidden">
             <AppSidebar />
           </div>
-          <AppRail />
+          <AppRail pinned={railPinned} onTogglePin={toggleRailPin} />
 
-          <div className="flex-1 flex flex-col min-w-0 md:pl-[104px]">
+          {/* Fixado, o menu ocupa 248px + folgas: o conteúdo abre espaço (não
+              fica coberto). Solto, volta pros 104px do rail de ícones. */}
+          <div
+            className={cn(
+              "flex-1 flex flex-col min-w-0 md:transition-[padding-left] md:duration-200",
+              railPinned ? "md:pl-[288px]" : "md:pl-[104px]",
+            )}
+          >
             {/* TOPO MOBILE: o banner de impersonação e o header ficam GRUDADOS e
                 sticky juntos, respeitando a safe-area do topo do celular. No desktop
                 o wrapper vira fluxo normal (md:static) e só o banner aparece, já que
@@ -281,8 +304,13 @@ const AppLayout = () => {
 
             <TrialBanner />
             <StorageWarningBanner />
-            <div className="hidden md:block md:-ml-[104px] md:w-[calc(100%+104px)]">
-              <HeroBand eyebrow={heroEyebrow} title={heroTitle} avatar={avatarNode} actions={quickActions}>
+            <div
+              className={cn(
+                "hidden md:block",
+                railPinned ? "md:-ml-[288px] md:w-[calc(100%+288px)]" : "md:-ml-[104px] md:w-[calc(100%+104px)]",
+              )}
+            >
+              <HeroBand wideInset={railPinned} eyebrow={heroEyebrow} title={heroTitle} avatar={avatarNode} actions={quickActions}>
                 <div className="flex items-center gap-2 rounded-2xl bg-white/15 px-2 py-1 backdrop-blur">
                   <GlobalSearch />
                   <PlanBadge light />
