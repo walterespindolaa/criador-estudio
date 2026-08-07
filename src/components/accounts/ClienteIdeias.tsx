@@ -1,12 +1,16 @@
 import { useState, useMemo, useEffect } from "react";
-import { Lightbulb, Bookmark, Sparkles, Plus, Trash2, ExternalLink, Instagram, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Lightbulb, Bookmark, Sparkles, Plus, Trash2, ExternalLink, Instagram, Loader2, ChevronLeft, ChevronRight, PenLine, Send, CalendarPlus, RotateCcw, Link2 } from "lucide-react";
 import { useCriaClientIdeas, useCrmSavedRefs, useAddCrmSavedRef, useDeleteCrmSavedRef } from "@/hooks/useBancoIdeias";
-import { useCreativeIdeas, useUpdateIdeaStatus, useDeleteIdea } from "@/hooks/useHubCria";
+import { useCreativeIdeas, useUpdateIdeaStatus, useDeleteIdea, useAddManualIdea, useIdeaToPost, useIdeaToCronograma, type CreativeIdea } from "@/hooks/useHubCria";
+import { useCronogramas } from "@/hooks/useCronograma";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { confirmar } from "@/components/shared/Confirm";
+import { toast } from "sonner";
 
 // ═══════════════════════════════════════════════════════════════════════
 // BANCO DE IDEIAS DO CLIENTE
@@ -14,32 +18,47 @@ import { confirmar } from "@/components/shared/Confirm";
 // Antes as ideias moravam misturadas com a pesquisa do Apify, a pessoa
 // abria "Criativo" e não sabia se aquilo era do cliente, do HUB, ou dela.
 //
-// Agora são quatro origens, cada uma com o seu lugar e o seu rótulo:
+// Agora são cinco origens, cada uma com o seu lugar e o seu rótulo:
+//   • Suas ideias  → o que VOCÊ anota no meio do dia (e converte daqui)
 //   • Do cliente   → ideias que ELE escreveu na conta CRIA dele
 //   • Salvos dele  → posts que ELE guardou como referência
 //   • Do HUB       → ideias que a IA gerou a partir dos concorrentes
-//   • Suas         → links que VOCÊ salva, só você vê
+//   • Seus salvos  → links que VOCÊ salva, só você vê
 // ═══════════════════════════════════════════════════════════════════════
 
-type Fonte = "cliente" | "salvos-cliente" | "hub" | "meus";
+type Fonte = "minhas" | "cliente" | "salvos-cliente" | "hub" | "meus";
 
 // Paginação: ~10 linhas por página. No desktop o grid tem 6 colunas,
 // então 6 x 10 = 60 itens por página. Espelha o padrão do SavedRefs.
 const PAGE_SIZE = 60;
 
 const ABAS: { key: Fonte; label: string; icon: typeof Lightbulb; hint: string }[] = [
+  { key: "minhas", label: "Suas ideias", icon: PenLine, hint: "Anote a ideia na hora que ela vier. Depois, daqui mesmo, ela vira post ou entra no cronograma do cliente." },
   { key: "cliente", label: "Do cliente", icon: Lightbulb, hint: "Ideias que o próprio cliente escreveu na conta CRIA dele. Ele pensa, você executa." },
   { key: "salvos-cliente", label: "Salvos dele", icon: Bookmark, hint: "Posts que o cliente guardou como referência. É o gosto dele, em imagem." },
   { key: "hub", label: "Do HUB", icon: Sparkles, hint: "Ideias que a IA gerou a partir da análise dos concorrentes dele." },
   { key: "meus", label: "Seus salvos", icon: Instagram, hint: "Links que você guarda pra este cliente. Só você vê, nem ele, nem a equipe do lado dele." },
 ];
 
-export function ClienteIdeias({ clientId, criaOwnerId }: { clientId: string; criaOwnerId: string | null }) {
-  const [aba, setAba] = useState<Fonte>(criaOwnerId ? "cliente" : "hub");
+// O que o MinhasIdeias precisa saber do Cria Post do cliente (o portal dele).
+// Null = Cria Post não ativado; as conversões explicam em vez de quebrar.
+export type ExtClientMin = { id: string; name: string; instagram_handle: string | null };
+
+export function ClienteIdeias({ clientId, criaOwnerId, extClient = null }: {
+  clientId: string;
+  criaOwnerId: string | null;
+  extClient?: ExtClientMin | null;
+}) {
+  // Abre em "Suas ideias": a captura rápida é a porta de entrada do fluxo.
+  const [aba, setAba] = useState<Fonte>("minhas");
 
   const { data: doCria, isLoading: loadingCria } = useCriaClientIdeas(criaOwnerId);
   const { data: meusRefs = [], isLoading: loadingRefs } = useCrmSavedRefs(clientId);
-  const { data: hubIdeas = [], isLoading: loadingHub } = useCreativeIdeas(clientId);
+  const { data: todasIdeas = [], isLoading: loadingHub } = useCreativeIdeas(clientId);
+  // A creative_ideas guarda as duas origens: 'manual' é o que a social mídia
+  // anotou na mão; o resto (scrape/tendencia/plano) é o que a IA do HUB gerou.
+  const minhasIdeias = useMemo(() => todasIdeas.filter((i) => i.source === "manual"), [todasIdeas]);
+  const hubIdeas = useMemo(() => todasIdeas.filter((i) => i.source !== "manual"), [todasIdeas]);
 
   const addRef = useAddCrmSavedRef();
   const delRef = useDeleteCrmSavedRef();
@@ -85,6 +104,7 @@ export function ClienteIdeias({ clientId, criaOwnerId }: { clientId: string; cri
   const semCria = !criaOwnerId;
 
   const contagem: Record<Fonte, number> = {
+    minhas: minhasIdeias.length,
     cliente: doCria?.ideas.length ?? 0,
     "salvos-cliente": doCria?.saved.length ?? 0,
     hub: hubIdeas.length,
@@ -131,6 +151,11 @@ export function ClienteIdeias({ clientId, criaOwnerId }: { clientId: string; cri
 
       {semCria && (aba === "cliente" || aba === "salvos-cliente") && (
         <Vazio titulo="Este cliente não usa o Cria" texto="As ideias e os salvos dele só aparecem aqui quando ele tem conta no Cria." />
+      )}
+
+      {/* ── SUAS IDEIAS (captura rápida + conversão) ── */}
+      {aba === "minhas" && (
+        <MinhasIdeias clientId={clientId} ideias={minhasIdeias} loading={loadingHub} extClient={extClient ?? null} />
       )}
 
       {/* ── IDEIAS DO CLIENTE ── */}
@@ -257,6 +282,249 @@ export function ClienteIdeias({ clientId, criaOwnerId }: { clientId: string; cri
             )}
         </>
       )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SUAS IDEIAS — o pedido veio da operação real: "ter onde ir colocando
+// ideia de conteúdo pro cliente, pra depois virar post ou ir pro cronograma".
+//
+// O uso é no meio do dia: um campo de UMA linha no topo, Enter salva.
+// Cada ideia tem dois destinos ("Virar post" e "Cronograma") e três estados
+// (nova, aproveitada, descartada). A aproveitada NÃO some: guarda o link de
+// pra onde foi, que é o histórico do que já virou conteúdo.
+// ═══════════════════════════════════════════════════════════════════════
+
+type FiltroIdeia = "novas" | "aproveitadas" | "descartadas";
+
+const FILTROS: { key: FiltroIdeia; label: string }[] = [
+  { key: "novas", label: "Novas" },
+  { key: "aproveitadas", label: "Aproveitadas" },
+  { key: "descartadas", label: "Descartadas" },
+];
+
+// status do banco → balde do filtro ('usar' é herança do HUB, conta como nova).
+const baldeDe = (s: CreativeIdea["status"]): FiltroIdeia =>
+  s === "usada" ? "aproveitadas" : s === "descartada" ? "descartadas" : "novas";
+
+function MinhasIdeias({ clientId, ideias, loading, extClient }: {
+  clientId: string;
+  ideias: CreativeIdea[];
+  loading: boolean;
+  extClient: ExtClientMin | null;
+}) {
+  const navigate = useNavigate();
+  const add = useAddManualIdea();
+  const toPost = useIdeaToPost();
+  const toCrono = useIdeaToCronograma();
+  const setStatus = useUpdateIdeaStatus();
+  const delIdea = useDeleteIdea();
+  const { cronogramas, create: createCrono } = useCronogramas();
+
+  // Captura: uma linha obrigatória; nota e link são opcionais, escondidos
+  // atrás do "+ detalhes" pra não pesar o gesto rápido.
+  const [texto, setTexto] = useState("");
+  const [detalhes, setDetalhes] = useState(false);
+  const [nota, setNota] = useState("");
+  const [refUrl, setRefUrl] = useState("");
+  const [filtro, setFiltro] = useState<FiltroIdeia>("novas");
+  // Ideia esperando a escolha do cronograma (dialog). Null = dialog fechado.
+  const [escolhendo, setEscolhendo] = useState<CreativeIdea | null>(null);
+
+  // Cronogramas "vivos" deste cliente (arquivado não recebe ideia nova).
+  const cronosAtivos = useMemo(
+    () => (extClient ? cronogramas.filter((c) => c.external_client_id === extClient.id && c.status !== "arquivado") : []),
+    [cronogramas, extClient],
+  );
+
+  const salvar = () => {
+    if (!texto.trim() || add.isPending) return;
+    add.mutate(
+      { crm_client_id: clientId, title: texto, rationale: nota || null, ref_url: refUrl || null },
+      { onSuccess: () => { setTexto(""); setNota(""); setRefUrl(""); setDetalhes(false); } },
+    );
+  };
+
+  // Cliente sem Cria Post: explica o porquê em vez de quebrar (pedido #5).
+  const explicarSemPost = () =>
+    toast.error("O Cria Post não está ativo pra este cliente. Ative na aba Cria Post (é o que cria a área de posts e cronogramas dele) e volte aqui pra converter a ideia.");
+
+  const virarPost = async (idea: CreativeIdea) => {
+    if (!extClient) { explicarSemPost(); return; }
+    if (toPost.isPending) return;
+    try {
+      await toPost.mutateAsync({ idea, externalClientId: extClient.id });
+      // O post nasce Em produção: leva a pessoa direto pro kanban dele.
+      navigate(`/socialmidia/clientes/${clientId}/posts`);
+    } catch { /* o hook já avisa */ }
+  };
+
+  const mandarCronograma = (idea: CreativeIdea) => {
+    if (!extClient) { explicarSemPost(); return; }
+    // 1 cronograma ativo = vai direto; 0 ou vários = o dialog decide.
+    if (cronosAtivos.length === 1) { toCrono.mutate({ idea, cronogramaId: cronosAtivos[0].id }); return; }
+    setEscolhendo(idea);
+  };
+
+  // Sem nenhum cronograma: cria um agora (nome com o mês corrente) e já envia.
+  const criarEEnviar = async () => {
+    if (!extClient || !escolhendo || createCrono.isPending) return;
+    const mes = new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+    try {
+      const c = await createCrono.mutateAsync({
+        title: `Cronograma de ${mes}`,
+        external_client_id: extClient.id,
+        client_label: extClient.name,
+        client_handle: extClient.instagram_handle ?? null,
+        crm_client_id: clientId,
+      });
+      await toCrono.mutateAsync({ idea: escolhendo, cronogramaId: c.id });
+      setEscolhendo(null);
+    } catch { /* os hooks já avisam */ }
+  };
+
+  const visiveis = ideias.filter((i) => baldeDe(i.status) === filtro);
+  const converting = toPost.isPending || toCrono.isPending;
+
+  return (
+    <div className="space-y-4">
+      {/* CAPTURA RÁPIDA — âncora do tour do cockpit. */}
+      <div data-tour="cli-ideias-captura" className="rounded-2xl border border-border bg-card p-4">
+        <div className="flex gap-2">
+          <Input
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); salvar(); } }}
+            placeholder="Anote uma ideia pra este cliente e aperte Enter…"
+            className="rounded-xl"
+            aria-label="Nova ideia"
+          />
+          <Button onClick={salvar} disabled={!texto.trim() || add.isPending} className="shrink-0 px-3" aria-label="Adicionar ideia">
+            {add.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          </Button>
+        </div>
+        <button type="button" onClick={() => setDetalhes((v) => !v)}
+          className="mt-2 text-[12px] font-body font-semibold text-muted-foreground hover:text-foreground">
+          {detalhes ? "esconder detalhes" : "+ nota ou link de referência"}
+        </button>
+        {detalhes && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+            <Textarea rows={1} value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Nota (opcional)" className="rounded-xl text-sm" />
+            <Input value={refUrl} onChange={(e) => setRefUrl(e.target.value)} placeholder="https://… link de referência (opcional)" className="rounded-xl" />
+          </div>
+        )}
+      </div>
+
+      {/* Filtro por estado. */}
+      <div className="flex gap-1.5 flex-wrap">
+        {FILTROS.map((f) => (
+          <FolderChip key={f.key} active={filtro === f.key} onClick={() => setFiltro(f.key)}>
+            {f.label} <span className="opacity-70">{ideias.filter((i) => baldeDe(i.status) === f.key).length}</span>
+          </FolderChip>
+        ))}
+      </div>
+
+      {loading ? <Carregando /> :
+        visiveis.length === 0 ? (
+          filtro === "novas"
+            ? <Vazio titulo="Nenhuma ideia anotada" texto="Vai anotando ao longo da semana: cada ideia vira post ou entra no cronograma com um toque." />
+            : <Vazio titulo={filtro === "aproveitadas" ? "Nada aproveitado ainda" : "Nada descartado"} texto={filtro === "aproveitadas" ? "Quando uma ideia virar post ou cronograma, o histórico fica aqui." : "As ideias que você descartar ficam aqui, dá pra restaurar."} />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {visiveis.map((i) => (
+              <div key={i.id} className="rounded-2xl border border-border bg-card p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-display font-bold text-foreground leading-snug">{i.title}</p>
+                  <button
+                    onClick={async () => { if (await confirmar({ titulo: "Excluir esta ideia de vez?" })) delIdea.mutate(i.id); }}
+                    className="text-muted-foreground hover:text-destructive shrink-0" aria-label="Excluir ideia">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                {i.rationale && <p className="text-[12.5px] font-body text-muted-foreground mt-1 whitespace-pre-wrap leading-relaxed">{i.rationale}</p>}
+                {i.ref_url && (
+                  <a href={i.ref_url} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11.5px] font-body font-semibold text-primary mt-1.5">
+                    <Link2 className="h-3 w-3" /> referência
+                  </a>
+                )}
+
+                {/* Ações por estado. */}
+                {baldeDe(i.status) === "novas" && (
+                  <div className="flex gap-1.5 mt-3 pt-2.5 border-t border-border/60 flex-wrap">
+                    <Button size="sm" className="h-8 text-[11.5px]" disabled={converting} onClick={() => virarPost(i)}>
+                      <Send className="h-3.5 w-3.5 mr-1" /> Virar post
+                    </Button>
+                    <Button size="sm" variant="outline" className="h-8 text-[11.5px]" disabled={converting} onClick={() => mandarCronograma(i)}>
+                      <CalendarPlus className="h-3.5 w-3.5 mr-1" /> Cronograma
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-8 text-[11.5px] text-muted-foreground"
+                      onClick={() => setStatus.mutate({ id: i.id, status: "descartada" })}>
+                      Descartar
+                    </Button>
+                  </div>
+                )}
+                {baldeDe(i.status) === "aproveitadas" && (
+                  <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-border/60 flex-wrap">
+                    <Chip tone="ok">Aproveitada</Chip>
+                    {i.converted_post_id && (
+                      <button onClick={() => navigate(`/socialmidia/clientes/${clientId}/posts`)}
+                        className="inline-flex items-center gap-1 text-[11.5px] font-body font-semibold text-primary">
+                        <ExternalLink className="h-3 w-3" /> ver na Produção
+                      </button>
+                    )}
+                    {i.converted_cronograma_id && (
+                      <button onClick={() => navigate(`/socialmidia/clientes/${clientId}/cronograma`)}
+                        className="inline-flex items-center gap-1 text-[11.5px] font-body font-semibold text-primary">
+                        <ExternalLink className="h-3 w-3" /> ver no Cronograma
+                      </button>
+                    )}
+                  </div>
+                )}
+                {baldeDe(i.status) === "descartadas" && (
+                  <div className="flex gap-1.5 mt-3 pt-2.5 border-t border-border/60">
+                    <Button size="sm" variant="outline" className="h-8 text-[11.5px]"
+                      onClick={() => setStatus.mutate({ id: i.id, status: "novo" })}>
+                      <RotateCcw className="h-3.5 w-3.5 mr-1" /> Restaurar
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+      {/* Escolha do cronograma: vários ativos = lista; nenhum = oferece criar. */}
+      <Dialog open={!!escolhendo} onOpenChange={(o) => { if (!o) setEscolhendo(null); }}>
+        <DialogContent className="max-w-sm rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-display">Mandar pra qual cronograma?</DialogTitle>
+          </DialogHeader>
+          {cronosAtivos.length > 0 ? (
+            <div className="space-y-1.5">
+              {cronosAtivos.map((c) => (
+                <button key={c.id}
+                  onClick={() => { if (escolhendo && !toCrono.isPending) { toCrono.mutate({ idea: escolhendo, cronogramaId: c.id }, { onSuccess: () => setEscolhendo(null) }); } }}
+                  className="w-full text-left rounded-xl border border-border px-3 py-2.5 text-[13px] font-body font-semibold text-foreground hover:border-primary/40 hover:bg-muted/40 transition-colors">
+                  {c.title}
+                  <span className="block text-[11px] font-normal text-muted-foreground capitalize">{c.status}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-[13px] font-body text-muted-foreground leading-relaxed">
+                Este cliente ainda não tem cronograma. Quer criar um agora, já com esta ideia dentro?
+              </p>
+              <Button onClick={criarEEnviar} disabled={createCrono.isPending || toCrono.isPending} className="w-full">
+                {(createCrono.isPending || toCrono.isPending) && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+                Criar cronograma com a ideia
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -520,9 +520,10 @@ export default function ClienteHub() {
             <button
               key={g.key}
               onClick={() => openGroup(g)}
-              // Âncoras do tutorial: o tour precisa CLICAR nestas duas abas pra
-              // levar a pessoa até a Visão geral e até a landing do Cria Post.
-              data-tour={g.key === "visao-geral" ? "cli-nav-visao" : g.key === "cria-post" ? "cli-nav-post" : undefined}
+              // Âncoras do tutorial: o tour precisa CLICAR nestas abas pra levar
+              // a pessoa até a Visão geral, a landing do Cria Post e a do Radar
+              // (onde mora o banco de ideias com a captura rápida).
+              data-tour={g.key === "visao-geral" ? "cli-nav-visao" : g.key === "cria-post" ? "cli-nav-post" : g.key === "cria-radar" ? "cli-nav-radar" : undefined}
               title={locked ? `${g.label} · não está no seu plano` : g.label}
               className={`group flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-body font-semibold whitespace-nowrap transition-colors ${
                 on ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"
@@ -736,8 +737,17 @@ export default function ClienteHub() {
         )
       )}
 
-      {/* IDEIAS, o banco de ideias do cliente (4 origens). */}
-      {activeTab === "ideias" && <ClienteIdeias clientId={id!} criaOwnerId={client.cria_owner_id} />}
+      {/* IDEIAS, o banco de ideias do cliente (5 origens, a primeira é a captura
+          rápida da própria social mídia). O extClient vai junto porque é ele que
+          permite converter ideia em post/cronograma; null = a ação explica como
+          ativar o Cria Post em vez de quebrar. */}
+      {activeTab === "ideias" && (
+        <ClienteIdeias
+          clientId={id!}
+          criaOwnerId={client.cria_owner_id}
+          extClient={extClient ? { id: extClient.id, name: extClient.name, instagram_handle: extClient.instagram_handle } : null}
+        />
+      )}
 
       {/* PESQUISA. Apify. A aba só existe pra quem tem o HUB liberado. */}
       {activeTab === "pesquisa" && hasHubCria && <CriativoTab clientId={id!} clientName={displayName} />}

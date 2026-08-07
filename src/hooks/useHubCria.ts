@@ -157,9 +157,18 @@ export type CreativeIdea = {
   title: string;
   format: string | null;
   rationale: string | null;
+  // Colunas novas (ver migration 20260807000001): a ideia manual pode carregar
+  // um link de referência, e a convertida guarda PRA ONDE ela foi.
+  ref_url: string | null;
+  converted_post_id: string | null;
+  converted_cronograma_id: string | null;
   status: "novo" | "usar" | "usada" | "descartada";
   created_at: string;
 };
+
+// Colunas lidas do banco de ideias (um lugar só, pras 3 queries não divergirem).
+const IDEA_COLUMNS =
+  "id,crm_client_id,scrape_id,source,title,format,rationale,ref_url,converted_post_id,converted_cronograma_id,status,created_at";
 
 // crmClientId undefined = análise avulsa (crm_client_id null).
 export function useScrapes(crmClientId?: string) {
@@ -182,7 +191,7 @@ export function useAllCreativeIdeas() {
     queryKey: ["hubcria-ideas-all"],
     queryFn: async () => {
       const { data, error } = await sbFrom("creative_ideas")
-        .select("id,crm_client_id,scrape_id,source,title,format,rationale,status,created_at")
+        .select(IDEA_COLUMNS)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as CreativeIdea[];
@@ -195,7 +204,7 @@ export function useCreativeIdeas(crmClientId?: string) {
     queryKey: ["hubcria-ideas", crmClientId ?? "avulsa"],
     queryFn: async () => {
       let q = sbFrom("creative_ideas")
-        .select("id,crm_client_id,scrape_id,source,title,format,rationale,status,created_at");
+        .select(IDEA_COLUMNS);
       q = crmClientId ? q.eq("crm_client_id", crmClientId) : q.is("crm_client_id", null);
       const { data, error } = await q.order("created_at", { ascending: false });
       if (error) throw error;
@@ -358,6 +367,125 @@ export function useGeneratePlanFromIdeas() {
       const m = e instanceof Error ? e.message : "";
       toast.error(m || "Não consegui gerar o cronograma.");
     },
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   IDEIAS MANUAIS + CONVERSÃO (cockpit do cliente)
+
+   A Gabriela anota a ideia no meio do dia ("Na aba do cliente tem como colocar
+   ideias?") e depois decide o destino: virar post no Cria Post ou entrar num
+   cronograma. A ideia convertida NÃO some: vira "usada" e guarda o link do
+   destino (converted_post_id / converted_cronograma_id), que é o histórico do
+   que já virou conteúdo.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+// Captura rápida: a ideia digitada na mão entra na MESMA creative_ideas do HUB,
+// com source 'manual'. Tabela nova pra isso seria dívida: o banco de ideias do
+// cliente é um só.
+export function useAddManualIdea() {
+  const { agencyOwnerId } = useActiveAccount();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { crm_client_id: string; title: string; rationale?: string | null; ref_url?: string | null }) => {
+      if (!agencyOwnerId) throw new Error("Sem sessão");
+      const title = input.title.trim();
+      if (!title) throw new Error("Escreva a ideia primeiro.");
+      const ref = input.ref_url?.trim() || null;
+      if (ref && !/^https?:\/\//i.test(ref)) throw new Error("O link de referência precisa ser completo (https://…).");
+      const { error } = await sbFrom("creative_ideas").insert({
+        manager_id: agencyOwnerId,
+        crm_client_id: input.crm_client_id,
+        source: "manual",
+        title: title.slice(0, 500),
+        rationale: input.rationale?.trim() || null,
+        ref_url: ref,
+      } as never);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["hubcria-ideas", vars.crm_client_id] });
+      qc.invalidateQueries({ queryKey: ["hubcria-ideas-all"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Não consegui salvar a ideia."),
+  });
+}
+
+// "Virar post": cria o post no kanban do cliente pelo MESMO caminho do "Novo
+// post" da Produção (nasce Em produção, não vai pro cliente antes da hora) e
+// marca a ideia como usada apontando pro post.
+export function useIdeaToPost() {
+  const { agencyOwnerId } = useActiveAccount();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { idea: CreativeIdea; externalClientId: string }): Promise<string> => {
+      if (!agencyOwnerId) throw new Error("Sem sessão");
+      const { data, error } = await sbFrom("posts").insert({
+        user_id: agencyOwnerId,
+        external_client_id: input.externalClientId,
+        status: "editando",
+        approval_status: "em_producao",
+        approval_mode: "fast",
+        platform: "instagram",
+        format: (input.idea.format || "reels").toLowerCase(),
+        title: input.idea.title.slice(0, 200),
+        caption: input.idea.rationale ?? null,
+        reference_url: input.idea.ref_url ?? null,
+      } as never).select("id").single();
+      if (error) throw new Error(error.message);
+      const postId = (data as { id: string }).id;
+      const { error: upErr } = await sbFrom("creative_ideas")
+        .update({ status: "usada", converted_post_id: postId, updated_at: new Date().toISOString() } as never)
+        .eq("id", input.idea.id);
+      if (upErr) throw new Error(upErr.message);
+      return postId;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["hubcria-ideas"] });
+      qc.invalidateQueries({ queryKey: ["hubcria-ideas-all"] });
+      // O post novo aparece em todas as telas que listam posts do portal.
+      qc.invalidateQueries({ queryKey: ["cria-posts"] });
+      qc.invalidateQueries({ queryKey: ["external-posts-all"] });
+      qc.invalidateQueries({ queryKey: ["external-pending"] });
+      qc.invalidateQueries({ queryKey: ["operation-posts"] });
+      qc.invalidateQueries({ queryKey: ["manager-calendar"] });
+      toast.success("Post criado em Produção. Monte a arte e a legenda por lá.");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Não consegui criar o post."),
+  });
+}
+
+// "Mandar pro cronograma": entra como item no fim do cronograma escolhido e
+// marca a ideia como usada apontando pro cronograma.
+export function useIdeaToCronograma() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { idea: CreativeIdea; cronogramaId: string }) => {
+      // sort_order no fim da lista atual (só o count, sem baixar os itens).
+      const { count, error: cntErr } = await sbFrom("cronograma_items")
+        .select("id", { count: "exact", head: true })
+        .eq("cronograma_id", input.cronogramaId);
+      if (cntErr) throw new Error(cntErr.message);
+      const { error } = await sbFrom("cronograma_items").insert({
+        cronograma_id: input.cronogramaId,
+        sort_order: count ?? 0,
+        title: input.idea.title.slice(0, 200),
+        description: input.idea.rationale ?? null,
+        ref_url: input.idea.ref_url ?? null,
+      } as never);
+      if (error) throw new Error(error.message);
+      const { error: upErr } = await sbFrom("creative_ideas")
+        .update({ status: "usada", converted_cronograma_id: input.cronogramaId, updated_at: new Date().toISOString() } as never)
+        .eq("id", input.idea.id);
+      if (upErr) throw new Error(upErr.message);
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["hubcria-ideas"] });
+      qc.invalidateQueries({ queryKey: ["hubcria-ideas-all"] });
+      qc.invalidateQueries({ queryKey: ["cronograma-items", vars.cronogramaId] });
+      toast.success("Ideia enviada pro cronograma.");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Não consegui mandar pro cronograma."),
   });
 }
 

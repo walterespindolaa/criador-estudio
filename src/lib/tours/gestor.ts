@@ -217,6 +217,27 @@ export const TOURS_GESTOR: TourConfig[] = [
         placement: "top",
       },
       {
+        // O banco de ideias mora no Cria Radar. Este passo abre a landing do
+        // Radar (o card Ideias existe sempre; é a Pesquisa que depende do HUB).
+        target: '[data-tour="cli-sub-ideias"]',
+        openFirst: '[data-tour="cli-nav-radar"]',
+        title: "O banco de ideias dele",
+        body: "Tudo que inspira este cliente num lugar só: o que você anota, o que ele escreveu na conta dele, o que ele salvou e o que a IA tirou dos concorrentes.",
+        placement: "bottom",
+      },
+      {
+        // A captura só está montada dentro da sub-página Ideias; o openFirst
+        // clica no card que o passo anterior deixou na tela. Se algo mudar de
+        // lugar, o passo sai do tour em vez de virar card solto.
+        skipIfMissing: true,
+        target: '[data-tour="cli-ideias-captura"]',
+        openFirst: '[data-tour="cli-sub-ideias"]',
+        title: "Anote agora, converta depois",
+        body: "Veio uma ideia no meio do dia? Escreve e aperta Enter. Quando for a hora, o “Virar post” cria o rascunho na Produção e o “Cronograma” manda direto pro calendário do mês. A ideia aproveitada não some: fica no histórico apontando pra onde foi.",
+        mobileBody: "Veio uma ideia? Escreve e toca no +. Depois, “Virar post” cria o rascunho na Produção e “Cronograma” manda pro calendário do mês. A aproveitada fica no histórico apontando pra onde foi.",
+        placement: "bottom",
+      },
+      {
         target: '[data-tour="cli-links"]',
         title: "Links úteis e as pastas do Drive",
         body: "Este botão abre os links salvos do cliente de qualquer aba: Drive, captação, materiais. Na aba Links úteis lá em cima você cadastra rótulo e URL, e o conteúdo de cada pasta do Google Drive aparece listado logo abaixo. Pra listar, a pasta precisa estar compartilhada como “qualquer pessoa com o link pode ver”.",
