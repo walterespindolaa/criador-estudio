@@ -83,9 +83,10 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
 }) {
   const { list, uploadImage, uploadVideo, addDriveLink, remove, removeAll, reorder } = useCriaPostMedia(postId);
   const qc = useQueryClient();
-  const { pickAndSave, picking } = useGoogleDrive();
+  const { pickAndSave, picking, pickerSupported } = useGoogleDrive();
   const imgRef = useRef<HTMLInputElement>(null);
   const vidRef = useRef<HTMLInputElement>(null);
+  const driveLinkRef = useRef<HTMLInputElement>(null);
   const [driveUrl, setDriveUrl] = useState("");
   const [showDrive, setShowDrive] = useState(false);
   // "Anexos e links" colapsável: começa fechada, mas lembra a escolha por device.
@@ -229,6 +230,16 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
   // várias fotos de uma vez. Ideal pro carrossel. Depois recarrega a mídia.
   const onDrivePicker = async () => {
     if (remaining() <= 0) { toast.error(`Máximo de ${MAX_MEDIA} mídias por post.`); return; }
+    // No celular/PWA o seletor do Google não funciona (o popup de OAuth é bloqueado
+    // e o dialog do Picker é de desktop). Em vez de um botão que só dá erro, abre e
+    // foca o campo "Link Drive", que resolve o mesmo caso: copiar o link no app do
+    // Drive e colar aqui (o tipo do arquivo é detectado sozinho).
+    if (!pickerSupported) {
+      setShowDrive(true);
+      toast.info("No celular, abra o app do Drive, toque em Compartilhar > Copiar link e cole no campo aqui embaixo.");
+      setTimeout(() => driveLinkRef.current?.focus(), 80);
+      return;
+    }
     try {
       await pickAndSave(postId);
       qc.invalidateQueries({ queryKey: ["criapost-media", postId] });
@@ -326,7 +337,7 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
       {showDrive && (
         <div>
           <div className="flex items-center gap-2">
-            <Input value={driveUrl} onChange={(e) => setDriveUrl(e.target.value)} placeholder="Cole o link do Google Drive" className="h-9 rounded-xl" />
+            <Input ref={driveLinkRef} value={driveUrl} onChange={(e) => setDriveUrl(e.target.value)} placeholder="Cole o link do Google Drive" className="h-9 rounded-xl" />
             <Button type="button" size="sm" onClick={onDrive} disabled={addDriveLink.isPending}>Adicionar</Button>
           </div>
           <p className="text-[11px] font-body text-muted-foreground mt-1.5">

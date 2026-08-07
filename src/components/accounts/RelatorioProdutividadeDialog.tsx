@@ -7,7 +7,7 @@ import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { useCrmClients } from "@/hooks/useCrm";
 import { useExternalClients } from "@/hooks/useCriaPost";
-import { computeProdStats, useProdutividadePeriodo, type ProdutividadeRaw } from "@/hooks/useProdutividade";
+import { computeProdStats, useProdutividadePeriodo, type ProdCapture, type ProdutividadeRaw } from "@/hooks/useProdutividade";
 
 // ── RELATÓRIO DE PRODUTIVIDADE (da operação, não do cliente) ─────────────────
 // "Quanto EU produzi na semana/no mês": posts, captações, tarefas, criações e
@@ -65,6 +65,28 @@ function DeltaInline({ d }: { d: Delta | undefined }) {
 
 function ymd(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
 const ddmm = (iso: string) => parseDateOnly(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+
+// Ícones desenhados como SVG inline (não lucide) de propósito: o html2canvas do
+// PDF fotografa formas simples com segurança, e emoji/glifo de relógio varia de
+// fonte pra fonte. Check verde = concluída, relógio dourado = agendada.
+const IconeCheck = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" style={{ flexShrink: 0, display: "block" }} aria-label="Concluída">
+    <path d="M20 6L9 17l-5-5" fill="none" stroke={C.green} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+const IconeRelogio = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" style={{ flexShrink: 0, display: "block" }} aria-label="Agendada">
+    <circle cx="12" cy="12" r="9" fill="none" stroke={C.gold} strokeWidth="2.5" />
+    <path d="M12 7v5l3.2 2" fill="none" stroke={C.gold} strokeWidth="2.5" strokeLinecap="round" />
+  </svg>
+);
+
+// "HH:MM:SS" do banco vira "HH:MM" pra leitura.
+const horaCurta = (t: string | null) => (t ? t.slice(0, 5) : null);
+
+// Mesma chave de agrupamento do ranking, pra casar captação com a linha do cliente.
+const chaveCaptura = (c: ProdCapture): string | null =>
+  c.crm_client_id ? `crm:${c.crm_client_id}` : c.client_name?.trim() ? `nome:${c.client_name.trim().toLowerCase()}` : null;
 
 type Modo = "semana" | "mes";
 
@@ -129,12 +151,25 @@ function buildRanking(
   return Array.from(map.values()).sort((a, b) => b.total - a.total).slice(0, 6);
 }
 
+// Detalhe do ranking por extenso ("12 posts · 2 tarefas · 1 capt."), só com as
+// partes maiores que zero. O antigo "12p 2t 1c" ninguém entendia sem legenda.
+function detalheRank(r: RankRow): string {
+  const partes: string[] = [];
+  if (r.posts > 0) partes.push(`${nb(r.posts)} ${r.posts === 1 ? "post" : "posts"}`);
+  if (r.tarefas > 0) partes.push(`${nb(r.tarefas)} ${r.tarefas === 1 ? "tarefa" : "tarefas"}`);
+  if (r.capts > 0) partes.push(`${nb(r.capts)} capt.`);
+  return partes.join(" · ");
+}
+
 type Props = { open: boolean; onOpenChange: (open: boolean) => void };
 
 export function RelatorioProdutividadeDialog({ open, onOpenChange }: Props) {
   const [modo, setModo] = useState<Modo>("mes");
   const [anchor, setAnchor] = useState<Date>(() => parseDateOnly(hojeBR()));
   const [downloading, setDownloading] = useState(false);
+  // Lista geral de captações aberta/fechada e qual cliente do ranking está expandido.
+  const [captAberta, setCaptAberta] = useState(false);
+  const [clienteAberto, setClienteAberto] = useState<string | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
   const { exportPdf } = usePdfExport();
 
@@ -182,6 +217,18 @@ export function RelatorioProdutividadeDialog({ open, onOpenChange }: Props) {
   );
   const rankMax = ranking[0]?.total ?? 0;
 
+  // Captações do período em ordem cronológica, sem as canceladas (mesma régua da
+  // contagem do ranking). É o detalhe do que já é contado, não métrica nova.
+  const capsPeriodo = useMemo(() => {
+    const list = (cur.data?.captures ?? []).filter((c) => c.status !== "cancelada");
+    return [...list].sort((a, b) =>
+      `${a.capture_date} ${a.capture_time ?? ""}`.localeCompare(`${b.capture_date} ${b.capture_time ?? ""}`),
+    );
+  }, [cur.data]);
+
+  const nomeCaptura = (c: ProdCapture) =>
+    (c.crm_client_id ? crmName.get(c.crm_client_id) : null) ?? c.client_name?.trim() ?? "Sem cliente";
+
   const nav = (dir: -1 | 1) => setAnchor((a) => {
     const n = new Date(a);
     modo === "mes" ? n.setMonth(n.getMonth() + dir) : n.setDate(n.getDate() + dir * 7);
@@ -189,7 +236,13 @@ export function RelatorioProdutividadeDialog({ open, onOpenChange }: Props) {
   });
 
   const download = async () => {
+    // O PDF é relatório pra guardar: sai sempre com a lista de captações expandida,
+    // independente do que está aberto na tela. `downloading` também esconde os
+    // controles de expandir/ocultar, que não fazem sentido impressos.
     setDownloading(true);
+    setCaptAberta(true);
+    // Dois frames pra garantir que o React pintou o estado novo antes da foto.
+    await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
     try {
       await exportPdf(reportRef, `produtividade-${modo}-${per.from}`);
     } finally {
@@ -219,6 +272,40 @@ export function RelatorioProdutividadeDialog({ open, onOpenChange }: Props) {
   const sectionTitle = (t: string) => (
     <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: C.sub, marginBottom: 6 }}>{t}</div>
   );
+
+  // Uma captação por linha: ícone de status, cliente (ou data, quando a linha já
+  // está dentro do detalhe de um cliente), nota e data/hora. `comNome` também
+  // decide o data-pdf-block: na lista geral cada linha é ponto seguro de corte de
+  // página; dentro da caixinha do cliente não, pra não fatiar o fundo cinza.
+  const linhaCaptura = (c: ProdCapture, comNome: boolean) => {
+    const hora = horaCurta(c.capture_time);
+    const quando = `${ddmm(c.capture_date)}${hora ? ` · ${hora}` : ""}`;
+    return (
+      <div key={c.id} data-pdf-block={comNome ? true : undefined}
+        style={{ display: "flex", alignItems: "flex-start", gap: 7, padding: "5px 0", borderBottom: `1px solid ${C.soft}` }}>
+        <div style={{ marginTop: 2 }}>{c.status === "concluida" ? <IconeCheck /> : <IconeRelogio />}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12, fontWeight: comNome ? 600 : 500, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {comNome ? nomeCaptura(c) : quando}
+          </div>
+          {c.note?.trim() ? (
+            <div style={{ fontSize: 10.5, color: C.sub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.note.trim()}</div>
+          ) : null}
+        </div>
+        {comNome && <div style={{ fontSize: 11, color: C.sub, whiteSpace: "nowrap", marginTop: 1 }}>{quando}</div>}
+      </div>
+    );
+  };
+
+  // Botão discreto de expandir/ocultar. Some no PDF (downloading) porque controle
+  // de tela impresso não faz sentido.
+  const botaoLink = (label: string, onClick: () => void) =>
+    downloading ? null : (
+      <button type="button" onClick={onClick}
+        style={{ background: "none", border: 0, padding: "7px 0 2px", cursor: "pointer", fontSize: 11.5, fontWeight: 700, color: C.brand, fontFamily: "inherit" }}>
+        {label}
+      </button>
+    );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -291,6 +378,20 @@ export function RelatorioProdutividadeDialog({ open, onOpenChange }: Props) {
                   {row("Agendadas", stats.capt.agendadas, d.captAgendadas)}
                   {row("Concluídas", stats.capt.concluidas, d.captConcluidas)}
                   {stats.capt.canceladas > 0 && row("Canceladas", stats.capt.canceladas)}
+                  {/* O detalhe do que foi contado: QUAIS captações, com nome. No PDF sai sempre aberto. */}
+                  {capsPeriodo.length === 0 ? (
+                    <div style={{ fontSize: 11.5, color: C.sub, padding: "7px 0" }}>Nenhuma captação no período.</div>
+                  ) : captAberta ? (
+                    <>
+                      <div style={{ marginTop: 6 }}>{capsPeriodo.map((c) => linhaCaptura(c, true))}</div>
+                      {botaoLink("Ocultar lista", () => setCaptAberta(false))}
+                    </>
+                  ) : (
+                    botaoLink(
+                      capsPeriodo.length === 1 ? "Ver a captação do período" : `Ver as ${nb(capsPeriodo.length)} captações do período`,
+                      () => setCaptAberta(true),
+                    )
+                  )}
                 </div>
 
                 <div data-pdf-block style={{ marginTop: 16 }}>
@@ -309,19 +410,44 @@ export function RelatorioProdutividadeDialog({ open, onOpenChange }: Props) {
                 {ranking.length > 0 && (
                   <div data-pdf-block style={{ marginTop: 16 }}>
                     {sectionTitle("Produção por cliente")}
-                    {ranking.map((r) => (
-                      <div key={r.key} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                        <div style={{ width: 110, fontSize: 12, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</div>
-                        <div style={{ flex: 1, height: 8, background: C.soft, borderRadius: 99, overflow: "hidden" }}>
-                          <div style={{ width: `${rankMax > 0 ? Math.max(4, (r.total / rankMax) * 100) : 0}%`, height: "100%", background: C.brand }} />
+                    {ranking.map((r) => {
+                      const aberto = clienteAberto === r.key;
+                      const capsCliente = capsPeriodo.filter((c) => chaveCaptura(c) === r.key);
+                      const detalhe = detalheRank(r);
+                      return (
+                        <div key={r.key} style={{ marginBottom: 6 }}>
+                          {/* A linha inteira é clicável: expande as captações do cliente no período. */}
+                          <button type="button" onClick={() => setClienteAberto(aberto ? null : r.key)}
+                            style={{ display: "block", width: "100%", background: "none", border: 0, padding: "3px 0", margin: 0, cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
+                            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+                              <div style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 600, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {/* Setinha some no PDF: impresso não expande nada. */}
+                                {!downloading && <span style={{ color: C.sub, fontSize: 9, marginRight: 5 }}>{aberto ? "▼" : "►"}</span>}
+                                {r.name}
+                              </div>
+                              <b style={{ fontSize: 12.5, color: C.ink, whiteSpace: "nowrap" }}>{r.total}</b>
+                            </div>
+                            <div style={{ height: 8, background: C.soft, borderRadius: 99, overflow: "hidden", margin: "4px 0 3px" }}>
+                              <div style={{ width: `${rankMax > 0 ? Math.max(4, (r.total / rankMax) * 100) : 0}%`, height: "100%", background: C.brand }} />
+                            </div>
+                            {/* Por extenso e em linha própria: no celular o nome já trunca, aqui cabe inteiro. */}
+                            {detalhe && <div style={{ fontSize: 10.5, color: C.sub }}>{detalhe}</div>}
+                          </button>
+                          {aberto && (
+                            <div style={{ margin: "3px 0 8px", padding: "6px 10px 4px", background: C.soft, borderRadius: 8 }}>
+                              <div style={{ fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4, color: C.sub, marginBottom: 2 }}>
+                                Captações no período
+                              </div>
+                              {capsCliente.length === 0 ? (
+                                <div style={{ fontSize: 11, color: C.sub, padding: "3px 0 5px" }}>Nenhuma captação no período.</div>
+                              ) : (
+                                capsCliente.map((c) => linhaCaptura(c, false))
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <div style={{ width: 132, textAlign: "right", fontSize: 11, color: C.sub, whiteSpace: "nowrap" }}>
-                          <b style={{ color: C.ink, fontSize: 12 }}>{r.total}</b>
-                          {" · "}{r.posts}p {r.tarefas}t {r.capts}c
-                        </div>
-                      </div>
-                    ))}
-                    <div style={{ fontSize: 10, color: C.sub }}>p = posts, t = tarefas, c = captações</div>
+                      );
+                    })}
                   </div>
                 )}
               </>

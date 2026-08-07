@@ -62,6 +62,47 @@ const setStoredToken = (token: string, scope: string, expiresInSeconds = 3600) =
 
 const isVideoMime = (mime: string) => mime.startsWith("video/");
 
+/**
+ * O seletor do Google (Picker) NÃO funciona de forma confiável no celular, por dois motivos:
+ * 1) O token de OAuth vem de initTokenClient, que abre um POPUP. Como o clique passa por
+ *    vários awaits (carregar 2 scripts do Google + buscar o client_id na edge function)
+ *    antes do requestAccessToken, o navegador mobile já "esqueceu" o toque do usuário e
+ *    bloqueia a janela: o GIS devolve popup_failed_to_open e o fluxo morre ali. Em PWA
+ *    instalado (standalone) é ainda pior, popup nem existe direito.
+ * 2) Mesmo com token, o dialog do Picker é feito pra desktop e fica inutilizável em tela
+ *    pequena dentro do modal.
+ * Então no celular a gente nem tenta: orienta o caminho que funciona (campo "Link Drive").
+ */
+export function isPickerSupported(): boolean {
+  try {
+    const standalone = window.matchMedia?.("(display-mode: standalone)")?.matches
+      || (navigator as unknown as { standalone?: boolean }).standalone === true;
+    const ua = navigator.userAgent;
+    const mobileUA = /android|iphone|ipad|ipod/i.test(ua);
+    // iPad em "modo desktop" se apresenta como Macintosh, mas tem touch.
+    const iPadDesktop = /macintosh/i.test(ua) && (navigator.maxTouchPoints ?? 0) > 1;
+    return !standalone && !mobileUA && !iPadDesktop;
+  } catch { return true; }
+}
+
+// Instrução única do fallback mobile, compartilhada pelos botões que usam o picker.
+export const PICKER_MOBILE_MSG =
+  "No celular o seletor do Google não abre. Use o botão \"Link Drive\": no app do Drive, toque em Compartilhar > Copiar link e cole aqui.";
+
+// Traduz o erro real do fluxo pra uma mensagem curta em português, em vez do
+// antigo toast cego "Erro ao abrir Google Drive." que engolia a causa.
+const driveErrorMessage = (err: unknown): string => {
+  const raw = err instanceof Error ? err.message : String(err ?? "");
+  if (raw.includes("popup_failed_to_open")) {
+    return "O navegador bloqueou a janela de login do Google. Libere pop-ups pra este site ou use o botão \"Link Drive\".";
+  }
+  if (raw.includes("access_denied")) return "Permissão negada no Google. Tente de novo e aceite o acesso ao Drive.";
+  if (raw.includes("google_script_load_failed")) return "Não consegui carregar o Google. Confira a conexão e tente de novo.";
+  if (raw.includes("no_token") || raw.includes("oauth_error")) return "O login do Google falhou. Tente de novo.";
+  const short = raw.slice(0, 80);
+  return short ? `Erro ao abrir o Google Drive (${short}).` : "Erro ao abrir o Google Drive.";
+};
+
 async function downloadDriveFileToBlob(fileId: string, accessToken: string): Promise<Blob> {
   const res = await fetch(
     `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`,
@@ -352,6 +393,15 @@ export function useGoogleDrive() {
   const pickAndSave = useCallback(async (postId?: string) => {
     if (picking) return;
 
+    // Celular/PWA: popup de OAuth bloqueado + Picker de desktop. Melhor orientar
+    // o caminho que funciona do que deixar um botão que sempre termina em erro.
+    // (Telas que têm o campo "Link Drive" próprio checam pickerSupported antes
+    // e abrem o campo direto, sem passar por aqui.)
+    if (!isPickerSupported()) {
+      toast.info(PICKER_MOBILE_MSG);
+      return;
+    }
+
     setPicking(true);
 
     try {
@@ -378,14 +428,15 @@ export function useGoogleDrive() {
       const files = await openPicker(token, data.client_id);
       if (files.length > 0) await saveExternalRefs(files, token, postId);
     } catch (err: any) {
+      // Fechar o popup sem escolher conta não é erro; o resto mostra a causa real.
       if (!err?.message?.includes("popup_closed")) {
-        toast.error("Erro ao abrir Google Drive.");
+        toast.error(driveErrorMessage(err));
       }
-      console.error(err);
+      console.error("[drive-picker]", err);
     } finally {
       setPicking(false);
     }
   }, [picking, loadGoogleScripts, getAccessToken, openPicker, saveExternalRefs]);
 
-  return { pickAndSave, picking };
+  return { pickAndSave, picking, pickerSupported: isPickerSupported() };
 }

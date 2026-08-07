@@ -23,7 +23,15 @@ type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 
 export type ProdPost = { id: string; approval_status: string | null; scheduled_date: string; external_client_id: string | null };
-export type ProdCapture = { id: string; status: "agendada" | "concluida" | "cancelada"; capture_date: string; crm_client_id: string | null; client_name: string | null };
+export type ProdCapture = {
+  id: string;
+  status: "agendada" | "concluida" | "cancelada";
+  capture_date: string;
+  capture_time: string | null;
+  note: string | null;
+  crm_client_id: string | null;
+  client_name: string | null;
+};
 export type ProdTask = { id: string; status: string; due_date: string | null; created_at: string; crm_client_id: string | null };
 export type ProdCreation = { id: string; day: string; crm_client_id: string | null; client_name: string | null };
 export type ProdMaterial = { id: string; status: string; due_date: string; crm_client_id: string | null };
@@ -63,7 +71,7 @@ export function useProdutividadePeriodo(from: string, to: string, enabled: boole
           .not("external_client_id", "is", null)
           .gte("scheduled_date", from).lte("scheduled_date", to),
         sbFrom("agenda_captures")
-          .select("id, status, capture_date, crm_client_id, client_name")
+          .select("id, status, capture_date, capture_time, note, crm_client_id, client_name")
           .eq("manager_id", agencyOwnerId!)
           .gte("capture_date", from).lte("capture_date", to),
         sbFrom("crm_tasks")
