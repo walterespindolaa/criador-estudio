@@ -271,7 +271,14 @@ export function AppRail({ pinned = false, onTogglePin }: AppRailProps) {
             <div className="flex-1" />
             <button
               type="button"
-              onClick={onTogglePin}
+              onClick={() => {
+                // Recolher precisa recolher NA HORA. Sem isto, o mouse ainda
+                // esta sobre o menu, o hover segura ele aberto e so a pagina
+                // recua, criando o efeito de "a pagina foi pra tras e o menu
+                // ficou". Zerar o hover faz os dois se moverem juntos.
+                if (pinned) setHovered(false);
+                onTogglePin();
+              }}
               aria-pressed={pinned}
               title={pinned ? "Recolher o menu ao sair" : "Manter o menu sempre aberto"}
               aria-label={pinned ? "Recolher o menu ao sair" : "Manter o menu sempre aberto"}
