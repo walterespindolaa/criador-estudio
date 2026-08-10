@@ -42,6 +42,8 @@ import { MultiLinkInput } from "@/components/shared/MultiLinkInput";
 import { parseRefLinks, serializeRefLinks, refLinkHref, refLinkLabel, isRefLink } from "@/lib/refLinks";
 // Etiquetas INTERNAS do post: só a agência vê, o cliente nunca recebe.
 import { InternalTagPicker } from "@/components/shared/InternalTagPicker";
+// Os 60 ganchos prontos ("Ideias de gancho"), fonte única em src/lib/ganchos.ts.
+import { SeletorDeGanchos } from "@/components/shared/SeletorDeGanchos";
 import { useClientHashtags, blocoParaColar, LIMITE_HASHTAGS_POST } from "@/hooks/useClientHashtags";
 import { usePostTags, usePostInternalTags, useSetPostInternalTags, POST_TAG_DOT_CLS, type PostTag } from "@/hooks/usePostTags";
 import { TAG_COLOR_CLS } from "@/hooks/useCrm";
@@ -968,6 +970,18 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                 <Label className="text-xs font-body">Pasta do Drive (link)</Label>
                 <Input value={f.drive_folder_url ?? ""} onChange={(e) => setF((p) => ({ ...p, drive_folder_url: e.target.value || null }))}
                   placeholder="Cole o link da pasta do Drive com os materiais" className="rounded-xl" />
+              </div>
+
+              {/* Gancho: a primeira frase que segura o cliente do cliente. O campo
+                  sempre existiu no post (o relatório cruza alcance por gancho), mas
+                  não tinha onde digitar. Agora tem, com os 60 ganchos prontos do lado. */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="text-xs font-body">Gancho (abertura)</Label>
+                  <SeletorDeGanchos valorAtual={f.hook ?? ""} onPick={(texto) => setF((p) => ({ ...p, hook: texto }))} />
+                </div>
+                <Textarea value={f.hook ?? ""} onChange={(e) => setF((p) => ({ ...p, hook: e.target.value }))} rows={2}
+                  placeholder="A primeira frase que prende nos primeiros segundos..." className="rounded-xl" />
               </div>
 
               {/* Legenda (maior) */}

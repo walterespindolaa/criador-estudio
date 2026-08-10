@@ -108,6 +108,7 @@ import { RoteiroPdfTemplate } from "@/components/pdf/RoteiroPdfTemplate";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { sanitizeText } from "@/lib/sanitize";
 import { confirmar } from "@/components/shared/Confirm";
+import { SeletorDeGanchos } from "@/components/shared/SeletorDeGanchos";
 
 
 interface Post {
@@ -1867,6 +1868,14 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                         </div>
                       )}
 
+                      {/* Atalho pros 60 ganchos prontos: aqui não existe campo de
+                          gancho (a nota é da legenda), então o modo é COPIAR, e a
+                          pessoa cola no começo da legenda se quiser. */}
+                      <div className="flex items-center gap-1.5 text-xs font-body text-muted-foreground">
+                        <span>Travou no gancho?</span>
+                        <SeletorDeGanchos modo="copiar" label="Experimente um destes" className="h-6 px-1.5" />
+                      </div>
+
                       {scoreResult.variacoes?.length > 0 && (
                         <div className="space-y-2">
                           <p className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
@@ -2136,9 +2145,16 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                             : field.key === "cta" ? setCta : (() => {});
                           return (
                             <div key={field.key} className="space-y-1.5">
-                              <Label className="font-body text-sm flex items-center gap-2">
-                                <IconComponent className="h-4 w-4" /> {field.label}
-                              </Label>
+                              <div className="flex items-center justify-between gap-2">
+                                <Label className="font-body text-sm flex items-center gap-2">
+                                  <IconComponent className="h-4 w-4" /> {field.label}
+                                </Label>
+                                {/* Os 60 ganchos prontos, só no campo de gancho
+                                    (na live o "hook" é o tema, não cabe). */}
+                                {field.key === "hook" && format !== "live" && (
+                                  <SeletorDeGanchos valorAtual={hook} onPick={setHook} />
+                                )}
+                              </div>
                               <Textarea
                                 placeholder={field.placeholder}
                                 value={value}
