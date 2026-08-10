@@ -5458,6 +5458,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      token_allows_post: {
+        Args: { _post_id: string; _token: string }
+        Returns: boolean
+      }
       tornar_conta_manager: { Args: never; Returns: undefined }
       touch_last_seen: { Args: never; Returns: undefined }
       user_tier: { Args: never; Returns: string }
