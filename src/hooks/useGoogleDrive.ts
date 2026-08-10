@@ -75,13 +75,16 @@ const isVideoMime = (mime: string) => mime.startsWith("video/");
  */
 export function isPickerSupported(): boolean {
   try {
-    const standalone = window.matchMedia?.("(display-mode: standalone)")?.matches
-      || (navigator as unknown as { standalone?: boolean }).standalone === true;
     const ua = navigator.userAgent;
-    const mobileUA = /android|iphone|ipad|ipod/i.test(ua);
-    // iPad em "modo desktop" se apresenta como Macintosh, mas tem touch.
-    const iPadDesktop = /macintosh/i.test(ua) && (navigator.maxTouchPoints ?? 0) > 1;
-    return !standalone && !mobileUA && !iPadDesktop;
+    const mobileUA = /android|iphone|ipod/i.test(ua);
+    // iPad moderno se apresenta como Macintosh, mas tem touch de verdade.
+    // Mac de verdade tem maxTouchPoints 0, então isto NAO pega o desktop.
+    const iPadOuTablet = /ipad/i.test(ua)
+      || (/macintosh/i.test(ua) && (navigator.maxTouchPoints ?? 0) > 1);
+    // Atencao: PWA instalado (standalone) NAO significa celular. O Cria
+    // instalado no Mac/Windows e standalone e o Picker funciona normal la
+    // (popup abre em janela propria). So bloqueamos por TELA/UA mobile.
+    return !mobileUA && !iPadOuTablet;
   } catch { return true; }
 }
 

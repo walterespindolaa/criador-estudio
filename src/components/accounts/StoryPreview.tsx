@@ -3,7 +3,8 @@ import { Heart, Send, ImageOff, Play, X, ExternalLink } from "lucide-react";
 import type { CarouselMedia } from "@/components/shared/PostMediaCarousel";
 import { getDisplayImageUrl, getDriveImageFallbackUrl, getDriveViewPageUrl, getThumbnailUrl, getVideoEmbedUrl, getVideoFileUrl, getVideoKind, isUnknownDriveMedia, isVideoMedia } from "@/lib/driveMedia";
 import { ProgressiveImage } from "@/components/shared/ProgressiveImage";
-import { VideoPoster } from "@/components/shared/VideoPoster";
+import { VideoPoster, useDriveVideoRatio } from "@/components/shared/VideoPoster";
+import { coverIframeStyle } from "@/lib/poster-letterbox";
 
 /**
  * Preview de Story (9:16, tela cheia): sem legenda e sem barra de ações de feed.
@@ -40,6 +41,15 @@ export function StoryPreview({ media, handle, avatarUrl, onRemove }: {
   const driveShortcutUrl = driveViewUrl ?? unknownDriveUrl;
   const driveShortcutLabel = driveViewUrl ? "Assistir no Drive" : "Abrir no Drive";
 
+  // "Cover no iframe" pro estado tocando: o player /preview do Drive faz contain
+  // com fundo preto, então iframe do tamanho do slot deixa barra dentro do player.
+  // Com a proporção real do vídeo (mesma medição do poster, ver poster-letterbox)
+  // o iframe cresce até cobrir o slot 9:16 e o excesso é cortado pelo
+  // overflow-hidden. Sem medição, cover é null e fica o iframe de sempre.
+  // Só o Drive: Bunny e <video> de arquivo já se ajustam sozinhos.
+  const videoRatio = useDriveVideoRatio(kind === "drive" ? item : null);
+  const cover = kind === "drive" && videoRatio ? coverIframeStyle(videoRatio, 9 / 16) : null;
+
   // Play robusto: monta o player embutido ou abre a fonte em nova aba.
   const onPlay = () => {
     if (hasInlinePlayer) { setPlaying(true); return; }
@@ -61,7 +71,15 @@ export function StoryPreview({ media, handle, avatarUrl, onRemove }: {
         playing && hasInlinePlayer && kind === "file" && fileUrl ? (
           <video src={fileUrl} controls playsInline autoPlay className="w-full h-full bg-black object-cover" />
         ) : playing && hasInlinePlayer && embedUrl ? (
-          <iframe src={embedUrl} className="w-full h-full bg-black" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={item.file_name || "vídeo"} />
+          cover ? (
+            // Janela de corte própria: o iframe maior fica fora do fluxo e o
+            // excesso (onde o player desenharia a barra) some no overflow.
+            <div className="absolute inset-0 overflow-hidden bg-black">
+              <iframe src={embedUrl} style={cover} className="bg-black" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={item.file_name || "vídeo"} />
+            </div>
+          ) : (
+            <iframe src={embedUrl} className="w-full h-full bg-black" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={item.file_name || "vídeo"} />
+          )
         ) : video ? (
           // Vídeo parado: mesmo poster do carrossel, que já trata a TARJA PRETA
           // queimada na miniatura do Drive (ver src/lib/poster-letterbox.ts).

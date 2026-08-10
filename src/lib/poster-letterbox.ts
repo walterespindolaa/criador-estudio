@@ -31,6 +31,18 @@ export type LetterboxBox = {
   nw: number; nh: number;
 };
 
+export type LetterboxProbe = {
+  /** Tarja medida, ou null quando a miniatura veio limpa (sem moldura). */
+  box: LetterboxBox | null;
+  /**
+   * Proporção largura/altura do CONTEÚDO de verdade: com tarja, é o miolo já
+   * sem a moldura; sem tarja, é a proporção natural da própria miniatura (que
+   * nesse caso é a proporção do frame do vídeo). Serve pro estado tocando
+   * dimensionar o iframe do player (ver coverIframeStyle).
+   */
+  ratio: number;
+};
+
 // Canal máximo pra considerar o pixel preto. Baixo de propósito: cena escura de
 // verdade quase nunca zera os três canais em TODA uma linha.
 const NEAR_BLACK = 24;
@@ -53,15 +65,38 @@ function loadCors(url: string): Promise<HTMLImageElement | null> {
   });
 }
 
+/** Proporção largura/altura do miolo (o frame sem a tarja medida). */
+function contentRatio(box: LetterboxBox): number {
+  return (box.nw * (1 - box.fl - box.fr)) / (box.nh * (1 - box.ft - box.fb));
+}
+
 /**
- * Devolve a tarja medida, ou null quando não há tarja / não deu pra medir.
- * NUNCA lança: qualquer problema (CORS, canvas indisponível, imagem quebrada)
- * vira null e a prévia segue no comportamento de sempre.
+ * Mede a miniatura e devolve tarja + proporção real do conteúdo, ou null quando
+ * a imagem não carregou / não deu pra ler (CORS, canvas indisponível). NUNCA
+ * lança: qualquer problema vira null e a prévia segue no comportamento de sempre.
+ * IMPORTANTE: null é só "não sei medir"; miniatura limpa volta { box: null, ratio }.
  */
-export async function measureLetterbox(url: string): Promise<LetterboxBox | null> {
+async function probeLetterboxNow(url: string): Promise<LetterboxProbe | null> {
   if (typeof document === "undefined") return null;
   const img = await loadCors(url);
   if (!img || !img.naturalWidth || !img.naturalHeight) return null;
+  const box = measureBox(img);
+  return { box, ratio: box ? contentRatio(box) : img.naturalWidth / img.naturalHeight };
+}
+
+// A mesma miniatura é medida pelo poster E pelo estado tocando (iframe), então a
+// promessa fica em cache por URL: um download e uma leitura de canvas por sessão.
+// Falha também fica em cache, igual ao comportamento antigo (o efeito só re-media
+// quando a URL da amostra muda).
+const probeCache = new Map<string, Promise<LetterboxProbe | null>>();
+export function probeLetterbox(url: string): Promise<LetterboxProbe | null> {
+  let p = probeCache.get(url);
+  if (!p) { p = probeLetterboxNow(url); probeCache.set(url, p); }
+  return p;
+}
+
+/** Devolve a tarja medida, ou null quando não há tarja / não deu pra medir. */
+function measureBox(img: HTMLImageElement): LetterboxBox | null {
 
   const w = Math.max(1, Math.min(PROBE_W, img.naturalWidth));
   const h = Math.max(1, Math.round((w * img.naturalHeight) / img.naturalWidth));
@@ -125,4 +160,54 @@ export function letterboxStyle(box: LetterboxBox, slotRatio: number): CSSPropert
   return slotRatio >= contentRatio
     ? { ...base, width: `${100 / kw}%`, height: "auto" }
     : { ...base, width: "auto", height: `${100 / kh}%` };
+}
+
+// ─── "Cover no iframe" (estado TOCANDO) ─────────────────────────────────────
+// O player do Drive (/preview) faz "contain" do vídeo dentro do iframe com fundo
+// preto: iframe do tamanho do slot + vídeo com proporção diferente = barra preta
+// dentro do player, que nenhum CSS de fora alcança. A saída é o mesmo truque do
+// object-cover, só que aplicado no IFRAME: o slot vira uma janela (overflow
+// hidden) e o iframe fica MAIOR que ela, centralizado, com a PROPORÇÃO DO VÍDEO.
+// Com iframe na proporção do vídeo, o contain do player preenche o iframe todo,
+// e o excesso (onde morava a barra) fica cortado fora da área visível.
+//
+// Corte tem preço: os controles do player (play/pause, barra de progresso) vivem
+// na borda de baixo do iframe. Acima desse teto de escala o corte começaria a
+// engolir os controles de vez, e vídeo muito fora da proporção do slot não tem
+// solução honesta por corte. Aí devolvemos null e o chamador fica com as barras
+// de sempre. Até o teto, o corte por borda é (escala-1)/2 <= 12,5% do slot, e as
+// prévias já desenham overlay de Instagram (rodapé de story, dots do carrossel)
+// por cima dessa faixa, então na prática pouco se perde.
+const MAX_COVER_SCALE = 1.25;
+
+/**
+ * Estilo pro iframe do player cobrir o slot. `videoRatio` é a proporção real do
+ * conteúdo (largura/altura, medida da miniatura via probeLetterbox) e `slotRatio`
+ * a do slot. Devolve null quando cobrir exigiria corte demais (ver teto acima)
+ * ou quando falta medida; o chamador então mantém o iframe do tamanho do slot.
+ *
+ * A conta: o iframe mantém a proporção V do vídeo e cresce só o bastante pra
+ * MENOR dimensão dele cobrir o slot (S = W/H):
+ *   V >= S (vídeo mais largo): altura do iframe = altura do slot (H) e largura =
+ *     H*V = W*(V/S). Sobra largura, cortada metade de cada lado.
+ *   V <  S (vídeo mais estreito): largura = W e altura = W/V = H*(S/V). Sobra
+ *     altura, cortada metade em cima e metade embaixo.
+ * Ou seja, a escala de corte é max(V/S, S/V) >= 1, aplicada numa dimensão só;
+ * a outra casa exata com o slot. Centralizar com left/top 50% + translate -50%
+ * deixa o corte simétrico, igual ao object-cover faria.
+ */
+export function coverIframeStyle(videoRatio: number, slotRatio: number): CSSProperties | null {
+  if (!Number.isFinite(videoRatio) || videoRatio <= 0) return null;
+  if (!Number.isFinite(slotRatio) || slotRatio <= 0) return null;
+  const scale = videoRatio >= slotRatio ? videoRatio / slotRatio : slotRatio / videoRatio;
+  if (scale > MAX_COVER_SCALE) return null;
+  const base: CSSProperties = {
+    position: "absolute",
+    left: "50%",
+    top: "50%",
+    transform: "translate(-50%, -50%)",
+  };
+  return videoRatio >= slotRatio
+    ? { ...base, height: "100%", width: `${scale * 100}%` }
+    : { ...base, width: "100%", height: `${scale * 100}%` };
 }

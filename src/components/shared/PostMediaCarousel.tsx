@@ -2,7 +2,8 @@ import { useRef, useState } from "react";
 import { ImageOff, ChevronLeft, ChevronRight, X, Play, ExternalLink } from "lucide-react";
 import { getDisplayImageUrl, getDriveImageFallbackUrl, getDriveViewPageUrl, getThumbnailUrl, getVideoEmbedUrl, getVideoFileUrl, getVideoKind, isUnknownDriveMedia, isVideoMedia } from "@/lib/driveMedia";
 import { ProgressiveImage } from "@/components/shared/ProgressiveImage";
-import { VideoPoster } from "@/components/shared/VideoPoster";
+import { VideoPoster, useDriveVideoRatio } from "@/components/shared/VideoPoster";
+import { coverIframeStyle } from "@/lib/poster-letterbox";
 
 export type CarouselMedia = {
   id?: string; provider?: string | null; external_file_id?: string | null; view_url?: string | null;
@@ -25,6 +26,20 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
   // ele ainda assiste abrindo a página do Drive em nova aba.
   const driveViewUrl = kind === "drive" ? getDriveViewPageUrl(item) : null;
 
+  // Proporção real do vídeo (medida na miniatura, mesma medição do poster) pra o
+  // estado tocando cobrir o slot com o iframe do Drive (ver coverIframeStyle).
+  // Só o Drive: Bunny e <video> de arquivo já se ajustam sozinhos.
+  const videoRatio = useDriveVideoRatio(kind === "drive" ? item : null);
+  // Proporção do slot medida no DOM (o aspect chega de fora como string CSS).
+  // Ref de callback nos DOIS estados (parado e tocando) pra medida existir antes
+  // do play e sobreviver à troca de raiz.
+  const [slotRatio, setSlotRatio] = useState(0);
+  const slotRef = (el: HTMLDivElement | null) => {
+    if (!el || el.clientHeight <= 0) return;
+    const r = el.clientWidth / el.clientHeight;
+    setSlotRatio((prev) => (Math.abs(prev - r) < 0.005 ? prev : r));
+  };
+
   // Play robusto: monta o player embutido; sem player embutido (ex.: só a página do
   // Drive), abre a fonte em nova aba. O usuário SEMPRE consegue assistir.
   const onPlay = () => {
@@ -37,10 +52,16 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
   if (playing && hasInlinePlayer) {
     if (kind === "file" && fileUrl)
       return <video src={fileUrl} controls playsInline autoPlay className="w-full h-full bg-black object-contain" />;
-    if (embedUrl)
+    if (embedUrl) {
+      // "Cover no iframe": o player do Drive faz contain com fundo preto, então
+      // iframe do tamanho do slot deixa barra dentro do player. Com a proporção
+      // real medida, o iframe cresce (até o teto de escala) e o slot vira janela
+      // com overflow-hidden que corta o excesso. Sem medição, null: fica o
+      // iframe de sempre com as barras, sem chute.
+      const cover = kind === "drive" && videoRatio && slotRatio > 0 ? coverIframeStyle(videoRatio, slotRatio) : null;
       return (
-        <div className="relative w-full h-full bg-black">
-          <iframe src={embedUrl} className="w-full h-full bg-black" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={item.file_name || "vídeo"} />
+        <div ref={slotRef} className="relative w-full h-full bg-black overflow-hidden">
+          <iframe src={embedUrl} style={cover ?? undefined} className={cover ? "bg-black" : "w-full h-full bg-black"} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={item.file_name || "vídeo"} />
           {driveViewUrl && (
             <button type="button" onClick={() => window.open(driveViewUrl, "_blank", "noopener,noreferrer")}
               className="absolute bottom-2 right-2 z-10 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-black/80">
@@ -49,10 +70,11 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
           )}
         </div>
       );
+    }
   }
 
   return (
-    <div className="relative w-full h-full bg-black">
+    <div ref={slotRef} className="relative w-full h-full bg-black">
       {/* O poster mora no VideoPoster: ele cuida do fallback do Drive, da
           retentativa e da TARJA PRETA queimada na miniatura (ver poster-letterbox). */}
       <VideoPoster item={item} onStatus={(good) => { if (good && thumbOk === false) onReady?.(); setThumbOk(good); }} />

@@ -1,6 +1,28 @@
 import { useEffect, useRef, useState } from "react";
 import { getDisplayImageUrl, getDriveImageFallbackUrl, isDriveMedia, type MediaLike } from "@/lib/driveMedia";
-import { letterboxStyle, measureLetterbox, type LetterboxBox } from "@/lib/poster-letterbox";
+import { letterboxStyle, probeLetterbox, type LetterboxBox } from "@/lib/poster-letterbox";
+
+/**
+ * Proporção REAL (largura/altura) do conteúdo de um vídeo do Drive, medida na
+ * miniatura já descontando tarja queimada (ver poster-letterbox). O estado
+ * TOCANDO usa isso pra dimensionar o iframe do player e sumir com as barras
+ * laterais que o /preview desenha (coverIframeStyle). A medição é a MESMA do
+ * poster (cache por URL), então não custa download extra. Passe null quando a
+ * mídia não é vídeo do Drive; sem medição confiável devolve null e quem chama
+ * mantém o comportamento de sempre, sem chute.
+ */
+export function useDriveVideoRatio(item: MediaLike | null): number | null {
+  const probe = item && isDriveMedia(item) ? getDriveImageFallbackUrl(item, 320) : null;
+  const [ratio, setRatio] = useState<number | null>(null);
+  useEffect(() => {
+    let alive = true;
+    setRatio(null);
+    if (!probe) return;
+    probeLetterbox(probe).then((p) => { if (alive) setRatio(p ? p.ratio : null); });
+    return () => { alive = false; };
+  }, [probe]);
+  return ratio;
+}
 
 /**
  * POSTER (frame) de um vídeo na prévia do post. Usado pelo carrossel do Cria Post
@@ -36,7 +58,7 @@ export function VideoPoster({ item, onStatus, className = "" }: {
     let alive = true;
     setBox(null);
     if (!probe) return;
-    measureLetterbox(probe).then((b) => { if (alive) setBox(b); });
+    probeLetterbox(probe).then((p) => { if (alive) setBox(p?.box ?? null); });
     return () => { alive = false; };
   }, [probe]);
 
