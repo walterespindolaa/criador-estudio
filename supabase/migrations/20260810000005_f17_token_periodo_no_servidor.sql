@@ -16,8 +16,13 @@
 -- O filtro no cliente continua (como exibicao), mas agora e redundante: mesmo
 -- que alguem chame a RPC direto, so recebe o periodo do link.
 -- ============================================================
+-- Precisa dropar antes: a funcao ja existe com uma coluna a mais no fim
+-- (drive_folder_url), e o Postgres nao troca o tipo de retorno com
+-- "create or replace" (erro 42P13). O drop + create recria com TODAS as
+-- colunas atuais (incluindo drive_folder_url) e so acrescenta o filtro de periodo.
+drop function if exists public.list_posts_by_token(text);
 create or replace function public.list_posts_by_token(_token text)
- returns table(post_id uuid, title text, platform text, format text, caption text, hook text, script text, content_blocks jsonb, approval_mode text, approval_stages jsonb, approval_status text, scheduled_date date, media jsonb, last_comment text, last_comment_role text)
+ returns table(post_id uuid, title text, platform text, format text, caption text, hook text, script text, content_blocks jsonb, approval_mode text, approval_stages jsonb, approval_status text, scheduled_date date, media jsonb, last_comment text, last_comment_role text, drive_folder_url text)
  language sql
  stable security definer
  set search_path to 'public'
@@ -43,7 +48,8 @@ as $function$
            ) order by m.position asc nulls last, m.created_at asc)
            from public.external_media_refs m where m.post_id = p.id
          ), '[]'::jsonb),
-         c.content, c.author_role
+         c.content, c.author_role,
+         p.drive_folder_url
   from tok
   join public.posts p on p.external_client_id = tok.external_client_id and p.user_id = tok.manager_id
   left join lateral (
