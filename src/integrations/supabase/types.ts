@@ -985,12 +985,15 @@ export type Database = {
       }
       creative_ideas: {
         Row: {
+          converted_cronograma_id: string | null
+          converted_post_id: string | null
           created_at: string
           crm_client_id: string | null
           format: string | null
           id: string
           manager_id: string
           rationale: string | null
+          ref_url: string | null
           scrape_id: string | null
           source: string
           status: string
@@ -998,12 +1001,15 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          converted_cronograma_id?: string | null
+          converted_post_id?: string | null
           created_at?: string
           crm_client_id?: string | null
           format?: string | null
           id?: string
           manager_id: string
           rationale?: string | null
+          ref_url?: string | null
           scrape_id?: string | null
           source?: string
           status?: string
@@ -1011,12 +1017,15 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          converted_cronograma_id?: string | null
+          converted_post_id?: string | null
           created_at?: string
           crm_client_id?: string | null
           format?: string | null
           id?: string
           manager_id?: string
           rationale?: string | null
+          ref_url?: string | null
           scrape_id?: string | null
           source?: string
           status?: string
@@ -1024,6 +1033,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "creative_ideas_converted_cronograma_id_fkey"
+            columns: ["converted_cronograma_id"]
+            isOneToOne: false
+            referencedRelation: "cronogramas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creative_ideas_converted_post_id_fkey"
+            columns: ["converted_post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "creative_ideas_crm_client_id_fkey"
             columns: ["crm_client_id"]
@@ -4955,6 +4978,7 @@ export type Database = {
     Functions: {
       accept_proposal_by_token: { Args: { _token: string }; Returns: undefined }
       acts_for: { Args: { target: string }; Returns: boolean }
+      acts_for_cria_owner: { Args: { _owner: string }; Returns: boolean }
       admin_list_referrals: {
         Args: never
         Returns: {
@@ -5218,6 +5242,15 @@ export type Database = {
           title: string
         }[]
       }
+      list_post_comments_by_token: {
+        Args: { _token: string }
+        Returns: {
+          author_kind: string
+          content: string
+          created_at: string
+          post_id: string
+        }[]
+      }
       list_posts_by_token: {
         Args: { _token: string }
         Returns: {
@@ -5304,6 +5337,14 @@ export type Database = {
         Returns: undefined
       }
       manager_owns_cria_client: { Args: { _owner: string }; Returns: boolean }
+      member_can: {
+        Args: { _code: string; _manager: string }
+        Returns: boolean
+      }
+      member_can_client: {
+        Args: { _client: string; _code: string; _manager: string }
+        Returns: boolean
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -5417,6 +5458,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      tornar_conta_manager: { Args: never; Returns: undefined }
       touch_last_seen: { Args: never; Returns: undefined }
       user_tier: { Args: never; Returns: string }
       validate_partner_code: {
