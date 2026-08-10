@@ -10,6 +10,7 @@ import { useIdeas } from "@/hooks/useIdeas";
 import { usePosts } from "@/hooks/usePosts";
 import { useCrmClients } from "@/hooks/useCrm";
 import { useAuth } from "@/contexts/AuthContext";
+import { ehAtalhoSeguro, ehCampoDeTexto } from "@/lib/atalhos";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    BUSCA GLOBAL
@@ -40,23 +41,21 @@ export function GlobalSearch() {
   const { posts = [] } = usePosts();
   const { data: clientes = [] } = useCrmClients();
 
-  // Cmd+K (Mac) e Ctrl+K (Windows). "/" também abre, como no Slack e no GitHub —
+  // Cmd+K (Mac) e Ctrl+K (Windows). "/" também abre, como no Slack e no GitHub,
   // desde que a pessoa não esteja digitando num campo.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const alvo = e.target as HTMLElement | null;
-      const digitando =
-        !!alvo &&
-        (alvo.tagName === "INPUT" ||
-          alvo.tagName === "TEXTAREA" ||
-          alvo.isContentEditable);
+      // Repeat e composição nunca são atalho. Sair cedo preserva o seletor de
+      // acentos do macOS (segurar a letra) e os dead keys (´ + a = á).
+      if (!ehAtalhoSeguro(e)) return;
 
-      if (e.key.toLowerCase() === "k" && (e.metaKey || e.ctrlKey)) {
+      if (e.key.toLowerCase() === "k" && (e.metaKey || e.ctrlKey) && !e.altKey) {
         e.preventDefault();
         setOpen((v) => !v);
         return;
       }
-      if (e.key === "/" && !digitando && !e.metaKey && !e.ctrlKey) {
+      // "/" só vale sem modificador nenhum e fora de campo de texto.
+      if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey && !ehCampoDeTexto(e.target)) {
         e.preventDefault();
         setOpen(true);
       }

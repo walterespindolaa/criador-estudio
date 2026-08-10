@@ -2,6 +2,7 @@ import * as React from "react";
 import useEmblaCarousel, { type UseEmblaCarouselType } from "embla-carousel-react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 
+import { ehCampoDeTexto } from "@/lib/atalhos";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -69,6 +70,10 @@ const Carousel = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEl
 
     const handleKeyDown = React.useCallback(
       (event: React.KeyboardEvent<HTMLDivElement>) => {
+        // Listener em fase de captura: sem esta guarda ele roubava as setas de
+        // qualquer input/textarea dentro do carrossel (cursor parava de andar)
+        // e interferia na digitação. Campo de texto fica com as teclas dele.
+        if (ehCampoDeTexto(event.target)) return;
         if (event.key === "ArrowLeft") {
           event.preventDefault();
           scrollPrev();

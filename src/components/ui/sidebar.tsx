@@ -4,6 +4,7 @@ import { VariantProps, cva } from "class-variance-authority";
 import { PanelLeft } from "lucide-react";
 
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ehAtalhoSeguro, ehCampoDeTexto } from "@/lib/atalhos";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,10 +76,20 @@ const SidebarProvider = React.forwardRef<
     return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
   }, [isMobile, setOpen, setOpenMobile]);
 
-  // Adds a keyboard shortcut to toggle the sidebar.
+  // Atalho de teclado (Cmd/Ctrl+B) pra abrir e fechar a sidebar.
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === SIDEBAR_KEYBOARD_SHORTCUT && (event.metaKey || event.ctrlKey)) {
+      // Guarda central: ignora tecla segurada (repeat) e composição de acento,
+      // senão o listener global engole o seletor de acentos do macOS.
+      if (!ehAtalhoSeguro(event)) return;
+      // Digitando num campo, Cmd/Ctrl+B fica com o campo (negrito em editor, etc.).
+      if (ehCampoDeTexto(event.target)) return;
+      if (
+        event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
+        (event.metaKey || event.ctrlKey) &&
+        !event.altKey &&
+        !event.shiftKey
+      ) {
         event.preventDefault();
         toggleSidebar();
       }
