@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import { PostEditor } from "@/components/kanban/PostEditor";
 import { FORMAT_LABELS, STATUS_OPTIONS, FORMATS } from "@/lib/constants";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
@@ -93,6 +94,24 @@ type ContentBlocks = { tema?: string; roteiro?: string; midia?: string; legenda?
 const Criando = () => {
   const { user } = useAuth();
   const { activeAccountId } = useActiveAccount();
+  // A bolinha amarela de "aguardando aprovacao" so faz sentido pra conta que
+  // TEM social midia vinculada (a validacao acontece na aba Aprovacoes, feita
+  // por ela). Criador solo nunca teria quem aprovar, entao o aviso vira ruido.
+  const donoDaConta = activeAccountId ?? user?.id ?? null;
+  const { data: temSocialMidia = false } = useQuery({
+    queryKey: ["tem-social-midia", donoDaConta],
+    enabled: !!donoDaConta,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("account_members")
+        .select("id")
+        .eq("owner_id", donoDaConta!)
+        .eq("status", "active")
+        .limit(1);
+      return (data?.length ?? 0) > 0;
+    },
+  });
   const { posts, updatePost, deletePost, reorderPosts, isLoading: postsLoading } = usePosts();
   const { pillars } = usePillars();
   const { tasks } = useTasks();
@@ -700,7 +719,7 @@ const Criando = () => {
                     const pillar = getPillar(post.pillar_id);
                     const tc = taskCounts.get(post.id);
                     const approvalStatus = (post as unknown as { approval_status?: string | null }).approval_status ?? null;
-                    const showApprovalBadge = post.status === "editando" && approvalStatus !== "aprovado";
+                    const showApprovalBadge = temSocialMidia && post.status === "editando" && approvalStatus !== "aprovado";
                     const allDone = tc && tc.count > 0 && tc.done === tc.count;
                     const pendingTasks = tc ? tc.count - tc.done : 0;
                     const blocks = (post.content_blocks ?? null) as ContentBlocks | null;
@@ -725,8 +744,8 @@ const Criando = () => {
                           {showApprovalBadge && (
                             <span
                               className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-yellow-400 text-yellow-950 text-[10px] font-bold mr-1 align-middle"
-                              title="Aguardando aprovação do cliente"
-                              aria-label="Aguardando aprovação do cliente"
+                              title="Aguardando a aprovação da sua social mídia (aba Aprovações)"
+                              aria-label="Aguardando a aprovação da sua social mídia"
                             >!</span>
                           )}
                           {post.title}
@@ -1087,7 +1106,7 @@ const Criando = () => {
                         const pillar = getPillar(post.pillar_id);
                         const tc = taskCounts.get(post.id);
                         const approvalStatus = (post as unknown as { approval_status?: string | null }).approval_status ?? null;
-                        const showApprovalBadge = post.status === "editando" && approvalStatus !== "aprovado";
+                        const showApprovalBadge = temSocialMidia && post.status === "editando" && approvalStatus !== "aprovado";
                         const allDone = tc && tc.count > 0 && tc.done === tc.count;
                         const pendingTasks = tc ? tc.count - tc.done : 0;
                         const blocks = (post.content_blocks ?? null) as ContentBlocks | null;
@@ -1110,8 +1129,8 @@ const Criando = () => {
                               {showApprovalBadge && (
                                 <span
                                   className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-yellow-400 text-yellow-950 text-[10px] font-bold mr-1 align-middle"
-                                  title="Aguardando aprovação do cliente"
-                                  aria-label="Aguardando aprovação do cliente"
+                                  title="Aguardando a aprovação da sua social mídia (aba Aprovações)"
+                                  aria-label="Aguardando a aprovação da sua social mídia"
                                 >!</span>
                               )}
                               {post.title}

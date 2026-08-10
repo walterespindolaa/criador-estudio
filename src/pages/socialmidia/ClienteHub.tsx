@@ -43,7 +43,7 @@ import { Label } from "@/components/ui/label";
 // A aba "Criativo" misturava três coisas diferentes: o Brandbook do cliente,
 // as ideias e a pesquisa do Apify. Virou uma sopa. Agora cada coisa tem o seu lugar:
 //   Brandbook → quem é a marca         (leitura, vem da conta CRIA dele)
-//   Ideias    → o que postar           (dele + do HUB + suas)
+//   Ideias    → o que postar           (mora no CRIA POST: o fluxo é ideia → post)
 //   Pesquisa  → analisar concorrente   (Apify, só quem tem o HUB liberado)
 //   Portal    → o que o cliente vê     (era o popup "Personalizar", espremido)
 // ═══════════════════════════════════════════════════════════════════════════
@@ -60,7 +60,8 @@ type TabDef = { key: string; label: string; hub?: boolean; modulo?: CriaColor; m
 const TABS: TabDef[] = [
   { key: "visao-geral", label: "Visão geral" },
   { key: "brandbook", label: "Brandbook", modulo: "rosa", moduloNome: "Cria Gestão" },
-  { key: "ideias", label: "Ideias", modulo: "lilas", moduloNome: "Cria Radar" },
+  // Ideias faz parte do fluxo do Cria Post (ideia → post), não do Radar.
+  { key: "ideias", label: "Ideias", modulo: "laranja", moduloNome: "Cria Post" },
   { key: "cronograma", label: "Cronograma", modulo: "laranja", moduloNome: "Cria Post" },
   { key: "posts", label: "Posts", modulo: "laranja", moduloNome: "Cria Post" },
   { key: "relatorio", label: "Relatório", modulo: "laranja", moduloNome: "Cria Post" },
@@ -73,10 +74,12 @@ const TABS: TabDef[] = [
 const OPERACIONAIS = new Set(["posts", "cronograma", "relatorio", "instagram"]);
 const WORKFLOW = new Set(["ideias", "posts", "cronograma", "relatorio"]);
 type FlowStep = { key: string; n: number; label: string; gated?: boolean };
+// O fluxo numerado do Cria Post: Ideias → Posts → Cronograma → Relatório
+// (mesma ordem das sub-páginas do grupo cria-post lá embaixo).
 const FLOW_STEPS: FlowStep[] = [
   { key: "ideias", n: 1, label: "Ideias" },
-  { key: "cronograma", n: 2, label: "Calendário do mês" },
-  { key: "posts", n: 3, label: "Posts prontos" },
+  { key: "posts", n: 2, label: "Posts prontos" },
+  { key: "cronograma", n: 3, label: "Calendário do mês" },
   { key: "relatorio", n: 4, label: "Resultado" },
 ];
 const FLOW_EXPLAIN: Record<string, string> = {
@@ -109,10 +112,14 @@ const SUB_META: Record<string, SubMeta> = {
 type Grp = { key: string; label: string; modulo?: CriaColor2; icon: LucideIcon; landing?: boolean; subs: string[] };
 const GROUPS: Grp[] = [
   { key: "visao-geral", label: "Visão geral", icon: Home, subs: [] },
-  { key: "cria-post", label: "Cria Post", modulo: "laranja", icon: Layers, landing: true, subs: ["posts", "cronograma", "kanban-cliente", "relatorio", "materiais", "portal"] },
+  // Ideias abre o fluxo do Cria Post (ideia → post → cronograma → relatório).
+  // Morava no Radar, mas a captura manual e a conversão em post são coração do
+  // Cria Post; a URL /ideias continua a mesma, só mudou de grupo.
+  { key: "cria-post", label: "Cria Post", modulo: "laranja", icon: Layers, landing: true, subs: ["ideias", "posts", "cronograma", "kanban-cliente", "relatorio", "materiais", "portal"] },
   { key: "cria-gestao", label: "Cria Gestão", modulo: "rosa", icon: BookOpen, subs: ["brandbook"] },
   { key: "cria-caixa", label: "Cria Caixa", modulo: "azul", icon: Wallet, subs: ["financeiro"] },
-  { key: "cria-radar", label: "Cria Radar", modulo: "lilas", icon: Search, landing: true, subs: ["ideias", "pesquisa"] },
+  // O Radar ficou só com a Pesquisa: 1 sub = vai direto (landing de 1 card seria bobo).
+  { key: "cria-radar", label: "Cria Radar", modulo: "lilas", icon: Search, subs: ["pesquisa"] },
   { key: "instagram", label: "Instagram", icon: Instagram, subs: ["instagram"] },
   // Links úteis vira aba de topo própria: o editor de rótulo+URL + as pastas do
   // Drive de cada link salvo. Antes o editor morava na Visão geral e o Drive era
@@ -154,8 +161,9 @@ export default function ClienteHub() {
     !!id && hasCrm,
   );
   const notesCount = clientNotes?.length ?? 0;
-  // A sub-página Pesquisa (Apify) só existe pra quem tem o HUB liberado. O Kanban do
-  // cliente só aparece quando o cliente do CRM tem conta Cria vinculada (cria_owner_id).
+  // A pílula da Pesquisa (Apify) só aparece pra quem tem o HUB liberado (sem ele,
+  // a rota /pesquisa mostra o convite do Radar). O Kanban do cliente só aparece
+  // quando o cliente do CRM tem conta Cria vinculada (cria_owner_id).
   const subVisible = (sub: string) => {
     if (sub === "pesquisa") return hasHubCria;
     if (sub === "kanban-cliente") return !!client?.cria_owner_id;
@@ -164,18 +172,19 @@ export default function ClienteHub() {
   const allTabKeys = useMemo(() => {
     const s = new Set<string>();
     GROUPS.forEach((g) => { s.add(g.key); g.subs.forEach((x) => {
-      if (x === "pesquisa" && !hasHubCria) return;
+      // "pesquisa" fica válida mesmo sem o HUB: o Radar agora só tem ela, e o
+      // clique precisa cair na vitrine do módulo em vez de voltar pra Visão geral.
       if (x === "kanban-cliente" && !client?.cria_owner_id) return;
       s.add(x);
     }); });
     return s;
-  }, [hasHubCria, client?.cria_owner_id]);
+  }, [client?.cria_owner_id]);
   // A URL manda: /clientes/:id/:tab. Se o tab é válido, é ele; senão, Visão geral.
   // É isso que faz o F5 preservar a sub-página em que a pessoa estava.
   const activeTab = tab && allTabKeys.has(tab) ? tab : "visao-geral";
   const activeGroup = GROUPS.find((g) => g.key === activeTab || g.subs.includes(activeTab)) ?? GROUPS[0];
   const onLanding = activeTab === activeGroup.key && activeGroup.landing === true;
-  const groupLocked = (g: Grp) => (g.key === "cria-post" && !hasPost) || (g.key === "cria-caixa" && !hasCaixa);
+  const groupLocked = (g: Grp) => (g.key === "cria-post" && !hasPost) || (g.key === "cria-caixa" && !hasCaixa) || (g.key === "cria-radar" && !hasHubCria);
   // Foto da conta CRIA do cliente sempre atual (não depende do sync manual do CRM).
   const { data: criaProfiles } = useCriaClientProfiles();
   const criaAvatar = client?.cria_owner_id ? (criaProfiles?.[client.cria_owner_id]?.avatar_url ?? null) : null;
@@ -521,8 +530,8 @@ export default function ClienteHub() {
               key={g.key}
               onClick={() => openGroup(g)}
               // Âncoras do tutorial: o tour precisa CLICAR nestas abas pra levar
-              // a pessoa até a Visão geral, a landing do Cria Post e a do Radar
-              // (onde mora o banco de ideias com a captura rápida).
+              // a pessoa até a Visão geral, a landing do Cria Post (onde mora o
+              // banco de ideias com a captura rápida) e o Radar (Pesquisa).
               data-tour={g.key === "visao-geral" ? "cli-nav-visao" : g.key === "cria-post" ? "cli-nav-post" : g.key === "cria-radar" ? "cli-nav-radar" : undefined}
               title={locked ? `${g.label} · não está no seu plano` : g.label}
               className={`group flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-body font-semibold whitespace-nowrap transition-colors ${
@@ -749,8 +758,23 @@ export default function ClienteHub() {
         />
       )}
 
-      {/* PESQUISA. Apify. A aba só existe pra quem tem o HUB liberado. */}
-      {activeTab === "pesquisa" && hasHubCria && <CriativoTab clientId={id!} clientName={displayName} />}
+      {/* PESQUISA. Apify. Sem o HUB liberado, o convite do módulo (o Radar agora
+          é só isto aqui, então o clique na aba precisa mostrar algo, não voltar
+          pra Visão geral). */}
+      {activeTab === "pesquisa" && (
+        hasHubCria ? (
+          <CriativoTab clientId={id!} clientName={displayName} />
+        ) : (
+          <div className="rounded-2xl border border-dashed border-border p-10 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 grid place-items-center mx-auto mb-3"><Search className="h-5 w-5 text-primary" /></div>
+            <p className="text-sm font-body text-foreground font-medium">Pesquisa de concorrentes é do Cria Radar</p>
+            <p className="text-xs text-muted-foreground font-body mt-1 mb-4 max-w-sm mx-auto">
+              Analise os concorrentes de {displayName || "cada cliente"} e receba ideias da IA baseadas no que funciona no nicho dele.
+            </p>
+            <Button variant="outline" asChild><Link to="/socialmidia/hubcria">Conhecer o Cria Radar</Link></Button>
+          </div>
+        )
+      )}
 
       {/* PORTAL, o que era o popup "Personalizar", agora com espaço pra respirar. */}
       {activeTab === "portal" && (

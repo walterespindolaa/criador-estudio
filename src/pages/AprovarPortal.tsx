@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, RotateCcw, Loader2, ImageOff, Heart, MessageCircle, Send, Bookmark, Zap, ListChecks, ChevronDown, Clapperboard, CalendarDays, BarChart3, CheckSquare, AlertTriangle, Package, Plus, FolderOpen } from "lucide-react";
+import { Check, RotateCcw, Loader2, ImageOff, Heart, MessageCircle, Send, Bookmark, Zap, ListChecks, ChevronDown, Clapperboard, CalendarDays, BarChart3, CheckSquare, AlertTriangle, Package, Plus, FolderOpen, History } from "lucide-react";
 import { hexToHsl } from "@/lib/applyTheme";
 import { PostMediaCarousel } from "@/components/shared/PostMediaCarousel";
 import { StoryPreview } from "@/components/accounts/StoryPreview";
@@ -36,6 +36,10 @@ export type PortalPost = {
   drive_folder_url?: string | null;
 };
 type ClientHeader = { client_name: string; client_logo: string | null; manager_name: string | null; brand_color?: string | null; instagram_handle?: string | null };
+// Histórico da conversa de ajuste de UM post, como a RPC pública devolve:
+// só o lado ('cliente' = ele mesmo, 'equipe' = quem cuida do conteúdo), o
+// texto e a data. Nada de nomes internos, ids de comentário ou etiquetas.
+type PortalComment = { post_id: string; author_kind: "cliente" | "equipe"; content: string; created_at: string };
 type PortalSettings = { show_calendar?: boolean; show_report?: boolean };
 type PortalTab = "aprovacoes" | "calendario" | "relatorio";
 
@@ -149,8 +153,55 @@ function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
   );
 }
 
-function PostApproval({ client, post, index, busy, onApproveFast, onAdjustFast, onApproveStage, onAdjustStage }: {
-  client: ClientHeader; post: PortalPost; index: number; busy: boolean;
+// ── "Ver o que você pediu" ──────────────────────────────────────────────────
+// Post reenviado depois de um ajuste: o cliente precisa comparar o que pediu
+// com a versão nova antes de aprovar. Este bloco recolhível mostra a conversa
+// daquele post (pedido dele + resposta da equipe), com data. Se o post nunca
+// teve ajuste, o bloco nem aparece.
+function HistoricoAjustes({ history, managerName }: { history: PortalComment[]; managerName: string | null }) {
+  const [open, setOpen] = useState(false);
+  if (history.length === 0) return null;
+  // Data + hora curtas, no fuso do aparelho do cliente (página pública).
+  const fmtData = (iso: string) => {
+    try {
+      return new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+    } catch { return ""; }
+  };
+  return (
+    <div className="mb-4 rounded-2xl border border-border bg-muted/30 overflow-hidden">
+      <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open}
+        className="w-full min-h-[44px] flex items-center justify-between gap-2 px-3.5 py-2.5 text-left hover:bg-muted/50 transition-colors">
+        <span className="flex items-center gap-1.5 text-[13px] font-body font-bold text-foreground">
+          <History className="h-3.5 w-3.5 text-muted-foreground shrink-0" /> Ver o que você pediu ({history.length})
+        </span>
+        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="px-3.5 pb-3.5 space-y-2 max-h-64 overflow-y-auto">
+          {history.map((h, i) => {
+            const doCliente = h.author_kind === "cliente";
+            return (
+              <div key={i} className={`rounded-xl border px-3 py-2 ${doCliente ? "border-orange-100 bg-orange-50" : "border-primary/15 bg-primary/[0.04]"}`}>
+                <div className="flex items-center justify-between gap-2 mb-0.5">
+                  {/* "Você" = o pedido do próprio cliente; a resposta leva o nome
+                      de quem cuida do conteúdo (já público no header) ou "Equipe". */}
+                  <span className={`text-[11px] font-body font-bold ${doCliente ? "text-orange-700" : "text-primary"}`}>
+                    {doCliente ? "Você" : (managerName?.trim() || "Equipe")}
+                  </span>
+                  <span className="text-[10px] font-body text-muted-foreground shrink-0">{fmtData(h.created_at)}</span>
+                </div>
+                <p className="text-[12.5px] font-body text-foreground whitespace-pre-wrap leading-relaxed">{h.content}</p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PostApproval({ client, post, index, busy, history, onApproveFast, onAdjustFast, onApproveStage, onAdjustStage }: {
+  client: ClientHeader; post: PortalPost; index: number; busy: boolean; history: PortalComment[];
   onApproveFast: (id: string) => void; onAdjustFast: (id: string, comment: string) => void;
   onApproveStage: (id: string, stage: Stage) => void; onAdjustStage: (id: string, stage: Stage, comment: string) => void;
 }) {
@@ -199,6 +250,13 @@ function PostApproval({ client, post, index, busy, onApproveFast, onAdjustFast, 
 
   const panel = (
     <>
+      {/* Post REENVIADO depois de um ajuste (voltou pra "Aguardando você" com
+          conversa registrada): o cliente compara o que pediu com a versão nova.
+          Nos outros status o bloco não aparece (em ajuste, o "Você pediu" abaixo
+          já mostra o último pedido). */}
+      {post.approval_status === "pendente" && (
+        <HistoricoAjustes history={history} managerName={client.manager_name} />
+      )}
       {hasDriveFolder && (
         <button type="button" onClick={() => window.open(driveFolder, "_blank", "noopener,noreferrer")}
           className="w-full flex items-center gap-2 mb-4 rounded-2xl border border-primary/30 bg-primary/[0.05] px-3.5 py-2.5 text-left hover:bg-primary/10 transition-colors">
@@ -305,7 +363,11 @@ function PostApproval({ client, post, index, busy, onApproveFast, onAdjustFast, 
 export default function AprovarPortal() {
   const { token } = useParams<{ token: string }>();
   const qc = useQueryClient();
-  const inv = () => qc.invalidateQueries({ queryKey: ["portal-posts", token] });
+  const inv = () => {
+    qc.invalidateQueries({ queryKey: ["portal-posts", token] });
+    // O histórico de ajustes muda junto (o pedido recém-enviado entra nele).
+    qc.invalidateQueries({ queryKey: ["portal-comments", token] });
+  };
   // Página pública: força tema claro (o cliente pode estar no dark do sistema).
   useForceLightTheme();
 
@@ -355,6 +417,20 @@ export default function AprovarPortal() {
       const ps = periodQ.data?.period_start; const pe = periodQ.data?.period_end;
       if (!ps || !pe) return all;                       // sem período = tudo
       return all.filter((p) => !!p.scheduled_date && p.scheduled_date >= ps && p.scheduled_date <= pe);
+    },
+  });
+
+  // Histórico de ajustes POR post (pedido do cliente + resposta da equipe).
+  // Se a RPC ainda não existir no banco, o portal segue sem o bloco
+  // (retrocompatível, mesmo padrão do get_portal_settings).
+  const commentsQ = useQuery({
+    queryKey: ["portal-comments", token], enabled: !!token && !!clientQ.data,
+    queryFn: async (): Promise<Record<string, PortalComment[]>> => {
+      const { data, error } = await sbRpc("list_post_comments_by_token", { _token: token });
+      if (error) return {};
+      const map: Record<string, PortalComment[]> = {};
+      for (const c of (data as PortalComment[]) ?? []) (map[c.post_id] ??= []).push(c);
+      return map;
     },
   });
 
@@ -424,6 +500,7 @@ export default function AprovarPortal() {
 
   const renderPost = (p: PortalPost, i: number) => (
     <PostApproval key={p.post_id} client={c} post={p} index={i} busy={pendingId === p.post_id}
+      history={commentsQ.data?.[p.post_id] ?? []}
       onApproveFast={(id) => approveFast.mutate(id)}
       onAdjustFast={(id, comment) => adjustFast.mutate({ id, comment })}
       onApproveStage={(id, stage) => approveStage.mutate({ id, stage })}

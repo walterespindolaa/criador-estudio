@@ -217,12 +217,12 @@ export const TOURS_GESTOR: TourConfig[] = [
         placement: "top",
       },
       {
-        // O banco de ideias mora no Cria Radar. Este passo abre a landing do
-        // Radar (o card Ideias existe sempre; é a Pesquisa que depende do HUB).
+        // O banco de ideias agora mora no CRIA POST (o fluxo é ideia → post).
+        // Este passo abre a landing do Cria Post, onde Ideias é o primeiro card.
         target: '[data-tour="cli-sub-ideias"]',
-        openFirst: '[data-tour="cli-nav-radar"]',
+        openFirst: '[data-tour="cli-nav-post"]',
         title: "O banco de ideias dele",
-        body: "Tudo que inspira este cliente num lugar só: o que você anota, o que ele escreveu na conta dele, o que ele salvou e o que a IA tirou dos concorrentes.",
+        body: "Toda produção começa aqui: o que você anota, o que o cliente escreveu na conta dele, o que ele salvou e o que a IA tirou dos concorrentes. É o primeiro passo do Cria Post, porque ideia boa vira post.",
         placement: "bottom",
       },
       {
