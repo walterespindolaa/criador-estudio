@@ -239,7 +239,7 @@ export function AppRail({ pinned = false, onTogglePin }: AppRailProps) {
       >
         <Icon className="h-[18px] w-[18px] shrink-0" />
         {expanded && <span className="flex-1 truncate text-left text-sm font-medium">{t(n.label)}</span>}
-        {/* Parcerias (Collabs) é item de 1º nível e é do Studio — passava sem selo. */}
+        {/* Parcerias (Collabs) é item de 1º nível e é do Studio passava sem selo. */}
         {expanded && n.to && !n.children && <PlanTag to={n.to} />}
         {!expanded && active && !n.featured && (
           <span className="absolute -left-2 top-1/2 h-4 w-1 -translate-y-1/2 rounded bg-primary" />

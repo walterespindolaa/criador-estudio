@@ -63,7 +63,7 @@ function shadeHex(hex: string, pct: number): string {
 
 // Luminância relativa (0 = preto, 1 = branco). Usada pra escolher texto legível
 // em cima da cor da marca: se a marca é clara (creme, bege, amarelo), texto
-// branco some — aí o botão usa texto escuro.
+// branco some aí o botão usa texto escuro.
 function luminance(hex: string): number {
   const clean = hex.replace("#", "");
   if (clean.length !== 6) return 1;
@@ -87,7 +87,7 @@ function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
   const vertical = aspect === "9 / 16";
   const brand = client.brand_color ?? null;
   // Legenda: no modo "Ambas"/detalhado o texto vai pro campo de conteúdo (script),
-  // então caímos nele quando a legenda estiver vazia — senão o cliente não vê nada.
+  // então caímos nele quando a legenda estiver vazia senão o cliente não vê nada.
   const legenda = post.caption || post.script || null;
   // Story tem preview próprio: tela cheia 9:16, sem legenda e sem ações de feed.
   if ((post.format || "").toLowerCase() === "story") {

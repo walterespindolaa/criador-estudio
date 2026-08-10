@@ -156,7 +156,7 @@ export function paidMonthlyClientIds(records: RecLike[], ym: string): Set<string
  * Tira da conta:
  *  - BUG 1 (dedup): mensalidade do mês já lançada à mão como paga (senão conta 2x).
  *  - BUG 3 (fantasma): cliente inativo/encerrado no mês da instância.
- *  - BUG 3b (excluído): cliente que saiu da carteira (soft delete) — a instância
+ *  - BUG 3b (excluído): cliente que saiu da carteira (soft delete) a instância
  *    pendente vira "a receber" invisível. Se há carteira carregada e o cliente
  *    não está nela, não soma. (Guardado por clients.length > 0 pra não zerar
  *    durante o carregamento.)

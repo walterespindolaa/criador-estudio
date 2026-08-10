@@ -33,7 +33,7 @@ export async function checkRateLimit(userId: string, options: RateLimitOptions):
   });
   if (error || !data || (Array.isArray(data) && data.length === 0)) {
     // Em erro de DB: por padrão LIBERA (fail-open, não trava todo mundo). Se o
-    // chamador passou failClosed:true (endpoints públicos anônimos), BLOQUEIA —
+    // chamador passou failClosed:true (endpoints públicos anônimos), BLOQUEIA -
     // senão um RPC fora do ar deixaria o endpoint sem limite algum. Vai pros logs.
     const failClosed = options.failClosed === true;
     console.error(`[rate-limit] RPC error, failing ${failClosed ? "closed" : "open"}:`, (error as { message?: string })?.message);

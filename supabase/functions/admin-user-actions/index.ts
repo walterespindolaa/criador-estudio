@@ -12,6 +12,33 @@ const VALIDITY_DAYS: Record<string, number | null> = {
   "15d": 15, "1m": 30, "3m": 90, "6m": 180, "1y": 365, "lifetime": null,
 };
 
+// Escapa valores interpolados no HTML do e-mail. (F12/F24)
+function escapeHtml(v: unknown): string {
+  return String(v ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Origin confiável pro link de redefinição (F13): APP_URL fixo ou allow-list,
+// caindo no domínio canônico. Nunca monta o link só com o header Origin cru.
+const CANONICAL_APP_URL = "https://app.criasocialclub.com.br";
+function resolveAppUrl(req: Request): string {
+  const fixed = Deno.env.get("APP_URL");
+  if (fixed) return fixed.replace(/\/+$/, "");
+  const origin = req.headers.get("origin") ?? "";
+  const allow = [
+    "https://app.criasocialclub.com.br",
+    "https://criasocialclub.com.br",
+    "https://www.criasocialclub.com.br",
+  ];
+  if (allow.includes(origin)) return origin;
+  if (/^https:\/\/[a-z0-9-]+\.(lovableproject\.com|lovable\.app)$/.test(origin)) return origin;
+  return CANONICAL_APP_URL;
+}
+
 async function ensureUnsubscribeToken(svc: SupabaseClient, email: string): Promise<string> {
   const token = crypto.randomUUID();
   await svc.from("email_unsubscribe_tokens").upsert({ email, token }, { onConflict: "email", ignoreDuplicates: true });
@@ -225,7 +252,7 @@ serve(async (req) => {
       }
       const email = userData.user.email;
 
-      const origin = req.headers.get("origin") ?? "https://app.criasocialclub.com.br";
+      const origin = resolveAppUrl(req); // F13: origin validado, não o header cru
       const redirectTo = origin + "/app/trocar-senha";
       const { data: linkData, error: linkErr } = await svc.auth.admin.generateLink({
         type: "recovery",
@@ -247,7 +274,7 @@ serve(async (req) => {
         paragraph: "O administrador do cria gerou um link para você definir uma nova senha. Clique no botão abaixo para continuar.",
         buttonLabel: "Definir nova senha",
         actionLink,
-        secondary: `Se o botão não funcionar, copie e cole este link no navegador:<br/><span style="word-break:break-all;color:#6b7280">${actionLink}</span>`,
+        secondary: `Se o botão não funcionar, copie e cole este link no navegador:<br/><span style="word-break:break-all;color:#6b7280">${escapeHtml(actionLink)}</span>`,
       });
       const messageId = crypto.randomUUID();
       const unsubscribeToken = await ensureUnsubscribeToken(svc, email);

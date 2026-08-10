@@ -549,7 +549,7 @@ export default function AgendaCriacao() {
     return m;
   }, [allPosts, from, to, filters.post, postClients]);
 
-  // TAREFA B — Posts do Cria do CLIENTE (o kanban pessoal dele), já "prontos" em diante
+  // TAREFA B Posts do Cria do CLIENTE (o kanban pessoal dele), já "prontos" em diante
   // e com data. A social mídia vê pra se organizar, sem precisar entrar no Cria de cada um.
   // Vínculo: só os clientes do CRM que têm conta Cria (cria_owner_id). Uma query só pra
   // todos (RLS is_account_member filtra o que o gestor pode ver).

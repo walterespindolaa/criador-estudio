@@ -575,7 +575,7 @@ export default function Landing() {
               </p>
             </motion.div>
 
-            {/* Eram 2 planos numa grade de 2 colunas. Com o Essencial são 3 —
+            {/* Eram 2 planos numa grade de 2 colunas. Com o Essencial são 3 -
                 e o do meio (Pro) é o que a gente quer que ela escolha, então ele
                 fica no centro, destacado. */}
             <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto items-start">

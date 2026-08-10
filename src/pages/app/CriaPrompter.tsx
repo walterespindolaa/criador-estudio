@@ -27,7 +27,7 @@ import {
 } from "@/hooks/usePrompterScripts";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   CRIA PROMPTER — BIBLIOTECA
+   CRIA PROMPTER BIBLIOTECA
    O roteiro nasce aqui (manual) ou chega pronto dos outros módulos: a seção
    "Na fase Produzindo" espelha a coluna do Criando (status = gravando) e
    transforma o post em roteiro com 1 toque, sempre na versão mais recente.
@@ -39,7 +39,7 @@ const SOURCE_LABEL: Record<PrompterScript["source"], string | null> = {
 };
 
 /* O que se FALA no vídeo: hook (destacado no prompter) + roteiro + CTA.
-   Legenda fica de fora — é texto escrito, não falado. */
+   Legenda fica de fora é texto escrito, não falado. */
 function postToSpokenScript(p: Post): string {
   const parts: string[] = [];
   if (p.hook?.trim()) parts.push("**" + p.hook.trim() + "**");
@@ -294,7 +294,7 @@ export default function CriaPrompter() {
               <div>
                 <Input
                   list="prompter-folders"
-                  placeholder="Pasta (opcional) — digite pra criar uma nova"
+                  placeholder="Pasta (opcional) digite pra criar uma nova"
                   value={editor.folder}
                   onChange={(e) => setEditor({ ...editor, folder: e.target.value })}
                 />

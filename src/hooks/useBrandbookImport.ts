@@ -18,7 +18,7 @@ import { lerPaginas, validarArquivo, MAX_PAGINAS } from "@/lib/pdfPages";
    posts antes de alguém perceber.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/** As chaves são as mesmas de crm_clients.brand_core — o campo já existe. */
+/** As chaves são as mesmas de crm_clients.brand_core o campo já existe. */
 export type CampoLido = { valor: string; origem?: string };
 export type LeituraBrandbook = {
   campos: Partial<Record<

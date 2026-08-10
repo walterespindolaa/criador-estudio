@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { cn } from "@/lib/utils";
 import { confirmar } from "@/components/shared/Confirm";
 import { toast } from "sonner";
+import { sanitizeUrl } from "@/lib/sanitize";
 
 // ═══════════════════════════════════════════════════════════════════════
 // BANCO DE IDEIAS DO CLIENTE
@@ -287,7 +288,7 @@ export function ClienteIdeias({ clientId, criaOwnerId, extClient = null }: {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// SUAS IDEIAS — o pedido veio da operação real: "ter onde ir colocando
+// SUAS IDEIAS o pedido veio da operação real: "ter onde ir colocando
 // ideia de conteúdo pro cliente, pra depois virar post ou ir pro cronograma".
 //
 // O uso é no meio do dia: um campo de UMA linha no topo, Enter salva.
@@ -389,7 +390,7 @@ function MinhasIdeias({ clientId, ideias, loading, extClient }: {
 
   return (
     <div className="space-y-4">
-      {/* CAPTURA RÁPIDA — âncora do tour do cockpit. */}
+      {/* CAPTURA RÁPIDA âncora do tour do cockpit. */}
       <div data-tour="cli-ideias-captura" className="rounded-2xl border border-border bg-card p-4">
         <div className="flex gap-2">
           <Input
@@ -443,8 +444,8 @@ function MinhasIdeias({ clientId, ideias, loading, extClient }: {
                   </button>
                 </div>
                 {i.rationale && <p className="text-[12.5px] font-body text-muted-foreground mt-1 whitespace-pre-wrap leading-relaxed">{i.rationale}</p>}
-                {i.ref_url && (
-                  <a href={i.ref_url} target="_blank" rel="noopener noreferrer"
+                {i.ref_url && sanitizeUrl(i.ref_url) && (
+                  <a href={sanitizeUrl(i.ref_url)} target="_blank" rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-[11.5px] font-body font-semibold text-primary mt-1.5">
                     <Link2 className="h-3 w-3" /> referência
                   </a>
@@ -532,9 +533,15 @@ function MinhasIdeias({ clientId, ideias, loading, extClient }: {
 function RefCard({ url, thumb, title, author, note, folder, onDelete }: {
   url: string; thumb?: string | null; title?: string | null; author?: string | null; note?: string | null; folder?: string | null; onDelete?: () => void;
 }) {
+  // XSS armazenado: a URL vem do banco (o cliente/social mídia cola o link). Sem
+  // validar o esquema, um "javascript:..." salvo viraria href executável ao clicar.
+  // sanitizeUrl só devolve http(s); se não passar, o card fica sem link clicável.
+  const safeUrl = sanitizeUrl(url);
   return (
     <div className="group relative rounded-xl border border-border bg-card overflow-hidden">
-      <a href={url} target="_blank" rel="noopener noreferrer" className="block">
+      <a href={safeUrl || undefined} target="_blank" rel="noopener noreferrer"
+        className={safeUrl ? "block" : "block pointer-events-none"}
+        aria-disabled={safeUrl ? undefined : true}>
         {/* referrerPolicy="no-referrer" é OBRIGATÓRIO aqui.
             O CDN do Instagram recusa a imagem quando o navegador manda o Referer
             de outro domínio (anti-hotlink). No desktop às vezes passa; no Safari

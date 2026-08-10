@@ -67,7 +67,7 @@ export function BrandbookImport({ alvo, campos = CAMPOS_CLIENTE, atual, onSalvar
   const { etapa, progresso, leitura, arquivos, importar, cancelar } = useBrandbookImport(alvo);
 
   // Quando a leitura chega, ela vira um RASCUNHO editável. A pessoa mexe à
-  // vontade antes de salvar — o que a IA devolveu é sugestão, não decisão.
+  // vontade antes de salvar o que a IA devolveu é sugestão, não decisão.
   useEffect(() => {
     if (etapa !== "pronto" || !leitura) return;
     const r: Record<string, string> = {};

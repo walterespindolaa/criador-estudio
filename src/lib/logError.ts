@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { sanitizeTrackingUrl } from "@/lib/trackingUrl";
 
 // RPC nova ainda não está nos tipos gerados, cast.
 const sbRpc = supabase.rpc.bind(supabase) as unknown as (
@@ -20,7 +21,8 @@ export function logError(message: string, context?: Record<string, unknown>, lev
     void sbRpc("log_app_error", {
       _message: message || "erro sem mensagem",
       _context: { ...(context ?? {}), ua: typeof navigator !== "undefined" ? navigator.userAgent : null },
-      _url: typeof window !== "undefined" ? window.location.href : null,
+      // URL mascarada: rotas com token (/aprovar, /ativar, etc.) não vazam o token pro log.
+      _url: typeof window !== "undefined" ? sanitizeTrackingUrl(window.location.href) : null,
       _level: level,
     });
   } catch {

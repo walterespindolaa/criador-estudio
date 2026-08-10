@@ -207,7 +207,7 @@ export function InstallPrompt() {
           )}
 
           {/* Instrução manual (nem iOS nem Android disparam a instalação por código
-              em todos os casos). Antes isto mostrava SEMPRE o passo do iPhone —
+              em todos os casos). Antes isto mostrava SEMPRE o passo do iPhone -
               então um usuário de Android via "abra no Safari", que ele não tem. */}
           {modo === "ios" && (
             <div className="mt-4 rounded-2xl border border-border bg-background/70 p-3.5">

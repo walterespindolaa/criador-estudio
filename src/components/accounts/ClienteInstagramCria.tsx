@@ -53,7 +53,7 @@ export function ClienteInstagramCria({ criaOwnerId, clientName, extClientId }: {
     return { followers, followersDelta, reach, interactions, eng };
   }, [data, media]);
 
-  // Alcance médio por formato — direto do tipo da mídia do IG (não depende de vínculo).
+  // Alcance médio por formato direto do tipo da mídia do IG (não depende de vínculo).
   const fmtLabel = (t: string | null) => (t === "VIDEO" || t === "REELS" ? "Reels" : t === "CAROUSEL_ALBUM" ? "Carrossel" : t === "IMAGE" ? "Foto" : "Outro");
   const porFormato = useMemo(() => {
     const acc: Record<string, { soma: number; n: number }> = {};

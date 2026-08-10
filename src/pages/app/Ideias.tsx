@@ -335,7 +335,7 @@ const Ideias = () => {
 
         {mainTab === "salvos" && <SavedRefs initialUrl={sharedUrl} />}
 
-        {/* A TELA DE IDEIAS NÃO TINHA ESTADO VAZIO — e ela é a primeira coisa que
+        {/* A TELA DE IDEIAS NÃO TINHA ESTADO VAZIO e ela é a primeira coisa que
             um criador abre. Ele via um branco e concluía que tinha quebrado.
             Os exemplos existem porque o pior de começar é a folha em branco. */}
         {mainTab === "ideias" && filtered.length === 0 && (

@@ -246,7 +246,7 @@ export const FEATURES: Record<FeatureKey, FeatureDef> = {
   },
   estudio: {
     // O Estúdio deixou de ser uma TELA (rota /app/estudio, item de menu) que
-    // gerava imagem por IA — cara, fora da identidade da pessoa, e que ela ia
+    // gerava imagem por IA cara, fora da identidade da pessoa, e que ela ia
     // refazer no Canva de qualquer jeito. Virou uma ABA dentro do post, que
     // devolve o PROMPT. Custa uma geração da cota de IA, e é do Pro pra cima.
     minimo: "pro",
@@ -263,7 +263,7 @@ export const FEATURES: Record<FeatureKey, FeatureDef> = {
 // ═══════════════════════════════════════════════════════════════════════════
 // ROTA → RECURSO  (é isto que faz o MENU saber de que plano cada coisa é)
 //
-// O menu marcava "PRO" na mão, item por item — e por isso só o Cria Estúdio
+// O menu marcava "PRO" na mão, item por item e por isso só o Cria Estúdio
 // tinha selo. Insights, Tendências, Media Kit, Relatórios, Collabs: nenhum
 // avisava que era de outro plano. A pessoa clicava, batia numa trava e
 // descobria ali que não tinha. Descobrir o preço depois de querer é a pior
@@ -286,7 +286,7 @@ export const ROUTE_FEATURE: Record<string, FeatureKey> = {
   "/app/collabs": "collabs",
   "/app/prompter": "prompter",
   // Não existe mais "/app/estudio": o Estúdio virou aba do post. Ele não é
-  // destino nenhum — por isso não tem rota e não tem selo de menu.
+  // destino nenhum por isso não tem rota e não tem selo de menu.
 };
 
 /** O nome do plano como a pessoa lê. */
@@ -306,7 +306,7 @@ export function minimoDaRota(to: string): Tier | "admin" | null {
  * O selo que o menu deve mostrar nesta rota, pra QUEM está olhando.
  *
  * Regra: só marca o que a pessoa AINDA NÃO TEM. Escrever "PRO" ao lado de um
- * item que o assinante Pro já usa não informa nada — é ruído, e ruído em menu
+ * item que o assinante Pro já usa não informa nada é ruído, e ruído em menu
  * a pessoa aprende a ignorar (aí quando o selo importar, ela não vê).
  * `admin` nunca vira selo: não é plano, é obra.
  */

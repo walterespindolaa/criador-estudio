@@ -1734,7 +1734,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     <PenLine className="h-3.5 w-3.5 mr-1.5" /> Roteiro
                   </TabsTrigger>
                   {/* ARTE. O Cria Estúdio deixou de ser uma TELA no menu (que
-                      ninguém abria) e virou uma aba dentro do post — o minuto
+                      ninguém abria) e virou uma aba dentro do post o minuto
                       exato em que a pessoa trava: texto pronto, arte em branco. */}
                   <TabsTrigger
                     value="arte"
@@ -2167,7 +2167,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                         })}
                         {/* O gerador de lâminas voltou. Ele morava no Cria Estúdio
                             (a tela que ninguém abria) e sumiu junto com ela. Agora
-                            mora onde as lâminas moram — e é ele que faz a aba Arte
+                            mora onde as lâminas moram e é ele que faz a aba Arte
                             gerar prompt do CONTEÚDO real, não do título. */}
                         {formatStructure.hasDynamicSections && (
                           <CarouselWriter
@@ -2366,7 +2366,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   })()}
                 </TabsContent>
 
-                {/* Tab: Arte — o Cria Estúdio */}
+                {/* Tab: Arte o Cria Estúdio */}
                 <TabsContent value="arte" className="flex-1 px-4 sm:px-6 py-5 m-0 outline-none">
                   <ArtStudio
                     titulo={title}

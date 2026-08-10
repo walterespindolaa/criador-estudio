@@ -59,7 +59,7 @@ const MORE_SECTIONS: { title: string; items: MoreItem[] }[] = [
   ]},
   { title: "Mais", items: [
     { title: "Parcerias", url: "/app/collabs", icon: Handshake },
-    // PLANOS. Eu tinha colocado o item só no menu lateral do DESKTOP — e a maior
+    // PLANOS. Eu tinha colocado o item só no menu lateral do DESKTOP e a maior
     // parte dessa gente vive no celular. Ou seja: quem quisesse fazer upgrade,
     // pelo celular, não tinha por onde. Você não pode esconder a porta de quem
     // está tentando te pagar.

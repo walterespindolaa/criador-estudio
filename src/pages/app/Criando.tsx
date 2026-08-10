@@ -664,7 +664,7 @@ const Criando = () => {
           )}
         </div>
 
-        {/* O QUADRO VAZIO. Antes ele mostrava seis colunas vazias e nada mais — o
+        {/* O QUADRO VAZIO. Antes ele mostrava seis colunas vazias e nada mais o
             que parece um sistema quebrado, não um começo. Um kanban sem card não
             ensina nada; um convite, sim. */}
         {posts.length === 0 && (

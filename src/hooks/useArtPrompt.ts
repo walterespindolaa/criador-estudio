@@ -11,12 +11,12 @@ import { useProfile } from "@/hooks/useProfile";
    O Cria Estúdio era uma TELA (rota /app/estudio, item de menu) que gerava
    imagem por IA. Três problemas: cada imagem custava dinheiro de verdade; o
    resultado saía fora da identidade da pessoa (marca é fonte, cor e
-   diagramação — não é o que um gerador de imagem entrega); e ela ia refazer
+   diagramação não é o que um gerador de imagem entrega); e ela ia refazer
    no Canva de qualquer jeito. Resultado: nem o dono do produto usava.
 
    Agora o Estúdio não é destino, é ferramenta: mora DENTRO do post, no minuto
    exato em que a pessoa trava (texto pronto, arte em branco), e devolve o
-   PROMPT — que ela cola no gerador que já usa e já paga.
+   PROMPT que ela cola no gerador que já usa e já paga.
 
    Custa uma geração da cota de IA. Sem produto novo, sem preço novo, sem
    conta do Higgsfield.
@@ -49,12 +49,12 @@ export type ArtSalvo = { resultado: ArtResult; noticias: Noticia[]; geradoEm: st
    OS PROMPTS FICAM NO POST
 
    Antes eles só existiam na memória da tela: a pessoa saía do post, voltava, e
-   tinha que GERAR DE NOVO — pagando outra geração da cota pra ver exatamente a
+   tinha que GERAR DE NOVO pagando outra geração da cota pra ver exatamente a
    mesma coisa. Crédito queimado à toa é o jeito mais rápido de ela achar o
    produto caro e cancelar.
 
    Agora eles vivem em posts.art (jsonb). Reabrir não custa nada. Gerar de novo
-   custa — e é por isso que o botão pergunta antes.
+   custa e é por isso que o botão pergunta antes.
    ═══════════════════════════════════════════════════════════════════════════ */
 export function useArtSalvo(postId?: string | null) {
   const qc = useQueryClient();
@@ -100,7 +100,7 @@ export function useArtPrompt() {
   const { profile } = useProfile();
 
   // As cores e as fontes moram no Brandbook (brand_items). Se estiverem
-  // vazias, o prompt sai genérico — e é por isso que a tela avisa a pessoa
+  // vazias, o prompt sai genérico e é por isso que a tela avisa a pessoa
   // ANTES de gerar, em vez de entregar um resultado morno e deixar ela achar
   // que "a IA do Cria é fraca".
   const cores = (items ?? [])
@@ -169,7 +169,7 @@ export function useArtPrompt() {
   // Antes, "amarrar com o que está quente" não buscava nada: mandava uma
   // instrução genérica e a pessoa não via notícia nenhuma. Agora ela vê as
   // manchetes, com fonte e data, e escolhe qual entra. Se a busca falhar, o
-  // Estúdio continua funcionando sem isso — notícia é tempero, não o prato.
+  // Estúdio continua funcionando sem isso notícia é tempero, não o prato.
   const busca = useMutation({
     mutationFn: async (tema: string): Promise<Noticia[]> => {
       const r = (await callAIContextBuilder({

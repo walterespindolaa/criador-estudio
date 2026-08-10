@@ -82,7 +82,7 @@ serve(async (req) => {
     }
 
     // já tem esse módulo ativo? não deixa assinar de novo
-    // (exceção: o pacote extra é cumulativo — ela pode comprar mais de um)
+    // (exceção: o pacote extra é cumulativo ela pode comprar mais de um)
     const { data: ent } = moduleCode === "hub_extra"
       ? { data: null }
       : await svc

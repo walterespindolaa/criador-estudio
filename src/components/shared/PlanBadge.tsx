@@ -5,7 +5,7 @@ import { useProfile } from "@/hooks/useProfile";
 /* ═══════════════════════════════════════════════════════════════════════════
    A PÍLULA DO PLANO
 
-   Ela EXISTIA e era clicável — mas escondia a si mesma pra admin e pra conta de
+   Ela EXISTIA e era clicável mas escondia a si mesma pra admin e pra conta de
    agência (`return { kind: "hide" }`). Resultado: quem administra o sistema nunca
    via a pílula, e concluía que não existia. Pior: não havia NENHUM outro lugar,
    em nenhuma tela, onde a pessoa pudesse ver o plano que tem ou trocar de plano.
@@ -70,7 +70,7 @@ export function PlanBadge({ light = false, onlyUrgent = false, compact = false }
 
   // No header do celular não cabe tudo. Ali a pílula só aparece quando ela PEDE
   // uma ação: o teste está acabando, ou a pessoa está sem plano. "Studio" e
-  // "Admin" não são notícia — pra isso existe o item "Planos" no menu.
+  // "Admin" não são notícia pra isso existe o item "Planos" no menu.
   if (onlyUrgent && !["trial_active", "trial_warning", "expired"].includes(state.kind)) {
     return null;
   }

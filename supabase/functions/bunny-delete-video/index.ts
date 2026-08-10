@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
       if (!membership) return json({ error: "Sem permissão para essa conta" }, 403);
     }
 
-    // POSSE OBRIGATÓRIA: o videoGuid NÃO é segredo — ele aparece na URL de embed
+    // POSSE OBRIGATÓRIA: o videoGuid NÃO é segredo ele aparece na URL de embed
     // do player (iframe.mediadelivery.net/embed/{lib}/{guid}), visível pra
     // clientes no portal de aprovação e pra colaboradores. Sem checar posse,
     // qualquer usuário logado deletaria o vídeo de outra conta. Exigimos que

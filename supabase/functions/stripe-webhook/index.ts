@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
               updated_at: new Date().toISOString(),
             }, { onConflict: "stripe_subscription_id" }), "module_entitlements upsert");
             // Módulo traz ESPAÇO junto (3 GB base + 3 GB por módulo). Sem este
-            // recálculo ela compra o módulo e continua com os 500 MB de trial —
+            // recálculo ela compra o módulo e continua com os 500 MB de trial 
             // bate numa parede invisível no meio da operação, com cliente esperando.
             await supabase.rpc("recalc_manager_storage", { _manager: managerId });
           }
@@ -219,16 +219,24 @@ Deno.serve(async (req) => {
         // Purchase server-side no Meta (fonte da verdade da compra confirmada).
         await sendMetaPurchase(s);
 
-        // Self-subscribe: ativa vínculo pendente manager→PF.
-        // PF (owner_id) agora aparece automaticamente na equipe da gestora.
-        await supabase.from("account_members")
-          .update({
-            status: "active",
-            pending_self_subscribe: false,
-            accepted_at: new Date().toISOString(),
-          })
-          .eq("owner_id", userId)
-          .eq("pending_self_subscribe", true);
+        // Self-subscribe (F28): ativa SÓ a linha pendente do manager que este
+        // checkout carregou. A PF (owner_id) consentiu ao concluir o checkout que a
+        // gestora montou (metadata self_subscribe_manager_id). Sem esse metadado
+        // (ex.: PF pagando a própria assinatura normal), NÃO ativamos vínculo nenhum
+        // antes, qualquer pagamento da PF acordava toda linha pendente do dono,
+        // o que permitia takeover por vínculo armado por terceiro.
+        const selfSubMgr = s.metadata?.self_subscribe_manager_id;
+        if (selfSubMgr) {
+          await supabase.from("account_members")
+            .update({
+              status: "active",
+              pending_self_subscribe: false,
+              accepted_at: new Date().toISOString(),
+            })
+            .eq("owner_id", userId)
+            .eq("member_id", selfSubMgr)
+            .eq("pending_self_subscribe", true);
+        }
         break;
       }
 
@@ -329,7 +337,7 @@ Deno.serve(async (req) => {
             .update({ status: "canceled", updated_at: new Date().toISOString() })
             .eq("stripe_subscription_id", sub.id);
           // Cancelou módulo → recalcula o espaço. (A função nunca DIMINUI abaixo
-          // do que ela já usa; ela só ajusta a cota — arquivo nenhum é apagado.)
+          // do que ela já usa; ela só ajusta a cota arquivo nenhum é apagado.)
           const mid = sub.metadata?.manager_id;
           if (mid) await supabase.rpc("recalc_manager_storage", { _manager: mid });
           break;

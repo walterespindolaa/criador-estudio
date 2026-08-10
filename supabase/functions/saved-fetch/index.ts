@@ -15,7 +15,7 @@ async function rateOk(svc: SupabaseClient, userId: string): Promise<boolean> {
     const { data, error } = await svc.rpc("check_and_increment_rate_limit", {
       _user_id: userId, _scope: "saved-fetch", _window_key: windowKey, _limit: 20,
     });
-    // O RPC devolve uma LINHA com { allowed, current_count, limit } — nunca o
+    // O RPC devolve uma LINHA com { allowed, current_count, limit } nunca o
     // boolean `false`. O código antigo (`data !== false`) era sempre true, então
     // o limite de 20/min NUNCA bloqueava (cada chamada dispara scrape pago no
     // Apify). Lemos allowed da linha, igual ao ai-context-builder.

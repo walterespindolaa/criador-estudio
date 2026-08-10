@@ -2,20 +2,20 @@
    PDF → IMAGENS (no navegador)
 
    Um moodboard é IMAGEM, não texto. A paleta e a tipografia moram no desenho
-   da página — extrair só o texto do PDF pegaria metade, e a metade menos
+   da página extrair só o texto do PDF pegaria metade, e a metade menos
    importante. Por isso a gente renderiza as páginas e manda pra um modelo que
    ENXERGA.
 
    A renderização acontece AQUI, no navegador da pessoa:
    · o PDF nunca sobe inteiro pro servidor (é mais rápido e mais barato);
    · a gente controla o tamanho do que sai (limite de payload da edge function);
-   · o pdfjs entra por import dinâmico — quem nunca sobe brandbook não paga
+   · o pdfjs entra por import dinâmico quem nunca sobe brandbook não paga
      nem 1 byte por essa biblioteca no bundle.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /** Páginas que a gente lê. Brandbook útil está sempre nas primeiras. */
 export const MAX_PAGINAS = 8;
-/** 10 MB. 5 MB era apertado: moodboard bonito é imagem e estoura fácil — e
+/** 10 MB. 5 MB era apertado: moodboard bonito é imagem e estoura fácil e
  *  bater na trava logo na primeira tentativa é a pior hora de frustrar. */
 export const MAX_BYTES = 10 * 1024 * 1024;
 /** Largura de render. Suficiente pra ler hex e nome de fonte, leve pra trafegar. */
@@ -51,7 +51,7 @@ async function pdfParaDataUrls(
   //
   // `new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url)` funciona no
   // dev e QUEBRA no build de produção: o Vite não resolve um especificador de
-  // pacote dentro de new URL(). O `?url` é a forma que ele entende — ele copia o
+  // pacote dentro de new URL(). O `?url` é a forma que ele entende ele copia o
   // arquivo pro bundle e devolve o caminho final.
   const worker = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
   pdfjs.GlobalWorkerOptions.workerSrc = worker;
@@ -91,7 +91,7 @@ export function validarArquivo(file: File): ArquivoInvalido | null {
     // Honestidade > falsa compatibilidade: ler .docx exigiria outra biblioteca
     // e o resultado seria pior (o Word perde o layout, que é o que interessa).
     // Exportar como PDF leva 5 segundos e a leitura fica muito melhor.
-    return { erro: "Word não dá pra ler direito (o layout se perde). Exporte como PDF — fica bem melhor." };
+    return { erro: "Word não dá pra ler direito (o layout se perde). Exporte como PDF fica bem melhor." };
   }
   if (!ehPdf && !ehImg) return { erro: "Mande um PDF ou uma imagem do moodboard." };
   return null;

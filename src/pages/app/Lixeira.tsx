@@ -44,7 +44,7 @@ export default function Lixeira() {
           {all.map((row) => (
             <TrashItem key={`${row.kind}:${row.id}`} row={row}
               onRestore={() => restore.mutate({ id: row.id, kind: row.kind })}
-              onPurge={async () => { if (await confirmar({ titulo: `Excluir "${row.label}" de vez?`, descricao: "Isso não dá pra desfazer — nem pela lixeira." })) purge.mutate({ id: row.id, kind: row.kind }); }} />
+              onPurge={async () => { if (await confirmar({ titulo: `Excluir "${row.label}" de vez?`, descricao: "Isso não dá pra desfazer nem pela lixeira." })) purge.mutate({ id: row.id, kind: row.kind }); }} />
           ))}
         </div>
       )}

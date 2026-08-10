@@ -773,7 +773,7 @@ const Relatorios = () => {
                           : "text-muted-foreground"
                   )}
                 >
-                  {hasReachBaseline ? formatPercent(avgReachDelta) : "—"}
+                  {hasReachBaseline ? formatPercent(avgReachDelta) : "-"}
                 </span>{" "}
                 vs período anterior · eng.{" "}
                 <span className="font-semibold text-foreground">{formatEngagement(avgEngagement)}</span>
@@ -863,7 +863,7 @@ const Relatorios = () => {
                         ? "Pilar (defina no post)"
                         : "Pilar (vincule pra ver)"
                   }
-                  value={hasLinkedPillar ? pillarPerf[0]?.label ?? "-" : "—"}
+                  value={hasLinkedPillar ? pillarPerf[0]?.label ?? "-" : "-"}
                   valueColor={hasLinkedPillar ? pillarPerf[0]?.color : undefined}
                   sub={
                     hasLinkedPillar

@@ -134,7 +134,13 @@ serve(async (req) => {
       }
     }
     // Marca self_subscribe nas metadatas, webhook B.2 lê "1" pra NÃO gerar comissão.
-    const selfSubMark: Record<string, string> = selfSubValidated ? { self_subscribe: "1" } : {};
+    // Carrega TAMBÉM o manager_id (self_subscribe_manager_id): o webhook usa isso
+    // pra ativar APENAS a linha pendente desse manager (F28). Sem esse metadado,
+    // o webhook não ativa vínculo nenhum uma assinatura normal da PF não pode
+    // "acordar" um vínculo pendente que outra gestora deixou armado.
+    const selfSubMark: Record<string, string> = selfSubValidated && selfSubManagerId
+      ? { self_subscribe: "1", self_subscribe_manager_id: selfSubManagerId }
+      : {};
     // ────────────────────────────────────────────────────────────
 
     const origin = req.headers.get("origin") ?? "https://app.criasocialclub.com.br";

@@ -14,7 +14,7 @@ import type { CriaColor } from "@/lib/moduleTheme";
 // VITRINE DE MÓDULO
 //
 // Quando a pessoa esbarra num recurso que ela não assina, ela NÃO leva uma
-// porta na cara. Ela vê o que ganharia — e, quando dá, sobre ESTE cliente,
+// porta na cara. Ela vê o que ganharia e, quando dá, sobre ESTE cliente,
 // citando o nome dele. É a diferença entre "módulo inativo" e uma oferta.
 //
 // Um lugar só: o texto de venda de cada módulo mora aqui. Antes existia um

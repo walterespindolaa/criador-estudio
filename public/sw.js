@@ -109,6 +109,23 @@ async function networkFirstNav(req) {
 // Guardamos o arquivo aqui e redirecionamos pra tela de Ideias, que lê de volta.
 const SHARE_CACHE = "cria-share";
 
+// SEGURANÇA: o share target guarda bytes que vêm de FORA (qualquer app que
+// compartilhe pro CRIA) e os serve de volta pela nossa origem. Se a gente ecoar
+// o Content-Type escolhido por quem compartilhou, um "text/html" viraria página
+// same-origin executável (XSS). Então: só aceitamos MIME de imagem/vídeo de uma
+// lista fixa, servimos com o tipo seguro FORÇADO + nosniff + attachment, e a
+// leitura de /__share/* nunca responde a uma navegação (só a fetch do app).
+const SHARE_MIME_OK = new Set([
+  "image/jpeg", "image/png", "image/gif", "image/webp", "image/heic", "image/heif",
+  "video/mp4", "video/quicktime", "video/webm",
+]);
+
+// Devolve o MIME seguro (da allow-list) ou null quando o tipo não é permitido.
+function tipoSeguroCompartilhado(mime) {
+  const m = (mime || "").split(";")[0].trim().toLowerCase();
+  return SHARE_MIME_OK.has(m) ? m : null;
+}
+
 async function receberCompartilhamento(event) {
   const form = await event.request.formData();
   const arquivos = form.getAll("files").filter((f) => f && f.size > 0);
@@ -124,10 +141,22 @@ async function receberCompartilhamento(event) {
   const nomes = [];
   for (let i = 0; i < arquivos.length && i < 4; i++) {
     const f = arquivos[i];
-    const url = `/__share/${Date.now()}-${i}`;
+    // Só guarda imagem/vídeo de MIME conhecido; qualquer outro tipo é ignorado
+    // (não gravamos bytes arbitrários de fora com Content-Type controlado por eles).
+    const tipo = tipoSeguroCompartilhado(f.type);
+    if (!tipo) continue;
+    // Chave ALEATÓRIA (não Date.now(), que é previsível): dificulta um terceiro
+    // adivinhar a URL do que foi compartilhado.
+    const url = `/__share/${crypto.randomUUID()}`;
     await cache.put(
       url,
-      new Response(f, { headers: { "content-type": f.type || "application/octet-stream" } }),
+      new Response(f, {
+        headers: {
+          "content-type": tipo,                 // tipo seguro forçado, não o enviado
+          "x-content-type-options": "nosniff",  // o navegador não re-adivinha o tipo
+          "content-disposition": "attachment",  // se abrir direto, baixa (não renderiza)
+        },
+      }),
     );
     nomes.push(url);
   }
@@ -167,10 +196,16 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Ler de volta o arquivo compartilhado.
+  // Ler de volta o arquivo compartilhado (só via fetch do app, nunca navegação).
   if (url.pathname.startsWith("/__share/")) {
+    // Navegar direto pra /__share/* (abrir a URL no browser) faria o conteúdo de
+    // fora virar documento same-origin. Recusamos: só o fetch da tela de Ideias lê.
+    if (req.mode === "navigate") {
+      event.respondWith(new Response("", { status: 404 }));
+      return;
+    }
     event.respondWith(
-      caches.open(SHARE_CACHE).then((c) => c.match(req).then((r) => r || new Response("{}"))),
+      caches.open(SHARE_CACHE).then((c) => c.match(req).then((r) => r || new Response("{}", { headers: { "content-type": "application/json" } }))),
     );
     return;
   }

@@ -116,11 +116,11 @@ button, a, [role="button"] {
     /* ===== BASE: branco =====
        O creme (#F6F2E8) virou o tema "CRIA", opcional em Ajustes → Visual.
        Aqui a base é branca: card branco sobre fundo quase-branco cria hierarquia
-       de verdade. Creme sobre creme não separava nada — era a origem do "morto". */
-    --background: 40 33% 98%;          /* #FDFBF5 — branco quente */
+       de verdade. Creme sobre creme não separava nada era a origem do "morto". */
+    --background: 40 33% 98%;          /* #FDFBF5 branco quente */
     --foreground: 0 0% 4%;           /* ink */
 
-    --card: 0 0% 100%;                 /* branco puro — o card SALTA do fundo */
+    --card: 0 0% 100%;                 /* branco puro o card SALTA do fundo */
     --card-foreground: 0 0% 4%;
 
     --popover: 0 0% 100%;
@@ -160,7 +160,7 @@ button, a, [role="button"] {
     --shadow-warm-lg: 0 8px 30px rgba(28, 28, 26, 0.08);
 
     /* ===== AS 6 CORES DA LP =====
-       O sistema só usava laranja e verde. As outras quatro nunca apareciam —
+       O sistema só usava laranja e verde. As outras quatro nunca apareciam -
        por isso a plataforma parecia morta perto da landing page.
        Agora são tokens de primeira classe: uma cor por módulo + as formas orgânicas. */
     --cria-laranja: 14 83% 51%;        /* #EA4918 oficial */
@@ -294,7 +294,7 @@ button, a, [role="button"] {
   display: none;
 }
 
-/* Barra de rolagem horizontal visível — board do Kanban (desktop) */
+/* Barra de rolagem horizontal visível board do Kanban (desktop) */
 .kanban-scroll {
   scrollbar-width: thin;
   scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
@@ -347,9 +347,9 @@ button, a, [role="button"] {
   display: none !important;
 }
 
-/* Canvas global — brilho radial seguindo o accent do tema (--primary) */
+/* Canvas global brilho radial seguindo o accent do tema (--primary) */
 .app-canvas{
-  /* Rebranding fase 3: brilho do accent bem mais discreto — a tela de trabalho fica neutra */
+  /* Rebranding fase 3: brilho do accent bem mais discreto a tela de trabalho fica neutra */
   background:
     radial-gradient(120% 80% at 18% 0%, hsl(var(--card)) 0%, transparent 40%),
     radial-gradient(150% 95% at 85% 10%, hsl(var(--primary) / 0.04) 0%, transparent 48%),

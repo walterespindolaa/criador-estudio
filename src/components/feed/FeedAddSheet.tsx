@@ -12,7 +12,7 @@ import type { Post } from "@/hooks/usePosts";
 import type { StatusFilter } from "./FeedSidebar";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   MEU FEED (mobile) — ADICIONAR POSTS VIA BOTTOM SHEET
+   MEU FEED (mobile) ADICIONAR POSTS VIA BOTTOM SHEET
    Substitui o drawer lateral no celular (mockup aprovado pelo Walter:
    CRIA/mockup-feed-bottom-sheet.html). Grade 3 colunas com a cara do feed,
    seleção múltipla com anel + check, botão que conta os selecionados.

@@ -29,6 +29,27 @@ async function ensureUnsubscribeToken(svc: SupabaseClient, email: string): Promi
   return (data?.token as string) ?? token;
 }
 
+// Escapa valores interpolados no HTML do e-mail (F12/F24): nome do usuário
+// ou da agência não pode injetar markup no template.
+function escapeHtml(v: unknown): string {
+  return String(v ?? "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+// Origin confiável pro link (F13): APP_URL fixo ou allow-list, caindo no
+// canônico. Nunca monta o link só com o header Origin cru.
+const CANONICAL_APP_URL = "https://app.criasocialclub.com.br";
+function resolveAppUrl(req: Request): string {
+  const fixed = Deno.env.get("APP_URL");
+  if (fixed) return fixed.replace(/\/+$/, "");
+  const origin = req.headers.get("origin") ?? "";
+  const allow = ["https://app.criasocialclub.com.br", "https://criasocialclub.com.br", "https://www.criasocialclub.com.br"];
+  if (allow.includes(origin)) return origin;
+  if (/^https:\/\/[a-z0-9-]+\.(lovableproject\.com|lovable\.app)$/.test(origin)) return origin;
+  return CANONICAL_APP_URL;
+}
+
 function emailHtml(opts: { title: string; paragraph: string; actionLink: string }): string {
   // Rodapé com o logo (e não com a palavra "cria" escrita).
   // Cuidados de e-mail: Gmail e Outlook bloqueiam imagem por padrão, então a URL
@@ -52,7 +73,7 @@ function emailHtml(opts: { title: string; paragraph: string; actionLink: string 
 }
 
 async function sendClientInvite(svc: SupabaseClient, email: string, agencyName: string, actionLink: string) {
-  const paragraph = `${agencyName || "Sua social mídia"} criou sua conta no cria pra cuidar do seu conteúdo. Clique no botão pra acessar e definir sua senha.`;
+  const paragraph = `${escapeHtml(agencyName || "Sua social mídia")} criou sua conta no cria pra cuidar do seu conteúdo. Clique no botão pra acessar e definir sua senha.`;
   const html = emailHtml({ title: "Seu acesso ao cria está pronto", paragraph, actionLink });
   const messageId = crypto.randomUUID();
   const unsubscribeToken = await ensureUnsubscribeToken(svc, email);
@@ -107,25 +128,46 @@ serve(async (req) => {
     if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return json({ error: "missing_fields" }, 400);
     if (email === (user.email ?? "").toLowerCase()) return json({ error: "use_different_email" }, 400);
 
-    const origin = req.headers.get("origin") ?? "https://app.criasocialclub.com.br";
+    const origin = resolveAppUrl(req);
 
-    // Gera invite (cria o usuário). Se já existir, manda magiclink.
-    const { data: list } = await svc.auth.admin.listUsers();
-    const existing = list?.users?.find((u) => u.email?.toLowerCase() === email);
-    const type: "magiclink" | "invite" = existing ? "magiclink" : "invite";
+    // SEGURANÇA (F2/F4/F5/F6/F7): este endpoint só cria conta NOVA. Se o e-mail já
+    // tem conta no CRIA, NÃO degradamos pra magiclink nem devolvemos link/token de
+    // uma conta que o chamador não possui, e NÃO reescrevemos plan/agency_owner_id/
+    // must_change_password de perfil preexistente. Isso era takeover total.
+    //
+    // Detecção confiável: tentamos o invite (que cria o usuário). Se falhar porque
+    // o e-mail já existe, confirmamos direto por e-mail (listUsers é paginado e não
+    // confiável) e recusamos com mensagem clara.
     const { data: linkData, error: linkErr } = await svc.auth.admin.generateLink({
-      type, email, options: { redirectTo: origin + "/app" },
+      type: "invite", email, options: { redirectTo: origin + "/app" },
     });
     if (linkErr || !linkData?.properties?.action_link || !linkData.user) {
+      // O invite pode ter falhado porque a conta já existe. Confirma por e-mail.
+      const { data: existingUid } = await svc.rpc("get_user_id_by_email", { _email: email });
+      if (existingUid) {
+        const { data: victim } = await svc.from("profiles")
+          .select("agency_owner_id").eq("id", existingUid as string).maybeSingle();
+        // Só informa "já é seu cliente" quando o chamador DE FATO possui a conta.
+        if ((victim as { agency_owner_id?: string } | null)?.agency_owner_id === user.id) {
+          return json({ error: "already_your_client", message: "Esse cliente já está vinculado à sua conta." }, 409);
+        }
+        // Conta de terceiro: recusa. Nunca devolve link/token de conta alheia.
+        return json({
+          error: "email_already_registered",
+          message: "Esse e-mail já tem conta no CRIA. Peça pra pessoa aceitar o vínculo.",
+        }, 409);
+      }
       return json({ error: "link_failed" }, 400);
     }
+    // Daqui pra baixo é SEMPRE conta nova criada por esta chamada.
     const creatorId = linkData.user.id;
     const hashed = linkData.properties.hashed_token;
     const inviteLink = hashed
-      ? `${origin}/ativar?th=${hashed}&type=${type}&to=${encodeURIComponent("/app")}`
+      ? `${origin}/ativar?th=${hashed}&type=invite&to=${encodeURIComponent("/app")}`
       : linkData.properties.action_link;
 
     // Conta de criadora coberta pela agência (studio, acesso ativo, sem cobrança própria).
+    // Seguro: creatorId é a conta recém-criada por esta chamada.
     await svc.from("profiles").update({
       name, plan: "studio", subscription_status: "active",
       agency_owner_id: user.id, must_change_password: true,

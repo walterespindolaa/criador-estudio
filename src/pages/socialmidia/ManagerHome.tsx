@@ -119,7 +119,7 @@ export default function ManagerHome() {
   const { signals, health, counts } = useOperationSignals();
 
   // Módulos: só os ativos viram card. Pacotes extras / add-ons (ex.: "Cria Radar
-  // · Pacote Extra", code hub_extra) NÃO são módulo próprio — é só compra de uso
+  // · Pacote Extra", code hub_extra) NÃO são módulo próprio é só compra de uso
   // a mais. Filtramos de vez, então nunca viram card nem upsell duplicado.
   const isAddon = (m: { code: string; name: string }) =>
     m.code === "hub_extra" || m.code.endsWith("_extra") || /pacote\s+extra/i.test(m.name);

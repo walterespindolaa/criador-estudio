@@ -7,7 +7,7 @@ import { PrompterPlayer } from "@/components/prompter/PrompterPlayer";
 
 /* Tela de gravação: carrega o roteiro e entrega pro player fullscreen.
    O player cobre o app inteiro (position:fixed, z-60), então o layout
-   (rail/bottombar) continua montado por baixo — sair é instantâneo. */
+   (rail/bottombar) continua montado por baixo sair é instantâneo. */
 
 export default function PrompterGravar() {
   const { id } = useParams<{ id: string }>();

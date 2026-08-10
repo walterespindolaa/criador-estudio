@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// POSTER-LETTERBOX — mede TARJA PRETA QUEIMADA NO PIXEL da miniatura de vídeo.
+// POSTER-LETTERBOX mede TARJA PRETA QUEIMADA NO PIXEL da miniatura de vídeo.
 //
 // POR QUE EXISTE: a miniatura de vídeo nem sempre é só o frame. Conferido em
 // arquivos reais do Google Drive: alguns devolvem o frame dentro de uma moldura

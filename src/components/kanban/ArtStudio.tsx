@@ -60,7 +60,7 @@ export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar
   const [copiada, setCopiada] = useState<number | null>(null);
 
   // O que a tela mostra: o que acabou de sair da IA, ou o que ficou guardado no
-  // post. Sem isto, sair do post e voltar apagava tudo — e ela pagaria outra
+  // post. Sem isto, sair do post e voltar apagava tudo e ela pagaria outra
   // geração pra ver exatamente a mesma coisa. Crédito queimado à toa é a forma
   // mais rápida de a pessoa achar o produto caro.
   const resultado = recemGerado ?? salvo?.resultado ?? null;
@@ -72,7 +72,7 @@ export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar
   const usaPaginas = paginasComTexto.length > 0;
   const nPaginas = usaPaginas ? paginasComTexto.length : 1;
 
-  // ── A trava. Não é <Navigate>: é vitrine. A pessoa clicou porque QUERIA —
+  // ── A trava. Não é <Navigate>: é vitrine. A pessoa clicou porque QUERIA -
   //    essa é a melhor oportunidade de venda que existe, e um redirect a joga
   //    fora. A trava de verdade (a que importa) está na edge function.
   const liberado = atLeast("pro");

@@ -47,10 +47,10 @@ import { Label } from "@/components/ui/label";
 //   Pesquisa  → analisar concorrente   (Apify, só quem tem o HUB liberado)
 //   Portal    → o que o cliente vê     (era o popup "Personalizar", espremido)
 // ═══════════════════════════════════════════════════════════════════════════
-// AS ABAS DO CLIENTE — cada uma com a cor do MÓDULO a que ela pertence.
+// AS ABAS DO CLIENTE cada uma com a cor do MÓDULO a que ela pertence.
 //
 // A ficha do cliente é onde os módulos do CRIA se encontram: Posts é o Cria Post,
-// Financeiro é o Cria Caixa, Pesquisa é o Cria Radar. Só que nada dizia isso — as
+// Financeiro é o Cria Caixa, Pesquisa é o Cria Radar. Só que nada dizia isso as
 // abas eram todas cinzas, e a pessoa não percebia que estava usando um produto
 // pago dentro da ficha. A cor faz o módulo aparecer e lembra do valor que ele
 // está entregando ali.
@@ -354,7 +354,7 @@ export default function ClienteHub() {
         {/* Mobile-first: empilha em blocos limpos (avatar+nome, selos, ações).
             No desktop (md:) volta a ser uma linha só, como era antes. */}
         <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:gap-4">
-          {/* BLOCO 1 — avatar + nome + @ + selos. No mobile ocupa a linha inteira
+          {/* BLOCO 1 avatar + nome + @ + selos. No mobile ocupa a linha inteira
               e o nome ganha largura pra aparecer; no desktop vira a coluna flex-1. */}
           <div className="flex items-center gap-3 md:gap-4 min-w-0 md:flex-1">
             <button type="button" onClick={() => avatarInputRef.current?.click()} aria-label="Trocar foto do cliente"
@@ -371,7 +371,7 @@ export default function ClienteHub() {
               <p className="text-sm text-muted-foreground font-body truncate">
                 {client.instagram ? `@${client.instagram.replace(/^@/, "")}` : "sem @"}{client.cria_owner_id ? " · usa o Cria" : " · aprova por link"}
               </p>
-              {/* SELOS — linha própria abaixo do nome, sem sobrepor. */}
+              {/* SELOS linha própria abaixo do nome, sem sobrepor. */}
               <div className="flex gap-1.5 mt-1.5 flex-wrap">
                 {extClient
                   ? <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/12 text-emerald-600 font-body font-semibold">Link de aprovação ativo</span>
@@ -411,13 +411,13 @@ export default function ClienteHub() {
               </div>
             </div>
           </div>
-          {/* BLOCO 2 — ações. No mobile viram uma linha própria (largura total,
+          {/* BLOCO 2 ações. No mobile viram uma linha própria (largura total,
               wrap, toque confortável); no desktop encostam à direita, shrink-0. */}
           <div className="relative flex gap-2 flex-wrap w-full md:w-auto md:shrink-0">
-            {/* LINKS ÚTEIS — atalho fixo pros links do cliente (Drive, Captação…).
+            {/* LINKS ÚTEIS atalho fixo pros links do cliente (Drive, Captação…).
                 Rótulo sempre "Links úteis"; aparece mesmo sem nenhum link. */}
             <LinksUteisHeaderButton links={(client as { useful_links?: { label: string; url: string }[] | null }).useful_links ?? null} />
-            {/* NOTAS — o bloco de notas deste cliente (várias notas, com data e
+            {/* NOTAS o bloco de notas deste cliente (várias notas, com data e
                 busca). É onde fica registrado o que foi conversado e alinhado
                 ao longo do tempo. Sem o Cria Gestão, abre a vitrine do módulo. */}
             <Button
@@ -435,7 +435,7 @@ export default function ClienteHub() {
                 </span>
               )}
             </Button>
-            {/* STATUS — ativar/pausar/inativar sem sair da ficha. Mesmo campo da lista.
+            {/* STATUS ativar/pausar/inativar sem sair da ficha. Mesmo campo da lista.
                 O valor EXIBIDO é derivado: encerramento em data futura = ainda ativo;
                 data passada = inativo (mesmo que ninguém tenha virado o status). */}
             <select
@@ -455,7 +455,7 @@ export default function ClienteHub() {
               onConfirm={confirmInativar}
               onCancel={() => setInativarOpen(false)}
             />
-            {/* COR DO CLIENTE — pinta o card na lista, a logo e o link público. */}
+            {/* COR DO CLIENTE pinta o card na lista, a logo e o link público. */}
             <Button variant="outline" className="px-3" onClick={() => setColorOpen((v) => !v)} title="Cor do cliente" aria-label="Cor do cliente">
               <span className="h-4 w-4 rounded-md ring-1 ring-border" style={{ background: (client as { color?: string | null }).color || "#cbd5e1" }} />
               <span className="hidden sm:inline ml-1.5">Cor</span>
@@ -489,7 +489,7 @@ export default function ClienteHub() {
                 <span className="hidden sm:inline">Entrar no Cria dele</span>
               </Button>
             )}
-            {/* ABRIR PORTAL — vive junto das outras ações pra fluir no mesmo wrap.
+            {/* ABRIR PORTAL vive junto das outras ações pra fluir no mesmo wrap.
                 O botão "Personalizar" SAIU daqui: abria um popup com exatamente o
                 mesmo conteúdo da aba Portal. Ficou UM lugar: a aba Portal. */}
             {extClient && (
@@ -511,7 +511,7 @@ export default function ClienteHub() {
         clientName={displayName || client.name}
       />
 
-      {/* NÍVEL 1 — os Cria. Topo enxuto: a pessoa escolhe QUAL Cria; o que tem
+      {/* NÍVEL 1 os Cria. Topo enxuto: a pessoa escolhe QUAL Cria; o que tem
           dentro aparece no nível 2. Cada botão na cor do módulo, que é o que
           ensina a reconhecer o produto dentro da ficha do cliente. */}
       <div
@@ -550,7 +550,7 @@ export default function ClienteHub() {
         })}
       </div>
 
-      {/* NÍVEL 2 — as sub-abas do Cria ativo (só quando tem mais de um assunto e
+      {/* NÍVEL 2 as sub-abas do Cria ativo (só quando tem mais de um assunto e
           a pessoa já entrou num deles). Na landing, os cards fazem esse papel. */}
       {/* data-tour="cli-subnav" fica na barra de sub-abas E na grade de cards da
           landing: são a MESMA coisa (as sub-páginas do Cria ativo) e nunca
@@ -586,7 +586,7 @@ export default function ClienteHub() {
         <p className="text-[12px] font-body text-muted-foreground leading-relaxed mb-4 px-1">{FLOW_EXPLAIN[activeTab]}</p>
       )}
 
-      {/* LANDING do Cria — cards dos assuntos daquele módulo. */}
+      {/* LANDING do Cria cards dos assuntos daquele módulo. */}
       {onLanding && (
         <div data-tour="cli-subnav" className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
           {activeGroup.subs.filter(subVisible).map((sub) => {
@@ -647,7 +647,7 @@ export default function ClienteHub() {
             <CampoCliente clientId={client.id} label="Plano" tipo="texto"
               valor={client.plan_name} placeholder="Ex.: Gestão completa" campo="plan_name" />
           </div>
-          {/* NOTAS — antes era um campo único de "Anotações" (tudo empilhado num
+          {/* NOTAS antes era um campo único de "Anotações" (tudo empilhado num
               texto só). Virou o bloco de notas do cliente: várias notas, com
               título, data e busca. Aqui fica o resumo das últimas; o bloco
               inteiro abre no drawer (mesmo botão do cabeçalho). */}
@@ -691,7 +691,7 @@ export default function ClienteHub() {
           {/* Os "Links úteis" (editor + pastas do Drive) migraram pra aba de topo
               própria "Links úteis". Aqui na Visão geral não fica mais duplicado. */}
 
-          {/* DESTAQUES — o cockpit: o resumo de cada Cria, com número de verdade.
+          {/* DESTAQUES o cockpit: o resumo de cada Cria, com número de verdade.
               O detalhe continua em cada módulo lá em cima. */}
           <Destaques
             clientId={client.id}
@@ -878,7 +878,7 @@ function fmtDriveDate(iso: string | null): string {
 // ── ABA DRIVE ──
 // Lê o conteúdo (subpastas + arquivos) da pasta do Drive salva nos links úteis do
 // cliente, igual o concorrente. A listagem por API key SÓ funciona com pasta
-// compartilhada como "qualquer pessoa com o link pode ver" — se for privada, a
+// compartilhada como "qualquer pessoa com o link pode ver" se for privada, a
 // edge devolve a mensagem amigável e a gente mostra aqui.
 const DRIVE_PAGE_SIZE = 10;
 

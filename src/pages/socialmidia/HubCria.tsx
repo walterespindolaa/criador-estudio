@@ -22,7 +22,7 @@ const DIAS_FRIO = 21;
    O DASHBOARD DO CRIA RADAR
 
    Esta página era uma LISTA DE CLIENTES. Ela não fazia nada que a tela de
-   Clientes já não fizesse — era um menu pra chegar noutro lugar.
+   Clientes já não fizesse era um menu pra chegar noutro lugar.
 
    Agora ela responde a única pergunta que importa aqui: ONDE EU PRECISO AGIR?
    Quem está com concorrente esfriando, quem nunca foi lido, e quantas pautas
@@ -44,7 +44,7 @@ export default function HubCria() {
   const restantes = Math.max(0, quota - usados);
   const pctUso = quota > 0 ? Math.min(100, Math.round((usados / quota) * 100)) : 0;
 
-  // O placar do módulo. "Nunca abertas" é o número que dói — e é de propósito.
+  // O placar do módulo. "Nunca abertas" é o número que dói e é de propósito.
   const placar = useMemo(() => {
     const usadas = ideas.filter((i) => i.status === "usada").length;
     const marcadas = ideas.filter((i) => i.status === "usar").length;
@@ -114,7 +114,7 @@ export default function HubCria() {
             </h1>
             <p className="text-sm font-body text-muted-foreground mt-1.5 max-w-2xl leading-relaxed">
               Os concorrentes dos seus clientes não avisam quando mudam de estratégia. Aqui você vê
-              quem está esfriando — e o que já foi lido e ninguém aproveitou.
+              quem está esfriando e o que já foi lido e ninguém aproveitou.
             </p>
           </div>
 
@@ -219,7 +219,7 @@ export default function HubCria() {
         </div>
       )}
 
-      {/* O PLACAR: o que o HUB já te deu — e o que você deixou na mesa. */}
+      {/* O PLACAR: o que o HUB já te deu e o que você deixou na mesa. */}
       {placar.total > 0 && (
         <div>
           <h2 className="text-sm font-display font-extrabold text-foreground mb-3">O que o HUB já te deu</h2>
@@ -232,13 +232,13 @@ export default function HubCria() {
           {placar.novas > 0 && (
             <p className="text-[12.5px] font-body text-muted-foreground mt-2.5 leading-relaxed">
               <strong className="text-foreground">{placar.novas} pautas prontas estão paradas.</strong>{" "}
-              Cada uma custou crédito e ninguém olhou — é aqui que o módulo deixa de se pagar.
+              Cada uma custou crédito e ninguém olhou é aqui que o módulo deixa de se pagar.
             </p>
           )}
         </div>
       )}
 
-      {/* PESQUISA AVULSA — ela não é de cliente nenhum, então mora aqui, e não
+      {/* PESQUISA AVULSA ela não é de cliente nenhum, então mora aqui, e não
           dentro da ficha. */}
       <div data-tour="hub-avulsa" className="rounded-3xl border border-border bg-card overflow-hidden">
         <button
@@ -251,7 +251,7 @@ export default function HubCria() {
           <span className="min-w-0 flex-1">
             <span className="block text-[14px] font-display font-extrabold text-foreground">Espiar alguém que não é cliente</span>
             <span className="block text-[12.5px] font-body text-muted-foreground">
-              Uma prospecção, uma referência de outro nicho. Fica guardado aqui no HUB — não entra na ficha de ninguém.
+              Uma prospecção, uma referência de outro nicho. Fica guardado aqui no HUB não entra na ficha de ninguém.
             </span>
           </span>
           <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", avulsa && "rotate-180")} />

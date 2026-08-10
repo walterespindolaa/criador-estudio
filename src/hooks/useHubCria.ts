@@ -223,7 +223,7 @@ const erroDaEdge = async (error: { message: string; context?: Response }): Promi
 };
 
 /**
- * RODAR A ANÁLISE — agora em duas etapas.
+ * RODAR A ANÁLISE agora em duas etapas.
  *
  * Antes era um request só, que ESPERAVA o scrape inteiro terminar. Uma edge
  * function morre em ~150s e transcrever 10 reels leva minutos: a função era

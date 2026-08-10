@@ -1021,7 +1021,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                 )}
               </div>
 
-              {/* Roteiro / copy — sempre disponível (também no Simplificada). */}
+              {/* Roteiro / copy sempre disponível (também no Simplificada). */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-body">{f.approval_mode !== "fast" ? "Roteiro / conteúdo (etapa \"Conteúdo\")" : "Roteiro / copy (carrossel, reels...)"}</Label>
                 {f.approval_mode !== "fast" && (

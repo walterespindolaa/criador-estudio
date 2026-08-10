@@ -10,7 +10,7 @@ import { FEATURES, PLANS, tierAtLeast, type FeatureKey } from "@/lib/plans";
    A TRAVA QUE VENDE
 
    Este componente existia e NUNCA foi usado. Cada página inventava a própria
-   trava — e o Collabs, por exemplo, dava <Navigate to="/app/assinar">: porta na
+   trava e o Collabs, por exemplo, dava <Navigate to="/app/assinar">: porta na
    cara. A pessoa clicou EM COLLABS. Ela queria Collabs. Jogar ela numa tabela
    de preços genérica é desperdiçar o melhor momento de venda que existe.
 

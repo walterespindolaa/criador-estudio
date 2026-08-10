@@ -9,7 +9,7 @@ import type { CriaColor } from "@/lib/moduleTheme";
    O ESTADO VAZIO
 
    Este componente EXISTIA e era usado em UM lugar (Collabs). Metade das telas
-   do sistema não dizia nada quando estava vazia — inclusive "Minhas Ideias",
+   do sistema não dizia nada quando estava vazia inclusive "Minhas Ideias",
    que é literalmente a primeira coisa que um criador abre. Ela chegava na
    primeira semana, via um branco, e concluía que tinha quebrado.
 
@@ -17,7 +17,7 @@ import type { CriaColor } from "@/lib/moduleTheme";
    onboarding que a pessoa lê de verdade. As regras que este componente força:
 
    1. O título é um CONVITE, não um lamento. "Comece pelo caos da sua cabeça",
-      nunca "Nenhuma ideia encontrada". Ela já sabe que está vazio — o que ela
+      nunca "Nenhuma ideia encontrada". Ela já sabe que está vazio o que ela
       não sabe é o que fazer.
    2. Uma linha dizendo PRA QUE serve a tela. É a chance de ensinar.
    3. Um botão, com VERBO. Um só: duas escolhas diante do vazio é ansiedade.

@@ -61,6 +61,8 @@ export default function Contas() {
           : err === "no_seats" ? "Você ainda não tem um plano de agência ativo."
           : err === "use_different_email" ? "Use um e-mail diferente do seu de gestora."
           : err === "rate_limited" ? "Muitas tentativas. Aguarde um minuto."
+          : err === "email_already_registered" ? "Esse e-mail já tem conta no CRIA. Peça pra pessoa aceitar o vínculo."
+          : err === "already_your_client" ? "Esse cliente já está vinculado à sua conta."
           : "Não consegui adicionar agora.");
         return;
       }

@@ -44,6 +44,13 @@ Deno.serve(async (req) => {
     const ownerId = (cli as any).cria_owner_id as string | null;
     if (!ownerId) return json({ error: "not_cria_client", message: "Este cliente não usa o Cria." }, 400);
 
+    // F3/F8/F14: cria_owner_id é auto-declarado no crm_clients e NÃO serve de prova
+    // de autorização. Exige vínculo CONSENTIDO pela conta do cliente: account_members
+    // ativo entre o cliente (owner_id) e a gestora dona do crm_client (mgrId).
+    const { data: consent } = await svc.from("account_members")
+      .select("id").eq("owner_id", ownerId).eq("member_id", mgrId).eq("status", "active").maybeSingle();
+    if (!consent) return json({ error: "forbidden_no_consent", message: "Vínculo com este cliente ainda não foi confirmado." }, 403);
+
     // Dados que o cliente preencheu na conta Cria dele.
     const [profRes, pillarsRes, brandRes, persRes, moodRes] = await Promise.all([
       svc.from("profiles").select("name, niche, avatar_url").eq("id", ownerId).maybeSingle(),

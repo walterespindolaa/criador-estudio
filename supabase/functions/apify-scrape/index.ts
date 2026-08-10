@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// HUB CRIA — análise de concorrente (Apify) → ideias por cliente
+// HUB CRIA análise de concorrente (Apify) → ideias por cliente
 //
 // REESCRITA. O que estava errado e por que "não funcionava":
 //
@@ -17,7 +17,7 @@
 //    Era um botão que só podia falhar. Removido do produto até ter cookies.
 //
 // 4. O CUSTO ERA FICÇÃO. `cost_usd` vinha de números chutados no código. Agora
-//    lê o `usageTotalUsd` do run — o valor real que o Apify cobrou.
+//    lê o `usageTotalUsd` do run o valor real que o Apify cobrou.
 //
 // 5. NÃO HAVIA COTA. Só um rate-limit por minuto (anti-abuso), nada que segurasse
 //    o custo do mês. Agora tem crédito, debitado por tipo de análise.
@@ -73,7 +73,7 @@ function isReel(it: any): boolean {
 
 // ── ANÚNCIOS: descobrir a PÁGINA do concorrente ────────────────────────────
 // Buscar por keyword traz o anúncio de quem MENCIONA o nome. Pra trazer o que
-// ELE paga, precisamos do page_id — que a própria busca da biblioteca devolve.
+// ELE paga, precisamos do page_id que a própria busca da biblioteca devolve.
 async function resolvePageId(handle: string, token: string): Promise<string | null> {
   try {
     const url = `https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=BR&q=${encodeURIComponent(handle)}&search_type=keyword_unordered`;
@@ -174,7 +174,7 @@ function summarize(items: any[], type: string): { summary: Record<string, unknow
             link: a.linkUrl || s.link_url || a.link || null,
             cta: s.cta_text || a.ctaText || s.cta_type || null,
             // SEM LINK ela não conseguia VER o anúncio. Se não tiver o id do
-            // arquivo, cai na página do anunciante na biblioteca — melhor que nada.
+            // arquivo, cai na página do anunciante na biblioteca melhor que nada.
             library_link: archiveId
               ? `https://www.facebook.com/ads/library/?id=${archiveId}`
               : (pageId ? `https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=BR&view_all_page_id=${pageId}` : null),
@@ -187,7 +187,7 @@ function summarize(items: any[], type: string): { summary: Record<string, unknow
   }
 
   // ── Posts / Reels / Hashtag / Menções / Transcrição ──
-  // A TRANSCRIÇÃO caía aqui e era ordenada por CURTIDAS — que o ator de
+  // A TRANSCRIÇÃO caía aqui e era ordenada por CURTIDAS que o ator de
   // transcrição não devolve. Resultado: "top 8" em ordem aleatória, sem capa,
   // sem link, sem views. Não era design ruim: era dado faltando.
   const transcriptOf = (x: any): string =>
@@ -305,7 +305,7 @@ Nicho/segmento: ${nicho}${brandLines ? `\n${brandLines}` : ""}${personaTxt ? `\n
     const as = top.slice(0, 10).map((a: any, i: number) =>
       `${i + 1}.${a.isActive ?? a.active ? " [ativo]" : ""} "${String(a.adText || a.snapshot?.body?.text || a.body || a.text || "").replace(/\s+/g, " ").slice(0, 180)}"`).join("\n");
     fonte = `=== ANÚNCIOS que @${h} está PAGANDO pra rodar (Meta Ad Library) ===\n${as}`;
-    tarefa = `Esses são os anúncios que o concorrente PAGA pra promover — revelam a oferta, o ângulo e o gancho que funcionam pra ele. Gere ideias de conteúdo ORGÂNICO pro cliente (${clientName}) no nicho ${nicho}, inspiradas nesses ângulos (sem copiar a oferta).`;
+    tarefa = `Esses são os anúncios que o concorrente PAGA pra promover revelam a oferta, o ângulo e o gancho que funcionam pra ele. Gere ideias de conteúdo ORGÂNICO pro cliente (${clientName}) no nicho ${nicho}, inspiradas nesses ângulos (sem copiar a oferta).`;
   } else {
     const ps = top.slice(0, 8).map((x: any, i: number) =>
       `${i + 1}. [${x.productType || x.type}] ${x.likesCount || 0} curtidas, ${x.commentsCount || 0} coment${x.videoPlayCount ? `, ${x.videoPlayCount} views` : ""}, "${(x.caption || "").replace(/\s+/g, " ").slice(0, 120)}"`).join("\n");
@@ -365,6 +365,14 @@ Deno.serve(async (req) => {
       const { data: link } = await svc.from("manager_members")
         .select("id").eq("manager_id", reqMgr).eq("member_id", user.id).eq("status", "ativo").maybeSingle();
       if (!link) return json({ error: "forbidden_team" }, 403);
+      // F18: o scrape do Apify custa dinheiro. Nao basta ser colaborador ativo:
+      // o gestor precisa ter liberado o modulo hub_cria pra ESTE colaborador.
+      // (O dono do tenant nao cai aqui: reqMgr === user.id.) A trava do React
+      // (ModuleGate) e so UX; a decisao paga e no servidor.
+      const { data: perm } = await svc.from("manager_member_permissions")
+        .select("id").eq("member_row_id", (link as { id: string }).id)
+        .eq("module_code", "hub_cria").maybeSingle();
+      if (!perm) return json({ error: "forbidden", message: "Modulo HUB CRIA nao liberado para este colaborador." }, 403);
       mgr = reqMgr;
     }
 

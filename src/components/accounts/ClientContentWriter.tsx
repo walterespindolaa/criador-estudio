@@ -76,7 +76,7 @@ export function ClientContentWriter({ crmClientId, clienteNome, titulo, formato,
       if (laminas.length === 0) throw new Error("A IA não devolveu nada. Tente de novo.");
 
       // O post do cliente não tem lâminas separadas (é um campo só). Então elas
-      // entram numeradas — que é exatamente como o cliente lê na aprovação.
+      // entram numeradas que é exatamente como o cliente lê na aprovação.
       onChange(laminas.map((l, i) => `${i + 1}. ${l.texto}`).join("\n\n"));
       toast.success(`${laminas.length} ${palavra} escritas no tom de ${clienteNome}.`);
     } catch (e) {

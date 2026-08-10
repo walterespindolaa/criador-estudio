@@ -2,7 +2,7 @@
 import { memo, useEffect, useRef } from "react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   CRIA PROMPTER — PLAYER (teleprompter com voice-following pt-BR)
+   CRIA PROMPTER PLAYER (teleprompter com voice-following pt-BR)
 
    Port do protótipo standalone do Walter (validado no iPhone e Android).
    A engine é 100% imperativa DE PROPÓSITO: reconhecimento de voz, canvas de
@@ -25,7 +25,7 @@ type Props = {
 const SETTINGS_KEY = "cria_prompter_settings_v1";
 
 /* Cache de SESSÃO do microfone (escopo de módulo: sobrevive a entrar/sair do
-   player). No iOS a permissão vale pela sessão da página — se a gente solta a
+   player). No iOS a permissão vale pela sessão da página se a gente solta a
    trilha ao sair, voltar pro player dispara o prompt de novo. Mantendo o mic
    vivo, pede UMA vez por sessão. Entre aberturas do app quem decide é o iOS. */
 let sessionMic: MediaStream | null = null;
@@ -78,7 +78,7 @@ const CSS = `
 .cpr #quickBar .pbtn{background:transparent;border:none;}
 .cpr #topBar>div:last-child .pbtn{background:transparent;border:none;}
 .cpr #quickBar .pbtn.on{background:var(--accent);}
-/* barra inferior: UMA linha sempre — 5 botões flexíveis + obturador fixo no meio */
+/* barra inferior: UMA linha sempre 5 botões flexíveis + obturador fixo no meio */
 .cpr #bottomBar{bottom:0;gap:5px;padding:12px 8px 10px;padding-bottom:calc(10px + env(safe-area-inset-bottom));background:linear-gradient(transparent,rgba(10,10,10,.82));justify-content:space-evenly;flex-wrap:nowrap;}
 .cpr.barsHidden #topBar,.cpr.barsHidden #bottomBar{opacity:0;pointer-events:none;}
 .cpr .pbtn{background:var(--glass);border:1px solid var(--glassBrd);color:var(--cream);border-radius:999px;padding:9px 13px;font-size:14px;cursor:pointer;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:inline-flex;align-items:center;justify-content:center;gap:6px;}
@@ -182,7 +182,7 @@ const CSS = `
 .cpr.light:not(.camOn) #cprToast{background:rgba(253,251,245,.95);color:#0A0A0A;border-color:rgba(10,10,10,.14);}
 `;
 
-/* Ícones Lucide embutidos (mesmos paths do protótipo — sem CDN, sem flicker) */
+/* Ícones Lucide embutidos (mesmos paths do protótipo sem CDN, sem flicker) */
 const ICONS: Record<string, string> = {
   "chevron-left": '<path d="m15 18-6-6 6-6" />',
   "switch-camera": '<path d="M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5" /> <path d="M13 5h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5" /> <circle cx="12" cy="12" r="3" /> <path d="m18 22-3-3 3-3" /> <path d="m6 2 3 3-3 3" />',
@@ -255,7 +255,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     }
 
     /* ============================================================
-       PROMPTER — núcleo
+       PROMPTER núcleo
        ============================================================ */
     let words: string[] = [], wordEls: HTMLElement[] = [], pos = 0, mode = S.mode || "voice";
     let playing = false, rafId: number | null = null, lastT = 0, pxPerSec = 60;
@@ -732,7 +732,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       return micStream;
     }
     /* Analyser SÓ pro VU (não fica no caminho da gravação). No iOS o
-       AudioContext pode acordar "interrupted"/"suspended" — qualquer estado
+       AudioContext pode acordar "interrupted"/"suspended" qualquer estado
        diferente de running, tenta resume (idealmente dentro de um gesto). */
     function buildAnalyser() {
       if (!micLive()) return;
@@ -771,7 +771,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       setTimeout(() => {
         if (!(recorder && recorder.state === "recording") || sawSound) return;
         /* medidor quebrado (AudioContext fora do ar) não é prova de gravação
-           muda — a trilha crua pode estar ok. Só alarma com medidor confiável. */
+           muda a trilha crua pode estar ok. Só alarma com medidor confiável. */
         if (!audioCtx || audioCtx.state !== "running") return;
         showMicSheet();
       }, 4000);
@@ -792,7 +792,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       if (!micEnabled) $("#micBtn").classList.remove("hot");
       refreshIcons($("#micBtn"));
     }
-    /* o iOS muta/desmuta a trilha por conta própria — reflete no botão na hora */
+    /* o iOS muta/desmuta a trilha por conta própria reflete no botão na hora */
     function watchMicTrack() {
       const t = micStream && micStream.getAudioTracks()[0];
       if (!t) return;
@@ -870,7 +870,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     function showPermSheet(kind: "intro" | "denied") {
       $("#permTitle").textContent = kind === "intro" ? "Liberar câmera e microfone" : "Permissão bloqueada";
       $("#permText").innerHTML = kind === "intro"
-        ? "O iPhone/Android vai perguntar se o CRIA pode usar a <b>câmera</b> e o <b>microfone</b>. Toca em <b>Permitir</b> nas duas — é o que faz a mágica do teleprompter por voz e da gravação."
+        ? "O iPhone/Android vai perguntar se o CRIA pode usar a <b>câmera</b> e o <b>microfone</b>. Toca em <b>Permitir</b> nas duas é o que faz a mágica do teleprompter por voz e da gravação."
         : "Sem a permissão o prompter não grava. Pra liberar:<br><b>iPhone (Safari):</b> toca em <b>AA</b> na barra de endereço → Ajustes de Site → Câmera e Microfone → <b>Permitir</b>.<br><b>App instalado:</b> feche e abra o app de novo e toque em Permitir quando ele perguntar.<br><b>Android (Chrome):</b> cadeado na barra → Permissões.";
       $("#permGo").textContent = kind === "intro" ? "Beleza, liberar acesso" : "Tentar de novo";
       $("#permSheet").classList.add("show");
@@ -1044,7 +1044,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
       recorder.onstop = saveRecording;
       /* iOS: gravar em BLOCO ÚNICO. Com timeslice (start(1000)) o WebKit entrega
-         fatias de MP4 sem finalização — duração 00:00, player não toca e o
+         fatias de MP4 sem finalização duração 00:00, player não toca e o
          Fotos RECUSA salvar. Era a causa raiz do "não salva na galeria".
          Android/desktop (webm) seguem com fatias, que lá funcionam. */
       if (isIOS) recorder.start(); else recorder.start(1000);
@@ -1097,7 +1097,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     /* ---------- vídeo pronto: preview + salvar nas Fotos (share sheet) ----------
        O download automático de antes caía na tela de arquivo do Safari (feia e
        sem "Salvar Vídeo"). Agora: sheet com preview e navigator.share(files),
-       que no iPhone/Android abre o share sheet nativo — "Salvar Vídeo" manda
+       que no iPhone/Android abre o share sheet nativo "Salvar Vídeo" manda
        direto pro rolo da câmera. Download vira o fallback (desktop). */
     let pendingBlob: Blob | null = null, pendingName = "", pendingType = "", pendingUrl = "";
     const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && (navigator as any).maxTouchPoints > 1);
@@ -1144,7 +1144,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       const canShare = !!((navigator as any).canShare && (navigator as any).canShare({ files: [new File([""], "t.mp4", { type: "video/mp4" })] }));
       $("#ssShare").style.display = canShare ? "flex" : "none";
       /* no iOS o download de blob abre o visualizador de arquivo do Safari e
-         NUNCA chega na galeria — é só armadilha. Fica escondido (a não ser
+         NUNCA chega na galeria é só armadilha. Fica escondido (a não ser
          que o share não exista, aí é o único caminho). */
       $("#ssDownload").style.display = isIOS && canShare ? "none" : "flex";
       $("#ssHint").style.display = isIOS && canShare ? "block" : "none";

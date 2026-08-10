@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// DRIVE-FILE-META — descobre o TIPO REAL de um arquivo do Google Drive.
+// DRIVE-FILE-META descobre o TIPO REAL de um arquivo do Google Drive.
 //
 // POR QUE EXISTE: quando a social mídia cola um "Link Drive" no Cria Post, o link
 // não diz se aponta pra uma imagem ou pra um vídeo. Antes o app CHUTAVA vídeo, e

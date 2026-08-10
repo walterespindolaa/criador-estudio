@@ -349,7 +349,7 @@ const Arquivos = () => {
   const storageUsed = activeProfile?.storage_used_bytes ?? 0;
   const storageQuota = activeProfile?.storage_quota_bytes ?? storageBytesForPlan(null, false);
 
-  // Qual é o PRÓXIMO plano que dá mais espaço — e quanto ele dá de verdade.
+  // Qual é o PRÓXIMO plano que dá mais espaço e quanto ele dá de verdade.
   // (Se já está no topo, não existe convite: mostrar "faça upgrade" pra quem
   // está no Studio é insultar quem já te paga o máximo.)
   const { tier } = useTier();
@@ -648,7 +648,7 @@ const Arquivos = () => {
                 const url = await getPublicUrl(f.storage_path);
                 if (!url) { toast.error("Não foi possível abrir o arquivo."); return; }
                 // Tudo abre AQUI DENTRO. O PDF ia pra window.open, que o
-                // bloqueador de pop-up do celular engole — a pessoa clicava e
+                // bloqueador de pop-up do celular engole a pessoa clicava e
                 // não acontecia nada. E o que não dá pra renderizar ainda tem
                 // "Baixar" e "Abrir" no cabeçalho do modal.
                 const ehPdf = (f.file_type ?? "").includes("pdf") || /\.pdf$/i.test(f.name ?? "");

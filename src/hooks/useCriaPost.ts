@@ -563,7 +563,7 @@ export function useUpdateExternalPost() {
   });
 }
 
-// Move a data de um post (de qualquer cliente) — usado na Agenda ao arrastar.
+// Move a data de um post (de qualquer cliente) usado na Agenda ao arrastar.
 // Reprograma no Cria Post e reflete no kanban/calendário do cliente.
 export function useMoveExternalPostDate() {
   const { agencyOwnerId } = useActiveAccount();

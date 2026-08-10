@@ -168,7 +168,7 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
   onDelete: (id: string) => void;
 }) {
   const { items, addItem, updateItem, deleteItem, reorder } = useCronogramaItems(c.id);
-  const [mes, setMes] = useState("all"); // "all" | "YYYY-MM" — filtra por período antes de enviar
+  const [mes, setMes] = useState("all"); // "all" | "YYYY-MM" filtra por período antes de enviar
   const mesesDisp = Array.from(new Set(items.map((it) => it.date?.slice(0, 7)).filter(Boolean) as string[])).sort();
   const visible = mes === "all" ? items : items.filter((it) => (it.date ?? "").slice(0, 7) === mes);
 

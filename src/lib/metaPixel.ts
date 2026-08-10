@@ -3,6 +3,7 @@
 // Cada track() também é enviado pro CAPI (edge meta-capi) com o mesmo event_id → o Meta deduplica.
 
 import { supabase } from "@/integrations/supabase/client";
+import { sanitizeTrackingUrl, isSensitiveTokenRoute } from "@/lib/trackingUrl";
 
 const PIXEL_ID = import.meta.env.VITE_META_PIXEL_ID as string | undefined;
 
@@ -20,7 +21,9 @@ function sendCapi(event: string, eventId?: string, params?: Record<string, unkno
       body: {
         event_name: event,
         event_id: eventId,
-        event_source_url: window.location.href,
+        // Nunca manda a URL crua: rotas com token (/aprovar, /ativar, etc.) têm o
+        // token mascarado e a query descartada antes de ir pro Meta.
+        event_source_url: sanitizeTrackingUrl(window.location.href),
         value: params?.value,
         currency: params?.currency,
         email: params?.email,
@@ -64,7 +67,12 @@ export function track(event: string, params?: Record<string, unknown>, eventId?:
   if (!PIXEL_ID || typeof window === "undefined") return;
   initMetaPixel();
   const id = eventId ?? newEventId();
-  (window.fbq as ((...a: unknown[]) => void))?.("track", event, params || {}, { eventID: id });
+  // O pixel do browser captura window.location sozinho em rotas com token na
+  // URL isso vazaria o token pro Meta. Nessas rotas não disparamos o pixel do
+  // browser; o CAPI ainda vai, já com a URL mascarada em sendCapi.
+  if (!isSensitiveTokenRoute(window.location.pathname)) {
+    (window.fbq as ((...a: unknown[]) => void))?.("track", event, params || {}, { eventID: id });
+  }
   sendCapi(event, id, params);
 }
 

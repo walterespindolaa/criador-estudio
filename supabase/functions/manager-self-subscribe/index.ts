@@ -16,6 +16,19 @@ async function ensureUnsubscribeToken(svc: SupabaseClient, email: string): Promi
   return data.token as string;
 }
 
+// Origin confiável pro link (F13): APP_URL fixo ou allow-list, caindo no
+// canônico. Nunca monta o link só com o header Origin cru.
+const CANONICAL_APP_URL = "https://app.criasocialclub.com.br";
+function resolveAppUrl(req: Request): string {
+  const fixed = Deno.env.get("APP_URL");
+  if (fixed) return fixed.replace(/\/+$/, "");
+  const origin = req.headers.get("origin") ?? "";
+  const allow = ["https://app.criasocialclub.com.br", "https://criasocialclub.com.br", "https://www.criasocialclub.com.br"];
+  if (allow.includes(origin)) return origin;
+  if (/^https:\/\/[a-z0-9-]+\.(lovableproject\.com|lovable\.app)$/.test(origin)) return origin;
+  return CANONICAL_APP_URL;
+}
+
 function emailHtml(opts: {
   title: string;
   paragraph: string;
@@ -88,7 +101,7 @@ serve(async (req) => {
     const { data: list } = await svc.auth.admin.listUsers();
     const existing = list?.users?.find((u) => u.email?.toLowerCase() === normEmail);
 
-    const origin = req.headers.get("origin") ?? "https://app.criasocialclub.com.br";
+    const origin = resolveAppUrl(req);
     const redirectTo = origin + "/app/assinar";
     const type: "magiclink" | "invite" = existing ? "magiclink" : "invite";
     const { data: linkData, error: linkErr } = await svc.auth.admin.generateLink({

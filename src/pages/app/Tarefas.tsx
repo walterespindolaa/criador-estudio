@@ -180,7 +180,7 @@ const Tarefas = () => {
           ))}
         </div>
 
-        {/* Três colunas vazias não ensinam nada — parecem um sistema que não
+        {/* Três colunas vazias não ensinam nada parecem um sistema que não
             carregou. Aqui a tela diz o que ela É antes de pedir a primeira tarefa. */}
         {tasks.length === 0 && (
           <EmptyState

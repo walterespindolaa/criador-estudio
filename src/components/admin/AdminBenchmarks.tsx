@@ -9,7 +9,7 @@ import { formatBRL } from "@/lib/money";
 
    Você paga por cada IA que roda: o gateway (legendas, roteiros, ideias), o
    Apify (Cria Radar) e o Higgsfield (geração de imagem). Até agora esses custos
-   eram invisíveis — dava pra descobrir que estava caro só olhando a fatura.
+   eram invisíveis dava pra descobrir que estava caro só olhando a fatura.
 
    Esta tela responde três perguntas, que são as que decidem upgrade e preço:
    1. Quanto está sendo USADO (e por quem)?
@@ -174,7 +174,7 @@ export function AdminBenchmarks() {
               </p>
               <p className="text-[13px] font-body text-muted-foreground mt-1 leading-relaxed">
                 {pctCusto > 50
-                  ? "Passou do limite de 50%. Ou a cota de créditos está generosa demais, ou o preço está baixo. Aperte a cota antes de subir o preço — mexer no preço de quem já assinou é caro."
+                  ? "Passou do limite de 50%. Ou a cota de créditos está generosa demais, ou o preço está baixo. Aperte a cota antes de subir o preço mexer no preço de quem já assinou é caro."
                   : "Dentro do limite de 50%. Há folga pra aumentar a cota (e o valor percebido) sem machucar a margem."}
                 {" "}O custo fixo do Apify (US$ 49) se paga com <strong>{Math.ceil((49 * USD_BRL) / 49.9)} assinantes</strong> do HUB.
               </p>

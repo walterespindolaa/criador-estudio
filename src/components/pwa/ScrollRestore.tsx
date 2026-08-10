@@ -5,7 +5,7 @@ import { useLocation, useNavigationType } from "react-router-dom";
  * RESTAURAÇÃO DE SCROLL.
  *
  * Comportamento de hoje: a pessoa rola 800px na lista de clientes, abre um,
- * aperta "voltar" — e cai no topo da lista. Tem que rolar tudo de novo pra achar
+ * aperta "voltar" e cai no topo da lista. Tem que rolar tudo de novo pra achar
  * onde estava. Num celular, com 20 clientes, isso é enlouquecedor.
  *
  * Aqui a gente guarda a altura de cada rota e devolve no POP (o botão voltar).

@@ -8,6 +8,33 @@ const cors = {
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
 
+// Escapa valores interpolados no HTML do e-mail. (F12/F24)
+function escapeHtml(v: unknown): string {
+  return String(v ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Origin confiável pro link de ativação (F13): APP_URL fixo ou allow-list, caindo
+// no domínio canônico. Nunca monta o link só com o header Origin cru.
+const CANONICAL_APP_URL = "https://app.criasocialclub.com.br";
+function resolveAppUrl(req: Request): string {
+  const fixed = Deno.env.get("APP_URL");
+  if (fixed) return fixed.replace(/\/+$/, "");
+  const origin = req.headers.get("origin") ?? "";
+  const allow = [
+    "https://app.criasocialclub.com.br",
+    "https://criasocialclub.com.br",
+    "https://www.criasocialclub.com.br",
+  ];
+  if (allow.includes(origin)) return origin;
+  if (/^https:\/\/[a-z0-9-]+\.(lovableproject\.com|lovable\.app)$/.test(origin)) return origin;
+  return CANONICAL_APP_URL;
+}
+
 async function ensureUnsubscribeToken(svc: SupabaseClient, email: string): Promise<string> {
   const token = crypto.randomUUID();
   await svc.from("email_unsubscribe_tokens").upsert({ email, token }, { onConflict: "email", ignoreDuplicates: true });
@@ -82,7 +109,7 @@ serve(async (req) => {
     };
 
     // Gera invite link (Supabase cria o usuário como parte do generateLink type='invite')
-    const origin = req.headers.get("origin") ?? "https://app.criasocialclub.com.br";
+    const origin = resolveAppUrl(req); // F13: origin validado, não o header cru
     const redirectTo = origin + "/app";
     const { data: linkData, error: linkErr } = await svc.auth.admin.generateLink({
       type: "invite",
@@ -128,7 +155,7 @@ serve(async (req) => {
       paragraph: "Criamos sua conta no cria. Clique no botão para acessar e definir sua senha.",
       buttonLabel: "Acessar minha conta",
       actionLink,
-      secondary: `Se o botão não funcionar, copie e cole este link no navegador:<br/><span style="word-break:break-all;color:#6b7280">${actionLink}</span>`,
+      secondary: `Se o botão não funcionar, copie e cole este link no navegador:<br/><span style="word-break:break-all;color:#6b7280">${escapeHtml(actionLink)}</span>`,
     });
     const messageId = crypto.randomUUID();
     const unsubscribeToken = await ensureUnsubscribeToken(svc, normEmail);

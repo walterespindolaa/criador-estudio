@@ -14,6 +14,29 @@ const cors = {
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
 
+// F25 (SSRF): o `src` vem de external_media_refs, uma linha gravavel pelo cliente.
+// So deixamos o servidor buscar em hosts esperados e sempre por https. Sem isso,
+// alguem gravaria uma url interna (169.254.169.254, localhost, etc.) e o edge
+// buscaria por ela. Allowlist: pull zone do Bunny, Bunny Stream, Google Drive
+// (e o redirect de download do Drive) e o storage do proprio Supabase (providers
+// device/storage guardam a url publica do bucket).
+function fetchHostAllowed(raw: string): boolean {
+  let u: URL;
+  try { u = new URL(raw); } catch { return false; }
+  if (u.protocol !== "https:") return false;
+  const h = u.hostname.toLowerCase();
+  const pull = (Deno.env.get("BUNNY_STORAGE_PULLZONE") || "").toLowerCase();
+  let supaHost = "";
+  try { supaHost = new URL(Deno.env.get("SUPABASE_URL") || "").hostname.toLowerCase(); } catch { /* ignore */ }
+  if (pull && h === pull) return true;
+  if (h.endsWith(".b-cdn.net")) return true;                 // Bunny Storage pull zone
+  if (h === "video.bunnycdn.com" || h.endsWith(".mediadelivery.net")) return true; // Bunny Stream
+  if (supaHost && h === supaHost) return true;               // Supabase Storage (device/storage)
+  if (h === "drive.google.com" || h === "drive.usercontent.google.com") return true;
+  if (h.endsWith(".googleusercontent.com")) return true;     // redirect de download do Drive
+  return false;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
@@ -49,6 +72,9 @@ Deno.serve(async (req) => {
 
     const src = ref.download_url || ref.view_url;
     if (!src) return json({ error: "Arquivo indisponível." }, 404);
+
+    // F25 (SSRF): so busca em host esperado e por https.
+    if (!fetchHostAllowed(src)) return json({ error: "Origem do arquivo não permitida." }, 400);
 
     const upstream = await fetch(src);
     if (!upstream.ok || !upstream.body) return json({ error: `Falha ao buscar arquivo (${upstream.status}).` }, 502);

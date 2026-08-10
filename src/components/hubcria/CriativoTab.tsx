@@ -27,7 +27,7 @@ type TypeDef = { key: ScrapeType; label: string; icon: typeof LayoutGrid; desc: 
 //
 // STORIES FOI REMOVIDO. Ele nunca poderia funcionar: o scraper do Instagram não
 // enxerga stories sem uma sessão logada, e não há cookies configurados. Era um
-// botão que só sabia falhar — e botão que falha destrói a confiança no módulo
+// botão que só sabia falhar e botão que falha destrói a confiança no módulo
 // inteiro. Volta quando existir sessão.
 //
 // Os grupos agora seguem a INTENÇÃO da pessoa, não o tipo técnico do dado:
@@ -270,7 +270,7 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
       try {
         await run.mutateAsync({
           type: it.key, input: inp.trim(), crm_client_id: clientId,
-          // Amarra a leitura ao concorrente do radar — é o que permite o
+          // Amarra a leitura ao concorrente do radar é o que permite o
           // "sem leitura há 31 dias" depois.
           competitor_id: compAtivo && it.inputKind === "handle" ? compAtivo.id : null,
           limit, since: since || undefined,
@@ -283,7 +283,7 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
   return (
     <div className="space-y-5">
       {/* CABEÇALHO DO MÓDULO. Antes a aba abria direto num formulário cinza, sem
-          dizer o que ela é nem o que ela vale. Agora ela se apresenta — e mostra
+          dizer o que ela é nem o que ela vale. Agora ela se apresenta e mostra
           o saldo, que é o que a pessoa precisa saber ANTES de escolher a análise. */}
       <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-5">
         <OrganicBlobs color="lilas" />
@@ -297,8 +297,8 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
               Chegue na pauta com inteligência, não com achismo
             </h2>
             <p className="text-[13px] font-body text-muted-foreground mt-1 leading-relaxed max-w-xl">
-              O CRIA lê o concorrente de verdade — o que engajou, o roteiro do reel que bombou,
-              os anúncios que ele <strong>paga</strong> pra rodar — e devolve <strong>pautas prontas</strong> pro seu cliente.
+              O CRIA lê o concorrente de verdade o que engajou, o roteiro do reel que bombou,
+              os anúncios que ele <strong>paga</strong> pra rodar e devolve <strong>pautas prontas</strong> pro seu cliente.
             </p>
           </div>
 
@@ -316,7 +316,7 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
                   style={{ width: `${100 - pctUso}%` }}
                 />
               </div>
-              {/* O pacote extra aparece QUANDO ela precisa dele — não numa
+              {/* O pacote extra aparece QUANDO ela precisa dele não numa
                   tabela de preços que ela nunca vai abrir. */}
               {pctUso >= 80 && (
                 <button
@@ -333,7 +333,7 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
       </div>
 
       {/* ANALISANDO. Antes o botão só girava e a pessoa não sabia o que estava
-          acontecendo — e como a análise às vezes leva minutos, ela achava que
+          acontecendo e como a análise às vezes leva minutos, ela achava que
           tinha travado (e travava mesmo, era o bug do timeout). */}
       {running && (
         <div className="flex items-center gap-3 rounded-2xl border border-primary/30 bg-primary/[0.04] px-4 py-3.5">
@@ -341,14 +341,14 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
           <div className="min-w-0">
             <p className="text-[13px] font-display font-bold text-foreground">Analisando: {running}</p>
             <p className="text-[12px] font-body text-muted-foreground leading-tight">
-              Estamos lendo o perfil de verdade — isso leva de 20 segundos a 2 minutos. Pode deixar a aba aberta.
+              Estamos lendo o perfil de verdade isso leva de 20 segundos a 2 minutos. Pode deixar a aba aberta.
             </p>
           </div>
         </div>
       )}
 
       {/* ═══ O RADAR ═══
-          Os concorrentes são um ATIVO da ficha do cliente, como o brandbook —
+          Os concorrentes são um ATIVO da ficha do cliente, como o brandbook -
           não um "passo 1" de um formulário. Antes a pessoa redigitava o @ toda
           vez e o sistema não fazia ideia de que aquele perfil importava. É o
           radar que permite a frase que a traz de volta sozinha: "sem leitura
@@ -520,7 +520,7 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
           ))}
         </div>
 
-        {/* O QUE A ESCOLHA SIGNIFICA — visível em qualquer tela.
+        {/* O QUE A ESCOLHA SIGNIFICA visível em qualquer tela.
             Eu tinha jogado a descrição pro `title` (tooltip). No celular NÃO existe
             hover: a pessoa via oito chips e nenhuma explicação. Agora o texto do
             que está marcado aparece aqui embaixo, pra todo mundo. */}
@@ -591,7 +591,7 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
               </div>
             )}
             {/* O CUSTO ANTES DO CLIQUE. A pessoa precisa saber quanto vai gastar
-                enquanto ainda pode mudar de ideia — não depois, num erro. */}
+                enquanto ainda pode mudar de ideia não depois, num erro. */}
             <div className="flex items-center gap-3 flex-wrap">
               <Button onClick={analisar} disabled={!!running || creditsError || (quota > 0 && custoSelecao > restantes)} size="lg">
                 {running ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
@@ -607,7 +607,7 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
                 </p>
               ) : (
                 <p className="text-[11.5px] font-body text-muted-foreground">
-                  Roda uma por vez. Cada uma leva de 20s a 2 min — a gente avisa quando terminar.
+                  Roda uma por vez. Cada uma leva de 20s a 2 min a gente avisa quando terminar.
                 </p>
               )}
             </div>
@@ -620,7 +620,7 @@ export function CriativoTab({ clientId }: { clientId?: string; clientName?: stri
           conteúdo", com as ideias repetidas nas duas. Agora é UMA linha do tempo:
           cada leitura traz a sua conclusão, e o destino das pautas que ela gerou.
           O filtro é por INTENÇÃO (conteúdo, roteiro, mercado), não pelo nome
-          técnico do scraper — e tem o "virou post", que é o que ela mostra pro
+          técnico do scraper e tem o "virou post", que é o que ela mostra pro
           cliente na hora de renovar o contrato. */}
       <div>
         <div className="flex items-end justify-between gap-3 flex-wrap mb-3">
@@ -853,7 +853,7 @@ function TopPostCard({ p, rank }: { p: any; rank: number }) {
  *
  * O erro do que existia: a tela DESPEJAVA o dado (contagem, média, lista) e
  * deixava a pessoa fazer a interpretação sozinha. Mas ela não paga pra ver
- * número — paga pra ter a CONCLUSÃO. Aqui a gente lê os dados e escreve a frase
+ * número paga pra ter a CONCLUSÃO. Aqui a gente lê os dados e escreve a frase
  * que ela repetiria na reunião com o cliente.
  */
 function lerAnalise(s: Record<string, any>): string | null {
@@ -863,7 +863,7 @@ function lerAnalise(s: Record<string, any>): string | null {
 
   if (kind === "comments") {
     return total > 0
-      ? `Foram ${total} comentários lidos. As dúvidas que se repetem viraram pauta aqui embaixo — é o público dizendo o que quer ouvir.`
+      ? `Foram ${total} comentários lidos. As dúvidas que se repetem viraram pauta aqui embaixo é o público dizendo o que quer ouvir.`
       : null;
   }
   if (kind === "ads") {
@@ -887,7 +887,7 @@ function lerAnalise(s: Record<string, any>): string | null {
   if (s.avg_views) partes.push(`${fmtNum(s.avg_views)} views por vídeo`);
 
   if (kind === "transcription") {
-    return `Os roteiros abaixo são o áudio transcrito dos reels que mais rodaram${partes.length ? ` — ${partes[0]}` : ""}. Leia o gancho dos primeiros segundos: é ali que a retenção é ganha ou perdida.`;
+    return `Os roteiros abaixo são o áudio transcrito dos reels que mais rodaram${partes.length ? ` ${partes[0]}` : ""}. Leia o gancho dos primeiros segundos: é ali que a retenção é ganha ou perdida.`;
   }
   return partes.length ? `Lendo ${total} publicações: ${partes.join(", ")}.` : null;
 }
@@ -918,7 +918,7 @@ export function SummaryCard({
   const hex = COR_DO_TIPO[String(kind)] ?? CRIA_HEX.lilas;
 
   // O DESTINO das pautas. É o número que prova que a leitura de 3 créditos virou
-  // post publicado — e é o que ela mostra pro cliente na renovação do contrato.
+  // post publicado e é o que ela mostra pro cliente na renovação do contrato.
   const usadas = (ideas ?? []).filter((i) => i.status === "usada").length;
   const marcadas = (ideas ?? []).filter((i) => i.status === "usar").length;
   const novas = (ideas ?? []).filter((i) => i.status === "novo").length;
@@ -955,7 +955,7 @@ export function SummaryCard({
         <ChevronDown className={cn("h-4 w-4 text-muted-foreground shrink-0 transition-transform", open && "rotate-180")} />
       </button>
 
-      {/* O DESTINO, sempre visível — mesmo com o card fechado. Sem isso, a pessoa
+      {/* O DESTINO, sempre visível mesmo com o card fechado. Sem isso, a pessoa
           não sabe quais leituras ela já aproveitou e quais estão paradas. */}
       {ideas && ideas.length > 0 && (
         <div className="flex items-center gap-1.5 flex-wrap border-t border-border/60 px-4 py-2">
@@ -1050,7 +1050,7 @@ export function SummaryCard({
                       )}
                       {a.since && (
                         <span className="text-[10.5px] font-body text-muted-foreground">
-                          {/* Vinha "desde 1777446000" — epoch cru na cara do usuário. */}
+                          {/* Vinha "desde 1777446000" epoch cru na cara do usuário. */}
                           no ar desde {new Date(a.since).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
                         </span>
                       )}

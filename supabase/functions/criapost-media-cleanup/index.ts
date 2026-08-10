@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
       try {
         // Só apagamos a ref do banco (nosso ÚNICO índice do arquivo) se o delete
         // remoto realmente confirmou. Se o Bunny falhar (rate limit / instabilidade),
-        // logamos e PULAMOS esta ref — na próxima rodada ela ainda estará aqui pra
+        // logamos e PULAMOS esta ref na próxima rodada ela ainda estará aqui pra
         // ser removida. Perder a ref sem apagar o arquivo = mídia órfã paga.
         let remoteOk = true;
         if (r.provider === "bunny_storage" && r.external_file_id) {

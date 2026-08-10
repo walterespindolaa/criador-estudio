@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// DRIVE-LIST — lista o conteúdo de uma pasta pública do Google Drive.
+// DRIVE-LIST lista o conteúdo de uma pasta pública do Google Drive.
 //
 // A social mídia cola o LINK de uma pasta do Drive nos "links úteis" do cliente;
 // aqui a gente lê o que existe DENTRO dessa pasta (subpastas + arquivos) e devolve

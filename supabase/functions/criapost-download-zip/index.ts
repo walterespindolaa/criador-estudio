@@ -35,6 +35,54 @@ function driveDownloadUrl(id: string): string {
   return `https://drive.google.com/uc?export=download&id=${encodeURIComponent(id)}`;
 }
 
+// F26/F25 (SSRF): a url vem de external_media_refs (gravavel pelo cliente). So
+// buscamos em hosts esperados e por https. Mesma allowlist do criapost-download-file.
+function fetchHostAllowed(raw: string): boolean {
+  let u: URL;
+  try { u = new URL(raw); } catch { return false; }
+  if (u.protocol !== "https:") return false;
+  const h = u.hostname.toLowerCase();
+  const pull = (Deno.env.get("BUNNY_STORAGE_PULLZONE") || "").toLowerCase();
+  let supaHost = "";
+  try { supaHost = new URL(Deno.env.get("SUPABASE_URL") || "").hostname.toLowerCase(); } catch { /* ignore */ }
+  if (pull && h === pull) return true;
+  if (h.endsWith(".b-cdn.net")) return true;
+  if (h === "video.bunnycdn.com" || h.endsWith(".mediadelivery.net")) return true;
+  if (supaHost && h === supaHost) return true;
+  if (h === "drive.google.com" || h === "drive.usercontent.google.com") return true;
+  if (h.endsWith(".googleusercontent.com")) return true;
+  return false;
+}
+
+// F26: impoe o teto ANTES de alocar o corpo inteiro. Se o upstream manda
+// Content-Length, rejeita na hora. Senao le o body como stream, acumulando, e
+// aborta (reader.cancel) assim que passar do teto. `cap` = maximo permitido pra
+// ESTE arquivo. Devolve null quando estoura (o chamador poe no aviso).
+async function pullCapped(resp: Response, cap: number): Promise<Uint8Array | null> {
+  const clen = Number(resp.headers.get("content-length") || "");
+  if (Number.isFinite(clen) && clen > cap) { try { await resp.body?.cancel(); } catch { /* ignore */ } return null; }
+  const reader = resp.body?.getReader();
+  if (!reader) {
+    const b = new Uint8Array(await resp.arrayBuffer());
+    return b.byteLength > cap ? null : b;
+  }
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) {
+      size += value.byteLength;
+      if (size > cap) { try { await reader.cancel(); } catch { /* ignore */ } return null; }
+      chunks.push(value);
+    }
+  }
+  const out = new Uint8Array(size);
+  let off = 0;
+  for (const c of chunks) { out.set(c, off); off += c.byteLength; }
+  return out;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
@@ -71,7 +119,7 @@ Deno.serve(async (req) => {
     let total = 0;
     for (const m of (refs ?? []) as Array<Record<string, string | null>>) {
       const provider = (m.provider ?? "").toLowerCase();
-      // Vídeo do Bunny Stream não tem MP4 direto — anota e pula.
+      // Vídeo do Bunny Stream não tem MP4 direto anota e pula.
       if (m.bunny_video_id || provider === "bunny_stream") { skipped.push(`${m.file_name || "vídeo"} (vídeo)`); continue; }
 
       // Já bateu no teto de memória: manda o resto pro aviso pra não derrubar o worker.
@@ -85,6 +133,9 @@ Deno.serve(async (req) => {
       }
       if (!url) { skipped.push(m.file_name || "mídia"); continue; }
 
+      // F25/F26 (SSRF): so busca em host esperado e por https.
+      if (!fetchHostAllowed(url)) { skipped.push(`${m.file_name || "mídia"} (origem não permitida)`); continue; }
+
       try {
         let resp = await fetch(url);
         // Drive interstitial de arquivo grande: tenta confirmar.
@@ -93,9 +144,12 @@ Deno.serve(async (req) => {
           resp = await fetch(url + "&confirm=t");
         }
         if (!resp.ok) { skipped.push(`${m.file_name || "mídia"} (erro ${resp.status})`); continue; }
-        const buf = new Uint8Array(await resp.arrayBuffer());
+        // F26: teto imposto ANTES de alocar o corpo. O que este arquivo pode
+        // ocupar e o menor entre o teto por arquivo e o que resta do teto total.
+        const cap = Math.min(MAX_FILE_BYTES, MAX_TOTAL_BYTES - total);
+        const buf = await pullCapped(resp, cap);
         // Arquivo gigante isolado ou que estouraria o teto: pula com aviso.
-        if (buf.byteLength > MAX_FILE_BYTES || total + buf.byteLength > MAX_TOTAL_BYTES) {
+        if (buf === null) {
           skipped.push(`${m.file_name || "mídia"} (arquivo grande, baixe individual)`);
           continue;
         }

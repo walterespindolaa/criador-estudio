@@ -354,7 +354,7 @@ const Brandbook = () => {
     }
 
     // 2) Perguntas guiadas (Visual, Identidade, Valores, Comunicação, Tom).
-    //    Só preenche o campo VAZIO — nunca apaga o que a pessoa escreveu à mão.
+    //    Só preenche o campo VAZIO nunca apaga o que a pessoa escreveu à mão.
     const guiados: { section: string; key: string; valor?: string }[] = [
       { section: "moodboard-visual", key: "cores", valor: valores.colorPalette },
       { section: "moodboard-visual", key: "estetica", valor: valores.visualExpression },
@@ -382,7 +382,7 @@ const Brandbook = () => {
     //    ainda não existir nenhuma. Nunca mexe numa persona que a pessoa criou.
     //    Agora a persona vem ESTRUTURADA: dores, desejos, objeções, interesses e
     //    canais viram arrays nos campos certos (não mais só um texto solto).
-    //    Listas de frases quebram só por ";" e quebra de linha — vírgula picotaria
+    //    Listas de frases quebram só por ";" e quebra de linha vírgula picotaria
     //    frases tipo "acha caro, não confia".
     const paraFrases = (v?: string) =>
       (v ?? "").split(/[;\n]+/).map((s) => s.trim()).filter(Boolean);
@@ -694,7 +694,7 @@ const Brandbook = () => {
           {/* ═══ VISÃO GERAL ═══ */}
           <TabsContent value="visao-geral">
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-              {/* IMPORTAR DE PDF — proeminente, logo na entrada.
+              {/* IMPORTAR DE PDF proeminente, logo na entrada.
                   Antes vivia escondido só na aba Identidade. Aqui é a primeira
                   coisa que a pessoa vê, e a leitura preenche o brandbook INTEIRO
                   (cores, fontes, tom, visual, valores, temas e público), não só
@@ -887,7 +887,7 @@ const Brandbook = () => {
           <TabsContent value="identidade">
             {/* SUBIR O BRANDBOOK EM PDF.
                 Preencher cor por cor, fonte por fonte, é o que faz esta aba
-                ficar vazia — e brandbook vazio faz TODA a IA do Cria (legenda,
+                ficar vazia e brandbook vazio faz TODA a IA do Cria (legenda,
                 roteiro, prompt de arte) sair genérica. Quem já tem um moodboard
                 em PDF não devia digitar nada: sobe o arquivo e confere. */}
             <div className="mb-5">
@@ -896,7 +896,7 @@ const Brandbook = () => {
                 campos={CAMPOS_CRIADOR}
                 atual={identidadeAtual}
                 titulo="Já tem sua identidade num PDF? Sobe aqui."
-                descricao="Se você tem um manual de marca, moodboard ou até um print da sua paleta, a gente lê as cores, as fontes e o seu tom de voz — e você só confere. Pode subir até 2 arquivos."
+                descricao="Se você tem um manual de marca, moodboard ou até um print da sua paleta, a gente lê as cores, as fontes e o seu tom de voz e você só confere. Pode subir até 2 arquivos."
                 onSalvar={distribuirDoPdf}
               />
             </div>

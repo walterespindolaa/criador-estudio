@@ -141,7 +141,7 @@ function ClientsTab() {
           <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
           <Input placeholder="Buscar cliente..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 rounded-xl" />
         </div>
-        {/* SITUAÇÃO — por padrão só ativos. "Todos" e "Inativos" ampliam. */}
+        {/* SITUAÇÃO por padrão só ativos. "Todos" e "Inativos" ampliam. */}
         <div className="flex items-center gap-1 rounded-full border border-border bg-muted/40 p-1 shrink-0">
           {STATUS_FILTER_OPTS.map(([k, l]) => (
             <button key={k} type="button" onClick={() => setStatusFilterPersist(k)}
@@ -150,7 +150,7 @@ function ClientsTab() {
             </button>
           ))}
         </div>
-        {/* NICHO — popover ancorado no botão, no lugar do drawer que colava embaixo. */}
+        {/* NICHO popover ancorado no botão, no lugar do drawer que colava embaixo. */}
         {segments.length > 0 && (
           <Popover open={segOpen} onOpenChange={setSegOpen}>
             <PopoverTrigger asChild>

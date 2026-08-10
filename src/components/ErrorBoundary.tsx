@@ -16,7 +16,7 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("ErrorBoundary:", error, info);
     // Como o boundary "engole" o erro de renderização, o Sentry não o captura
-    // sozinho — mandamos manualmente (o app_logs continua recebendo via logError).
+    // sozinho mandamos manualmente (o app_logs continua recebendo via logError).
     Sentry.captureException(error, { contexts: { react: { componentStack: info?.componentStack } } });
     logError(error?.message || "Erro de renderização", {
       stack: error?.stack?.slice(0, 1200),

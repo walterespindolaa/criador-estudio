@@ -36,7 +36,7 @@ export const RecoveryEmail = ({
           Criar nova senha
         </Button>
         <Text style={footer}>
-          Se não foi você que pediu, pode ignorar este e-mail — sua senha atual
+          Se não foi você que pediu, pode ignorar este e-mail sua senha atual
           continua a mesma.
         </Text>
       </Container>

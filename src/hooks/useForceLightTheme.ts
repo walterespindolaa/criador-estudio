@@ -3,7 +3,7 @@ import { useEffect } from "react";
 // Páginas PÚBLICAS (portal de aprovação, cronograma, proposta, bio) são vistas
 // pelo cliente do cliente, que nunca configurou tema. Elas são desenhadas 100%
 // claras (cards brancos, chips claros). Se o dispositivo está no dark mode, o
-// ThemeProvider aplica `.dark` no <html> e o texto vira claro sobre branco —
+// ThemeProvider aplica `.dark` no <html> e o texto vira claro sobre branco -
 // ilegível. Este hook fixa o modo claro enquanto a página pública está montada
 // e restaura o tema anterior ao sair, sem afetar o app interno.
 export function useForceLightTheme() {

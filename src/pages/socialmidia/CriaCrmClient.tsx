@@ -437,7 +437,7 @@ function ClientWorkspace() {
           )}
           {/* ── SUBIR O BRANDBOOK EM PDF ─────────────────────────────────────
               Esta aba é um formulário de vinte campos. Ninguém preenche
-              formulário de vinte campos — e por isso o brandbook do cliente
+              formulário de vinte campos e por isso o brandbook do cliente
               vive vazio, e TODA a IA que depende dele (ideias, legenda, prompt
               de arte, briefing) sai genérica.
 

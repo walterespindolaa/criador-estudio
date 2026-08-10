@@ -20,6 +20,47 @@ export type MediaLike = {
 // Aceitamos variações por segurança, sem afetar storage/bunny.
 const DRIVE_PROVIDERS = new Set(["gdrive", "drive", "google_drive"]);
 
+// ── Guardas de URL (segurança) ──────────────────────────────────────────────
+// view_url/download_url/thumbnail_url vêm do banco. Sem validar o esquema, um
+// "javascript:..." ou "data:text/html..." salvo viraria src de <iframe>/<img>/
+// <video> ou href de download → XSS. Aqui só deixamos passar http(s), e no embed
+// exigimos host de uma allow-list. Isso NÃO afeta o fluxo real (Drive/Bunny/CDN
+// sempre são https de hosts conhecidos); só bloqueia esquema/host indevido.
+
+// Só http(s): devolve a URL normalizada ou null.
+function safeHttpUrl(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  try {
+    const u = new URL(raw.trim());
+    if (u.protocol !== "https:" && u.protocol !== "http:") return null;
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
+
+// Host (minúsculo) de uma URL http(s), ou null.
+function urlHost(raw: string | null | undefined): string | null {
+  const safe = safeHttpUrl(raw);
+  if (!safe) return null;
+  try {
+    return new URL(safe).hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+// Host bate com a allow-list (host exato ou subdomínio dele)?
+function hostAllowed(host: string | null, allow: string[]): boolean {
+  if (!host) return false;
+  return allow.some((d) => host === d || host.endsWith("." + d));
+}
+
+// Hosts confiáveis pra src de <iframe> de vídeo: embed do Bunny e /preview do Drive.
+const EMBED_HOSTS = ["iframe.mediadelivery.net", "drive.google.com"];
+// Host do embed do Bunny Stream: detecção ANCORADA no host (não substring solta).
+const BUNNY_EMBED_HOST = "iframe.mediadelivery.net";
+
 export function isDriveMedia(m: MediaLike): boolean {
   return DRIVE_PROVIDERS.has((m.provider ?? "").toLowerCase());
 }
@@ -96,10 +137,10 @@ export function getDisplayImageUrl(m: MediaLike, size = 1600): string | null {
   if (isDriveMedia(m)) {
     const id = getDriveFileId(m);
     if (id) return `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${size}`;
-    return m.thumbnail_url || null;
+    return safeHttpUrl(m.thumbnail_url);
   }
-  if (isVideoMedia(m)) return m.thumbnail_url || null;
-  return m.view_url || m.thumbnail_url || m.download_url || null;
+  if (isVideoMedia(m)) return safeHttpUrl(m.thumbnail_url);
+  return safeHttpUrl(m.view_url) || safeHttpUrl(m.thumbnail_url) || safeHttpUrl(m.download_url);
 }
 
 /**
@@ -112,10 +153,10 @@ export function getThumbnailUrl(m: MediaLike, size = 480): string | null {
   if (isDriveMedia(m)) {
     const id = getDriveFileId(m);
     if (id) return `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${size}`;
-    return m.thumbnail_url || null;
+    return safeHttpUrl(m.thumbnail_url);
   }
-  if (isVideoMedia(m)) return m.thumbnail_url || null;
-  return m.thumbnail_url || m.view_url || m.download_url || null;
+  if (isVideoMedia(m)) return safeHttpUrl(m.thumbnail_url);
+  return safeHttpUrl(m.thumbnail_url) || safeHttpUrl(m.view_url) || safeHttpUrl(m.download_url);
 }
 
 /** Fallback (lh3.googleusercontent.com) pra quando o thumbnail do Drive falhar. */
@@ -133,7 +174,13 @@ export function getVideoEmbedUrl(m: MediaLike): string | null {
     const id = getDriveFileId(m);
     if (id) return `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`;
   }
-  return m.view_url || null;
+  // view_url do banco vira src de <iframe>: só entra se for https E de host
+  // confiável (embed do Bunny ou /preview do Drive). Qualquer outra coisa → null.
+  const url = safeHttpUrl(m.view_url);
+  if (!url) return null;
+  if (!/^https:/i.test(url)) return null;
+  if (!hostAllowed(urlHost(url), EMBED_HOSTS)) return null;
+  return url;
 }
 
 /**
@@ -145,7 +192,9 @@ export function getVideoEmbedUrl(m: MediaLike): string | null {
  */
 export function getVideoKind(m: MediaLike): "bunny" | "drive" | "file" | null {
   if (!isVideoMedia(m)) return null;
-  if (!!m.bunny_video_id || m.provider === "bunny_stream" || /iframe\.mediadelivery\.net/i.test(m.view_url ?? "")) return "bunny";
+  // Detecção do Bunny ancorada no HOST do view_url (não substring em qualquer
+  // posição da string, que um valor forjado poderia satisfazer sem ser Bunny).
+  if (!!m.bunny_video_id || m.provider === "bunny_stream" || urlHost(m.view_url) === BUNNY_EMBED_HOST) return "bunny";
   // Qualquer mídia do Drive (mesmo sem mime) usa o player /preview, não a tag <video>.
   if (isDriveMedia(m)) return "drive";
   return "file";
@@ -153,7 +202,8 @@ export function getVideoKind(m: MediaLike): "bunny" | "drive" | "file" | null {
 
 /** src direto pra <video> (vídeo de storage/device): o próprio arquivo público. */
 export function getVideoFileUrl(m: MediaLike): string | null {
-  return m.view_url || m.download_url || null;
+  // src direto de <video>: só http(s) (bloqueia javascript:/data: salvos no banco).
+  return safeHttpUrl(m.view_url) || safeHttpUrl(m.download_url);
 }
 
 /**
@@ -205,16 +255,19 @@ async function downloadViaProxy(mediaId: string, fileName: string): Promise<bool
 // É o fallback final do mobile: no Safari/webview o fetch de uma imagem de outra origem
 // falha ("Load failed"), então a gente entrega a imagem pra pessoa segurar e salvar.
 function openForSave(url: string, fileName: string) {
+  // Só abre/baixa URL http(s): esquema forjado (javascript:) não vira href.
+  const safe = safeHttpUrl(url);
+  if (!safe) return;
   try {
     const a = document.createElement("a");
-    a.href = url;
+    a.href = safe;
     // download só é respeitado em same-origin; cross-origin o navegador ignora e
     // abre numa aba (target _blank), que é justamente o que queremos no mobile.
     a.download = fileName;
     a.target = "_blank"; a.rel = "noopener";
     document.body.appendChild(a); a.click(); a.remove();
   } catch {
-    window.open(url, "_blank", "noopener");
+    window.open(safe, "_blank", "noopener");
   }
 }
 

@@ -10,6 +10,33 @@ const json = (b: unknown, s = 200) =>
 
 const DEFAULT_MODULES = ["cria_post", "cria_gestao", "hub_cria", "agenda"];
 
+// Escapa valores interpolados no HTML do e-mail (nome da agência etc.). (F12/F24)
+function escapeHtml(v: unknown): string {
+  return String(v ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Origin confiável pro link de ativação (F13): APP_URL fixo ou allow-list, caindo
+// no domínio canônico. Nunca monta o link só com o header Origin cru.
+const CANONICAL_APP_URL = "https://app.criasocialclub.com.br";
+function resolveAppUrl(req: Request): string {
+  const fixed = Deno.env.get("APP_URL");
+  if (fixed) return fixed.replace(/\/+$/, "");
+  const origin = req.headers.get("origin") ?? "";
+  const allow = [
+    "https://app.criasocialclub.com.br",
+    "https://criasocialclub.com.br",
+    "https://www.criasocialclub.com.br",
+  ];
+  if (allow.includes(origin)) return origin;
+  if (/^https:\/\/[a-z0-9-]+\.(lovableproject\.com|lovable\.app)$/.test(origin)) return origin;
+  return CANONICAL_APP_URL;
+}
+
 async function ensureUnsubscribeToken(svc: SupabaseClient, email: string): Promise<string> {
   const token = crypto.randomUUID();
   await svc.from("email_unsubscribe_tokens").upsert({ email, token }, { onConflict: "email", ignoreDuplicates: true });
@@ -29,7 +56,7 @@ function emailHtml(opts: { managerName: string; actionLink: string }): string {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:32px 16px"><tr><td align="center">
     <table role="presentation" width="480" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;width:100%;background:#fff;border-radius:16px;padding:40px 32px;box-shadow:0 1px 3px rgba(0,0,0,0.05)"><tr><td>
       <h1 style="margin:0 0 16px 0;font-size:22px;font-weight:700;color:#111827;line-height:1.3">Você foi adicionado à equipe</h1>
-      <p style="margin:0 0 28px 0;font-size:15px;line-height:1.55;color:#4b5563">${opts.managerName} te convidou pra colaborar no cria. Clique pra acessar e definir sua senha, você já entra direto na conta da agência pra trabalhar.</p>
+      <p style="margin:0 0 28px 0;font-size:15px;line-height:1.55;color:#4b5563">${escapeHtml(opts.managerName)} te convidou pra colaborar no cria. Clique pra acessar e definir sua senha, você já entra direto na conta da agência pra trabalhar.</p>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px 0"><tr><td style="border-radius:12px;background:#8B5CF6">
         <a href="${opts.actionLink}" style="display:inline-block;padding:12px 24px;color:#fff;font-size:15px;font-weight:600;text-decoration:none;border-radius:12px">Acessar a equipe</a>
       </td></tr></table>
@@ -78,7 +105,7 @@ serve(async (req) => {
     const { data: list } = await svc.auth.admin.listUsers();
     const existing = list?.users?.find((u) => u.email?.toLowerCase() === normEmail);
 
-    const origin = req.headers.get("origin") ?? "https://app.criasocialclub.com.br";
+    const origin = resolveAppUrl(req); // F13: origin validado, não o header cru
     const type: "magiclink" | "invite" = existing ? "magiclink" : "invite";
     const { data: linkData, error: linkErr } = await svc.auth.admin.generateLink({
       type, email: normEmail, options: { redirectTo: origin + "/socialmidia/dashboard" },

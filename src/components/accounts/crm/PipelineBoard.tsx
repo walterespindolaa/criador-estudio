@@ -53,7 +53,7 @@ export function PipelineBoard() {
   const metrics = useMemo(() => {
     const open = leads.filter((l) => l.stage !== "fechado" && l.stage !== "perdido");
     const nego = leads.filter((l) => l.stage === "proposta" || l.stage === "negociacao");
-    // Receita mensal: MESMA regra do Caixa (mensalidadeAtivaNoMes) — cliente com
+    // Receita mensal: MESMA regra do Caixa (mensalidadeAtivaNoMes) cliente com
     // encerramento agendado conta até o mês do encerramento, inclusive. Antes
     // olhava só a flag `active`, que divergia do MRR do Caixa.
     const mesAtual = hojeBR().slice(0, 7);

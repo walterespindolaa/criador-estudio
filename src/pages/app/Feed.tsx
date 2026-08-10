@@ -232,7 +232,7 @@ const Feed = () => {
   };
 
   // Mobile: adicionar em lote pelo bottom sheet (a ordem da seleção vira a
-  // ordem no feed). O drawer lateral de lista morreu no celular — no dedo,
+  // ordem no feed). O drawer lateral de lista morreu no celular no dedo,
   // escolher post é visual, não textual.
   const addManyToGrid = (postIds: string[]) => {
     const toAdd = postIds

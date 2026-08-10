@@ -46,19 +46,19 @@ export default function ComecarAgencia() {
     }
   }, [isLoading, profile, navigate]);
 
-  // Abre a conta de gestora. Sem cobrança: o account_type não é campo travado
-  // pela RLS justamente porque essa conta é gratuita por definição. Quem cobra
-  // são os módulos e os assentos, cada um com o seu próprio checkout.
+  // Abre a conta de gestora. Sem cobrança: quem cobra são os módulos e os
+  // assentos, cada um com o seu próprio checkout. A coluna account_type é
+  // travada pela RLS (é campo de privilégio), então a gravação vai pela RPC
+  // security definer tornar_conta_manager(), que valida auth.uid() no servidor
+  // e só marca a própria conta como gestora.
   const abrirConta = async () => {
     setLoading(true);
     try {
       const { data: sessao } = await supabase.auth.getUser();
       const uid = sessao?.user?.id;
       if (!uid) { toast.error("Sua sessão expirou. Entre de novo."); return; }
-      const { error } = await supabase
-        .from("profiles")
-        .update({ account_type: "manager" })
-        .eq("id", uid);
+      // Cast: a RPC é nova e ainda não está nos tipos gerados do banco.
+      const { error } = await (supabase.rpc as unknown as (fn: string) => Promise<{ error: unknown }>)("tornar_conta_manager");
       if (error) {
         console.error("[comecar-agencia] falha ao abrir a conta:", error);
         toast.error("Não consegui abrir sua conta agora. Tente de novo.");

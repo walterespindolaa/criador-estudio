@@ -6,14 +6,14 @@ import { cn } from "@/lib/utils";
 const Tabs = TabsPrimitive.Root;
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   ABAS EM PÍLULA — o padrão do CRIA
+   ABAS EM PÍLULA o padrão do CRIA
 
    O padrão que veio do shadcn é um retângulo cinza com cantos de 2px. Ele é
    correto e é sem alma: parece painel de configuração, não parece o Cria.
 
    E tinha um problema de USO, não só de gosto: em várias telas a aba ativa se
    distinguia por uma sublinha de 2px. No celular isso é praticamente invisível,
-   e o alvo do dedo ficava pequeno. A pílula resolve as duas coisas — a ativa
+   e o alvo do dedo ficava pequeno. A pílula resolve as duas coisas a ativa
    vira um objeto sólido (branco, sombra, laranja) dentro de um trilho, e a
    área de toque cresce.
 

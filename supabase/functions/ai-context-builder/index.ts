@@ -322,18 +322,27 @@ serve(async (req) => {
     const { operation, data } = await req.json()
     const userId = user.id // use this, ignore userId from body
 
-    // ── Recursos do Pro pra cima ───────────────────────────────────
-    // A trava do frontend é UX (o selo "PRO" no botão, a vitrine). Ela não é
+    // ── Recursos pagos por TIER (F19) ──────────────────────────────
+    // A trava do frontend (roteador React / UpgradeGate) é UX. Ela não é
     // segurança: qualquer um chama a edge function direto. Quem decide é aqui.
-    // Trial entra (ele roda como Studio de propósito — a pessoa precisa SENTIR
-    // o que perde quando acabar).
-    const PRO_OU_ACIMA = new Set(['art-prompt'])  // art-brief é da agência (módulo Cria Post), não de plano de criador
-    if (PRO_OU_ACIMA.has(operation)) {
-      const planoOk = accessRow.plan === 'pro' || accessRow.plan === 'studio'
-      const liberado = _isAdmin || _trialOk || (_isActive && planoOk)
-      if (!liberado) {
+    // Espelhamos o mapa recurso->tier de src/lib/plans.ts (FEATURES[*].minimo)
+    // e rejeitamos qualquer operação cujo tier mínimo exceda o do chamador.
+    // Trial entra como Studio de propósito (a pessoa precisa SENTIR o que perde
+    // quando acabar). Admin passa direto. art-brief NÃO entra: é da agência
+    // (módulo Cria Post, gate próprio), não é degrau de plano de criador.
+    const TIER_RANK: Record<string, number> = { none: 0, essencial: 1, pro: 2, studio: 3 }
+    const OP_MIN_TIER: Record<string, 'pro' | 'studio'> = {
+      'art-prompt': 'pro',              // Cria Estúdio  (FEATURES.estudio.minimo = pro)
+      'autopilot-cronograma': 'studio', // Cria Plano    (FEATURES["cria-plano"].minimo = studio)
+      'story-plan-generate': 'studio',  // Cria Stories  (FEATURES.stories.minimo = studio)
+    }
+    const _minTier = OP_MIN_TIER[operation]
+    if (_minTier && !_isAdmin) {
+      const _callerTier = _trialOk ? 'studio' : (_isActive ? String(accessRow.plan ?? 'none') : 'none')
+      if ((TIER_RANK[_callerTier] ?? 0) < TIER_RANK[_minTier]) {
+        const _label = _minTier === 'studio' ? 'Studio' : 'Pro'
         return new Response(
-          JSON.stringify({ error: 'upgrade_required', message: 'O Cria Estúdio está no plano Pro.' }),
+          JSON.stringify({ error: 'upgrade_required', message: `Este recurso está no plano ${_label}.` }),
           { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
@@ -423,7 +432,7 @@ Gere um insight estratégico conciso em português BR no formato:
     //
     // Cobrar pela BUSCA de notícia era um erro caro: a pessoa clicava em
     // "amarrar com o que está quente" só pra VER as manchetes, e já tinha
-    // pagado — antes de decidir qualquer coisa. Aí gerava o prompt e pagava
+    // pagado antes de decidir qualquer coisa. Aí gerava o prompt e pagava
     // de novo. Um post podia custar 2 créditos sem ela entender por quê.
     //
     // Regra: cobra o que ENTREGA (o prompt, o briefing, a leitura do PDF).
@@ -470,7 +479,7 @@ Gere um insight estratégico conciso em português BR no formato:
     // LER O BRANDBOOK DE UM PDF (visão)
     //
     // O brandbook é o dado do qual TODA a IA do CRIA depende: legenda, roteiro,
-    // prompt de arte, briefing. Sem ele, tudo sai genérico — e a pessoa conclui
+    // prompt de arte, briefing. Sem ele, tudo sai genérico e a pessoa conclui
     // que "a IA do Cria é fraca" e cancela.
     //
     // Só que ele é um formulário de vinte campos, e ninguém preenche formulário
@@ -478,12 +487,12 @@ Gere um insight estratégico conciso em português BR no formato:
     //
     // O dado JÁ EXISTE: a social mídia tem o moodboard do cliente em PDF, e a
     // criadora tem o dela. Então a gente para de pedir pra digitar e passa a
-    // pedir o arquivo. "Digite vinte campos" vira "confere o que eu entendi" —
+    // pedir o arquivo. "Digite vinte campos" vira "confere o que eu entendi" -
     // e confirmar é infinitamente mais fácil que criar.
     //
     // MOODBOARD É IMAGEM, NÃO TEXTO: a paleta e a tipografia moram no desenho
     // da página, não no texto extraível. Por isso mandamos as PÁGINAS RENDERIZADAS
-    // pra um modelo que ENXERGA. Extrair só texto pegaria metade — e a metade
+    // pra um modelo que ENXERGA. Extrair só texto pegaria metade e a metade
     // menos importante.
     //
     // E NADA É SALVO AQUI. Isto só LÊ e devolve. Quem grava é a pessoa, depois
@@ -570,7 +579,7 @@ RESPONDA APENAS JSON válido:
     //
     // O botão "amarrar com o que está quente" existia SEM ISTO: ele só mandava
     // uma instrução genérica pro modelo ("converse com o assunto do momento") e
-    // a pessoa não via notícia nenhuma. Promessa vazia na tela — não quebrava
+    // a pessoa não via notícia nenhuma. Promessa vazia na tela não quebrava
     // nada, só mentia. Que é o pior tipo de defeito, porque ninguém reporta.
     //
     // Agora ele busca de verdade (Perplexity, com fonte e data) e a pessoa
@@ -595,7 +604,7 @@ RESPONDA APENAS JSON válido:
           body: JSON.stringify({
             model: 'sonar',
             messages: [
-              { role: 'system', content: 'Você pesquisa notícias e assuntos em alta no Brasil. Responda SOMENTE em JSON válido, sem markdown. Só inclua o que você REALMENTE encontrou, com fonte real. Se não achar nada relevante, devolva a lista vazia — jamais invente notícia.' },
+              { role: 'system', content: 'Você pesquisa notícias e assuntos em alta no Brasil. Responda SOMENTE em JSON válido, sem markdown. Só inclua o que você REALMENTE encontrou, com fonte real. Se não achar nada relevante, devolva a lista vazia jamais invente notícia.' },
               { role: 'user', content: `Hoje é ${hoje}. Sobre o tema "${tema}"${nicho ? ` (nicho: ${nicho})` : ''}, o que está sendo falado AGORA no Brasil? Traga no máximo 3 itens dos últimos 30 dias.
 {"noticias":[{"titulo":"manchete curta","fonte":"veículo","quando":"há X dias","resumo":"1 frase do que mudou"}]}` },
             ],
@@ -615,7 +624,7 @@ RESPONDA APENAS JSON válido:
       } catch (e) {
         console.error('[hot-news] falhou', e)
         // Fail-soft: o Estúdio continua funcionando sem notícia. Ele não é a
-        // funcionalidade — é um tempero.
+        // funcionalidade é um tempero.
         return new Response(JSON.stringify({ result: { noticias: [], motivo: 'falhou' } }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
@@ -1019,7 +1028,7 @@ REGRAS DURAS:
 - Onde vier "primeiro período", trate como primeira medição e não finja que houve crescimento.
 - Nada de conselho genérico ("poste mais", "use CTA", "seja consistente", "invista em vídeo").
 - Não use jargão interno de agência nem nome de ferramenta. O cliente lê isso.
-- Não use travessão (—) no texto.
+- Não use travessão (-) no texto.
 
 TOM: profissional, direto, específico, português BR. Como quem explica o mês numa reunião e sabe do que está falando.
 
@@ -1147,7 +1156,7 @@ ${data.brandContext ? `\nMARCA DO CRIADOR:\n${data.brandContext}` : ''}`
         break
       }
       // ═══════════════════════════════════════════════════════════════════
-      // CRIA ESTÚDIO — o prompt da arte, dentro do post
+      // CRIA ESTÚDIO o prompt da arte, dentro do post
       //
       // Não geramos imagem. Geramos o PROMPT, que a pessoa cola no gerador
       // que ela já usa. Imagem por IA custa dinheiro de verdade, sai fora da
@@ -1155,7 +1164,7 @@ ${data.brandContext ? `\nMARCA DO CRIADOR:\n${data.brandContext}` : ''}`
       //
       // Duas decisões que estão no formato da resposta:
       // 1. UM BLOCO DE ESTILO que se repete em TODAS as páginas. Sem isso o
-      //    carrossel sai com 5 imagens de 5 mundos diferentes — e aí ela
+      //    carrossel sai com 5 imagens de 5 mundos diferentes e aí ela
       //    testa uma vez e nunca mais volta.
       // 2. pt + en. Mostramos em português (ela precisa CONFERIR se a IA
       //    entendeu a marca dela); o botão copia o inglês, que é o que os
@@ -1194,12 +1203,12 @@ ${data.contextoQuente ? `\nAMARRAR COM O QUE ESTÁ EM ALTA (só se encaixar natu
         break
       }
       // ═══════════════════════════════════════════════════════════════════
-      // BRIEFING DE ARTE — dentro do post do cliente (Cria Post)
+      // BRIEFING DE ARTE dentro do post do cliente (Cria Post)
       //
       // Aqui a pessoa NÃO quer um prompt de IA. Ela quer o que MANDAR PRO
       // DESIGNER: paleta com hex, fonte, o que pode e o que não pode, e o texto
       // que vai na peça. Ela escreve isso no WhatsApp, na mão, dez vezes por
-      // semana — e digita a paleta do cliente de cabeça toda vez.
+      // semana e digita a paleta do cliente de cabeça toda vez.
       //
       // O prompt de IA é só UMA DAS SAÍDAS do mesmo briefing.
       // ═══════════════════════════════════════════════════════════════════
@@ -1209,8 +1218,8 @@ ${data.contextoQuente ? `\nAMARRAR COM O QUE ESTÁ EM ALTA (só se encaixar natu
 REGRAS:
 - Fale com um designer humano: objetivo, concreto, sem enrolação e sem jargão de IA.
 - "direcao": 3 a 5 instruções do que FAZER na peça (composição, tipo de imagem, luz, hierarquia).
-- "evitar": 2 a 4 instruções do que NÃO fazer, tiradas da marca do cliente. Se a marca não disser nada, use o bom senso do segmento — nunca invente uma regra específica do cliente.
-- "textoPeca": o texto que vai DENTRO da arte, página por página. Curto, do jeito que cabe numa peça — não é a legenda.
+- "evitar": 2 a 4 instruções do que NÃO fazer, tiradas da marca do cliente. Se a marca não disser nada, use o bom senso do segmento nunca invente uma regra específica do cliente.
+- "textoPeca": o texto que vai DENTRO da arte, página por página. Curto, do jeito que cabe numa peça não é a legenda.
 - "promptEn": o mesmo briefing traduzido em UM prompt de imagem em inglês, pra quem for gerar por IA em vez de desenhar. Sem texto na imagem ("no text").
 - Não invente cor nem fonte que não foi informada.
 
@@ -1239,7 +1248,7 @@ Público: ${data.publico || '(não informado)'}`
       //
       // Isto existia no Cria Estúdio antigo e MORREU junto com a tela: a pessoa
       // dava o tema e ele escrevia lâmina por lâmina. Matar a tela sem trazer o
-      // recurso junto foi erro meu — o problema era a tela, não o recurso.
+      // recurso junto foi erro meu o problema era a tela, não o recurso.
       //
       // Agora ele vive onde as lâminas vivem: na aba Roteiro do post. E é ele
       // que alimenta a aba Arte: com o texto de cada página escrito, o prompt
@@ -1256,7 +1265,7 @@ REGRAS:
 - ${n} ${ehReels ? 'cenas' : 'páginas'}, na ordem, contando UMA história do começo ao fim.
 - A 1ª é o GANCHO: ela tem que parar o dedo. Nada de "hoje vou te contar sobre...".
 - A última é o CTA: uma ação concreta (salvar, comentar, seguir, ir pro link).
-- Cada ${ehReels ? 'cena' : 'página'} é CURTA — é texto pra tela, não parágrafo de blog. No máximo 2 frases.
+- Cada ${ehReels ? 'cena' : 'página'} é CURTA é texto pra tela, não parágrafo de blog. No máximo 2 frases.
 - Uma ideia por ${ehReels ? 'cena' : 'página'}. Se tem duas, quebre em duas.
 - Português BR, direto, sem clichê de coach e sem emoji.
 - Nada de "página 1", "slide 2" dentro do texto.

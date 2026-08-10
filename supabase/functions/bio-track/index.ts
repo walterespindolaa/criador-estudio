@@ -37,7 +37,7 @@ serve(async (req) => {
     // 30 eventos/min por IP+alvo. Se estourar, ignora silenciosamente (não conta).
     // Fail-CLOSED: este endpoint é público e anônimo (verify_jwt = false), então
     // em erro do rate-limit (RPC/DB fora) a gente NÃO conta o evento. Liberar em
-    // falha deixaria o contador da bio sem teto justo quando o freio quebrou —
+    // falha deixaria o contador da bio sem teto justo quando o freio quebrou -
     // exatamente a hora do abuso. Melhor perder uma métrica que abrir a porteira.
     const { data: allowed, error: rlErr } = await svc.rpc("rate_touch", { _key: `bio:${ip}:${slug || linkId}`, _limit: 30 });
     if (rlErr || allowed === false) return ok({ ok: true, throttled: true });

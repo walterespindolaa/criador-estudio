@@ -51,6 +51,7 @@ import { cn } from "@/lib/utils";
 import { validateUpload } from "@/lib/upload-validation";
 import { useBioLeads } from "@/hooks/useBioLeads";
 import { confirmar } from "@/components/shared/Confirm";
+import { escapeCsvCell } from "@/lib/csv";
 
 type BgType = "color" | "gradient" | "image";
 type BgImageSize = "cover" | "contain";
@@ -623,7 +624,8 @@ const LinkInBio = () => {
   const { leads, isLoading: leadsLoading, deleteLead } = useBioLeads();
   const exportLeadsCsv = () => {
     const rows = [["Nome", "Email", "Telefone", "Data"], ...leads.map((l) => [l.name ?? "", l.email ?? "", l.phone ?? "", new Date(l.created_at).toLocaleString("pt-BR")])];
-    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    // escapeCsvCell: além de escapar aspas, neutraliza injeção de fórmula (=,+,-,@,TAB,CR).
+    const csv = rows.map((r) => r.map(escapeCsvCell).join(",")).join("\n");
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

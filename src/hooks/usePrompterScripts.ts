@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { toast } from "sonner";
 
-/* Tabela nova (prompter_scripts) fora do types.ts gerado — o types.ts é
+/* Tabela nova (prompter_scripts) fora do types.ts gerado o types.ts é
    travado, então o acesso segue o mesmo padrão do useStoryPlan: sbFrom + cast. */
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
@@ -29,7 +29,7 @@ export function usePrompterScripts() {
     /* O global usa refetchOnMount:false (anti-pisca), mas roteiro é criado no
        CELULAR e gravado no PC (ou vice-versa): sem revalidar ao entrar na tela,
        o outro aparelho nunca vê o roteiro novo. "always" mostra o cache na hora
-       e busca por trás — sem esqueleto, sem dado velho. */
+       e busca por trás sem esqueleto, sem dado velho. */
     refetchOnMount: "always",
     refetchOnWindowFocus: true,
     queryFn: async () => {
@@ -101,7 +101,7 @@ export function useSavePrompterScript() {
 /* ── Pastas ──────────────────────────────────────────────────────────────────
    Pasta é um rótulo (coluna text), não uma tabela: os chips derivam dos
    roteiros existentes. Renomear/excluir = update em massa no rótulo.
-   Pasta vazia não existe — mesmo comportamento do protótipo, sem schema extra. */
+   Pasta vazia não existe mesmo comportamento do protótipo, sem schema extra. */
 
 export function useRenamePrompterFolder() {
   const { activeAccountId } = useActiveAccount();
@@ -142,7 +142,7 @@ export function useDeletePrompterFolder() {
 
 /* ── Post (Criando) → Prompter ───────────────────────────────────────────────
    Um post na fase Produzindo vira roteiro com 1 toque. Se já foi enviado
-   antes (source_id igual), ATUALIZA o texto em vez de duplicar — assim o
+   antes (source_id igual), ATUALIZA o texto em vez de duplicar assim o
    roteiro chega sempre na versão mais recente do post. */
 
 export function useSendPostToPrompter() {

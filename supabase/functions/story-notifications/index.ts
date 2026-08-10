@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
 
     const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     // Heartbeat honesto: registra o RESULTADO da rodada (ok true/false) no admin.
-    // Chamado nos pontos de saída — no início não sabemos ainda se vai dar certo.
+    // Chamado nos pontos de saída no início não sabemos ainda se vai dar certo.
     const heartbeat = (ok: boolean, detail: string | null = null) =>
       svc.from("cron_runs").upsert({ job: "story-notifications", last_run_at: new Date().toISOString(), ok, detail }, { onConflict: "job" });
 
@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
 
     // REIVINDICAÇÃO (claim) ANTES de notificar: marca notified_at só nos slots que
     // AINDA estavam null. O WHERE notified_at IS NULL é reavaliado por linha sob lock,
-    // então duas execuções concorrentes do cron NÃO reivindicam o mesmo slot — cada
+    // então duas execuções concorrentes do cron NÃO reivindicam o mesmo slot cada
     // story dispara uma vez só. Antes o insert vinha primeiro e o update depois (não
     // checado), o que duplicava a notificação quando o cron rodava 2x junto.
     const readyIds = ready.map((s: any) => s.id);

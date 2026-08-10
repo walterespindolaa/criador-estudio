@@ -29,6 +29,7 @@ import { mascarar, useValoresOcultos } from "@/hooks/useValoresOcultos";
 import { hojeBR, toISODateBR, parseDateOnly } from "@/lib/date-br";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { confirmar } from "@/components/shared/Confirm";
+import { escapeCsvCell } from "@/lib/csv";
 
 // FONTE ÚNICA de exibição de dinheiro no Caixa. Passa pelo olhinho (mascarar):
 // com valores ocultos TUDO que renderiza por aqui vira "••••". Não usar
@@ -1687,11 +1688,13 @@ function RelatorioPeriodo({ records, ctx, clients = [], monthlies = [], mrr = 0,
   const meses = [...porMes.entries()].sort(([a], [b]) => a.localeCompare(b));
 
   const exportCsv = () => {
-    const head = "data;tipo;descricao;categoria;status;valor";
+    // escapeCsvCell envolve cada célula em aspas e neutraliza injeção de fórmula,
+    // então o separador ";" dentro do texto já fica protegido (sem o replace antigo).
+    const head = ["data", "tipo", "descricao", "categoria", "status", "valor"].map(escapeCsvCell).join(";");
     const body = rows
       .slice()
       .sort((a, b) => a.date.localeCompare(b.date))
-      .map((r) => [r.date, r.type, (r.description ?? "").replace(/;/g, ","), r.category ?? "", r.status, String(r.amount).replace(".", ",")].join(";"));
+      .map((r) => [r.date, r.type, r.description ?? "", r.category ?? "", r.status, String(r.amount).replace(".", ",")].map(escapeCsvCell).join(";"));
     const csv = [head, ...body].join("\n");
     const url = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
     const a = document.createElement("a");

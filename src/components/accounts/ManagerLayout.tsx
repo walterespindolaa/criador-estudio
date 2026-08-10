@@ -176,7 +176,7 @@ export default function ManagerLayout() {
   const ctx: ManagerOutletContext = { openModule, openSettings: () => setSettingsOpen(true) };
 
   // ═══ FAIXA DO TOPO ═══
-  // Antes ela repetia "Bom dia, Gabriela" — a MESMA saudação que já está no card
+  // Antes ela repetia "Bom dia, Gabriela" a MESMA saudação que já está no card
   // logo abaixo. Era um espaço órfão: nas outras telas a faixa mostra o nome do
   // módulo, e no dashboard não havia nada pra mostrar, então enfiaram a saudação.
   //
@@ -297,9 +297,9 @@ export default function ManagerLayout() {
           </HeroBand>
         </div>
 
-        {/* HEADER MOBILE DA SOCIAL MÍDIA — não existia.
+        {/* HEADER MOBILE DA SOCIAL MÍDIA não existia.
             O sino de notificações morava SÓ dentro da HeroBand, que é `hidden md:block`.
-            Ou seja: no celular, o gestor não tinha como ver notificação nenhuma —
+            Ou seja: no celular, o gestor não tinha como ver notificação nenhuma -
             nem aprovação de cliente, nem lead. Todo o sistema de push apontava pra
             uma tela que ele não conseguia abrir.
             Mesma estrutura do lado do criador: 2 à esquerda, logo no centro, 2 à direita. */}
@@ -373,7 +373,7 @@ export default function ManagerLayout() {
               // O CRIA RADAR APARECIA TRÊS VEZES no menu do celular:
               //   1. o módulo hub_cria, vindo do banco;
               //   2. o "Pacote Extra" (hub_extra), que também é uma linha em `modules`
-              //      — mas ele NÃO é um lugar pra abrir, é um pacote de créditos;
+              //      mas ele NÃO é um lugar pra abrir, é um pacote de créditos;
               //   3. um item fixo, escrito na mão logo abaixo.
               // Some com os dois primeiros: o Radar entra uma vez só, no item de baixo,
               // que é o que realmente leva pra tela dele.

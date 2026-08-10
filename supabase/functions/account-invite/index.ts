@@ -8,6 +8,35 @@ const cors = {
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
 
+// Escapa valores interpolados no HTML do e-mail (nome do usuário etc.): sem isso,
+// um nome com "<script>" ou "onerror=" seria injetado no template. (F12/F24)
+function escapeHtml(v: unknown): string {
+  return String(v ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Origin confiável pro link de ativação (F13): usa APP_URL fixo se definido; senão
+// valida o header Origin contra a allow-list, caindo no domínio canônico. Nunca
+// monta o link só com o Origin cru da request (dá pra forjar → link malicioso).
+const CANONICAL_APP_URL = "https://app.criasocialclub.com.br";
+function resolveAppUrl(req: Request): string {
+  const fixed = Deno.env.get("APP_URL");
+  if (fixed) return fixed.replace(/\/+$/, "");
+  const origin = req.headers.get("origin") ?? "";
+  const allow = [
+    "https://app.criasocialclub.com.br",
+    "https://criasocialclub.com.br",
+    "https://www.criasocialclub.com.br",
+  ];
+  if (allow.includes(origin)) return origin;
+  if (/^https:\/\/[a-z0-9-]+\.(lovableproject\.com|lovable\.app)$/.test(origin)) return origin;
+  return CANONICAL_APP_URL;
+}
+
 async function ensureUnsubscribeToken(svc: SupabaseClient, email: string): Promise<string> {
   const token = crypto.randomUUID();
   await svc.from("email_unsubscribe_tokens").upsert({ email, token }, { onConflict: "email", ignoreDuplicates: true });
@@ -77,8 +106,8 @@ serve(async (req) => {
     const { data: list } = await svc.auth.admin.listUsers();
     const existing = list?.users?.find((u) => u.email?.toLowerCase() === normEmail);
 
-    // Gera o link conforme o caso
-    const origin = req.headers.get("origin") ?? "https://app.criasocialclub.com.br";
+    // Gera o link conforme o caso (origin validado, nunca o header cru F13)
+    const origin = resolveAppUrl(req);
     const redirectTo = origin + "/app";
     const type: "magiclink" | "invite" = existing ? "magiclink" : "invite";
     const { data: linkData, error: linkErr } = await svc.auth.admin.generateLink({
@@ -123,7 +152,7 @@ serve(async (req) => {
 
     const html = emailHtml({
       title: "Você foi convidado",
-      paragraph: `${ownerName} convidou você para gerenciar a conta dele(a) no cria como social media. Clique no botão abaixo para acessar, você define sua senha e já entra direto.`,
+      paragraph: `${escapeHtml(ownerName)} convidou você para gerenciar a conta dele(a) no cria como social media. Clique no botão abaixo para acessar, você define sua senha e já entra direto.`,
       buttonLabel: "Aceitar convite e acessar",
       actionLink,
       secondary: "Depois de entrar, selecione o cliente no seletor de contas no topo.",

@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
           // 400/401/403 do endpoint de refresh = falha DEFINITIVA (token morto):
           // essa conexão precisa que o usuário reconecte, e volta pra fila todo dia.
           const definitiva = r.status === 400 || r.status === 401 || r.status === 403;
-          console.error('[instagram-refresh] refresh failed', c.id, r.status, body?.error, definitiva ? '(token morto/definitivo — precisa reconectar)' : '(possivelmente transitório)');
+          console.error('[instagram-refresh] refresh failed', c.id, r.status, body?.error, definitiva ? '(token morto/definitivo precisa reconectar)' : '(possivelmente transitório)');
           // TODO(schema): social_connections NÃO tem coluna de status/reconexão
           // (colunas: username, account_type, access_token, token_expires_at, scopes,
           // connected_at, updated_at, profile_picture_url, crm_client_id). Hoje o

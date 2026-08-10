@@ -120,7 +120,7 @@ let lastQueryErrorToast = 0;
 // As queries já avisavam quando falhavam. As MUTAÇÕES não: cada hook tratava do
 // seu jeito, e qualquer um que esquecesse o onError deixava a pessoa achando que
 // tinha salvado. Com update otimista (que a gente usa em tudo), a tela até MOSTRA
-// o dado novo — e ele nunca chegou no banco. Esta é a rede de segurança: se um
+// o dado novo e ele nunca chegou no banco. Esta é a rede de segurança: se um
 // hook não avisou, o MutationCache avisa.
 const traduzErro = (e: unknown): string => {
   const m = e instanceof Error ? e.message : String(e ?? "");
@@ -143,7 +143,7 @@ const queryClient = new QueryClient({
   }),
   mutationCache: new MutationCache({
     onError: (error, _vars, _ctx, mutation) => {
-      // Se o hook já tem o próprio onError, ele que fale — não damos toast dobrado.
+      // Se o hook já tem o próprio onError, ele que fale não damos toast dobrado.
       if (mutation.options.onError) return;
       const now = Date.now();
       if (now - lastMutationErrorToast < 4000) return;
@@ -241,7 +241,7 @@ const App = () => (
                 <Route path="ideias" element={<ErrorBoundary><Ideias /></ErrorBoundary>} />
                 <Route path="criando" element={<ErrorBoundary><Criando /></ErrorBoundary>} />
                 {/* ═══ TRAVAS DE PLANO ═══
-                    A trava mora AQUI, na rota — não espalhada dentro das páginas.
+                    A trava mora AQUI, na rota não espalhada dentro das páginas.
                     Antes cada tela inventava a sua (três implementações diferentes
                     da mesma regra), e o Cria Estúdio, que gasta crédito pago de
                     geração de imagem, não tinha trava NENHUMA: bastava digitar a

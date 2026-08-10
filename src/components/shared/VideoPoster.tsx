@@ -34,7 +34,7 @@ export function useDriveVideoRatio(item: MediaLike | null): number | null {
  *     testes em src/lib/poster-letterbox.ts. Sem tarja, nada muda.
  *  2. CACHE-BUSTER QUEBRADO: a URL do Drive já tem query (?id=…&sz=w1600); a
  *     retentativa colava "?r=1" no fim e o sz virava "w1600?r=1", fazendo o Drive
- *     devolver um frame de 124px de largura — aquela miniatura borrada.
+ *     devolver um frame de 124px de largura aquela miniatura borrada.
  *  3. Fallback lh3 numa vez só, sem repetir a lógica em cada tela.
  */
 export function VideoPoster({ item, onStatus, className = "" }: {
