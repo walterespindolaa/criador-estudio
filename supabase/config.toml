@@ -90,8 +90,6 @@ project_id = "exuxlwdnkgmhtnwoyvwo"
     verify_jwt = true
   [functions.delete-account]
     verify_jwt = true
-  [functions.google-calendar-sync]
-    verify_jwt = true
   [functions.google-drive-connect]
     verify_jwt = true
   # Lista o conteúdo de uma pasta PÚBLICA do Drive (API key, sem OAuth).
