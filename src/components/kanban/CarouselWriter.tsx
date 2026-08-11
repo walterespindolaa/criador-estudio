@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Sparkles, Loader2, Wand2, RefreshCw, Flame } from "lucide-react";
+import { Sparkles, Loader2, Wand2, RefreshCw, Flame, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -49,6 +49,10 @@ export function CarouselWriter({
   titulo, formato, pilar, sections, onChange, hook, onHook, cta, onCta, unify,
 }: Props) {
   const { profile } = useProfile();
+  // Recolhido por padrao: fechado ocupa so uma linha (cabecalho clicavel). A
+  // pessoa abre quando quiser que a IA escreva. Assim o bloco nao rouba espaco
+  // de quem prefere escrever a mao.
+  const [aberto, setAberto] = useState(false);
   const [angulo, setAngulo] = useState("");
   const [qtd, setQtd] = useState(sections.length || 5);
   const [gerando, setGerando] = useState(false);
@@ -169,21 +173,33 @@ export function CarouselWriter({
 
   return (
     <div data-tour="roteiro-ia" className="rounded-2xl border border-dashed border-primary/30 bg-primary/[0.03] px-3.5 py-3">
-      <div className="flex items-center gap-2 mb-2.5">
+      {/* Cabecalho clicavel: fechado ocupa so uma linha; abre o conteudo (angulo,
+          paginas, "quente" e o botao de escrever) quando a pessoa clica. */}
+      <button
+        type="button"
+        onClick={() => setAberto((v) => !v)}
+        aria-expanded={aberto}
+        className="flex w-full items-center gap-2 text-left"
+      >
         <span className="grid h-7 w-7 shrink-0 place-items-center rounded-xl bg-primary/12 text-primary">
           <Wand2 className="h-3.5 w-3.5" />
         </span>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="font-display text-[13.5px] font-bold text-foreground leading-tight">
-            Não sabe o que escrever em cada {ehReels ? "cena" : "página"}?
+            Não sabe o que escrever? A IA escreve as {palavra} pra você
           </p>
-          <p className="text-[12px] font-body text-muted-foreground leading-snug">
-            A IA escreve as {palavra}, o gancho e o CTA, no tom da sua marca. Você edita depois.
-          </p>
+          {aberto && (
+            <p className="text-[12px] font-body text-muted-foreground leading-snug">
+              A IA escreve as {palavra}, o gancho e o CTA, no tom da sua marca. Você edita depois.
+            </p>
+          )}
         </div>
-      </div>
+        <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", aberto && "rotate-180")} />
+      </button>
 
-      <div className="flex flex-wrap items-end gap-2">
+      {aberto && (
+      <>
+      <div className="mt-2.5 flex flex-wrap items-end gap-2">
         <div className="flex-1 min-w-[180px]">
           <label className="block text-[11px] font-body font-semibold text-muted-foreground mb-1">
             Algum ângulo? (opcional)
@@ -297,6 +313,8 @@ export function CarouselWriter({
       <p className="mt-1.5 text-center text-[11px] font-body text-muted-foreground">
         Consome 1 geração da sua cota. Buscar notícia é de graça.
       </p>
+      </>
+      )}
     </div>
   );
 }

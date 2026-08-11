@@ -245,6 +245,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   const [cta, setCta] = useState("");
   const [scheduledDate, setScheduledDate] = useState("");
   const [scheduledTime, setScheduledTime] = useState("");
+  // Melhores horários pra postar: acessível de forma compacta perto da data (topo),
+  // escondido atrás de um clique pra não ocupar espaço no fluxo.
+  const [showBestTimes, setShowBestTimes] = useState(false);
   const [notes, setNotes] = useState("");
   const [weekNumber, setWeekNumber] = useState<number | null>(null);
   
@@ -1449,27 +1452,30 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                       <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
                         Pilar
                       </Label>
-                      <div className="flex flex-wrap gap-1.5">
-                        {pillars.map((p) => {
-                          const active = pillarId === p.id;
-                          return (
-                            <button
-                              key={p.id}
-                              type="button"
-                              onClick={() => setPillarId(active ? "" : p.id)}
-                              className={cn(
-                                "px-3 py-1.5 rounded-full text-xs font-body font-medium border transition-all whitespace-nowrap",
-                                active
-                                  ? "text-primary-foreground border-transparent shadow-sm"
-                                  : "bg-card text-foreground border-border hover:border-primary/30"
-                              )}
-                              style={active ? { backgroundColor: p.color } : undefined}
-                            >
-                              {p.name}
-                            </button>
-                          );
-                        })}
-                      </div>
+                      {/* Menu compacto (uma linha) no lugar da fileira de pilulas.
+                          A bolinha da cor do pilar vai de prefixo em cada opcao. */}
+                      <Select
+                        value={pillarId || "__none__"}
+                        onValueChange={(v) => setPillarId(v === "__none__" ? "" : v)}
+                      >
+                        <SelectTrigger className="rounded-xl h-10 bg-card">
+                          <SelectValue placeholder="Escolher pilar" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">Sem pilar</SelectItem>
+                          {pillars.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              <span className="flex items-center gap-2">
+                                <span
+                                  className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
+                                  style={{ backgroundColor: p.color }}
+                                />
+                                {p.name}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   )}
 
@@ -1534,6 +1540,54 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                         onChange={(e) => setReferenceLink(e.target.value)}
                         className="rounded-xl h-10 text-sm bg-card"
                       />
+                    </div>
+                  </div>
+
+                  {/* DATA E HORA: compactos e no topo, junto dos detalhes. Antes
+                      moravam num bloco grande so no fim do fluxo (passo 4), forcando
+                      a pessoa a rolar ate embaixo pra definir a data. O widget de
+                      melhores horarios virou um "ver melhores horarios" que expande,
+                      logo abaixo, secundario. */}
+                  <div data-tour="editor-agendamento" className="space-y-2">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80 flex items-center gap-1.5">
+                          <Calendar className="h-3 w-3" /> Data
+                        </Label>
+                        <Input
+                          type="date"
+                          value={scheduledDate}
+                          onChange={(e) => setScheduledDate(e.target.value)}
+                          className="rounded-xl h-10 text-sm w-full min-w-0 px-3 text-left bg-card [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:text-left"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80 flex items-center gap-1.5">
+                          <Clock className="h-3 w-3" /> Hora
+                        </Label>
+                        <Input
+                          type="time"
+                          value={scheduledTime}
+                          onChange={(e) => setScheduledTime(e.target.value)}
+                          className="rounded-xl h-10 text-sm w-full min-w-0 px-3 text-left bg-card [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:text-left"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setShowBestTimes((v) => !v)}
+                        className="inline-flex items-center gap-1.5 text-[11px] font-body font-semibold text-primary hover:underline"
+                      >
+                        <Sparkles className="h-3.5 w-3.5" />
+                        {showBestTimes ? "Ocultar melhores horários" : "Ver melhores horários pra postar"}
+                        <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showBestTimes && "rotate-180")} />
+                      </button>
+                      {showBestTimes && (
+                        <div className="mt-2">
+                          <BestTimesHint platform={platform} niche={profile?.niche} onPick={setScheduledTime} />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1833,55 +1887,52 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   </div>
                 )}
 
-                {/* Ajuda da IA: tudo o que antes ficava no "Content Assistant" da
-                    coluna da esquerda agora mora AQUI, colado na legenda. Um lugar so. */}
-                <div data-tour="editor-ia" className="rounded-2xl border border-primary/15 bg-primary/5 p-3 sm:p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-pink-400 flex items-center justify-center shadow-sm">
-                      <Sparkles className="h-3.5 w-3.5 text-white" />
-                    </div>
-                    <span className="text-sm font-display font-semibold">Ajuda da IA</span>
-                    <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold">IA</span>
-                  </div>
+                {/* Ajuda da IA: recolhida por padrao pra deixar menos coisa a mostra.
+                    Abre no clique com o mesmo padrao dos blocos Tarefas/Notas/Refs.
+                    Fechada ocupa uma linha; o gerar/hashtags continua funcionando aberto. */}
+                <div data-tour="editor-ia">
+                  <Recolhivel icon={Sparkles} titulo="Ajuda da IA: gerar legenda, escolher tom, hashtags">
+                    <div className="space-y-3 pt-1">
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] text-muted-foreground">Tom</Label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {TONE_OPTIONS.map((t) => (
+                            <button key={t.key} type="button" onClick={() => setAiTone(t.key)} className={pillClass(aiTone === t.key)}>
+                              {t.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] text-muted-foreground">Tom</Label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {TONE_OPTIONS.map((t) => (
-                        <button key={t.key} type="button" onClick={() => setAiTone(t.key)} className={pillClass(aiTone === t.key)}>
-                          {t.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] text-muted-foreground">Tamanho</Label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {LENGTH_OPTIONS.map((l) => (
+                            <button key={l.key} type="button" onClick={() => setAiLength(l.key)} className={pillClass(aiLength === l.key)}>
+                              {l.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] text-muted-foreground">Tamanho</Label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {LENGTH_OPTIONS.map((l) => (
-                        <button key={l.key} type="button" onClick={() => setAiLength(l.key)} className={pillClass(aiLength === l.key)}>
-                          {l.label}
-                        </button>
-                      ))}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <Button variant="hero" onClick={handleGenerateCaption} disabled={!title || aiLoading} className="w-full">
+                          {aiLoading ? (
+                            <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Gerando legenda...</>
+                          ) : (
+                            <><Sparkles className="h-4 w-4 mr-2" /> Gerar legenda</>
+                          )}
+                        </Button>
+                        <Button variant="secondary" onClick={handleSuggestHashtags} disabled={!title || hashLoading} className="w-full">
+                          {hashLoading ? (
+                            <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sugerindo...</>
+                          ) : (
+                            <><Hash className="h-4 w-4 mr-2" /> Sugerir hashtags</>
+                          )}
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <Button variant="hero" onClick={handleGenerateCaption} disabled={!title || aiLoading} className="w-full">
-                      {aiLoading ? (
-                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Gerando legenda...</>
-                      ) : (
-                        <><Sparkles className="h-4 w-4 mr-2" /> Gerar legenda</>
-                      )}
-                    </Button>
-                    <Button variant="secondary" onClick={handleSuggestHashtags} disabled={!title || hashLoading} className="w-full">
-                      {hashLoading ? (
-                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sugerindo...</>
-                      ) : (
-                        <><Hash className="h-4 w-4 mr-2" /> Sugerir hashtags</>
-                      )}
-                    </Button>
-                  </div>
+                  </Recolhivel>
                 </div>
 
                 {aiCaption && (
@@ -2307,33 +2358,10 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 </div>
               </section>
 
-              {/* 4. QUANDO PUBLICAR */}
-              <section data-tour="editor-agendamento" className="rounded-3xl border border-border bg-card p-4 sm:p-5 space-y-4">
-                <BlocoCabecalho numero={4} titulo="Quando publicar" subtitulo="Data, horário e o melhor horário pra postar." />
-                <div className="flex items-end gap-2">
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <Label className="text-[11px] text-muted-foreground flex items-center h-4">Data</Label>
-                    <Input
-                      type="date"
-                      value={scheduledDate}
-                      onChange={(e) => setScheduledDate(e.target.value)}
-                      className="rounded-xl h-10 text-sm w-full min-w-0 px-3 text-left [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:text-left"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <Label className="text-[11px] text-muted-foreground flex items-center gap-1 h-4">
-                      <Clock className="h-3 w-3" /> Hora
-                    </Label>
-                    <Input
-                      type="time"
-                      value={scheduledTime}
-                      onChange={(e) => setScheduledTime(e.target.value)}
-                      className="rounded-xl h-10 text-sm w-full min-w-0 px-3 text-left [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:text-left"
-                    />
-                  </div>
-                </div>
-                <BestTimesHint platform={platform} niche={profile?.niche} onPick={setScheduledTime} />
-              </section>
+              {/* O antigo passo 4 "Quando publicar" saiu daqui: data e hora agora
+                  vivem compactos no topo (bloco de detalhes do passo 1), e o widget
+                  de melhores horarios virou um "ver melhores horarios" ao lado da
+                  data. Assim a pessoa define a data sem rolar ate o fim do fluxo. */}
 
               {/* MAIS: organizacao interna (secundario), recolhido pra nao poluir o fluxo. */}
               <div className="space-y-3">
