@@ -91,7 +91,7 @@ import { CarouselWriter } from "./CarouselWriter";
 import { EmojiPicker } from "@/components/shared/EmojiPicker";
 import { RepurposeSheet } from "./RepurposeSheet";
 import { BestTimesHint } from "@/components/shared/BestTimesHint";
-import { PostPreviewModal } from "./PostPreviewModal";
+import { PostPreviewModal, PostPreviewContent } from "./PostPreviewModal";
 import { PublishButton } from "./PublishButton";
 import { useProfile } from "@/hooks/useProfile";
 import { usePostPreviewIdentity } from "@/hooks/usePostPreviewIdentity";
@@ -1100,6 +1100,20 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   const mediaList: DriveRef[] = isNew ? pendingDriveFiles : driveMedia;
   const activeUpload = uploads.find((u) => u.status === "uploading") ?? null;
 
+  // Mídia da PRÉVIA (mockup do feed/Instagram). Derivada da mídia primária do post,
+  // reaproveitada tanto na prévia fixa do desktop quanto no modal fullscreen do mobile.
+  const previewMediaUrl = mediaList.length > 0
+    ? (() => {
+        const first = mediaList[0];
+        const fid = first.external_file_id || first.id;
+        if (first.file_type?.includes("video")) {
+          return first.view_url || `https://drive.google.com/uc?id=${encodeURIComponent(fid)}`;
+        }
+        return first.thumbnail_url || first.view_url || `https://lh3.googleusercontent.com/d/${encodeURIComponent(fid)}=w800`;
+      })()
+    : undefined;
+  const previewMediaType = mediaList.length > 0 ? (mediaList[0].file_type?.includes("video") ? "video" : "image") : "image";
+
   const handleRemoveAllMedia = () => {
     // removeDriveRef já cuida do lock + cleanup dos dois arrays.
     if (isNew) {
@@ -1331,13 +1345,18 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
             </div>
           </DialogHeader>
 
-          {/* CORPO: FLUXO VERTICAL NUMERADO
-              Uma tela so, de cima pra baixo, na ordem que a cabeca pensa:
-              1) o conteudo, 2) a legenda, 3) a arte, 4) quando publicar.
-              Leigo e conduzido pela sequencia; experiente rola direto. No celular
-              vira uma coluna; no desktop o conteudo fica centralizado e legivel. */}
+          {/* CORPO: FLUXO NUMERADO + PRÉVIA
+              No celular: uma coluna só, de cima pra baixo, na ordem que a cabeça
+              pensa (1 conteúdo, 2 legenda, 3 arte, 4 quando publicar); a prévia
+              abre pelo botão "Prévia" do topo, em tela cheia.
+              No desktop (lg pra cima): duas colunas. À esquerda (~60%) o fluxo
+              numerado rolável; à direita (~40%) a prévia do post fixa (sticky),
+              sempre visível enquanto a pessoa escreve. */}
           <div ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden bg-muted/20">
-            <div className="mx-auto w-full max-w-3xl px-3 sm:px-6 py-4 sm:py-6 space-y-4 pb-[calc(3rem+env(safe-area-inset-bottom))]">
+            <div className="mx-auto w-full max-w-3xl lg:max-w-none px-3 sm:px-6 py-4 sm:py-6 pb-[calc(3rem+env(safe-area-inset-bottom))] lg:grid lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-6 lg:items-start">
+
+              {/* COLUNA ESQUERDA: o fluxo numerado (no mobile, a coluna única). */}
+              <div className="space-y-4 min-w-0">
 
               {/* 1. O CONTEUDO DO POST */}
               <section ref={conteudoRef} className="scroll-mt-4 rounded-3xl border border-border bg-card p-4 sm:p-5 space-y-4">
@@ -2412,6 +2431,33 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   </div>
                 </section>
               )}
+              </div>
+              {/* FIM da coluna esquerda */}
+
+              {/* COLUNA DIREITA (só desktop): a PRÉVIA do post, fixa enquanto rola.
+                  No mobile ela não aparece aqui: fica no botão "Prévia" do topo. */}
+              <aside className="hidden lg:block lg:sticky lg:top-4 self-start">
+                <div className="mx-auto w-full max-w-[380px] rounded-3xl border border-border bg-background overflow-hidden shadow-sm">
+                  <div className="px-3 py-2 border-b border-border bg-card/50 flex items-center gap-2">
+                    <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-xs font-display font-semibold text-foreground">Prévia do post</span>
+                  </div>
+                  <PostPreviewContent
+                    key={platform}
+                    title={title}
+                    hook={hook}
+                    caption={caption}
+                    platform={platform}
+                    format={format}
+                    userName={previewIdentity.name}
+                    userHandle={previewIdentity.handle}
+                    avatarUrl={previewIdentity.avatarUrl}
+                    mediaUrl={previewMediaUrl}
+                    mediaType={previewMediaType}
+                    sections={sections}
+                  />
+                </div>
+              </aside>
             </div>
           </div>
         </DialogContent>
@@ -2436,19 +2482,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
         userName={previewIdentity.name}
         userHandle={previewIdentity.handle}
         avatarUrl={previewIdentity.avatarUrl}
-        mediaUrl={
-          mediaList.length > 0
-            ? (() => {
-                const first = mediaList[0];
-                const fid = first.external_file_id || first.id;
-                if (first.file_type?.includes("video")) {
-                  return first.view_url || `https://drive.google.com/uc?id=${encodeURIComponent(fid)}`;
-                }
-                return first.thumbnail_url || first.view_url || `https://lh3.googleusercontent.com/d/${encodeURIComponent(fid)}=w800`;
-              })()
-            : undefined
-        }
-        mediaType={mediaList.length > 0 ? (mediaList[0].file_type?.includes("video") ? "video" : "image") : "image"}
+        mediaUrl={previewMediaUrl}
+        mediaType={previewMediaType}
         sections={sections}
       />
       <div style={{ position: "fixed", left: "-9999px", top: 0, zIndex: -1 }}>

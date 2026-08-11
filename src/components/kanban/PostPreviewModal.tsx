@@ -12,9 +12,7 @@ interface SectionData {
   driveThumbnail?: string | null;
 }
 
-interface PostPreviewProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+interface PostPreviewContentProps {
   title: string;
   hook: string;
   caption: string;
@@ -31,7 +29,14 @@ interface PostPreviewProps {
   sections?: SectionData[];
 }
 
-export function PostPreviewModal({ open, onOpenChange, title, hook, caption, platform, format, userName, userHandle, avatarUrl, mediaUrl, mediaType, media, thumbnail, coverImage, sections }: PostPreviewProps) {
+interface PostPreviewProps extends PostPreviewContentProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+// Conteudo puro da previa (sem Dialog), reutilizavel: vive no modal fullscreen do
+// mobile E na coluna direita fixa do desktop dentro do PostEditor.
+export function PostPreviewContent({ title, hook, caption, platform, format, userName, userHandle, avatarUrl, mediaUrl, mediaType, media, thumbnail, coverImage, sections }: PostPreviewContentProps) {
   const initials = (userName || "C")[0].toUpperCase();
   const [igTab, setIgTab] = useState<"feed" | "reels">("feed");
   const [ytTab, setYtTab] = useState<"thumbnail" | "shorts">("thumbnail");
@@ -48,7 +53,7 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
     : null;
   const isPlayableVideo = mediaType === "video" && !isDriveVideo && !isBunnyVideo;
 
-  useEffect(() => { if (open) setCarouselIdx(0); }, [open, format]);
+  useEffect(() => { setCarouselIdx(0); }, [format]);
 
   const AvatarCircle = ({ size = 32, border = false }: { size?: number; border?: boolean }) => (
     <div
@@ -249,13 +254,11 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden rounded-3xl border-0 shadow-2xl bg-background">
-        <Tabs defaultValue={platform || "instagram"} className="w-full">
+    <Tabs defaultValue={platform || "instagram"} className="w-full">
           <TabsList className="w-full rounded-none border-b border-border bg-card/80 backdrop-blur grid grid-cols-3 h-11">
             {["instagram", "tiktok", "youtube"].map(p => (
               <TabsTrigger key={p} value={p} className="font-body text-[11px] gap-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-none">
-                <PlatformIcon platform={p as any} size="sm" />
+                <PlatformIcon platform={p} size="sm" />
                 <span className="capitalize">{p === "youtube" ? "YT" : p === "instagram" ? "IG" : "TK"}</span>
               </TabsTrigger>
             ))}
@@ -369,7 +372,16 @@ export function PostPreviewModal({ open, onOpenChange, title, hook, caption, pla
               <VerticalPreview variant="shorts" />
             )}
           </TabsContent>
-        </Tabs>
+    </Tabs>
+  );
+}
+
+// Wrapper de dialog (mobile / botao "Previa"): mantem a mesma API de antes.
+export function PostPreviewModal({ open, onOpenChange, ...rest }: PostPreviewProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden rounded-3xl border-0 shadow-2xl bg-background">
+        <PostPreviewContent {...rest} />
       </DialogContent>
     </Dialog>
   );
