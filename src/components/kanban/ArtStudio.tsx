@@ -178,11 +178,12 @@ export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar
           </>
         ) : (
           <>
-            <b className="font-display">Vou criar a partir do título.</b>{" "}
-            Você ainda não escreveu o conteúdo das páginas, dá pra gerar assim, mas sai mais raso.
-            {/* A saída é UM CLIQUE daqui, não "vá procurar na aba Roteiro". Mandar
-                a pessoa achar sozinha o recurso que resolve o problema que a
-                gente acabou de apontar é jogar a culpa nela. */}
+            <b className="font-display">O prompt vai sair só do título.</b>{" "}
+            Você ainda não escreveu o conteúdo dos slides, dá pra gerar assim, mas fica raso.
+            {/* A saída é UM CLIQUE daqui: sobe pro passo 1 (o conteúdo do post),
+                onde ela escreve os slides. Mandar a pessoa procurar sozinha o
+                recurso que resolve o problema que a gente apontou é jogar a
+                culpa nela. */}
             {onIrParaRoteiro && (
               <>
                 {" "}
@@ -191,9 +192,9 @@ export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar
                   onClick={onIrParaRoteiro}
                   className="font-display font-bold text-primary underline underline-offset-2"
                 >
-                  Escrever as páginas com IA →
+                  Escrever o conteúdo primeiro ↑
                 </button>{" "}
-                (fica na aba Roteiro, leva 10 segundos, e o prompt sai muito melhor depois).
+                (sobe pro passo 1, leva 10 segundos, e o prompt sai muito melhor depois).
               </>
             )}
           </>
@@ -225,7 +226,9 @@ export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar
         data-tour="estudio-gerar"
         className={cn(
           "flex flex-col gap-1.5",
-          "md:static md:bg-transparent md:border-0 md:p-0",
+          // No desktop volta a ser um bloco normal dentro do card: zera a margem
+          // negativa e o padding da barra, senão o botao vaza pra fora da borda.
+          "md:static md:mx-0 md:bg-transparent md:border-0 md:p-0",
           "sticky bottom-0 -mx-4 border-t border-border bg-background px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:-mx-6 sm:px-6",
         )}
       >
