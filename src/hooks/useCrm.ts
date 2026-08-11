@@ -184,8 +184,22 @@ export function useDeleteCrmClient() {
       // Soft-delete: vai pra Lixeira (recuperável por 30 dias).
       const { error } = await sbFrom("crm_clients").update({ deleted_at: new Date().toISOString() } as never).eq("id", id);
       if (error) throw error;
+      // Limpa a cobrança NÃO realizada do cliente em fin_monthly (mensalidades
+      // pendentes/puladas). Sem isto, a instância do mês virava ÓRFÃ: como o
+      // soft-delete não dispara o "on delete cascade" da FK, a linha ficava em
+      // fin_monthly apontando pra um cliente que sumiu da carteira, aparecendo no
+      // Caixa como "Cliente" R$ x, atrasada e sem como remover. NÃO apagamos a
+      // instância 'pago': ela já virou receita real em fin_records (histórico
+      // financeiro de verdade). Feito no hook, e não em trigger, pra a regra viver
+      // junto do soft-delete (um lugar só, sem novo objeto de banco pra manter).
+      const { error: e2 } = await sbFrom("fin_monthly").delete().eq("crm_client_id", id).neq("status", "pago");
+      if (e2) throw e2;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["crm-clients", agencyOwnerId] }); toast.success("Cliente movido pra Lixeira (recuperável por 30 dias)."); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["crm-clients", agencyOwnerId] });
+      qc.invalidateQueries({ queryKey: ["fin-monthly", agencyOwnerId] });
+      toast.success("Cliente movido pra Lixeira (recuperável por 30 dias).");
+    },
     onError: () => toast.error("Erro ao excluir."),
   });
 }

@@ -204,6 +204,20 @@ function CaixaInner() {
     [billableMonthlies],
   );
 
+  // ── Mensalidades ÓRFÃS: some da lista as instâncias de fin_monthly cujo cliente
+  // foi EXCLUÍDO do CRM (soft delete). clients (useCrmClients) já filtra deleted_at,
+  // então "tem crm_client_id mas não está na carteira viva" = cliente excluído ou
+  // inexistente: uma mensalidade sem dono, que não pode aparecer nem contar. Cliente
+  // ENCERRADO continua existindo na carteira (só sai do MRR via mensalidadeAtivaNoMes),
+  // então NÃO cai aqui, esse caso legítimo segue visível. Instância sem cliente
+  // vinculado (crm_client_id null) é mantida. Guarda clients.length > 0 pra não
+  // esconder tudo enquanto a carteira ainda carrega.
+  const liveClientIds = useMemo(() => new Set(clients.map((c) => c.id)), [clients]);
+  const visibleMonthlies = useMemo(
+    () => monthlies.filter((m) => !m.crm_client_id || clients.length === 0 || liveClientIds.has(m.crm_client_id)),
+    [monthlies, liveClientIds, clients.length],
+  );
+
   // Despesas: separo o que já saiu do que ainda vai sair, a pessoa precisa ver as duas.
   const despesasPagas = monthCtx.filter((r) => r.type === "despesa" && r.status === "pago").reduce((s, r) => s + Number(r.amount), 0);
   const aPagar = despesas - despesasPagas;
@@ -509,7 +523,7 @@ function CaixaInner() {
       {/* ═══════ CALENDÁRIO ═══════ */}
       {show("calendario") && (
         <CalendarioFinanceiro
-          monthlies={isPj ? monthlies : []}
+          monthlies={isPj ? visibleMonthlies : []}
           billablePendingIds={isPj ? billablePendingIds : new Set()}
           records={records}
           recurring={recurring}
@@ -532,7 +546,7 @@ function CaixaInner() {
       {/* ═══════ RELATÓRIOS ═══════ */}
       {show("relatorios") && (
         <>
-          <RelatorioPeriodo records={records} ctx={ctx} clients={clients} monthlies={monthlies} mrr={mrr} fin={fin} />
+          <RelatorioPeriodo records={records} ctx={ctx} clients={clients} monthlies={visibleMonthlies} mrr={mrr} fin={fin} />
           <CashflowChart records={records} ctx={ctx} ym={ym} />
         </>
       )}
@@ -551,7 +565,7 @@ function CaixaInner() {
         </div>
       )}
 
-      {showMensContent && monthlies.length === 0 && (
+      {showMensContent && visibleMonthlies.length === 0 && (
         <div className="rounded-2xl border border-dashed border-border p-10 text-center">
           <p className="text-sm font-body text-foreground font-medium">Nenhuma mensalidade neste mês</p>
           <p className="text-xs text-muted-foreground font-body mt-1">
@@ -559,14 +573,14 @@ function CaixaInner() {
           </p>
         </div>
       )}
-      {showMensContent && monthlies.length > 0 && (
+      {showMensContent && visibleMonthlies.length > 0 && (
         <div className="rounded-2xl border border-border bg-card p-4 mb-5">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <h3 className="text-sm font-display font-bold text-foreground">Mensalidades do mês</h3>
             <span className="text-[11px] text-muted-foreground font-body">Receita mensal: <span className="font-bold text-foreground">{brl(mrr)}</span></span>
           </div>
           <div className="space-y-1">
-            {monthlies.map((m) => {
+            {visibleMonthlies.map((m) => {
               const nome = clientName(m.crm_client_id) ?? "Cliente";
               const venc = m.due_date.split("-").reverse().slice(0, 2).join("/");
               const atrasado = m.status === "pendente" && m.due_date < todayISO;
