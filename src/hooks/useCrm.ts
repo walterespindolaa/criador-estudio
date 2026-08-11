@@ -38,6 +38,12 @@ export type CrmClient = {
   cria_owner_id: string | null;
   crm_lead_id: string | null;
   name: string;
+  // Apelido do cliente definido pelo GESTOR (só ele vê). Tem prioridade sobre o
+  // nome ao vivo do Cria e sobre `name` no painel do gestor. NULL = usa o nome ao
+  // vivo do Cria. Coluna nova (ver 20260811000002_apelido_do_cliente.sql). Fica
+  // opcional no tipo pra leitura defensiva: antes da migration rodar, o select("*")
+  // não traz a coluna e o valor cai como undefined (fallback), sem quebrar nada.
+  display_name?: string | null;
   logo: string | null;
   color: string | null;
   segment: string | null;

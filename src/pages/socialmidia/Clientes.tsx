@@ -5,6 +5,7 @@ import { Plus, Users, Loader2, Link2, Search, Send, Upload, FolderOpen, Download
 import { toast } from "sonner";
 import { useCrmClients, useCreateCrmClient, useUploadCrmAsset, useImportCriaClients, type CrmClient } from "@/hooks/useCrm";
 import { clienteInativo } from "@/lib/cliente-status";
+import { nomeExibidoCliente } from "@/lib/cliente-nome";
 import { useExternalClients, type ExternalClient } from "@/hooks/useCriaPost";
 import { useCriaClientProfiles } from "@/hooks/useManagerClientCria";
 import { useActiveAccount } from "@/contexts/AccountContext";
@@ -44,12 +45,12 @@ export default function Clientes() {
     const criaAvatar = c.cria_owner_id ? criaProfiles?.[c.cria_owner_id]?.avatar_url : null;
     return criaAvatar ?? c.logo;
   };
-  // Nome sempre atual: quando o cliente tem conta CRIA vinculada, mostra o nome AO VIVO
-  // do profile dele (via manager_clients_cria_profiles), nao a copia estagnada em
-  // crm_clients.name. Cliente sem CRIA continua com o nome editavel do CRM.
+  // Nome exibido pro gestor: apelido (display_name) > nome AO VIVO do Cria > name do CRM.
+  // Mesma regra do cockpit e da agenda (src/lib/cliente-nome.ts). O apelido é só do
+  // gestor; sem ele, cai no nome ao vivo do profile do cliente.
   const nameOf = (c: CrmClient) => {
     const live = c.cria_owner_id ? criaProfiles?.[c.cria_owner_id]?.name?.trim() : null;
-    return (live || c.name) ?? null;
+    return nomeExibidoCliente(c, live) || null;
   };
 
   const [filter, setFilter] = useState<"todos" | "cria" | "link">("todos");

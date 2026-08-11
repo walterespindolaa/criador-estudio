@@ -135,6 +135,7 @@ type CriaColor2 = CriaColor;
 import { formatBRL } from "@/lib/money";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { clienteInativo } from "@/lib/cliente-status";
+import { nomeExibidoCliente } from "@/lib/cliente-nome";
 import { confirmar } from "@/components/shared/Confirm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { MoneyInput } from "@/components/shared/MoneyInput";
@@ -193,7 +194,9 @@ export default function ClienteHub() {
   // dele (nao a copia estagnada em crm_clients.name, que so era atualizada no sync manual
   // da ficha do CRM). Cliente sem CRIA segue com o nome editavel do CRM.
   const criaLiveName = client?.cria_owner_id ? (criaProfiles?.[client.cria_owner_id]?.name?.trim() || null) : null;
-  const displayName = criaLiveName ?? client?.name ?? "";
+  // Precedência: apelido do gestor (display_name) > nome ao vivo do Cria > name do CRM.
+  // Regra única em src/lib/cliente-nome.ts (a mesma da lista de Clientes e da agenda).
+  const displayName = nomeExibidoCliente(client, criaLiveName);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const uploadAsset = useUploadCrmAsset();
   const updateClient = useUpdateCrmClient();
@@ -225,6 +228,18 @@ export default function ClienteHub() {
   const [copying, setCopying] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [colorOpen, setColorOpen] = useState(false);
+  // APELIDO editável no cabeçalho: o nome que SÓ o gestor vê (crm_clients.display_name).
+  // Vazio = volta a mostrar o nome ao vivo do Cria. Não muda a conta do cliente.
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const startEditName = () => { setNameDraft(client?.display_name?.trim() ?? ""); setEditingName(true); };
+  const saveName = async () => {
+    if (!client) return;
+    const v = nameDraft.trim();
+    setEditingName(false);
+    await updateClient.mutateAsync({ id: client.id, display_name: v || null });
+    toast.success(v ? "Apelido salvo. Só você vê." : "Apelido removido. Voltou ao nome do Cria.");
+  };
   const setColor = async (hex: string | null) => {
     if (!client) return;
     setColorOpen(false);
@@ -367,7 +382,41 @@ export default function ClienteHub() {
             <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={onPickAvatar} />
             <ImageCropModal open={!!cropSrc} onOpenChange={(o) => { if (!o) setCropSrc(null); }} imageSrc={cropSrc ?? ""} onCropComplete={onCroppedAvatar} aspectRatio={1} />
             <div className="min-w-0 flex-1">
-              <h1 className="text-xl sm:text-2xl font-display font-extrabold text-foreground tracking-tight truncate">{displayName}</h1>
+              {/* NOME: apelido do gestor editável inline. Clicar no lápis (ou no nome)
+                  abre um campo pra digitar o nome que SÓ o gestor vê. Salva em
+                  crm_clients.display_name. Limpar volta pro nome ao vivo do Cria. */}
+              {editingName ? (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      autoFocus
+                      value={nameDraft}
+                      onChange={(e) => setNameDraft(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") void saveName(); if (e.key === "Escape") setEditingName(false); }}
+                      placeholder={criaLiveName ?? client?.name ?? "Nome do cliente"}
+                      aria-label="Apelido do cliente (só você vê)"
+                      className="text-xl sm:text-2xl font-display font-extrabold text-foreground tracking-tight bg-transparent border-b-2 border-primary/40 focus:border-primary outline-none min-w-0 flex-1 pb-0.5"
+                    />
+                    <Button size="sm" className="h-8 w-8 p-0 shrink-0" onClick={() => void saveName()} title="Salvar apelido" aria-label="Salvar apelido"><Check className="h-4 w-4" /></Button>
+                    <Button size="sm" variant="ghost" className="h-8 px-2 shrink-0" onClick={() => setEditingName(false)} title="Cancelar">Cancelar</Button>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground font-body">
+                    Nome que só você vê, não muda a conta do cliente.
+                    {(client?.display_name?.trim() || criaLiveName) && (
+                      <button type="button" onClick={() => { setNameDraft(""); void saveName(); }} className="ml-1 text-primary hover:underline font-semibold">
+                        Usar o nome do Cria
+                      </button>
+                    )}
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <h1 className="text-xl sm:text-2xl font-display font-extrabold text-foreground tracking-tight truncate">{displayName}</h1>
+                  <button type="button" onClick={startEditName} title="Renomear só no seu painel (não muda a conta do cliente)" aria-label="Renomear cliente no seu painel" className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
               <p className="text-sm text-muted-foreground font-body truncate">
                 {client.instagram ? `@${client.instagram.replace(/^@/, "")}` : "sem @"}{client.cria_owner_id ? " · usa o Cria" : " · aprova por link"}
               </p>

@@ -32,6 +32,7 @@ import { RelatorioProdutividadeDialog } from "@/components/accounts/RelatorioPro
 import { isDriveMedia, isDriveUrl, isVideoMedia, getThumbnailUrl, getDriveImageFallbackUrl, downloadMediaFile, mediaDownloadName } from "@/lib/driveMedia";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { clienteInativo } from "@/lib/cliente-status";
+import { nomeExibidoCliente } from "@/lib/cliente-nome";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { parseRefLinks, refLinkHref } from "@/lib/refLinks";
 // Faixas do dia (manhã/tarde/noite). AS JANELAS DE HORÁRIO MORAM SÓ LÁ.
@@ -380,7 +381,16 @@ export default function AgendaCriacao() {
   const extLiveName = (e: ExternalClient) => {
     const crm = e.crm_client_id ? crmById.get(e.crm_client_id) : null;
     const live = crm?.cria_owner_id ? criaProfiles?.[crm.cria_owner_id]?.name?.trim() : null;
-    return live || e.name;
+    // Vinculado ao CRM: apelido do gestor > nome ao vivo do Cria > name do CRM.
+    // Sem vínculo, cai no nome do próprio external.
+    if (crm) return nomeExibidoCliente(crm, live);
+    return e.name;
+  };
+  // Nome exibido de um cliente do CRM na agenda (mesma regra do cockpit/lista):
+  // apelido do gestor > nome ao vivo do Cria > name do CRM.
+  const crmClientName = (c: { id: string; name: string; display_name?: string | null; cria_owner_id: string | null }) => {
+    const live = c.cria_owner_id ? criaProfiles?.[c.cria_owner_id]?.name?.trim() : null;
+    return nomeExibidoCliente(c, live);
   };
 
   // Filtro de cliente vale pra TODOS os tipos da agenda. Só os posts guardam
@@ -558,7 +568,10 @@ export default function AgendaCriacao() {
   const criaLinks = useMemo<ClientCriaLink[]>(() =>
     clients
       .filter((c) => !!c.cria_owner_id)
-      .map((c) => ({ criaOwnerId: c.cria_owner_id!, crmClientId: c.id, name: c.name, color: c.color })),
+      .map((c) => ({ criaOwnerId: c.cria_owner_id!, crmClientId: c.id, name: crmClientName(c), color: c.color })),
+    // crmClientName só lê criaProfiles pra resolver o nome exibido (label); o
+    // vínculo (owner/crm/cor) que alimenta a query depende mesmo é de `clients`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [clients]);
   const { data: clientCriaPosts = [] } = useClientCriaAgendaPosts(criaLinks, from, to);
   // Posts do Cria do cliente por dia (aplicando o mesmo filtro de cliente da agenda).
@@ -703,7 +716,7 @@ export default function AgendaCriacao() {
         const casa = alvo === mmdd || (alvo === "02-29" && mmdd === "02-28" && !bissexto);
         if (!casa) continue;
         if (!clientMatches(c.id, c.name)) continue;
-        (m.get(iso) ?? m.set(iso, []).get(iso)!).push({ clientId: c.id, nome: c.name, cor: c.color });
+        (m.get(iso) ?? m.set(iso, []).get(iso)!).push({ clientId: c.id, nome: crmClientName(c), cor: c.color });
       }
     }
     return m;
@@ -1528,14 +1541,14 @@ export default function AgendaCriacao() {
   );
 }
 
-type Client = { id: string; name: string };
+type Client = { id: string; name: string; display_name?: string | null };
 
 function ClientPicker({ clients, crm, name, onCrm, onName }: { clients: Client[]; crm: string | null; name: string; onCrm: (v: string | null) => void; onName: (v: string) => void }) {
   return (
     <>
       <select value={crm ?? ""} onChange={(e) => onCrm(e.target.value || null)} className="w-full h-10 rounded-xl border border-border bg-card px-3 text-sm font-body">
         <option value="">Cliente do CRM</option>
-        {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        {clients.map((c) => <option key={c.id} value={c.id}>{nomeExibidoCliente(c)}</option>)}
       </select>
       {!crm && <Input value={name} onChange={(e) => onName(e.target.value)} placeholder="Ou nome livre" className="mt-2" />}
     </>
@@ -1823,7 +1836,7 @@ function TaskDialog({ task, clients, onClose, onOpenCrm, onSave, onDelete }: {
                 <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Cliente</p>
                 <select value={clientId ?? ""} onChange={(e) => setClientId(e.target.value || null)} className="w-full h-10 rounded-xl border border-border bg-card px-3 text-sm font-body">
                   <option value="">Sem cliente</option>
-                  {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {clients.map((c) => <option key={c.id} value={c.id}>{nomeExibidoCliente(c)}</option>)}
                 </select>
               </div>
             )}
