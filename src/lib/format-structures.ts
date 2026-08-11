@@ -53,7 +53,7 @@ export const FORMAT_STRUCTURES: Record<string, FormatStructure> = {
       // era so o "CTA (ultimo slide)"; agora guarda os slides do meio + o CTA
       // do ultimo, tudo num campo so (o Walter nao quer separar slide a slide,
       // igual e no Cria de social midia). Nenhuma coluna nova no banco.
-      { key: "cta", label: "Desenvolvimento", placeholder: "Os slides do meio e o CTA do último, tudo aqui. Um slide por linha ou como preferir.", rows: 8, icon: "PenLine" },
+      { key: "cta", label: "Conteúdo dos slides", placeholder: "Escreva aqui o conteúdo dos slides: o desenvolvimento (um slide por linha ou parágrafo) e, no fim, o CTA do último slide. Tudo num lugar só.", rows: 8, icon: "PenLine" },
       { key: "caption", label: "Legenda", placeholder: "Texto para o feed com CTA para salvar...", rows: 3, icon: "MessageSquare" },
     ],
     hasDynamicSections: true,

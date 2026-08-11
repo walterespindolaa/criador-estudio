@@ -1,4 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
+import {
+  DragDropContext, Droppable, Draggable,
+  type DropResult, type DraggableProvidedDragHandleProps,
+} from "@hello-pangea/dnd";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,7 +16,7 @@ import {
   Layers, Type, Radio, MousePointerClick, Link as LinkIcon, Download, BookOpen, CircleHelp,
   Loader2, Hash, Copy, Repeat2, Recycle, FileText, ListChecks, Calendar, ChevronDown,
   RefreshCw, Minus, Plus, SmilePlus, Briefcase, StickyNote,
-  
+  GripVertical,
   Play, Video, ExternalLink,
 } from "lucide-react";
 import { useTour } from "@/components/tour/TourProvider";
@@ -343,7 +348,10 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
       .from("external_media_refs")
       .select("id, external_file_id, file_name, file_type, thumbnail_url, view_url, provider")
       .eq("post_id", postId)
-      .order("created_at");
+      // Ordem do carrossel: a `position` gravada no reorder manda; quem nunca
+      // foi reordenado (position null) cai pro created_at, ordem de chegada.
+      .order("position", { ascending: true, nullsFirst: true })
+      .order("created_at", { ascending: true });
     setDriveMedia((data as DriveRef[]) || []);
   }, []);
 
@@ -936,6 +944,15 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
           .from("external_media_refs")
           .update({ post_id: newPostId })
           .in("id", allPendingIds);
+        // Grava a ordem do carrossel (posição) na ordem em que a tira ficou,
+        // pra o reorder feito antes do primeiro save sobreviver ao recarregar.
+        await Promise.all(
+          driveIds.map((id, idx) =>
+            id.startsWith("temp-")
+              ? Promise.resolve()
+              : supabase.from("external_media_refs").update({ position: idx }).eq("id", id),
+          ),
+        );
         setPendingDriveFiles([]);
         setPendingSectionRefIds([]);
       }
@@ -1113,6 +1130,29 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
       })()
     : undefined;
   const previewMediaType = mediaList.length > 0 ? (mediaList[0].file_type?.includes("video") ? "video" : "image") : "image";
+
+  // Reordena a mídia (carrossel): a ordem da tira = a ordem dos slides.
+  // Atualiza o estado local na hora e, no post já salvo, grava a nova `position`
+  // em cada ref pra ordem sobreviver ao recarregar. No post novo, a ordem do
+  // array de pendências já basta (o backfill do save mantém essa ordem).
+  const reorderMedia = useCallback((orderedIds: string[]) => {
+    const applyOrder = (arr: DriveRef[]) => {
+      const byId = new Map(arr.map((m) => [m.id, m]));
+      const next = orderedIds.map((id) => byId.get(id)).filter(Boolean) as DriveRef[];
+      // Preserva qualquer item que por acaso não esteja na lista de ids (segurança).
+      for (const m of arr) if (!orderedIds.includes(m.id)) next.push(m);
+      return next;
+    };
+    if (isNew) {
+      setPendingDriveFiles((prev) => applyOrder(prev));
+    } else {
+      setDriveMedia((prev) => applyOrder(prev));
+      orderedIds.forEach((id, idx) => {
+        if (id.startsWith("temp-")) return;
+        void supabase.from("external_media_refs").update({ position: idx }).eq("id", id);
+      });
+    }
+  }, [isNew]);
 
   const handleRemoveAllMedia = () => {
     // removeDriveRef já cuida do lock + cleanup dos dois arrays.
@@ -1400,6 +1440,104 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   </div>
                 </div>
 
+                {/* DETALHES (pilar, status, semana): decisões importantes, ficam
+                    VISÍVEIS e no topo do passo 1, logo depois de plataforma/formato.
+                    Antes estavam escondidas num recolhível apagado no fim do passo. */}
+                <div className="space-y-3 rounded-2xl border border-border bg-muted/20 p-3">
+                  {pillars.length > 0 && (
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                        Pilar
+                      </Label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {pillars.map((p) => {
+                          const active = pillarId === p.id;
+                          return (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => setPillarId(active ? "" : p.id)}
+                              className={cn(
+                                "px-3 py-1.5 rounded-full text-xs font-body font-medium border transition-all whitespace-nowrap",
+                                active
+                                  ? "text-primary-foreground border-transparent shadow-sm"
+                                  : "bg-card text-foreground border-border hover:border-primary/30"
+                              )}
+                              style={active ? { backgroundColor: p.color } : undefined}
+                            >
+                              {p.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <div data-tour="editor-status" className="space-y-1.5">
+                    <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                      Status
+                    </Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {STATUS_OPTIONS.map((s) => {
+                        const active = status === s.key;
+                        return (
+                          <button
+                            key={s.key}
+                            type="button"
+                            onClick={() => handleStatusChange(s.key)}
+                            className={cn(
+                              "px-3 py-1.5 rounded-full text-xs font-body font-medium border transition-all whitespace-nowrap",
+                              active
+                                ? getStatusClasses(s.key).replace("bg-", "bg-").replace("/10", "/20") + " font-semibold"
+                                : "bg-card text-muted-foreground border-border hover:text-foreground hover:border-primary/30"
+                            )}
+                          >
+                            {s.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                        Semana
+                      </Label>
+                      <Select
+                        value={weekNumber === null ? "none" : String(weekNumber)}
+                        onValueChange={(val) => setWeekNumber(val === "none" ? null : Number(val))}
+                      >
+                        <SelectTrigger className="rounded-xl h-10 text-sm bg-card">
+                          <SelectValue placeholder="Sem semana" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">
+                            <span className="text-muted-foreground">Sem semana</span>
+                          </SelectItem>
+                          {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                            <SelectItem key={n} value={String(n)}>
+                              Semana {n}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80 flex items-center gap-1.5">
+                        <LinkIcon className="h-3 w-3" /> Link de referência
+                      </Label>
+                      <Input
+                        placeholder="Cole um link de vídeo de referência..."
+                        value={referenceLink}
+                        onChange={(e) => setReferenceLink(e.target.value)}
+                        className="rounded-xl h-10 text-sm bg-card"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 {/* Roteiro/estrutura (muda conforme o formato). A LEGENDA saiu daqui
                     de proposito: agora tem lugar unico no passo 2, pra ninguem mais
                     procurar "onde escrevo a legenda". */}
@@ -1635,101 +1773,6 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   );
                 })()}
 
-                {/* Detalhes: metadados de organizacao, recolhidos pra nao competir com o miolo. */}
-                <Recolhivel icon={Layers} titulo="Detalhes (pilar, status, semana)">
-                  <div className="space-y-4 pt-1">
-                    {pillars.length > 0 && (
-                      <div className="space-y-1.5">
-                        <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
-                          Pilar
-                        </Label>
-                        <div className="flex flex-wrap gap-1.5">
-                          {pillars.map((p) => {
-                            const active = pillarId === p.id;
-                            return (
-                              <button
-                                key={p.id}
-                                type="button"
-                                onClick={() => setPillarId(active ? "" : p.id)}
-                                className={cn(
-                                  "px-3 py-1.5 rounded-full text-xs font-body font-medium border transition-all whitespace-nowrap",
-                                  active
-                                    ? "text-primary-foreground border-transparent shadow-sm"
-                                    : "bg-card text-foreground border-border hover:border-primary/30"
-                                )}
-                                style={active ? { backgroundColor: p.color } : undefined}
-                              >
-                                {p.name}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    <div data-tour="editor-status" className="space-y-1.5">
-                      <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
-                        Status
-                      </Label>
-                      <div className="flex flex-wrap gap-1.5">
-                        {STATUS_OPTIONS.map((s) => {
-                          const active = status === s.key;
-                          return (
-                            <button
-                              key={s.key}
-                              type="button"
-                              onClick={() => handleStatusChange(s.key)}
-                              className={cn(
-                                "px-3 py-1.5 rounded-full text-xs font-body font-medium border transition-all whitespace-nowrap",
-                                active
-                                  ? getStatusClasses(s.key).replace("bg-", "bg-").replace("/10", "/20") + " font-semibold"
-                                  : "bg-card text-muted-foreground border-border hover:text-foreground hover:border-primary/30"
-                              )}
-                            >
-                              {s.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
-                        Semana
-                      </Label>
-                      <Select
-                        value={weekNumber === null ? "none" : String(weekNumber)}
-                        onValueChange={(val) => setWeekNumber(val === "none" ? null : Number(val))}
-                      >
-                        <SelectTrigger className="rounded-xl h-10 text-sm bg-card">
-                          <SelectValue placeholder="Sem semana" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">
-                            <span className="text-muted-foreground">Sem semana</span>
-                          </SelectItem>
-                          {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
-                            <SelectItem key={n} value={String(n)}>
-                              Semana {n}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80 flex items-center gap-1.5">
-                        <LinkIcon className="h-3 w-3" /> Link de referência
-                      </Label>
-                      <Input
-                        placeholder="Cole um link de vídeo de referência..."
-                        value={referenceLink}
-                        onChange={(e) => setReferenceLink(e.target.value)}
-                        className="rounded-xl h-10 text-sm bg-card"
-                      />
-                    </div>
-                  </div>
-                </Recolhivel>
               </section>
 
               {/* 2. A LEGENDA */}
@@ -2171,9 +2214,59 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     </div>
                   </div>
                 ) : (
-                  <p className="text-xs font-body text-muted-foreground rounded-xl border border-dashed border-border bg-muted/20 p-3">
-                    No carrossel, cada imagem fica na sua lâmina, lá no passo 1 (o conteúdo).
-                  </p>
+                  /* CARROSSEL: um lugar só pra TODA a mídia. Sobe várias imagens de
+                     uma vez e reordena arrastando pela barrinha. A ordem da tira é
+                     a ordem dos slides. Nada de mídia por lâmina no carrossel. */
+                  <div className="space-y-2">
+                    <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                      Imagens do carrossel
+                    </Label>
+                    <p className="text-[11px] font-body text-muted-foreground leading-snug">
+                      Suba todas as imagens de uma vez. A ordem aqui é a ordem dos slides, arraste pela barrinha
+                      <GripVertical className="inline-block h-3 w-3 rotate-90 align-text-bottom mx-0.5" />
+                      pra reordenar.
+                    </p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={handleDrivePick}
+                        disabled={picking}
+                        className="flex items-center gap-1.5 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all px-3 py-2 text-xs font-body text-muted-foreground disabled:opacity-50"
+                      >
+                        <Cloud className="h-4 w-4" />
+                        {picking ? "Abrindo..." : "Google Drive"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={openLocalFilePicker}
+                        disabled={uploadingLocal}
+                        className="flex items-center gap-1.5 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all px-3 py-2 text-xs font-body text-muted-foreground disabled:opacity-50"
+                      >
+                        <ImageIcon className="h-4 w-4" />
+                        {uploadingLocal ? "Enviando..." : "Galeria / PC"}
+                      </button>
+                      {(uploadingLocal || activeUpload) && (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      )}
+                      {mediaList.length > 0 && (
+                        <span className="ml-auto text-[11px] font-body text-muted-foreground tabular-nums">
+                          {mediaList.length} {mediaList.length === 1 ? "imagem" : "imagens"}
+                        </span>
+                      )}
+                    </div>
+                    {mediaList.length > 0 ? (
+                      <CarouselMediaStrip
+                        media={mediaList}
+                        onReorder={reorderMedia}
+                        onRemove={removeDriveRef}
+                        removingIds={removingIds}
+                      />
+                    ) : (
+                      <p className="text-[11px] font-body text-muted-foreground/70 rounded-xl border border-dashed border-border bg-muted/20 p-3 text-center">
+                        Nenhuma imagem ainda. Suba as imagens do carrossel pelos botões acima.
+                      </p>
+                    )}
+                  </div>
                 )}
 
                 {/* Link do conteudo final (Drive/Canva/arquivo pronto). */}
@@ -2557,6 +2650,117 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 // ────────────────────────────────────────────────────────────
 // Helper components
 // ────────────────────────────────────────────────────────────
+
+// ─── Punho de arraste da tira do carrossel (mesmo padrão do gestor): só a
+// barrinha de baixo é alça, então no celular o dedo ainda rola a tira por cima
+// da miniatura e o arraste começa pegando o punho.
+function MediaGrip({ handleProps }: { handleProps?: DraggableProvidedDragHandleProps }) {
+  return (
+    <span
+      {...(handleProps ?? {})}
+      aria-label="Arrastar para reordenar"
+      onClick={(e) => e.stopPropagation()}
+      className="absolute inset-x-0 bottom-0 z-10 h-5 grid place-items-center bg-black/60 text-white/95 cursor-grab active:cursor-grabbing touch-none"
+    >
+      <GripVertical className="h-3.5 w-3.5 rotate-90" />
+    </span>
+  );
+}
+
+// ─── Tira reordenável da mídia do carrossel. Uma imagem por slide, na ordem da
+// tira. Enquanto arrasta, o item vai pro <body> via portal, porque o editor é um
+// Dialog com transform, e o transform quebra o position:fixed que o dnd usa.
+function CarouselMediaStrip({
+  media, onReorder, onRemove, removingIds,
+}: {
+  media: DriveRef[];
+  onReorder: (orderedIds: string[]) => void;
+  onRemove: (ref: DriveRef) => void;
+  removingIds: Set<string>;
+}) {
+  const onDragEnd = (r: DropResult) => {
+    if (!r.destination) return;
+    const from = r.source.index;
+    const to = r.destination.index;
+    if (from === to) return;
+    const ids = media.map((m) => m.id);
+    const [moved] = ids.splice(from, 1);
+    ids.splice(to, 0, moved);
+    onReorder(ids);
+  };
+  return (
+    <div className="overflow-x-auto overflow-y-hidden pb-2.5 kanban-scroll">
+      <DragDropContext onDragEnd={onDragEnd}>
+        <Droppable droppableId="carousel-media" direction="horizontal">
+          {(dropP) => (
+            <div ref={dropP.innerRef} {...dropP.droppableProps} className="flex w-max">
+              {media.map((m, i) => {
+                const isVideo = m.file_type?.includes("video");
+                const src = m.thumbnail_url || m.view_url || "";
+                return (
+                  <Draggable key={m.id} draggableId={m.id} index={i} disableInteractiveElementBlocking>
+                    {(dragP, dragS) => {
+                      const item = (
+                        <div
+                          ref={dragP.innerRef}
+                          {...dragP.draggableProps}
+                          style={{
+                            ...dragP.draggableProps.style,
+                            WebkitUserSelect: "none",
+                            userSelect: "none",
+                            WebkitTouchCallout: "none",
+                          }}
+                          className={cn(
+                            "relative shrink-0 w-16 h-16 mr-2 rounded-xl overflow-hidden border border-border bg-muted select-none",
+                            dragS.isDragging && "ring-2 ring-primary/50 shadow-lg",
+                          )}
+                        >
+                          {src ? (
+                            <img
+                              src={src}
+                              alt=""
+                              draggable={false}
+                              loading="lazy"
+                              className="w-full h-full object-cover select-none"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                              <ImageIcon className="h-5 w-5" />
+                            </div>
+                          )}
+                          {isVideo && (
+                            <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <Play className="h-5 w-5 text-white [filter:drop-shadow(0_1px_2px_rgba(0,0,0,.7))]" />
+                            </span>
+                          )}
+                          <span className="absolute top-0.5 left-0.5 z-10 bg-black/65 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                            {i + 1}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => onRemove(m)}
+                            disabled={removingIds.has(m.id)}
+                            aria-label="Remover imagem"
+                            className="absolute top-0.5 right-0.5 z-20 bg-black/65 text-white rounded-full p-0.5 disabled:opacity-50"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                          <MediaGrip handleProps={dragP.dragHandleProps ?? undefined} />
+                        </div>
+                      );
+                      return dragS.isDragging ? createPortal(item, document.body) : item;
+                    }}
+                  </Draggable>
+                );
+              })}
+              {dropP.placeholder}
+            </div>
+          )}
+        </Droppable>
+      </DragDropContext>
+    </div>
+  );
+}
 
 // ─── Bloco numerado do fluxo vertical: badge com o número + título + orientação.
 function BlocoCabecalho({ numero, titulo, subtitulo }: { numero: number; titulo: string; subtitulo: string }) {
