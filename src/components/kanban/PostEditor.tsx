@@ -2660,9 +2660,9 @@ function MediaGrip({ handleProps }: { handleProps?: DraggableProvidedDragHandleP
       {...(handleProps ?? {})}
       aria-label="Arrastar para reordenar"
       onClick={(e) => e.stopPropagation()}
-      className="absolute inset-x-0 bottom-0 z-10 h-5 grid place-items-center bg-black/60 text-white/95 cursor-grab active:cursor-grabbing touch-none"
+      className="absolute inset-x-0 bottom-0 z-10 h-6 grid place-items-center bg-black/60 text-white/95 cursor-grab active:cursor-grabbing touch-none"
     >
-      <GripVertical className="h-3.5 w-3.5 rotate-90" />
+      <GripVertical className="h-4 w-4 rotate-90" />
     </span>
   );
 }
@@ -2741,9 +2741,9 @@ function CarouselMediaStrip({
                             onClick={() => onRemove(m)}
                             disabled={removingIds.has(m.id)}
                             aria-label="Remover imagem"
-                            className="absolute top-0.5 right-0.5 z-20 bg-black/65 text-white rounded-full p-0.5 disabled:opacity-50"
+                            className="absolute top-1 right-1 z-20 grid place-items-center bg-black/65 text-white rounded-full p-1 disabled:opacity-50"
                           >
-                            <X className="h-3 w-3" />
+                            <X className="h-3.5 w-3.5" />
                           </button>
                           <MediaGrip handleProps={dragP.dragHandleProps ?? undefined} />
                         </div>
