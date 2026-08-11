@@ -116,9 +116,15 @@ export function useLinkClientMedia(criaOwnerId: string | null | undefined) {
 // todos os clientes vinculados de uma vez, pra não pesar. NÃO é post de aprovação por
 // link (esses vivem em `posts.external_client_id`); é o kanban pessoal do criador.
 
-// Estados "prontos em diante" do kanban do cliente (Criando.tsx):
-// editando = "Pronto", agendado = "Agendado", publicado = "Publicado".
-export const CLIENT_CRIA_READY_STATUSES = ["editando", "agendado", "publicado"] as const;
+// Estados do kanban do cliente (Criando.tsx) que valem pra Agenda quando o post
+// TEM data marcada. Antes so aceitava editando/agendado/publicado ("prontos em
+// diante"), mas o criador pode marcar uma data com o post ainda em coluna
+// anterior (ideia/planejamento/produzindo). O calendario do PROPRIO cliente
+// mostra QUALQUER post com scheduled_date (ver UpcomingPosts / Dashboard), entao
+// a Agenda do gestor sumia com posts que o cliente ja agendou pra um dia so
+// porque nao estavam em "Pronto". Agora todo post COM data aparece pro gestor,
+// igual o cliente ve. O filtro que importa e ter scheduled_date, nao a coluna.
+export const CLIENT_CRIA_READY_STATUSES = ["ideia", "roteiro", "gravando", "editando", "agendado", "publicado"] as const;
 
 export type ClientCriaAgendaPost = {
   id: string;

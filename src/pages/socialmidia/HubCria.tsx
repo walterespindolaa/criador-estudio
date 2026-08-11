@@ -6,6 +6,7 @@ import {
   AlertTriangle, Radar, Search, CheckCircle2,
 } from "lucide-react";
 import { useCrmClients } from "@/hooks/useCrm";
+import { clienteInativo } from "@/lib/cliente-status";
 import {
   useAllCreativeIdeas, useHasHubCria, useAllCompetitors, useHubCredits, diasSemLeitura,
 } from "@/hooks/useHubCria";
@@ -62,7 +63,7 @@ export default function HubCria() {
       porCliente.set(c.crm_client_id, arr);
     }
 
-    const ativos = clients.filter((c) => (c.status ?? "ativo") !== "inativo");
+    const ativos = clients.filter((c) => !clienteInativo(c));
 
     return ativos
       .map((cli) => {
@@ -82,7 +83,7 @@ export default function HubCria() {
   }, [clients, competidores, ideas]);
 
   const emDia = useMemo(
-    () => clients.filter((c) => (c.status ?? "ativo") !== "inativo").length - atencao.length,
+    () => clients.filter((c) => !clienteInativo(c)).length - atencao.length,
     [clients, atencao],
   );
 

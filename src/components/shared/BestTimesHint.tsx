@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Clock, Sparkles } from "lucide-react";
-import { bestTimes } from "@/lib/bestTimes";
+import { bestTimes, bestTimesFromMedia } from "@/lib/bestTimes";
+import { useSocialConnection, useMediaInsights } from "@/hooks/useSocialInsights";
 
 type Props = {
   platform?: string | null;
@@ -11,8 +12,29 @@ type Props = {
 
 // Mostra os melhores horários sugeridos. Se onPick for passado, cada horário
 // vira um botão que aplica o horário no agendamento.
+//
+// Fonte dos horários:
+//   - Instagram conectado + histórico suficiente → calcula pelo desempenho real
+//     dos posts (hora de publicação x engajamento). Aviso: "Baseado no seu Instagram".
+//   - Sem conexão ou sem dado suficiente → heurística por nicho/plataforma, com o
+//     aviso de que fica mais preciso quando o Instagram for conectado.
 export function BestTimesHint({ platform, niche, onPick, className }: Props) {
-  const bt = useMemo(() => bestTimes(platform, niche), [platform, niche]);
+  const ehInstagram = (platform ?? "instagram").toLowerCase() === "instagram";
+  // Só o Instagram tem dado real de horário aqui; nas outras plataformas nem
+  // buscamos, mas os hooks são baratos (cache por conta ativa) e respeitam a
+  // conta ativa (funciona também quando a gestora abre a conta de um cliente).
+  const { data: connection } = useSocialConnection();
+  const { data: media } = useMediaInsights();
+
+  const bt = useMemo(() => {
+    if (ehInstagram && connection) {
+      const real = bestTimesFromMedia(media);
+      if (real) return real;
+    }
+    return bestTimes(platform, niche);
+  }, [ehInstagram, connection, media, platform, niche]);
+
+  const daHeuristica = bt.source === "heuristica";
 
   return (
     <div className={`rounded-xl border border-primary/15 bg-primary/5 p-3 ${className ?? ""}`}>
@@ -35,9 +57,13 @@ export function BestTimesHint({ platform, niche, onPick, className }: Props) {
           </button>
         ))}
       </div>
-      {bt.source === "heuristica" && (
+      {daHeuristica ? (
         <p className="text-[10px] font-body text-muted-foreground/70 mt-2">
           Baseado no seu nicho e plataforma. Vai ficar ainda mais preciso quando o Instagram for conectado.
+        </p>
+      ) : (
+        <p className="text-[10px] font-body text-primary/80 mt-2">
+          Baseado no seu Instagram: os dias e horários em que seus posts mais engajaram.
         </p>
       )}
     </div>

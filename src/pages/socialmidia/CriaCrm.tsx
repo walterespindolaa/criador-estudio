@@ -216,11 +216,18 @@ function ClientsTab() {
                   </div>
                 </div>
 
-                {/* Status fixo + etiquetas personalizadas, visíveis já na lista. */}
+                {/* Status DERIVADO (nao o cru): encerramento no passado vale Inativo mesmo
+                    que a coluna status ainda diga 'ativo'; encerramento futuro segue Ativo.
+                    Pausado (manual, sem data) continua Pausado. Regra em cliente-status.ts. */}
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full border", CLIENT_STATUS_META[(c.status ?? "ativo") as ClientStatus]?.cls)}>
-                    {CLIENT_STATUS_META[(c.status ?? "ativo") as ClientStatus]?.label ?? "Ativo"}
-                  </span>
+                  {(() => {
+                    const eff: ClientStatus = isInactive(c) ? "inativo" : ((c.status ?? "ativo") === "pausado" ? "pausado" : "ativo");
+                    return (
+                      <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full border", CLIENT_STATUS_META[eff]?.cls)}>
+                        {CLIENT_STATUS_META[eff]?.label ?? "Ativo"}
+                      </span>
+                    );
+                  })()}
                   {(c.tags ?? []).map((t) => (
                     <span key={t} className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full border", TAG_COLOR_CLS[tagColor(t)] ?? TAG_COLOR_CLS.slate)}>{t}</span>
                   ))}

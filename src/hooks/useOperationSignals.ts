@@ -3,6 +3,7 @@ import { useCrmClients } from "@/hooks/useCrm";
 import { useOperationPosts, useExternalClients } from "@/hooks/useCriaPost";
 import { useFinRecords } from "@/hooks/useFinance";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
+import { clienteInativo } from "@/lib/cliente-status";
 
 // ── MOTOR DE SINAIS DA HOME (copiloto de operação) ──
 // Calcula, a partir dos dados que já existem, o feed "Sua operação hoje" e a
@@ -72,7 +73,8 @@ export function useOperationSignals() {
     const health: ClientHealth[] = [];
 
     for (const c of crmClients) {
-      if ((c.status ?? "ativo") === "inativo") continue;
+      // Situação DERIVADA: encerramento no passado sai da saúde; futuro segue ativo.
+      if (clienteInativo(c)) continue;
       const color = (c as { color?: string | null }).color ?? extByCrm.get(c.id)?.color ?? null;
       const push = (s: Omit<OpSignal, "clientId" | "clientName" | "clientColor">) =>
         signals.push({ ...s, clientId: c.id, clientName: c.name, clientColor: color });

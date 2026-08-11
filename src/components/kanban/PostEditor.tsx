@@ -219,8 +219,6 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   const [platform, setPlatform] = useState("instagram");
   const [format, setFormat] = useState("reels");
   const [pillarId, setPillarId] = useState("");
-  // Aba controlada: o Estúdio precisa conseguir MANDAR a pessoa pro Roteiro.
-  const [aba, setAba] = useState("legenda");
   const [status, setStatus] = useState("ideia");
   const [hook, setHook] = useState("");
   const [script, setScript] = useState("");
@@ -277,14 +275,12 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   const [scoreLoading, setScoreLoading] = useState(false);
   const [scoreResult, setScoreResult] = useState<CaptionScore | null>(null);
 
-  const [mobileTab, setMobileTab] = useState<"config" | "criar">("config");
-  const mainRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    if (mobileTab === "criar") mainRef.current?.scrollTo({ top: 0 });
-  }, [mobileTab]);
+  // Refs de rolagem: mainRef é o container do fluxo vertical; conteudoRef é o
+  // passo 1 (o Estúdio manda a pessoa de volta pro conteúdo com scroll suave).
+  const mainRef = useRef<HTMLDivElement>(null);
+  const conteudoRef = useRef<HTMLDivElement>(null);
 
   // References panel
-  const [refsOpen, setRefsOpen] = useState(false);
   const [isRefAiLoading, setIsRefAiLoading] = useState(false);
   const [aiHookCategories, setAiHookCategories] = useState<string[]>([]);
 
@@ -1335,203 +1331,454 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
             </div>
           </DialogHeader>
 
-          {/* Body: split view */}
-          <div className="flex flex-1 overflow-hidden flex-col">
-            {/* Mobile tab switcher */}
-            <div className="flex md:hidden shrink-0 border-b border-border bg-muted/30">
-              <button
-                type="button"
-                data-tour="editor-tab-config"
-                onClick={() => setMobileTab("config")}
-                className={cn(
-                  "flex-1 py-2.5 text-sm font-body font-semibold transition-colors",
-                  mobileTab === "config"
-                    ? "text-primary border-b-2 border-primary bg-card"
-                    : "text-muted-foreground"
-                )}
-              >
-                ⚙ Configurar
-              </button>
-              <button
-                type="button"
-                data-tour="editor-tab-criar"
-                onClick={() => setMobileTab("criar")}
-                className={cn(
-                  "flex-1 py-2.5 text-sm font-body font-semibold transition-colors",
-                  mobileTab === "criar"
-                    ? "text-primary border-b-2 border-primary bg-card"
-                    : "text-muted-foreground"
-                )}
-              >
-                ✦ Criar conteúdo
-              </button>
-            </div>
-            <div className="flex flex-1 overflow-hidden md:flex-row">
-            {/* ─── LEFT: Configuration + AI ─────────── */}
-            <aside className={cn(
-              "w-full md:w-[40%] md:max-w-[480px] md:border-r border-border bg-muted/30 overflow-y-auto overflow-x-hidden",
-              mobileTab === "config" ? "block" : "hidden md:block"
-            )}>
-              <div className="p-4 sm:p-5 space-y-5 pb-[calc(2rem+env(safe-area-inset-bottom))]">
-                {/* Metadata */}
-                <section className="space-y-4">
-                  <div data-tour="editor-plataforma" className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
-                        Plataforma
-                      </Label>
-                      <Select value={platform} onValueChange={setPlatform}>
-                        <SelectTrigger className="rounded-xl h-10 bg-card">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PLATFORMS.map((p) => (
-                            <SelectItem key={p} value={p}>
-                              <span className="flex items-center gap-2">
-                                <PlatformIcon platform={p} size="sm" />
-                                <span className="capitalize">{p}</span>
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
-                        Formato
-                      </Label>
-                      <Select value={format} onValueChange={setFormat}>
-                        <SelectTrigger className="rounded-xl h-10 bg-card">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {FORMATS.map((f) => (
-                            <SelectItem key={f} value={f}>{FORMAT_LABELS[f] || f}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
+          {/* CORPO: FLUXO VERTICAL NUMERADO
+              Uma tela so, de cima pra baixo, na ordem que a cabeca pensa:
+              1) o conteudo, 2) a legenda, 3) a arte, 4) quando publicar.
+              Leigo e conduzido pela sequencia; experiente rola direto. No celular
+              vira uma coluna; no desktop o conteudo fica centralizado e legivel. */}
+          <div ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden bg-muted/20">
+            <div className="mx-auto w-full max-w-3xl px-3 sm:px-6 py-4 sm:py-6 space-y-4 pb-[calc(3rem+env(safe-area-inset-bottom))]">
 
-                  {pillars.length > 0 && (
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
-                        Pilar
-                      </Label>
-                      <div className="flex flex-wrap gap-1.5">
-                        {pillars.map((p) => {
-                          const active = pillarId === p.id;
-                          return (
-                            <button
-                              key={p.id}
-                              type="button"
-                              onClick={() => setPillarId(active ? "" : p.id)}
-                              className={cn(
-                                "px-3 py-1.5 rounded-full text-xs font-body font-medium border transition-all whitespace-nowrap",
-                                active
-                                  ? "text-primary-foreground border-transparent shadow-sm"
-                                  : "bg-card text-foreground border-border hover:border-primary/30"
-                              )}
-                              style={active ? { backgroundColor: p.color } : undefined}
-                            >
-                              {p.name}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+              {/* 1. O CONTEUDO DO POST */}
+              <section ref={conteudoRef} className="scroll-mt-4 rounded-3xl border border-border bg-card p-4 sm:p-5 space-y-4">
+                <BlocoCabecalho numero={1} titulo="O conteúdo do post" subtitulo="Escolha o formato e escreva a estrutura." />
 
-                  <div data-tour="editor-status" className="space-y-1.5">
-                    <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
-                      Status
-                    </Label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {STATUS_OPTIONS.map((s) => {
-                        const active = status === s.key;
-                        return (
-                          <button
-                            key={s.key}
-                            type="button"
-                            onClick={() => handleStatusChange(s.key)}
-                            className={cn(
-                              "px-3 py-1.5 rounded-full text-xs font-body font-medium border transition-all whitespace-nowrap",
-                              active
-                                ? getStatusClasses(s.key).replace("bg-", "bg-").replace("/10", "/20") + " font-semibold"
-                                : "bg-card text-muted-foreground border-border hover:text-foreground hover:border-primary/30"
-                            )}
-                          >
-                            {s.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
+                <div data-tour="editor-plataforma" className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
-                      Semana
+                      Plataforma
                     </Label>
-                    <Select
-                      value={weekNumber === null ? "none" : String(weekNumber)}
-                      onValueChange={(val) => setWeekNumber(val === "none" ? null : Number(val))}
-                    >
-                      <SelectTrigger className="rounded-xl h-10 text-sm bg-card">
-                        <SelectValue placeholder="Sem semana" />
+                    <Select value={platform} onValueChange={setPlatform}>
+                      <SelectTrigger className="rounded-xl h-10 bg-card">
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">
-                          <span className="text-muted-foreground">Sem semana</span>
-                        </SelectItem>
-                        {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
-                          <SelectItem key={n} value={String(n)}>
-                            Semana {n}
+                        {PLATFORMS.map((p) => (
+                          <SelectItem key={p} value={p}>
+                            <span className="flex items-center gap-2">
+                              <PlatformIcon platform={p} size="sm" />
+                              <span className="capitalize">{p}</span>
+                            </span>
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                </section>
-
-                {/* Schedule */}
-                <section data-tour="editor-agendamento" className="rounded-2xl bg-card border border-border p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-display font-semibold">Agendamento</span>
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                      Formato
+                    </Label>
+                    <Select value={format} onValueChange={setFormat}>
+                      <SelectTrigger className="rounded-xl h-10 bg-card">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FORMATS.map((f) => (
+                          <SelectItem key={f} value={f}>{FORMAT_LABELS[f] || f}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <div className="flex items-end gap-2">
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <Label className="text-[11px] text-muted-foreground flex items-center h-4">Data</Label>
-                      <Input
-                        type="date"
-                        value={scheduledDate}
-                        onChange={(e) => setScheduledDate(e.target.value)}
-                        className="rounded-xl h-10 text-sm w-full min-w-0 px-3 text-left [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:text-left"
-                      />
+                </div>
+
+                {/* Roteiro/estrutura (muda conforme o formato). A LEGENDA saiu daqui
+                    de proposito: agora tem lugar unico no passo 2, pra ninguem mais
+                    procurar "onde escrevo a legenda". */}
+                {(() => {
+                  const iconMap: Record<string, React.ElementType> = {
+                    Anchor, Layers, Type, Radio, MousePointerClick, MessageSquare, PenLine,
+                  };
+                  return (
+                    <div className="space-y-4">
+                      {formatStructure.fields.map((field) => {
+                        if (field.key === "caption") return null; // legenda vive no passo 2
+                        const IconComponent = iconMap[field.icon] || PenLine;
+                        const value = field.key === "hook" ? hook
+                          : field.key === "script" ? script
+                          : field.key === "cta" ? cta : "";
+                        const setter = field.key === "hook" ? setHook
+                          : field.key === "script" ? setScript
+                          : field.key === "cta" ? setCta : (() => {});
+                        return (
+                          <div key={field.key} className="space-y-1.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <Label className="font-body text-sm flex items-center gap-2">
+                                <IconComponent className="h-4 w-4" /> {field.label}
+                              </Label>
+                              {field.key === "hook" && format !== "live" && (
+                                <SeletorDeGanchos valorAtual={hook} onPick={setHook} />
+                              )}
+                            </div>
+                            <Textarea
+                              placeholder={field.placeholder}
+                              value={value}
+                              onChange={(e) => setter(e.target.value)}
+                              className="rounded-xl"
+                              rows={field.rows}
+                            />
+                          </div>
+                        );
+                      })}
+                      {formatStructure.hasDynamicSections && (
+                        <CarouselWriter
+                          titulo={title}
+                          formato={format}
+                          pilar={pillarId ?? undefined}
+                          sections={sections}
+                          onChange={setSections}
+                          hook={hook}
+                          onHook={setHook}
+                          cta={cta}
+                          onCta={setCta}
+                          unify={formatStructure.devField}
+                        />
+                      )}
+                      {formatStructure.hasDynamicSections && !formatStructure.devField && (
+                        <ScriptEditor
+                          sections={sections}
+                          onChange={setSections}
+                          sectionLabel={formatStructure.sectionLabel ?? "Seção"}
+                          picking={picking}
+                          uploadingLocal={uploadingLocal}
+                          onUploadLocalForSection={(index) => {
+                            if (!userId) return;
+                            const input = document.createElement("input");
+                            input.type = "file";
+                            input.accept = "image/*";
+                            input.style.cssText = "position:fixed;left:-9999px;top:-9999px;opacity:0;pointer-events:none";
+
+                            const cleanup = () => {
+                              if (input.parentNode) input.parentNode.removeChild(input);
+                            };
+
+                            input.addEventListener("change", async () => {
+                              try {
+                                const raw = input.files?.[0];
+                                if (!raw) return;
+                                const validation = validateUpload(raw, "postMedia");
+                                if (!validation.ok) {
+                                  toast.error(validation.reason);
+                                  return;
+                                }
+                                try {
+                                  setUploadingLocal(true);
+                                  const file = await compressImage(raw);
+                                  const safeName = sanitizeStoragePath(file.name);
+                                  const path = `${userId}/${Date.now()}-${safeName}`;
+                                  const { error: upErr } = await supabase.storage
+                                    .from("media")
+                                    .upload(path, file, { upsert: true, contentType: file.type });
+                                  if (upErr) {
+                                    console.error("[section-upload] storage error", upErr);
+                                    toast.error(`Erro ao enviar ${file.name}: ${upErr.message}`);
+                                    return;
+                                  }
+                                  const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
+
+                                  // Registra em external_media_refs (provider='storage') pra
+                                  // Feed e Arquivos enxergarem; cota e incrementada.
+                                  let mediaRefId: string | null = null;
+                                  const { data: inserted, error: insErr } = await supabase
+                                    .from("external_media_refs")
+                                    .insert({
+                                      user_id: userId,
+                                      post_id: post?.id ?? null,
+                                      provider: "storage",
+                                      external_file_id: path,
+                                      file_name: file.name,
+                                      file_type: file.type || null,
+                                      file_size: file.size,
+                                      thumbnail_url: urlData.publicUrl,
+                                      view_url: urlData.publicUrl,
+                                    })
+                                    .select("id")
+                                    .single();
+                                  if (insErr) {
+                                    console.error("[section-upload] external_media_refs insert error", insErr);
+                                  } else if (inserted) {
+                                    mediaRefId = (inserted as { id: string }).id;
+                                    if (!post?.id) {
+                                      // backfill no save (mesmo mecanismo de pendingDriveFiles, mas em lista propria)
+                                      setPendingSectionRefIds((prev) => [...prev, mediaRefId!]);
+                                    }
+                                    const { error: incErr } = await (supabase.rpc as unknown as (
+                                      fn: string, args: unknown,
+                                    ) => Promise<{ error: unknown }>)("increment_storage", { _user: userId, _delta: file.size });
+                                    if (incErr) console.error("[section-upload] increment_storage failed (+)", incErr);
+                                  }
+
+                                  setSections((prev) =>
+                                    prev.map((s, j) =>
+                                      j === index
+                                        ? {
+                                            ...s,
+                                            driveFileId: path,
+                                            driveFileName: file.name,
+                                            driveThumbnail: urlData.publicUrl,
+                                            mediaRefId,
+                                          }
+                                        : s
+                                    )
+                                  );
+                                } catch (err) {
+                                  console.error("[section-upload] unexpected", err);
+                                  toast.error("Erro ao enviar midia.");
+                                } finally {
+                                  setUploadingLocal(false);
+                                }
+                              } finally {
+                                cleanup();
+                              }
+                            }, { once: true });
+
+                            input.addEventListener("cancel", cleanup, { once: true });
+                            setTimeout(() => {
+                              if (!input.files || input.files.length === 0) cleanup();
+                            }, 5 * 60 * 1000);
+
+                            document.body.appendChild(input);
+                            input.click();
+                          }}
+                          onRemoveSectionMedia={async (index) => {
+                            const sec = sections[index];
+                            const refId = sec?.mediaRefId ?? null;
+                            const storagePath = sec?.driveFileId ?? null;
+                            // 1) limpa a UI imediatamente
+                            setSections((prev) =>
+                              prev.map((s, j) =>
+                                j === index
+                                  ? {
+                                      ...s,
+                                      driveFileId: null,
+                                      driveFileName: null,
+                                      driveThumbnail: null,
+                                      mediaRefId: null,
+                                    }
+                                  : s
+                              )
+                            );
+                            if (!refId) return; // midia de Drive antiga sem mediaRefId, nada a sincronizar
+                            try {
+                              // Busca file_size pra devolver pra cota
+                              const { data: refRow } = await supabase
+                                .from("external_media_refs")
+                                .select("file_size, provider, external_file_id")
+                                .eq("id", refId)
+                                .maybeSingle();
+                              await supabase.from("external_media_refs").delete().eq("id", refId);
+                              // remove do state de pending se ainda estava la (post novo)
+                              setPendingSectionRefIds((prev) => prev.filter((id) => id !== refId));
+                              const provider = (refRow as { provider?: string | null } | null)?.provider;
+                              const sizeBytes = (refRow as { file_size?: number | null } | null)?.file_size ?? null;
+                              const filePath = ((refRow as { external_file_id?: string | null } | null)?.external_file_id) ?? storagePath;
+                              if (provider === "storage" && filePath) {
+                                await supabase.storage.from("media").remove([filePath]);
+                                if (sizeBytes && sizeBytes > 0 && userId) {
+                                  const { error: decErr } = await (supabase.rpc as unknown as (
+                                    fn: string, args: unknown,
+                                  ) => Promise<{ error: unknown }>)("increment_storage", { _user: userId, _delta: -sizeBytes });
+                                  if (decErr) console.error("[section-upload] increment_storage failed (-)", decErr);
+                                }
+                              }
+                            } catch (e) {
+                              console.error("[section-upload] remove sync failed", e);
+                            }
+                          }}
+                          onPickDriveForSection={async (index) => {
+                            const before = new Date().toISOString();
+                            await pickAndSave(undefined);
+                            const { data } = await supabase
+                              .from("external_media_refs")
+                              .select("external_file_id, file_name, thumbnail_url")
+                              .eq("user_id", userId)
+                              .is("post_id", null)
+                              .gte("created_at", before)
+                              .order("created_at", { ascending: false })
+                              .limit(1);
+                            if (data && data[0]) {
+                              setSections((prev) =>
+                                prev.map((s, j) =>
+                                  j === index
+                                    ? {
+                                        ...s,
+                                        driveFileId: data[0].external_file_id,
+                                        driveFileName: data[0].file_name,
+                                        driveThumbnail: data[0].thumbnail_url,
+                                      }
+                                    : s
+                                )
+                              );
+                            }
+                          }}
+                        />
+                      )}
                     </div>
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <Label className="text-[11px] text-muted-foreground flex items-center gap-1 h-4">
-                        <Clock className="h-3 w-3" /> Hora
+                  );
+                })()}
+
+                {/* Detalhes: metadados de organizacao, recolhidos pra nao competir com o miolo. */}
+                <Recolhivel icon={Layers} titulo="Detalhes (pilar, status, semana)">
+                  <div className="space-y-4 pt-1">
+                    {pillars.length > 0 && (
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                          Pilar
+                        </Label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {pillars.map((p) => {
+                            const active = pillarId === p.id;
+                            return (
+                              <button
+                                key={p.id}
+                                type="button"
+                                onClick={() => setPillarId(active ? "" : p.id)}
+                                className={cn(
+                                  "px-3 py-1.5 rounded-full text-xs font-body font-medium border transition-all whitespace-nowrap",
+                                  active
+                                    ? "text-primary-foreground border-transparent shadow-sm"
+                                    : "bg-card text-foreground border-border hover:border-primary/30"
+                                )}
+                                style={active ? { backgroundColor: p.color } : undefined}
+                              >
+                                {p.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    <div data-tour="editor-status" className="space-y-1.5">
+                      <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                        Status
+                      </Label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {STATUS_OPTIONS.map((s) => {
+                          const active = status === s.key;
+                          return (
+                            <button
+                              key={s.key}
+                              type="button"
+                              onClick={() => handleStatusChange(s.key)}
+                              className={cn(
+                                "px-3 py-1.5 rounded-full text-xs font-body font-medium border transition-all whitespace-nowrap",
+                                active
+                                  ? getStatusClasses(s.key).replace("bg-", "bg-").replace("/10", "/20") + " font-semibold"
+                                  : "bg-card text-muted-foreground border-border hover:text-foreground hover:border-primary/30"
+                              )}
+                            >
+                              {s.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                        Semana
+                      </Label>
+                      <Select
+                        value={weekNumber === null ? "none" : String(weekNumber)}
+                        onValueChange={(val) => setWeekNumber(val === "none" ? null : Number(val))}
+                      >
+                        <SelectTrigger className="rounded-xl h-10 text-sm bg-card">
+                          <SelectValue placeholder="Sem semana" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">
+                            <span className="text-muted-foreground">Sem semana</span>
+                          </SelectItem>
+                          {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                            <SelectItem key={n} value={String(n)}>
+                              Semana {n}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80 flex items-center gap-1.5">
+                        <LinkIcon className="h-3 w-3" /> Link de referência
                       </Label>
                       <Input
-                        type="time"
-                        value={scheduledTime}
-                        onChange={(e) => setScheduledTime(e.target.value)}
-                        className="rounded-xl h-10 text-sm w-full min-w-0 px-3 text-left [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:text-left"
+                        placeholder="Cole um link de vídeo de referência..."
+                        value={referenceLink}
+                        onChange={(e) => setReferenceLink(e.target.value)}
+                        className="rounded-xl h-10 text-sm bg-card"
                       />
                     </div>
                   </div>
+                </Recolhivel>
+              </section>
 
-                  <BestTimesHint platform={platform} niche={profile?.niche} onPick={setScheduledTime} />
-                </section>
+              {/* 2. A LEGENDA */}
+              <section className="rounded-3xl border border-border bg-card p-4 sm:p-5 space-y-4">
+                <BlocoCabecalho numero={2} titulo="A legenda" subtitulo="Escreva aqui. A IA te ajuda a gerar, encurtar e melhorar. É o único lugar da legenda." />
 
-                {/* Content Assistant */}
-                <section data-tour="editor-ia" className="rounded-2xl bg-card border border-border p-4 space-y-3">
+                {/* O textarea vem primeiro e grande: e a resposta pra "onde escrevo?". */}
+                <div className="relative rounded-2xl border border-border bg-muted/10 p-3">
+                  {/* Emoji sempre visivel no canto superior direito da legenda. */}
+                  <div className="absolute top-2 right-2 z-10 rounded-full bg-card/90 backdrop-blur-sm shadow-sm border border-border">
+                    <EmojiPicker onPick={insertEmoji} />
+                  </div>
+                  <textarea
+                    ref={captionRef}
+                    placeholder="Escreva sua legenda aqui ou gere com IA..."
+                    value={caption}
+                    onChange={(e) => setCaption(e.target.value)}
+                    className="w-full min-h-[220px] bg-transparent border-none outline-none focus:outline-none focus:ring-0 font-body text-base text-foreground placeholder:text-muted-foreground/40 resize-none leading-relaxed pr-10"
+                  />
+                  <span className="absolute bottom-2 right-2 text-[10px] text-muted-foreground/70 font-mono tabular-nums">
+                    {captionLen}/{captionMax}
+                  </span>
+                </div>
+
+                {caption.length > 10 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {([
+                      { key: "rephrase", label: "Reescrever", icon: RefreshCw, instruction: "Reescreva essa legenda mantendo a mesma mensagem mas com palavras completamente diferentes." },
+                      { key: "shorten", label: "Encurtar", icon: Minus, instruction: "Encurte essa legenda pra no maximo 2 linhas mantendo a essencia e o CTA." },
+                      { key: "expand", label: "Expandir", icon: Plus, instruction: "Expanda essa legenda com mais detalhes, storytelling e contexto. Mantenha o tom." },
+                      { key: "casual", label: "Mais casual", icon: SmilePlus, instruction: "Reescreva essa legenda num tom mais casual, descontraido, como conversa entre amigos. Use girias leves." },
+                      { key: "formal", label: "Mais formal", icon: Briefcase, instruction: "Reescreva essa legenda num tom mais profissional e polido. Sem girias, linguagem clara e direta." },
+                    ] as const).map((action) => {
+                      const isLoading = refineLoading === action.key;
+                      const Icon = action.icon;
+                      return (
+                        <button
+                          key={action.key}
+                          type="button"
+                          disabled={!!refineLoading}
+                          onClick={() => handleRefineCaption(action.key, action.instruction)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card hover:bg-accent text-xs font-body font-medium text-muted-foreground hover:text-foreground transition-all disabled:opacity-50 disabled:hover:bg-card"
+                        >
+                          {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Icon className="h-3 w-3" />}
+                          {action.label}
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      disabled={scoreLoading}
+                      onClick={handleScoreCaption}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 hover:bg-primary/15 text-xs font-body font-semibold text-primary transition-all disabled:opacity-50"
+                    >
+                      {scoreLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <BarChart3 className="h-3 w-3" />}
+                      Avaliar legenda
+                    </button>
+                  </div>
+                )}
+
+                {/* Ajuda da IA: tudo o que antes ficava no "Content Assistant" da
+                    coluna da esquerda agora mora AQUI, colado na legenda. Um lugar so. */}
+                <div data-tour="editor-ia" className="rounded-2xl border border-primary/15 bg-primary/5 p-3 sm:p-4 space-y-3">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-pink-400 flex items-center justify-center shadow-sm">
-                      <Sparkles className="h-4 w-4 text-white" />
+                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-pink-400 flex items-center justify-center shadow-sm">
+                      <Sparkles className="h-3.5 w-3.5 text-white" />
                     </div>
-                    <span className="text-base font-display font-semibold">Content Assistant</span>
+                    <span className="text-sm font-display font-semibold">Ajuda da IA</span>
                     <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold">IA</span>
                   </div>
 
@@ -1539,12 +1786,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     <Label className="text-[11px] text-muted-foreground">Tom</Label>
                     <div className="flex flex-wrap gap-1.5">
                       {TONE_OPTIONS.map((t) => (
-                        <button
-                          key={t.key}
-                          type="button"
-                          onClick={() => setAiTone(t.key)}
-                          className={pillClass(aiTone === t.key)}
-                        >
+                        <button key={t.key} type="button" onClick={() => setAiTone(t.key)} className={pillClass(aiTone === t.key)}>
                           {t.label}
                         </button>
                       ))}
@@ -1555,822 +1797,392 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     <Label className="text-[11px] text-muted-foreground">Tamanho</Label>
                     <div className="flex flex-wrap gap-1.5">
                       {LENGTH_OPTIONS.map((l) => (
-                        <button
-                          key={l.key}
-                          type="button"
-                          onClick={() => setAiLength(l.key)}
-                          className={pillClass(aiLength === l.key)}
-                        >
+                        <button key={l.key} type="button" onClick={() => setAiLength(l.key)} className={pillClass(aiLength === l.key)}>
                           {l.label}
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  <Button
-                    variant="hero"
-                    onClick={handleGenerateCaption}
-                    disabled={!title || aiLoading}
-                    className="w-full"
-                  >
-                    {aiLoading ? (
-                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Gerando legenda…</>
-                    ) : (
-                      <><Sparkles className="h-4 w-4 mr-2" /> Gerar legenda</>
-                    )}
-                  </Button>
-
-                  <Button
-                    variant="secondary"
-                    onClick={handleSuggestHashtags}
-                    disabled={!title || hashLoading}
-                    className="w-full"
-                  >
-                    {hashLoading ? (
-                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sugerindo…</>
-                    ) : (
-                      <><Hash className="h-4 w-4 mr-2" /> Sugerir hashtags</>
-                    )}
-                  </Button>
-
-                  {aiCaption && (
-                    <div className="bg-primary/5 border border-primary/15 rounded-xl p-3">
-                      <p className="text-sm font-body text-foreground whitespace-pre-line leading-relaxed">{aiCaption}</p>
-                      <div className="flex gap-2 mt-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 text-xs"
-                          onClick={() => {
-                            setCaption((prev) => (prev ? `${prev}\n\n${aiCaption}` : aiCaption));
-                            toast.success("Legenda adicionada ao post!");
-                          }}
-                        >
-                          Usar esta legenda
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-xs" onClick={handleGenerateCaption}>
-                          Gerar outra
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </section>
-
-                {/* Reference link */}
-                <section className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80 flex items-center gap-1.5">
-                      <LinkIcon className="h-3 w-3" /> Link de referência
-                    </Label>
-                    <Input
-                      placeholder="Cole um link de vídeo de referência..."
-                      value={referenceLink}
-                      onChange={(e) => setReferenceLink(e.target.value)}
-                      className="rounded-xl h-10 text-sm bg-card"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <Button variant="hero" onClick={handleGenerateCaption} disabled={!title || aiLoading} className="w-full">
+                      {aiLoading ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Gerando legenda...</>
+                      ) : (
+                        <><Sparkles className="h-4 w-4 mr-2" /> Gerar legenda</>
+                      )}
+                    </Button>
+                    <Button variant="secondary" onClick={handleSuggestHashtags} disabled={!title || hashLoading} className="w-full">
+                      {hashLoading ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sugerindo...</>
+                      ) : (
+                        <><Hash className="h-4 w-4 mr-2" /> Sugerir hashtags</>
+                      )}
+                    </Button>
                   </div>
-                </section>
+                </div>
 
-                {/* Link do conteúdo final (Drive/Canva/arquivo pronto).
-                    Separado da referência: aqui vai o arquivo/arte pronta. */}
-                <section className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80 flex items-center gap-1.5">
-                      <Cloud className="h-3 w-3" /> Link do conteúdo (Drive/Canva)
-                    </Label>
-                    <Input
-                      placeholder="Cole o link do Drive, Canva ou arquivo final..."
-                      value={contentLink}
-                      onChange={(e) => setContentLink(e.target.value)}
-                      className="rounded-xl h-10 text-sm bg-card"
-                    />
-                    {contentLink.trim() && /^https?:\/\//i.test(contentLink.trim()) && (
+                {aiCaption && (
+                  <div className="bg-primary/5 border border-primary/15 rounded-xl p-3">
+                    <p className="text-sm font-body text-foreground whitespace-pre-line leading-relaxed">{aiCaption}</p>
+                    <div className="flex gap-2 mt-2">
                       <Button
-                        type="button"
                         variant="outline"
                         size="sm"
-                        className="gap-1.5 mt-1"
-                        onClick={() => window.open(contentLink.trim(), "_blank", "noopener,noreferrer")}
+                        className="flex-1 text-xs"
+                        onClick={() => {
+                          setCaption((prev) => (prev ? `${prev}\n\n${aiCaption}` : aiCaption));
+                          toast.success("Legenda adicionada ao post!");
+                        }}
                       >
-                        <ExternalLink className="h-3.5 w-3.5" /> Abrir conteúdo
+                        Usar esta legenda
                       </Button>
-                    )}
-                  </div>
-                </section>
-
-                {showResults && (
-                  <section className="rounded-2xl bg-card border border-border p-4 space-y-3">
-                    <p className="font-body font-semibold text-foreground text-sm flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4" /> Resultados do post
-                    </p>
-                    {status === "publicado" && !post?.result_views && (
-                      <p className="text-xs text-muted-foreground font-body flex items-center gap-1.5">
-                        <Target className="h-3 w-3" /> Quer registrar o resultado?
-                      </p>
-                    )}
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="space-y-1">
-                        <Label className="font-body text-[10px] flex items-center gap-1">
-                          <Eye className="h-3 w-3" /> Views
-                        </Label>
-                        <Input type="number" placeholder="0" value={views} onChange={(e) => setViews(e.target.value)} className="rounded-lg h-9 text-sm" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="font-body text-[10px] flex items-center gap-1">
-                          <Bookmark className="h-3 w-3" /> Salvos
-                        </Label>
-                        <Input type="number" placeholder="0" value={saves} onChange={(e) => setSaves(e.target.value)} className="rounded-lg h-9 text-sm" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="font-body text-[10px] flex items-center gap-1">
-                          <MessageSquare className="h-3 w-3" /> Coment.
-                        </Label>
-                        <Input type="number" placeholder="0" value={comments} onChange={(e) => setComments(e.target.value)} className="rounded-lg h-9 text-sm" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="font-body text-[10px] flex items-center gap-1">
-                          <Radio className="h-3 w-3" /> Alcance
-                        </Label>
-                        <Input type="number" placeholder="0" value={reach} onChange={(e) => setReach(e.target.value)} className="rounded-lg h-9 text-sm" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="font-body text-[10px] flex items-center gap-1">
-                          <Repeat2 className="h-3 w-3" /> Compart.
-                        </Label>
-                        <Input type="number" placeholder="0" value={shares} onChange={(e) => setShares(e.target.value)} className="rounded-lg h-9 text-sm" />
-                      </div>
+                      <Button variant="ghost" size="sm" className="text-xs" onClick={handleGenerateCaption}>
+                        Gerar outra
+                      </Button>
                     </div>
-                  </section>
+                  </div>
                 )}
-              </div>
-            </aside>
 
-            {/* ─── RIGHT: Content tabs ─────────── */}
-            <main
-              ref={mainRef}
-              className={cn(
-                "flex-1 overflow-y-auto bg-card",
-                mobileTab === "criar" ? "block" : "hidden md:block"
-              )}
-            >
-              <Tabs value={aba} onValueChange={setAba} className="h-full flex flex-col">
-                {/* AS ABAS EM PÍLULA.
-                    A sublinha fina cinza era herança de UI de sistema: fria, sem
-                    peso, e no celular a aba ativa quase não se distinguia das
-                    outras (a diferença era 2px de borda). Pílula resolve as duas
-                    coisas: a ativa vira um objeto sólido, e o alvo do dedo cresce. */}
-                <TabsList data-tour="editor-abas" className="mx-4 sm:mx-6 mt-3 mb-1 h-auto w-fit max-w-[calc(100%-2rem)] shrink-0 justify-start gap-1 overflow-x-auto flex-nowrap whitespace-nowrap rounded-full border border-border bg-muted/50 p-1">
-                  <TabsTrigger
-                    value="legenda"
-                    className="rounded-full px-3.5 py-1.5 font-body text-[13px] font-semibold text-muted-foreground transition-colors data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm hover:text-foreground"
-                  >
-                    <FileText className="h-3.5 w-3.5 mr-1.5" /> Legenda
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="roteiro"
-                    data-tour="editor-tab-roteiro"
-                    className="rounded-full px-3.5 py-1.5 font-body text-[13px] font-semibold text-muted-foreground transition-colors data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm hover:text-foreground"
-                  >
-                    <PenLine className="h-3.5 w-3.5 mr-1.5" /> Roteiro
-                  </TabsTrigger>
-                  {/* ARTE. O Cria Estúdio deixou de ser uma TELA no menu (que
-                      ninguém abria) e virou uma aba dentro do post o minuto
-                      exato em que a pessoa trava: texto pronto, arte em branco. */}
-                  <TabsTrigger
-                    value="arte"
-                    data-tour="editor-tab-arte"
-                    className="rounded-full px-3.5 py-1.5 font-body text-[13px] font-semibold text-muted-foreground transition-colors data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm hover:text-foreground"
-                  >
-                    <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Arte
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="tarefas"
-                    className="rounded-full px-3.5 py-1.5 font-body text-[13px] font-semibold text-muted-foreground transition-colors data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm hover:text-foreground"
-                  >
-                    <ListChecks className="h-3.5 w-3.5 mr-1.5" /> Tarefas
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="notas"
-                    className="rounded-full px-3.5 py-1.5 font-body text-[13px] font-semibold text-muted-foreground transition-colors data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm hover:text-foreground"
-                  >
-                    <StickyNote className="h-3.5 w-3.5 mr-1.5" /> Notas
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="refs"
-                    onClick={() => { setRefsOpen(true); handleAiReferences(); }}
-                    className="rounded-full px-3.5 py-1.5 font-body text-[13px] font-semibold text-muted-foreground transition-colors data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm hover:text-foreground"
-                  >
-                    <BookOpen className="h-3.5 w-3.5 mr-1.5" /> Refs
-                  </TabsTrigger>
-                </TabsList>
-
-                {/* Tab: Legenda */}
-                <TabsContent value="legenda" className="flex-1 px-4 sm:px-6 py-5 m-0 outline-none space-y-5">
-                  <div className="relative">
-                    {/* Emoji sempre visível no canto superior direito da legenda. */}
-                    <div className="absolute top-0 right-0 z-10 rounded-full bg-card/90 backdrop-blur-sm shadow-sm border border-border">
-                      <EmojiPicker onPick={insertEmoji} />
-                    </div>
-                    <textarea
-                      ref={captionRef}
-                      placeholder="Escreva sua legenda aqui ou gere com IA…"
-                      value={caption}
-                      onChange={(e) => setCaption(e.target.value)}
-                      className="w-full min-h-[280px] bg-transparent border-none outline-none focus:outline-none focus:ring-0 font-body text-base text-foreground placeholder:text-muted-foreground/40 resize-none leading-relaxed pr-10"
-                    />
-                    <span className="absolute bottom-2 right-2 text-[10px] text-muted-foreground/70 font-mono tabular-nums">
-                      {captionLen}/{captionMax}
-                    </span>
-                  </div>
-
-                  {caption.length > 10 && (
-                    <div className="flex flex-wrap gap-1.5 py-2 border-t border-border/50">
-                      {([
-                        { key: "rephrase", label: "Reescrever", icon: RefreshCw, instruction: "Reescreva essa legenda mantendo a mesma mensagem mas com palavras completamente diferentes." },
-                        { key: "shorten", label: "Encurtar", icon: Minus, instruction: "Encurte essa legenda pra no máximo 2 linhas mantendo a essência e o CTA." },
-                        { key: "expand", label: "Expandir", icon: Plus, instruction: "Expanda essa legenda com mais detalhes, storytelling e contexto. Mantenha o tom." },
-                        { key: "casual", label: "Mais casual", icon: SmilePlus, instruction: "Reescreva essa legenda num tom mais casual, descontraído, como conversa entre amigos. Use gírias leves." },
-                        { key: "formal", label: "Mais formal", icon: Briefcase, instruction: "Reescreva essa legenda num tom mais profissional e polido. Sem gírias, linguagem clara e direta." },
-                      ] as const).map((action) => {
-                        const isLoading = refineLoading === action.key;
-                        const Icon = action.icon;
+                {scoreResult && (
+                  <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+                    <div className="flex items-center gap-3">
+                      {(() => {
+                        const nota = scoreResult.nota;
+                        const cls = nota >= 8 ? "text-emerald-600 bg-emerald-500/10"
+                          : nota >= 6 ? "text-amber-600 bg-amber-500/10"
+                          : "text-destructive bg-destructive/10";
                         return (
-                          <button
-                            key={action.key}
-                            type="button"
-                            disabled={!!refineLoading}
-                            onClick={() => handleRefineCaption(action.key, action.instruction)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card hover:bg-accent text-xs font-body font-medium text-muted-foreground hover:text-foreground transition-all disabled:opacity-50 disabled:hover:bg-card"
-                          >
-                            {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Icon className="h-3 w-3" />}
-                            {action.label}
-                          </button>
+                          <div className={`flex flex-col items-center justify-center h-14 w-14 rounded-2xl shrink-0 ${cls}`}>
+                            <span className="text-xl font-display font-extrabold leading-none tabular-nums">
+                              {nota.toFixed(1)}
+                            </span>
+                            <span className="text-[9px] font-body opacity-70">/ 10</span>
+                          </div>
                         );
-                      })}
+                      })()}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80 mb-0.5">
+                          Nota de gancho
+                        </p>
+                        <p className="text-sm font-body text-foreground">{scoreResult.veredito}</p>
+                      </div>
                       <button
                         type="button"
-                        disabled={scoreLoading}
-                        onClick={handleScoreCaption}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 hover:bg-primary/15 text-xs font-body font-semibold text-primary transition-all disabled:opacity-50"
+                        onClick={() => setScoreResult(null)}
+                        className="shrink-0 p-1 rounded-md text-muted-foreground/50 hover:text-foreground transition-colors"
+                        aria-label="Fechar"
                       >
-                        {scoreLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <BarChart3 className="h-3 w-3" />}
-                        Avaliar legenda
+                        <X className="h-4 w-4" />
                       </button>
                     </div>
-                  )}
 
-                  {scoreResult && (
-                    <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-                      <div className="flex items-center gap-3">
-                        {(() => {
-                          const nota = scoreResult.nota;
-                          const cls = nota >= 8 ? "text-emerald-600 bg-emerald-500/10"
-                            : nota >= 6 ? "text-amber-600 bg-amber-500/10"
-                            : "text-destructive bg-destructive/10";
-                          return (
-                            <div className={`flex flex-col items-center justify-center h-14 w-14 rounded-2xl shrink-0 ${cls}`}>
-                              <span className="text-xl font-display font-extrabold leading-none tabular-nums">
-                                {nota.toFixed(1)}
-                              </span>
-                              <span className="text-[9px] font-body opacity-70">/ 10</span>
-                            </div>
-                          );
-                        })()}
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80 mb-0.5">
-                            Nota de gancho
-                          </p>
-                          <p className="text-sm font-body text-foreground">{scoreResult.veredito}</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setScoreResult(null)}
-                          className="shrink-0 p-1 rounded-md text-muted-foreground/50 hover:text-foreground transition-colors"
-                          aria-label="Fechar"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-
-                      {scoreResult.melhorias?.length > 0 && (
-                        <div className="space-y-1">
-                          <p className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
-                            Como melhorar
-                          </p>
-                          <ul className="space-y-1">
-                            {scoreResult.melhorias.map((m, i) => (
-                              <li key={i} className="flex gap-2 text-xs font-body text-muted-foreground">
-                                <span className="text-primary">•</span>
-                                <span>{m}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {/* Atalho pros 60 ganchos prontos: aqui não existe campo de
-                          gancho (a nota é da legenda), então o modo é COPIAR, e a
-                          pessoa cola no começo da legenda se quiser. */}
-                      <div className="flex items-center gap-1.5 text-xs font-body text-muted-foreground">
-                        <span>Travou no gancho?</span>
-                        <SeletorDeGanchos modo="copiar" label="Experimente um destes" className="h-6 px-1.5" />
-                      </div>
-
-                      {scoreResult.variacoes?.length > 0 && (
-                        <div className="space-y-2">
-                          <p className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
-                            Variações prontas
-                          </p>
-                          {scoreResult.variacoes.map((v, i) => (
-                            <div key={i} className="bg-muted/40 rounded-lg p-3 space-y-2">
-                              <p className="text-sm font-body text-foreground whitespace-pre-line">{v}</p>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setCaption(v);
-                                  setScoreResult(null);
-                                  toast.success("Legenda atualizada!");
-                                }}
-                                className="text-xs font-body font-semibold text-primary hover:underline"
-                              >
-                                Usar esta
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {refinedPreview && (
-                    <div className="bg-primary/5 border border-primary/15 rounded-xl p-4 space-y-3">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Sparkles className="h-3.5 w-3.5 text-primary" />
-                        <span className="text-xs font-display font-semibold text-primary">Sugestão da IA</span>
-                      </div>
-                      <div className="bg-destructive/5 rounded-lg p-2.5">
-                        <p className="text-xs font-body text-muted-foreground line-through whitespace-pre-line">
-                          {caption.slice(0, 200)}{caption.length > 200 ? "..." : ""}
+                    {scoreResult.melhorias?.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                          Como melhorar
                         </p>
+                        <ul className="space-y-1">
+                          {scoreResult.melhorias.map((m, i) => (
+                            <li key={i} className="flex gap-2 text-xs font-body text-muted-foreground">
+                              <span className="text-primary">•</span>
+                              <span>{m}</span>
+                            </li>
+                          ))}
+                        </ul>
                       </div>
-                      <div className="bg-emerald-50 dark:bg-emerald-500/10 rounded-lg p-2.5 border border-emerald-200/50">
-                        <p className="text-sm font-body text-foreground whitespace-pre-line">{refinedPreview}</p>
+                    )}
+
+                    {/* Atalho pros 60 ganchos prontos: aqui nao existe campo de
+                        gancho (a nota e da legenda), entao o modo e COPIAR, e a
+                        pessoa cola no comeco da legenda se quiser. */}
+                    <div className="flex items-center gap-1.5 text-xs font-body text-muted-foreground">
+                      <span>Travou no gancho?</span>
+                      <SeletorDeGanchos modo="copiar" label="Experimente um destes" className="h-6 px-1.5" />
+                    </div>
+
+                    {scoreResult.variacoes?.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                          Variações prontas
+                        </p>
+                        {scoreResult.variacoes.map((v, i) => (
+                          <div key={i} className="bg-muted/40 rounded-lg p-3 space-y-2">
+                            <p className="text-sm font-body text-foreground whitespace-pre-line">{v}</p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCaption(v);
+                                setScoreResult(null);
+                                toast.success("Legenda atualizada!");
+                              }}
+                              className="text-xs font-body font-semibold text-primary hover:underline"
+                            >
+                              Usar esta
+                            </button>
+                          </div>
+                        ))}
                       </div>
-                      <div className="flex gap-2">
+                    )}
+                  </div>
+                )}
+
+                {refinedPreview && (
+                  <div className="bg-primary/5 border border-primary/15 rounded-xl p-4 space-y-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Sparkles className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-xs font-display font-semibold text-primary">Sugestão da IA</span>
+                    </div>
+                    <div className="bg-destructive/5 rounded-lg p-2.5">
+                      <p className="text-xs font-body text-muted-foreground line-through whitespace-pre-line">
+                        {caption.slice(0, 200)}{caption.length > 200 ? "..." : ""}
+                      </p>
+                    </div>
+                    <div className="bg-emerald-50 dark:bg-emerald-500/10 rounded-lg p-2.5 border border-emerald-200/50">
+                      <p className="text-sm font-body text-foreground whitespace-pre-line">{refinedPreview}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="hero"
+                        size="sm"
+                        className="flex-1 text-xs"
+                        onClick={() => {
+                          setCaption(refinedPreview);
+                          setRefinedPreview(null);
+                          toast.success("Legenda atualizada!");
+                        }}
+                      >
+                        Substituir
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => setRefinedPreview(null)}
+                      >
+                        Descartar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {hashSuggested.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                        Hashtags sugeridas
+                      </p>
+                      {hashSelected.length > 0 && (
                         <Button
-                          variant="hero"
+                          variant="ghost"
                           size="sm"
-                          className="flex-1 text-xs"
+                          className="h-7 text-xs"
                           onClick={() => {
-                            setCaption(refinedPreview);
-                            setRefinedPreview(null);
-                            toast.success("Legenda atualizada!");
+                            const text = hashSelected.map((t) => `#${t}`).join(" ");
+                            navigator.clipboard.writeText(text);
+                            toast.success("Hashtags copiadas!");
                           }}
                         >
-                          Substituir
+                          <Copy className="h-3 w-3 mr-1" /> Copiar {hashSelected.length}
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-xs"
-                          onClick={() => setRefinedPreview(null)}
-                        >
-                          Descartar
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {hashSuggested.length > 0 && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
-                          Hashtags sugeridas
-                        </p>
-                        {hashSelected.length > 0 && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 text-xs"
-                            onClick={() => {
-                              const text = hashSelected.map((t) => `#${t}`).join(" ");
-                              navigator.clipboard.writeText(text);
-                              toast.success("Hashtags copiadas!");
-                            }}
-                          >
-                            <Copy className="h-3 w-3 mr-1" /> Copiar {hashSelected.length}
-                          </Button>
-                        )}
-                      </div>
-                      {hashGroups.high.length > 0 && (
-                        <HashGroup label="Alta relevância" color="text-emerald-600" tags={hashGroups.high} selected={hashSelected} onToggle={toggleHash} />
-                      )}
-                      {hashGroups.medium.length > 0 && (
-                        <HashGroup label="Média relevância" color="text-amber-600" tags={hashGroups.medium} selected={hashSelected} onToggle={toggleHash} />
-                      )}
-                      {hashGroups.niche.length > 0 && (
-                        <HashGroup label="Nicho específico" color="text-violet-600" tags={hashGroups.niche} selected={hashSelected} onToggle={toggleHash} />
-                      )}
-                      {hashSelected.length > 0 && (
-                        <p className="text-xs font-body text-primary break-all border-t border-border pt-2">
-                          {hashSelected.map((t) => `#${t}`).join(" ")}
-                        </p>
                       )}
                     </div>
-                  )}
+                    {hashGroups.high.length > 0 && (
+                      <HashGroup label="Alta relevância" color="text-emerald-600" tags={hashGroups.high} selected={hashSelected} onToggle={toggleHash} />
+                    )}
+                    {hashGroups.medium.length > 0 && (
+                      <HashGroup label="Média relevância" color="text-amber-600" tags={hashGroups.medium} selected={hashSelected} onToggle={toggleHash} />
+                    )}
+                    {hashGroups.niche.length > 0 && (
+                      <HashGroup label="Nicho específico" color="text-violet-600" tags={hashGroups.niche} selected={hashSelected} onToggle={toggleHash} />
+                    )}
+                    {hashSelected.length > 0 && (
+                      <p className="text-xs font-body text-primary break-all border-t border-border pt-2">
+                        {hashSelected.map((t) => `#${t}`).join(" ")}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </section>
 
-                  {/* Mídia final do post, todos os formatos exceto carrossel (que usa as lâminas) */}
-                  {format !== "carrossel" && (
-                    <div className="space-y-2">
-                      <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
-                        Mídia
-                      </Label>
-                      <div className="rounded-2xl border-2 border-dashed border-border/50 overflow-hidden bg-muted/20 hover:border-primary/30 transition-colors">
-                        {activeUpload ? (
-                          <div className="relative">
-                            <div className="aspect-[4/5] relative overflow-hidden max-h-[60vh] sm:max-h-[360px] bg-muted">
-                              <MediaPreparingPlaceholder pct={activeUpload.pct} label="Enviando vídeo…" />
-                            </div>
+              {/* 3. A ARTE / MIDIA */}
+              <section className="rounded-3xl border border-border bg-card p-4 sm:p-5 space-y-4">
+                <BlocoCabecalho numero={3} titulo="A arte / mídia" subtitulo="Suba a imagem ou o vídeo, cole o link do arquivo pronto e gere a arte no Estúdio." />
+
+                {format !== "carrossel" ? (
+                  <div className="space-y-2">
+                    <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                      Midia
+                    </Label>
+                    <div className="rounded-2xl border-2 border-dashed border-border/50 overflow-hidden bg-muted/20 hover:border-primary/30 transition-colors">
+                      {activeUpload ? (
+                        <div className="relative">
+                          <div className="aspect-[4/5] relative overflow-hidden max-h-[60vh] sm:max-h-[360px] bg-muted">
+                            <MediaPreparingPlaceholder pct={activeUpload.pct} label="Enviando vídeo..." />
                           </div>
-                        ) : mediaList.length > 0 ? (
-                          <div className="relative">
-                            <div className="aspect-[4/5] relative overflow-hidden max-h-[60vh] sm:max-h-[360px] bg-muted">
-                              {(() => {
-                                const primary = mediaList[0];
-                                const fileId = primary.external_file_id || primary.id;
-                                const isVideo = primary.file_type?.startsWith("video/");
-                                const isBunny = isVideo && primary.provider === "bunny";
-                                const isSupabaseUpload = !!primary.thumbnail_url
-                                  && !primary.thumbnail_url.includes("drive.google")
-                                  && !primary.thumbnail_url.includes("lh3.google");
-                                const driveImgSrc = `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w600`;
-                                const imgSrc = primary.thumbnail_url || primary.view_url || driveImgSrc;
-                                return isBunny ? (
-                                  <VideoMediaSlot viewUrl={primary.view_url ?? ""} videoGuid={primary.external_file_id} className="w-full h-full border-0" />
-                                ) : isVideo ? (
-                                  <a
-                                    href={`https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="block w-full h-full relative bg-black group"
-                                  >
-                                    <img
-                                      src={driveImgSrc}
-                                      alt={primary.file_name}
-                                      loading="lazy"
-                                      className="w-full h-full object-contain sm:object-cover"
-                                      onError={(e) => {
-                                        const el = e.target as HTMLImageElement;
-                                        el.classList.add("hidden");
-                                        el.nextElementSibling?.classList.remove("hidden");
-                                      }}
-                                    />
-                                    <div className="hidden absolute inset-0 bg-muted flex flex-col items-center justify-center gap-2 px-4 text-center">
-                                      <Video className="h-10 w-10 text-muted-foreground" />
-                                      <span className="text-xs text-muted-foreground font-body truncate max-w-full">{primary.file_name}</span>
-                                      <span className="inline-flex items-center gap-1 text-[11px] text-primary font-body font-semibold">
-                                        <ExternalLink className="h-3 w-3" /> Abrir no Drive
-                                      </span>
-                                    </div>
-                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-gradient-to-t from-black/30 to-transparent group-hover:from-black/40 transition-colors">
-                                      <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                                        <Play className="h-6 w-6 text-black ml-0.5" fill="currentColor" />
-                                      </div>
-                                    </div>
-                                  </a>
-                                ) : (
+                        </div>
+                      ) : mediaList.length > 0 ? (
+                        <div className="relative">
+                          <div className="aspect-[4/5] relative overflow-hidden max-h-[60vh] sm:max-h-[360px] bg-muted">
+                            {(() => {
+                              const primary = mediaList[0];
+                              const fileId = primary.external_file_id || primary.id;
+                              const isVideo = primary.file_type?.startsWith("video/");
+                              const isBunny = isVideo && primary.provider === "bunny";
+                              const isSupabaseUpload = !!primary.thumbnail_url
+                                && !primary.thumbnail_url.includes("drive.google")
+                                && !primary.thumbnail_url.includes("lh3.google");
+                              const driveImgSrc = `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w600`;
+                              const imgSrc = primary.thumbnail_url || primary.view_url || driveImgSrc;
+                              return isBunny ? (
+                                <VideoMediaSlot viewUrl={primary.view_url ?? ""} videoGuid={primary.external_file_id} className="w-full h-full border-0" />
+                              ) : isVideo ? (
+                                <a
+                                  href={`https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block w-full h-full relative bg-black group"
+                                >
                                   <img
-                                    src={imgSrc}
+                                    src={driveImgSrc}
                                     alt={primary.file_name}
-                                    className="w-full h-full object-contain sm:object-cover"
                                     loading="lazy"
+                                    className="w-full h-full object-contain sm:object-cover"
                                     onError={(e) => {
                                       const el = e.target as HTMLImageElement;
-                                      if (!isSupabaseUpload) {
-                                        el.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
-                                      } else {
-                                        console.warn("[media] Supabase upload falhou ao carregar", {
-                                          src: el.src,
-                                          fileName: primary.file_name,
-                                          path: primary.external_file_id,
-                                        });
-                                        // Em vez de esconder, manter placeholder visível para o usuário saber que algo quebrou.
-                                        el.src = "/placeholder.svg";
-                                        el.classList.add("opacity-40");
-                                      }
+                                      el.classList.add("hidden");
+                                      el.nextElementSibling?.classList.remove("hidden");
                                     }}
                                   />
-                                );
-                              })()}
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
-                              <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
-                                <div className="flex items-center gap-1 bg-black/40 backdrop-blur rounded-full px-2 py-0.5">
-                                  <Cloud className="h-2.5 w-2.5 text-white" />
-                                  <span className="text-[9px] text-white font-body truncate max-w-[120px]">{mediaList[0].file_name}</span>
-                                </div>
-                                <button
-                                  onClick={() => handleRemoveAllMedia()}
-                                  disabled={removingIds.size > 0}
-                                  className="bg-black/40 backdrop-blur rounded-full p-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                  <X className="h-3 w-3 text-white" />
-                                </button>
-                              </div>
-                            </div>
-                            {mediaList[0].file_type?.startsWith("video/") && mediaList[0].provider !== "bunny" && (
-                              <a
-                                href={`https://drive.google.com/file/d/${encodeURIComponent(mediaList[0].external_file_id || mediaList[0].id)}/view`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-xs text-primary font-body hover:underline mt-2 px-3"
-                              >
-                                <ExternalLink className="h-3 w-3" /> Abrir vídeo no Google Drive
-                              </a>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex flex-col gap-3 p-3">
-                            <div className="grid grid-cols-2 gap-2">
-                              <button
-                                type="button"
-                                onClick={handleDrivePick}
-                                disabled={picking}
-                                className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all p-4 text-center"
-                              >
-                                <Cloud className="h-6 w-6 text-muted-foreground" />
-                                <span className="text-xs font-body text-muted-foreground">
-                                  {picking ? "Abrindo..." : "Google Drive"}
-                                </span>
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={openLocalFilePicker}
-                                disabled={uploadingLocal}
-                                className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all p-4 text-center"
-                              >
-                                <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                                <span className="text-xs font-body text-muted-foreground">
-                                  {uploadingLocal ? "Enviando..." : "Galeria / PC"}
-                                </span>
-                              </button>
-                            </div>
-                            <p className="text-[10px] text-muted-foreground/60 font-body text-center">
-                              💡 Para melhor qualidade, use arquivos do Google Drive. Uploads diretos ficam disponíveis por 30 dias.
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </TabsContent>
-
-                {/* Tab: Roteiro */}
-                <TabsContent value="roteiro" className="flex-1 px-4 sm:px-6 py-5 m-0 outline-none space-y-5">
-                  {(() => {
-                    const iconMap: Record<string, React.ElementType> = {
-                      Anchor, Layers, Type, Radio, MousePointerClick, MessageSquare, PenLine,
-                    };
-                    return (
-                      <>
-                        {formatStructure.fields.map((field) => {
-                          const IconComponent = iconMap[field.icon] || PenLine;
-                          const value = field.key === "hook" ? hook
-                            : field.key === "script" ? script
-                            : field.key === "caption" ? caption
-                            : field.key === "cta" ? cta : "";
-                          const setter = field.key === "hook" ? setHook
-                            : field.key === "script" ? setScript
-                            : field.key === "caption" ? setCaption
-                            : field.key === "cta" ? setCta : (() => {});
-                          return (
-                            <div key={field.key} className="space-y-1.5">
-                              <div className="flex items-center justify-between gap-2">
-                                <Label className="font-body text-sm flex items-center gap-2">
-                                  <IconComponent className="h-4 w-4" /> {field.label}
-                                </Label>
-                                {/* Os 60 ganchos prontos, só no campo de gancho
-                                    (na live o "hook" é o tema, não cabe). */}
-                                {field.key === "hook" && format !== "live" && (
-                                  <SeletorDeGanchos valorAtual={hook} onPick={setHook} />
-                                )}
-                              </div>
-                              <Textarea
-                                placeholder={field.placeholder}
-                                value={value}
-                                onChange={(e) => setter(e.target.value)}
-                                className="rounded-xl"
-                                rows={field.rows}
-                              />
-                            </div>
-                          );
-                        })}
-                        {/* O gerador de lâminas voltou. Ele morava no Cria Estúdio
-                            (a tela que ninguém abria) e sumiu junto com ela. Agora
-                            mora onde as lâminas moram e é ele que faz a aba Arte
-                            gerar prompt do CONTEÚDO real, não do título. */}
-                        {formatStructure.hasDynamicSections && (
-                          <CarouselWriter
-                            titulo={title}
-                            formato={format}
-                            pilar={pillarId ?? undefined}
-                            sections={sections}
-                            onChange={setSections}
-                            hook={hook}
-                            onHook={setHook}
-                            cta={cta}
-                            onCta={setCta}
-                            unify={formatStructure.devField}
-                          />
-                        )}
-                        {/* No carrossel (devField) nao ha edicao lamina a lamina:
-                            o desenvolvimento inteiro mora no campo unico acima. */}
-                        {formatStructure.hasDynamicSections && !formatStructure.devField && (
-                          <ScriptEditor
-                            sections={sections}
-                            onChange={setSections}
-                            sectionLabel={formatStructure.sectionLabel ?? "Seção"}
-                            picking={picking}
-                            uploadingLocal={uploadingLocal}
-                            onUploadLocalForSection={(index) => {
-                              if (!userId) return;
-                              const input = document.createElement("input");
-                              input.type = "file";
-                              input.accept = "image/*";
-                              input.style.cssText = "position:fixed;left:-9999px;top:-9999px;opacity:0;pointer-events:none";
-
-                              const cleanup = () => {
-                                if (input.parentNode) input.parentNode.removeChild(input);
-                              };
-
-                              input.addEventListener("change", async () => {
-                                try {
-                                  const raw = input.files?.[0];
-                                  if (!raw) return;
-                                  const validation = validateUpload(raw, "postMedia");
-                                  if (!validation.ok) {
-                                    toast.error(validation.reason);
-                                    return;
-                                  }
-                                  try {
-                                    setUploadingLocal(true);
-                                    const file = await compressImage(raw);
-                                    const safeName = sanitizeStoragePath(file.name);
-                                    const path = `${userId}/${Date.now()}-${safeName}`;
-                                    const { error: upErr } = await supabase.storage
-                                      .from("media")
-                                      .upload(path, file, { upsert: true, contentType: file.type });
-                                    if (upErr) {
-                                      console.error("[section-upload] storage error", upErr);
-                                      toast.error(`Erro ao enviar ${file.name}: ${upErr.message}`);
-                                      return;
+                                  <div className="hidden absolute inset-0 bg-muted flex flex-col items-center justify-center gap-2 px-4 text-center">
+                                    <Video className="h-10 w-10 text-muted-foreground" />
+                                    <span className="text-xs text-muted-foreground font-body truncate max-w-full">{primary.file_name}</span>
+                                    <span className="inline-flex items-center gap-1 text-[11px] text-primary font-body font-semibold">
+                                      <ExternalLink className="h-3 w-3" /> Abrir no Drive
+                                    </span>
+                                  </div>
+                                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-gradient-to-t from-black/30 to-transparent group-hover:from-black/40 transition-colors">
+                                    <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                      <Play className="h-6 w-6 text-black ml-0.5" fill="currentColor" />
+                                    </div>
+                                  </div>
+                                </a>
+                              ) : (
+                                <img
+                                  src={imgSrc}
+                                  alt={primary.file_name}
+                                  className="w-full h-full object-contain sm:object-cover"
+                                  loading="lazy"
+                                  onError={(e) => {
+                                    const el = e.target as HTMLImageElement;
+                                    if (!isSupabaseUpload) {
+                                      el.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
+                                    } else {
+                                      console.warn("[media] Supabase upload falhou ao carregar", {
+                                        src: el.src,
+                                        fileName: primary.file_name,
+                                        path: primary.external_file_id,
+                                      });
+                                      // Em vez de esconder, manter placeholder visivel para o usuario saber que algo quebrou.
+                                      el.src = "/placeholder.svg";
+                                      el.classList.add("opacity-40");
                                     }
-                                    const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
-
-                                    // Registra em external_media_refs (provider='storage') pra
-                                    // Feed e Arquivos enxergarem; cota é incrementada.
-                                    let mediaRefId: string | null = null;
-                                    const { data: inserted, error: insErr } = await supabase
-                                      .from("external_media_refs")
-                                      .insert({
-                                        user_id: userId,
-                                        post_id: post?.id ?? null,
-                                        provider: "storage",
-                                        external_file_id: path,
-                                        file_name: file.name,
-                                        file_type: file.type || null,
-                                        file_size: file.size,
-                                        thumbnail_url: urlData.publicUrl,
-                                        view_url: urlData.publicUrl,
-                                      })
-                                      .select("id")
-                                      .single();
-                                    if (insErr) {
-                                      console.error("[section-upload] external_media_refs insert error", insErr);
-                                    } else if (inserted) {
-                                      mediaRefId = (inserted as { id: string }).id;
-                                      if (!post?.id) {
-                                        // backfill no save (mesmo mecanismo de pendingDriveFiles, mas em lista própria)
-                                        setPendingSectionRefIds((prev) => [...prev, mediaRefId!]);
-                                      }
-                                      const { error: incErr } = await (supabase.rpc as unknown as (
-                                        fn: string, args: unknown,
-                                      ) => Promise<{ error: unknown }>)("increment_storage", { _user: userId, _delta: file.size });
-                                      if (incErr) console.error("[section-upload] increment_storage failed (+)", incErr);
-                                    }
-
-                                    setSections((prev) =>
-                                      prev.map((s, j) =>
-                                        j === index
-                                          ? {
-                                              ...s,
-                                              driveFileId: path,
-                                              driveFileName: file.name,
-                                              driveThumbnail: urlData.publicUrl,
-                                              mediaRefId,
-                                            }
-                                          : s
-                                      )
-                                    );
-                                  } catch (err) {
-                                    console.error("[section-upload] unexpected", err);
-                                    toast.error("Erro ao enviar mídia.");
-                                  } finally {
-                                    setUploadingLocal(false);
-                                  }
-                                } finally {
-                                  cleanup();
-                                }
-                              }, { once: true });
-
-                              input.addEventListener("cancel", cleanup, { once: true });
-                              setTimeout(() => {
-                                if (!input.files || input.files.length === 0) cleanup();
-                              }, 5 * 60 * 1000);
-
-                              document.body.appendChild(input);
-                              input.click();
-                            }}
-                            onRemoveSectionMedia={async (index) => {
-                              const sec = sections[index];
-                              const refId = sec?.mediaRefId ?? null;
-                              const storagePath = sec?.driveFileId ?? null;
-                              // 1) limpa a UI imediatamente
-                              setSections((prev) =>
-                                prev.map((s, j) =>
-                                  j === index
-                                    ? {
-                                        ...s,
-                                        driveFileId: null,
-                                        driveFileName: null,
-                                        driveThumbnail: null,
-                                        mediaRefId: null,
-                                      }
-                                    : s
-                                )
+                                  }}
+                                />
                               );
-                              if (!refId) return; // mídia de Drive antiga sem mediaRefId → nada a sincronizar
-                              try {
-                                // Busca file_size pra devolver pra cota
-                                const { data: refRow } = await supabase
-                                  .from("external_media_refs")
-                                  .select("file_size, provider, external_file_id")
-                                  .eq("id", refId)
-                                  .maybeSingle();
-                                await supabase.from("external_media_refs").delete().eq("id", refId);
-                                // remove do state de pending se ainda estava lá (post novo)
-                                setPendingSectionRefIds((prev) => prev.filter((id) => id !== refId));
-                                const provider = (refRow as { provider?: string | null } | null)?.provider;
-                                const sizeBytes = (refRow as { file_size?: number | null } | null)?.file_size ?? null;
-                                const filePath = ((refRow as { external_file_id?: string | null } | null)?.external_file_id) ?? storagePath;
-                                if (provider === "storage" && filePath) {
-                                  await supabase.storage.from("media").remove([filePath]);
-                                  if (sizeBytes && sizeBytes > 0 && userId) {
-                                    const { error: decErr } = await (supabase.rpc as unknown as (
-                                      fn: string, args: unknown,
-                                    ) => Promise<{ error: unknown }>)("increment_storage", { _user: userId, _delta: -sizeBytes });
-                                    if (decErr) console.error("[section-upload] increment_storage failed (-)", decErr);
-                                  }
-                                }
-                              } catch (e) {
-                                console.error("[section-upload] remove sync failed", e);
-                              }
-                            }}
-                            onPickDriveForSection={async (index) => {
-                              const before = new Date().toISOString();
-                              await pickAndSave(undefined);
-                              const { data } = await supabase
-                                .from("external_media_refs")
-                                .select("external_file_id, file_name, thumbnail_url")
-                                .eq("user_id", userId)
-                                .is("post_id", null)
-                                .gte("created_at", before)
-                                .order("created_at", { ascending: false })
-                                .limit(1);
-                              if (data && data[0]) {
-                                setSections((prev) =>
-                                  prev.map((s, j) =>
-                                    j === index
-                                      ? {
-                                          ...s,
-                                          driveFileId: data[0].external_file_id,
-                                          driveFileName: data[0].file_name,
-                                          driveThumbnail: data[0].thumbnail_url,
-                                        }
-                                      : s
-                                  )
-                                );
-                              }
-                            }}
-                          />
-                        )}
-                      </>
-                    );
-                  })()}
-                </TabsContent>
+                            })()}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
+                            <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
+                              <div className="flex items-center gap-1 bg-black/40 backdrop-blur rounded-full px-2 py-0.5">
+                                <Cloud className="h-2.5 w-2.5 text-white" />
+                                <span className="text-[9px] text-white font-body truncate max-w-[120px]">{mediaList[0].file_name}</span>
+                              </div>
+                              <button
+                                onClick={() => handleRemoveAllMedia()}
+                                disabled={removingIds.size > 0}
+                                className="bg-black/40 backdrop-blur rounded-full p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <X className="h-3 w-3 text-white" />
+                              </button>
+                            </div>
+                          </div>
+                          {mediaList[0].file_type?.startsWith("video/") && mediaList[0].provider !== "bunny" && (
+                            <a
+                              href={`https://drive.google.com/file/d/${encodeURIComponent(mediaList[0].external_file_id || mediaList[0].id)}/view`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs text-primary font-body hover:underline mt-2 px-3"
+                            >
+                              <ExternalLink className="h-3 w-3" /> Abrir vídeo no Google Drive
+                            </a>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-3 p-3">
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={handleDrivePick}
+                              disabled={picking}
+                              className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all p-4 text-center"
+                            >
+                              <Cloud className="h-6 w-6 text-muted-foreground" />
+                              <span className="text-xs font-body text-muted-foreground">
+                                {picking ? "Abrindo..." : "Google Drive"}
+                              </span>
+                            </button>
 
-                {/* Tab: Arte o Cria Estúdio */}
-                <TabsContent value="arte" className="flex-1 px-4 sm:px-6 py-5 m-0 outline-none">
+                            <button
+                              type="button"
+                              onClick={openLocalFilePicker}
+                              disabled={uploadingLocal}
+                              className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all p-4 text-center"
+                            >
+                              <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                              <span className="text-xs font-body text-muted-foreground">
+                                {uploadingLocal ? "Enviando..." : "Galeria / PC"}
+                              </span>
+                            </button>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground/60 font-body text-center">
+                            Para melhor qualidade, use arquivos do Google Drive. Uploads diretos ficam disponíveis por 30 dias.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs font-body text-muted-foreground rounded-xl border border-dashed border-border bg-muted/20 p-3">
+                    No carrossel, cada imagem fica na sua lâmina, lá no passo 1 (o conteúdo).
+                  </p>
+                )}
+
+                {/* Link do conteudo final (Drive/Canva/arquivo pronto). */}
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80 flex items-center gap-1.5">
+                    <Cloud className="h-3 w-3" /> Link do conteúdo (Drive/Canva)
+                  </Label>
+                  <Input
+                    placeholder="Cole o link do Drive, Canva ou arquivo final..."
+                    value={contentLink}
+                    onChange={(e) => setContentLink(e.target.value)}
+                    className="rounded-xl h-10 text-sm bg-card"
+                  />
+                  {contentLink.trim() && /^https?:\/\//i.test(contentLink.trim()) && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 mt-1"
+                      onClick={() => window.open(contentLink.trim(), "_blank", "noopener,noreferrer")}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" /> Abrir conteúdo
+                    </Button>
+                  )}
+                </div>
+
+                {/* Gerador de prompt do Estudio (arte a partir do conteudo real). */}
+                <div className="pt-1 border-t border-border/50">
                   <ArtStudio
                     titulo={title}
                     formato={format}
@@ -2378,152 +2190,228 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     postId={post?.id ?? null}
                     roteiro={[hook, script, cta].filter(Boolean).join("\n\n")}
                     onSalvar={(texto) => setNotes((n) => (n ? `${n}\n\n${texto}` : texto))}
-                    onIrParaRoteiro={() => setAba("roteiro")}
+                    onIrParaRoteiro={() => conteudoRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
                   />
-                </TabsContent>
+                </div>
+              </section>
 
-                {/* Tab: Tarefas */}
-                <TabsContent value="tarefas" className="flex-1 px-4 sm:px-6 py-5 m-0 outline-none">
-                  {!isNew && post ? (
-                    <PostTasks postId={post.id} />
-                  ) : (
-                    <div className="text-center py-10 text-sm text-muted-foreground font-body">
-                      Salve o post primeiro para adicionar tarefas.
-                    </div>
-                  )}
-                </TabsContent>
-
-                {/* Tab: Notas */}
-                <TabsContent value="notas" className="flex-1 px-4 sm:px-6 py-5 m-0 outline-none">
-                  <div className="relative">
-                    <textarea
-                      placeholder="Anote ideias soltas, links de inspiração, lembretes para esse conteúdo…"
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      className="w-full min-h-[400px] bg-transparent border-none outline-none focus:outline-none focus:ring-0 font-body text-base text-foreground placeholder:text-muted-foreground/40 resize-none leading-relaxed"
+              {/* 4. QUANDO PUBLICAR */}
+              <section data-tour="editor-agendamento" className="rounded-3xl border border-border bg-card p-4 sm:p-5 space-y-4">
+                <BlocoCabecalho numero={4} titulo="Quando publicar" subtitulo="Data, horário e o melhor horário pra postar." />
+                <div className="flex items-end gap-2">
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <Label className="text-[11px] text-muted-foreground flex items-center h-4">Data</Label>
+                    <Input
+                      type="date"
+                      value={scheduledDate}
+                      onChange={(e) => setScheduledDate(e.target.value)}
+                      className="rounded-xl h-10 text-sm w-full min-w-0 px-3 text-left [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:text-left"
                     />
                   </div>
-                </TabsContent>
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <Label className="text-[11px] text-muted-foreground flex items-center gap-1 h-4">
+                      <Clock className="h-3 w-3" /> Hora
+                    </Label>
+                    <Input
+                      type="time"
+                      value={scheduledTime}
+                      onChange={(e) => setScheduledTime(e.target.value)}
+                      className="rounded-xl h-10 text-sm w-full min-w-0 px-3 text-left [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:text-left"
+                    />
+                  </div>
+                </div>
+                <BestTimesHint platform={platform} niche={profile?.niche} onPick={setScheduledTime} />
+              </section>
 
-                {/* Tab: Refs */}
-                <TabsContent value="refs" className="flex-1 px-4 sm:px-6 py-5 m-0 outline-none">
-                  <Tabs defaultValue="hooks">
-                    <TabsList className="bg-muted/40 border border-border rounded-xl mb-4 w-full">
-                      <TabsTrigger value="hooks" className="flex-1 rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-                        <Sparkles className="h-3 w-3 mr-1" /> Hooks
-                      </TabsTrigger>
-                      <TabsTrigger value="formatos" className="flex-1 rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-                        <FileCode2 className="h-3 w-3 mr-1" /> Formatos
-                      </TabsTrigger>
-                      <TabsTrigger value="prompts" className="flex-1 rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-                        <MessageSquareText className="h-3 w-3 mr-1" /> Prompts
-                      </TabsTrigger>
-                    </TabsList>
+              {/* MAIS: organizacao interna (secundario), recolhido pra nao poluir o fluxo. */}
+              <div className="space-y-3">
+                <Recolhivel icon={ListChecks} titulo="Tarefas">
+                  <div className="pt-1">
+                    {!isNew && post ? (
+                      <PostTasks postId={post.id} />
+                    ) : (
+                      <div className="text-center py-6 text-sm text-muted-foreground font-body">
+                        Salve o post primeiro para adicionar tarefas.
+                      </div>
+                    )}
+                  </div>
+                </Recolhivel>
 
-                    <TabsContent value="hooks" className="space-y-2">
-                      {isRefAiLoading && (
-                        <div className="bg-card rounded-xl p-3 border border-border animate-pulse flex items-center justify-center">
-                          <Sparkles className="h-4 w-4 mr-2 animate-spin text-primary" />
-                          <span className="text-xs font-body text-muted-foreground">Filtrando referências...</span>
-                        </div>
-                      )}
-                      {aiHookCategories.length > 0 && (
-                        <div className="mb-4">
-                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Sugestões da IA</p>
-                          <div className="flex flex-wrap gap-2">
-                            {aiHookCategories.map((cat) => (
-                              <span key={cat} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/20 text-primary border border-primary/20">
-                                {cat}
-                              </span>
+                <Recolhivel icon={StickyNote} titulo="Notas">
+                  <div className="relative pt-1">
+                    <textarea
+                      placeholder="Anote ideias soltas, links de inspiração, lembretes para esse conteúdo..."
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      className="w-full min-h-[220px] bg-transparent border-none outline-none focus:outline-none focus:ring-0 font-body text-base text-foreground placeholder:text-muted-foreground/40 resize-none leading-relaxed"
+                    />
+                  </div>
+                </Recolhivel>
+
+                <Recolhivel icon={BookOpen} titulo="Referências (hooks, formatos, prompts)" onOpen={handleAiReferences}>
+                  <div className="pt-1">
+                    <Tabs defaultValue="hooks">
+                      <TabsList className="bg-muted/40 border border-border rounded-xl mb-4 w-full">
+                        <TabsTrigger value="hooks" className="flex-1 rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                          <Sparkles className="h-3 w-3 mr-1" /> Hooks
+                        </TabsTrigger>
+                        <TabsTrigger value="formatos" className="flex-1 rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                          <FileCode2 className="h-3 w-3 mr-1" /> Formatos
+                        </TabsTrigger>
+                        <TabsTrigger value="prompts" className="flex-1 rounded-lg font-body text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                          <MessageSquareText className="h-3 w-3 mr-1" /> Prompts
+                        </TabsTrigger>
+                      </TabsList>
+
+                      <TabsContent value="hooks" className="space-y-2">
+                        {isRefAiLoading && (
+                          <div className="bg-card rounded-xl p-3 border border-border animate-pulse flex items-center justify-center">
+                            <Sparkles className="h-4 w-4 mr-2 animate-spin text-primary" />
+                            <span className="text-xs font-body text-muted-foreground">Filtrando referências...</span>
+                          </div>
+                        )}
+                        {aiHookCategories.length > 0 && (
+                          <div className="mb-4">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Sugestões da IA</p>
+                            <div className="flex flex-wrap gap-2">
+                              {aiHookCategories.map((cat) => (
+                                <span key={cat} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/20 text-primary border border-primary/20">
+                                  {cat}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {FALLBACK_HOOKS.map((h, i) => (
+                          <div key={i} className={`bg-muted/30 rounded-xl p-3 border transition-all ${aiHookCategories.includes(h.category) ? "border-primary/40 shadow-sm" : "border-border"}`}>
+                            <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-body mb-2 ${aiHookCategories.includes(h.category) ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"}`}>
+                              {h.category}
+                            </span>
+                            <p className="text-sm font-body text-foreground mb-2">"{h.text}"</p>
+                            <CopyButton text={h.text} />
+                          </div>
+                        ))}
+                        {userRefHooks.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-border">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Meus Hooks</p>
+                            {userRefHooks.map((h, i) => (
+                              <div key={`uh-${i}`} className="bg-muted/30 rounded-xl p-3 border border-border mb-2">
+                                <span className="inline-block px-1.5 py-0.5 rounded text-xs font-body bg-secondary/10 text-secondary mb-1 capitalize">
+                                  {h.category}
+                                </span>
+                                <p className="text-sm font-body text-foreground">"{h.hook_text}"</p>
+                                <CopyButton text={h.hook_text} className="mt-1" />
+                              </div>
                             ))}
                           </div>
-                        </div>
-                      )}
-                      {FALLBACK_HOOKS.map((h, i) => (
-                        <div key={i} className={`bg-muted/30 rounded-xl p-3 border transition-all ${aiHookCategories.includes(h.category) ? "border-primary/40 shadow-sm" : "border-border"}`}>
-                          <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-body mb-2 ${aiHookCategories.includes(h.category) ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"}`}>
-                            {h.category}
-                          </span>
-                          <p className="text-sm font-body text-foreground mb-2">"{h.text}"</p>
-                          <CopyButton text={h.text} />
-                        </div>
-                      ))}
-                      {userRefHooks.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-border">
-                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Meus Hooks</p>
-                          {userRefHooks.map((h, i) => (
-                            <div key={`uh-${i}`} className="bg-muted/30 rounded-xl p-3 border border-border mb-2">
-                              <span className="inline-block px-1.5 py-0.5 rounded text-xs font-body bg-secondary/10 text-secondary mb-1 capitalize">
-                                {h.category}
-                              </span>
-                              <p className="text-sm font-body text-foreground">"{h.hook_text}"</p>
-                              <CopyButton text={h.hook_text} className="mt-1" />
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </TabsContent>
+                        )}
+                      </TabsContent>
 
-                    <TabsContent value="formatos" className="space-y-2">
-                      {(() => {
-                        const filtered = refFormats.filter((f) => f.platform === platform || f.platform === "todos" || !platform);
-                        if (filtered.length === 0)
-                          return (
-                            <div className="bg-muted/30 rounded-xl p-4 border border-border text-center">
-                              <p className="text-sm text-muted-foreground font-body">Nenhum formato cadastrado ainda.</p>
-                            </div>
-                          );
-                        return filtered.map((f) => (
-                          <div key={f.id} className="bg-muted/30 rounded-xl p-3 border border-border space-y-1.5">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <PlatformIcon platform={f.platform} size="sm" />
-                                <span className="font-body font-medium text-sm text-foreground">{f.name}</span>
+                      <TabsContent value="formatos" className="space-y-2">
+                        {(() => {
+                          const filtered = refFormats.filter((f) => f.platform === platform || f.platform === "todos" || !platform);
+                          if (filtered.length === 0)
+                            return (
+                              <div className="bg-muted/30 rounded-xl p-4 border border-border text-center">
+                                <p className="text-sm text-muted-foreground font-body">Nenhum formato cadastrado ainda.</p>
                               </div>
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-body bg-secondary/10 text-secondary">{f.format_type}</span>
+                            );
+                          return filtered.map((f) => (
+                            <div key={f.id} className="bg-muted/30 rounded-xl p-3 border border-border space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <PlatformIcon platform={f.platform} size="sm" />
+                                  <span className="font-body font-medium text-sm text-foreground">{f.name}</span>
+                                </div>
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-body bg-secondary/10 text-secondary">{f.format_type}</span>
+                              </div>
+                              <p className="text-xs text-muted-foreground font-body whitespace-pre-line">{f.structure}</p>
+                              {f.tips && <p className="text-xs text-muted-foreground font-body italic">{f.tips}</p>}
+                              <CopyButton text={f.structure || f.name} />
                             </div>
-                            <p className="text-xs text-muted-foreground font-body whitespace-pre-line">{f.structure}</p>
-                            {f.tips && <p className="text-xs text-muted-foreground font-body italic">💡 {f.tips}</p>}
-                            <CopyButton text={f.structure || f.name} />
-                          </div>
-                        ));
-                      })()}
-                    </TabsContent>
+                          ));
+                        })()}
+                      </TabsContent>
 
-                    <TabsContent value="prompts" className="space-y-2">
-                      <p className="text-xs text-muted-foreground font-body mb-3">
-                        Copie, preencha os [COLCHETES] e cole no ChatGPT ou Claude
-                      </p>
-                      {FALLBACK_PROMPTS.map((p, i) => (
-                        <div key={i} className="bg-muted/30 rounded-xl p-3 border border-border">
-                          <span className="inline-block px-1.5 py-0.5 rounded text-xs font-body bg-secondary/10 text-secondary mb-2">
-                            {p.category}
-                          </span>
-                          <p className="font-body font-medium text-sm text-foreground mb-1">{p.title}</p>
-                          <p className="text-xs text-muted-foreground font-body mb-2">{p.text}</p>
-                          <CopyButton text={p.text} />
-                        </div>
-                      ))}
-                      {userRefPrompts.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-border">
-                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Meus Prompts</p>
-                          {userRefPrompts.map((p, i) => (
-                            <div key={i} className="bg-muted/30 rounded-xl p-3 border border-border mb-2">
-                              <span className="inline-block px-1.5 py-0.5 rounded text-xs font-body bg-secondary/10 text-secondary mb-1 capitalize">
-                                {p.category}
-                              </span>
-                              <p className="text-sm font-body font-medium text-foreground mb-1">{p.title}</p>
-                              <p className="text-xs text-muted-foreground font-body">{p.prompt_text}</p>
-                              <CopyButton text={p.prompt_text} className="mt-1" />
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </TabsContent>
-                  </Tabs>
-                </TabsContent>
-              </Tabs>
-            </main>
+                      <TabsContent value="prompts" className="space-y-2">
+                        <p className="text-xs text-muted-foreground font-body mb-3">
+                          Copie, preencha os [COLCHETES] e cole no ChatGPT ou Claude
+                        </p>
+                        {FALLBACK_PROMPTS.map((p, i) => (
+                          <div key={i} className="bg-muted/30 rounded-xl p-3 border border-border">
+                            <span className="inline-block px-1.5 py-0.5 rounded text-xs font-body bg-secondary/10 text-secondary mb-2">
+                              {p.category}
+                            </span>
+                            <p className="font-body font-medium text-sm text-foreground mb-1">{p.title}</p>
+                            <p className="text-xs text-muted-foreground font-body mb-2">{p.text}</p>
+                            <CopyButton text={p.text} />
+                          </div>
+                        ))}
+                        {userRefPrompts.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-border">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Meus Prompts</p>
+                            {userRefPrompts.map((p, i) => (
+                              <div key={i} className="bg-muted/30 rounded-xl p-3 border border-border mb-2">
+                                <span className="inline-block px-1.5 py-0.5 rounded text-xs font-body bg-secondary/10 text-secondary mb-1 capitalize">
+                                  {p.category}
+                                </span>
+                                <p className="text-sm font-body font-medium text-foreground mb-1">{p.title}</p>
+                                <p className="text-xs text-muted-foreground font-body">{p.prompt_text}</p>
+                                <CopyButton text={p.prompt_text} className="mt-1" />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </TabsContent>
+                    </Tabs>
+                  </div>
+                </Recolhivel>
+              </div>
+
+              {showResults && (
+                <section className="rounded-3xl bg-card border border-border p-4 sm:p-5 space-y-3">
+                  <p className="font-body font-semibold text-foreground text-sm flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4" /> Resultados do post
+                  </p>
+                  {status === "publicado" && !post?.result_views && (
+                    <p className="text-xs text-muted-foreground font-body flex items-center gap-1.5">
+                      <Target className="h-3 w-3" /> Quer registrar o resultado?
+                    </p>
+                  )}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1">
+                      <Label className="font-body text-[10px] flex items-center gap-1">
+                        <Eye className="h-3 w-3" /> Views
+                      </Label>
+                      <Input type="number" placeholder="0" value={views} onChange={(e) => setViews(e.target.value)} className="rounded-lg h-9 text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="font-body text-[10px] flex items-center gap-1">
+                        <Bookmark className="h-3 w-3" /> Salvos
+                      </Label>
+                      <Input type="number" placeholder="0" value={saves} onChange={(e) => setSaves(e.target.value)} className="rounded-lg h-9 text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="font-body text-[10px] flex items-center gap-1">
+                        <MessageSquare className="h-3 w-3" /> Coment.
+                      </Label>
+                      <Input type="number" placeholder="0" value={comments} onChange={(e) => setComments(e.target.value)} className="rounded-lg h-9 text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="font-body text-[10px] flex items-center gap-1">
+                        <Radio className="h-3 w-3" /> Alcance
+                      </Label>
+                      <Input type="number" placeholder="0" value={reach} onChange={(e) => setReach(e.target.value)} className="rounded-lg h-9 text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="font-body text-[10px] flex items-center gap-1">
+                        <Repeat2 className="h-3 w-3" /> Compart.
+                      </Label>
+                      <Input type="number" placeholder="0" value={shares} onChange={(e) => setShares(e.target.value)} className="rounded-lg h-9 text-sm" />
+                    </div>
+                  </div>
+                </section>
+              )}
             </div>
           </div>
         </DialogContent>
@@ -2634,6 +2522,60 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 // ────────────────────────────────────────────────────────────
 // Helper components
 // ────────────────────────────────────────────────────────────
+
+// ─── Bloco numerado do fluxo vertical: badge com o número + título + orientação.
+function BlocoCabecalho({ numero, titulo, subtitulo }: { numero: number; titulo: string; subtitulo: string }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-display font-extrabold text-sm shadow-sm">
+        {numero}
+      </span>
+      <div className="min-w-0 pt-0.5">
+        <h3 className="font-display font-bold text-[15px] sm:text-base text-foreground leading-tight">{titulo}</h3>
+        <p className="text-xs font-body text-muted-foreground mt-0.5 leading-snug">{subtitulo}</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Seção recolhível (Detalhes, Tarefas, Notas, Referências): mantém o fluxo
+// principal limpo e guarda o secundário atrás de um clique.
+function Recolhivel({
+  icon: Icon,
+  titulo,
+  defaultOpen,
+  onOpen,
+  children,
+}: {
+  icon: React.ElementType;
+  titulo: string;
+  defaultOpen?: boolean;
+  onOpen?: () => void;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(!!defaultOpen);
+  const alternar = () => {
+    setOpen((o) => {
+      const proximo = !o;
+      if (proximo) onOpen?.();
+      return proximo;
+    });
+  };
+  return (
+    <div className="rounded-2xl border border-border bg-muted/20 overflow-hidden">
+      <button
+        type="button"
+        onClick={alternar}
+        className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-muted/40 transition-colors"
+      >
+        <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+        <span className="flex-1 font-display font-semibold text-sm text-foreground">{titulo}</span>
+        <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")} />
+      </button>
+      {open && <div className="px-4 pb-4">{children}</div>}
+    </div>
+  );
+}
 
 function HashGroup({
   label,

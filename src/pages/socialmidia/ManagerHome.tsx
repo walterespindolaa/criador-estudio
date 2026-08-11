@@ -130,7 +130,8 @@ export default function ManagerHome() {
     !activeMods.some((a) => m.name.startsWith(a.name)),
   );
   // Clientes do CRM (todos, não só os que usam o Cria), pro grid da home.
-  const clientesHome = crmClients.filter((c) => (c.status ?? "ativo") !== "inativo").slice(0, 6);
+  // Situação DERIVADA: encerramento no passado já sai da home; futuro segue ativo.
+  const clientesHome = crmClients.filter((c) => !clienteInativo(c)).slice(0, 6);
   // Saúde por cliente (do motor de sinais): a bolinha + o texto de status entram
   // dentro do card de cada cliente, sem faixa separada. Fail-safe: se não houver
   // sinal, o cliente aparece sem status.

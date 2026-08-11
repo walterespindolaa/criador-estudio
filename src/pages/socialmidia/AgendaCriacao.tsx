@@ -48,8 +48,10 @@ const POST_STATUS: Record<string, { label: string; cls: string }> = {
   postado: { label: "Postado", cls: "bg-slate-200 text-slate-600" },
 };
 
-// Rótulos dos estados "prontos" do kanban do cliente (Tarefa B), pro pill do card.
-const CRIA_POST_STATUS: Record<string, string> = { editando: "Pronto", agendado: "Agendado", publicado: "Publicado" };
+// Rótulos dos estados do kanban do cliente (Tarefa B), pro pill do card. Cobre
+// todas as colunas do Criando.tsx porque a Agenda agora mostra qualquer post do
+// cliente COM data, inclusive os que ainda estão em coluna anterior a "Pronto".
+const CRIA_POST_STATUS: Record<string, string> = { ideia: "Ideia", roteiro: "Planejamento", gravando: "Produzindo", editando: "Pronto", agendado: "Agendado", publicado: "Publicado" };
 // Cor identidade dos posts do Cria do cliente na agenda (verde, distinta dos demais tipos).
 const CRIA_POST_COLOR = "#059669";
 
