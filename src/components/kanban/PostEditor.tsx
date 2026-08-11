@@ -2180,9 +2180,12 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                             onHook={setHook}
                             cta={cta}
                             onCta={setCta}
+                            unify={formatStructure.devField}
                           />
                         )}
-                        {formatStructure.hasDynamicSections && (
+                        {/* No carrossel (devField) nao ha edicao lamina a lamina:
+                            o desenvolvimento inteiro mora no campo unico acima. */}
+                        {formatStructure.hasDynamicSections && !formatStructure.devField && (
                           <ScriptEditor
                             sections={sections}
                             onChange={setSections}
@@ -2568,6 +2571,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
           hook={hook}
           caption={caption}
           sections={sections}
+          /* No carrossel o desenvolvimento (slides do meio + CTA) mora na
+             coluna cta, entao ele entra no PDF por aqui, nao pelas laminas. */
+          development={formatStructure.devField ? cta : undefined}
           referenceLink={referenceLink}
           userName={profile?.name}
           platform={platform}

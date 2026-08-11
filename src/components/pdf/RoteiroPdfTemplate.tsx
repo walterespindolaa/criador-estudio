@@ -13,6 +13,9 @@ interface RoteiroPdfProps {
   hook?: string;
   caption?: string;
   sections: Section[];
+  // Desenvolvimento em texto corrido (carrossel): slides do meio + CTA num
+  // campo so, no lugar das laminas separadas.
+  development?: string;
   referenceLink?: string;
   userName?: string;
   platform?: string;
@@ -47,7 +50,7 @@ const FORMAT_LABELS: Record<string, string> = {
 };
 
 export const RoteiroPdfTemplate = forwardRef<HTMLDivElement, RoteiroPdfProps>(
-  ({ title, format, hook, caption, sections, referenceLink, userName }, ref) => {
+  ({ title, format, hook, caption, sections, development, referenceLink, userName }, ref) => {
     const badgeColor = FORMAT_BADGE_COLORS[format] || "#6B7280";
     const sectionLabel = SECTION_LABELS[format] || "CENAS";
     const filledSections = sections.filter(s => s.text.trim() || s.captacao?.trim());
@@ -140,6 +143,14 @@ export const RoteiroPdfTemplate = forwardRef<HTMLDivElement, RoteiroPdfProps>(
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Desenvolvimento (carrossel): texto corrido no lugar das laminas */}
+          {development && development.trim() && (
+            <div style={{ marginBottom: 24 }}>
+              <p style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 2, color: "#1a1a1a", fontWeight: 700, margin: "0 0 8px 0" }}>Desenvolvimento</p>
+              <p style={{ fontSize: 12, color: "#222", lineHeight: 1.7, margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{development}</p>
             </div>
           )}
 

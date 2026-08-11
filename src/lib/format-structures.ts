@@ -9,6 +9,10 @@ export type FormatField = {
 export type FormatStructure = {
   fields: FormatField[];
   hasDynamicSections?: boolean;
+  // Quando true, o formato usa UM campo unico de "Desenvolvimento" (a coluna
+  // cta) no lugar do editor lamina por lamina. Some o ScriptEditor e a IA
+  // escreve tudo nesse campo. Hoje so o carrossel usa isso.
+  devField?: boolean;
   sectionLabel?: string;
   defaultSections?: number;
 };
@@ -45,10 +49,15 @@ export const FORMAT_STRUCTURES: Record<string, FormatStructure> = {
   carrossel: {
     fields: [
       { key: "hook", label: "Capa (slide 1)", placeholder: "O que vai aparecer na capa para parar o scroll?", rows: 2, icon: "Layers" },
+      // "Desenvolvimento" reaproveita a coluna `cta` do post. Antes esse campo
+      // era so o "CTA (ultimo slide)"; agora guarda os slides do meio + o CTA
+      // do ultimo, tudo num campo so (o Walter nao quer separar slide a slide,
+      // igual e no Cria de social midia). Nenhuma coluna nova no banco.
+      { key: "cta", label: "Desenvolvimento", placeholder: "Os slides do meio e o CTA do último, tudo aqui. Um slide por linha ou como preferir.", rows: 8, icon: "PenLine" },
       { key: "caption", label: "Legenda", placeholder: "Texto para o feed com CTA para salvar...", rows: 3, icon: "MessageSquare" },
-      { key: "cta", label: "CTA (último slide)", placeholder: "Ex: Salva esse carrossel!", rows: 1, icon: "MousePointerClick" },
     ],
     hasDynamicSections: true,
+    devField: true,
     sectionLabel: "Lâmina",
     defaultSections: 5,
   },

@@ -40,10 +40,13 @@ type Props = {
   /** Preenche o campo CTA do post. Só sobrescreve se estiver vazio. */
   cta?: string;
   onCta?: (v: string) => void;
+  /** Carrossel: em vez de escrever lâmina a lâmina, junta tudo (páginas + CTA)
+      no campo único "Desenvolvimento" (a coluna cta). */
+  unify?: boolean;
 };
 
 export function CarouselWriter({
-  titulo, formato, pilar, sections, onChange, hook, onHook, cta, onCta,
+  titulo, formato, pilar, sections, onChange, hook, onHook, cta, onCta, unify,
 }: Props) {
   const { profile } = useProfile();
   const [angulo, setAngulo] = useState("");
@@ -55,7 +58,11 @@ export function CarouselWriter({
   const [buscando, setBuscando] = useState(false);
   const [escolhidas, setEscolhidas] = useState<Set<string>>(new Set());
 
-  const temTexto = sections.some((s) => (s.text ?? "").trim().length > 0);
+  // No modo unificado o "já tem texto" olha o campo Desenvolvimento (cta),
+  // não as lâminas, que nesse formato nem aparecem.
+  const temTexto = unify
+    ? (cta ?? "").trim().length > 0
+    : sections.some((s) => (s.text ?? "").trim().length > 0);
   const ehReels = /reels|video|vídeo/i.test(formato);
   const palavra = ehReels ? "cenas" : "páginas";
 
@@ -120,21 +127,34 @@ export function CarouselWriter({
       const laminas = r?.laminas ?? [];
       if (laminas.length === 0) throw new Error("A IA não devolveu nada. Tente de novo.");
 
-      // Preserva a mídia que já estava em cada lâmina: trocar o texto não pode
-      // apagar a foto que ela já anexou.
-      const novas: Section[] = laminas.map((l, i) => ({
-        ...(sections[i] ?? emptySection()),
-        text: l.texto,
-      }));
-      onChange(novas);
+      if (unify) {
+        // Carrossel: sem separar slide a slide. Junta as páginas e cola o CTA
+        // do último no fim, tudo no campo único Desenvolvimento (coluna cta).
+        // Aqui a IA sobrescreve o campo de propósito: foi o que a pessoa pediu
+        // ao clicar em "Escrever", e o confirm já avisou antes.
+        const corpo = laminas.map((l) => l.texto).filter(Boolean).join("\n\n");
+        const textoFinal = r.cta ? `${corpo}\n\n${r.cta}` : corpo;
+        onCta?.(textoFinal);
+        // O gancho tem campo próprio (Capa). Não sobrescreve o que ela escreveu.
+        if (r.hook && onHook && !hook?.trim()) onHook(r.hook);
+        toast.success(`Desenvolvimento escrito${r.hook && !hook?.trim() ? ", com gancho e CTA" : ""}.`);
+      } else {
+        // Preserva a mídia que já estava em cada lâmina: trocar o texto não pode
+        // apagar a foto que ela já anexou.
+        const novas: Section[] = laminas.map((l, i) => ({
+          ...(sections[i] ?? emptySection()),
+          text: l.texto,
+        }));
+        onChange(novas);
 
-      // Cada coisa no seu campo. O gancho e o CTA têm lugar próprio no post, e
-      // deixá-los vazios obrigava a pessoa a copiar da lâmina 1 na mão.
-      // Não sobrescreve o que ela escreveu: o trabalho dela vence o da IA.
-      if (r.hook && onHook && !hook?.trim()) onHook(r.hook);
-      if (r.cta && onCta && !cta?.trim()) onCta(r.cta);
+        // Cada coisa no seu campo. O gancho e o CTA têm lugar próprio no post, e
+        // deixá-los vazios obrigava a pessoa a copiar da lâmina 1 na mão.
+        // Não sobrescreve o que ela escreveu: o trabalho dela vence o da IA.
+        if (r.hook && onHook && !hook?.trim()) onHook(r.hook);
+        if (r.cta && onCta && !cta?.trim()) onCta(r.cta);
 
-      toast.success(`${novas.length} ${palavra} escritas${r.hook && !hook?.trim() ? ", com gancho e CTA" : ""}.`);
+        toast.success(`${novas.length} ${palavra} escritas${r.hook && !hook?.trim() ? ", com gancho e CTA" : ""}.`);
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       toast.error(
