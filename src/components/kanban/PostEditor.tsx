@@ -306,6 +306,26 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   const initialLoadCompleteRef = useRef(false);
 
   const { profile } = useProfile();
+  // Mapa invertido pilarId -> dias da semana, a partir da linha editorial das
+  // Configuracoes (profile.editorial_line: CHAVE = dia "SEG"/"TER"..., VALOR = pilar.id).
+  // Serve so de enfeite visual: ao lado de cada pilar mostramos o(s) dia(s) sugerido(s).
+  // Um pilar pode cair em varios dias (mostra todos) ou nenhum (nao mostra nada).
+  const EDITORIAL_DAY_ORDER = ["SEG", "TER", "QUA", "QUI", "SEX", "SÁB", "DOM"];
+  const pillarDays = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    const line = profile?.editorial_line;
+    if (!line) return map;
+    for (const [day, pid] of Object.entries(line)) {
+      if (typeof pid !== "string" || !pid) continue;
+      (map[pid] ||= []).push(day);
+    }
+    // ordena os dias na sequencia natural da semana
+    for (const pid of Object.keys(map)) {
+      map[pid].sort((a, b) => EDITORIAL_DAY_ORDER.indexOf(a) - EDITORIAL_DAY_ORDER.indexOf(b));
+    }
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.editorial_line]);
   // Identidade da PRÉVIA: dono do post (cliente do Cria Post → conta ativa → neutro),
   // nunca automaticamente o usuário logado. No criador (conta própria) o tiktok_handle
   // dele ainda serve de fallback quando não há handle do Instagram.
@@ -1465,12 +1485,17 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                           <SelectItem value="__none__">Sem pilar</SelectItem>
                           {pillars.map((p) => (
                             <SelectItem key={p.id} value={p.id}>
-                              <span className="flex items-center gap-2">
+                              <span className="flex items-center gap-2 w-full">
                                 <span
                                   className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
                                   style={{ backgroundColor: p.color }}
                                 />
                                 {p.name}
+                                {pillarDays[p.id]?.length > 0 && (
+                                  <span className="ml-auto pl-2 text-[10px] font-medium tracking-wide text-muted-foreground shrink-0">
+                                    {pillarDays[p.id].join(", ")}
+                                  </span>
+                                )}
                               </span>
                             </SelectItem>
                           ))}
