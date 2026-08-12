@@ -115,7 +115,7 @@ const GROUPS: Grp[] = [
   // Ideias abre o fluxo do Cria Post (ideia → post → cronograma → relatório).
   // Morava no Radar, mas a captura manual e a conversão em post são coração do
   // Cria Post; a URL /ideias continua a mesma, só mudou de grupo.
-  { key: "cria-post", label: "Cria Post", modulo: "laranja", icon: Layers, landing: true, subs: ["ideias", "posts", "cronograma", "kanban-cliente", "relatorio", "materiais", "portal"] },
+  { key: "cria-post", label: "Cria Post", modulo: "laranja", icon: Layers, landing: true, subs: ["posts", "ideias", "cronograma", "kanban-cliente", "relatorio", "materiais", "portal"] },
   { key: "cria-gestao", label: "Cria Gestão", modulo: "rosa", icon: BookOpen, subs: ["brandbook"] },
   { key: "cria-caixa", label: "Cria Caixa", modulo: "azul", icon: Wallet, subs: ["financeiro"] },
   // O Radar ficou só com a Pesquisa: 1 sub = vai direto (landing de 1 card seria bobo).
