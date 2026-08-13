@@ -1250,8 +1250,13 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
           </div>
         )}
 
-        {/* Preview = o próprio elemento exportado */}
-        <div className="mt-3 border border-border rounded-xl overflow-hidden bg-white">
+        {/* Preview = o próprio elemento exportado. Numa caixa rolável e rotulada
+            pra ficar óbvio que é aqui que a "Análise do período" (e tudo mais) sai. */}
+        <div className="mt-3">
+          <div className="mb-1 text-xs font-body font-semibold text-foreground">
+            Prévia do relatório <span className="font-normal text-muted-foreground">(role pra ver tudo, inclusive a “Análise do período”. É isto que vira o PDF.)</span>
+          </div>
+          <div className="border border-border rounded-xl overflow-y-auto bg-white" style={{ maxHeight: 520 }}>
           <div ref={reportRef} style={{ width: "100%", background: "#ffffff", padding: 32, fontFamily: "Inter, system-ui, sans-serif", color: C.ink }}>
             {/* ───────────────── CAPA (ocupa a primeira página inteira) ─────────────────
                 Estilo apresentação Cria: creme + formas orgânicas da paleta, logo do
@@ -1820,6 +1825,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
               </div>
               <AssinaturaCria variante="rodape" tom="claro" style={{ marginTop: 10 }} />
             </div>
+          </div>
           </div>
         </div>
 
