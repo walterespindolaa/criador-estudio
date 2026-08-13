@@ -64,11 +64,18 @@ export function AccountProvider({ children }: { children: ReactNode }) {
 
   const selectable = useMemo(() => [...managedAccounts, ...teamAccounts], [managedAccounts, teamAccounts]);
 
-  // Restaura seleção salva; se for colaborador sem conta própria de gestão, entra direto na agência.
+  // Ao logar, o padrão é a PRÓPRIA conta. Entrar no "Cria dele" de um cliente
+  // (managedAccounts) é temporário e NÃO deve sobreviver ao logout: senão o gestor
+  // relogava e caía dentro da conta de um cliente (ex.: "gerenciando a conta de
+  // Gabi", ou o Atlas no celular). Só restauramos conta de EQUIPE (colaborador),
+  // que é o lar natural de quem entra como membro de uma agência.
   useEffect(() => {
     if (!user?.id) { setActive(null); return; }
     const saved = localStorage.getItem(LS_KEY);
-    if (saved && selectable.some((m) => m.owner_id === saved)) { setActive(saved); return; }
+    if (saved && teamAccounts.some((m) => m.owner_id === saved)) { setActive(saved); return; }
+    // Seleção salva que é de CLIENTE (não é conta de equipe): ignora e limpa, pra
+    // não reabrir num cliente no próximo login.
+    if (saved && !teamAccounts.some((m) => m.owner_id === saved)) { localStorage.removeItem(LS_KEY); }
     if (!saved && managedAccounts.length === 0 && teamAccounts.length > 0) {
       setActive(teamAccounts[0].owner_id); // colaborador cai na conta do gestor ao logar
     }
