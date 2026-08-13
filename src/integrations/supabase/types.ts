@@ -139,12 +139,18 @@ export type Database = {
           capture_date: string
           capture_time: string | null
           client_name: string | null
+          converted_post_id: string | null
           created_at: string | null
           crm_client_id: string | null
           id: string
           location: string | null
           manager_id: string
           note: string | null
+          recurrence_day: number | null
+          recurrence_source_id: string | null
+          recurring: boolean
+          roteiro: string | null
+          shot_list: Json
           status: string | null
           team: string | null
         }
@@ -152,12 +158,18 @@ export type Database = {
           capture_date: string
           capture_time?: string | null
           client_name?: string | null
+          converted_post_id?: string | null
           created_at?: string | null
           crm_client_id?: string | null
           id?: string
           location?: string | null
           manager_id: string
           note?: string | null
+          recurrence_day?: number | null
+          recurrence_source_id?: string | null
+          recurring?: boolean
+          roteiro?: string | null
+          shot_list?: Json
           status?: string | null
           team?: string | null
         }
@@ -165,16 +177,29 @@ export type Database = {
           capture_date?: string
           capture_time?: string | null
           client_name?: string | null
+          converted_post_id?: string | null
           created_at?: string | null
           crm_client_id?: string | null
           id?: string
           location?: string | null
           manager_id?: string
           note?: string | null
+          recurrence_day?: number | null
+          recurrence_source_id?: string | null
+          recurring?: boolean
+          roteiro?: string | null
+          shot_list?: Json
           status?: string | null
           team?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "agenda_captures_converted_post_id_fkey"
+            columns: ["converted_post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "agenda_captures_crm_client_id_fkey"
             columns: ["crm_client_id"]
@@ -1154,6 +1179,7 @@ export type Database = {
           address: string | null
           birthday: string | null
           brand_core: Json
+          city: string | null
           cnpj: string | null
           color: string | null
           company_name: string | null
@@ -1165,6 +1191,7 @@ export type Database = {
           crm_lead_id: string | null
           deleted_at: string | null
           diagnosis: Json
+          display_name: string | null
           email: string | null
           hashtags: string[]
           id: string
@@ -1194,6 +1221,7 @@ export type Database = {
           address?: string | null
           birthday?: string | null
           brand_core?: Json
+          city?: string | null
           cnpj?: string | null
           color?: string | null
           company_name?: string | null
@@ -1205,6 +1233,7 @@ export type Database = {
           crm_lead_id?: string | null
           deleted_at?: string | null
           diagnosis?: Json
+          display_name?: string | null
           email?: string | null
           hashtags?: string[]
           id?: string
@@ -1234,6 +1263,7 @@ export type Database = {
           address?: string | null
           birthday?: string | null
           brand_core?: Json
+          city?: string | null
           cnpj?: string | null
           color?: string | null
           company_name?: string | null
@@ -1245,6 +1275,7 @@ export type Database = {
           crm_lead_id?: string | null
           deleted_at?: string | null
           diagnosis?: Json
+          display_name?: string | null
           email?: string | null
           hashtags?: string[]
           id?: string
@@ -3693,6 +3724,7 @@ export type Database = {
           bio_slug: string | null
           bio_views: number | null
           brand_logo_url: string | null
+          capture_cities: string[]
           collab_seats_subscription_id: string | null
           created_at: string | null
           editorial_line: Json | null
@@ -3748,6 +3780,7 @@ export type Database = {
           bio_slug?: string | null
           bio_views?: number | null
           brand_logo_url?: string | null
+          capture_cities?: string[]
           collab_seats_subscription_id?: string | null
           created_at?: string | null
           editorial_line?: Json | null
@@ -3803,6 +3836,7 @@ export type Database = {
           bio_slug?: string | null
           bio_views?: number | null
           brand_logo_url?: string | null
+          capture_cities?: string[]
           collab_seats_subscription_id?: string | null
           created_at?: string | null
           editorial_line?: Json | null
@@ -5146,6 +5180,30 @@ export type Database = {
       get_external_handle_by_token: {
         Args: { _token: string }
         Returns: string
+      }
+      get_managed_profile: {
+        Args: { _owner: string }
+        Returns: {
+          account_type: string
+          avatar_url: string
+          bio: string
+          bio_settings: Json
+          bio_slug: string
+          id: string
+          instagram_handle: string
+          name: string
+          niche: string
+          role: string
+          storage_quota_bytes: number
+          storage_retention_days: number
+          storage_used_bytes: number
+          theme_accent: string
+          theme_font: string
+          theme_preset: string
+          theme_sidebar: string
+          useful_links: Json
+          weekly_goal: number
+        }[]
       }
       get_manager_notes: { Args: { _owner_id: string }; Returns: string }
       get_my_partner_referrals: {
