@@ -5,7 +5,7 @@ import { NotificationNudge } from "@/components/NotificationNudge";
 import { FeedbackButton, FeedbackDialog } from "@/components/FeedbackButton";
 import {
   Home, Boxes, Handshake, DollarSign, Users, ListChecks, Menu, ChevronRight, Gift,
-  Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, Sparkles, CalendarDays, Trash2, UserPlus, Search, MessageSquarePlus, type LucideIcon,
+  Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, Sparkles, CalendarDays, Camera, Trash2, UserPlus, Search, MessageSquarePlus, type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -65,6 +65,7 @@ const BUSINESS_NAV = [
 const HERO_TITLES: Record<string, string> = {
   "/socialmidia/clientes": "Clientes",
   "/socialmidia/agenda": "Agenda",
+  "/socialmidia/captacao": "Cria Captação",
   "/socialmidia/hubcria": "Cria Radar",
   "/socialmidia/criapost": "Cria Post",
   "/socialmidia/criacrm": "Cria Gestão",
@@ -238,6 +239,7 @@ export default function ManagerLayout() {
           {railNode(Home, "Início", { active: isActive("/socialmidia/dashboard"), onClick: () => navigate("/socialmidia/dashboard") })}
           {canClients && railNode(Contact, "Clientes", { active: isActive("/socialmidia/clientes"), onClick: () => navigate("/socialmidia/clientes") })}
           {canAgenda && railNode(CalendarDays, "Agenda", { active: isActive("/socialmidia/agenda"), onClick: () => navigate("/socialmidia/agenda") })}
+          {canAgenda && railNode(Camera, "Cria Captação", { active: isActive("/socialmidia/captacao"), onClick: () => navigate("/socialmidia/captacao") })}
           {railNode(ListChecks, "Aprovações", { active: isActive("/socialmidia/aprovacoes"), onClick: () => navigate("/socialmidia/aprovacoes") })}
           {railHovered && (modules.length > 0 || hasHubCria) && <p className="px-2 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Módulos</p>}
           {modules
@@ -367,6 +369,12 @@ export default function ManagerLayout() {
         // quadradinho, descrição do que aquilo faz e chevron. A grade de ícones
         // secos que existia aqui não dizia o que cada coisa era.
         const moreSections: { title: string; items: { label: string; desc?: string; icon: LucideIcon; onClick: () => void; ativo?: boolean }[] }[] = [
+          {
+            title: "Dia a dia",
+            items: [
+              ...(canAgenda ? [{ label: "Cria Captação", desc: "Roteiros e panorama das captações", icon: Camera as LucideIcon, ativo: isActive("/socialmidia/captacao"), onClick: () => navigate("/socialmidia/captacao") }] : []),
+            ],
+          },
           {
             title: "Módulos",
             items: [

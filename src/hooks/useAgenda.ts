@@ -29,6 +29,10 @@ export type Capture = {
   team: string | null;
   status: "agendada" | "concluida" | "cancelada";
   note: string | null;
+  // Roteiro da gravação (o texto que o gestor copia cru no Cria Captação). É
+  // separado de `note` (nota livre). Opcional no tipo pra leitura defensiva: antes
+  // da migration rodar, o select("*") não traz a coluna e cai como undefined.
+  roteiro?: string | null;
   created_at: string;
 };
 
@@ -241,7 +245,7 @@ export function useAddCapture() {
 export function useUpdateCapture() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<Capture, "status" | "capture_date" | "capture_time" | "location" | "team" | "note" | "crm_client_id" | "client_name">> }) => {
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<Capture, "status" | "capture_date" | "capture_time" | "location" | "team" | "note" | "roteiro" | "crm_client_id" | "client_name">> }) => {
       const { error } = await sbFrom("agenda_captures").update(patch as never).eq("id", id);
       if (error) throw error;
     },

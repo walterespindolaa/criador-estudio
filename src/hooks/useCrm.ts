@@ -61,6 +61,10 @@ export type CrmClient = {
   owner_name: string | null;
   whatsapp: string | null;
   address: string | null;
+  // Cidade do cliente (pro gráfico por cidade do Cria Captação). Idealmente uma das
+  // cidades atendidas (profiles.capture_cities), mas texto livre. Opcional no tipo
+  // pra leitura defensiva: antes da migration rodar, o select("*") não traz a coluna.
+  city?: string | null;
   // Contrato
   plan_name: string | null;
   payment_day: number | null;

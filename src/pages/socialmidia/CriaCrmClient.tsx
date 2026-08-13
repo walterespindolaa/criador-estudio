@@ -14,6 +14,7 @@ import {
   CLIENT_STATUSES, CLIENT_STATUS_META, TAG_COLORS, TAG_COLOR_CLS,
   type CrmClient, type ClientStatus, type CrmTag,
 } from "@/hooks/useCrm";
+import { useCaptureCities } from "@/hooks/useCaptureCities";
 import { ClientColorPicker } from "@/components/shared/ClientColorPicker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
@@ -43,7 +44,7 @@ const payloadOf = (f: CrmClient) => ({
   name: f.name, instagram: f.instagram, email: f.email, phone: f.phone,
   segment: f.segment, monthly_value: f.monthly_value, contract_date: f.contract_date,
   renewal_date: f.renewal_date, contract_end_date: f.contract_end_date, notes: f.notes, logo: f.logo, color: f.color,
-  company_name: f.company_name, cnpj: f.cnpj, owner_name: f.owner_name, whatsapp: f.whatsapp, address: f.address,
+  company_name: f.company_name, cnpj: f.cnpj, owner_name: f.owner_name, whatsapp: f.whatsapp, address: f.address, city: f.city,
   plan_name: f.plan_name, payment_day: f.payment_day, payment_method: f.payment_method, birthday: f.birthday,
   status: f.status, tags: f.tags,
   brand_core: f.brand_core, persona: f.persona, diagnosis: f.diagnosis, competitors: f.competitors,
@@ -101,6 +102,8 @@ function ClientWorkspace() {
   const hubDone = hubScrapes.filter((s) => s.status === "done" && s.result_summary);
   const delScrape = useDeleteScrape();
   const update = useUpdateCrmClient();
+  // Cidades atendidas (config do gestor): viram sugestões no campo Cidade.
+  const { cities: captureCities } = useCaptureCities();
   const del = useDeleteCrmClient();
   const uploadAsset = useUploadCrmAsset();
   const sync = useSyncCrmFromCria();
@@ -369,6 +372,16 @@ function ClientWorkspace() {
               <F label="Responsável principal"><Input value={form.owner_name ?? ""} onChange={(e) => setForm({ ...form, owner_name: e.target.value })} className="rounded-xl" /></F>
               <F label="WhatsApp"><Input value={form.whatsapp ?? ""} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} placeholder="(DDD) 90000-0000" className="rounded-xl" /></F>
               <F label="Endereço" className="sm:col-span-2"><Input value={form.address ?? ""} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Rua, nº, sala, bairro / cidade" className="rounded-xl" /></F>
+              {/* CIDADE: alimenta o gráfico por cidade do Cria Captação. Datalist
+                  sugere as cidades atendidas (config do gestor), mas aceita digitar
+                  livre (cliente de fora da lista). */}
+              <F label="Cidade">
+                <Input value={(form as { city?: string | null }).city ?? ""} onChange={(e) => setForm({ ...form, city: e.target.value || null } as CrmClient)}
+                  list="crm-capture-cities" placeholder="Ex.: Itajaí" className="rounded-xl" />
+                <datalist id="crm-capture-cities">
+                  {captureCities.map((c) => <option key={c} value={c} />)}
+                </datalist>
+              </F>
               <F label="Aniversário (lembrete)"><BirthdayPicker value={form.birthday ?? null} onChange={(v) => setForm({ ...form, birthday: v })} /></F>
               {/* COR DO CLIENTE: mesma paleta (e mesmo componente) do cockpit e do
                   cadastro. Antes eram 7 bolinhas aqui e uma paleta grande lá, então a

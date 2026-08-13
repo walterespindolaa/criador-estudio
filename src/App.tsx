@@ -110,6 +110,7 @@ function AppHome() {
 }
 const Aprovacoes = lazy(() => import("./pages/socialmidia/Aprovacoes"));
 const AgendaCriacao = lazy(() => import("./pages/socialmidia/AgendaCriacao"));
+const CriaCaptacao = lazy(() => import("./pages/socialmidia/CriaCaptacao"));
 const Equipe = lazy(() => import("./pages/socialmidia/Equipe"));
 const Lixeira = lazy(() => import("./pages/app/Lixeira"));
 
@@ -300,6 +301,7 @@ const App = () => (
                 <Route path="clientes/:id/:tab" element={<ErrorBoundary><ClienteHub /></ErrorBoundary>} />
                 <Route path="aprovacoes" element={<ErrorBoundary><Aprovacoes /></ErrorBoundary>} />
                 <Route path="agenda" element={<ErrorBoundary><AgendaCriacao /></ErrorBoundary>} />
+                <Route path="captacao" element={<ErrorBoundary><CriaCaptacao /></ErrorBoundary>} />
                 <Route path="equipe" element={<ErrorBoundary><Equipe /></ErrorBoundary>} />
                 <Route path="lixeira" element={<ErrorBoundary><Lixeira /></ErrorBoundary>} />
               </Route>
