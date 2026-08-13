@@ -30,6 +30,9 @@ const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 type CaptureRow = {
   id: string; capture_date: string; capture_time: string | null;
   status: string | null; location: string | null; converted_post_id: string | null;
+  // Nota/briefing que a social mídia deixou na captação (agenda). É o que a
+  // Gabriela pediu pra aparecer no relatório ("Vídeos ADS Yasmin" etc).
+  note: string | null; team: string | null;
 };
 type IgMediaRow = {
   caption: string | null; media_type: string | null; permalink: string | null;
@@ -258,6 +261,10 @@ type Props = {
 const C = {
   ink: "#1a1a2e", sub: "#6b7280", line: "#e5e7eb", soft: "#f3f4f6",
   brand: "#EA4918", green: "#16a34a", amber: "#d97706", orange: "#ea580c",
+  // Paleta oficial do Cria (mesma da LP) pra capa e acentos, no tom "apresentação".
+  creme: "#F6F2E8", cremeCard: "#FBF9F2",
+  laranja: "#EA4918", verde: "#01A652", azul: "#0061EE",
+  rosa: "#FF77B9", amarelo: "#FFCF03", lilas: "#7C90F0",
 };
 
 export function ClientReportDialog({ open, onOpenChange, client, posts, managerName, initialPeriodKey, customSince, customUntil }: Props) {
@@ -331,7 +338,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     enabled: open && !!agencyOwnerId && !!client.crm_client_id,
     queryFn: async () => {
       const { data, error } = await sbFrom("agenda_captures")
-        .select("id, capture_date, capture_time, status, location, converted_post_id")
+        .select("id, capture_date, capture_time, status, location, converted_post_id, note, team")
         .eq("manager_id", agencyOwnerId!)
         .eq("crm_client_id", client.crm_client_id!)
         .gte("capture_date", dayRange.since)
@@ -354,6 +361,14 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       last: valid[0]?.capture_date ?? captures[0]?.capture_date ?? null,
     };
   }, [captures]);
+
+  // Lista das captações do período em ordem cronológica, pro relatório mostrar
+  // cada gravação com a nota/briefing que a social mídia deixou (a Gabriela quer
+  // ver "Vídeos ADS Yasmin" e afins no PDF, não só o número).
+  const captureList = useMemo(
+    () => [...captures].sort((a, b) => a.capture_date.localeCompare(b.capture_date)),
+    [captures],
+  );
 
   // Chave ESTÁVEL do período pra persistir a nota: o intervalo de datas em si, não
   // o rótulo relativo ("este mês" viraria outro mês no mês seguinte).
@@ -469,6 +484,17 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   }, [posts, periodIsCurrent]);
 
   const monthLabel = period.label;
+
+  // Título da capa. Mês fechado vira "Agosto de 2026"; janela solta ("últimos 30
+  // dias", período custom) mantém o rótulo do próprio recorte.
+  const coverPeriodo = useMemo(() => {
+    const s = period.since, u = period.until;
+    const isFullMonth =
+      s.getDate() === 1 && u.getDate() === 1 &&
+      (u.getFullYear() * 12 + u.getMonth()) - (s.getFullYear() * 12 + s.getMonth()) === 1;
+    return isFullMonth ? `${MONTHS[s.getMonth()]} de ${s.getFullYear()}` : period.label;
+  }, [period]);
+  const elaboradoPor = managerName?.trim() || "sua social mídia";
 
   // Métricas reais do Instagram do PRÓPRIO CLIENTE (conta que ele conectou).
   // Lidas via RPC segura (a gestora não conecta nada; só lê o que o cliente conectou).
@@ -912,9 +938,13 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     </div>
   );
 
-  // Título de seção, sempre igual. `block` marca o bloco pro PDF não cortar no meio.
-  const sectionTitle = (t: string) => (
-    <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: C.sub, marginBottom: 10 }}>{t}</div>
+  // Título de seção no estilo "apresentação": um traço colorido curto + o rótulo.
+  // Dá ritmo visual sem pesar, e cada seção pode ter a sua cor da paleta Cria.
+  const sectionTitle = (t: string, cor: string = C.laranja) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 12 }}>
+      <span style={{ width: 22, height: 5, borderRadius: 99, background: cor, flexShrink: 0 }} />
+      <span style={{ fontSize: 12.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.6, color: C.ink }}>{t}</span>
+    </div>
   );
 
   // Barra de alcance médio (cruzamentos) com o valor absoluto e a contagem.
@@ -1046,30 +1076,73 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         {/* Preview = o próprio elemento exportado */}
         <div className="mt-3 border border-border rounded-xl overflow-hidden bg-white">
           <div ref={reportRef} style={{ width: "100%", background: "#ffffff", padding: 32, fontFamily: "Inter, system-ui, sans-serif", color: C.ink }}>
-            {/* Cabeçalho branded */}
-            <div data-pdf-block style={{ display: "flex", alignItems: "center", gap: 14, paddingBottom: 18, borderBottom: `2px solid ${C.brand}` }}>
-              <div style={{ width: 52, height: 52, borderRadius: 14, background: C.soft, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+            {/* ───────────────── CAPA (ocupa a primeira página inteira) ─────────────────
+                Estilo apresentação Cria: creme + formas orgânicas da paleta, logo do
+                cliente redonda no centro, título "Relatório de Entregas", o mês, a
+                marca da agência e o "elaborado por". */}
+            <div data-pdf-block style={{
+              position: "relative", overflow: "hidden",
+              margin: "-32px -32px 0", padding: "50px 46px",
+              background: C.creme, aspectRatio: "210 / 286",
+              display: "flex", flexDirection: "column",
+            }}>
+              {/* formas orgânicas nos cantos (como a capa do Cria) */}
+              <span style={{ position: "absolute", top: -92, right: -66, width: 250, height: 250, borderRadius: "50%", background: C.rosa }} />
+              <span style={{ position: "absolute", bottom: -116, left: -92, width: 250, height: 250, borderRadius: "50%", background: C.amarelo }} />
+              <span style={{ position: "absolute", top: "36%", left: 24, width: 58, height: 58, borderRadius: "50%", background: C.azul }} />
+              <span style={{ position: "absolute", bottom: "24%", right: 50, width: 42, height: 42, borderRadius: "50%", background: C.verde }} />
+
+              {/* topo: marca da agência + selo do tipo de relatório */}
+              <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                {agencyLogo
+                  ? <img src={agencyLogo} alt={managerName ? `Logo ${managerName}` : "Logo da agência"} crossOrigin="anonymous" style={{ maxHeight: 42, maxWidth: 190, objectFit: "contain", display: "block" }} />
+                  : <div style={{ fontSize: 15, fontWeight: 800, color: C.ink }}>{elaboradoPor}</div>}
+                <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", color: "#fff", background: C.laranja, padding: "7px 15px", borderRadius: 999, whiteSpace: "nowrap" }}>
+                  Relatório de Entregas
+                </span>
+              </div>
+
+              {/* centro: logo redonda do cliente + nome + mês */}
+              <div style={{ position: "relative", zIndex: 1, flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+                <div style={{ width: 134, height: 134, borderRadius: "50%", background: "#fff", border: "5px solid #fff", boxShadow: "0 10px 34px -14px rgba(0,0,0,.35)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+                  {client.logo_url
+                    ? <img src={client.logo_url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    : <span style={{ fontWeight: 800, fontSize: 54, color: C.laranja }}>{client.name.charAt(0).toUpperCase()}</span>}
+                </div>
+                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.5, textTransform: "uppercase", color: C.sub, marginBottom: 6 }}>Relatório de Entregas</div>
+                <div style={{ fontSize: 30, fontWeight: 800, color: C.ink, lineHeight: 1.12 }}>{client.name}</div>
+                {client.instagram_handle && (
+                  <div style={{ fontSize: 15, color: C.sub, marginTop: 2 }}>@{client.instagram_handle.replace(/^@/, "")}</div>
+                )}
+                <div style={{ marginTop: 18, fontSize: 22, fontWeight: 800, color: C.laranja }}>{coverPeriodo}</div>
+              </div>
+
+              {/* rodapé da capa: elaborado por + data + assinatura discreta do Cria */}
+              <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
+                <div style={{ fontSize: 12, color: C.sub, lineHeight: 1.6 }}>
+                  <div>Elaborado por <b style={{ color: C.ink }}>{elaboradoPor}</b></div>
+                  <div>Gerado em {new Date().toLocaleDateString("pt-BR")}</div>
+                </div>
+                <AssinaturaCria variante="rodape" tom="claro" style={{ width: "auto" }} />
+              </div>
+            </div>
+            {/* força o conteúdo a começar numa página nova (a capa é só dela) */}
+            <div data-pdf-break style={{ height: 1 }} />
+
+            {/* Cabeçalho corrido das páginas de conteúdo */}
+            <div data-pdf-block style={{ display: "flex", alignItems: "center", gap: 12, paddingBottom: 14, borderBottom: `2px solid ${C.laranja}` }}>
+              <div style={{ width: 44, height: 44, borderRadius: "50%", background: C.soft, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
                 {client.logo_url
                   ? <img src={client.logo_url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  : <span style={{ fontWeight: 800, fontSize: 22, color: C.brand }}>{client.name.charAt(0).toUpperCase()}</span>}
+                  : <span style={{ fontWeight: 800, fontSize: 19, color: C.laranja }}>{client.name.charAt(0).toUpperCase()}</span>}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 20, fontWeight: 800 }}>{client.name}</div>
-                {client.instagram_handle && (
-                  <div style={{ fontSize: 13, color: C.sub }}>@{client.instagram_handle.replace(/^@/, "")}</div>
-                )}
+                <div style={{ fontSize: 17, fontWeight: 800, color: C.ink }}>{client.name}</div>
+                <div style={{ fontSize: 12, color: C.sub }}>Relatório de Entregas · {coverPeriodo}</div>
               </div>
-              {/* Marca da agência (social mídia) + período. A logo dela do profile
-                  (brand_logo_url); sem logo, só o texto. O Cria fica no rodapé. */}
-              <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
-                {agencyLogo && (
-                  <img src={agencyLogo} alt={managerName ? `Logo ${managerName}` : "Logo da agência"} crossOrigin="anonymous" style={{ maxHeight: 30, maxWidth: 150, objectFit: "contain", display: "block" }} />
-                )}
-                <div>
-                  <div style={{ fontSize: 11, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Relatório de conteúdo</div>
-                  <div style={{ fontSize: 15, fontWeight: 700 }}>{monthLabel}</div>
-                </div>
-              </div>
+              {agencyLogo && (
+                <img src={agencyLogo} alt="" crossOrigin="anonymous" style={{ maxHeight: 26, maxWidth: 130, objectFit: "contain", display: "block", flexShrink: 0 }} />
+              )}
             </div>
 
             {/* Recado da social mídia: abre o relatório com a leitura humana do mês.
@@ -1126,13 +1199,13 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
             {/* Breakdown */}
             <div data-pdf-block style={{ display: "flex", gap: 24, marginTop: 24 }}>
               <div style={{ flex: 1 }}>
-                {sectionTitle("Por formato")}
+                {sectionTitle("Por formato", C.azul)}
                 {Object.keys(stats.byFormat).length === 0
                   ? <div style={{ fontSize: 12, color: C.sub }}>Sem posts no período.</div>
                   : Object.entries(stats.byFormat).sort((a, b) => b[1] - a[1]).map(([f, v]) => breakdownRow(FORMAT_LABELS[f] ?? cap(f), v, stats.total))}
               </div>
               <div style={{ flex: 1 }}>
-                {sectionTitle("Por plataforma")}
+                {sectionTitle("Por plataforma", C.lilas)}
                 {Object.keys(stats.byPlatform).length === 0
                   ? <div style={{ fontSize: 12, color: C.sub }}>Sem posts no período.</div>
                   : Object.entries(stats.byPlatform).sort((a, b) => b[1] - a[1]).map(([p, v]) => breakdownRow(cap(p), v, stats.total))}
@@ -1142,7 +1215,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
             {/* Leitura do período: destaque, formato campeão e fluxo de aprovação */}
             {(highlight || bestFormat || stats.cycleDays !== null || stuck.length > 0) && (
               <div data-pdf-block style={{ marginTop: 24 }}>
-                {sectionTitle("O que o período mostrou")}
+                {sectionTitle("O que o período mostrou", C.verde)}
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                   {highlight && (
                     <div style={{ flex: 2, minWidth: 260, border: `1px solid ${C.line}`, borderRadius: 12, padding: "14px 16px", display: "flex", gap: 12, alignItems: "center" }}>
@@ -1219,7 +1292,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
             {/* Lista de posts do período (produzidos, agendados ou publicados) */}
             {monthPosts.length > 0 && (
               <div data-pdf-block style={{ marginTop: 24 }}>
-                {sectionTitle(`Peças do período (${monthPosts.length})`)}
+                {sectionTitle(`Peças do período (${monthPosts.length})`, C.verde)}
                 <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden" }}>
                   {monthPosts.map((p, i) => {
                     const k = statusOf(p);
@@ -1484,7 +1557,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
             {/* Captação do período: o que foi a campo no mês (gravações). Puxado de
                 agenda_captures pelo mesmo período; sempre com estado vazio honesto. */}
             <div data-pdf-block style={{ marginTop: 24 }}>
-              {sectionTitle("Captação do período")}
+              {sectionTitle("Captação do período", C.rosa)}
               {!client.crm_client_id ? (
                 <div style={{ fontSize: 12, color: C.sub, padding: "12px 14px", border: `1px dashed ${C.line}`, borderRadius: 12, background: C.soft }}>
                   Vincule este cliente ao cadastro central pra trazer as captações do período aqui.
@@ -1499,14 +1572,40 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
                     {statCard(captureSummary.total === 1 ? "Captação" : "Captações", nb(captureSummary.total))}
                     {statCard("Concluídas", nb(captureSummary.done), C.green)}
                     {captureSummary.last && statCard("Última captação", parseDateOnly(captureSummary.last).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }))}
-                    {statCard("Viraram post", nb(captureSummary.withPost))}
                   </div>
-                  <div style={{ fontSize: 10.5, color: C.sub, marginTop: 8, lineHeight: 1.5 }}>
-                    {captureSummary.withPost > 0
-                      ? `${captureSummary.withPost} ${captureSummary.withPost === 1 ? "captação já virou" : "captações já viraram"} conteúdo no Cria Post.`
-                      : "As captações deste período ainda não foram transformadas em publicação."}
-                    {captureSummary.cancelled > 0 ? ` ${captureSummary.cancelled} ${captureSummary.cancelled === 1 ? "foi cancelada" : "foram canceladas"}.` : ""}
+
+                  {/* Lista das gravações do mês, cada uma com a nota/briefing que a
+                      social mídia deixou na agenda (ex.: "Vídeos ADS Yasmin"). */}
+                  <div style={{ marginTop: 12, border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden" }}>
+                    {captureList.map((c, i) => {
+                      const st = c.status === "concluida" ? { t: "Concluída", cor: C.green }
+                        : c.status === "cancelada" ? { t: "Cancelada", cor: C.sub }
+                        : { t: "Agendada", cor: C.amber };
+                      const dia = parseDateOnly(c.capture_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+                      const local = [c.location, c.team].filter(Boolean).join(" · ");
+                      return (
+                        <div key={c.id} data-pdf-block style={{ display: "flex", gap: 12, padding: "11px 14px", borderTop: i === 0 ? "none" : `1px solid ${C.line}`, opacity: c.status === "cancelada" ? 0.6 : 1 }}>
+                          <div style={{ width: 58, flexShrink: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 800, color: C.ink }}>{dia}</div>
+                            {c.capture_time && <div style={{ fontSize: 11, color: C.sub }}>{c.capture_time.slice(0, 5)}</div>}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>
+                              {c.note?.trim() ? c.note.trim() : <span style={{ color: C.sub, fontStyle: "italic" }}>Sem nota registrada.</span>}
+                            </div>
+                            {local && <div style={{ fontSize: 11, color: C.sub, marginTop: 3 }}>{local}</div>}
+                          </div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: st.cor, whiteSpace: "nowrap", flexShrink: 0 }}>{st.t}</div>
+                        </div>
+                      );
+                    })}
                   </div>
+
+                  {captureSummary.cancelled > 0 && (
+                    <div style={{ fontSize: 10.5, color: C.sub, marginTop: 8 }}>
+                      {captureSummary.cancelled === 1 ? "1 captação foi cancelada" : `${captureSummary.cancelled} captações foram canceladas`} no período.
+                    </div>
+                  )}
                 </>
               )}
             </div>

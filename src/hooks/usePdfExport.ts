@@ -17,14 +17,31 @@ function blockBoundaries(element: HTMLElement, scale: number): number[] {
   return Array.from(out).sort((a, b) => a - b);
 }
 
+// Quebras de página OBRIGATÓRIAS: elementos marcados com data-pdf-break forçam o
+// fim da página no TOPO deles (o que vem depois começa numa folha nova). É o que
+// deixa a capa do relatório ser uma página inteira só dela.
+function forcedBreaks(element: HTMLElement, scale: number): number[] {
+  const marks = Array.from(element.querySelectorAll<HTMLElement>("[data-pdf-break]"));
+  if (marks.length === 0) return [];
+  const top = element.getBoundingClientRect().top;
+  return marks
+    .map((m) => Math.round((m.getBoundingClientRect().top - top) * scale))
+    .filter((p) => p > 1)
+    .sort((a, b) => a - b);
+}
+
 // Escolhe onde termina cada página respeitando os limites de bloco. Se um bloco
 // for maior que a página inteira, aí não tem jeito e cortamos na altura cheia.
-function pageCuts(boundaries: number[], totalPx: number, pagePx: number): number[] {
+function pageCuts(boundaries: number[], forced: number[], totalPx: number, pagePx: number): number[] {
   const cuts: number[] = [];
   let start = 0;
   let guard = 0;
   while (totalPx - start > pagePx + 1 && guard++ < 200) {
     const limit = start + pagePx;
+    // Quebra obrigatória dentro da página: corta nela, sem discussão (a capa
+    // ocupa a folha inteira e o conteúdo desce pra próxima).
+    const hardCut = forced.find((f) => f > start + 1 && f <= limit);
+    if (hardCut) { cuts.push(hardCut); start = hardCut; continue; }
     // Preferência: um corte que preencha ao menos 35% da página, senão o PDF vira
     // um monte de folha quase vazia.
     const min = start + pagePx * 0.35;
@@ -85,6 +102,7 @@ async function buildPdf(element: HTMLDivElement) {
   const fullWidth = Math.max(element.scrollWidth, element.offsetWidth);
   const scale = 2;
   const boundaries = blockBoundaries(element, scale);
+  const forced = forcedBreaks(element, scale);
 
   const canvas = await html2canvas(element, {
     scale,
@@ -111,7 +129,7 @@ async function buildPdf(element: HTMLDivElement) {
     return pdf;
   }
 
-  const cuts = pageCuts(boundaries, canvas.height, pagePx);
+  const cuts = pageCuts(boundaries, forced, canvas.height, pagePx);
   const slice = document.createElement("canvas");
   const ctx = slice.getContext("2d");
   let from = 0;
