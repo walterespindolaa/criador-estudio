@@ -27,6 +27,7 @@ import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { nomeExibidoCliente } from "@/lib/cliente-nome";
 import { PrompterPlayer } from "@/components/prompter/PrompterPlayer";
 import { usePdfExport } from "@/hooks/usePdfExport";
+import { ModuleGate } from "@/components/accounts/ModuleGate";
 
 // Paleta de cores do app pro gráfico por cidade (as mesmas cores dos chips da
 // agenda). Cicla quando há mais cidades que cores.
@@ -134,7 +135,20 @@ type TripSuggestion = {
   candidates: TripCandidate[];
 };
 
+// Cria Captação é módulo PAGO: a página inteira fica atrás do ModuleGate
+// ('cria_captacao'). Dono sem o módulo vê o convite pra ativar; colaborador
+// precisa do módulo liberado (teamCode). Acessar /socialmidia/captacao direto
+// pela URL cai no mesmo paywall, não numa tela quebrada. Marcar captação na
+// Agenda NÃO passa por aqui: aquilo é grátis (gate 'agenda').
 export default function CriaCaptacao() {
+  return (
+    <ModuleGate code="cria_captacao" teamCode="cria_captacao">
+      <CriaCaptacaoInner />
+    </ModuleGate>
+  );
+}
+
+function CriaCaptacaoInner() {
   const navigate = useNavigate();
   const [month, setMonth] = useState(() => hojeBR().slice(0, 7));
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("todas");

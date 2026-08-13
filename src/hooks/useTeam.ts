@@ -13,6 +13,7 @@ export const TEAM_MODULES = [
   { code: "hub_cria", label: "HUB Criativo (análises)" },
   { code: "agenda", label: "Agenda de criação" },
   { code: "cria_caixa", label: "Cria Caixa" },
+  { code: "cria_captacao", label: "Cria Captação (painel de captações)" },
 ] as const;
 export type TeamModuleCode = (typeof TEAM_MODULES)[number]["code"];
 // Módulo financeiro (sensível): NÃO entra marcado por padrão no convite.

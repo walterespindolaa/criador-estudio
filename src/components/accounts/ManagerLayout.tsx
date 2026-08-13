@@ -38,7 +38,7 @@ const brl = (c: number) => `R$ ${(c / 100).toFixed(2).replace(".", ",")}`;
 // Ícone de cada módulo, casado pelo CÓDIGO DO CATÁLOGO (m.code). Fonte única da
 // verdade: o rail (desktop), o menu "Mais" (mobile) e os cards da home
 // (ManagerHome) leem daqui, pra o ícone do card ser o MESMO do menu lateral.
-export const MODULE_ICON: Record<string, LucideIcon> = { aprovapost_externo: Send, crm: Users2, financeiro: Wallet, hub_cria: Search };
+export const MODULE_ICON: Record<string, LucideIcon> = { aprovapost_externo: Send, crm: Users2, financeiro: Wallet, hub_cria: Search, cria_captacao: Camera };
 const MODULE_ROUTE: Record<string, string> = {
   aprovapost_externo: "/socialmidia/criapost",
   crm: "/socialmidia/criacrm",
@@ -46,12 +46,17 @@ const MODULE_ROUTE: Record<string, string> = {
   // ISTO NÃO EXISTIA. Sem rota, o clique caía no `else` e abria o popup dizendo
   // "assinatura ativa", sem lugar nenhum pra ir. A pessoa pagava e não entrava.
   hub_cria: "/socialmidia/hubcria",
+  // Cria Captação virou módulo pago: a PÁGINA é gated. Ela entra na seção
+  // "Módulos" do menu como os outros (ativo abre a rota; sem o módulo abre o
+  // popup pra ativar). Marcar captação na Agenda segue grátis, é outra coisa.
+  cria_captacao: "/socialmidia/captacao",
 };
 // Mapeia o código do módulo (catálogo) → código de permissão de time.
 const MODULE_TEAM_CODE: Record<string, string> = {
   aprovapost_externo: "cria_post",
   crm: "cria_gestao",
   financeiro: "cria_caixa",
+  cria_captacao: "cria_captacao",
 };
 
 // Seção "Negócio" do rail (Equipe e Comissões têm tratamento próprio no render).
@@ -239,7 +244,9 @@ export default function ManagerLayout() {
           {railNode(Home, "Início", { active: isActive("/socialmidia/dashboard"), onClick: () => navigate("/socialmidia/dashboard") })}
           {canClients && railNode(Contact, "Clientes", { active: isActive("/socialmidia/clientes"), onClick: () => navigate("/socialmidia/clientes") })}
           {canAgenda && railNode(CalendarDays, "Agenda", { active: isActive("/socialmidia/agenda"), onClick: () => navigate("/socialmidia/agenda") })}
-          {canAgenda && railNode(Camera, "Cria Captação", { active: isActive("/socialmidia/captacao"), onClick: () => navigate("/socialmidia/captacao") })}
+          {/* Cria Captação NÃO é mais item fixo: virou módulo pago e entra na
+              seção "Módulos" abaixo (pelo loop de `modules`), com cadeado/preço
+              pra quem não tem e ponto verde pra quem ativou. */}
           {railNode(ListChecks, "Aprovações", { active: isActive("/socialmidia/aprovacoes"), onClick: () => navigate("/socialmidia/aprovacoes") })}
           {railHovered && (modules.length > 0 || hasHubCria) && <p className="px-2 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Módulos</p>}
           {modules
@@ -369,12 +376,8 @@ export default function ManagerLayout() {
         // quadradinho, descrição do que aquilo faz e chevron. A grade de ícones
         // secos que existia aqui não dizia o que cada coisa era.
         const moreSections: { title: string; items: { label: string; desc?: string; icon: LucideIcon; onClick: () => void; ativo?: boolean }[] }[] = [
-          {
-            title: "Dia a dia",
-            items: [
-              ...(canAgenda ? [{ label: "Cria Captação", desc: "Roteiros e panorama das captações", icon: Camera as LucideIcon, ativo: isActive("/socialmidia/captacao"), onClick: () => navigate("/socialmidia/captacao") }] : []),
-            ],
-          },
+          // Cria Captação saiu do "Dia a dia": agora é módulo pago e aparece na
+          // seção "Módulos" (pelo loop de `modules`), igual aos outros.
           {
             title: "Módulos",
             items: [

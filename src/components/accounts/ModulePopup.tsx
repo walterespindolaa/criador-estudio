@@ -4,11 +4,11 @@ import { useManageSubscription } from "@/hooks/useManageSubscription";
 import { ManagerProfileForm } from "@/components/accounts/ManagerProfileForm";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Sparkles, Check, Clock, Loader2, Send, Users2, Wallet, Radar, ArrowRight } from "lucide-react";
+import { Sparkles, Check, Clock, Loader2, Send, Users2, Wallet, Radar, ArrowRight, Camera } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const brl = (c: number) => `R$ ${(c / 100).toFixed(2).replace(".", ",")}`;
-const ICONS: Record<string, typeof Sparkles> = { aprovapost_externo: Send, crm: Users2, financeiro: Wallet, hub_cria: Radar, hub_extra: Sparkles };
+const ICONS: Record<string, typeof Sparkles> = { aprovapost_externo: Send, crm: Users2, financeiro: Wallet, hub_cria: Radar, hub_extra: Sparkles, cria_captacao: Camera };
 
 // Onde cada módulo ABRE. Sem isto, o popup de um módulo ativo vira um beco sem
 // saída: diz "assinatura ativa" e não oferece caminho nenhum.
@@ -17,6 +17,7 @@ const ROTA: Record<string, string> = {
   crm: "/socialmidia/criacrm",
   financeiro: "/socialmidia/criacaixa",
   hub_cria: "/socialmidia/hubcria",
+  cria_captacao: "/socialmidia/captacao",
 };
 const TAGLINES: Record<string, string> = {
   aprovapost_externo: "Aprovação externa por link",
@@ -24,6 +25,7 @@ const TAGLINES: Record<string, string> = {
   financeiro: "Cachês e fluxo de caixa",
   hub_cria: "Espie os concorrentes dos seus clientes",
   hub_extra: "Mais créditos de análise no Cria Radar",
+  cria_captacao: "O painel das captações do mês",
 };
 const BENEFITS: Record<string, string[]> = {
   aprovapost_externo: [
@@ -58,6 +60,13 @@ const BENEFITS: Record<string, string[]> = {
     "+20 análises no Cria Radar",
     "Some à sua cota do mês",
     "Cancele quando quiser",
+  ],
+  cria_captacao: [
+    "Todas as captações do mês por dia e por local",
+    "Roteiro e teleprompter pra cada gravação",
+    "Folha do dia pronta pra copiar",
+    "Lista de tomadas e captação recorrente",
+    "Sugestão de captação por cidade",
   ],
 };
 
