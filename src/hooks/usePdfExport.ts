@@ -25,12 +25,21 @@ function pageCuts(boundaries: number[], totalPx: number, pagePx: number): number
   let guard = 0;
   while (totalPx - start > pagePx + 1 && guard++ < 200) {
     const limit = start + pagePx;
-    // Só aceita um corte que preencha ao menos 35% da página, senão o PDF vira
+    // Preferência: um corte que preencha ao menos 35% da página, senão o PDF vira
     // um monte de folha quase vazia.
     const min = start + pagePx * 0.35;
     let cut = 0;
     for (const b of boundaries) if (b > min && b <= limit) cut = Math.max(cut, b);
-    if (cut <= start) cut = limit;
+    if (cut <= start) {
+      // Não há limite de bloco na zona boa. Antes de cortar no meio, tenta QUALQUER
+      // limite antes do fim da página: assim um bloco grande que começou no meio da
+      // página é empurrado INTEIRO pra próxima em vez de sair partido (era o que
+      // cortava cards ao meio). Só se não houver limite nenhum entre o começo e o
+      // fim da página é que cortamos na altura cheia (bloco maior que uma página).
+      let fallback = 0;
+      for (const b of boundaries) if (b > start && b <= limit) fallback = Math.max(fallback, b);
+      cut = fallback > start ? fallback : limit;
+    }
     cuts.push(cut);
     start = cut;
   }

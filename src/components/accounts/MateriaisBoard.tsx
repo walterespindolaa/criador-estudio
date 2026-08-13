@@ -154,10 +154,10 @@ export function MateriaisBoard({ clientId, clientName }: { clientId: string; cli
   // Data do card neste board = PRAZO pra ficar pronto (due_date). Material sem
   // prazo vai pro fim da coluna. Não há ordem manual persistida aqui (ver o
   // comentário do onDragEnd), então o alternador não briga com arraste nenhum.
-  const [porData, setPorData] = useOrdemPorData("materiais_ordem_data_v1");
+  const [porData, setPorData, ordemDir, alternarOrdem] = useOrdemPorData("materiais_ordem_data_v1");
   const byStatus = (s: MaterialStatus) => {
     const lista = materials.filter((m) => m.status === s);
-    return porData ? ordenarPorData(lista, (m) => m.due_date) : lista;
+    return porData ? ordenarPorData(lista, (m) => m.due_date, undefined, ordemDir) : lista;
   };
   const pedidosCliente = materials.filter((m) => m.requested_by === "cliente" && m.status === "solicitado").length;
 
@@ -183,7 +183,7 @@ export function MateriaisBoard({ clientId, clientName }: { clientId: string; cli
       {/* Ordem das colunas: como veio (mais recentes) ou pelo prazo. */}
       {materials.length > 1 && (
         <div className="flex flex-wrap items-center gap-1.5 mb-3">
-          <OrdemDataToggle valor={porData} onChange={setPorData} rotuloPadrao="Mais recentes" />
+          <OrdemDataToggle valor={porData} direcao={ordemDir} onChange={setPorData} onToggle={alternarOrdem} rotuloPadrao="Mais recentes" />
           {porData && (
             <span className="text-[11px] font-body text-muted-foreground">Sem prazo fica no fim.</span>
           )}

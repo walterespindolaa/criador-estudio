@@ -7,7 +7,8 @@ import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { useCrmClients } from "@/hooks/useCrm";
 import { useExternalClients } from "@/hooks/useCriaPost";
-import { computeProdStats, useProdutividadePeriodo, type ProdCapture, type ProdutividadeRaw } from "@/hooks/useProdutividade";
+import { computeProdStats, useProdutividadePeriodo, type ProdCapture, type ProdPost, type ProdutividadeRaw } from "@/hooks/useProdutividade";
+import { nomeExibidoCliente } from "@/lib/cliente-nome";
 
 // ── RELATÓRIO DE PRODUTIVIDADE (da operação, não do cliente) ─────────────────
 // "Quanto EU produzi na semana/no mês": posts, captações, tarefas, criações e
@@ -116,20 +117,47 @@ function periodoDe(anchor: Date, modo: Modo) {
   };
 }
 
-// Ranking simples de quem consumiu mais produção no período: posts (data agendada)
-// + tarefas (prazo no período) + captações (não canceladas). Item sem cliente fica fora.
-type RankRow = { key: string; name: string; posts: number; tarefas: number; capts: number; total: number };
-function buildRanking(
+// PANORAMA POR CLIENTE. Pra o gestor bater o olho e ver TUDO que fez de cada
+// cliente no período sem abrir o relatório de cada um: quantos posts SAÍRAM
+// (publicados, o número que mais importa), o funil resumido (aprovados/aguardando/
+// em produção), captações concluídas e tarefas concluídas. É a evolução do antigo
+// ranking "Produção por cliente" (mesma chave de agrupamento, mesma unificação de
+// cliente via ext→crm), só que aberto por status em vez de um total cego.
+//
+// Atribuição por status (mesma régua do computeProdStats, pra bater com o topo):
+//  - publicados  = approval_status "postado"
+//  - aprovados   = "aprovado"
+//  - aguardando  = "pendente" + "ajuste_solicitado"
+//  - em produção = "em_producao" + null (post recém-criado sem status)
+// Tarefas: só concluídas com prazo no período. Captações: não canceladas.
+// Cliente sem nada no período fica de fora.
+type PanoramaRow = {
+  key: string; name: string;
+  publicados: number; aprovados: number; aguardando: number; emProducao: number; postsTotal: number;
+  captConcluidas: number; captAgendadas: number; tarefas: number;
+  peso: number; // volume total, só pra ordenar e desempatar
+  postsPublicados: ProdPost[]; // pro detalhe expandível (os posts que saíram)
+};
+function buildPanorama(
   raw: ProdutividadeRaw | undefined,
   from: string, to: string,
   crmName: Map<string, string>,
   ext: Map<string, { name: string; crm_client_id: string | null }>,
-): RankRow[] {
+): PanoramaRow[] {
   if (!raw) return [];
-  const map = new Map<string, RankRow>();
-  const bump = (key: string, name: string, f: "posts" | "tarefas" | "capts") => {
-    const row = map.get(key) ?? { key, name, posts: 0, tarefas: 0, capts: 0, total: 0 };
-    row[f] += 1; row.total += 1; map.set(key, row);
+  const map = new Map<string, PanoramaRow>();
+  const get = (key: string, name: string): PanoramaRow => {
+    let row = map.get(key);
+    if (!row) {
+      row = {
+        key, name, publicados: 0, aprovados: 0, aguardando: 0, emProducao: 0, postsTotal: 0,
+        captConcluidas: 0, captAgendadas: 0, tarefas: 0, peso: 0, postsPublicados: [],
+      };
+      map.set(key, row);
+    }
+    // Quem chegou primeiro pode ter caído no genérico "Cliente"; um nome melhor sobrescreve.
+    if (name && name !== "Cliente" && row.name === "Cliente") row.name = name;
+    return row;
   };
   for (const p of raw.posts) {
     if (!p.external_client_id) continue;
@@ -137,28 +165,37 @@ function buildRanking(
     // Unifica pelo cliente central quando o vínculo existe (mesmo cliente em tabelas diferentes).
     const key = e?.crm_client_id ? `crm:${e.crm_client_id}` : `ext:${p.external_client_id}`;
     const name = (e?.crm_client_id ? crmName.get(e.crm_client_id) : null) ?? e?.name ?? "Cliente";
-    bump(key, name, "posts");
+    const row = get(key, name);
+    row.postsTotal += 1;
+    const s = p.approval_status;
+    if (s === "postado") { row.publicados += 1; row.postsPublicados.push(p); }
+    else if (s === "aprovado") row.aprovados += 1;
+    else if (s === "pendente" || s === "ajuste_solicitado") row.aguardando += 1;
+    else row.emProducao += 1; // "em_producao" + null
   }
   for (const t of raw.tasks) {
-    if (!t.crm_client_id || !t.due_date || t.due_date < from || t.due_date > to) continue;
-    bump(`crm:${t.crm_client_id}`, crmName.get(t.crm_client_id) ?? "Cliente", "tarefas");
+    if (!t.crm_client_id || t.status !== "concluida" || !t.due_date || t.due_date < from || t.due_date > to) continue;
+    get(`crm:${t.crm_client_id}`, crmName.get(t.crm_client_id) ?? "Cliente").tarefas += 1;
   }
   for (const c of raw.captures) {
     if (c.status === "cancelada") continue;
-    if (c.crm_client_id) bump(`crm:${c.crm_client_id}`, crmName.get(c.crm_client_id) ?? c.client_name ?? "Cliente", "capts");
-    else if (c.client_name?.trim()) bump(`nome:${c.client_name.trim().toLowerCase()}`, c.client_name.trim(), "capts");
+    const key = c.crm_client_id ? `crm:${c.crm_client_id}` : c.client_name?.trim() ? `nome:${c.client_name.trim().toLowerCase()}` : null;
+    if (!key) continue;
+    const name = (c.crm_client_id ? crmName.get(c.crm_client_id) : null) ?? c.client_name?.trim() ?? "Cliente";
+    const row = get(key, name);
+    if (c.status === "concluida") row.captConcluidas += 1;
+    else row.captAgendadas += 1;
   }
-  return Array.from(map.values()).sort((a, b) => b.total - a.total).slice(0, 6);
-}
-
-// Detalhe do ranking por extenso ("12 posts · 2 tarefas · 1 capt."), só com as
-// partes maiores que zero. O antigo "12p 2t 1c" ninguém entendia sem legenda.
-function detalheRank(r: RankRow): string {
-  const partes: string[] = [];
-  if (r.posts > 0) partes.push(`${nb(r.posts)} ${r.posts === 1 ? "post" : "posts"}`);
-  if (r.tarefas > 0) partes.push(`${nb(r.tarefas)} ${r.tarefas === 1 ? "tarefa" : "tarefas"}`);
-  if (r.capts > 0) partes.push(`${nb(r.capts)} capt.`);
-  return partes.join(" · ");
+  for (const r of map.values()) {
+    r.peso = r.postsTotal + r.captConcluidas + r.captAgendadas + r.tarefas;
+    r.postsPublicados.sort((a, b) =>
+      `${a.scheduled_date} ${a.scheduled_time ?? ""}`.localeCompare(`${b.scheduled_date} ${b.scheduled_time ?? ""}`));
+  }
+  // Ordena por quem mais PUBLICOU (o que o gestor quer ver primeiro), desempata por
+  // volume total e depois alfabético. Mostra todos com produção, não só um top N.
+  return Array.from(map.values())
+    .filter((r) => r.peso > 0)
+    .sort((a, b) => b.publicados - a.publicados || b.peso - a.peso || a.name.localeCompare(b.name, "pt-BR"));
 }
 
 type Props = { open: boolean; onOpenChange: (open: boolean) => void };
@@ -206,16 +243,18 @@ export function RelatorioProdutividadeDialog({ open, onOpenChange }: Props) {
 
   const { data: crmClients = [] } = useCrmClients();
   const { clients: extClients } = useExternalClients();
-  const crmName = useMemo(() => new Map(crmClients.map((c) => [c.id, c.name])), [crmClients]);
+  // Nome exibido = apelido do gestor quando existir (nomeExibidoCliente), senão o nome do CRM.
+  const crmName = useMemo(() => new Map(crmClients.map((c) => [c.id, nomeExibidoCliente(c) || c.name])), [crmClients]);
   const extMap = useMemo(
     () => new Map(extClients.map((e) => [e.id, { name: e.name, crm_client_id: e.crm_client_id ?? null }])),
     [extClients],
   );
-  const ranking = useMemo(
-    () => buildRanking(cur.data, per.from, per.to, crmName, extMap),
+  const panorama = useMemo(
+    () => buildPanorama(cur.data, per.from, per.to, crmName, extMap),
     [cur.data, per.from, per.to, crmName, extMap],
   );
-  const rankMax = ranking[0]?.total ?? 0;
+  // Base da barrinha: quem mais publicou. Se ninguém publicou ainda no período, não desenha barra (seria vazia e mentirosa).
+  const maxPublicados = useMemo(() => panorama.reduce((m, r) => Math.max(m, r.publicados), 0), [panorama]);
 
   // Captações do período em ordem cronológica, sem as canceladas (mesma régua da
   // contagem do ranking). É o detalhe do que já é contado, não métrica nova.
@@ -306,6 +345,38 @@ export function RelatorioProdutividadeDialog({ open, onOpenChange }: Props) {
         {label}
       </button>
     );
+
+  // Número + rótulo num chip pequeno, pro panorama. `hero` = o publicados (o que
+  // mais importa), destacado na cor da marca; os outros ficam neutros.
+  const chip = (value: number, label: string, hero = false) => (
+    <span style={{
+      display: "inline-flex", alignItems: "baseline", gap: 4, padding: "3px 8px", borderRadius: 7,
+      background: hero ? "#FCE9E1" : C.soft, border: `1px solid ${hero ? "#F6C6B4" : C.line}`,
+    }}>
+      <b style={{ fontSize: 13, color: hero ? C.brand : C.ink, lineHeight: 1 }}>{nb(value)}</b>
+      <span style={{ fontSize: 10, color: hero ? C.brand : C.sub }}>{label}</span>
+    </span>
+  );
+
+  // Um post publicado por linha (no detalhe do cliente): check verde, título, plataforma e data.
+  const linhaPost = (p: ProdPost) => {
+    const hora = horaCurta(p.scheduled_time);
+    const quando = `${ddmm(p.scheduled_date)}${hora ? ` · ${hora}` : ""}`;
+    return (
+      <div key={p.id} style={{ display: "flex", alignItems: "flex-start", gap: 7, padding: "5px 0", borderBottom: `1px solid ${C.soft}` }}>
+        <div style={{ marginTop: 2 }}><IconeCheck /></div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12, fontWeight: 500, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {p.title?.trim() || "Post sem título"}
+          </div>
+          {p.platform?.trim() ? (
+            <div style={{ fontSize: 10.5, color: C.sub, textTransform: "capitalize" }}>{p.platform.trim()}</div>
+          ) : null}
+        </div>
+        <div style={{ fontSize: 11, color: C.sub, whiteSpace: "nowrap", marginTop: 1 }}>{quando}</div>
+      </div>
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -407,35 +478,57 @@ export function RelatorioProdutividadeDialog({ open, onOpenChange }: Props) {
                   {stats.materiais.total > 0 && row("Materiais finalizados", stats.materiais.finalizados)}
                 </div>
 
-                {ranking.length > 0 && (
-                  <div data-pdf-block style={{ marginTop: 16 }}>
-                    {sectionTitle("Produção por cliente")}
-                    {ranking.map((r) => {
+                {panorama.length > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    {sectionTitle("Panorama por cliente")}
+                    <div style={{ fontSize: 10.5, color: C.sub, marginTop: -2, marginBottom: 8, lineHeight: 1.5 }}>
+                      Tudo que saiu de cada cliente no período: quantos posts foram publicados, o funil (aprovados,
+                      aguardando aprovação, em produção), captações e tarefas concluídas. Toque num cliente pra ver o detalhe.
+                    </div>
+                    {panorama.map((r) => {
                       const aberto = clienteAberto === r.key;
                       const capsCliente = capsPeriodo.filter((c) => chaveCaptura(c) === r.key);
-                      const detalhe = detalheRank(r);
                       return (
-                        <div key={r.key} style={{ marginBottom: 6 }}>
-                          {/* A linha inteira é clicável: expande as captações do cliente no período. */}
+                        <div key={r.key} data-pdf-block style={{ marginBottom: 8, border: `1px solid ${C.line}`, borderRadius: 10, overflow: "hidden" }}>
+                          {/* O card inteiro é clicável: expande os posts publicados e as captações do cliente. */}
                           <button type="button" onClick={() => setClienteAberto(aberto ? null : r.key)}
-                            style={{ display: "block", width: "100%", background: "none", border: 0, padding: "3px 0", margin: 0, cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
+                            style={{ display: "block", width: "100%", background: "none", border: 0, padding: "10px 12px 11px", margin: 0, cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
                             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
-                              <div style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 600, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              <div style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                 {/* Setinha some no PDF: impresso não expande nada. */}
                                 {!downloading && <span style={{ color: C.sub, fontSize: 9, marginRight: 5 }}>{aberto ? "▼" : "►"}</span>}
                                 {r.name}
                               </div>
-                              <b style={{ fontSize: 12.5, color: C.ink, whiteSpace: "nowrap" }}>{r.total}</b>
+                              {r.postsTotal > 0 && (
+                                <span style={{ fontSize: 10.5, color: C.sub, whiteSpace: "nowrap" }}>{nb(r.postsTotal)} no fluxo</span>
+                              )}
                             </div>
-                            <div style={{ height: 8, background: C.soft, borderRadius: 99, overflow: "hidden", margin: "4px 0 3px" }}>
-                              <div style={{ width: `${rankMax > 0 ? Math.max(4, (r.total / rankMax) * 100) : 0}%`, height: "100%", background: C.brand }} />
+                            {/* Os números do cliente, em chips que empilham no celular. Publicados em destaque. */}
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                              {chip(r.publicados, r.publicados === 1 ? "publicado" : "publicados", true)}
+                              {r.aprovados > 0 && chip(r.aprovados, "aprovados")}
+                              {r.aguardando > 0 && chip(r.aguardando, "aguardando")}
+                              {r.emProducao > 0 && chip(r.emProducao, "em produção")}
+                              {r.captConcluidas > 0 && chip(r.captConcluidas, r.captConcluidas === 1 ? "captação" : "captações")}
+                              {r.tarefas > 0 && chip(r.tarefas, r.tarefas === 1 ? "tarefa" : "tarefas")}
                             </div>
-                            {/* Por extenso e em linha própria: no celular o nome já trunca, aqui cabe inteiro. */}
-                            {detalhe && <div style={{ fontSize: 10.5, color: C.sub }}>{detalhe}</div>}
+                            {maxPublicados > 0 && (
+                              <div style={{ height: 6, background: C.soft, borderRadius: 99, overflow: "hidden", marginTop: 9 }}>
+                                <div style={{ width: `${r.publicados > 0 ? Math.max(4, (r.publicados / maxPublicados) * 100) : 0}%`, height: "100%", background: C.brand }} />
+                              </div>
+                            )}
                           </button>
                           {aberto && (
-                            <div style={{ margin: "3px 0 8px", padding: "6px 10px 4px", background: C.soft, borderRadius: 8 }}>
-                              <div style={{ fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4, color: C.sub, marginBottom: 2 }}>
+                            <div style={{ padding: "2px 12px 10px", borderTop: `1px solid ${C.soft}` }}>
+                              <div style={{ fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4, color: C.sub, margin: "8px 0 2px" }}>
+                                Posts publicados
+                              </div>
+                              {r.postsPublicados.length === 0 ? (
+                                <div style={{ fontSize: 11, color: C.sub, padding: "3px 0 5px" }}>Nenhum post publicado no período.</div>
+                              ) : (
+                                r.postsPublicados.map((p) => linhaPost(p))
+                              )}
+                              <div style={{ fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4, color: C.sub, margin: "10px 0 2px" }}>
                                 Captações no período
                               </div>
                               {capsCliente.length === 0 ? (

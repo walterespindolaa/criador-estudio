@@ -264,11 +264,11 @@ const Criando = () => {
   // Ordem das colunas do board: manual (arrastada, board_order) ou por data de
   // publicação. É EXIBIÇÃO: nada é regravado, então desligar devolve a ordem manual.
   // Vale pros três boards da tela (desktop, mobile overview e mobile em colunas).
-  const [porData, setPorData] = useOrdemPorData("criando_ordem_data_v1");
+  const [porData, setPorData, ordemDir, alternarOrdem] = useOrdemPorData("criando_ordem_data_v1");
   // Data do card aqui = scheduled_date, desempatada por scheduled_time.
-  // Post sem data agendada vai pro fim da coluna.
+  // Post sem data agendada vai pro fim da coluna (nos dois sentidos da direção).
   const ordenarColuna = (lista: Post[]) =>
-    porData ? ordenarPorData(lista, (p) => p.scheduled_date, (p) => p.scheduled_time) : lista;
+    porData ? ordenarPorData(lista, (p) => p.scheduled_date, (p) => p.scheduled_time, ordemDir) : lista;
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pendingFormat, setPendingFormat] = useState<string | null>(null);
@@ -420,7 +420,7 @@ const Criando = () => {
           </div>
           {/* Ordem das colunas: manual (o que você arrastou) ou por data. */}
           <div className="flex items-center gap-1.5 mt-2 overflow-x-auto scrollbar-none">
-            <OrdemDataToggle valor={porData} onChange={setPorData} className="shrink-0" />
+            <OrdemDataToggle valor={porData} direcao={ordemDir} onChange={setPorData} onToggle={alternarOrdem} className="shrink-0" />
           </div>
           {porData && (
             <p className="text-[11px] font-body text-muted-foreground mt-1.5">Post sem data fica no fim da coluna.</p>
@@ -656,7 +656,7 @@ const Criando = () => {
               cabeçalho e o calendário é organizado pelo dia. */}
           {view === "board" && (
             <>
-              <OrdemDataToggle valor={porData} onChange={setPorData} />
+              <OrdemDataToggle valor={porData} direcao={ordemDir} onChange={setPorData} onToggle={alternarOrdem} />
               {porData && (
                 <span className="text-[11px] font-body text-muted-foreground">Post sem data fica no fim da coluna.</span>
               )}

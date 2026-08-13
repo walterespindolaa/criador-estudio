@@ -22,7 +22,7 @@ import { parseDateOnly, toISODateBR } from "@/lib/date-br";
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 
-export type ProdPost = { id: string; approval_status: string | null; scheduled_date: string; external_client_id: string | null };
+export type ProdPost = { id: string; title: string | null; platform: string | null; approval_status: string | null; scheduled_date: string; scheduled_time: string | null; external_client_id: string | null };
 export type ProdCapture = {
   id: string;
   status: "agendada" | "concluida" | "cancelada";
@@ -66,7 +66,7 @@ export function useProdutividadePeriodo(from: string, to: string, enabled: boole
       const toWide = addDaysISO(to, 2);
       const [posts, caps, tasks, cris, mats] = await Promise.all([
         sbFrom("posts")
-          .select("id, approval_status, scheduled_date, external_client_id")
+          .select("id, title, platform, approval_status, scheduled_date, scheduled_time, external_client_id")
           .eq("user_id", agencyOwnerId!)
           .not("external_client_id", "is", null)
           .gte("scheduled_date", from).lte("scheduled_date", to),

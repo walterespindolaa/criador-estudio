@@ -7,17 +7,30 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { clientReportInsight } from "@/lib/ai/claude";
 import { useCrmClients } from "@/hooks/useCrm";
 import { parseDateOnly, toISODateBR } from "@/lib/date-br";
-import { FORMAT_LABELS } from "@/lib/constants";
+import { FORMAT_LABELS, normalizarFormato } from "@/lib/constants";
 import type { ExternalClient, ExternalPost } from "@/hooks/useCriaPost";
+import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
 import {
   computeCrossAnalysis, crossHeadlines, computeAudienceBreakdown, computeStoriesSummary,
   fmtNum, type CrossItem, type AudienceLike, type StoryLike,
 } from "@/components/insights/insightsUtils";
 
 const sbRpcR = supabase.rpc.bind(supabase) as unknown as (fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
+// Acesso "solto" a tabelas que ou já existem em types.ts (agenda_captures) ou
+// ainda não foram regeneradas nos tipos (client_report_notes, tabela nova). Mesmo
+// padrão de src/hooks/useAgenda.ts.
+type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
+const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
+
+// Uma captação (gravação) do cliente, resumida pro relatório.
+type CaptureRow = {
+  id: string; capture_date: string; capture_time: string | null;
+  status: string | null; location: string | null; converted_post_id: string | null;
+};
 type IgMediaRow = {
   caption: string | null; media_type: string | null; permalink: string | null;
   thumbnail_url: string | null; posted_at: string | null; metrics: Record<string, number> | null;
@@ -85,20 +98,22 @@ type PeriodStats = {
   cycleSample: number;
 };
 
-// Um post "pertence" ao período se foi criado, agendado OU publicado nele.
-// Antes olhávamos só created_at, então post feito em junho e publicado em julho
-// não aparecia no relatório de julho, que é justamente o que o cliente recebeu.
+// Um post "pertence" ao período pela data em que ele acontece no FEED do cliente:
+// a data de PUBLICAÇÃO (se já foi ao ar) ou, na falta dela, a data de AGENDAMENTO.
+// NÃO usamos mais created_at: peça criada em junho e publicada em julho é conteúdo
+// de julho; peça criada em julho mas agendada pra agosto é conteúdo de agosto.
+// Antes o created_at entrava no filtro, e por isso o relatório de julho mostrava
+// peça de agosto (e o "publicados" contava peça de fora do mês) (o bug que o
+// cliente recebeu. Agora TODO número do relatório reflete só o período selecionado.
 function buildStats(all: ExternalPost[], since: Date, until: Date): PeriodStats {
   const sinceDay = toISODateBR(since);
   // `until` é exclusivo; comparação de string precisa do último dia incluído.
   const untilDay = toISODateBR(new Date(until.getTime() - 1));
-  const inRange = (d: Date | null) => !!d && d >= since && d < until;
   const dayIn = (s: string | null) => !!s && s >= sinceDay && s <= untilDay;
+  // Data que define o mês do post: publicação (se postado) ou agendamento.
+  const refDayOf = (p: ExternalPost): string | null => publishedDayOf(p) ?? p.scheduled_date;
 
-  const posts = all.filter((p) => {
-    const created = p.created_at ? new Date(p.created_at) : null;
-    return inRange(created) || dayIn(p.scheduled_date) || dayIn(publishedDayOf(p));
-  });
+  const posts = all.filter((p) => dayIn(refDayOf(p)));
 
   const byStatus = Object.fromEntries(STATUS_KEYS.map((k) => [k, 0])) as Record<StatusKey, number>;
   const byFormat: Record<string, number> = {};
@@ -110,7 +125,10 @@ function buildStats(all: ExternalPost[], since: Date, until: Date): PeriodStats 
 
   for (const p of posts) {
     byStatus[statusOf(p)] += 1;
-    byFormat[p.format] = (byFormat[p.format] ?? 0) + 1;
+    // Agrupa pelo formato CANÔNICO: "Reels"/"reels"/variações contam no mesmo
+    // balde, senão o "POR FORMATO" listava o mesmo formato repetido.
+    const fmtKey = normalizarFormato(p.format) || "outro";
+    byFormat[fmtKey] = (byFormat[fmtKey] ?? 0) + 1;
     byPlatform[p.platform] = (byPlatform[p.platform] ?? 0) + 1;
     const day = publishedDayOf(p);
     if (dayIn(day)) { publishedDays.add(day!); publishedPosts.push(p); }
@@ -245,11 +263,27 @@ const C = {
 export function ClientReportDialog({ open, onOpenChange, client, posts, managerName, initialPeriodKey, customSince, customUntil }: Props) {
   const { exportPdf, exportPdfBlob } = usePdfExport();
   const { user } = useAuth();
+  const { agencyOwnerId } = useActiveAccount();
   const { data: crmClients = [] } = useCrmClients();
   const linked = useMemo(
     () => (client.crm_client_id ? crmClients.find((c) => c.id === client.crm_client_id) ?? null : null),
     [crmClients, client.crm_client_id],
   );
+
+  // Marca da SOCIAL MÍDIA (agência) pro cabeçalho branded: a logo dela vive em
+  // profiles.brand_logo_url do dono do tenant (funciona pra colaborador também,
+  // via agencyOwnerId). Leitura defensiva: sem logo, o cabeçalho só não a mostra.
+  const { data: agencyBrand } = useQuery<{ brand_logo_url: string | null } | null>({
+    queryKey: ["report-agency-brand", agencyOwnerId],
+    enabled: open && !!agencyOwnerId,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("profiles")
+        .select("brand_logo_url").eq("id", agencyOwnerId!).maybeSingle();
+      if (error) throw error;
+      return (data as { brand_logo_url: string | null } | null) ?? null;
+    },
+  });
+  const agencyLogo = agencyBrand?.brand_logo_url ?? null;
   const reportRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   // Período custom (de/até) do "Relatório rápido" entra como uma opção a mais no seletor.
@@ -271,18 +305,107 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   const [aiLoading, setAiLoading] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [sharing, setSharing] = useState<"link" | "wa" | "mail" | null>(null);
+  // Recado da social mídia: texto livre que ela escreve antes de mandar e que sai
+  // no INÍCIO do relatório. Persistido por cliente+período quando dá (ver abaixo).
+  const [notes, setNotes] = useState("");
+  const [notesSaving, setNotesSaving] = useState(false);
 
   const period = useMemo(
     () => periods.find((p) => p.key === periodKey) ?? periods.find((p) => p.key === "este-mes") ?? periods[0],
     [periods, periodKey],
   );
 
+  // Intervalo do período em dia de calendário BR (para filtrar captações e chavear
+  // as notas). `until` é exclusivo, então o último dia incluído é until - 1.
+  const dayRange = useMemo(() => ({
+    since: toISODateBR(period.since),
+    until: toISODateBR(new Date(period.until.getTime() - 1)),
+  }), [period]);
+
+  // Captações (gravações) do cliente NO PERÍODO. Fecha o relatório com o que foi a
+  // campo no mês. Chaveado pelo crm_client_id (mesmo cliente central) e filtrado
+  // por capture_date, então nunca traz captação de outro mês. Leitura defensiva:
+  // sem cliente central vinculado, a seção mostra estado vazio honesto.
+  const { data: captures = [] } = useQuery<CaptureRow[]>({
+    queryKey: ["report-captures", agencyOwnerId, client.crm_client_id, dayRange.since, dayRange.until],
+    enabled: open && !!agencyOwnerId && !!client.crm_client_id,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("agenda_captures")
+        .select("id, capture_date, capture_time, status, location, converted_post_id")
+        .eq("manager_id", agencyOwnerId!)
+        .eq("crm_client_id", client.crm_client_id!)
+        .gte("capture_date", dayRange.since)
+        .lte("capture_date", dayRange.until)
+        .order("capture_date", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as CaptureRow[];
+    },
+  });
+
+  const captureSummary = useMemo(() => {
+    const total = captures.length;
+    const valid = captures.filter((c) => c.status !== "cancelada");
+    return {
+      total,
+      done: captures.filter((c) => c.status === "concluida").length,
+      cancelled: captures.filter((c) => c.status === "cancelada").length,
+      withPost: captures.filter((c) => c.converted_post_id).length,
+      // capture_date já vem desc: a primeira não cancelada é a última do mês.
+      last: valid[0]?.capture_date ?? captures[0]?.capture_date ?? null,
+    };
+  }, [captures]);
+
+  // Chave ESTÁVEL do período pra persistir a nota: o intervalo de datas em si, não
+  // o rótulo relativo ("este mês" viraria outro mês no mês seguinte).
+  const notesKey = useMemo(() => `${dayRange.since}_${dayRange.until}`, [dayRange]);
+  const canPersistNotes = !!agencyOwnerId && !!client.crm_client_id;
+
+  // Carrega a nota salva pra este cliente+período. Se a tabela ainda não existir
+  // (migration não rodou), a query falha e a nota fica só na sessão.
+  const { data: savedNote, isFetched: notesFetched } = useQuery<string>({
+    queryKey: ["report-notes", agencyOwnerId, client.crm_client_id, notesKey],
+    enabled: open && canPersistNotes,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("client_report_notes")
+        .select("body")
+        .eq("manager_id", agencyOwnerId!)
+        .eq("crm_client_id", client.crm_client_id!)
+        .eq("period_key", notesKey)
+        .maybeSingle();
+      if (error) throw error;
+      return ((data as { body: string | null } | null)?.body) ?? "";
+    },
+  });
+  // Espelha a nota carregada no textarea ao abrir/trocar de período/cliente.
+  useEffect(() => {
+    if (notesFetched) setNotes(savedNote ?? "");
+  }, [notesFetched, savedNote, notesKey]);
+
+  const saveNotes = async () => {
+    if (!canPersistNotes) return;
+    setNotesSaving(true);
+    try {
+      const { error } = await sbFrom("client_report_notes").upsert({
+        manager_id: agencyOwnerId, crm_client_id: client.crm_client_id,
+        period_key: notesKey, body: notes, updated_at: new Date().toISOString(),
+      } as never, { onConflict: "manager_id,crm_client_id,period_key" });
+      if (error) throw error;
+    } catch (e) {
+      console.error("Salvar recado do relatório falhou", e);
+    } finally {
+      setNotesSaving(false);
+    }
+  };
+
   // Relatório rápido: reabre já no preset escolhido pela gestora.
   useEffect(() => { if (open && initialPeriodKey) setPeriodKey(initialPeriodKey); }, [open, initialPeriodKey]);
 
-  // Limpa a análise e o link publicado ao trocar de período (não valem pra outro recorte).
+  // Limpa a análise, o recado e o link publicado ao trocar de período (não valem
+  // pra outro recorte). Pra cliente com persistência, o recado salvo é recarregado
+  // logo em seguida pelo efeito da query de notas.
   useEffect(() => {
     if (editorRef.current) editorRef.current.innerHTML = "";
+    setNotes("");
     setShareUrl(null);
   }, [periodKey]);
 
@@ -462,7 +585,8 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   const byProducedFormat = useMemo(() => {
     const acc: Record<string, { soma: number; n: number }> = {};
     pieces.forEach((p) => {
-      const f = p.format || "outro";
+      // Formato canônico: agrupa "Reels"/"reels"/variações no mesmo balde.
+      const f = normalizarFormato(p.format) || "outro";
       acc[f] = acc[f] ?? { soma: 0, n: 0 };
       acc[f].soma += p.reach; acc[f].n += 1;
     });
@@ -527,23 +651,6 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     };
   }, [cross.byFormat]);
 
-  // Consistência: dias distintos com publicação. Usa o dado real do IG quando a
-  // conta está conectada e completa com o que foi marcado como postado no fluxo.
-  const consistency = useMemo(() => {
-    const days = new Set<string>(stats.publishedDays);
-    igMedia.forEach((r) => { if (r.posted_at) days.add(toISODateBR(new Date(r.posted_at))); });
-    const prevDays = new Set<string>(prevStats.publishedDays);
-    prevIgMedia.forEach((r) => { if (r.posted_at) prevDays.add(toISODateBR(new Date(r.posted_at))); });
-    const spanDays = Math.max(1, Math.round((period.until.getTime() - period.since.getTime()) / DAY_MS));
-    const canCompare = hasPriorHistory || prevDays.size > 0;
-    return {
-      days: days.size,
-      spanDays,
-      prevDays: canCompare ? prevDays.size : null,
-      delta: deltaOf(days.size, canCompare ? prevDays.size : null),
-    };
-  }, [stats.publishedDays, prevStats.publishedDays, igMedia, prevIgMedia, period, hasPriorHistory]);
-
   // Seguidores no período: primeiro e último ponto da série diária dentro do
   // recorte. Só aparece quando a RPC devolve `daily` e há pontos suficientes.
   const followers = useMemo(() => {
@@ -588,6 +695,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   const download = async () => {
     setDownloading(true);
     try {
+      if (canPersistNotes) await saveNotes();
       await exportPdf(reportRef, `relatorio-${client.name}-${period.key}`.replace(/\s+/g, "-").toLowerCase());
     } finally {
       setDownloading(false);
@@ -601,6 +709,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   const ensureShareLink = async (): Promise<string | null> => {
     if (shareUrl) return shareUrl;
     if (!user) { toast.error("Sessão expirada, entre de novo pra compartilhar."); return null; }
+    if (canPersistNotes) await saveNotes();
     const blob = await exportPdfBlob(reportRef);
     if (!blob) { toast.error("Não consegui gerar o PDF do relatório."); return null; }
     const slug = client.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "cliente";
@@ -690,9 +799,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       };
       const comparativo = [
         cmp("Publicados", stats.published, prodDelta.published),
-        cmp("Total no fluxo", stats.total, prodDelta.total),
         cmp("Ajustes pedidos", stats.byStatus.ajuste_solicitado, prodDelta.adjustments),
-        cmp("Dias com publicação", consistency.days, consistency.delta),
         igDelta.has ? cmp("Alcance", perf.reach, igDelta.reach) : null,
         igDelta.has ? cmp("Interações", perf.interactions, igDelta.interactions) : null,
         perf.engRate !== null
@@ -725,7 +832,6 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         formatoCampeao: bestFormat
           ? `${bestFormat.label}, ${bestFormat.avg} de alcance médio em ${bestFormat.count} publicação(ões)${bestFormat.lift !== null ? `, ${bestFormat.lift > 0 ? "+" : ""}${bestFormat.lift}% acima de ${bestFormat.vs}` : ""}`
           : undefined,
-        consistencia: `publicamos em ${consistency.days} de ${consistency.spanDays} dias do período${consistency.prevDays !== null ? ` (período anterior: ${consistency.prevDays} dias)` : " (primeiro período, sem comparação)"}`,
         seguidores: followers
           ? `${followers.delta > 0 ? "+" : ""}${followers.delta} seguidores em ${followers.spanDays} dias (de ${followers.start} para ${followers.end})`
           : undefined,
@@ -883,6 +989,31 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
             : "Dica: vincule este cliente ao cadastro central (no cadastro do Cria Post) pra uma análise mais rica."}
         </p>
 
+        {/* Recado da social mídia: texto livre que abre o relatório pro cliente.
+            Persistido por cliente+período quando há cadastro central vinculado. */}
+        <div className="mt-3">
+          <div className="flex items-center justify-between">
+            <label htmlFor="report-notes" className="text-xs font-body font-semibold text-foreground">
+              Recado da social mídia <span className="font-normal text-muted-foreground">(aparece no início do relatório)</span>
+            </label>
+            {notesSaving && <span className="text-[11px] font-body text-muted-foreground">salvando…</span>}
+          </div>
+          <textarea
+            id="report-notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            onBlur={() => { if (canPersistNotes) saveNotes(); }}
+            placeholder="Ex.: um resumo do mês, os próximos passos, um recado pro cliente."
+            rows={3}
+            className="mt-1 w-full rounded-xl border border-border bg-card p-3 text-sm font-body text-foreground outline-none focus:border-primary resize-y"
+          />
+          <p className="text-[11px] font-body text-muted-foreground mt-1">
+            {canPersistNotes
+              ? "Salvo automaticamente por cliente e período."
+              : "Vincule o cliente ao cadastro central pra guardar o recado entre sessões. Por ora ele sai só neste PDF."}
+          </p>
+        </div>
+
         {/* Barra de formatação (fora do que vira PDF) */}
         <style>{`.report-editor:empty:before{content:attr(data-placeholder);color:#9ca3af;}
 .report-editor ul{list-style:disc;padding-left:22px;margin:6px 0;} .report-editor ol{list-style:decimal;padding-left:22px;margin:6px 0;} .report-editor li{margin-bottom:4px;} .report-editor p{margin:0 0 8px;}`}</style>
@@ -928,11 +1059,29 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
                   <div style={{ fontSize: 13, color: C.sub }}>@{client.instagram_handle.replace(/^@/, "")}</div>
                 )}
               </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 11, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Relatório de conteúdo</div>
-                <div style={{ fontSize: 15, fontWeight: 700 }}>{monthLabel}</div>
+              {/* Marca da agência (social mídia) + período. A logo dela do profile
+                  (brand_logo_url); sem logo, só o texto. O Cria fica no rodapé. */}
+              <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
+                {agencyLogo && (
+                  <img src={agencyLogo} alt={managerName ? `Logo ${managerName}` : "Logo da agência"} crossOrigin="anonymous" style={{ maxHeight: 30, maxWidth: 150, objectFit: "contain", display: "block" }} />
+                )}
+                <div>
+                  <div style={{ fontSize: 11, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Relatório de conteúdo</div>
+                  <div style={{ fontSize: 15, fontWeight: 700 }}>{monthLabel}</div>
+                </div>
               </div>
             </div>
+
+            {/* Recado da social mídia: abre o relatório com a leitura humana do mês.
+                Só aparece quando há texto (o cliente não vê um bloco vazio). */}
+            {notes.trim() && (
+              <div data-pdf-block style={{ marginTop: 18, padding: "14px 16px", border: `1px solid ${C.line}`, borderLeft: `3px solid ${C.brand}`, borderRadius: 12, background: C.soft }}>
+                <div style={{ fontSize: 10.5, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+                  {managerName ? `Recado de ${managerName}` : "Recado da social mídia"}
+                </div>
+                <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{notes.trim()}</div>
+              </div>
+            )}
 
             {/* Período totalmente vazio: estado honesto em vez de uma parede de zeros */}
             {stats.total === 0 && !perf.has ? (
@@ -940,7 +1089,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
                 <div style={{ fontSize: 14, fontWeight: 700, color: C.ink }}>Nenhuma atividade registrada em {monthLabel}</div>
                 <div style={{ fontSize: 12, color: C.sub, marginTop: 6, lineHeight: 1.5 }}>
                   Não houve peça produzida, aprovada ou publicada neste período.
-                  {hasPriorHistory ? ` No período anterior (${prevPeriod.label}) foram ${prevStats.published} publicação(ões) e ${prevStats.total} peça(s) no fluxo.` : " Este é o primeiro período acompanhado."}
+                  {hasPriorHistory ? ` No período anterior (${prevPeriod.label}) foram ${prevStats.published} publicação(ões).` : " Este é o primeiro período acompanhado."}
                 </div>
               </div>
             ) : (
@@ -948,15 +1097,12 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
             {/* Entrega: o número que prova o trabalho vem primeiro e grande */}
             <div data-pdf-block style={{ marginTop: 20 }}>
               <div style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
-                <div style={{ flex: 1.4, border: `1px solid ${C.green}`, borderRadius: 12, padding: "16px 18px", background: "#f0fdf4" }}>
+                <div style={{ flex: 1, border: `1px solid ${C.green}`, borderRadius: 12, padding: "16px 18px", background: "#f0fdf4" }}>
                   <div style={{ fontSize: 38, fontWeight: 800, color: C.green, lineHeight: 1 }}>{nb(stats.published)}</div>
                   <div style={{ fontSize: 11, color: C.sub, marginTop: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>
                     {stats.published === 1 ? "Post publicado no período" : "Posts publicados no período"}
                   </div>
-                  {deltaLine(prodDelta.published)}
                 </div>
-                {statCard("Peças no fluxo", nb(stats.total), C.ink, prodDelta.total)}
-                {statCard("Dias com publicação", `${consistency.days}/${consistency.spanDays}`, C.ink, consistency.delta)}
               </div>
 
               {/* Funil completo: as cinco etapas do fluxo, nenhuma escondida */}
@@ -973,7 +1119,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
                 })}
               </div>
               <div style={{ fontSize: 10.5, color: C.sub, marginTop: 8, lineHeight: 1.5 }}>
-                O funil mostra em que etapa cada peça do período está hoje. As comparações são contra {prevPeriod.label}.
+                O funil mostra em que etapa cada peça do período está hoje.
               </div>
             </div>
 
@@ -1040,7 +1186,6 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
                         <div style={{ fontSize: 11, color: C.sub, marginTop: 3 }}>
                           Média da criação da peça até a aprovação, em {stats.cycleSample} peça{stats.cycleSample === 1 ? "" : "s"} aprovada{stats.cycleSample === 1 ? "" : "s"} no período.
                         </div>
-                        {prodDelta.cycle && deltaLine(prodDelta.cycle, " dias", true)}
                       </div>
                     )}
                     {stuck.length > 0 && (
@@ -1084,7 +1229,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
                       : k === "pendente" ? "Aguardando" : k === "ajuste_solicitado" ? "Em ajuste" : "Em produção";
                     const dia = publishedDayOf(p) ?? p.scheduled_date;
                     return (
-                      <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
+                      <div key={p.id} data-pdf-block style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>{p.title}</div>
                           <div style={{ fontSize: 11, color: C.sub }}>
@@ -1194,7 +1339,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
                     </div>
                     <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden" }}>
                       {pieces.map((p, i) => (
-                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
+                        <div key={i} data-pdf-block style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
                           <div style={{ width: 44, height: 44, borderRadius: 8, background: C.soft, overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                             {p.thumbnail_url
                               ? <img src={p.thumbnail_url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -1336,14 +1481,48 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
               </div>
             )}
 
-            {/* Rodapé branded (white-label) */}
-            <div data-pdf-block style={{ marginTop: 22, paddingTop: 14, borderTop: `1px solid ${C.line}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ fontSize: 11, color: C.sub }}>
-                {managerName ? `Preparado por ${managerName}` : "Relatório de gestão de conteúdo"}
+            {/* Captação do período: o que foi a campo no mês (gravações). Puxado de
+                agenda_captures pelo mesmo período; sempre com estado vazio honesto. */}
+            <div data-pdf-block style={{ marginTop: 24 }}>
+              {sectionTitle("Captação do período")}
+              {!client.crm_client_id ? (
+                <div style={{ fontSize: 12, color: C.sub, padding: "12px 14px", border: `1px dashed ${C.line}`, borderRadius: 12, background: C.soft }}>
+                  Vincule este cliente ao cadastro central pra trazer as captações do período aqui.
+                </div>
+              ) : captureSummary.total === 0 ? (
+                <div style={{ fontSize: 12, color: C.sub, padding: "12px 14px", border: `1px dashed ${C.line}`, borderRadius: 12, background: C.soft }}>
+                  Nenhuma captação registrada neste período.
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                    {statCard(captureSummary.total === 1 ? "Captação" : "Captações", nb(captureSummary.total))}
+                    {statCard("Concluídas", nb(captureSummary.done), C.green)}
+                    {captureSummary.last && statCard("Última captação", parseDateOnly(captureSummary.last).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }))}
+                    {statCard("Viraram post", nb(captureSummary.withPost))}
+                  </div>
+                  <div style={{ fontSize: 10.5, color: C.sub, marginTop: 8, lineHeight: 1.5 }}>
+                    {captureSummary.withPost > 0
+                      ? `${captureSummary.withPost} ${captureSummary.withPost === 1 ? "captação já virou" : "captações já viraram"} conteúdo no Cria Post.`
+                      : "As captações deste período ainda não foram transformadas em publicação."}
+                    {captureSummary.cancelled > 0 ? ` ${captureSummary.cancelled} ${captureSummary.cancelled === 1 ? "foi cancelada" : "foram canceladas"}.` : ""}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Rodapé branded (white-label). Protagonismo do cliente e da agência lá
+                em cima; aqui embaixo o Cria entra só como assinatura discreta. */}
+            <div data-pdf-block style={{ marginTop: 22, paddingTop: 14, borderTop: `1px solid ${C.line}` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontSize: 11, color: C.sub }}>
+                  {managerName ? `Preparado por ${managerName}` : "Relatório de gestão de conteúdo"}
+                </div>
+                <div style={{ fontSize: 11, color: C.sub }}>
+                  Gerado em {new Date().toLocaleDateString("pt-BR")}
+                </div>
               </div>
-              <div style={{ fontSize: 11, color: C.sub }}>
-                Gerado em {new Date().toLocaleDateString("pt-BR")}
-              </div>
+              <AssinaturaCria variante="rodape" tom="claro" style={{ marginTop: 10 }} />
             </div>
           </div>
         </div>

@@ -28,7 +28,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useCrmClients } from "@/hooks/useCrm";
 import { useClientSocialConnection, connectInstagram } from "@/hooks/useSocialInsights";
 import { ClienteInstagramCria } from "@/components/accounts/ClienteInstagramCria";
-import { FORMATS_BY_PLATFORM, FORMAT_LABELS } from "@/lib/constants";
+import { FORMATS_BY_PLATFORM, FORMAT_LABELS, normalizarFormato } from "@/lib/constants";
 // Cor por formato (fonte única): a pessoa bate o olho e sabe o que é.
 import { formatColorVars, FORMAT_TEXT_CLASS, FORMAT_BORDER_CLASS, FORMAT_DOT_CLASS } from "@/lib/format-colors";
 // Toggle Kanban/Calendário compartilhado com as outras telas de board.
@@ -307,12 +307,14 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   }, [filter]);
   const range = filterRange(filter);
   const filterActive = filter.preset !== "all" || filter.fmt !== "all" || filter.tag !== "all";
-  const formatosPost = Array.from(new Set(posts.map((p) => p.format).filter(Boolean) as string[]));
+  // Lista de formatos do filtro: canoniza cada post antes do Set pra "Reels" e
+  // "reels" (ou qualquer variação gravada) virarem UM chip só, não dois.
+  const formatosPost = Array.from(new Set(posts.map((p) => normalizarFormato(p.format)).filter(Boolean)));
   // Só as etiquetas que estão REALMENTE em uso viram filtro (o catálogo inteiro
   // encheria a tela de chip que não filtra nada).
   const tagsEmUso = tagCatalog.filter((t) => posts.some((p) => (tagsByPost[p.id] ?? []).includes(t.id)));
   const viewPosts = posts.filter((p) => {
-    if (filter.fmt !== "all" && p.format !== filter.fmt) return false;
+    if (filter.fmt !== "all" && normalizarFormato(p.format) !== filter.fmt) return false;
     if (filter.tag !== "all" && !(tagsByPost[p.id] ?? []).includes(filter.tag)) return false;
     // Post sem data (tipicamente "Em produção") SEMPRE aparece: só o formato o filtra.
     if (!p.scheduled_date) return true;
@@ -323,12 +325,13 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   // Ordem das colunas: manual (arrastada, board_order) ou por data de publicação.
   // Preferência de EXIBIÇÃO, salva por dispositivo. Desligar devolve a ordem manual
   // inteira, porque nada foi regravado no banco enquanto estava ligada.
-  const [porData, setPorData] = useOrdemPorData("criapost_ordem_data_v1");
+  const [porData, setPorData, ordemDir, alternarOrdem] = useOrdemPorData("criapost_ordem_data_v1");
   // Data do card neste board = data de PUBLICAÇÃO (scheduled_date), desempatada
-  // pelo horário. Post sem data agendada cai no fim da coluna.
+  // pelo horário. Post sem data agendada cai no fim da coluna. A direção (asc/desc)
+  // vem do toggle "Por data" e mantém o "sem data no fim" nos dois sentidos.
   const ordenarColuna = (lista: ExternalPost[]) =>
     porData
-      ? ordenarPorData(lista, (p) => p.scheduled_date, (p) => (p as { scheduled_time?: string | null }).scheduled_time)
+      ? ordenarPorData(lista, (p) => p.scheduled_date, (p) => (p as { scheduled_time?: string | null }).scheduled_time, ordemDir)
       : lista;
   // Guarda o id do rascunho aberto: se o usuário cancelar, apagamos (não vira lixo).
   const [draftId, setDraftId] = useState<string | null>(null);
@@ -600,13 +603,16 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
         {view === "kanban" && (
           <>
             <span aria-hidden className="h-4 w-px bg-border mx-0.5 hidden sm:block" />
-            <OrdemDataToggle valor={porData} onChange={setPorData} />
+            <OrdemDataToggle valor={porData} direcao={ordemDir} onChange={setPorData} onToggle={alternarOrdem} />
           </>
         )}
       </div>
       {porData && view === "kanban" && (
         <p className="text-[11px] font-body text-muted-foreground -mt-1.5 mb-3">
-          Cada coluna está da data mais próxima pra mais distante, e post sem data fica no fim. Pra reposicionar arrastando, volte pra Ordem manual.
+          {ordemDir === "asc"
+            ? "Cada coluna está da data mais próxima pra mais distante, e post sem data fica no fim."
+            : "Cada coluna está da data mais distante pra mais próxima, e post sem data fica no fim."}
+          {" "}Toque de novo em "Por data" pra inverter; pra reposicionar arrastando, volte pra Ordem manual.
         </p>
       )}
       {/* Filtro por formato: aparece quando há mais de um formato na fila. */}
@@ -680,7 +686,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                         className={`bg-card border border-border rounded-xl p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all ${dragS.isDragging ? "shadow-warm-lg ring-2 ring-primary/40" : ""}`}>
                         <div className="flex items-start gap-2">
                           <div className="flex-1 min-w-0">
-                            <span className="text-[10px] font-body font-bold uppercase tracking-wide"><span style={formatColorVars(p.format)} className={FORMAT_TEXT_CLASS}>{cap(p.format)}</span> <span className="text-muted-foreground">· {cap(p.platform)}</span></span>
+                            <span className="text-[10px] font-body font-bold uppercase tracking-wide"><span style={formatColorVars(p.format)} className={FORMAT_TEXT_CLASS}>{FORMAT_LABELS[normalizarFormato(p.format)] ?? cap(p.format)}</span> <span className="text-muted-foreground">· {cap(p.platform)}</span></span>
                             <p className="font-display font-bold text-sm text-foreground truncate mt-1">{p.title}</p>
                             {/* Data direto no card, sem abrir o post. Reflete no calendário na hora. */}
                             <input type="date" value={p.scheduled_date ?? ""}
@@ -1149,7 +1155,7 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove, tagsByPost, tagCatalog 
                     {/* Formato e etiquetas na MESMA linha: a célula é apertada, então
                         a etiqueta entra como bolinha colorida (nome no tooltip). */}
                     <span className="flex items-center gap-1 min-w-0">
-                      <span className={`text-[9px] font-body font-bold uppercase truncate ${FORMAT_TEXT_CLASS}`}>{cap(p.format)}</span>
+                      <span className={`text-[9px] font-body font-bold uppercase truncate ${FORMAT_TEXT_CLASS}`}>{FORMAT_LABELS[normalizarFormato(p.format)] ?? cap(p.format)}</span>
                       <TagDots ids={tagsByPost[p.id]} catalog={tagCatalog} />
                     </span>
                   </button>
@@ -1173,7 +1179,7 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove, tagsByPost, tagCatalog 
                 className={`rounded-lg border border-border ${FORMAT_BORDER_CLASS} bg-card px-2 py-1.5 text-left hover:bg-muted/40 transition-shadow cursor-grab active:cursor-grabbing ${dragId === p.id ? "opacity-50 shadow-lg" : ""}`}>
                 <p className="text-[11px] font-body font-semibold text-foreground truncate max-w-[160px]">{p.title}</p>
                 <span className="flex items-center gap-1 min-w-0">
-                  <span className={`text-[9px] font-body font-bold uppercase ${FORMAT_TEXT_CLASS}`}>{cap(p.format)}</span>
+                  <span className={`text-[9px] font-body font-bold uppercase ${FORMAT_TEXT_CLASS}`}>{FORMAT_LABELS[normalizarFormato(p.format)] ?? cap(p.format)}</span>
                   <TagDots ids={tagsByPost[p.id]} catalog={tagCatalog} />
                 </span>
               </button>

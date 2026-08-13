@@ -162,14 +162,14 @@ function Pipeline({ active, isLoading, onOpen, onNew }: {
   // Ordem das colunas: como vem do banco (mais recentes) ou pelo PRAZO da collab
   // (deadline), com quem não tem prazo no fim. O pipeline não tem arraste, então
   // é exibição pura, sem conflito nenhum.
-  const [porData, setPorData] = useOrdemPorData("collabs_ordem_data_v1");
+  const [porData, setPorData, ordemDir, alternarOrdem] = useOrdemPorData("collabs_ordem_data_v1");
   if (isLoading) return <div className="text-sm text-muted-foreground py-8 text-center">Carregando…</div>;
   if (active.length === 0) return <EmptyState onNew={onNew} />;
   return (
     <>
     {active.length > 1 && (
       <div className="flex flex-wrap items-center gap-1.5 mb-3">
-        <OrdemDataToggle valor={porData} onChange={setPorData} rotuloPadrao="Mais recentes" />
+        <OrdemDataToggle valor={porData} direcao={ordemDir} onChange={setPorData} onToggle={alternarOrdem} rotuloPadrao="Mais recentes" />
         {porData && <span className="text-[11px] font-body text-muted-foreground">Collab sem prazo fica no fim.</span>}
       </div>
     )}
@@ -177,7 +177,7 @@ function Pipeline({ active, isLoading, onOpen, onNew }: {
     <div ref={boardRef} className="flex gap-3 overflow-x-auto pb-2">
       {COLLAB_STATUSES.map((s) => {
         const lista = active.filter((c) => c.status === s);
-        const items = porData ? ordenarPorData(lista, (c) => c.deadline) : lista;
+        const items = porData ? ordenarPorData(lista, (c) => c.deadline, undefined, ordemDir) : lista;
         return (
           <div key={s} className="min-w-[190px] flex-1">
             <div className="flex items-center gap-2 mb-2.5 px-0.5">

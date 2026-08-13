@@ -44,19 +44,25 @@ export function chaveHora(valor?: string | null): string {
   return `${String(h).padStart(2, "0")}:${m[2]}`;
 }
 
+export type OrdemDir = "asc" | "desc";
+
 /**
- * Devolve uma NOVA lista ordenada por data crescente, com os itens sem data no
- * fim. Nunca altera o array recebido.
+ * Devolve uma NOVA lista ordenada por data, com os itens sem data SEMPRE no fim
+ * (nos dois sentidos). Nunca altera o array recebido.
  *
  * @param itens   lista da coluna
  * @param getData de onde sai a data do item (scheduled_date, due_date, deadline...)
  * @param getHora opcional: desempata dois cards do mesmo dia pelo horário
+ * @param direcao "asc" (padrão: mais antigo -> mais recente) ou "desc" (inverte).
+ *                O balde "sem data" fica no fim independentemente da direção.
  */
 export function ordenarPorData<T>(
   itens: T[],
   getData: (item: T) => string | null | undefined,
   getHora?: (item: T) => string | null | undefined,
+  direcao: OrdemDir = "asc",
 ): T[] {
+  const sinal = direcao === "desc" ? -1 : 1;
   return itens
     .map((item, i) => ({
       item,
@@ -66,11 +72,13 @@ export function ordenarPorData<T>(
     }))
     .sort((a, b) => {
       if (a.dia && b.dia) {
-        if (a.dia !== b.dia) return a.dia < b.dia ? -1 : 1;
-        if (a.hora !== b.hora) return a.hora < b.hora ? -1 : 1;
+        // A direção só inverte a comparação ENTRE datas/horas; o desempate por
+        // índice segue estável (não multiplica pelo sinal).
+        if (a.dia !== b.dia) return (a.dia < b.dia ? -1 : 1) * sinal;
+        if (a.hora !== b.hora) return (a.hora < b.hora ? -1 : 1) * sinal;
         return a.i - b.i; // empate total: mantém a ordem original (estável)
       }
-      if (a.dia) return -1; // quem tem data vem antes de quem não tem
+      if (a.dia) return -1; // quem tem data vem antes de quem não tem (sempre)
       if (b.dia) return 1;
       return a.i - b.i; // os dois sem data: preserva a ordem que já estava
     })

@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { normalizarFormato } from "@/lib/constants";
 
 // Fonte única das cores por FORMATO de post (kanban do Cria Post, visão de
 // calendário, filtros de formato e a lista de vínculo do Insights).
@@ -27,7 +28,9 @@ export const FORMAT_COLORS: Record<string, FormatColor> = {
 // Cor do formato, com fallback neutro pra formato desconhecido/vazio.
 export function corDoFormato(format?: string | null): FormatColor {
   if (!format) return FORMAT_COLOR_FALLBACK;
-  return FORMAT_COLORS[format.trim().toLowerCase()] ?? FORMAT_COLOR_FALLBACK;
+  // Canoniza antes de buscar a cor: "Reels"/"reels"/"reel" caem na MESMA cor,
+  // senão uma variação ia pro fallback cinza e o formato aparecia com duas cores.
+  return FORMAT_COLORS[normalizarFormato(format)] ?? FORMAT_COLOR_FALLBACK;
 }
 
 // Vars do elemento. Use junto de FORMAT_TEXT_CLASS / FORMAT_BORDER_CLASS /

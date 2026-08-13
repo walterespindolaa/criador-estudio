@@ -75,10 +75,10 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
   // Ordem das colunas: como vem do banco (mais recentes) ou pela data de
   // PUBLICAÇÃO do post. Este painel é só leitura (não tem arraste), então o
   // alternador não conflita com nada: é exibição pura.
-  const [porData, setPorData] = useOrdemPorData("aprovacoes_ordem_data_v1");
+  const [porData, setPorData, ordemDir, alternarOrdem] = useOrdemPorData("aprovacoes_ordem_data_v1");
   const ordenarColuna = (lista: ExternalPostWithClient[]) =>
     porData
-      ? ordenarPorData(lista, (p) => p.scheduled_date, (p) => (p as { scheduled_time?: string | null }).scheduled_time)
+      ? ordenarPorData(lista, (p) => p.scheduled_date, (p) => (p as { scheduled_time?: string | null }).scheduled_time, ordemDir)
       : lista;
 
   // Sumário por cliente: contagem de cada status pros chips do topo (clicáveis = filtro).
@@ -351,7 +351,7 @@ export function ExternalApprovalsPanel({ statusFilter = null, compact = false, t
       {/* Ordem dos cards: como veio ou pela data de publicação (sem data no fim). */}
       {shown.length > 1 && (
         <div className="flex flex-wrap items-center gap-1.5 mb-3">
-          <OrdemDataToggle valor={porData} onChange={setPorData} rotuloPadrao="Mais recentes" />
+          <OrdemDataToggle valor={porData} direcao={ordemDir} onChange={setPorData} onToggle={alternarOrdem} rotuloPadrao="Mais recentes" />
           {porData && <span className="text-[11px] font-body text-muted-foreground">Post sem data fica no fim.</span>}
         </div>
       )}
