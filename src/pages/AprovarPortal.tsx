@@ -534,7 +534,7 @@ export default function AprovarPortal() {
       <header className="lg:hidden border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-20">
         <div className="max-w-md mx-auto px-4 py-3 flex items-center gap-3">
           <LogoMarca src={c.client_logo} nome={c.client_name} tamanho="sm" comFallback
-            cor={brand ?? "#CE4A1D"} fundo="#ffffff" />
+            formato="avatar" cor={brand ?? "#CE4A1D"} fundo="#ffffff" />
           <div className="min-w-0 flex-1">
             <p className="font-display font-bold text-foreground truncate leading-tight">{c.client_name}</p>
             {c.manager_name && <p className="text-[11px] text-muted-foreground font-body truncate">conteúdo por {c.manager_name}</p>}
@@ -557,7 +557,7 @@ export default function AprovarPortal() {
         <div className="max-w-5xl mx-auto px-8 pt-12 pb-10">
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: "easeOut" }} className="flex items-center gap-6">
             <LogoMarca src={c.client_logo} nome={c.client_name} tamanho="lg" comFallback
-              cor={brand ?? "#CE4A1D"} fundo="#ffffff" />
+              formato="avatar" cor={brand ?? "#CE4A1D"} fundo="#ffffff" />
             <div className="min-w-0 flex-1">
               <h1 className="font-display font-extrabold text-white text-3xl tracking-tight truncate">{c.client_name}</h1>
               {c.manager_name && <p className="text-sm text-white/80 font-body mt-0.5">conteúdo por {c.manager_name}</p>}

@@ -1257,14 +1257,17 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
             Prévia do relatório <span className="font-normal text-muted-foreground">(role pra ver tudo, inclusive a “Análise do período”. É isto que vira o PDF.)</span>
           </div>
           <div className="border border-border rounded-xl overflow-y-auto bg-white" style={{ maxHeight: 520 }}>
-          <div ref={reportRef} style={{ width: "100%", background: "#ffffff", padding: 32, fontFamily: "Inter, system-ui, sans-serif", color: C.ink }}>
+          <div ref={reportRef} style={{ width: "100%", boxSizing: "border-box", background: "#ffffff", padding: 32, fontFamily: "Inter, system-ui, sans-serif", color: C.ink }}>
             {/* ───────────────── CAPA (ocupa a primeira página inteira) ─────────────────
                 Estilo apresentação Cria: creme + formas orgânicas da paleta, logo do
                 cliente redonda no centro, título "Relatório de Entregas", o mês, a
                 marca da agência e o "elaborado por". */}
             <div data-pdf-block style={{
               position: "relative", overflow: "hidden",
-              margin: "-32px -32px 0", padding: "50px 46px",
+              // Full-bleed de verdade: largura explícita (100% do conteúdo + os 64px
+              // dos dois paddings) + margem negativa. Só a margem negativa não
+              // expandia a largura e sobrava faixa branca à direita.
+              width: "calc(100% + 64px)", margin: "-32px -32px 0", padding: "50px 46px",
               background: C.creme, aspectRatio: "210 / 286",
               display: "flex", flexDirection: "column",
             }}>

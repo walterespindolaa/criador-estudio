@@ -99,7 +99,11 @@ async function buildPdf(element: HTMLDivElement) {
     element.offsetHeight,
     element.getBoundingClientRect().height,
   );
-  const fullWidth = Math.max(element.scrollWidth, element.offsetWidth);
+  // Largura de captura = a largura REAL do elemento (clientWidth), NÃO o scrollWidth.
+  // scrollWidth incluía qualquer estouro horizontal (ex.: a capa full-bleed) e
+  // deixava uma faixa branca à direita em todas as páginas (margem torta). Com
+  // clientWidth o canvas tem a largura da página e as margens ficam simétricas.
+  const fullWidth = element.clientWidth || element.offsetWidth;
   const scale = 2;
   const boundaries = blockBoundaries(element, scale);
   const forced = forcedBreaks(element, scale);
@@ -144,6 +148,10 @@ async function buildPdf(element: HTMLDivElement) {
     ctx.fillRect(0, 0, slice.width, slice.height);
     ctx.drawImage(canvas, 0, from, canvas.width, h, 0, 0, canvas.width, h);
     pdf.addImage(slice.toDataURL("image/png"), "PNG", 0, 0, pdfWidth, h / pxPerMm);
+    // Cobre a emenda no topo da página nova (o "risco preto" que aparecia entre
+    // páginas era o antialias da fatia). O corte cai sempre em área branca, então
+    // essa faixa fininha não come conteúdo.
+    if (i > 0) { pdf.setFillColor(255, 255, 255); pdf.rect(0, 0, pdfWidth, 0.7, "F"); }
     from = to;
   });
   return pdf;
