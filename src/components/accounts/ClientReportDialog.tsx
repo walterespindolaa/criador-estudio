@@ -322,6 +322,10 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   const [metricShots, setMetricShots] = useState<{ path: string; url: string }[]>([]);
   const [uploadingShot, setUploadingShot] = useState(false);
   const shotInputRef = useRef<HTMLInputElement>(null);
+  // Barra de formatação da análise: só faz sentido quando há texto (ou o campo
+  // está em foco). Antes ficava sempre visível pedindo negrito sem texto pra usar.
+  const [analiseTemTexto, setAnaliseTemTexto] = useState(false);
+  const [analiseFocada, setAnaliseFocada] = useState(false);
 
   const period = useMemo(
     () => periods.find((p) => p.key === periodKey) ?? periods.find((p) => p.key === "este-mes") ?? periods[0],
@@ -480,6 +484,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     if (editorRef.current) editorRef.current.innerHTML = "";
     setNotes("");
     setMetricShots([]);
+    setAnaliseTemTexto(false);
     setShareUrl(null);
   }, [periodKey]);
 
@@ -489,6 +494,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
   const updateActive = () => {
+    setAnaliseTemTexto(!!editorRef.current?.textContent?.trim());
     try {
       setActive({
         bold: document.queryCommandState("bold"),
@@ -555,18 +561,41 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   }, [period]);
   const elaboradoPor = managerName?.trim() || "sua social mídia";
 
-  // Métricas reais do Instagram do PRÓPRIO CLIENTE (conta que ele conectou).
-  // Lidas via RPC segura (a gestora não conecta nada; só lê o que o cliente conectou).
+  // Métricas reais do Instagram do PRÓPRIO CLIENTE.
+  // Há DOIS caminhos, e o relatório antes só usava um deles (por isso não puxava
+  // as métricas de cliente que usa o Cria):
+  //  1) Cliente que USA O CRIA (tem conta própria, cria_owner_id): os dados vivem
+  //     na conta dele e são lidos por manager_client_instagram(client_owner_id),
+  //     a MESMA fonte da aba Instagram do cockpit, que funciona. É snapshot total,
+  //     então filtramos por período aqui no cliente.
+  //  2) Cliente que só aprova por link (sem conta Cria): get_client_ig_report por
+  //     crm_client_id, já filtrado por período no servidor.
+  const criaOwnerId = linked?.cria_owner_id ?? null;
   const monthRange = useMemo(() => ({
     since: period.since.toISOString(),
     until: period.until.toISOString(),
   }), [period]);
-  // Bundle do IG do cliente: mídias do período + demografia de audiência (snapshot
-  // atual) + stories do período. Uma única RPC segura (get_client_ig_report) que
-  // reaproveita a checagem de gestor do get_client_ig_media.
-  const { data: igReport } = useQuery<IgReport>({
+
+  // Caminho 1: snapshot do IG do cliente que usa o Cria.
+  type CriaIgRaw = {
+    media?: IgMediaRow[]; audience?: AudienceLike[]; stories?: StoryLike[];
+    daily?: IgDailyRow[];
+  };
+  const { data: criaIgRaw } = useQuery<CriaIgRaw>({
+    queryKey: ["report-ig-cria", criaOwnerId],
+    enabled: open && !!criaOwnerId,
+    queryFn: async () => {
+      const { data, error } = await sbRpcR("manager_client_instagram", { client_owner_id: criaOwnerId });
+      if (error) throw error;
+      const d = (data as (CriaIgRaw & { connected?: boolean }) | null) ?? {};
+      return { media: d.media ?? [], audience: d.audience ?? [], stories: d.stories ?? [], daily: d.daily ?? [] };
+    },
+  });
+
+  // Caminho 2: RPC por crm_client_id (só quando NÃO é cliente Cria).
+  const { data: igReportRpc } = useQuery<IgReport>({
     queryKey: ["report-ig-data", client.crm_client_id, period.key],
-    enabled: open && !!client.crm_client_id,
+    enabled: open && !!client.crm_client_id && !criaOwnerId,
     queryFn: async () => {
       const { data, error } = await sbRpcR("get_client_ig_report", {
         _crm_client_id: client.crm_client_id,
@@ -578,11 +607,9 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       return { media: d.media ?? [], audience: d.audience ?? [], stories: d.stories ?? [], daily: d.daily ?? [] };
     },
   });
-  // Mesma RPC no período ANTERIOR, só pra comparar. É a mesma checagem de
-  // segurança, então não abre nada novo.
-  const { data: prevIgReport } = useQuery<IgMediaRow[]>({
+  const { data: prevIgRpc } = useQuery<IgMediaRow[]>({
     queryKey: ["report-ig-prev", client.crm_client_id, prevPeriod.since.toISOString(), prevPeriod.until.toISOString()],
-    enabled: open && !!client.crm_client_id,
+    enabled: open && !!client.crm_client_id && !criaOwnerId,
     queryFn: async () => {
       const { data, error } = await sbRpcR("get_client_ig_report", {
         _crm_client_id: client.crm_client_id,
@@ -593,8 +620,37 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       return ((data as Partial<IgReport> | null)?.media) ?? [];
     },
   });
+
+  // Filtra por período (posted_at dentro de [since, until); `until` exclusivo).
+  const inRange = (iso: string | null | undefined, since: Date, until: Date) => {
+    if (!iso) return false;
+    const t = new Date(iso).getTime();
+    return t >= since.getTime() && t < until.getTime();
+  };
+
+  // Bundle final do IG: caminho Cria (filtrado por período) ou RPC.
+  const igReport = useMemo<IgReport>(() => {
+    if (criaOwnerId && criaIgRaw) {
+      const sinceDay = toISODateBR(period.since);
+      const untilDay = toISODateBR(new Date(period.until.getTime() - 1));
+      return {
+        media: (criaIgRaw.media ?? []).filter((m) => inRange(m.posted_at, period.since, period.until)),
+        stories: (criaIgRaw.stories ?? []).filter((s) => inRange((s as { posted_at?: string | null }).posted_at, period.since, period.until)),
+        // Demografia é snapshot (não tem série por dia), então vai inteira.
+        audience: criaIgRaw.audience ?? [],
+        daily: (criaIgRaw.daily ?? []).filter((d) => d.date >= sinceDay && d.date <= untilDay),
+      };
+    }
+    return igReportRpc ?? { media: [], audience: [], stories: [], daily: [] };
+  }, [criaOwnerId, criaIgRaw, igReportRpc, period]);
+
   const igMedia = useMemo<IgMediaRow[]>(() => igReport?.media ?? [], [igReport]);
-  const prevIgMedia = useMemo<IgMediaRow[]>(() => prevIgReport ?? [], [prevIgReport]);
+  const prevIgMedia = useMemo<IgMediaRow[]>(() => {
+    if (criaOwnerId && criaIgRaw) {
+      return (criaIgRaw.media ?? []).filter((m) => inRange(m.posted_at, prevPeriod.since, prevPeriod.until));
+    }
+    return prevIgRpc ?? [];
+  }, [criaOwnerId, criaIgRaw, prevIgRpc, prevPeriod]);
   const audience = useMemo(() => computeAudienceBreakdown(igReport?.audience), [igReport]);
   const stories = useMemo(() => computeStoriesSummary(igReport?.stories), [igReport]);
   const perf = useMemo(() => perfOf(igMedia), [igMedia]);
@@ -892,7 +948,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
           : null,
       ].filter(Boolean).join(" | ");
 
-      const res = await clientReportInsight({
+      const aiCall = clientReportInsight({
         cliente: client.name, mes: monthLabel, total: stats.total,
         formatos: fmt, plataformas: plat,
         publicados: stats.published,
@@ -930,12 +986,19 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
           ? `${stories.count} stories, ${stories.reach} de alcance, ${stories.replies} respostas`
           : undefined,
       }, user?.id);
+      // Timeout: se a IA não responder em 25s, cai no resumo automático em vez de
+      // deixar o botão girando pra sempre (era o "cliquei e não gerou nada").
+      const res = await Promise.race([
+        aiCall,
+        new Promise<never>((_, rej) => setTimeout(() => rej(new Error("tempo esgotado")), 25000)),
+      ]);
       if (!res || typeof res.resumo !== "string") throw new Error("formato inesperado");
       const recs = (res.recomendacoes ?? []).map((r) => `<li>${escapeHtml(r)}</li>`).join("");
       const html =
         `<p><strong>Resumo.</strong> ${escapeHtml(res.resumo)}</p>` +
         (recs ? `<p><strong>Recomendações</strong></p><ul>${recs}</ul>` : "");
       if (editorRef.current) editorRef.current.innerHTML = html;
+      setAnaliseTemTexto(true);
     } catch (e) {
       console.error("Report AI failed", e);
       const msg = e instanceof Error ? e.message : "";
@@ -958,6 +1021,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       if (recs.length === 0) recs.push("Manter a constância de publicações no próximo período.");
       linhas.push(`<p><strong>Recomendações</strong></p><ul>${recs.map((r) => `<li>${escapeHtml(r)}</li>`).join("")}</ul>`);
       if (editorRef.current) editorRef.current.innerHTML = linhas.join("");
+      setAnaliseTemTexto(true);
       toast.message(
         msg && !/non-2xx/i.test(msg) ? `IA indisponível (${msg}). Gerei um resumo automático, você pode editar.` : "IA indisponível agora. Gerei um resumo automático, você pode editar.",
       );
@@ -1153,31 +1217,33 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         {/* Barra de formatação (fora do que vira PDF) */}
         <style>{`.report-editor:empty:before{content:attr(data-placeholder);color:#9ca3af;}
 .report-editor ul{list-style:disc;padding-left:22px;margin:6px 0;} .report-editor ol{list-style:decimal;padding-left:22px;margin:6px 0;} .report-editor li{margin-bottom:4px;} .report-editor p{margin:0 0 8px;}`}</style>
-        <div className="mt-3 flex items-center gap-1">
-          <span className="text-xs font-body text-muted-foreground mr-1">Formatar análise:</span>
-          {([
-            ["Negrito", "bold", "B", "font-bold"],
-            ["Itálico", "italic", "I", "italic"],
-            ["Lista com marcadores", "insertUnorderedList", "•", ""],
-            ["Lista numerada", "insertOrderedList", "1.", ""],
-          ] as [string, string, string, string][]).map(([label, cmd, icon, cls]) => (
-            <button
-              key={cmd}
-              type="button"
-              title={label}
-              aria-pressed={!!active[cmd]}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => exec(cmd)}
-              className={`h-8 w-8 rounded-lg border text-sm transition-colors ${cls} ${
-                active[cmd]
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-card text-foreground border-border hover:bg-accent"
-              }`}
-            >
-              {icon}
-            </button>
-          ))}
-        </div>
+        {(analiseTemTexto || analiseFocada) && (
+          <div className="mt-3 flex items-center gap-1">
+            <span className="text-xs font-body text-muted-foreground mr-1">Formatar análise:</span>
+            {([
+              ["Negrito", "bold", "B", "font-bold"],
+              ["Itálico", "italic", "I", "italic"],
+              ["Lista com marcadores", "insertUnorderedList", "•", ""],
+              ["Lista numerada", "insertOrderedList", "1.", ""],
+            ] as [string, string, string, string][]).map(([label, cmd, icon, cls]) => (
+              <button
+                key={cmd}
+                type="button"
+                title={label}
+                aria-pressed={!!active[cmd]}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => exec(cmd)}
+                className={`h-8 w-8 rounded-lg border text-sm transition-colors ${cls} ${
+                  active[cmd]
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-card text-foreground border-border hover:bg-accent"
+                }`}
+              >
+                {icon}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Preview = o próprio elemento exportado */}
         <div className="mt-3 border border-border rounded-xl overflow-hidden bg-white">
@@ -1430,9 +1496,11 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
                 ref={editorRef}
                 contentEditable
                 suppressContentEditableWarning
+                onInput={updateActive}
                 onKeyUp={updateActive}
                 onMouseUp={updateActive}
-                onFocus={updateActive}
+                onFocus={() => { setAnaliseFocada(true); updateActive(); }}
+                onBlur={() => setAnaliseFocada(false)}
                 data-placeholder="Escreva a análise ou clique em “Gerar análise (IA)”. Você pode formatar com a barra acima."
                 className="report-editor"
                 style={{ fontSize: 13, color: C.ink, lineHeight: 1.6, outline: "none", minHeight: 48 }}
