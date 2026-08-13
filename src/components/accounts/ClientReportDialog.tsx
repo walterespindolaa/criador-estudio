@@ -293,16 +293,19 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   const agencyLogo = agencyBrand?.brand_logo_url ?? null;
   const reportRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
-  // Período custom (de/até) do "Relatório rápido" entra como uma opção a mais no seletor.
-  // parseDateOnly evita o off-by-one de fuso; `until` é exclusivo (por isso +1 dia no fim).
+  // Período custom (de/até): começa com o que veio do "Relatório rápido" (props),
+  // mas a gestora pode mudar as datas aqui dentro pra extrair por um intervalo
+  // específico. parseDateOnly evita o off-by-one de fuso; `until` é exclusivo.
+  const [customFrom, setCustomFrom] = useState(customSince ?? "");
+  const [customTo, setCustomTo] = useState(customUntil ?? "");
   const customPeriod = useMemo<ReportPeriod | null>(() => {
-    if (!customSince || !customUntil || customSince > customUntil) return null;
-    const since = parseDateOnly(customSince);
-    const until = parseDateOnly(customUntil);
+    if (!customFrom || !customTo || customFrom > customTo) return null;
+    const since = parseDateOnly(customFrom);
+    const until = parseDateOnly(customTo);
     until.setDate(until.getDate() + 1);
     const fmtBR = (s: string) => parseDateOnly(s).toLocaleDateString("pt-BR");
-    return { key: "custom", label: `${fmtBR(customSince)} a ${fmtBR(customUntil)}`, since, until };
-  }, [customSince, customUntil]);
+    return { key: "custom", label: `${fmtBR(customFrom)} a ${fmtBR(customTo)}`, since, until };
+  }, [customFrom, customTo]);
   const periods = useMemo(
     () => (customPeriod ? [customPeriod, ...buildPeriods()] : buildPeriods()),
     [customPeriod],
@@ -1139,6 +1142,36 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
               {m.label}
             </button>
           ))}
+        </div>
+
+        {/* Extrair por data específica: escolhe De/Até e o relatório passa a usar
+            esse intervalo (vira a opção "Período personalizado" selecionada). */}
+        <div className="mt-2 flex flex-wrap items-end gap-2">
+          <div className="flex flex-col">
+            <label htmlFor="rep-de" className="text-[11px] font-body text-muted-foreground mb-0.5">De</label>
+            <input
+              id="rep-de"
+              type="date"
+              value={customFrom}
+              max={customTo || undefined}
+              onChange={(e) => { setCustomFrom(e.target.value); if (e.target.value && customTo) setPeriodKey("custom"); }}
+              className="rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-body text-foreground outline-none focus:border-primary"
+            />
+          </div>
+          <div className="flex flex-col">
+            <label htmlFor="rep-ate" className="text-[11px] font-body text-muted-foreground mb-0.5">Até</label>
+            <input
+              id="rep-ate"
+              type="date"
+              value={customTo}
+              min={customFrom || undefined}
+              onChange={(e) => { setCustomTo(e.target.value); if (customFrom && e.target.value) setPeriodKey("custom"); }}
+              className="rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-body text-foreground outline-none focus:border-primary"
+            />
+          </div>
+          {customPeriod && periodKey === "custom" && (
+            <span className="text-[11px] font-body text-primary pb-1.5">Usando {customPeriod.label}</span>
+          )}
         </div>
 
         <p className="mt-2 text-[11px] font-body text-muted-foreground">
