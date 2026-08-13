@@ -1,5 +1,7 @@
 # Mapa dos Tutoriais Guiados (Tours) — CRIA
 
+> **NOVO TOUR: `gestor-captacao` (Cria Captação) em 13/08/2026.** Módulo novo `/socialmidia/captacao` (`src/pages/socialmidia/CriaCaptacao.tsx`) ganhou tour de 13 passos. Rota exata, encontrada pelo "?" do ManagerLayout (findTourByRoute casa `route` exata; nada a mexer no registry além do config em gestor.ts). Fica FORA do TRAINING_SEQUENCES (extensão da Agenda, não entra no tour completo). Âncoras `data-tour` novas em CriaCaptacao.tsx: `cap-topo` (nav de mês), `cap-resumo`, `cap-viagem` (bloco "Aproveita a viagem", cond.), `cap-filtros`, `cap-grupo` (agrupamento dia/local, cond.), `cap-roteiro` (roteiro + copiar, cond.), `cap-teleprompter` (cond.), `cap-tomadas` (checklist da gravação, cond.), `cap-virarpost` (cond.), `cap-status` (marcar concluída, cond.), `cap-folha` (folha do dia, cond.), `cap-grafico` (por cidade, cond.), `cap-cidades` (configurar cidades). Passos âncora que existem sempre: `cap-topo`, `cap-resumo`, `cap-filtros`, `cap-cidades`. Todos os condicionais usam `skipIfMissing` (mês vazio não quebra). Alvos visíveis no desktop e no mobile (nenhum é `hidden` numa das larguras; os textos "Folha do dia"/"Cidades" ficam com `hidden sm:inline` mas o botão com ícone existe nas duas). Zero alvo órfão, zero travessão.
+>
 > **RODADA GESTOR: EXECUTADA em 06/08/2026.** Todos os tours do lado gestor (/socialmidia/*) foram revisados contra a tela real de hoje. Estado atual, tour a tour:
 >
 > | Tour | Rota | Status 06/08 | O que cobre agora |

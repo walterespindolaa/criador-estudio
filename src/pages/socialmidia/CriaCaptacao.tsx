@@ -5,7 +5,7 @@ import {
   Video, ChevronLeft, ChevronRight, Copy, Check, MapPin, Building2, Loader2,
   Plus, X, CheckCircle2, Clock, Pencil, CalendarRange, MapPinned, Camera,
   Play, FileText, Download, Repeat, ListChecks, Square, CheckSquare, ChevronDown,
-  Sparkles, Route, Send,
+  Sparkles, Route, Send, Settings, Clapperboard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,7 @@ import {
 } from "@/hooks/useAgenda";
 import { useCrmClients } from "@/hooks/useCrm";
 import { useExternalClients } from "@/hooks/useCriaPost";
-import { useCaptureCities } from "@/hooks/useCaptureCities";
+import { useCaptureCities, useDefaultShotList } from "@/hooks/useCaptureCities";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { nomeExibidoCliente } from "@/lib/cliente-nome";
 import { PrompterPlayer } from "@/components/prompter/PrompterPlayer";
@@ -139,7 +139,8 @@ export default function CriaCaptacao() {
   const [month, setMonth] = useState(() => hojeBR().slice(0, 7));
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("todas");
   const [cityFilter, setCityFilter] = useState<string>(""); // "" = todas
-  const [citiesOpen, setCitiesOpen] = useState(false);
+  // Dialog de Configurações da captação (Cidades + Tomadas padrão).
+  const [configOpen, setConfigOpen] = useState(false);
   // Teleprompter em tela cheia com o roteiro de uma captação (overlay z-60).
   const [prompter, setPrompter] = useState<{ title: string; text: string } | null>(null);
   // Folha do dia aberta (todos os roteiros daquele dia + local num lugar só).
@@ -154,6 +155,8 @@ export default function CriaCaptacao() {
   const ensureRecurring = useEnsureRecurringCaptures();
   const addCapture = useAddCapture();
   const { cities, save: saveCities } = useCaptureCities();
+  // Tomadas padrão configuráveis pela social mídia (fallback = DEFAULT_SHOT_LIST).
+  const { shots: defaultShots, save: saveDefaultShots } = useDefaultShotList();
 
   const currentMonth = hojeBR().slice(0, 7);
   // Mês em que a social mídia dispensou o bloco de sugestões (dispensa por mês:
@@ -493,7 +496,7 @@ export default function CriaCaptacao() {
   return (
     <div className="space-y-5">
       {/* Cabeçalho: navegação de mês + botão Cidades */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div data-tour="cap-topo" className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-1.5">
           <button type="button" onClick={() => setMonth(addMonth(month, -1))}
             className="grid h-9 w-9 place-items-center rounded-xl border border-border text-muted-foreground hover:text-foreground transition-colors" aria-label="Mês anterior">
@@ -508,13 +511,13 @@ export default function CriaCaptacao() {
             <Button variant="ghost" size="sm" onClick={goHoje} className="h-9 rounded-xl text-xs">Hoje</Button>
           )}
         </div>
-        <Button variant="outline" size="sm" onClick={() => setCitiesOpen(true)} className="rounded-xl">
-          <MapPinned className="h-4 w-4 mr-1.5" /> Cidades
+        <Button data-tour="cap-cidades" variant="outline" size="sm" onClick={() => setConfigOpen(true)} className="rounded-xl">
+          <Settings className="h-4 w-4 mr-1.5" /> Configurações
         </Button>
       </div>
 
       {/* Resumo do mês: cards grandes */}
-      <div className="grid grid-cols-3 gap-3">
+      <div data-tour="cap-resumo" className="grid grid-cols-3 gap-3">
         <div className="rounded-2xl border border-border bg-card p-4">
           <p className="flex items-center gap-1.5 text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground"><Video className="h-3.5 w-3.5" /> Captações</p>
           <p className="text-3xl font-display font-extrabold text-foreground leading-none mt-2 tabular-nums">{resumo.total}</p>
@@ -534,7 +537,7 @@ export default function CriaCaptacao() {
 
       {/* Gráfico por cidade */}
       {porCidade.length > 0 && (
-        <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+        <div data-tour="cap-grafico" className="rounded-2xl border border-border bg-card p-4 sm:p-5">
           <h2 className="flex items-center gap-2 text-sm font-display font-bold text-foreground mb-3">
             <MapPin className="h-4 w-4 text-primary" /> Captações por cidade
           </h2>
@@ -555,7 +558,7 @@ export default function CriaCaptacao() {
       )}
 
       {/* Filtros: status + cidade */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div data-tour="cap-filtros" className="flex flex-wrap items-center gap-2">
         <div className="inline-flex rounded-xl border border-border bg-card p-0.5">
           {([["todas", "Todas"], ["pendentes", "Pendentes"], ["concluidas", "Concluídas"]] as const).map(([k, label]) => (
             <button key={k} type="button" onClick={() => setStatusFilter(k)}
@@ -600,7 +603,7 @@ export default function CriaCaptacao() {
       ) : (
         <div className="space-y-4">
           {grupos.map((g) => (
-            <div key={`${g.date}||${g.local}`} className="rounded-2xl border border-border bg-card overflow-hidden">
+            <div key={`${g.date}||${g.local}`} data-tour="cap-grupo" className="rounded-2xl border border-border bg-card overflow-hidden">
               {/* Cabeçalho do grupo: dia + local */}
               <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-muted/30">
                 <CalendarRange className="h-4 w-4 text-primary shrink-0" />
@@ -612,7 +615,7 @@ export default function CriaCaptacao() {
                 </span>
                 <div className="ml-auto flex items-center gap-2 shrink-0">
                   {g.caps.some((c) => (c.roteiro ?? "").trim()) && (
-                    <Button variant="outline" size="sm" onClick={() => abrirFolha(g)}
+                    <Button data-tour="cap-folha" variant="outline" size="sm" onClick={() => abrirFolha(g)}
                       className="h-8 rounded-xl px-2.5 whitespace-nowrap"
                       title="Todos os roteiros desse dia num texto só, pra levar pra captação.">
                       <FileText className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Folha do dia</span>
@@ -634,6 +637,7 @@ export default function CriaCaptacao() {
                       onTeleprompter={() => setPrompter({ title: capName(c), text: (c.roteiro ?? "").trim() })}
                       shotList={normalizeShotList(c.shot_list)}
                       onSaveShotList={(list) => setShots.mutate({ id: c.id, shot_list: list })}
+                      defaultShots={defaultShots}
                       recurring={!!root.recurring}
                       recurrenceDay={root.recurrence_day ?? null}
                       onSetRecurring={(on, day) => updCapture.mutateAsync({ id: rootId, patch: { recurring: on, recurrence_day: day } })}
@@ -649,8 +653,9 @@ export default function CriaCaptacao() {
         </div>
       )}
 
-      <CitiesDialog open={citiesOpen} onOpenChange={setCitiesOpen}
-        cities={cities} onSave={(list) => saveCities.mutateAsync(list)} saving={saveCities.isPending} />
+      <ConfigCaptacaoDialog open={configOpen} onOpenChange={setConfigOpen}
+        cities={cities} onSaveCities={(list) => saveCities.mutateAsync(list)} savingCities={saveCities.isPending}
+        shots={defaultShots} onSaveShots={(list) => saveDefaultShots.mutateAsync(list)} savingShots={saveDefaultShots.isPending} />
 
       {folha && (
         <FolhaDoDiaDialog open onOpenChange={(o) => { if (!o) setFolha(null); }}
@@ -693,7 +698,7 @@ function SugestoesViagem({ trips, onAdd, onDismiss }: {
   };
 
   return (
-    <div className="rounded-2xl border border-dashed border-primary/30 bg-primary/[0.03] p-4">
+    <div data-tour="cap-viagem" className="rounded-2xl border border-dashed border-primary/30 bg-primary/[0.03] p-4">
       <div className="flex items-start gap-2">
         <Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" />
         <div className="min-w-0 flex-1">
@@ -755,12 +760,14 @@ function SugestoesViagem({ trips, onAdd, onDismiss }: {
 }
 
 // ── Uma captação (cliente + cidade + status + roteiro + copiar) ────────────────
-function CaptureRow({ cap, nome, cidade, onToggle, onSaveRoteiro, onTeleprompter, shotList, onSaveShotList, recurring, recurrenceDay, onSetRecurring, convertedPostId, onVirarPost, onVerPost, converting }: {
+function CaptureRow({ cap, nome, cidade, onToggle, onSaveRoteiro, onTeleprompter, shotList, onSaveShotList, defaultShots, recurring, recurrenceDay, onSetRecurring, convertedPostId, onVirarPost, onVerPost, converting }: {
   cap: Capture; nome: string; cidade: string;
   onToggle: () => void; onSaveRoteiro: (roteiro: string) => Promise<unknown>;
   onTeleprompter: () => void;
   shotList: ShotItem[];
   onSaveShotList: (list: ShotItem[]) => void;
+  // Lista padrão que a social mídia configurou (vazio = cai no fallback fixo).
+  defaultShots: string[];
   recurring: boolean;
   recurrenceDay: number | null;
   onSetRecurring: (on: boolean, day: number) => Promise<unknown>;
@@ -790,8 +797,11 @@ function CaptureRow({ cap, nome, cidade, onToggle, onSaveRoteiro, onTeleprompter
   };
   const toggleShot = (id: string) => onSaveShotList(shotList.map((s) => (s.id === id ? { ...s, feito: !s.feito } : s)));
   const removeShot = (id: string) => onSaveShotList(shotList.filter((s) => s.id !== id));
+  // "Usar tomadas padrão": usa a lista que a social mídia configurou nas
+  // Configurações da captação; se ela não configurou nada, cai na lista fixa.
   const usarPadrao = () => {
-    onSaveShotList(DEFAULT_SHOT_LIST.map((texto) => ({ id: newShotId(), texto, feito: false })));
+    const base = defaultShots.length > 0 ? defaultShots : [...DEFAULT_SHOT_LIST];
+    onSaveShotList(base.map((texto) => ({ id: newShotId(), texto, feito: false })));
     setShotsOpen(true);
   };
 
@@ -864,7 +874,7 @@ function CaptureRow({ cap, nome, cidade, onToggle, onSaveRoteiro, onTeleprompter
           </div>
         </div>
         {/* Status: toca pra alternar pendente <-> concluída */}
-        <button type="button" onClick={onToggle}
+        <button type="button" data-tour="cap-status" onClick={onToggle}
           className={cn("shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-body font-bold transition-colors",
             done
               ? "bg-[hsl(var(--cria-verde)/0.12)] text-[hsl(var(--cria-verde))]"
@@ -873,56 +883,74 @@ function CaptureRow({ cap, nome, cidade, onToggle, onSaveRoteiro, onTeleprompter
         </button>
       </div>
 
-      {/* Roteiro */}
-      {editing ? (
-        <div className="mt-3">
-          <Textarea rows={4} value={draft} onChange={(e) => setDraft(e.target.value)} autoFocus
-            placeholder="Escreva o roteiro dessa gravação…" className="rounded-xl text-sm" />
-          <div className="flex items-center gap-2 mt-2">
-            <Button size="sm" onClick={salvar} disabled={saving} className="rounded-xl">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar roteiro"}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => setEditing(false)} className="rounded-xl">Cancelar</Button>
-          </div>
+      {/* Roteiro da gravação: SEMPRE visível, com título e um estado vazio claro
+          que convida a escrever. Assim que há texto, aparecem "Copiar roteiro" e
+          "Usar como teleprompter" (antes escondidos atrás do "tem roteiro", e por
+          isso a pessoa "não achava" onde copiar/abrir o teleprompter). */}
+      <div data-tour="cap-roteiro" className="mt-3 rounded-xl border border-border bg-muted/20 p-3">
+        <div className="flex items-center gap-2">
+          <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
+          <span className="text-xs font-body font-semibold text-foreground">Roteiro da gravação</span>
         </div>
-      ) : roteiro ? (
-        <div className="mt-3 rounded-xl border border-border bg-muted/20 p-3">
-          <p className="text-[13px] font-body text-foreground whitespace-pre-wrap break-words">{roteiro}</p>
-          <div className="flex items-center gap-2 mt-2.5 flex-wrap">
-            <Button size="sm" onClick={onTeleprompter} className="rounded-xl h-8"
-              title="Entregue o celular pro cliente ler o roteiro no teleprompter enquanto você grava na câmera.">
-              <Play className="h-3.5 w-3.5 mr-1.5" /> Usar como teleprompter
-            </Button>
-            <Button size="sm" variant="outline" onClick={copiar} className="rounded-xl h-8">
-              {copied ? <><Check className="h-3.5 w-3.5 mr-1.5" /> Copiado</> : <><Copy className="h-3.5 w-3.5 mr-1.5" /> Copiar roteiro</>}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={abrirEdicao} className="rounded-xl h-8">
-              <Pencil className="h-3.5 w-3.5 mr-1.5" /> Editar
+        {editing ? (
+          <div className="mt-2.5">
+            <Textarea rows={4} value={draft} onChange={(e) => setDraft(e.target.value)} autoFocus
+              placeholder="Escreva o que vai ser falado/gravado nessa captação…" className="rounded-xl text-sm" />
+            <div className="flex items-center gap-2 mt-2">
+              <Button size="sm" onClick={salvar} disabled={saving} className="rounded-xl">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar roteiro"}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setEditing(false)} className="rounded-xl">Cancelar</Button>
+            </div>
+          </div>
+        ) : roteiro ? (
+          <div className="mt-2.5">
+            <p className="text-[13px] font-body text-foreground whitespace-pre-wrap break-words">{roteiro}</p>
+            <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+              <Button data-tour="cap-teleprompter" size="sm" onClick={onTeleprompter} className="rounded-xl h-9"
+                title="Entregue o celular pro cliente ler o roteiro no teleprompter enquanto você grava na câmera.">
+                <Play className="h-3.5 w-3.5 mr-1.5" /> Usar como teleprompter
+              </Button>
+              <Button size="sm" variant="outline" onClick={copiar} className="rounded-xl h-9">
+                {copied ? <><Check className="h-3.5 w-3.5 mr-1.5" /> Copiado</> : <><Copy className="h-3.5 w-3.5 mr-1.5" /> Copiar roteiro</>}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={abrirEdicao} className="rounded-xl h-9">
+                <Pencil className="h-3.5 w-3.5 mr-1.5" /> Editar
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-2">
+            <p className="text-[11.5px] font-body text-muted-foreground">
+              Escreva o que vai ser falado ou gravado. Depois dá pra copiar o texto e abrir no teleprompter.
+            </p>
+            <Button size="sm" onClick={abrirEdicao} className="rounded-xl h-9 mt-2 w-full sm:w-auto">
+              <Pencil className="h-3.5 w-3.5 mr-1.5" /> Escrever roteiro
             </Button>
           </div>
-        </div>
-      ) : (
-        <button type="button" onClick={abrirEdicao}
-          className="mt-3 w-full flex items-center gap-2 rounded-xl border border-dashed border-border px-3 py-2.5 text-left text-xs font-body text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
-          <Plus className="h-3.5 w-3.5 shrink-0" /> Escrever roteiro dessa captação
-        </button>
-      )}
+        )}
+      </div>
 
       {/* Tomadas: o que precisa sair dessa gravação (mini-acordeão + contador). */}
-      <div className="mt-3 rounded-xl border border-border overflow-hidden">
+      <div data-tour="cap-tomadas" className="mt-3 rounded-xl border border-border overflow-hidden">
         <button type="button" onClick={() => setShotsOpen((o) => !o)}
-          className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/30 transition-colors">
-          <ListChecks className="h-3.5 w-3.5 text-primary shrink-0" />
-          <span className="text-xs font-body font-semibold text-foreground">Tomadas</span>
+          className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-muted/30 transition-colors">
+          <ListChecks className="h-4 w-4 text-primary shrink-0" />
+          <div className="min-w-0 flex-1">
+            <span className="text-xs font-body font-semibold text-foreground">Tomadas (o que precisa gravar)</span>
+            <p className="text-[10.5px] font-body text-muted-foreground leading-snug">
+              A lista do que tem que sair dessa gravação: reels, fotos, stories. Marque conforme grava, pra não faltar nada.
+            </p>
+          </div>
           {shotList.length > 0 && (
-            <span className={cn("text-[11px] font-body font-bold tabular-nums rounded-full px-1.5 py-0.5",
+            <span className={cn("shrink-0 text-[11px] font-body font-bold tabular-nums rounded-full px-1.5 py-0.5",
               feitas === shotList.length
                 ? "bg-[hsl(var(--cria-verde)/0.12)] text-[hsl(var(--cria-verde))]"
                 : "bg-muted text-muted-foreground")}>
               {feitas}/{shotList.length}
             </span>
           )}
-          <ChevronDown className={cn("h-4 w-4 text-muted-foreground ml-auto transition-transform", shotsOpen && "rotate-180")} />
+          <ChevronDown className={cn("h-4 w-4 text-muted-foreground shrink-0 transition-transform", shotsOpen && "rotate-180")} />
         </button>
         {shotsOpen && (
           <div className="px-3 pb-3 pt-0.5 space-y-1.5 border-t border-border">
@@ -990,7 +1018,7 @@ function CaptureRow({ cap, nome, cidade, onToggle, onSaveRoteiro, onTeleprompter
 
       {/* Virar post: manda o roteiro/nota desta captação pro Cria Post do cliente como
           rascunho. Já virou (convertedPostId) = vira atalho pro post, sem duplicar. */}
-      <div className="mt-3 pt-3 border-t border-border/60">
+      <div data-tour="cap-virarpost" className="mt-3 pt-3 border-t border-border/60">
         {convertedPostId ? (
           <button type="button" onClick={onVerPost}
             className="inline-flex items-center gap-1.5 text-[11.5px] font-body font-semibold text-primary">
@@ -1097,51 +1125,93 @@ function FolhaDoDiaDialog({ open, onOpenChange, diaLabel, wd, local, items }: {
   );
 }
 
-// ── Configurar cidades atendidas (chips add/remove) ────────────────────────────
-function CitiesDialog({ open, onOpenChange, cities, onSave, saving }: {
+// ── Configurações da captação (Cidades atendidas + Tomadas padrão) ─────────────
+// Um lugar só pras duas configs da social mídia: as cidades onde ela faz captação
+// (viram sugestão no cadastro do cliente + alimentam o gráfico) e a lista de
+// tomadas padrão (o que o botão "Usar tomadas padrão" injeta numa captação).
+function ConfigCaptacaoDialog({ open, onOpenChange, cities, onSaveCities, savingCities, shots, onSaveShots, savingShots }: {
   open: boolean; onOpenChange: (o: boolean) => void;
-  cities: string[]; onSave: (list: string[]) => Promise<unknown>; saving: boolean;
+  cities: string[]; onSaveCities: (list: string[]) => Promise<unknown>; savingCities: boolean;
+  shots: string[]; onSaveShots: (list: string[]) => Promise<unknown>; savingShots: boolean;
 }) {
-  const [novo, setNovo] = useState("");
-
-  const add = async () => {
-    const c = novo.trim();
-    if (!c) return;
-    if (cities.some((x) => x.toLowerCase() === c.toLowerCase())) { setNovo(""); return; }
-    await onSave([...cities, c]);
-    setNovo("");
-  };
-  const remove = (city: string) => onSave(cities.filter((c) => c !== city));
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader><DialogTitle className="font-display">Cidades que você atende</DialogTitle></DialogHeader>
-        <p className="text-xs text-muted-foreground font-body">
-          As cidades onde você faz captação. Elas viram opção no cadastro do cliente e alimentam o gráfico por cidade.
-        </p>
-        <div className="flex gap-2 mt-3">
-          <Input value={novo} onChange={(e) => setNovo(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
-            placeholder="Ex.: Balneário Camboriú" className="rounded-xl" />
-          <Button onClick={add} disabled={saving || !novo.trim()} className="shrink-0 rounded-xl">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-          </Button>
+      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
+        <DialogHeader><DialogTitle className="font-display">Configurações da captação</DialogTitle></DialogHeader>
+
+        {/* SEÇÃO 1 · Cidades atendidas */}
+        <div>
+          <h3 className="flex items-center gap-1.5 text-sm font-display font-bold text-foreground">
+            <MapPinned className="h-4 w-4 text-primary" /> Cidades que você atende
+          </h3>
+          <p className="text-xs text-muted-foreground font-body mt-1">
+            As cidades onde você faz captação. Elas viram sugestão no cadastro do cliente e alimentam o gráfico por cidade.
+          </p>
+          <ChipEditor items={cities} onSave={onSaveCities} saving={savingCities}
+            placeholder="Ex.: Balneário Camboriú"
+            emptyText="Nenhuma cidade ainda. Adicione a primeira acima."
+            removeLabel={(c) => `Remover ${c}`} dedupe />
         </div>
-        <div className="flex flex-wrap gap-2 mt-4 min-h-[40px]">
-          {cities.length === 0 ? (
-            <p className="text-xs text-muted-foreground font-body italic">Nenhuma cidade ainda. Adicione a primeira acima.</p>
-          ) : cities.map((c) => (
-            <span key={c} className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 text-primary border border-primary/15 pl-3 pr-1.5 py-1 text-xs font-body font-semibold">
-              {c}
-              <button type="button" onClick={() => remove(c)} disabled={saving}
-                className="grid h-5 w-5 place-items-center rounded-full hover:bg-primary/15 transition-colors" aria-label={`Remover ${c}`}>
-                <X className="h-3 w-3" />
-              </button>
-            </span>
-          ))}
+
+        <div className="h-px bg-border my-1" />
+
+        {/* SEÇÃO 2 · Tomadas padrão */}
+        <div>
+          <h3 className="flex items-center gap-1.5 text-sm font-display font-bold text-foreground">
+            <Clapperboard className="h-4 w-4 text-primary" /> Tomadas padrão
+          </h3>
+          <p className="text-xs text-muted-foreground font-body mt-1">
+            A lista que o botão "Usar tomadas padrão" injeta numa captação. Monte o combo que você quase sempre grava (ex.: 1 Reels, 5 Fotos, 3 Stories). Sem nada aqui, o botão usa uma lista básica.
+          </p>
+          <ChipEditor items={shots} onSave={onSaveShots} saving={savingShots}
+            placeholder="Ex.: 5 Fotos"
+            emptyText="Nenhuma tomada padrão ainda. O botão usa a lista básica até você montar a sua."
+            removeLabel={(s) => `Remover ${s}`} />
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// Editor de chips reutilizável (add por Enter/botão, remove no X). Usado pelas
+// Cidades e pelas Tomadas padrão. `dedupe` ignora repetido (case-insensitive).
+function ChipEditor({ items, onSave, saving, placeholder, emptyText, removeLabel, dedupe }: {
+  items: string[]; onSave: (list: string[]) => Promise<unknown>; saving: boolean;
+  placeholder: string; emptyText: string; removeLabel: (v: string) => string; dedupe?: boolean;
+}) {
+  const [novo, setNovo] = useState("");
+  const add = async () => {
+    const v = novo.trim();
+    if (!v) return;
+    if (dedupe && items.some((x) => x.toLowerCase() === v.toLowerCase())) { setNovo(""); return; }
+    await onSave([...items, v]);
+    setNovo("");
+  };
+  const remove = (v: string) => onSave(items.filter((x) => x !== v));
+
+  return (
+    <>
+      <div className="flex gap-2 mt-3">
+        <Input value={novo} onChange={(e) => setNovo(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
+          placeholder={placeholder} className="rounded-xl" />
+        <Button onClick={add} disabled={saving || !novo.trim()} className="shrink-0 rounded-xl">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+        </Button>
+      </div>
+      <div className="flex flex-wrap gap-2 mt-3 min-h-[40px]">
+        {items.length === 0 ? (
+          <p className="text-xs text-muted-foreground font-body italic">{emptyText}</p>
+        ) : items.map((v) => (
+          <span key={v} className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 text-primary border border-primary/15 pl-3 pr-1.5 py-1 text-xs font-body font-semibold">
+            {v}
+            <button type="button" onClick={() => remove(v)} disabled={saving}
+              className="grid h-5 w-5 place-items-center rounded-full hover:bg-primary/15 transition-colors" aria-label={removeLabel(v)}>
+              <X className="h-3 w-3" />
+            </button>
+          </span>
+        ))}
+      </div>
+    </>
   );
 }

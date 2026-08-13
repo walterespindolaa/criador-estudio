@@ -5,6 +5,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Link2, Loader2, Plu
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useCrmClient, useUpdateCrmClient, useUploadCrmAsset, useClientNotes, CLIENT_STATUSES, CLIENT_STATUS_META, type ClientStatus } from "@/hooks/useCrm";
+import { useCaptureCities } from "@/hooks/useCaptureCities";
 import { ClientNotesDrawer, notePreview } from "@/components/accounts/ClientNotesDrawer";
 import { ClientHashtags } from "@/components/accounts/crm/ClientHashtags";
 import { mensalidadeAtivaNoMes } from "@/lib/finance";
@@ -156,6 +157,9 @@ export default function ClienteHub() {
   const [notesOpen, setNotesOpen] = useState(false);
   const { data: client, isLoading } = useCrmClient(id);
   const { setActiveAccount } = useActiveAccount();
+  // Cidades atendidas pela social mídia: viram sugestão (datalist) no card Cidade
+  // da Visão geral. Leitura defensiva no hook: sem a coluna/config, vem [].
+  const { cities: captureCities } = useCaptureCities();
   // Contador discreto no botão de notas (e já deixa a lista quente pro drawer).
   const { data: clientNotes } = useClientNotes(
     { crmClientId: id ?? null, accountOwnerId: client?.cria_owner_id ?? null },
@@ -673,6 +677,13 @@ export default function ClienteHub() {
             <CampoCliente clientId={client.id} label="Segmento" tipo="texto"
               valor={client.segment} placeholder="Ex.: Nutrição, Odonto…"
               campo="segment" />
+            {/* CIDADE do cliente, editável aqui mesmo (é onde a social mídia
+                procura naturalmente). Sugere as cidades cadastradas em
+                capture_cities (datalist), mas aceita digitar qualquer uma.
+                Grava em crm_clients.city pelo mesmo update dos outros cards. */}
+            <CampoCliente clientId={client.id} label="Cidade" tipo="texto"
+              valor={(client as { city?: string | null }).city} placeholder="Ex.: Balneário Camboriú"
+              campo="city" sugestoes={captureCities} />
             <CampoCliente clientId={client.id} label="WhatsApp" tipo="texto"
               valor={client.whatsapp || client.phone} placeholder="(DDD) 90000-0000"
               campo={client.whatsapp || !client.phone ? "whatsapp" : "phone"} />
@@ -1318,7 +1329,7 @@ function MiniStat({ k, v, tone }: { k: string; v: string; tone: "green" | "red" 
 // e sai do campo → salva. Sem botão, sem modal, sem ir pra outra tela.
 // O lápis aparece no hover pra deixar claro que dá pra editar.
 // ═══════════════════════════════════════════════════════════════════════
-function CampoCliente({ clientId, label, valor, campo, tipo, placeholder, rodape }: {
+function CampoCliente({ clientId, label, valor, campo, tipo, placeholder, rodape, sugestoes }: {
   clientId: string;
   label: string;
   valor: string | number | null | undefined;
@@ -1326,10 +1337,15 @@ function CampoCliente({ clientId, label, valor, campo, tipo, placeholder, rodape
   tipo: "texto" | "dinheiro" | "data" | "dia";
   placeholder?: string;
   rodape?: string;
+  // Sugestões pro campo de texto (datalist): a pessoa escolhe uma ou digita à mão.
+  // Usado pela Cidade, que sugere as cidades cadastradas em capture_cities.
+  sugestoes?: string[];
 }) {
   const update = useUpdateCrmClient();
   const [editando, setEditando] = useState(false);
   const [rascunho, setRascunho] = useState<string | number | null>(valor ?? null);
+  // id único do datalist (só quando há sugestões e é campo de texto).
+  const listId = sugestoes && sugestoes.length && tipo === "texto" ? `dl-${campo}-${clientId}` : undefined;
 
   useEffect(() => { if (!editando) setRascunho(valor ?? null); }, [valor, editando]);
 
@@ -1363,23 +1379,31 @@ function CampoCliente({ clientId, label, valor, campo, tipo, placeholder, rodape
               onChange={(v) => setRascunho(v)}
             />
           ) : (
-            <Input
-              autoFocus
-              type={tipo === "data" ? "date" : tipo === "dia" ? "number" : "text"}
-              min={tipo === "dia" ? 1 : undefined}
-              max={tipo === "dia" ? 31 : undefined}
-              value={rascunho === null || rascunho === undefined ? "" : String(rascunho)}
-              placeholder={placeholder}
-              onChange={(e) => {
-                const v = e.target.value;
-                setRascunho(tipo === "dia" ? (v === "" ? null : Math.max(1, Math.min(31, Number(v)))) : (v || null));
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") salvar(rascunho);
-                if (e.key === "Escape") { setRascunho(valor ?? null); setEditando(false); }
-              }}
-              className="rounded-xl h-9"
-            />
+            <>
+              <Input
+                autoFocus
+                type={tipo === "data" ? "date" : tipo === "dia" ? "number" : "text"}
+                min={tipo === "dia" ? 1 : undefined}
+                max={tipo === "dia" ? 31 : undefined}
+                list={listId}
+                value={rascunho === null || rascunho === undefined ? "" : String(rascunho)}
+                placeholder={placeholder}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setRascunho(tipo === "dia" ? (v === "" ? null : Math.max(1, Math.min(31, Number(v)))) : (v || null));
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") salvar(rascunho);
+                  if (e.key === "Escape") { setRascunho(valor ?? null); setEditando(false); }
+                }}
+                className="rounded-xl h-9"
+              />
+              {listId && (
+                <datalist id={listId}>
+                  {sugestoes!.map((s) => <option key={s} value={s} />)}
+                </datalist>
+              )}
+            </>
           )}
           <div className="flex items-center gap-1.5 mt-2">
             <Button size="sm" className="h-7 text-xs flex-1" onClick={() => salvar(rascunho)} disabled={update.isPending}>Salvar</Button>

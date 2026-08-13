@@ -316,6 +316,114 @@ export const TOURS_GESTOR: TourConfig[] = [
     ],
   },
   {
+    id: "gestor-captacao",
+    route: "/socialmidia/captacao",
+    title: "Cria Captação",
+    valueProp:
+      "O dia de gravação num painel só: o que grava no mês, o roteiro de cada cliente e o que ainda falta captar. Você sai de casa com tudo na mão em vez de abrir cliente por cliente.",
+    benefits: [
+      "Roteiro e tomadas de cada captação no lugar certo",
+      "Agrupa a gravação por dia e por local",
+      "Vê o que já gravou e o que ainda falta no mês",
+    ],
+    steps: [
+      {
+        target: '[data-tour="cap-topo"]',
+        title: "O mês de gravação",
+        body: "Esta tela junta todas as captações que você marcou na Agenda pra você preparar a gravação. As setas trocam o mês, e o botão Hoje te devolve pro mês atual.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="cap-resumo"]',
+        title: "Quanto falta gravar",
+        body: "O placar do mês num olhar: quantas captações no total, quantas já foram gravadas e quantas ainda faltam. É o termômetro pra saber se a semana de gravação está em dia.",
+        placement: "bottom",
+      },
+      {
+        // Bloco condicional: só aparece quando há cliente da mesma cidade ainda não
+        // captado no mês. Mês sem oportunidade não mostra nada, então o passo sai.
+        skipIfMissing: true,
+        target: '[data-tour="cap-viagem"]',
+        title: "Aproveita a viagem",
+        body: "Já que você vai a uma cidade, o Cria mostra outros clientes de lá que ainda não foram captados este mês. Com um toque em Marcar você já agenda a captação no dia da ida, pra resolver tudo numa viagem só.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="cap-filtros"]',
+        title: "Filtrar a lista",
+        body: "Quando o mês enche, filtre por status (pendentes ou concluídas) ou por cidade pra ver só o que interessa agora. É o jeito de focar na cidade da próxima gravação sem o resto atrapalhar.",
+        placement: "bottom",
+      },
+      {
+        // A lista de grupos só existe quando há captação no mês (e passando no filtro).
+        skipIfMissing: true,
+        target: '[data-tour="cap-grupo"]',
+        title: "Agrupado por dia e local",
+        body: "As captações vêm juntas por dia e por local, porque na prática você grava tudo do mesmo lugar de uma vez. Cada bloco mostra a data, o local e quantas gravações saem dali.",
+        placement: "top",
+      },
+      {
+        // Roteiro (e os botões dele) só existe quando a captação já tem roteiro escrito.
+        skipIfMissing: true,
+        target: '[data-tour="cap-roteiro"]',
+        title: "O roteiro da gravação",
+        body: "Cada captação guarda o roteiro daquele cliente, que você escreve e edita aqui mesmo. O Copiar roteiro leva o texto pronto pra onde você precisar, sem redigitar nada.",
+        placement: "top",
+      },
+      {
+        skipIfMissing: true,
+        target: '[data-tour="cap-teleprompter"]',
+        title: "Usar como teleprompter",
+        body: "Na hora de gravar, este botão abre o roteiro em tela cheia rolando sozinho. Entregue o celular pro cliente ler enquanto você grava na câmera, sem ele decorar nada.",
+        placement: "top",
+      },
+      {
+        // A lista de tomadas só existe dentro de uma captação (precisa haver captação no mês).
+        skipIfMissing: true,
+        target: '[data-tour="cap-tomadas"]',
+        title: "As tomadas do dia",
+        body: "As tomadas são o checklist do que precisa sair da gravação: 1 Reels, 3 stories, uma foto de capa. Vá marcando conforme grava, pra não voltar pra casa e descobrir que faltou.",
+        placement: "top",
+      },
+      {
+        skipIfMissing: true,
+        target: '[data-tour="cap-virarpost"]',
+        title: "Virar post",
+        body: "Gravou? Este botão manda o roteiro e a nota da captação direto pro Cria Post do cliente como rascunho. Assim o material gravado já cai na produção sem você recomeçar do zero.",
+        placement: "top",
+      },
+      {
+        skipIfMissing: true,
+        target: '[data-tour="cap-status"]',
+        title: "Marcar como concluída",
+        body: "Toque aqui pra alternar a captação entre pendente e concluída. É o que atualiza o placar lá em cima e tira a gravação da sua lista de pendências do mês.",
+        placement: "left",
+      },
+      {
+        // O botão só aparece quando o grupo tem captação com roteiro escrito.
+        skipIfMissing: true,
+        target: '[data-tour="cap-folha"]',
+        title: "A folha do dia",
+        body: "A folha junta todos os roteiros daquele dia e local num texto só, pra você levar pra captação sem abrir cliente por cliente. Dá pra copiar tudo de uma vez ou baixar em PDF.",
+        placement: "bottom",
+      },
+      {
+        // O gráfico só existe quando há captação no mês (senão não há cidade pra contar).
+        skipIfMissing: true,
+        target: '[data-tour="cap-grafico"]',
+        title: "Captações por cidade",
+        body: "O gráfico mostra quantas gravações caem em cada cidade no mês, pra você enxergar onde vai passar mais tempo. Ajuda a planejar a rota e agrupar as idas.",
+        placement: "top",
+      },
+      {
+        target: '[data-tour="cap-cidades"]',
+        title: "As cidades que você atende",
+        body: "Aqui você cadastra as cidades onde faz captação. Elas viram opção no cadastro do cliente e alimentam o gráfico e as sugestões de viagem desta tela.",
+        placement: "bottom",
+      },
+    ],
+  },
+  {
     id: "gestor-aprovacoes",
     route: "/socialmidia/aprovacoes",
     title: "Central de aprovações",
