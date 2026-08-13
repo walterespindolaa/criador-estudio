@@ -999,6 +999,10 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         (recs ? `<p><strong>Recomendações</strong></p><ul>${recs}</ul>` : "");
       if (editorRef.current) editorRef.current.innerHTML = html;
       setAnaliseTemTexto(true);
+      // A análise fica no meio do preview (longe do botão), então rola até ela e
+      // avisa, senão parece que "não gerou nada".
+      editorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      toast.success("Análise gerada. Veja em “Análise do período”.");
     } catch (e) {
       console.error("Report AI failed", e);
       const msg = e instanceof Error ? e.message : "";
@@ -1022,6 +1026,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       linhas.push(`<p><strong>Recomendações</strong></p><ul>${recs.map((r) => `<li>${escapeHtml(r)}</li>`).join("")}</ul>`);
       if (editorRef.current) editorRef.current.innerHTML = linhas.join("");
       setAnaliseTemTexto(true);
+      editorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       toast.message(
         msg && !/non-2xx/i.test(msg) ? `IA indisponível (${msg}). Gerei um resumo automático, você pode editar.` : "IA indisponível agora. Gerei um resumo automático, você pode editar.",
       );
