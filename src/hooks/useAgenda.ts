@@ -18,6 +18,10 @@ export type Creation = {
   created_at: string;
 };
 
+// Um item da lista de tomadas (checklist) de uma captação: o que precisa sair
+// naquela gravação. Guardado em agenda_captures.shot_list (jsonb array).
+export type ShotItem = { id: string; texto: string; feito: boolean };
+
 export type Capture = {
   id: string;
   manager_id: string;
@@ -33,8 +37,52 @@ export type Capture = {
   // separado de `note` (nota livre). Opcional no tipo pra leitura defensiva: antes
   // da migration rodar, o select("*") não traz a coluna e cai como undefined.
   roteiro?: string | null;
+  // Lista de tomadas (checklist da gravação). Opcional/defensivo: antes da migration
+  // o select("*") não traz a coluna e cai como undefined (a tela trata como []).
+  shot_list?: ShotItem[] | null;
+  // Recorrência mensal por dia do mês (ver 20260813000002). Todos opcionais pra
+  // leitura defensiva: sem a migration, undefined = captação comum (não recorrente).
+  recurring?: boolean | null;
+  recurrence_day?: number | null;
+  recurrence_source_id?: string | null;
+  // Post do Cria Post que nasceu desta captação (ver 20260813000003). Opcional/
+  // defensivo: sem a migration, o select("*") não traz a coluna e cai como undefined
+  // (a tela trata como "ainda não virou post").
+  converted_post_id?: string | null;
   created_at: string;
 };
+
+// Modelo padrão de tomadas (atalho "usar tomadas padrão"). O que quase toda
+// captação de social mídia precisa entregar.
+export const DEFAULT_SHOT_LIST = ["1 Reels", "3 Fotos", "1 Story", "Bastidores"] as const;
+
+// id curto e único pra um item de tomada (crypto.randomUUID quando existe; senão
+// um fallback simples, que basta pra chave de item local).
+export function newShotId(): string {
+  try {
+    if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  } catch { /* segue pro fallback */ }
+  return `s_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+// Normaliza o que vem do banco (jsonb) num ShotItem[] confiável: descarta itens
+// malformados e garante os três campos. Blindagem contra dado velho/estranho.
+export function normalizeShotList(raw: unknown): ShotItem[] {
+  if (!Array.isArray(raw)) return [];
+  const out: ShotItem[] = [];
+  for (const it of raw) {
+    if (!it || typeof it !== "object") continue;
+    const o = it as Record<string, unknown>;
+    const texto = typeof o.texto === "string" ? o.texto : "";
+    if (!texto.trim()) continue;
+    out.push({
+      id: typeof o.id === "string" && o.id ? o.id : newShotId(),
+      texto,
+      feito: !!o.feito,
+    });
+  }
+  return out;
+}
 
 // Nomes dos colaboradores ativos da agência (pra sugerir no campo Equipe). Vazio até ter colaborador.
 export function useCollaboratorNames() {
@@ -245,11 +293,83 @@ export function useAddCapture() {
 export function useUpdateCapture() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<Capture, "status" | "capture_date" | "capture_time" | "location" | "team" | "note" | "roteiro" | "crm_client_id" | "client_name">> }) => {
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<Capture, "status" | "capture_date" | "capture_time" | "location" | "team" | "note" | "roteiro" | "crm_client_id" | "client_name" | "shot_list" | "recurring" | "recurrence_day">> }) => {
       const { error } = await sbFrom("agenda_captures").update(patch as never).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["agenda-captures"] }),
+  });
+}
+
+// Grava a lista de tomadas de uma captação, OTIMISTA: marcar/adicionar/remover item
+// reflete na hora (checkbox responsivo no mobile) e só depois persiste. Rollback no
+// erro. Isolado de useUpdateCapture pra não mexer no fluxo de arraste da Agenda.
+export function useSetCaptureShotList() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, shot_list }: { id: string; shot_list: ShotItem[] }) => {
+      const { error } = await sbFrom("agenda_captures").update({ shot_list } as never).eq("id", id);
+      if (error) throw error;
+    },
+    onMutate: async ({ id, shot_list }) => {
+      await qc.cancelQueries({ queryKey: ["agenda-captures"] });
+      const prev = qc.getQueriesData<Capture[]>({ queryKey: ["agenda-captures"] });
+      qc.setQueriesData<Capture[]>({ queryKey: ["agenda-captures"] }, (old) =>
+        old?.map((c) => (c.id === id ? { ...c, shot_list } : c)));
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      ctx?.prev?.forEach(([key, data]) => qc.setQueryData(key, data));
+      toast.error("Não consegui salvar as tomadas.");
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["agenda-captures"] }),
+  });
+}
+
+// ── MATERIALIZAÇÃO DAS CAPTAÇÕES RECORRENTES (no cliente, sem cron/edge) ───────
+// Quando o gestor abre o Cria Captação, garantimos que cada captação recorrente
+// (recurring=true, recurrence_day válido) tenha ocorrência no MÊS VIGENTE e no
+// PRÓXIMO (sempre uma adiante). Sem robô: é o próprio app que "puxa" o que falta.
+//
+// GRUPO de uma recorrência = a origem (raiz, recurring=true) + todas as filhas que
+// têm recurrence_source_id = id da raiz. A ocorrência de um mês é criada UMA vez:
+// antes de inserir, olhamos os meses que o grupo já cobre (nas captações carregadas)
+// e, no fim, uma trava de sessão (Set em ref) impede reinserir o mesmo (grupo, mês)
+// na janela entre inserir e o refetch chegar. Cancelar a recorrência (recurring=false
+// na raiz) simplesmente para de gerar; as já criadas ficam.
+//
+// A raiz só gera do SEU mês pra frente (nunca cria retroativo antes de existir) e
+// nunca cria mês passado. Datas SEM toISOString: a string YYYY-MM-DD é montada à mão.
+export type NewRecurringRow = {
+  manager_id: string;
+  status: "agendada";
+  capture_date: string;
+  capture_time: string | null;
+  location: string | null;
+  crm_client_id: string | null;
+  client_name: string | null;
+  team: string | null;
+  note: string | null;
+  shot_list: ShotItem[];
+  recurrence_source_id: string;
+  recurrence_day: number;
+};
+
+export function useEnsureRecurringCaptures() {
+  const { agencyOwnerId } = useActiveAccount();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (rows: NewRecurringRow[]) => {
+      if (!agencyOwnerId) throw new Error("Not authenticated");
+      if (rows.length === 0) return 0;
+      const { error } = await sbFrom("agenda_captures").insert(rows as never);
+      if (error) throw error;
+      return rows.length;
+    },
+    onSuccess: (n) => { if (n) qc.invalidateQueries({ queryKey: ["agenda-captures"] }); },
+    // Silencioso: recorrência é conveniência. Se a migration ainda não rodou (colunas
+    // inexistentes) ou qualquer falha, não estraga a tela; tenta de novo na próxima carga.
+    onError: (err) => console.warn("[captacao] não consegui materializar recorrência", err),
   });
 }
 
@@ -262,5 +382,56 @@ export function useDeleteCapture() {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["agenda-captures"] }),
     onError: () => toast.error("Não consegui excluir."),
+  });
+}
+
+// ── "Virar post": a captação vira um rascunho no Cria Post do cliente ──────────
+// Fecha o ciclo captação → post pelo MESMO caminho do "Novo post" da Produção
+// (posts com external_client_id, nasce Em produção com approval_status em_producao,
+// não vai pro cliente antes da hora) e marca a captação com o id do post gerado
+// (converted_post_id) pra não duplicar. O post nasce do MANAGER dono (user_id =
+// agencyOwnerId), então a segurança é a mesma do Cria Post. Não move mídia: o elo
+// é o roteiro/nota da captação virando o ponto de partida do post.
+export function useCaptureToPost() {
+  const { agencyOwnerId } = useActiveAccount();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      captureId: string; externalClientId: string;
+      title: string; caption: string | null; script: string | null;
+    }): Promise<string> => {
+      if (!agencyOwnerId) throw new Error("Sem sessão");
+      const { data, error } = await sbFrom("posts").insert({
+        user_id: agencyOwnerId,
+        external_client_id: input.externalClientId,
+        status: "editando",
+        approval_status: "em_producao",
+        approval_mode: "fast",
+        platform: "instagram",
+        format: "reels",
+        title: input.title.slice(0, 200),
+        caption: input.caption,
+        script: input.script,
+      } as never).select("id").single();
+      if (error) throw new Error(error.message);
+      const postId = (data as { id: string }).id;
+      const { error: upErr } = await sbFrom("agenda_captures")
+        .update({ converted_post_id: postId } as never)
+        .eq("id", input.captureId);
+      if (upErr) throw new Error(upErr.message);
+      return postId;
+    },
+    onSuccess: () => {
+      // A captação passa a mostrar "virou post"; o post novo aparece em todas as
+      // telas que listam posts do portal (kanban do cliente, agenda, home, calendário).
+      qc.invalidateQueries({ queryKey: ["agenda-captures"] });
+      qc.invalidateQueries({ queryKey: ["cria-posts"] });
+      qc.invalidateQueries({ queryKey: ["external-posts-all"] });
+      qc.invalidateQueries({ queryKey: ["external-pending"] });
+      qc.invalidateQueries({ queryKey: ["operation-posts"] });
+      qc.invalidateQueries({ queryKey: ["manager-calendar"] });
+      toast.success("Post criado em Produção. Monte a arte e a legenda por lá.");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Não consegui criar o post."),
   });
 }

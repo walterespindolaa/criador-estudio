@@ -81,6 +81,78 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── Lembrete na véspera da captação: avisa a social mídia (o manager dono) no
+    //    dia ANTERIOR. Uma notificação AGREGADA por manager/dia (menos spam que uma
+    //    por captação), com a lista das captações de amanhã. Só captações agendadas
+    //    (não canceladas, não concluídas). Dedupe: uma por manager por dia. ──────────
+    const fmtBR = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit",
+    });
+    // "Amanhã" no fuso BR: soma 24h ao agora e formata no fuso (o Brasil não tem mais
+    // horário de verão, então o deslocamento de 24h é seguro pra achar o dia seguinte).
+    const amanhaBR = fmtBR.format(new Date(now + dayMs));
+
+    const { data: capsAmanha } = await svc.from("agenda_captures")
+      .select("id, manager_id, crm_client_id, client_name, capture_time, location")
+      .eq("capture_date", amanhaBR)
+      .eq("status", "agendada");
+
+    const capsList = (capsAmanha ?? []) as {
+      id: string; manager_id: string; crm_client_id: string | null;
+      client_name: string | null; capture_time: string | null; location: string | null;
+    }[];
+
+    if (capsList.length) {
+      // Nome do cliente: display_name (apelido do gestor) > name; senão o client_name livre.
+      const crmIds = [...new Set(capsList.map((c) => c.crm_client_id).filter((x): x is string => !!x))];
+      const nomeById = new Map<string, string>();
+      if (crmIds.length) {
+        const { data: crm } = await svc.from("crm_clients").select("id, name, display_name").in("id", crmIds);
+        for (const c of (crm ?? []) as { id: string; name: string | null; display_name: string | null }[]) {
+          nomeById.set(c.id, c.display_name?.trim() || c.name?.trim() || "Cliente");
+        }
+      }
+      const nomeDe = (c: { crm_client_id: string | null; client_name: string | null }) =>
+        (c.crm_client_id ? nomeById.get(c.crm_client_id) : null) || c.client_name?.trim() || "Cliente";
+
+      // Agrupa por manager (uma notificação por social mídia, agregando o dia).
+      const porManager = new Map<string, typeof capsList>();
+      for (const c of capsList) {
+        (porManager.get(c.manager_id) ?? porManager.set(c.manager_id, []).get(c.manager_id)!).push(c);
+      }
+
+      // Dedupe por dia: não repete a véspera pro mesmo manager (caso o cron rode 2x).
+      const managerIds = [...porManager.keys()];
+      const { data: sentVespera } = await svc.from("notifications")
+        .select("user_id").eq("type", "captacao_amanha")
+        .in("user_id", managerIds).gte("created_at", iso(now - dayMs));
+      const jaAvisado = new Set((sentVespera ?? []).map((r: { user_id: string }) => r.user_id));
+
+      const hora = (t: string | null) => (t ? t.slice(0, 5) : null);
+      for (const [managerId, caps] of porManager) {
+        if (jaAvisado.has(managerId)) continue;
+        caps.sort((a, b) => (a.capture_time ?? "99:99").localeCompare(b.capture_time ?? "99:99"));
+        let title: string;
+        let description: string;
+        if (caps.length === 1) {
+          const c = caps[0];
+          const h = hora(c.capture_time);
+          const partes = [nomeDe(c)];
+          if (h) partes.push(`às ${h}`);
+          if (c.location?.trim()) partes.push(`em ${c.location.trim()}`);
+          title = "📹 Amanhã você tem captação";
+          description = `${partes.join(" ")}. Roteiro pronto?`;
+        } else {
+          title = `📹 Amanhã: ${caps.length} captações`;
+          description = `${caps.map((c) => {
+            const h = hora(c.capture_time);
+            return `${nomeDe(c)}${h ? ` (${h})` : ""}`;
+          }).join(", ")}. Roteiros prontos?`;
+        }
+        rows.push({ user_id: managerId, type: "captacao_amanha", title, description, link: "/socialmidia/captacao" });
+      }
+    }
+
     // Insert em lote (1 chamada), o trigger de push dispara por linha.
     // Checa o erro: sem isso, uma falha no insert passava batido e o cron
     // reportava "created:N" sem ter criado nada (e o heartbeat dizia ok:true).
