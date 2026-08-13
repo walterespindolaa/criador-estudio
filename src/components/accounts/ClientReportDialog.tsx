@@ -316,6 +316,12 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   // no INÍCIO do relatório. Persistido por cliente+período quando dá (ver abaixo).
   const [notes, setNotes] = useState("");
   const [notesSaving, setNotesSaving] = useState(false);
+  // Prints das métricas do Instagram que a social mídia sobe (a Gabriela cola o
+  // print do app do IG e ele entra numa seção do relatório). Guardamos o caminho
+  // no Storage e a URL assinada pra renderizar no preview e no PDF.
+  const [metricShots, setMetricShots] = useState<{ path: string; url: string }[]>([]);
+  const [uploadingShot, setUploadingShot] = useState(false);
+  const shotInputRef = useRef<HTMLInputElement>(null);
 
   const period = useMemo(
     () => periods.find((p) => p.key === periodKey) ?? periods.find((p) => p.key === "este-mes") ?? periods[0],
@@ -377,23 +383,31 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
 
   // Carrega a nota salva pra este cliente+período. Se a tabela ainda não existir
   // (migration não rodou), a query falha e a nota fica só na sessão.
-  const { data: savedNote, isFetched: notesFetched } = useQuery<string>({
+  const { data: savedNote, isFetched: notesFetched } = useQuery<{ body: string; shots: { path: string; url: string }[] }>({
     queryKey: ["report-notes", agencyOwnerId, client.crm_client_id, notesKey],
     enabled: open && canPersistNotes,
     queryFn: async () => {
       const { data, error } = await sbFrom("client_report_notes")
-        .select("body")
+        .select("body, metrics_images")
         .eq("manager_id", agencyOwnerId!)
         .eq("crm_client_id", client.crm_client_id!)
         .eq("period_key", notesKey)
         .maybeSingle();
       if (error) throw error;
-      return ((data as { body: string | null } | null)?.body) ?? "";
+      const row = data as { body: string | null; metrics_images: string[] | null } | null;
+      const paths = row?.metrics_images ?? [];
+      // Assina cada caminho do Storage pra renderizar (bucket privado).
+      const shots: { path: string; url: string }[] = [];
+      for (const p of paths) {
+        const { data: s } = await supabase.storage.from("relatorios").createSignedUrl(p, 60 * 60 * 24 * 30);
+        if (s?.signedUrl) shots.push({ path: p, url: s.signedUrl });
+      }
+      return { body: row?.body ?? "", shots };
     },
   });
-  // Espelha a nota carregada no textarea ao abrir/trocar de período/cliente.
+  // Espelha a nota e os prints carregados ao abrir/trocar de período/cliente.
   useEffect(() => {
-    if (notesFetched) setNotes(savedNote ?? "");
+    if (notesFetched) { setNotes(savedNote?.body ?? ""); setMetricShots(savedNote?.shots ?? []); }
   }, [notesFetched, savedNote, notesKey]);
 
   const saveNotes = async () => {
@@ -412,6 +426,50 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     }
   };
 
+  // Persiste a lista de caminhos dos prints no mesmo registro da nota (coluna
+  // metrics_images). Upsert só com esses campos: não mexe no `body`.
+  const persistMetricPaths = async (paths: string[]) => {
+    if (!canPersistNotes) return;
+    const { error } = await sbFrom("client_report_notes").upsert({
+      manager_id: agencyOwnerId, crm_client_id: client.crm_client_id,
+      period_key: notesKey, metrics_images: paths, updated_at: new Date().toISOString(),
+    } as never, { onConflict: "manager_id,crm_client_id,period_key" });
+    if (error) console.error("Salvar prints do relatório falhou", error);
+  };
+
+  const onPickShots = async (files: FileList | null) => {
+    if (!files || files.length === 0 || !user) return;
+    setUploadingShot(true);
+    try {
+      const added: { path: string; url: string }[] = [];
+      for (const file of Array.from(files)) {
+        if (!file.type.startsWith("image/")) continue;
+        const ext = (file.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
+        const cli = client.crm_client_id ?? "sem-cliente";
+        const path = `${user.id}/metricas/${cli}/${notesKey}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
+        const { error } = await supabase.storage.from("relatorios").upload(path, file, { upsert: true, contentType: file.type });
+        if (error) { toast.error("Não consegui subir o print. Tente de novo."); continue; }
+        const { data: s } = await supabase.storage.from("relatorios").createSignedUrl(path, 60 * 60 * 24 * 30);
+        if (s?.signedUrl) added.push({ path, url: s.signedUrl });
+      }
+      if (added.length) {
+        const next = [...metricShots, ...added];
+        setMetricShots(next);
+        await persistMetricPaths(next.map((x) => x.path));
+      }
+    } finally {
+      setUploadingShot(false);
+      if (shotInputRef.current) shotInputRef.current.value = "";
+    }
+  };
+
+  const removeShot = async (path: string) => {
+    const next = metricShots.filter((x) => x.path !== path);
+    setMetricShots(next);
+    await persistMetricPaths(next.map((x) => x.path));
+    supabase.storage.from("relatorios").remove([path]).catch(() => { /* best effort */ });
+  };
+
   // Relatório rápido: reabre já no preset escolhido pela gestora.
   useEffect(() => { if (open && initialPeriodKey) setPeriodKey(initialPeriodKey); }, [open, initialPeriodKey]);
 
@@ -421,6 +479,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   useEffect(() => {
     if (editorRef.current) editorRef.current.innerHTML = "";
     setNotes("");
+    setMetricShots([]);
     setShareUrl(null);
   }, [periodKey]);
 
@@ -1044,6 +1103,53 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
           </p>
         </div>
 
+        {/* Prints das métricas do Instagram: sobe a imagem e ela entra no relatório */}
+        <div className="mt-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-body font-semibold text-foreground">
+              Métricas do Instagram <span className="font-normal text-muted-foreground">(suba o print do app, entra no relatório)</span>
+            </span>
+            {uploadingShot && <span className="text-[11px] font-body text-muted-foreground">enviando…</span>}
+          </div>
+          <input
+            ref={shotInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={(e) => onPickShots(e.target.files)}
+            className="hidden"
+          />
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            {metricShots.map((s) => (
+              <div key={s.path} className="relative h-16 w-16 overflow-hidden rounded-lg border border-border bg-muted">
+                <img src={s.url} alt="Print das métricas" className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeShot(s.path)}
+                  title="Remover print"
+                  className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white text-xs leading-none"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => shotInputRef.current?.click()}
+              disabled={uploadingShot}
+              className="flex h-16 w-16 flex-col items-center justify-center gap-0.5 rounded-lg border border-dashed border-border text-muted-foreground hover:border-primary hover:text-foreground disabled:opacity-50"
+            >
+              {uploadingShot ? <Loader2 className="h-4 w-4 animate-spin" /> : <span className="text-lg leading-none">+</span>}
+              <span className="text-[10px]">print</span>
+            </button>
+          </div>
+          <p className="text-[11px] font-body text-muted-foreground mt-1">
+            {canPersistNotes
+              ? "Ótimo pra cliente sem o Instagram conectado. Salvo por cliente e período."
+              : "Vincule o cliente ao cadastro central pra guardar os prints entre sessões. Por ora saem só neste PDF."}
+          </p>
+        </div>
+
         {/* Barra de formatação (fora do que vira PDF) */}
         <style>{`.report-editor:empty:before{content:attr(data-placeholder);color:#9ca3af;}
 .report-editor ul{list-style:disc;padding-left:22px;margin:6px 0;} .report-editor ol{list-style:decimal;padding-left:22px;margin:6px 0;} .report-editor li{margin-bottom:4px;} .report-editor p{margin:0 0 8px;}`}</style>
@@ -1109,12 +1215,11 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
                     ? <img src={client.logo_url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     : <span style={{ fontWeight: 800, fontSize: 54, color: C.laranja }}>{client.name.charAt(0).toUpperCase()}</span>}
                 </div>
-                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.5, textTransform: "uppercase", color: C.sub, marginBottom: 6 }}>Relatório de Entregas</div>
                 <div style={{ fontSize: 30, fontWeight: 800, color: C.ink, lineHeight: 1.12 }}>{client.name}</div>
                 {client.instagram_handle && (
                   <div style={{ fontSize: 15, color: C.sub, marginTop: 2 }}>@{client.instagram_handle.replace(/^@/, "")}</div>
                 )}
-                <div style={{ marginTop: 18, fontSize: 22, fontWeight: 800, color: C.laranja }}>{coverPeriodo}</div>
+                <div style={{ marginTop: 18, fontSize: 20, fontWeight: 800, color: C.laranja }}>Relatório de Entregas · {coverPeriodo}</div>
               </div>
 
               {/* rodapé da capa: elaborado por + data + assinatura discreta do Cria */}
@@ -1123,7 +1228,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
                   <div>Elaborado por <b style={{ color: C.ink }}>{elaboradoPor}</b></div>
                   <div>Gerado em {new Date().toLocaleDateString("pt-BR")}</div>
                 </div>
-                <AssinaturaCria variante="rodape" tom="claro" style={{ width: "auto" }} />
+                <AssinaturaCria variante="rodape" tom="claro" altura={22} style={{ width: "auto" }} />
               </div>
             </div>
             {/* força o conteúdo a começar numa página nova (a capa é só dela) */}
@@ -1510,13 +1615,32 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
                   </div>
                 )}
               </div>
-            ) : (
+            ) : metricShots.length === 0 ? (
               <div data-pdf-block style={{ marginTop: 20, padding: "14px 16px", border: `1px dashed ${C.line}`, borderRadius: 12, background: C.soft }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: C.ink }}>Métricas de alcance e engajamento</div>
                 <div style={{ fontSize: 11, color: C.sub, marginTop: 4, lineHeight: 1.55 }}>
                   Este relatório cobre a produção e a entrega das peças. Alcance, visualizações, salvamentos e evolução de seguidores
                   vêm direto do Instagram e só podem ser lidos com o perfil conectado, o que ainda não foi feito. Assim que a conexão
                   for autorizada, esta seção passa a sair preenchida nos próximos relatórios.
+                </div>
+              </div>
+            ) : null}
+
+            {/* Métricas do Instagram por print: a social mídia sobe o print do app do
+                IG (alcance, seguidores, etc) e ele entra aqui como imagem. Serve
+                sobretudo pra cliente sem o perfil conectado. */}
+            {metricShots.length > 0 && (
+              <div data-pdf-block style={{ marginTop: 24 }}>
+                {sectionTitle("Métricas do Instagram", C.azul)}
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {metricShots.map((s) => (
+                    <div key={s.path} data-pdf-block style={{ border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden", background: "#fff" }}>
+                      <img src={s.url} alt="Print das métricas do Instagram" crossOrigin="anonymous" style={{ display: "block", width: "100%", height: "auto" }} />
+                    </div>
+                  ))}
+                </div>
+                <div style={{ fontSize: 10.5, color: C.sub, marginTop: 8 }}>
+                  Prints das métricas direto do Instagram no período.
                 </div>
               </div>
             )}
