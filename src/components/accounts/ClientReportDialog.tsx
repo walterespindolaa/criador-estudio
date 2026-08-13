@@ -1256,7 +1256,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
           <div className="mb-1 text-xs font-body font-semibold text-foreground">
             Prévia do relatório <span className="font-normal text-muted-foreground">(role pra ver tudo, inclusive a “Análise do período”. É isto que vira o PDF.)</span>
           </div>
-          <div className="border border-border rounded-xl overflow-y-auto bg-white" style={{ maxHeight: 520 }}>
+          <div className="border border-border rounded-xl overflow-hidden bg-white">
           <div ref={reportRef} style={{ width: "100%", boxSizing: "border-box", background: "#ffffff", padding: 32, fontFamily: "Inter, system-ui, sans-serif", color: C.ink }}>
             {/* ───────────────── CAPA (ocupa a primeira página inteira) ─────────────────
                 Estilo apresentação Cria: creme + formas orgânicas da paleta, logo do
@@ -1268,7 +1268,10 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
               // dos dois paddings) + margem negativa. Só a margem negativa não
               // expandia a largura e sobrava faixa branca à direita.
               width: "calc(100% + 64px)", margin: "-32px -32px 0", padding: "50px 46px",
-              background: C.creme, aspectRatio: "210 / 286",
+              // Altura ~ uma página A4 inteira (210/296, um tico abaixo de 297 pra
+              // não estourar), pra a capa preencher a folha e o conteúdo começar na
+              // página 2.
+              background: C.creme, aspectRatio: "210 / 296",
               display: "flex", flexDirection: "column",
             }}>
               {/* formas orgânicas nos cantos (como a capa do Cria) */}
@@ -1280,7 +1283,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
               {/* topo: marca da agência + selo do tipo de relatório */}
               <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                 {agencyLogo
-                  ? <img src={agencyLogo} alt={managerName ? `Logo ${managerName}` : "Logo da agência"} crossOrigin="anonymous" style={{ maxHeight: 42, maxWidth: 190, objectFit: "contain", display: "block" }} />
+                  ? <img src={agencyLogo} alt={managerName ? `Logo ${managerName}` : "Logo da agência"} crossOrigin="anonymous" style={{ maxHeight: 42, maxWidth: 190, objectFit: "contain", display: "block", borderRadius: 10 }} />
                   : <div style={{ fontSize: 15, fontWeight: 800, color: C.ink }}>{elaboradoPor}</div>}
                 <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", color: "#fff", background: C.laranja, padding: "7px 15px", borderRadius: 999, whiteSpace: "nowrap" }}>
                   Relatório de Entregas
@@ -1325,7 +1328,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
                 <div style={{ fontSize: 12, color: C.sub }}>Relatório de Entregas · {coverPeriodo}</div>
               </div>
               {agencyLogo && (
-                <img src={agencyLogo} alt="" crossOrigin="anonymous" style={{ maxHeight: 26, maxWidth: 130, objectFit: "contain", display: "block", flexShrink: 0 }} />
+                <img src={agencyLogo} alt="" crossOrigin="anonymous" style={{ maxHeight: 26, maxWidth: 130, objectFit: "contain", display: "block", flexShrink: 0, borderRadius: 7 }} />
               )}
             </div>
 
