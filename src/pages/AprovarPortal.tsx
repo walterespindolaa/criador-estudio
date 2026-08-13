@@ -349,7 +349,7 @@ function PostApproval({ client, post, index, busy, history, onApproveFast, onAdj
             {legenda && !isStory && (
               <div className="hidden lg:block mb-5">
                 <p className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground mb-1.5">Legenda</p>
-                <p className="text-[13.5px] leading-snug text-foreground whitespace-pre-wrap max-h-72 overflow-y-auto pr-1">{legenda}</p>
+                <p className="text-[13.5px] leading-snug text-foreground whitespace-pre-wrap">{legenda}</p>
               </div>
             )}
             {panel}
