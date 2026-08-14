@@ -50,7 +50,10 @@ export default function Parceria() {
           <div data-tour="parceria-programa" className="relative overflow-hidden rounded-3xl border border-border px-6 py-8 sm:px-10 sm:py-10" style={{ background: P.creme }}>
             <span className="absolute -top-14 -right-10 w-44 h-44 rounded-full" style={{ background: P.rosa }} aria-hidden />
             <span className="absolute -bottom-16 -left-12 w-44 h-44 rounded-full" style={{ background: P.amarelo }} aria-hidden />
-            <span className="absolute top-1/2 right-16 w-7 h-7 rounded-full hidden sm:block" style={{ background: P.verde }} aria-hidden />
+            <span className="absolute top-8 right-56 w-7 h-7 rounded-full hidden lg:block" style={{ background: P.verde }} aria-hidden />
+            {/* Logo do Cria preenchendo o respiro à direita (some no mobile pra não
+                brigar com o texto). */}
+            <img src="/logo-cria.png" alt="Cria Social Club" className="hidden md:block absolute right-16 top-1/2 -translate-y-1/2 h-20 lg:h-24 w-auto opacity-90 pointer-events-none" />
             <div className="relative max-w-xl">
               <span className="inline-block text-[10px] font-body font-bold uppercase tracking-widest text-white px-3 py-1.5 rounded-full" style={{ background: P.laranja }}>
                 Programa de parceria
