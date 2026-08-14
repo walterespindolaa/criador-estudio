@@ -58,7 +58,12 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
       // real medida, o iframe cresce (até o teto de escala) e o slot vira janela
       // com overflow-hidden que corta o excesso. Sem medição, null: fica o
       // iframe de sempre com as barras, sem chute.
-      const cover = kind === "drive" && videoRatio && slotRatio > 0 ? coverIframeStyle(videoRatio, slotRatio) : null;
+      // SÓ NO DESKTOP: no celular os controles do player do Google ficam sempre
+      // visíveis (touch) e eram ampliados junto com o vídeo, virando botões
+      // gigantes cortados no meio da tela (a aprovação "desconfigurada" no
+      // iPhone). No mobile o player fica contido, com os controles normais.
+      const desktop = typeof window !== "undefined" && window.innerWidth >= 768;
+      const cover = desktop && kind === "drive" && videoRatio && slotRatio > 0 ? coverIframeStyle(videoRatio, slotRatio) : null;
       return (
         <div ref={slotRef} className="relative w-full h-full bg-black overflow-hidden">
           {/* scrolling="no": a página de preview do Drive rola por conta própria e
