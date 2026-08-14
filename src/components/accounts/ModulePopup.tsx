@@ -53,17 +53,20 @@ const NA_PRATICA: Record<string, string[]> = {
   aprovapost_externo: [
     "Terminou a arte às 18h? Manda o link e o cliente aprova do celular, na fila do mercado. O post sai no dia certo.",
     "Pediu ajuste? O pedido chega comentado no post certo, sem áudio de 3 minutos pra decifrar.",
-    "No fim do mês, o histórico mostra tudo que foi enviado, aprovado e publicado: prova do seu trabalho, preto no branco.",
+    "Fim do mês: você gera o relatório de entregas com capa, sua logo e análise, e manda o PDF direto no WhatsApp do cliente.",
+    "Cliente novo entrou? Cria o kanban dele em minutos e importa o que já existia de outro board.",
   ],
   crm: [
     "Segunda de manhã: você abre o pipeline e vê qual proposta está parada e quem precisa de follow-up hoje.",
     "Lead chegou pelo direct? Cadastra em 30 segundos e ele nunca mais se perde na caixa de mensagens.",
-    "Na renovação de contrato, o histórico inteiro do cliente está ali pra justificar seu reajuste com segurança.",
+    "Chegou gente nova na equipe? Brandbook e persona estão na ficha do cliente: a pessoa pega o tom sem você repetir tudo.",
+    "Na renovação, o histórico e o custo daquele cliente estão ali pra justificar o reajuste com segurança.",
   ],
   financeiro: [
     "Dia 5: o Caixa mostra quem já pagou e quem merece uma cobrada educada, antes de virar bola de neve.",
     "Fechou cliente novo? Lança a mensalidade recorrente UMA vez e ela entra sozinha na previsão de todo mês.",
-    "No fechamento, você sabe o número real: quanto entrou, o que ficou pendente e qual cliente dá mais resultado.",
+    "Quer saber se aquele cliente difícil compensa? A rentabilidade por cliente responde com número, não com feeling.",
+    "E a vida pessoal não fica de fora: orçamento, contas fixas e metas num caixa separado do da empresa.",
   ],
   hub_cria: [
     "Antes da reunião de pauta, você roda a análise e chega com: “os concorrentes estão apostando em X, a gente responde com Y”.",
@@ -82,30 +85,37 @@ const NA_PRATICA: Record<string, string[]> = {
 };
 const BENEFITS: Record<string, string[]> = {
   aprovapost_externo: [
-    "Link de aprovação pra clientes que não usam o Cria",
-    "Cliente aprova ou pede ajuste sem login, sem app",
+    "Kanban do mês por cliente: em produção, aguardando, aprovado, publicado",
+    "Link de aprovação sem login: o cliente aprova ou pede ajuste do celular",
+    "Visão de feed igual ao Instagram e comentários por post",
+    "Cronograma e calendário com data e hora de cada peça",
+    "Materiais no Drive vinculados ao post (carrossel importa a pasta inteira)",
+    "Relatório de entregas em PDF estilo apresentação, com a sua logo",
     "Clientes externos ilimitados",
-    "Visão de feed igual ao Instagram",
-    "Comentários e histórico por post",
   ],
   crm: [
-    "Carteira de clientes e leads num lugar só",
-    "Pipeline de propostas e contratos",
-    "Lembretes de follow-up",
-    "Histórico de cada cliente",
+    "Carteira de clientes e leads num lugar só, com as suas etiquetas",
+    "Pipeline de propostas em kanban, do primeiro contato ao fechamento",
+    "Contratos com data de renovação pra ninguém te pegar de surpresa",
+    "Tarefas e lembretes de follow-up por cliente",
+    "Brandbook, persona e histórico completo na ficha de cada cliente",
+    "Custo por cliente (design, copy, tráfego) pra enxergar o seu lucro",
   ],
   financeiro: [
-    "Controle de cachês e mensalidades",
-    "Contas a receber por cliente",
-    "Fluxo de caixa e visão do mês",
-    "Alertas de pagamentos pendentes",
+    "Mensalidades e trabalhos avulsos por cliente, sem planilha",
+    "Recorrência lançada UMA vez e prevista em todos os meses",
+    "Contas a receber com status: pago, pendente, atrasado",
+    "Calendário financeiro com projeção dos próximos meses",
+    "Impostos pelo seu regime e rentabilidade por cliente",
+    "Caixa pessoal separado: orçamento, contas fixas e metas",
   ],
   hub_cria: [
-    "Leia o que os concorrentes de cada cliente estão postando",
+    "Acompanhe o que os concorrentes de cada cliente estão postando",
     "Veja os anúncios que eles estão rodando agora",
-    "Transcreva os reels que bombaram",
-    "As pautas viram ideias no cronograma do cliente",
-    "40 análises por mês",
+    "Transcrição dos reels que bombaram, pronta pra adaptar",
+    "Tudo salvo na aba Concorrência da ficha do cliente",
+    "Pauta boa vira ideia no cronograma do cliente com um clique",
+    "40 análises por mês (amplia com créditos extras quando precisar)",
   ],
   hub_extra: [
     "+20 análises no Cria Radar",
@@ -113,11 +123,12 @@ const BENEFITS: Record<string, string[]> = {
     "Cancele quando quiser",
   ],
   cria_captacao: [
-    "Todas as captações do mês por dia e por local",
-    "Roteiro e teleprompter pra cada gravação",
-    "Folha do dia pronta pra copiar",
-    "Lista de tomadas e captação recorrente",
-    "Sugestão de captação por cidade",
+    "O mês de gravações por dia e por local, num painel só",
+    "Roteiro por captação com teleprompter pro cliente ler gravando",
+    "Folha do dia: todos os roteiros do dia numa página, pronta pra levar",
+    "Checklist de tomadas pra nada ficar sem gravar",
+    "Captação recorrente e lembrete automático na véspera",
+    "Sugestão por cidade pra aproveitar a mesma viagem",
   ],
 };
 
@@ -152,11 +163,11 @@ export function ModulePopup({ module: m, onClose }: { module: ModuleWithStatus |
   return (
     <>
       <Dialog open={!!m} onOpenChange={(o) => !o && onClose()}>
-        <DialogContent className="max-w-md rounded-3xl p-0 overflow-hidden">
+        <DialogContent className="max-w-lg rounded-3xl p-0 overflow-hidden">
           {m && (
             <div className="max-h-[88vh] overflow-y-auto scrollbar-none">
               {/* ── Hero no estilo Cria: creme + formas + ícone + preço ── */}
-              <div className="relative overflow-hidden px-6 pt-9 pb-6 text-center" style={{ background: "#F6F2E8" }}>
+              <div className="relative overflow-hidden px-8 pt-9 pb-6 text-center" style={{ background: "#F6F2E8" }}>
                 <span className="absolute -top-10 -right-8 w-28 h-28 rounded-full opacity-90" style={{ background: "#FF77B9" }} aria-hidden />
                 <span className="absolute -bottom-12 -left-10 w-28 h-28 rounded-full opacity-90" style={{ background: "#FFCF03" }} aria-hidden />
                 <span className="absolute top-8 left-8 w-4 h-4 rounded-full" style={{ background: "#0061EE" }} aria-hidden />
@@ -172,7 +183,7 @@ export function ModulePopup({ module: m, onClose }: { module: ModuleWithStatus |
                 </div>
               </div>
 
-              <div className="px-6 pb-6">
+              <div className="px-8 pb-7">
                 {/* ── A dor (só pra quem ainda não tem) ── */}
                 {!active && dor && (
                   <div className="mt-5 rounded-2xl px-4 py-3" style={{ background: `${cor}0F`, borderLeft: `3px solid ${cor}` }}>
