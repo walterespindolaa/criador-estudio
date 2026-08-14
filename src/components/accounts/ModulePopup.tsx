@@ -19,13 +19,41 @@ const ROTA: Record<string, string> = {
   hub_cria: "/socialmidia/hubcria",
   cria_captacao: "/socialmidia/captacao",
 };
+
+// Cor de acento por módulo (paleta oficial): dá identidade a cada popup.
+const COR: Record<string, string> = {
+  aprovapost_externo: "#EA4918",
+  crm: "#0061EE",
+  financeiro: "#01A652",
+  hub_cria: "#4B3FA8",
+  hub_extra: "#EA4918",
+  cria_captacao: "#FF77B9",
+};
+
+// ── Copy de venda por módulo: a DOR que a social mídia vive, a PROMESSA e o
+// RESULTADO no fim do mês. Sem número inventado: só o que o módulo entrega. ──
+const DOR: Record<string, string> = {
+  aprovapost_externo: "Manda o post no WhatsApp, o cliente some, o feed atrasa e a aprovação vira caça ao “ok”.",
+  crm: "Cliente na planilha, proposta no e-mail, follow-up na memória. Nesse esquema, sempre escapa alguém.",
+  financeiro: "Quanto entra esse mês? Quem ainda não pagou? Se a resposta é “deixa eu ver na planilha”, tá caro.",
+  hub_cria: "O cliente pergunta o que o concorrente anda fazendo e a resposta não pode ser achismo.",
+  cria_captacao: "Dia de gravação: roteiro perdido no bloco de notas, cliente esperando e você tentando lembrar o que falta gravar.",
+};
 const TAGLINES: Record<string, string> = {
-  aprovapost_externo: "Aprovação externa por link",
-  crm: "Sua carteira de clientes",
-  financeiro: "Cachês e fluxo de caixa",
-  hub_cria: "Espie os concorrentes dos seus clientes",
-  hub_extra: "Mais créditos de análise no Cria Radar",
-  cria_captacao: "O painel das captações do mês",
+  aprovapost_externo: "Aprovação de post sem caçar cliente no WhatsApp",
+  crm: "Sua carteira de clientes rodando no automático",
+  financeiro: "O financeiro da social mídia, sem planilha",
+  hub_cria: "A espiã oficial dos concorrentes dos seus clientes",
+  hub_extra: "Mais fôlego de análise pro Cria Radar",
+  cria_captacao: "Suas captações do mês organizadas como uma produção",
+};
+const RESULTADO: Record<string, string> = {
+  aprovapost_externo: "Post enviado, cliente aprova pelo link em segundos e você publica no prazo, com histórico de tudo.",
+  crm: "Você bate o olho e sabe de cada cliente: proposta, contrato, follow-up e histórico, tudo num lugar só.",
+  financeiro: "Cachês, mensalidades e pendências na tela: você cobra na hora certa e fecha o mês sabendo o número.",
+  hub_cria: "Pauta baseada no que já bomba no nicho, e o cliente sentindo que você está sempre um passo à frente.",
+  hub_extra: "Mais clientes analisados no mesmo mês, sem esperar a cota virar.",
+  cria_captacao: "Você chega na captação com roteiro, tomadas e folha do dia prontos, e nada fica sem gravar.",
 };
 const BENEFITS: Record<string, string[]> = {
   aprovapost_externo: [
@@ -47,8 +75,6 @@ const BENEFITS: Record<string, string[]> = {
     "Fluxo de caixa e visão do mês",
     "Alertas de pagamentos pendentes",
   ],
-  // Faltavam. Por isso o popup do Cria Radar abria com "O QUE VOCÊ VAI TER" VAZIO:
-  // uma caixa cinza em branco na tela onde a pessoa decide comprar.
   hub_cria: [
     "Leia o que os concorrentes de cada cliente estão postando",
     "Veja os anúncios que eles estão rodando agora",
@@ -78,8 +104,11 @@ export function ModulePopup({ module: m, onClose }: { module: ModuleWithStatus |
   const [pending, setPending] = useState<string | null>(null);
 
   const Icon = m ? (ICONS[m.code] ?? Sparkles) : Sparkles;
+  const cor = m ? (COR[m.code] ?? "#EA4918") : "#EA4918";
   const active = m ? (m.status === "active" || m.status === "past_due") : false;
   const benefits = m ? (BENEFITS[m.code] ?? []) : [];
+  const dor = m ? DOR[m.code] : undefined;
+  const resultado = m ? RESULTADO[m.code] : undefined;
   const busy = checkout.isPending || portalLoading;
   const navigate = useNavigate();
   const rota = m ? ROTA[m.code] : undefined;
@@ -98,48 +127,85 @@ export function ModulePopup({ module: m, onClose }: { module: ModuleWithStatus |
   return (
     <>
       <Dialog open={!!m} onOpenChange={(o) => !o && onClose()}>
-        <DialogContent className="max-w-md rounded-3xl">
+        <DialogContent className="max-w-md rounded-3xl p-0 overflow-hidden">
           {m && (
-            <>
-              <div className="flex flex-col items-center text-center pt-2">
-                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-3"><Icon className="h-7 w-7 text-primary" /></div>
-                <span className="inline-flex items-center gap-1.5 text-xs font-body font-semibold px-3 py-1.5 rounded-full border border-border text-foreground mb-3">
-                  {active ? <><Check className="h-3.5 w-3.5 text-primary" /> Ativo</> : m.coming_soon ? <><Clock className="h-3.5 w-3.5" /> Em breve</> : `${brl(m.price_cents)}/mês`}
-                </span>
-                <h2 className="text-xl font-display font-extrabold text-foreground">{m.name}</h2>
-                <p className="text-sm text-muted-foreground font-body mt-1">{TAGLINES[m.code] ?? ""}</p>
-              </div>
-              <div className="bg-muted/40 rounded-2xl p-4 mt-5 text-left">
-                <p className="text-[10.5px] uppercase tracking-wider text-muted-foreground font-body font-bold mb-2.5">O que você vai ter</p>
-                <ul className="space-y-2">
-                  {benefits.map((b, i) => (
-                    <li key={i} className="flex items-start gap-2.5 text-sm font-body text-foreground/90"><Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" /> {b}</li>
-                  ))}
-                </ul>
-              </div>
-              <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground font-body mt-4 mb-1">
-                <Check className="h-3.5 w-3.5" /> {active ? "Assinatura ativa" : m.coming_soon ? "Avisamos quando estiver disponível" : "Cobrança separada · cancele quando quiser"}
-              </p>
-              <div className="mt-3">
-                {active ? (
-                  // Módulo ativo: a ação principal é ENTRAR NELE. "Gerenciar
-                  // assinatura" é secundário, e vira o único botão quando não
-                  // existe destino (o pacote de créditos, por exemplo).
-                  <div className="space-y-2">
-                    {rota && (
-                      <Button className="w-full rounded-xl h-12" onClick={() => { onClose(); navigate(rota); }}>
-                        Abrir {m.name} <ArrowRight className="h-4 w-4 ml-1.5" />
-                      </Button>
-                    )}
-                    <Button variant="outline" className="w-full rounded-xl h-12" onClick={openPortal} disabled={busy}>Gerenciar assinatura</Button>
+            <div className="max-h-[88vh] overflow-y-auto">
+              {/* ── Hero no estilo Cria: creme + formas + ícone + preço ── */}
+              <div className="relative overflow-hidden px-6 pt-9 pb-6 text-center" style={{ background: "#F6F2E8" }}>
+                <span className="absolute -top-10 -right-8 w-28 h-28 rounded-full opacity-90" style={{ background: "#FF77B9" }} aria-hidden />
+                <span className="absolute -bottom-12 -left-10 w-28 h-28 rounded-full opacity-90" style={{ background: "#FFCF03" }} aria-hidden />
+                <span className="absolute top-8 left-8 w-4 h-4 rounded-full" style={{ background: "#0061EE" }} aria-hidden />
+                <div className="relative flex flex-col items-center">
+                  <div className="w-16 h-16 rounded-full bg-white shadow-lg shadow-black/10 flex items-center justify-center mb-3">
+                    <Icon className="h-7 w-7" style={{ color: cor }} />
                   </div>
-                ) : m.coming_soon ? (
-                  <Button className="w-full rounded-xl h-12" disabled>Em breve</Button>
-                ) : (
-                  <Button className="w-full rounded-xl h-12" onClick={() => onBuy(m.code)} disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : `Comprar agora · ${brl(m.price_cents)}/mês`}</Button>
-                )}
+                  <h2 className="text-2xl font-display font-extrabold text-[#1a1a2e]">{m.name}</h2>
+                  <p className="text-sm font-body font-semibold mt-1" style={{ color: cor }}>{TAGLINES[m.code] ?? ""}</p>
+                  <span className="mt-3 inline-flex items-center gap-1.5 text-xs font-body font-bold px-3 py-1.5 rounded-full text-white" style={{ background: active ? "#01A652" : "#1a1a2e" }}>
+                    {active ? <><Check className="h-3.5 w-3.5" /> Ativo na sua conta</> : m.coming_soon ? <><Clock className="h-3.5 w-3.5" /> Em breve</> : `${brl(m.price_cents)}/mês`}
+                  </span>
+                </div>
               </div>
-            </>
+
+              <div className="px-6 pb-6">
+                {/* ── A dor (só pra quem ainda não tem) ── */}
+                {!active && dor && (
+                  <div className="mt-5 rounded-2xl px-4 py-3" style={{ background: `${cor}0F`, borderLeft: `3px solid ${cor}` }}>
+                    <p className="text-[10.5px] uppercase tracking-wider font-body font-bold mb-1" style={{ color: cor }}>Te soa familiar?</p>
+                    <p className="text-[13px] font-body text-foreground/90 leading-relaxed">{dor}</p>
+                  </div>
+                )}
+
+                {/* ── O que destrava ── */}
+                <div className="mt-4 text-left">
+                  <p className="text-[10.5px] uppercase tracking-wider text-muted-foreground font-body font-bold mb-2.5">O que você destrava</p>
+                  <ul className="space-y-2">
+                    {benefits.map((b, i) => (
+                      <li key={i} className="flex items-start gap-2.5 text-sm font-body text-foreground/90">
+                        <span className="mt-0.5 flex h-4.5 w-4.5 h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full" style={{ background: `${cor}1A` }}>
+                          <Check className="h-3 w-3" strokeWidth={3} style={{ color: cor }} />
+                        </span>
+                        {b}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* ── O resultado no fim do mês ── */}
+                {resultado && (
+                  <div className="mt-4 rounded-2xl border border-border bg-muted/30 px-4 py-3">
+                    <p className="text-[10.5px] uppercase tracking-wider text-muted-foreground font-body font-bold mb-1">Na prática</p>
+                    <p className="text-[13px] font-body text-foreground leading-relaxed">{resultado}</p>
+                  </div>
+                )}
+
+                <p className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground font-body mt-4">
+                  <Check className="h-3.5 w-3.5" /> {active ? "Assinatura ativa" : m.coming_soon ? "Avisamos quando estiver disponível" : "Ativa na hora · cobrança separada · cancele quando quiser"}
+                </p>
+
+                <div className="mt-3">
+                  {active ? (
+                    // Módulo ativo: a ação principal é ENTRAR NELE. "Gerenciar
+                    // assinatura" é secundário, e vira o único botão quando não
+                    // existe destino (o pacote de créditos, por exemplo).
+                    <div className="space-y-2">
+                      {rota && (
+                        <Button className="w-full rounded-xl h-12" onClick={() => { onClose(); navigate(rota); }}>
+                          Abrir {m.name} <ArrowRight className="h-4 w-4 ml-1.5" />
+                        </Button>
+                      )}
+                      <Button variant="outline" className="w-full rounded-xl h-12" onClick={openPortal} disabled={busy}>Gerenciar assinatura</Button>
+                    </div>
+                  ) : m.coming_soon ? (
+                    <Button className="w-full rounded-xl h-12" disabled>Em breve</Button>
+                  ) : (
+                    <Button className="w-full rounded-xl h-12 text-[15px]" onClick={() => onBuy(m.code)} disabled={busy}>
+                      {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Quero o {m.name} · {brl(m.price_cents)}/mês</>}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>
