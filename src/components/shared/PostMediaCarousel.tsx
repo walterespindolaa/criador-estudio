@@ -61,7 +61,10 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
       const cover = kind === "drive" && videoRatio && slotRatio > 0 ? coverIframeStyle(videoRatio, slotRatio) : null;
       return (
         <div ref={slotRef} className="relative w-full h-full bg-black overflow-hidden">
-          <iframe src={embedUrl} style={cover ?? undefined} className={cover ? "bg-black" : "w-full h-full bg-black"} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={item.file_name || "vídeo"} />
+          {/* scrolling="no": a página de preview do Drive rola por conta própria e
+              desenhava uma barra de rolagem DENTRO do player (o "risco" vertical que
+              aparecia ao lado do vídeo na aprovação). */}
+          <iframe src={embedUrl} scrolling="no" style={cover ?? undefined} className={cover ? "bg-black" : "w-full h-full bg-black"} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={item.file_name || "vídeo"} />
           {driveViewUrl && (
             <button type="button" onClick={() => window.open(driveViewUrl, "_blank", "noopener,noreferrer")}
               className="absolute bottom-2 right-2 z-10 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-black/80">
