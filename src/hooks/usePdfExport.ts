@@ -98,7 +98,10 @@ async function buildPdf(element: HTMLDivElement) {
   // ([data-pdf-page], caso do relatório do cliente), fotografamos cada folha
   // separadamente e cada uma vira exatamente UMA página do PDF. Sem fatiar
   // canvas: sem compressão, sem corte no meio de texto e sem emenda.
-  const pages = Array.from(element.querySelectorAll<HTMLElement>("[data-pdf-page]"));
+  // data-pdf-skip="1" marca folha que aparece na prévia mas NÃO sai no PDF
+  // (ex.: a página da análise enquanto está vazia).
+  const pages = Array.from(element.querySelectorAll<HTMLElement>("[data-pdf-page]"))
+    .filter((p) => p.getAttribute("data-pdf-skip") !== "1");
   if (pages.length > 0) {
     const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
     const w = pdf.internal.pageSize.getWidth();
@@ -106,6 +109,13 @@ async function buildPdf(element: HTMLDivElement) {
     for (let i = 0; i < pages.length; i++) {
       const canvas = await html2canvas(pages[i], {
         scale: 2, useCORS: true, logging: false, backgroundColor: "#ffffff",
+        // O placeholder do editor ("Escreva a análise...") é um ::before de CSS e
+        // o html2canvas o renderizaria no PDF do cliente. Some no clone capturado.
+        onclone: (doc: Document) => {
+          const st = doc.createElement("style");
+          st.textContent = ".report-editor:empty:before{content:none!important}";
+          doc.head.appendChild(st);
+        },
       });
       if (i > 0) pdf.addPage();
       pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, w, h);

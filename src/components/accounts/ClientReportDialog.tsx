@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { clientReportInsight } from "@/lib/ai/claude";
 import { useCrmClients } from "@/hooks/useCrm";
+import { useCriaClientProfiles } from "@/hooks/useManagerClientCria";
 import { parseDateOnly, toISODateBR } from "@/lib/date-br";
 import { FORMAT_LABELS, normalizarFormato } from "@/lib/constants";
 import type { ExternalClient, ExternalPost } from "@/hooks/useCriaPost";
@@ -291,6 +292,12 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     },
   });
   const agencyLogo = agencyBrand?.brand_logo_url ?? null;
+  // Logo do cliente com fallback: logo do portal (external_clients) > logo do
+  // cadastro central (crm_clients.logo) > avatar da conta Cria do cliente. Antes
+  // a capa só olhava o portal e saía com a inicial mesmo com foto no cadastro.
+  const { data: criaProfiles } = useCriaClientProfiles();
+  const criaAvatar = linked?.cria_owner_id ? (criaProfiles?.[linked.cria_owner_id]?.avatar_url ?? null) : null;
+  const logoCliente = client.logo_url || linked?.logo || criaAvatar || null;
   const reportRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   // Período custom (de/até): começa com o que veio do "Relatório rápido" (props),
@@ -1081,11 +1088,11 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   // Barra de alcance médio (cruzamentos) com o valor absoluto e a contagem.
   const crossRow = (label: string, avgReach: number, count: number, max: number) => (
     <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-      <div style={{ width: 96, fontSize: 12, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</div>
+      <div style={{ width: 96, fontSize: 12, lineHeight: 1.6, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</div>
       <div style={{ flex: 1, height: 8, background: C.soft, borderRadius: 99, overflow: "hidden" }}>
         <div style={{ width: `${max > 0 ? Math.max(4, (avgReach / max) * 100) : 0}%`, height: "100%", background: C.brand }} />
       </div>
-      <div style={{ width: 88, textAlign: "right", fontSize: 12, color: C.ink }}>
+      <div style={{ width: 88, textAlign: "right", fontSize: 12, lineHeight: 1.6, color: C.ink }}>
         <b>{fmtNum(avgReach)}</b> <span style={{ color: C.sub }}>· {count}</span>
       </div>
     </div>
@@ -1093,22 +1100,22 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
 
   const breakdownRow = (label: string, value: number, total: number) => (
     <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-      <div style={{ width: 90, fontSize: 12, color: C.ink }}>{label}</div>
+      <div style={{ width: 90, fontSize: 12, lineHeight: 1.6, color: C.ink }}>{label}</div>
       <div style={{ flex: 1, height: 8, background: C.soft, borderRadius: 99, overflow: "hidden" }}>
         <div style={{ width: `${total ? (value / total) * 100 : 0}%`, height: "100%", background: C.brand }} />
       </div>
-      <div style={{ width: 28, textAlign: "right", fontSize: 12, fontWeight: 700, color: C.ink }}>{value}</div>
+      <div style={{ width: 28, textAlign: "right", fontSize: 12, lineHeight: 1.6, fontWeight: 700, color: C.ink }}>{value}</div>
     </div>
   );
 
   // Barra de demografia (audiência): rótulo + barra proporcional ao percentual.
   const audienceBar = (label: string, pct: number) => (
     <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-      <div style={{ width: 100, fontSize: 12, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</div>
+      <div style={{ width: 100, fontSize: 12, lineHeight: 1.6, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</div>
       <div style={{ flex: 1, height: 8, background: C.soft, borderRadius: 99, overflow: "hidden" }}>
         <div style={{ width: `${pct > 0 ? Math.max(4, pct) : 0}%`, height: "100%", background: C.brand }} />
       </div>
-      <div style={{ width: 44, textAlign: "right", fontSize: 12, fontWeight: 700, color: C.ink }}>{Math.round(pct)}%</div>
+      <div style={{ width: 44, textAlign: "right", fontSize: 12, lineHeight: 1.6, fontWeight: 700, color: C.ink }}>{Math.round(pct)}%</div>
     </div>
   );
 
@@ -1131,10 +1138,59 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     return out;
   }
 
+  // Estimativa de linhas visuais (considerando quebra automática) e um
+  // empacotador por "custo": é o que deixa texto longo CONTINUAR na página
+  // seguinte em vez de sumir cortado no rodapé da folha.
+  const estLinhas = (l: string) => Math.max(1, Math.ceil(l.trim().length / 78));
+  function pack<T>(arr: T[], custo: (t: T) => number, orcamento: number): T[][] {
+    const grupos: T[][] = [];
+    let atual: T[] = [];
+    let soma = 0;
+    for (const item of arr) {
+      const c = custo(item);
+      if (atual.length && soma + c > orcamento) { grupos.push(atual); atual = []; soma = 0; }
+      atual.push(item); soma += c;
+    }
+    if (atual.length) grupos.push(atual);
+    return grupos;
+  }
+
+  // Texto "rico" do recado: *trecho* vira negrito, linha começando com "- ",
+  // "* " ou "• " vira tópico com bolinha, "## " vira subtítulo e uma linha só
+  // de traços (---) vira divisor. É como a social mídia já escreve.
+  const negrito = (t: string, kb: string) =>
+    t.split(/\*([^*]+)\*/g).map((parte, i) =>
+      i % 2 === 1 ? <b key={`${kb}-${i}`}>{parte}</b> : <span key={`${kb}-${i}`}>{parte}</span>);
+  const renderTextoRico = (linhas: string[]) => {
+    const out: ReactNode[] = [];
+    let bullets: string[] = [];
+    const solta = () => {
+      if (!bullets.length) return;
+      const itens = [...bullets];
+      out.push(
+        <ul key={`ul-${out.length}`} style={{ margin: "4px 0 6px", paddingLeft: 18, listStyleType: "disc" }}>
+          {itens.map((b, i) => <li key={i} style={{ marginBottom: 3 }}>{negrito(b, `li-${out.length}-${i}`)}</li>)}
+        </ul>,
+      );
+      bullets = [];
+    };
+    linhas.forEach((ln, i) => {
+      const t = ln.trim();
+      if (/^[-\u2013]{3,}$/.test(t)) { solta(); out.push(<div key={`hr-${i}`} style={{ borderTop: `1px solid ${C.line}`, margin: "9px 0" }} />); return; }
+      if (/^#{1,3}\s+/.test(t)) { solta(); out.push(<div key={`h-${i}`} style={{ fontWeight: 800, fontSize: 13, marginTop: out.length ? 8 : 0, marginBottom: 3 }}>{negrito(t.replace(/^#{1,3}\s+/, ""), `h-${i}`)}</div>); return; }
+      if (/^([-\u2022]|\*)\s+/.test(t)) { bullets.push(t.replace(/^([-\u2022]|\*)\s+/, "")); return; }
+      solta();
+      if (t === "") { out.push(<div key={`br-${i}`} style={{ height: 7 }} />); return; }
+      out.push(<div key={`p-${i}`}>{negrito(ln, `p-${i}`)}</div>);
+    });
+    solta();
+    return out;
+  };
+
   const logoClienteRedonda = (px: number, fontePx: number) => (
     <div style={{ width: px, height: px, borderRadius: "50%", background: "#fff", boxShadow: "0 8px 26px -14px rgba(0,0,0,.35)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-      {client.logo_url
-        ? <img src={client.logo_url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      {logoCliente
+        ? <img src={logoCliente} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         : <span style={{ fontWeight: 800, fontSize: fontePx, color: C.laranja }}>{client.name.charAt(0).toUpperCase()}</span>}
     </div>
   );
@@ -1199,8 +1255,8 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   const cabecalhoPagina = (
     <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "18px 32px 12px", borderBottom: `2px solid ${C.laranja}`, background: C.creme, flexShrink: 0 }}>
       <div style={{ width: 30, height: 30, borderRadius: "50%", background: C.soft, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
-        {client.logo_url
-          ? <img src={client.logo_url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        {logoCliente
+          ? <img src={logoCliente} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           : <span style={{ fontWeight: 800, fontSize: 13, color: C.laranja }}>{client.name.charAt(0).toUpperCase()}</span>}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -1223,14 +1279,25 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   );
 
   // ── Blocos de conteúdo (cada um cabe na sua página) ──
-  const recadoNode = notes.trim() ? (
+  const recadoLinhas = notes.trim() ? notes.trim().split("\n") : [];
+  const recadoEst = recadoLinhas.reduce((a, l) => a + estLinhas(l), 0);
+  const recadoCurto = recadoEst <= 14;
+  const recadoBox = (linhas: string[], continuacao: boolean) => (
     <div style={{ marginBottom: 14, padding: "12px 14px", border: `1px solid ${C.line}`, borderLeft: `3px solid ${C.brand}`, borderRadius: 12, background: C.soft }}>
       <div style={{ fontSize: 10, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 5 }}>
-        {managerName ? `Recado de ${managerName}` : "Recado da social mídia"}
+        {managerName ? `Recado de ${managerName}` : "Recado da social mídia"}{continuacao ? " (continuação)" : ""}
       </div>
-      <div style={{ fontSize: 12.5, color: C.ink, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{notes.trim()}</div>
+      <div style={{ fontSize: 12.5, color: C.ink, lineHeight: 1.55 }}>{renderTextoRico(linhas)}</div>
     </div>
-  ) : null;
+  );
+  // Recado curto entra na página de resumo; recado longo vira página(s) própria(s)
+  // e o texto CONTINUA na folha seguinte (antes ele sumia cortado).
+  const recadoNode = recadoLinhas.length && recadoCurto ? recadoBox(recadoLinhas, false) : null;
+  const recadoPages = recadoLinhas.length && !recadoCurto
+    ? pack(recadoLinhas, estLinhas, 30).map((grupo, gi) => (
+        <div key={`recado-${gi}`}>{recadoBox(grupo, gi > 0)}</div>
+      ))
+    : [];
 
   const emptyNode = (
     <div style={{ padding: "22px 20px", border: `1px dashed ${C.line}`, borderRadius: 12, background: C.soft, textAlign: "center" }}>
@@ -1372,7 +1439,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   ) : null;
 
   const analiseNode = (
-    <div style={{ marginTop: leituraNode ? 18 : 0 }}>
+    <div>
       {sectionTitle("Análise do período")}
       <div
         ref={editorRef}
@@ -1660,7 +1727,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         </div>
       </div>
     )]
-    : chunk(captureList, 7).map((grupo, gi, all) => (
+    : pack(captureList, (c) => 1 + estLinhas(c.note ?? ""), 20).map((grupo, gi, all) => (
       <div key={`captacao-${gi}`}>
         {sectionTitle(all.length > 1 ? `Captação do período · parte ${gi + 1}` : "Captação do período", C.rosa)}
         {gi === 0 && (
@@ -1682,9 +1749,10 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     ));
 
   // ── Sequência final das páginas ──
-  const defs: { key: string; body: ReactNode; semChrome?: boolean }[] = [
+  const defs: { key: string; body: ReactNode; semChrome?: boolean; pularSeVazia?: boolean }[] = [
     { key: "capa", body: paginaCapa, semChrome: true },
   ];
+  recadoPages.forEach((b, i) => defs.push({ key: `recado-${i}`, body: b }));
   defs.push({
     key: "resumo",
     body: (
@@ -1700,7 +1768,10 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       </>
     ),
   });
-  defs.push({ key: "analise", body: (<>{leituraNode}{analiseNode}</>) });
+  if (leituraNode) defs.push({ key: "leitura", body: leituraNode });
+  // A página da análise só SAI NO PDF quando há texto. Vazia, ela aparece na
+  // prévia (pra dar onde escrever) mas não vai pra visualização do cliente.
+  defs.push({ key: "analise", body: analiseNode, pularSeVazia: true });
   pecasPages.forEach((b, i) => defs.push({ key: `pecas-${i}`, body: b }));
   if (igNode) defs.push({ key: "ig", body: igNode });
   produzimosPages.forEach((b, i) => defs.push({ key: `produzimos-${i}`, body: b }));
@@ -1710,20 +1781,33 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   captacaoPages.forEach((b, i) => defs.push({ key: `captacao-${i}`, body: b }));
   defs.push({ key: "final", body: paginaFinal, semChrome: true });
 
-  const totalPaginas = defs.length;
-  const paginasRender = defs.map((p, i) => (
-    <div key={p.key} style={{ boxShadow: "0 6px 20px -12px rgba(0,0,0,.35)", borderRadius: 6, overflow: "hidden", border: `1px solid ${C.line}` }}>
-      <div data-pdf-page style={{ width: "100%", aspectRatio: "210 / 297", background: "#ffffff", display: "flex", flexDirection: "column", overflow: "hidden", boxSizing: "border-box", fontFamily: "Inter, system-ui, sans-serif", color: C.ink }}>
-        {p.semChrome ? p.body : (
-          <>
-            {cabecalhoPagina}
-            <div style={{ flex: 1, overflow: "hidden", padding: "14px 32px 6px" }}>{p.body}</div>
-            {rodapePagina(i + 1, totalPaginas)}
-          </>
-        )}
+  const sai = (p: { pularSeVazia?: boolean }) => !(p.pularSeVazia && !analiseTemTexto);
+  const totalPaginas = defs.filter(sai).length;
+  let numeroCorrente = 0;
+  const paginasRender = defs.map((p) => {
+    const entra = sai(p);
+    if (entra) numeroCorrente += 1;
+    const numero = numeroCorrente;
+    return (
+      <div key={p.key} style={{ boxShadow: "0 6px 20px -12px rgba(0,0,0,.35)", borderRadius: 6, overflow: "hidden", border: `1px solid ${C.line}`, opacity: entra ? 1 : 0.8 }}>
+        <div data-pdf-page data-pdf-skip={entra ? undefined : "1"} style={{ width: "100%", aspectRatio: "210 / 297", background: "#ffffff", display: "flex", flexDirection: "column", overflow: "hidden", boxSizing: "border-box", fontFamily: "Inter, system-ui, sans-serif", color: C.ink }}>
+          {p.semChrome ? p.body : (
+            <>
+              {cabecalhoPagina}
+              <div style={{ flex: 1, overflow: "hidden", padding: "14px 32px 6px" }}>{p.body}</div>
+              {entra
+                ? rodapePagina(numero, totalPaginas)
+                : (
+                  <div style={{ padding: "10px 32px 16px", borderTop: `1px solid ${C.line}`, background: C.cremeCard, fontSize: 9.5, color: C.sub, textAlign: "center", flexShrink: 0 }}>
+                    Esta página só entra no PDF quando a análise tiver texto.
+                  </div>
+                )}
+            </>
+          )}
+        </div>
       </div>
-    </div>
-  ));
+    );
+  });
 
 
   return (

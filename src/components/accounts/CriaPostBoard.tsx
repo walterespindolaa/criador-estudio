@@ -23,6 +23,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { CriaPostMedia } from "@/components/accounts/CriaPostMedia";
 import { ImportKanbanDialog } from "@/components/accounts/ImportKanbanDialog";
 import { ClientReportDialog } from "@/components/accounts/ClientReportDialog";
+import { NotasRelatorioSalvas } from "@/components/accounts/NotasRelatorioSalvas";
 import { ExternalClientDialog } from "@/components/accounts/ExternalClientDialog";
 import { useProfile } from "@/hooks/useProfile";
 import { useCrmClients } from "@/hooks/useCrm";
@@ -774,6 +775,8 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
             <p className="text-xs text-muted-foreground font-body mb-4">Produção, desempenho do Instagram e análise da IA, pronto pra enviar em PDF.</p>
             <Button onClick={() => setReportOpen(true)}><FileText className="h-4 w-4 mr-1.5" /> Abrir relatório</Button>
           </div>
+          {/* As notas que a social mídia escreveu em cada período, acessíveis sem gerar o PDF. */}
+          <NotasRelatorioSalvas crmClientId={client.crm_client_id ?? null} />
         </TabsContent>
 
         <TabsContent value="instagram">
