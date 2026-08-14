@@ -1901,7 +1901,8 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl rounded-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl rounded-2xl p-0 overflow-hidden">
+        <div className="max-h-[90vh] overflow-y-auto p-6">
         <DialogHeader>
           <DialogTitle className="font-display">Relatório do cliente</DialogTitle>
         </DialogHeader>
@@ -2111,6 +2112,15 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
           </div>
         )}
 
+        {/* Gerar análise faz parte de MONTAR o relatório, então o botão vive aqui
+            em cima também (embaixo ele continua, perto do Baixar). */}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={genAI} disabled={aiLoading}>
+            {aiLoading ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Analisando…</> : <><Sparkles className="h-4 w-4 mr-1.5" /> Gerar análise (IA)</>}
+          </Button>
+          <span className="text-[11px] font-body text-muted-foreground">Entra na seção “Análise do período” da prévia (e dá pra editar por lá).</span>
+        </div>
+
         {/* Prévia paginada: cada folha abaixo é uma página A4 REAL do PDF (o
             exportador fotografa folha por folha). A análise é editável direto. */}
         <div className="mt-3">
@@ -2153,6 +2163,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
             </Button>
           </div>
         </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
